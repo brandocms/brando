@@ -194,23 +194,23 @@ module.exports = {
           mainItem: {
             iphone: {
               'font-size': '24px',
-              'line-height': '40px'
+              'line-height': '36px'
             },
             mobile: {
               'font-size': '24px',
-              'line-height': '40px'
+              'line-height': '36px'
             },
             ipad_portrait: {
               'font-size': '24px',
-              'line-height': '40px'
+              'line-height': '36px'
             },
             ipad_landscape: {
               'font-size': '24px',
-              'line-height': '40px'
+              'line-height': '36px'
             },
             desktop_md: {
               'font-size': '24px',
-              'line-height': '40px'
+              'line-height': '36px'
             },
             desktop_lg: {
               'font-size': '28px',

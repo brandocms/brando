@@ -1,7 +1,6 @@
 defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
-  alias Brando.Blueprint.Villain.Blocks.ModuleBlock
-  alias Brando.Blueprint.Villain.Blocks
   alias Brando.Villain.Module
+  alias Brando.Sites.Var
 
   # TODO: Split into ModuleBlock and MultiModuleBlock?
 
@@ -18,15 +17,29 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
     data_layer :embedded
     identifier "{{ entry.type }}"
 
+    trait Brando.Trait.CastPolymorphicEmbeds
+
     attributes do
       attribute :module_id, :integer, required: true
       attribute :sequence, :integer
       attribute :multi, :boolean, default: false
+
+      attribute :vars, {:array, PolymorphicEmbed},
+        types: [
+          boolean: Var.Boolean,
+          text: Var.Text,
+          string: Var.String,
+          datetime: Var.Datetime,
+          html: Var.Html,
+          color: Var.Color
+        ],
+        type_field: :type,
+        on_type_not_found: :raise,
+        on_replace: :delete
     end
 
     relations do
       relation :refs, :embeds_many, module: Module.Ref, on_replace: :delete
-      relation :vars, :embeds_many, module: Module.Var, on_replace: :delete
     end
   end
 

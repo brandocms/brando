@@ -1,11 +1,11 @@
-defmodule BrandoAdmin.Components.Form.Input.Blocks.RenderVar do
+defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   use Surface.Component
   use Phoenix.HTML
-
   alias BrandoAdmin.Components.Form.Input
 
   prop var, :any
   prop important, :boolean, default: false
+  prop edit, :boolean, default: false
 
   data should_render?, :boolean
   data label, :string
@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.RenderVar do
     input_value(form, field)
   end
 
-  def update(%{var: var, important: render_important}, socket) do
+  def update(%{var: var, important: render_important, edit: edit}, socket) do
     important = v(var, :important)
 
     should_render? =
@@ -27,6 +27,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.RenderVar do
 
     {:ok,
      socket
+     |> assign(:edit, edit)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
      |> assign(:label, v(var, :label))
@@ -36,26 +37,57 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.RenderVar do
 
   def render(assigns) do
     ~F"""
-      {#if @should_render?}
-        {hidden_input @var, :name}
-        {hidden_input @var, :label}
-        {hidden_input @var, :type}
-        {hidden_input @var, :important}
+      <div>
+        {#if @should_render?}
+          {#if @edit}
+            <div id={"#{@var.id}-edit"}>
+              <h2><code>{input_value(@var, :key)}</code></h2>
+              <Input.Toggle form={@var} field={:marked_as_deleted} />
+              <Input.Toggle form={@var} field={:important} />
+              <Input.Text form={@var} field={:key} />
+              <Input.Text form={@var} field={:label} />
+              <Input.Radios form={@var} field={:type} options={[
+                %{label: "Boolean", value: "boolean"},
+                %{label: "Color", value: "color"},
+                %{label: "Datetime", value: "datetime"},
+                %{label: "Html", value: "html"},
+                %{label: "String", value: "string"},
+                %{label: "Text", value: "text"}
+              ]} />
+              {hidden_input @var, :value}
+            </div>
+          {#else}
+            <div id={"#{@var.id}-value"}>
+              {hidden_input @var, :key}
+              {hidden_input @var, :label}
+              {hidden_input @var, :type}
+              {hidden_input @var, :important}
 
-        {#case @type}
-          {#match :string}
-            <Input.Text form={@var} field={:value} label={@label} />
+              <div class="brando-input">
+                {#case @type}
+                  {#match "string"}
+                    <Input.Text form={@var} field={:value} label={@label} />
 
-          {#match :text}
-            <Input.Textarea form={@var} field={:value} label={@label} />
+                  {#match "text"}
+                    <Input.Textarea form={@var} field={:value} label={@label} />
 
-          {#match :boolean}
-            <Input.Toggle form={@var} field={:value} label={@label} />
+                  {#match "boolean"}
+                    <Input.Toggle form={@var} field={:value} label={@label} />
 
-          {#match :color}
-            <Input.Text form={@var} field={:value} label={@label} />
-        {/case}
-      {/if}
+                  {#match "color"}
+                    <Input.Text form={@var} field={:value} label={@label} />
+
+                  {#match "datetime"}
+                    <Input.Datetime form={@var} field={:value} label={@label} />
+
+                  {#match "html"}
+                    <Input.RichText form={@var} field={:value} label={@label} />
+                {/case}
+              </div>
+            </div>
+          {/if}
+        {/if}
+      </div>
     """
   end
 end

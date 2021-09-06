@@ -16,6 +16,7 @@ defmodule Brando.Villain.Module do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
+  alias Brando.Sites.Var
 
   table "pages_modules"
 
@@ -27,6 +28,7 @@ defmodule Brando.Villain.Module do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.CastPolymorphicEmbeds
   trait __MODULE__.Trait.ValidateCode
 
   attributes do
@@ -38,11 +40,23 @@ defmodule Brando.Villain.Module do
     attribute :svg, :text
     attribute :multi, :boolean
     attribute :wrapper, :text
+
+    attribute :vars, {:array, PolymorphicEmbed},
+      types: [
+        boolean: Var.Boolean,
+        text: Var.Text,
+        string: Var.String,
+        datetime: Var.Datetime,
+        html: Var.Html,
+        color: Var.Color
+      ],
+      type_field: :type,
+      on_type_not_found: :raise,
+      on_replace: :delete
   end
 
   relations do
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
-    relation :vars, :embeds_many, module: __MODULE__.Var, on_replace: :delete
   end
 
   listings do

@@ -76,7 +76,7 @@
             left: -30px;
             opacity: 0;
             transition: all 0.5s ease;
-            margin-top: 13px;
+            margin-top: 10px;
           }
 
           &:hover {
@@ -87,6 +87,7 @@
 
           a {
             @fontsize 20px;
+            line-height: 34px;
             display: block;
             font-weight: 200;
 

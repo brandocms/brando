@@ -3,7 +3,6 @@ defmodule Brando.Globals do
   Globals
   """
   alias Brando.Cache
-  alias Brando.Sites.Global
   alias Brando.Sites.GlobalCategory
   alias Brando.Villain
 
@@ -13,6 +12,43 @@ defmodule Brando.Globals do
   @type changeset :: Ecto.Changeset.t()
   @type global_category :: Brando.Sites.GlobalCategory.t()
   @type params :: map
+
+  query :list, GlobalCategory, do: fn query -> from(q in query) end
+
+  filters GlobalCategory do
+    fn
+      {:key, key}, query ->
+        from(q in query, where: ilike(q.key, ^"%#{key}%"))
+
+      {:label, label}, query ->
+        from(q in query, where: ilike(q.label, ^"%#{label}%"))
+    end
+  end
+
+  query :single, GlobalCategory, do: fn query -> from(q in query) end
+
+  matches GlobalCategory do
+    fn
+      {:id, id}, query -> from(t in query, where: t.id == ^id)
+      {:key, key}, query -> from(t in query, where: t.key == ^key)
+    end
+  end
+
+  mutation :create, GlobalCategory do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Globals.update()
+      |> update_villains_referencing_global()
+    end
+  end
+
+  mutation :update, GlobalCategory do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Globals.update()
+      |> update_villains_referencing_global()
+    end
+  end
 
   mutation :delete, GlobalCategory
 
@@ -72,11 +108,11 @@ defmodule Brando.Globals do
     |> get_global_value!()
   end
 
-  def get_global_value!(%Global{type: "boolean", data: %{"value" => ""}}), do: false
-  def get_global_value!(%Global{type: "boolean", data: %{"value" => false}}), do: false
-  def get_global_value!(%Global{type: "boolean", data: %{"value" => _}}), do: true
+  def get_global_value!(%{type: "boolean", data: %{"value" => ""}}), do: false
+  def get_global_value!(%{type: "boolean", data: %{"value" => false}}), do: false
+  def get_global_value!(%{type: "boolean", data: %{"value" => _}}), do: true
 
-  def get_global_value!(%Global{type: "datetime", data: %{"value" => value}}) do
+  def get_global_value!(%{type: "datetime", data: %{"value" => value}}) do
     {:ok, datetime, _} = DateTime.from_iso8601(value)
     datetime
   end
@@ -89,62 +125,6 @@ defmodule Brando.Globals do
       {:ok, global} -> global
       _ -> ""
     end
-  end
-
-  @doc """
-  List global categories, without preload
-  """
-  def list_global_categories do
-    {:ok, Brando.repo().all(GlobalCategory)}
-  end
-
-  @doc """
-  Get global categories, preloaded with globals
-  """
-  def get_global_categories do
-    query = from t in GlobalCategory, preload: :globals
-    {:ok, Brando.repo().all(query)}
-  end
-
-  @doc """
-  Get global category
-  """
-  @spec get_global_category(category_id :: any) ::
-          {:ok, global_category()} | {:error, {:global_category, :not_found}}
-  def get_global_category(category_id) do
-    case Brando.repo().get_by(GlobalCategory, id: category_id) do
-      nil -> {:error, {:global_category, :not_found}}
-      global_category -> {:ok, Brando.repo().preload(global_category, :globals)}
-    end
-  end
-
-  @doc """
-  Create new global category
-  """
-  @spec create_global_category(params) ::
-          {:ok, global_category} | {:error, changeset}
-  def create_global_category(global_category_params) do
-    changeset = GlobalCategory.changeset(%GlobalCategory{}, global_category_params)
-
-    changeset
-    |> Brando.repo().insert()
-    |> Cache.Globals.update()
-    |> update_villains_referencing_global()
-  end
-
-  @doc """
-  Update global category
-  """
-  @spec update_global_category(id :: any, params) ::
-          {:ok, global_category} | {:error, changeset}
-  def update_global_category(category_id, global_category_params) do
-    {:ok, category} = get_global_category(category_id)
-    changeset = GlobalCategory.changeset(category, global_category_params)
-
-    changeset
-    |> Brando.repo().update()
-    |> Cache.Globals.update()
-    |> update_villains_referencing_global()
   end
 
   @doc """

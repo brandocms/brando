@@ -1,8 +1,30 @@
-defmodule Brando.Repo.Migrations.ConvertVillainVarsToList do
+defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
   use Ecto.Migration
   import Ecto.Query
 
   def up do
+    query = from m in "pages_modules", select: %{id: m.id, vars: m.vars}
+    modules = Brando.repo().all(query)
+    for module <- modules do
+      # convert from string map to list of objects
+      vars =
+        module.vars
+        |> Enum.map(fn
+          var ->
+            var
+            |> Map.put("key", var["name"])
+            |> Map.delete("name")
+        end)
+
+      query =
+        from(m in "pages_modules",
+          where: m.id == ^module.id,
+          update: [set: [vars: ^vars]]
+        )
+
+      Brando.repo().update_all(query, [])
+    end
+
     for {schema, attrs} <- Brando.Villain.list_villains,
       %{name: data_field} <- attrs do
       query =
@@ -45,11 +67,10 @@ defmodule Brando.Repo.Migrations.ConvertVillainVarsToList do
       processed_value =
         case key do
           "vars" ->
-            Enum.map(value, fn
-              {k, v} ->
-                Map.put(v, "name", k)
-              var ->
+            Enum.map(value, fn var ->
                 var
+                |> Map.put("key", var["name"])
+                |> Map.delete("name")
             end)
 
         _ ->

@@ -11,11 +11,12 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   alias Brando.Villain
   alias Brando.Villain.Module.Ref
-  alias Brando.Villain.Module.Var
+  alias Brando.Sites.Var
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MapInputs
+  alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Form.MapValueInputs
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Toast
@@ -232,43 +233,55 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                 </button>
               </h2>
               <ul>
-                <Inputs form={form} for={:vars} :let={form: var, index: idx}>
+                <PolyInputs form={form} for={:vars} :let={form: var, index: idx}>
                   <li class="padded">
                     <Modal title="Edit var" id={"#{form.id}-var-#{idx}"}>
                       <Input.Toggle form={var} field={:important} />
-                      <Input.Text form={var} field={:name} />
+                      <Input.Text form={var} field={:key} />
                       <Input.Text form={var} field={:label} />
                       <Input.Radios form={var} field={:type} options={[
                         %{label: "Boolean", value: "boolean"},
                         %{label: "Text", value: "text"},
                         %{label: "String", value: "string"},
-                        %{label: "Color", value: "color"}
+                        %{label: "Color", value: "color"},
+                        %{label: "Html", value: "html"},
+                        %{label: "Datetime", value: "datetime"},
                       ]} />
                       {#case input_value(var, :type)}
-                        {#match :text}
+                        {#match "text"}
                           <Input.Text form={var} field={:value} />
 
-                        {#match :string}
+                        {#match "string"}
                           <Input.Text form={var} field={:value} />
 
-                        {#match :boolean}
+                        {#match "boolean"}
                           <Input.Toggle form={var} field={:value} />
+
+                        {#match "datetime"}
+                          <Input.Datetime form={var} field={:value} />
+
+                        {#match "html"}
+                          <Input.RichText form={var} field={:value} />
+
+                        {#match "color"}
+                          {!-- #TODO: Input.Color --}
+                          <Input.Text form={var} field={:value} />
 
                         {#match _}
                           <Input.Text form={var} field={:value} />
                       {/case}
                     </Modal>
-                    <span class="text-mono">{input_value(var, :type)} - &lcub;&lcub; {input_value(var, :name)} &rcub;&rcub;</span>
+                    <span class="text-mono">{input_value(var, :type)} - &lcub;&lcub; {input_value(var, :key)} &rcub;&rcub;</span>
                     <div class="actions">
                       <button class="tiny" type="button" :on-click="show_modal" phx-value-id={"#{form.id}-var-#{idx}"}>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M6.414 16L16.556 5.858l-1.414-1.414L5 14.586V16h1.414zm.829 2H3v-4.243L14.435 2.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 18zM3 20h18v2H3v-2z"/></svg>
                       </button>
-                      <button class="tiny" type="button" :on-click="delete_var" phx-value-id={input_value(var, :name)}>
+                      <button class="tiny" type="button" :on-click="delete_var" phx-value-id={input_value(var, :key)}>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
                       </button>
                     </div>
                   </li>
-                </Inputs>
+                </PolyInputs>
               </ul>
 
               <div class="button-group">
@@ -347,8 +360,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
       ) do
     vars = get_field(changeset, :vars)
 
-    new_var = %Var{
-      name: var_name,
+    new_var = %Var.Boolean{
+      key: var_name,
       type: var_type
     }
 
@@ -403,6 +416,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
           end)
 
         require Logger
+        Logger.error(inspect(changeset, pretty: true))
+        Logger.error(inspect(changeset.errors, pretty: true))
         Logger.error(inspect(traversed_errors, pretty: true))
 
         {:noreply, assign(socket, changeset: changeset)}
@@ -424,7 +439,9 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   end
 
   defp assign_entry(socket, entry_id) do
-    assign_new(socket, :entry, fn -> Brando.Villain.get_module!(entry_id) end)
+    assign_new(socket, :entry, fn ->
+      Brando.Villain.get_module!(entry_id) |> IO.inspect(pretty: true)
+    end)
   end
 
   defp assign_changeset(%{assigns: %{entry: entry, current_user: current_user}} = socket) do

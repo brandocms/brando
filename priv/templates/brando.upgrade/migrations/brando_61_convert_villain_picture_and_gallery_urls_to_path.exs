@@ -1,4 +1,4 @@
-defmodule Animaskin.Repo.Migrations.ConvertVillainPictureGalleryURLToPath do
+defmodule Brando.Repo.Migrations.ConvertVillainPictureGalleryURLToPath do
   use Ecto.Migration
   import Ecto.Query
 

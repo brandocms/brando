@@ -144,11 +144,7 @@ defmodule Brando.Villain do
       Enum.map(global_categories, fn {g_key, g_category} ->
         cat_globs =
           Enum.map(g_category, fn
-            {key, %{type: "text", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "html", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "color", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "boolean", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "datetime", data: %{"value" => value}}} -> {key, value}
+            {key, %{value: value}} -> {key, value}
           end)
           |> Enum.into(%{})
 

@@ -7,7 +7,6 @@
   input.text, textarea.text {
     @color bg white;
   }
-
 }
 
 .compact {
@@ -34,7 +33,7 @@
 
   .shaded & {
     &:last-of-type {
-      margin-bottom: 0;
+      margin-bottom: 13px;
     }
   }
 
@@ -173,12 +172,14 @@
       display: flex;
       align-items: center;
       margin-top: 15px;
+      transition: background-color 250ms ease, color 250ms ease;
 
       svg {
         margin-bottom: 4px;
         margin-right: 10px;
 
         path:nth-of-type(2) {
+          transition: fill 250ms ease;
           fill: theme(colors.dark);
         }
       }

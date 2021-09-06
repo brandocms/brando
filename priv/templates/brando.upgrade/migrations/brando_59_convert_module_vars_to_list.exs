@@ -1,4 +1,4 @@
-defmodule Animaskin.Repo.Migrations.ConvertModuleVarsToList do
+defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
   use Ecto.Migration
   import Ecto.Query
 

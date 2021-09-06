@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Input.Blocks.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           |> List.first()
 
         refs = Enum.with_index(inputs_for(block_data, :refs))
-        important_vars = Enum.filter(v(block_data, :vars), &(&1.important == true))
+        vars = v(block_data, :vars)
 
         socket
         |> assign(:uid, v(block, :uid))
@@ -75,8 +75,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_name, module.name)
         |> assign(:module_class, module.class)
         |> assign(:module_code, module.code)
-        |> assign(:important_vars, important_vars)
         |> assign(:refs, refs)
+        |> assign_new(:important_vars, fn ->
+          Enum.filter(vars, &(&1.important == true))
+        end)
     end
   end
 
@@ -135,7 +137,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
             {#unless Enum.empty?(@important_vars)}
               <div class="important-vars">
-                {#for var <- inputs_for(block_data, :vars)}
+                {#for var <- inputs_for_poly(block_data, :vars)}
                   <RenderVar var={var} important />
                 {/for}
               </div>

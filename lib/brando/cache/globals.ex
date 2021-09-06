@@ -20,7 +20,7 @@ defmodule Brando.Cache.Globals do
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    {:ok, global_categories} = Globals.get_global_categories()
+    {:ok, global_categories} = Globals.list_global_categories()
     global_map = process_globals(global_categories)
     Cachex.put(:cache, :globals, global_map)
   end
@@ -31,7 +31,7 @@ defmodule Brando.Cache.Globals do
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, global_category}) do
-    {:ok, global_categories} = Globals.get_global_categories()
+    {:ok, global_categories} = Globals.list_global_categories()
     global_map = process_globals(global_categories)
     Cachex.update(:cache, :globals, global_map)
     {:ok, global_category}

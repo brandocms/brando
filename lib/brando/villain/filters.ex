@@ -200,7 +200,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Lexer.Filter.markdown("this is a **string**", %{}) |> String.trim("\\n")
       "<p>this is a <strong>string</strong></p>"
   """
-  def markdown(%Brando.Sites.Global{data: %{"value" => str}}, opts), do: markdown(str, opts)
+  def markdown(%{value: str}, opts), do: markdown(str, opts)
 
   def markdown(str, _) when is_binary(str) do
     str

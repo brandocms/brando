@@ -1,15 +1,20 @@
 defmodule BrandoAdmin.Sites.GlobalsLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Sites.Global
+  use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalCategory
+
   import Ecto.Changeset
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils
+
+  alias Surface.Components.Form
+
   alias Brando.Users
+  alias Brando.Sites.GlobalCategory
+  alias Brando.Sites.Var
+  alias Brando.Globals
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Toast
-  alias Brando.Globals
-  alias Brando.Sites.Global
-  alias Brando.Sites.GlobalCategory
-  alias Surface.Components.Form
 
   def mount(_, %{"user_token" => token}, socket) do
     {:ok,
@@ -20,7 +25,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
      |> assign(
        config?: false,
        category_changeset: nil,
-       selected_changeset_key: nil
+       selected_category_key: nil
      )}
   end
 
@@ -40,7 +45,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
         {#for category <- @global_categories}
           <button
             type="button"
-            class={"category", selected: @selected_changeset_key == category.key}
+            class={"category", selected: @selected_category_key == category.key}
             :on-click="select_category"
             phx-value-key={category.key}>
             {category.label}
@@ -48,7 +53,6 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
         {/for}
       </div>
       <div class="content">
-
           <Modal title="Create category" id="modal-create-category" narrow>
             <Form
               for={@new_category_changeset}
@@ -84,13 +88,22 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
           </button>
           <Form
             for={@category_changeset}
+            submit="update_category"
             :let={form: category_form}>
             <h2>{get_field(@category_changeset, :label)}</h2>
-            {#for global <- inputs_for(category_form, :globals)}
-              <div class="global">
-                {inspect global, pretty: true}
-              </div>
-            {/for}
+            <h3><code>{get_field(@category_changeset, :key)}</code></h3>
+            {hidden_input category_form, :key}
+            {hidden_input category_form, :label}
+            <div class="vars">
+              {#for var <- inputs_for_poly(category_form, :globals)}
+                <div id={"#{category_form.id}-#{var.id}"} class={"var", shaded: @config?}>
+                  <RenderVar var={var} edit={@config?} />
+                </div>
+              {/for}
+              <button class="primary">
+                Save changes
+              </button>
+            </div>
           </Form>
         {#else}
           No category selected
@@ -100,53 +113,52 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
     """
   end
 
-  def handle_info({:save, changeset, _form}, %{assigns: %{current_user: user}} = socket) do
-    list_view = Global.__modules__().admin_list_view
-    singular = Global.__naming__().singular
-    context = Global.__modules__().context
-
-    case apply(context, :"update_#{singular}", [changeset, user]) do
+  def handle_event(
+        "create_category",
+        %{"global_category" => params},
+        %{assigns: %{current_user: user}} = socket
+      ) do
+    case Globals.create_global_category(Map.put(params, "globals", []), user) do
       {:ok, _} ->
-        Toast.send_delayed("#{String.capitalize(singular)} updated")
-        {:noreply, push_redirect(socket, to: Brando.routes().admin_live_path(socket, list_view))}
+        Toast.send_delayed("Category created")
+        Modal.hide("modal-create-category")
+        {:noreply, assign_globals(socket)}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        {:noreply, assign(socket, new_category_changeset: changeset)}
     end
   end
 
   def handle_event(
-        "create_global",
-        %{"id" => id},
-        %{assigns: %{category_changeset: category_changeset}} = socket
+        "update_category",
+        %{"global_category" => params},
+        %{assigns: %{category: category, current_user: user}} = socket
       ) do
-    Globals.delete_global_category(id)
+    changeset =
+      category
+      |> GlobalCategory.changeset(params, user)
+      |> filter_deleted_globals()
 
-    new_global = %Global{
-      key: "key",
-      label: "label"
-    }
+    case Globals.update_global_category(changeset, user) do
+      {:ok, _} ->
+        Toast.send_delayed("Category updated")
 
-    globals = get_field(category_changeset, :globals)
-    updated_category_changeset = put_change(category_changeset, :globals, [new_global | globals])
+        {:noreply,
+         socket
+         |> assign_globals()
+         |> assign(
+           selected_category_key: nil,
+           category: nil,
+           category_changeset: nil
+         )}
 
-    {:noreply,
-     socket
-     |> assign(
-       category_changeset: updated_category_changeset,
-       selected_changeset_key: nil
-     )}
-  end
-
-  def handle_event("select_category", %{"key" => key}, socket) do
-    category = Enum.find(socket.assigns.global_categories, &(&1.key == key))
-    category_changeset = change(category)
-
-    {:noreply,
-     assign(socket,
-       category_changeset: category_changeset,
-       selected_changeset_key: key
-     )}
+      {:error, changeset} ->
+        Toast.send_delayed("Error updating category")
+        require Logger
+        Logger.error(inspect(changeset, pretty: true))
+        Logger.error(inspect(changeset.errors, pretty: true))
+        {:noreply, assign(socket, category_changeset: changeset)}
+    end
   end
 
   def handle_event("delete_category", %{"id" => id}, socket) do
@@ -157,20 +169,45 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
      |> assign_globals
      |> assign(
        category_changeset: nil,
-       selected_changeset_key: nil
+       selected_category_key: nil
      )}
   end
 
-  def handle_event("create_category", %{"global_category" => params}, socket) do
-    case Globals.create_global_category(params) do
-      {:ok, _} ->
-        Toast.send_delayed("Category created")
-        Modal.hide("modal-create-category")
-        {:noreply, assign_globals(socket)}
+  def handle_event(
+        "create_global",
+        _,
+        %{assigns: %{category_changeset: category_changeset}} = socket
+      ) do
+    new_global = %Var.String{
+      key: "key",
+      label: "label",
+      type: "string",
+      value: nil,
+      important: false
+    }
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, new_category_changeset: changeset)}
-    end
+    globals = get_field(category_changeset, :globals)
+    new_globals = Enum.reverse([new_global | globals])
+    updated_category_changeset = put_change(category_changeset, :globals, new_globals)
+
+    {:noreply,
+     assign(
+       socket,
+       category_changeset: updated_category_changeset,
+       selected_category_key: nil
+     )}
+  end
+
+  def handle_event("select_category", %{"key" => key}, socket) do
+    category = Enum.find(socket.assigns.global_categories, &(&1.key == key))
+    category_changeset = change(category)
+
+    {:noreply,
+     assign(socket,
+       category: category,
+       category_changeset: category_changeset,
+       selected_category_key: key
+     )}
   end
 
   def handle_event("toggle_config", _, socket) do
@@ -183,7 +220,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
   end
 
   def assign_globals(socket) do
-    assign(socket, :global_categories, Brando.Globals.get_global_categories() |> elem(1))
+    assign(socket, :global_categories, Brando.Globals.list_global_categories() |> elem(1))
   end
 
   def assign_defaults(socket, token) do
@@ -206,5 +243,16 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
   def set_admin_locale(socket) do
     Gettext.put_locale(socket.assigns.current_user.language |> to_string)
     socket
+  end
+
+  defp filter_deleted_globals(changeset) do
+    case get_field(changeset, :globals) do
+      nil ->
+        changeset
+
+      data when is_list(data) ->
+        filtered_globals = Enum.reject(data, & &1.marked_as_deleted)
+        put_change(changeset, :globals, filtered_globals)
+    end
   end
 end

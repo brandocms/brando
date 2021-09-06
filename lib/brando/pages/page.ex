@@ -16,10 +16,8 @@ defmodule Brando.Pages.Page do
   alias Brando.Pages
   alias Brando.Pages.Fragment
   alias Brando.Pages.Property
-  alias BrandoAdmin.Components.Pages.PropertyData
 
   import Brando.Gettext
-  import Surface
 
   # ++ Traits
   trait Brando.Trait.Creator

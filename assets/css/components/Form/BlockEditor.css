@@ -2,11 +2,11 @@
   @row 2;
 
   .code {
-    @column 11/16;
+    @column 10/16;
   }
 
   .properties {
-    @column 5/16;
+    @column 6/16;
     
     .field-wrapper {
       @space margin-bottom 1;

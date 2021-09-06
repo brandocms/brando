@@ -1,7 +1,7 @@
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
-  alias Brando.Sites.Global
+  alias Brando.Sites
   alias Brando.Sites.GlobalCategory
   alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
@@ -29,19 +29,16 @@ defmodule Brando.Factory do
     %GlobalCategory{
       label: "System",
       key: "system",
-      globals: [build_list(2, :global)]
+      globals: [build_list(2, :var_text)]
     }
   end
 
-  def global_factory do
-    %Global{
+  def var_text_factory do
+    %Sites.Var.Text{
       type: "text",
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
-      data: %{
-        "type" => "string",
-        "value" => "Hello!"
-      }
+      value: "Hello!"
     }
   end
 

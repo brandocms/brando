@@ -5,7 +5,6 @@
   import Typography from '@tiptap/extension-typography'
   import Link from '@tiptap/extension-link'
   import Button from './extensions/Button'
-  import Variable from './extensions/Variable'
   import PreventDrop from './extensions/PreventDrop'
   import Focus from '@tiptap/extension-focus'
 
@@ -39,7 +38,6 @@
           openOnClick: false
         }),
         Button,
-        Variable,
         Focus.configure({
           className: 'has-focus',
           mode: 'shallowest',

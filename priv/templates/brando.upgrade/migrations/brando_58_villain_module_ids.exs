@@ -1,4 +1,4 @@
-defmodule Animaskin.Repo.Migrations.MigrateVillainModuleIds do
+defmodule Brando.Repo.Migrations.MigrateVillainModuleIds do
   use Ecto.Migration
   import Ecto.Query
 

@@ -152,15 +152,15 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/cache"
               },
               %{
-                name: gettext("Content modules"),
+                name: gettext("Block modules"),
                 url: "/admin/config/modules"
               },
               %{
-                name: gettext("Content templates"),
+                name: gettext("Templates"),
                 url: "/admin/config/templates"
               },
               %{
-                name: gettext("Content sections"),
+                name: gettext("Sections"),
                 url: "/admin/config/sections"
               }
             ]

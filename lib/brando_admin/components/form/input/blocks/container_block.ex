@@ -133,11 +133,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     generated_uid = Brando.Utils.generate_uid() |> IO.inspect(label: "generated UID")
 
-    refs_with_generated_uids =
-      put_in(
+    {_, refs_with_generated_uids} =
+      get_and_update_in(
         module.refs,
         [Access.all(), Access.key(:data), Access.key(:uid)],
-        Brando.Utils.generate_uid()
+        &{&1, Brando.Utils.generate_uid()}
       )
 
     new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
