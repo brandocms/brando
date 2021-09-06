@@ -107,9 +107,15 @@ defmodule Brando.Utils do
   @spec try_path(map :: map, keys :: [atom] | nil) :: any | nil
   def try_path(_, nil), do: nil
 
-  def try_path(map, keys) do
+  def try_path(map, keys) when is_map(map) do
     Enum.reduce(keys, map, fn key, acc ->
       if acc, do: Map.get(acc, key)
+    end)
+  end
+
+  def try_path(kw, keys) when is_list(kw) do
+    Enum.reduce(keys, kw, fn key, acc ->
+      if acc, do: Keyword.get(acc, key)
     end)
   end
 
