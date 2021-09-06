@@ -1,8 +1,7 @@
 .content-list { 
   .empty-list {
-    @space padding-y 3;
+    @space padding-y 7vw;
     @color bg peach;
-    max-width: 500px;
     border-radius: 33px;
 
     display: flex;
