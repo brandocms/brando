@@ -1,9 +1,11 @@
 defmodule BrandoAdmin.Menu do
   @moduledoc """
+      import MyAppAdmin.Gettext
+
       menus do
-        menu_item gettext("Projects") do
-          menu_subitem gettext("Projects"), "/admin/projects/projects"
-          menu_subitem gettext("Categories"), "/admin/projects/categories"
+        menu_item t("Projects") do
+          menu_subitem t("Projects"), "/admin/projects/projects"
+          menu_subitem t("Categories"), "/admin/projects/categories"
           menu_subitem MyApp.Project.Something
         end
 
@@ -11,7 +13,7 @@ defmodule BrandoAdmin.Menu do
       end
   """
 
-  import Brando.Gettext
+  require Brando.Gettext
 
   defmacro __using__(_) do
     quote do
@@ -26,8 +28,37 @@ defmodule BrandoAdmin.Menu do
       def __menus__ do
         @menus
         |> Enum.reverse()
+        |> translate_menus()
       end
     end
+  end
+
+  def translate_menus(menus) do
+    Enum.map(menus, &__MODULE__.translate_menu/1)
+  end
+
+  def translate_menu(%{name: msgid, items: items} = menu)
+      when is_nil(items) or length(items) == 0 do
+    %{menu | name: translate_msgid(msgid)}
+  end
+
+  def translate_menu(%{name: msgid, items: items} = menu) do
+    translated_items = translate_menus(items)
+    %{menu | name: translate_msgid(msgid), items: translated_items}
+  end
+
+  def translate_menu(%{name: msgid} = menu) do
+    %{menu | name: translate_msgid(msgid)}
+  end
+
+  defp translate_msgid({:translate, gettext_domain, msgid}) do
+    Brando.gettext_admin()
+    |> Gettext.dgettext(gettext_domain, msgid)
+    |> String.capitalize()
+  end
+
+  defp translate_msgid(msgid) do
+    Gettext.dgettext(Brando.gettext_admin(), "menus", msgid)
   end
 
   defmacro menus(do: block) do
@@ -126,15 +157,13 @@ defmodule BrandoAdmin.Menu do
     quote location: :keep,
           generated: true,
           bind_quoted: [schema: schema] do
-      domain = schema.__naming__().domain |> Recase.to_snake()
+      domain = schema.__naming__().domain
+      snake_domain = domain |> Recase.to_snake()
+      schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
-      require Logger
-      Logger.error("==> running with locale: #{inspect(Gettext.get_locale())}")
+      msgid = plural
 
-      translated_plural =
-        Brando.Utils.try_path(schema.__translations__, [:naming, :plural]) || plural
-
-      url_base = "/admin/#{domain}/#{plural}"
+      url_base = "/admin/#{snake_domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
 
       if !default_listing do
@@ -151,10 +180,10 @@ defmodule BrandoAdmin.Menu do
         |> String.replace("%5D", "]")
 
       url = Enum.join([url_base, query_params], "?")
+      gettext_domain = String.downcase("#{domain}_#{schema_name}_naming")
 
-      # TODO: Translation for plural?
       var!(b_menu_subitems) = [
-        %{name: String.capitalize(translated_plural), url: url} | var!(b_menu_subitems)
+        %{name: {:translate, gettext_domain, msgid}, url: url} | var!(b_menu_subitems)
       ]
     end
   end
@@ -166,89 +195,95 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  defmacro t(msgid) do
+    quote do
+      dgettext("menus", unquote(msgid))
+    end
+  end
+
   def get_menu do
     content_menus = Brando.admin_module(Menus).__menus__()
 
     [
       %{
-        name: gettext("System"),
+        name: Brando.Gettext.gettext("System"),
         items: [
           %{
-            name: gettext("Dashboard"),
+            name: Brando.Gettext.gettext("Dashboard"),
             url: "/admin"
           },
           %{
-            name: gettext("Configuration"),
+            name: Brando.Gettext.gettext("Configuration"),
             url: nil,
             items: [
               %{
-                name: gettext("Navigation"),
+                name: Brando.Gettext.gettext("Navigation"),
                 url: "/admin/config/navigation"
               },
               %{
-                name: gettext("Identity"),
+                name: Brando.Gettext.gettext("Identity"),
                 url: "/admin/config/identity"
               },
               %{
-                name: gettext("SEO"),
+                name: Brando.Gettext.gettext("SEO"),
                 url: "/admin/config/seo"
               },
               %{
-                name: gettext("Global variables"),
+                name: Brando.Gettext.gettext("Global variables"),
                 url: "/admin/config/globals"
               },
               %{
-                name: gettext("Planned publishing"),
+                name: Brando.Gettext.gettext("Planned publishing"),
                 url: "/admin/config/planned-publishing"
               },
               %{
-                name: gettext("Cache"),
+                name: Brando.Gettext.gettext("Cache"),
                 url: "/admin/config/cache"
               },
               %{
-                name: gettext("Block modules"),
+                name: Brando.Gettext.gettext("Block modules"),
                 url: "/admin/config/modules"
               },
               %{
-                name: gettext("Templates"),
+                name: Brando.Gettext.gettext("Templates"),
                 url: "/admin/config/templates"
               },
               %{
-                name: gettext("Sections"),
+                name: Brando.Gettext.gettext("Sections"),
                 url: "/admin/config/sections"
               }
             ]
           },
           %{
-            name: gettext("Assets"),
+            name: Brando.Gettext.gettext("Assets"),
             url: nil,
             items: [
               %{
-                name: gettext("Files"),
+                name: Brando.Gettext.gettext("Files"),
                 url: "/admin/assets/files"
               },
               %{
-                name: gettext("Images"),
+                name: Brando.Gettext.gettext("Images"),
                 url: "/admin/assets/images"
               },
               %{
-                name: gettext("Videos"),
+                name: Brando.Gettext.gettext("Videos"),
                 url: "/admin/assets/videos"
               }
             ]
           },
           %{
-            name: gettext("Users"),
+            name: Brando.Gettext.gettext("Users"),
             url: "/admin/users"
           }
         ]
       },
       %{
-        name: gettext("Content"),
+        name: Brando.Gettext.gettext("Content"),
         items:
           [
             %{
-              name: gettext("Pages & Sections"),
+              name: Brando.Gettext.gettext("Pages & Sections"),
               url: "/admin/pages"
             }
           ] ++ content_menus

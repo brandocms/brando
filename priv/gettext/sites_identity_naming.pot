@@ -11,6 +11,6 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:113 lib/brando/sites/identity.ex:114
+#: lib/brando/sites/identity.ex:130 lib/brando/sites/identity.ex:131
 msgid "identity"
 msgstr ""

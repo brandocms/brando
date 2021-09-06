@@ -12,11 +12,11 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/pages/fragment.ex:61
-msgid "user"
+#: lib/brando/pages/fragment.ex:62
+msgid "fragment"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/fragment.ex:62
-msgid "users"
+#: lib/brando/pages/fragment.ex:63
+msgid "fragments"
 msgstr ""

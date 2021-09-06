@@ -11,51 +11,41 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:132
-msgid "Activate user"
+#: lib/brando/pages/fragment.ex:83
+msgid "Content"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:129
-msgid "Administrate users"
+#: lib/brando/pages/fragment.ex:78
+msgid "Key"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:130
-msgid "Create user"
+#: lib/brando/pages/fragment.ex:73
+msgid "Parent key"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:134
-msgid "Deactivate user"
+#: lib/brando/pages/fragment.ex:68 lib/brando/pages/fragment.ex:69
+msgid "Title"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:131
-msgid "Edit user"
+#: lib/brando/pages/fragment.ex:87
+msgid "Wrapper"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:126
-msgid "Error"
+#: lib/brando/pages/fragment.ex:89
+msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:127
-msgid "Superuser cannot be deactivated"
+#: lib/brando/pages/fragment.ex:79
+msgid "key"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:133
-msgid "User activated"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:135
-msgid "User deactivated"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:128
-msgid "Users"
+#: lib/brando/pages/fragment.ex:74
+msgid "parent_key"
 msgstr ""

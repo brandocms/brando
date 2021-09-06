@@ -10,7 +10,6 @@ defmodule <%= app_module %>.<%= domain %> do
   # __types
 
   use Brando.Query
-  alias <%= app_module %>.Repo
   import Ecto.Query
 
   # ++header
