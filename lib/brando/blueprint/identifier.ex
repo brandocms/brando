@@ -11,8 +11,10 @@ defmodule Brando.Blueprint.Identifier do
         context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
         {result, _} = Liquex.Render.render([], @parsed_identifier, context)
         title = Enum.join(result)
-        type = @singular
-        translated_type = Gettext.dgettext(Brando.gettext(), "default", type)
+
+        translated_type =
+          Brando.Utils.try_path(__MODULE__.__translations__(), [:naming, :singular]) || @singular
+
         status = Map.get(entry, :status, nil)
         absolute_url = __MODULE__.__absolute_url__(entry)
         cover = Brando.Schema.extract_cover(entry)
