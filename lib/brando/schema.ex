@@ -69,7 +69,7 @@ defmodule Brando.Schema do
           |> Module.split()
           |> List.last()
 
-        translated_type = Gettext.dgettext(Brando.gettext(), "default", type)
+        translated_type = Gettext.dgettext(Brando.gettext_admin(), "default", type)
         status = Map.get(entry, :status, nil)
         absolute_url = __MODULE__.__absolute_url__(entry)
         cover = Brando.Schema.extract_cover(entry)

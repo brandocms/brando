@@ -51,6 +51,7 @@ defmodule Brando do
   Gets the parent app's gettext module
   """
   def gettext, do: web_module(Gettext)
+  def gettext_admin, do: admin_module(Gettext)
 
   @doc """
   Gets the parent app's helpers

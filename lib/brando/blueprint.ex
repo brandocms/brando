@@ -3,7 +3,7 @@ defmodule Brando.Blueprint do
 
   # Override Gettext module
 
-  If you have a nonstandard named gettext module for your app (not MyAppWeb.Gettext),
+  If you have a nonstandard named gettext module for your app (not MyAppAdmin.Gettext),
   you can supply a `gettext_module` option to your use statement:
 
       use Brando.Blueprint,
@@ -593,7 +593,7 @@ defmodule Brando.Blueprint do
             do: @gettext_module,
             else:
               Module.concat([
-                web_module,
+                admin_module,
                 "Gettext"
               ])
 
