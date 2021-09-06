@@ -194,11 +194,7 @@ defmodule Mix.Tasks.Brando.Gen do
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen", "", binding, files)
 
     instructions = """
-    Update your repository by running migrations:
-
-        $ mix ecto.migrate
-
-    Then add these routes to your router
+    If you want to manage this schema through the admin, add these routes to your router
 
         live "/#{snake_domain}/#{plural}", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}ListLive
         live "/#{snake_domain}/#{plural}/create", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}CreateLive
