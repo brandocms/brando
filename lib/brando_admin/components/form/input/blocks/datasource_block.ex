@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
 
+  alias BrandoAdmin.Components.Identifier
   alias BrandoAdmin.Components.Form.ArrayInputs
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
@@ -25,8 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
 
   alias Brando.Datasource
 
-  # def v(form, field), do: input_value(form, field)
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
+  def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
     {:ok,
@@ -138,8 +138,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
           <Input.Text form={@block_data} field={:arg} />
           <Input.Text form={@block_data} field={:limit} />
 
-
-
         </:config>
         <div class="datasource-block">
           <div class="villain-block-datasource-info">
@@ -155,22 +153,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                   </code>
                 </small>
               </p>
+
               {#if v(@block_data, :type) == :selection}
-              {!--
                 <ArrayInputs
                   :let={value: array_value, name: array_name}
                   form={@block_data}
                   for={:ids}>
-                  <input type="text" name={array_name} value={array_value} />
+                  <input type="hidden" name={array_name} value={array_value} />
                 </ArrayInputs>
-              --}
-                <input type="text" name="project[data][0][data][ids][]" value="4" />
-                <input type="text" name="project[data][0][data][ids][]" value="5" />
-                <input type="text" name="project[data][0][data][ids][]" value="6" />
 
                 <div class="selected-entries">
-                  {#for entry <- @selected_entries}
-                    {entry.id} - {entry.title}<br>
+                  {#for identifier <- @selected_entries}
+                    <Identifier identifier={identifier} />
                   {/for}
                 </div>
 

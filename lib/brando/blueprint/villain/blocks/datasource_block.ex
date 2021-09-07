@@ -1,5 +1,16 @@
 defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
   defmodule Data do
+    defmodule Test do
+      use Brando.Trait
+      @changeset_phase :before_validate_required
+
+      def changeset_mutator(_module, _config, changeset, _user, _opts) do
+        require Logger
+        Logger.error(inspect(changeset, pretty: true))
+        changeset
+      end
+    end
+
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -8,8 +19,7 @@ defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
       plural: "datasource_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
-    alias Brando.Images.Focal
+    trait __MODULE__.Test
 
     @primary_key false
     data_layer :embedded

@@ -406,7 +406,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->
         Toast.send_delayed("Module updated")
-        {:noreply, push_redirect(socket, to: "/admin/config/modules")}
+        {:noreply, push_redirect(socket, to: "/admin/config/content/modules")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         traversed_errors =

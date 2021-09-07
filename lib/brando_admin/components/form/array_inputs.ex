@@ -23,17 +23,6 @@ defmodule BrandoAdmin.Components.Form.ArrayInputs do
 
   def update(assigns, socket) do
     value = input_value(assigns.form, assigns.for)
-    # case input_value(assigns.form, assigns.for) do
-    #   map when is_map(map) ->
-    #     map
-
-    #   list when is_list(list) ->
-    #     list
-    #     |> Enum.with_index()
-    #     |> Enum.map(&{to_string(elem(&1, 1)), elem(&1, 0)})
-    #     |> Enum.into(%{})
-    #     |> IO.inspect()
-    # end
 
     {:ok,
      socket
@@ -44,10 +33,10 @@ defmodule BrandoAdmin.Components.Form.ArrayInputs do
   def render(assigns) do
     ~F"""
     {#if @input_value}
-      {#for {index, mv} <- @input_value}
+      {#for {mv, idx} <- Enum.with_index(@input_value)}
         <#slot :args={
           name: "#{@form.name}[#{@for}][]",
-          key: index,
+          key: idx,
           value: mv
         } />
       {/for}

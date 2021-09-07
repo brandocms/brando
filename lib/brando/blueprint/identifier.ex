@@ -25,7 +25,7 @@ defmodule Brando.Blueprint.Identifier do
         %Brando.Blueprint.Identifier{
           id: entry.id,
           title: title,
-          type: translated_type,
+          type: String.capitalize(translated_type),
           status: status,
           absolute_url: absolute_url,
           cover: cover,

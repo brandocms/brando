@@ -25,6 +25,10 @@
     }
   }
 
+  .selected-entries {
+    @space margin-top 15px;
+  }
+
   .selected-entry {
     margin-top: 15px;
     padding: 7px 0;

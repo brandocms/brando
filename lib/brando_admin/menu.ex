@@ -249,15 +249,15 @@ defmodule BrandoAdmin.Menu do
               },
               %{
                 name: Brando.Gettext.gettext("Block modules"),
-                url: "/admin/config/modules"
+                url: "/admin/config/content/modules"
               },
               %{
                 name: Brando.Gettext.gettext("Templates"),
-                url: "/admin/config/templates"
+                url: "/admin/config/content/templates"
               },
               %{
                 name: Brando.Gettext.gettext("Sections"),
-                url: "/admin/config/sections"
+                url: "/admin/config/content/sections"
               }
             ]
           },

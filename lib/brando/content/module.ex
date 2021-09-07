@@ -98,7 +98,7 @@ defmodule Brando.Content.Module do
         <a
           data-phx-link="redirect"
           data-phx-link-state="push"
-          href="/admin/config/modules/update/{{ entry.id }}"
+          href="/admin/config/content/modules/update/{{ entry.id }}"
           class="entry-link">
           {{ entry.name }}
         </a>
