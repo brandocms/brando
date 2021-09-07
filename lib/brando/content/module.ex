@@ -1,6 +1,6 @@
-defmodule Brando.Villain.Module do
+defmodule Brando.Content.Module do
   @moduledoc """
-  Ecto schema for the Villain Module schema
+  Ecto schema for the Villain Content Module schema
 
   A module can hold a setup for multiple blocks.
   """
@@ -9,16 +9,14 @@ defmodule Brando.Villain.Module do
 
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Villain",
+    domain: "Content",
     schema: "Module",
     singular: "module",
     plural: "modules",
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  alias Brando.Sites.Var
-
-  table "pages_modules"
+  alias Brando.Content.Var
 
   identifier "{{ entry.name }}"
 

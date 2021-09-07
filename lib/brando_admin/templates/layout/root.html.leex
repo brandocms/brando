@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <%= csrf_meta_tag() %>
-    <%= live_title_tag assigns[:page_title] || "Brando" %>
+    <%= live_title_tag assigns[:page_title] || "Admin", suffix: " | #{Brando.config(:app_name)}" %>
     <meta name="user_id" content="<%= @current_user.id %>">
     <meta name="user_token" content="<%= Brando.Users.build_token(@current_user.id) %>">
     <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>

@@ -1,4 +1,4 @@
-defmodule Brando.Villain.Module.Trait.ValidateCode do
+defmodule Brando.Content.Module.Trait.ValidateCode do
   @moduledoc """
   Ensures that all referenced refs in code exists
   """

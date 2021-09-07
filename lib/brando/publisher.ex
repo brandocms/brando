@@ -27,7 +27,7 @@ defmodule Brando.Publisher do
       {:ok, entry}
     else
       args = %{schema: schema, id: id, user_id: user.id, status: :published}
-      entry_identifier = Brando.Schema.identifier_for(entry)
+      entry_identifier = Brando.Blueprint.Identifier.identifier_for(entry)
 
       Brando.repo().delete_all(
         from j in Oban.Job,
@@ -59,7 +59,7 @@ defmodule Brando.Publisher do
 
     revision_identifier =
       decoded_entry
-      |> Brando.Schema.identifier_for()
+      |> Brando.Blueprint.Identifier.identifier_for()
       |> maybe_add_revision_description(revision)
 
     args

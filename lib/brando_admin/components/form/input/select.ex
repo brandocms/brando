@@ -17,6 +17,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   prop options, :any
   prop current_user, :any
 
+  # props for non blueprint
+  prop narrow, :boolean, default: false
+  prop resetable, :boolean, default: false
+  prop show_filter, :boolean, default: true
+  prop changeset_fun, :fun
+  prop default_entry, :any
+  prop entry_form, :any
+
   data open, :boolean
   data selected_option, :any
   data input_options, :list
@@ -24,9 +32,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   data select_changeset, :any
   data filter_string, :string
   data modal_id, :string
-  data show_filter, :boolean
-  data narrow, :boolean
-  data resetable, :boolean
 
   slot default
 
@@ -39,15 +44,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(:filter_string, "")}
   end
 
-  def update(%{input: %{opts: opts}, blueprint: blueprint} = assigns, socket) do
-    selected_option =
-      case input_value(assigns.form, assigns.input.name) do
-        "" -> ""
-        nil -> nil
-        res when is_atom(res) -> to_string(res)
-        res when is_integer(res) -> to_string(res)
-        res -> res
-      end
+  def update(%{input: %{opts: opts}, blueprint: _} = assigns, socket) do
+    selected_option = get_selected_option(assigns.form, assigns.input.name)
 
     show_filter = Keyword.get(opts, :filter, true)
     narrow = Keyword.get(opts, :narrow)
@@ -76,12 +74,49 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      end)}
   end
 
+  def update(assigns, socket) do
+    selected_option = get_selected_option(assigns.form, assigns.field)
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:default, assigns.default_entry)
+     |> assign(:selected_option, selected_option)
+     |> assign_input_options()
+     |> assign_label()
+     |> maybe_assign_select_changeset()
+     |> maybe_assign_select_form()
+     |> assign_new(:modal_id, fn ->
+       "select-#{assigns.form.id}-#{assigns.field}-modal"
+     end)}
+  end
+
   def assign_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
     assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
   end
 
+  def assign_input_options(%{assigns: %{form: _, options: options}} = socket) do
+    assign_new(socket, :input_options, fn ->
+      Enum.map(options, &ensure_string_values/1)
+    end)
+  end
+
   def update_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
     assign(socket, :input_options, get_input_options(form, opts))
+  end
+
+  def update_input_options(%{assigns: %{form: _form, options: options}} = socket) do
+    assign(socket, :input_options, Enum.map(options, &ensure_string_values/1))
+  end
+
+  defp get_selected_option(form, field) do
+    case input_value(form, field) do
+      "" -> ""
+      nil -> nil
+      res when is_atom(res) -> to_string(res)
+      res when is_integer(res) -> to_string(res)
+      res -> res
+    end
   end
 
   defp get_input_options(form, opts) do
@@ -179,6 +214,125 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           <div class="select-modal">
             {#if @show_filter && !Enum.empty?(@input_options)}
               <div class="select-filter" id={"#{@form.id}-#{name}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+                <div class="field-wrapper">
+                  <div class="label-wrapper">
+                    <label for="select-modal-search" class="control-label">
+                      <span>Filter options</span>
+                    </label>
+                  </div>
+                  <div class="field-base">
+                    <input class="text" name="select-modal-search" type="text" value={@filter_string}>
+                  </div>
+                </div>
+              </div>
+            {/if}
+
+            <div class="options">
+              <h2 class="titlecase">Available options</h2>
+              {#if Enum.empty?(@input_options)}
+                No options found
+              {/if}
+              {#for opt <- @input_options}
+                <button
+                  type="button"
+                  class={"options-option", "option-selected": opt.value == @selected_option}
+                  data-label={opt.label}
+                  value={opt.value}
+                  :on-click="select_option">
+                  {opt.label}
+                </button>
+              {/for}
+            </div>
+
+            {#if @select_form}
+              <Form
+                for={@select_changeset}
+                change="validate_new_entry"
+                :let={form: entry_form}>
+                Create entry
+
+                <code style="font-family: monospace; font-size: 11px"><pre>
+                {inspect @select_changeset, pretty: true}
+                </pre></code>
+                <br>
+                {#for {tab, _tab_idx} <- Enum.with_index(@select_form.tabs)}
+                  <div
+                    class={"form-tab", active: true}
+                    data-tab-name={tab.name}>
+                    <div class="row">
+                      {#for {fieldset, fs_idx} <- Enum.with_index(tab.fields)}
+                        <Fieldset
+                          id={"#{entry_form.id}-fieldset-#{tab.name}-#{fs_idx}"}
+                          blueprint={@blueprint}
+                          form={entry_form}
+                          uploads={[]}
+                          fieldset={fieldset} />
+                      {/for}
+                    </div>
+                  </div>
+                {/for}
+                <button
+                  :on-click="save_new_entry"
+                  type="button" class="primary">
+                  Save
+                </button>
+              </Form>
+            {/if}
+
+            {#if @resetable}
+              <div class="reset">
+                <button
+                  type="button"
+                  class="secondary"
+                  :on-click="reset">
+                  Reset value
+                </button>
+              </div>
+            {/if}
+          </div>
+        </Modal>
+      </div>
+    </FieldBase>
+    """
+  end
+
+  def render(assigns) do
+    ~F"""
+    <FieldBase
+      form={@form}
+      field={@field}>
+
+      {hidden_input @form, @field, value: @selected_option}
+
+      <div class="multiselect">
+        <div>
+          <span>
+            {#if slot_assigned?(:default)}
+              <#slot />
+            {#else}
+              {#if @selected_option}
+                {@label}
+              {#else}
+                No selection
+              {/if}
+            {/if}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="button-edit"
+          :on-click="toggle"
+          phx-value-id={@modal_id}>
+          {#if @open}
+            Close
+          {#else}
+            Select
+          {/if}
+        </button>
+        <Modal title="Select option" id={@modal_id} narrow={@narrow}>
+          <div class="select-modal">
+            {#if @show_filter && !Enum.empty?(@input_options)}
+              <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">

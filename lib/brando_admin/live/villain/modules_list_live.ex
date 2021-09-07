@@ -1,8 +1,7 @@
 defmodule BrandoAdmin.Villain.ModuleListLive do
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Villain.Module
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
 
   alias BrandoAdmin.Components.Content
-  alias Brando.Villain
 
   import Brando.Gettext
 
@@ -40,11 +39,16 @@ defmodule BrandoAdmin.Villain.ModuleListLive do
           "  </div>\n</article>"
     }
 
-    {:ok, new_module} = Villain.create_module(params, user)
+    {:ok, new_module} = Brando.Content.create_module(params, user)
 
     {:noreply,
      push_redirect(socket,
-       to: Brando.routes().admin_live_path(socket, BrandoAdmin.Villain.ModuleUpdateLive, new_module.id)
+       to:
+         Brando.routes().admin_live_path(
+           socket,
+           BrandoAdmin.Villain.ModuleUpdateLive,
+           new_module.id
+         )
      )}
   end
 end

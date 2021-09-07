@@ -1,15 +1,14 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Surface.Components.Form.HiddenInput
+  alias Brando.Content
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.MapInputs
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   prop block, :any
   prop base_form, :any
@@ -35,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   defp get_module(id) do
-    {:ok, modules} = Villain.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
 
     case Enum.find(modules, &(&1.id == id)) do
       nil -> nil
@@ -179,7 +178,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     require Logger
     Logger.error(inspect("reinit_vars"))
     module_id = input_value(block_data, :module_id)
-    {:ok, module} = Villain.get_module(module_id)
+    {:ok, module} = Brando.Content.get_module(module_id)
 
     # update_block(uid, %{vars: vars_blueprint})
     changeset = base_form.source

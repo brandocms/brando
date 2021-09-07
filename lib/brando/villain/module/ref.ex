@@ -1,4 +1,4 @@
-defmodule Brando.Villain.Module.Ref do
+defmodule Brando.Content.Module.Ref do
   @moduledoc """
   Ecto schema for a module ref
   """

@@ -95,7 +95,7 @@ user = <%= application_module %>.Repo.insert!(user)
 }
 |> <%= application_module %>.Repo.insert!()
 
-example_module = %Brando.Villain.Module{
+example_module = %Brando.Content.Module{
   class: "example",
   code:
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
@@ -104,7 +104,7 @@ example_module = %Brando.Villain.Module{
   name: "Example module",
   namespace: "general",
   refs: [
-    %Brando.Villain.Module.Ref{
+    %Brando.Content.Module.Ref{
       data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
         data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
           class: nil,
@@ -117,7 +117,7 @@ example_module = %Brando.Villain.Module{
       description: "",
       name: "h1"
     },
-    %Brando.Villain.Module.Ref{
+    %Brando.Content.Module.Ref{
       data: %Brando.Blueprint.Villain.Blocks.TextBlock{
         data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
           extensions: [],
@@ -175,7 +175,7 @@ page = %Brando.Pages.Page{
         module_id: example_module.id,
         multi: false,
         refs: [
-          %Brando.Villain.Module.Ref{
+          %Brando.Content.Module.Ref{
             data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
               data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
                 class: nil,
@@ -188,7 +188,7 @@ page = %Brando.Pages.Page{
             description: "",
             name: "h1"
           },
-          %Brando.Villain.Module.Ref{
+          %Brando.Content.Module.Ref{
             data: %Brando.Blueprint.Villain.Blocks.TextBlock{
               data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
                 extensions: [],

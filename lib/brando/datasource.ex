@@ -107,6 +107,7 @@ defmodule Brando.Datasource do
 
   """
   alias Brando.Villain
+  alias Brando.Blueprint.Identifier
   import Ecto.Query
 
   @doc """
@@ -235,7 +236,11 @@ defmodule Brando.Datasource do
   """
   def list_datasources do
     {:ok, modules} = :application.get_key(Brando.otp_app(), :modules)
-    {:ok, Enum.filter(modules, &is_datasource/1)}
+
+    {:ok,
+     modules
+     |> Enum.filter(&is_datasource/1)
+     |> Enum.map(&String.replace(to_string(&1), "Elixir.", ""))}
   end
 
   @doc """
@@ -264,15 +269,33 @@ defmodule Brando.Datasource do
   """
   def list_selection(module_binary, query, arg) do
     module = Module.concat([module_binary])
-    module.__datasource__(:list_selection, String.to_existing_atom(query)).(module_binary, arg)
+
+    available_entries =
+      module.__datasource__(:list_selection, String.to_existing_atom(query)).(module_binary, arg)
+
+    case available_entries do
+      {:ok, [%{label: _} | _] = options} ->
+        {:ok, options}
+
+      {:ok, entries} ->
+        Identifier.identifiers_for(entries)
+    end
   end
 
   @doc """
   Get selection by [ids] from database
   """
+  def get_selection(_module_binary, _query, nil) do
+    {:ok, []}
+  end
+
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
-    module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
+
+    {:ok, selected_entries} =
+      module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
+
+    Identifier.identifiers_for(selected_entries)
   end
 
   @doc """

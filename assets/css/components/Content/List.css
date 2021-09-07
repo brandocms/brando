@@ -304,6 +304,7 @@
     }
 
     .entry-link {
+      font-weight: 500;
       border-bottom: none;
       position: relative;
       color: theme(colors.dark);

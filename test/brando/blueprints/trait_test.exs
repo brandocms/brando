@@ -109,7 +109,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.Pages.Fragment,
                Brando.Pages.Page,
                Brando.Users.User,
-               Brando.Villain.Module
+               Brando.Content.Module
              ]
     end
   end

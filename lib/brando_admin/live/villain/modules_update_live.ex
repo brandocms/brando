@@ -10,8 +10,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias Brando.Villain
-  alias Brando.Villain.Module.Ref
-  alias Brando.Sites.Var
+  alias Brando.Content.Module.Ref
+  alias Brando.Content.Var
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
@@ -391,19 +391,19 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{"module" => module_params},
         %{assigns: %{current_user: current_user, entry: entry}} = socket
       ) do
-    changeset = Brando.Villain.Module.changeset(entry, module_params, current_user)
+    changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
   def handle_event(
         "save",
-        %{"module" => module_params},
+        _,
         %{assigns: %{current_user: user, changeset: changeset}} = socket
       ) do
     changeset = %{changeset | action: :update}
 
-    case Villain.update_module(changeset, user) do
+    case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->
         Toast.send_delayed("Module updated")
         {:noreply, push_redirect(socket, to: "/admin/config/modules")}
@@ -440,13 +440,13 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   defp assign_entry(socket, entry_id) do
     assign_new(socket, :entry, fn ->
-      Brando.Villain.get_module!(entry_id) |> IO.inspect(pretty: true)
+      Brando.Content.get_module!(entry_id)
     end)
   end
 
   defp assign_changeset(%{assigns: %{entry: entry, current_user: current_user}} = socket) do
     assign_new(socket, :changeset, fn ->
-      Brando.Villain.Module.changeset(entry, %{}, current_user)
+      Brando.Content.Module.changeset(entry, %{}, current_user)
     end)
   end
 end

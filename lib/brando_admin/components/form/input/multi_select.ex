@@ -30,10 +30,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   data show_filter, :boolean
   data narrow, :boolean
   data creating, :boolean
+  data resetable, :boolean
 
   slot default
 
-  import Brando.Gettext
+  # import Brando.Gettext
 
   def mount(socket) do
     {:ok,
@@ -43,7 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:filter_string, "")}
   end
 
-  def update(%{input: %{opts: opts}, blueprint: blueprint} = assigns, socket) do
+  def update(%{input: %{opts: opts}, blueprint: _blueprint} = assigns, socket) do
     show_filter = Keyword.get(opts, :filter, true)
     narrow = Keyword.get(opts, :narrow)
     resetable = Keyword.get(opts, :resetable)
@@ -81,9 +82,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           %Ecto.Association.NotLoaded{} -> []
           val -> val
         end
-
-      require Logger
-      Logger.error("==> assign_selected_options = #{inspect(raw_value, pretty: true)}")
 
       selected_options =
         Enum.map(raw_value, fn

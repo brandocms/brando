@@ -1,7 +1,7 @@
-defmodule Brando.Sites.Var.Text do
+defmodule Brando.Content.Var.Text do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Sites",
+    domain: "Content",
     schema: "VarText",
     singular: "var_text",
     plural: "var_texts",

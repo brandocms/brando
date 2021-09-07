@@ -8,6 +8,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Modal
+
+  alias Brando.Content
   alias Brando.Villain
 
   prop block, :any
@@ -90,6 +92,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           insert_index={@insert_index}
           insert_block="insert_block"
           insert_section="insert_section"
+          insert_datasource="insert_datasource"
           show_module_picker="show_module_picker"
           duplicate_block="duplicate_block" />
       </Blocks.Block>
@@ -126,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     form_id = "#{module.__naming__.singular}_form"
     module_id = String.to_integer(module_id_binary)
 
-    {:ok, modules} = Villain.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
 
     # build a module block from module

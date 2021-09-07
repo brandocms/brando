@@ -253,7 +253,7 @@ defmodule Brando.DatasourcesTest do
     data_field = :data
 
     user = Factory.insert(:random_user)
-    {:ok, module} = Villain.create_module(@dummy_module, user)
+    {:ok, module} = Brando.Content.create_module(@dummy_module, user)
 
     data_refed_datasource = [
       %{

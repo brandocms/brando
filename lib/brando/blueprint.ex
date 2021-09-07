@@ -860,6 +860,45 @@ defmodule Brando.Blueprint do
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
 
+  @doc """
+  List all blueprints
+  """
+  @spec list_blueprints :: [module()]
+  def list_blueprints do
+    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+
+    app_modules
+    |> Enum.uniq()
+    |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  def list_entry_types do
+    blueprints = list_blueprints() ++ [Brando.Pages.Page]
+    entry_types = Enum.map(blueprints, &{get_plural(&1), &1})
+    {:ok, entry_types}
+  end
+
+  def list_entries_for(schema) do
+    list_opts = %{}
+    context = schema.__modules__.context
+    plural = schema.__naming__.plural
+
+    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
+    Brando.Blueprint.Identifier.identifiers_for(entries)
+  end
+
+  def get_entry_for_identifier(%__MODULE__.Identifier{id: id, schema: schema}) do
+    context = schema.__modules__.context
+    singular = schema.__naming__.singular
+    opts = %{matches: %{id: id}}
+    apply(context, :"get_#{singular}", [opts])
+  end
+
+  defp get_plural(module) do
+    plural = Brando.Utils.try_path(module.__translations__, [:naming, :plural])
+    String.capitalize(plural || module.__naming__.plural)
+  end
+
   defmacro __after_compile__(env, _) do
     # validate traits
     Enum.each(env.module.__traits__(), &elem(&1, 0).validate(env.module, elem(&1, 1)))

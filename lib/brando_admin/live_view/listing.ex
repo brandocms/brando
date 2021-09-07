@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   """
   import Phoenix.LiveView
+  alias Brando.Utils
   alias BrandoAdmin.Toast
 
   defmacro __using__(opts) do
@@ -50,6 +51,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       |> assign_current_user(token)
       |> set_admin_locale()
       |> assign_schema(schema)
+      |> assign_title()
       |> assign_blueprint(schema)
       |> attach_hooks(schema)
 
@@ -154,6 +156,18 @@ defmodule BrandoAdmin.LiveView.Listing do
     assign_new(socket, :schema, fn ->
       schema
     end)
+  end
+
+  defp assign_title(%{assigns: %{schema: schema}} = socket) do
+    translated_plural =
+      schema.__translations__
+      |> Utils.try_path([:naming, :plural])
+
+    assign(
+      socket,
+      :page_title,
+      (translated_plural && String.capitalize(translated_plural)) || nil
+    )
   end
 
   defp assign_blueprint(socket, schema) do

@@ -30,4 +30,8 @@
     padding: 7px 0;
     border-bottom: 1px solid theme(colors.peach);
   }
+
+  .select-button {
+    @space margin-top 15px;
+  }
 }

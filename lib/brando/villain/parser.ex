@@ -74,6 +74,7 @@ defmodule Brando.Villain.Parser do
       import Phoenix.HTML
 
       alias Brando.Cache
+      alias Brando.Content
       alias Brando.Datasource
       alias Brando.Villain
 
@@ -145,7 +146,7 @@ defmodule Brando.Villain.Parser do
         base_context = opts.context
         modules = opts.modules
 
-        {:ok, module} = Villain.find_module(modules, id)
+        {:ok, module} = Content.find_module(modules, id)
 
         content =
           Enum.map(Enum.with_index(entries), fn {%{refs: refs, vars: vars}, index} ->
@@ -181,7 +182,7 @@ defmodule Brando.Villain.Parser do
         base_context = opts.context
         modules = opts.modules
 
-        {:ok, module} = Villain.find_module(modules, id)
+        {:ok, module} = Content.find_module(modules, id)
 
         vars = Map.get(block, :vars)
         base_context = opts.context
@@ -804,7 +805,7 @@ defmodule Brando.Villain.Parser do
         base_context = opts.context
         modules = opts.modules
 
-        {:ok, module} = Villain.find_module(modules, module_id)
+        {:ok, module} = Content.find_module(modules, module_id)
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(module.code, context)
       end

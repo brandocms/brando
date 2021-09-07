@@ -7,7 +7,7 @@ defmodule Brando.Sites.GlobalCategory do
     plural: "global_categories",
     gettext_module: Brando.Gettext
 
-  alias Brando.Sites.Var
+  alias Brando.Content.Var
 
   trait Brando.Trait.CastPolymorphicEmbeds
 

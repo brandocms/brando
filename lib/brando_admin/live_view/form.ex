@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   """
   import Phoenix.LiveView
+  alias Brando.Utils
   alias BrandoAdmin.Toast
 
   defmacro __using__(opts) do
@@ -45,6 +46,7 @@ defmodule BrandoAdmin.LiveView.Form do
       |> Surface.init()
       |> assign_action(:update)
       |> assign_schema(schema)
+      |> assign_title()
       |> assign_entry_id(entry_id)
       |> assign_current_user(token)
       |> set_admin_locale()
@@ -59,6 +61,7 @@ defmodule BrandoAdmin.LiveView.Form do
       |> Surface.init()
       |> assign_action(:create)
       |> assign_schema(schema)
+      |> assign_title()
       |> assign_current_user(token)
       |> set_admin_locale()
       |> attach_hooks(schema)
@@ -138,6 +141,18 @@ defmodule BrandoAdmin.LiveView.Form do
     assign_new(socket, :schema, fn ->
       schema
     end)
+  end
+
+  defp assign_title(%{assigns: %{schema: schema}} = socket) do
+    translated_singular =
+      schema.__translations__
+      |> Utils.try_path([:naming, :singular])
+
+    assign(
+      socket,
+      :page_title,
+      (translated_singular && String.capitalize(translated_singular)) || nil
+    )
   end
 
   defp assign_entry_id(socket, entry_id) do

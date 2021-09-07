@@ -25,7 +25,7 @@ defmodule Brando.Query.Mutations do
         Revisions.create_revision(entry, user)
       end
 
-      case Schema.identifier_for(entry) do
+      case Brando.Blueprint.Identifier.identifier_for(entry) do
         nil -> nil
         identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
       end
@@ -48,7 +48,7 @@ defmodule Brando.Query.Mutations do
         Revisions.create_revision(entry, user)
       end
 
-      case Schema.identifier_for(entry) do
+      case Brando.Blueprint.Identifier.identifier_for(entry) do
         nil -> nil
         identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
       end
@@ -83,7 +83,7 @@ defmodule Brando.Query.Mutations do
           Revisions.create_revision(entry, user)
         end
 
-        case Schema.identifier_for(entry) do
+        case Brando.Blueprint.Identifier.identifier_for(entry) do
           nil -> nil
           identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
         end
@@ -111,7 +111,7 @@ defmodule Brando.Query.Mutations do
           Revisions.create_revision(entry, user)
         end
 
-        case Schema.identifier_for(entry) do
+        case Brando.Blueprint.Identifier.identifier_for(entry) do
           nil -> nil
           identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
         end
@@ -198,7 +198,7 @@ defmodule Brando.Query.Mutations do
 
     Datasource.update_datasource(module, entry)
 
-    case Schema.identifier_for(entry) do
+    case Brando.Blueprint.Identifier.identifier_for(entry) do
       nil -> nil
       identifier -> Notifications.push_mutation(gettext("deleted"), identifier, user)
     end

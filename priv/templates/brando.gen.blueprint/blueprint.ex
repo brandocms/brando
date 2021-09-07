@@ -31,4 +31,11 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   relations do
   end
+
+  translations do
+    context :naming do
+      translate :singular, t("<%= Recase.to_snake(schema) %>")
+      translate :plural, t("<%= Recase.to_snake(schema) %>s")
+    end
+  end
 end

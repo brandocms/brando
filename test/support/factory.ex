@@ -10,7 +10,8 @@ defmodule Brando.Factory do
   alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Users.User
-  alias Brando.Villain.Module
+  alias Brando.Content
+  alias Brando.Content.Module
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -34,7 +35,7 @@ defmodule Brando.Factory do
   end
 
   def var_text_factory do
-    %Sites.Var.Text{
+    %Content.Var.Text{
       type: "text",
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),

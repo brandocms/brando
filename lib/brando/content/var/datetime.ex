@@ -1,7 +1,7 @@
-defmodule Brando.Sites.Var.Datetime do
+defmodule Brando.Content.Var.Datetime do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Sites",
+    domain: "Content",
     schema: "VarDatetime",
     singular: "var_datetime",
     plural: "var_datetimes",

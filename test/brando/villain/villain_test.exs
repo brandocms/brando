@@ -217,7 +217,7 @@ defmodule Brando.VillainTest do
       class: "css class"
     }
 
-    {:ok, tp1} = Villain.create_module(module_params, user)
+    {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
     data = %{
       data: %{
@@ -241,7 +241,7 @@ defmodule Brando.VillainTest do
 
     assert page.html == "-- this is some code [Some text!] --"
 
-    Brando.Villain.update_module(
+    Brando.Content.update_module(
       tp1.id,
       %{code: "-- this is some NEW code [[{{ testvar }}]] --"},
       user
@@ -261,7 +261,7 @@ defmodule Brando.VillainTest do
       class: "css class"
     }
 
-    {:ok, tp1} = Villain.create_module(module_params, user)
+    {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
     data = [
       %{
@@ -338,7 +338,7 @@ defmodule Brando.VillainTest do
       |> Map.from_struct()
       |> Brando.Utils.stringify_keys()
 
-    Brando.Villain.update_module(tp1.id, tp2, user)
+    Brando.Content.update_module(tp1.id, tp2, user)
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 

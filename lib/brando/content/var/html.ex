@@ -1,10 +1,10 @@
-defmodule Brando.Sites.Var.String do
+defmodule Brando.Content.Var.Html do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Sites",
-    schema: "VarString",
-    singular: "var_string",
-    plural: "var_strings",
+    domain: "Content",
+    schema: "VarHtml",
+    singular: "var_html",
+    plural: "var_htmls",
     gettext_module: Brando.Gettext
 
   data_layer :embedded

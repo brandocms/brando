@@ -94,15 +94,18 @@ defmodule BrandoAdmin.Menu do
     quote location: :keep,
           generated: true,
           bind_quoted: [schema: schema] do
-      domain = schema.__naming__().domain |> Recase.to_snake()
+      domain = schema.__naming__().domain
+      snake_domain = domain |> Recase.to_snake()
+      schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
+      msgid = plural
 
-      url_base = "/admin/#{domain}/#{plural}"
+      url_base = "/admin/#{snake_domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
 
       if !default_listing do
         raise Brando.Exception.BlueprintError,
-          message: "Missing default listing for menu_item `#{inspect(schema)}`"
+          message: "Missing default listing for menu_subitem `#{inspect(schema)}`"
       end
 
       query_params =
@@ -114,8 +117,12 @@ defmodule BrandoAdmin.Menu do
         |> String.replace("%5D", "]")
 
       url = Enum.join([url_base, query_params], "?")
+      gettext_domain = String.downcase("#{domain}_#{schema_name}_naming")
 
-      Module.put_attribute(__MODULE__, :menus, %{name: String.capitalize(plural), url: url})
+      Module.put_attribute(__MODULE__, :menus, %{
+        name: {:translate, gettext_domain, msgid},
+        url: url
+      })
     end
   end
 

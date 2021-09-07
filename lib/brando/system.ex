@@ -7,6 +7,7 @@ defmodule Brando.System do
   alias Brando.Exception.ConfigError
   alias Brando.Cache
   alias Brando.CDN
+  alias Brando.Content
   alias Brando.System.Log
   alias Brando.Villain
 
@@ -243,7 +244,7 @@ defmodule Brando.System do
 
   # wrapper should be moved from datasource block to module
   defp check_invalid_wrapper_content do
-    {:ok, modules} = Brando.Villain.list_modules(%{filter: %{namespace: "all"}})
+    {:ok, modules} = Content.list_modules(%{filter: %{namespace: "all"}})
 
     if Enum.count(modules) > 0 do
       for t <- modules do

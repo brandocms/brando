@@ -1,6 +1,6 @@
 defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
-  alias Brando.Villain.Module
-  alias Brando.Sites.Var
+  alias Brando.Content.Module
+  alias Brando.Content.Var
 
   # TODO: Split into ModuleBlock and MultiModuleBlock?
 

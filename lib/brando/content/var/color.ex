@@ -1,7 +1,7 @@
-defmodule Brando.Sites.Var.Color do
+defmodule Brando.Content.Var.Color do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Sites",
+    domain: "Content",
     schema: "VarColor",
     singular: "var_color",
     plural: "var_colors",

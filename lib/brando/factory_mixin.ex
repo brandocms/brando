@@ -15,7 +15,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.ImageSeries
       alias Brando.Pages.Page
       alias Brando.Pages.Fragment
-      alias Brando.Villain.Module
+      alias Brando.Content.Module
       alias Brando.Type.ImageConfig
       alias Brando.Users.User
 

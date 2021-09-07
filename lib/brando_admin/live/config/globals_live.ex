@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
 
   alias Brando.Users
   alias Brando.Sites.GlobalCategory
-  alias Brando.Sites.Var
+  alias Brando.Content.Var
   alias Brando.Globals
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Modal
@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
             submit="update_category"
             :let={form: category_form}>
             <h2>{get_field(@category_changeset, :label)}</h2>
-            <h3><code>{get_field(@category_changeset, :key)}</code></h3>
+            <h3 :if={@config?}><code>{get_field(@category_changeset, :key)}</code></h3>
             {hidden_input category_form, :key}
             {hidden_input category_form, :label}
             <div class="vars">
