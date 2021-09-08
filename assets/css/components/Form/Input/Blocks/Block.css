@@ -125,6 +125,19 @@
     border-radius: 15px;
   }
 
+  figcaption {
+    @fontsize 10px;
+    @space margin-top 5px;
+    cursor: help;
+
+    span {
+      font-weight: bold;
+      margin-right: 5px;
+      min-width: 45px;
+      display: inline-block;
+    }
+  }
+
   input:focus,
   textarea:focus {
     outline: none !important;

@@ -8,6 +8,7 @@ import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
 import FocalPointHook from './hooks/FocalPoint'
 import FormHook from './hooks/Form'
+import LegacyImageUploadHook from './hooks/LegacyImageUpload'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
 import PopoverHook from './hooks/Popover'
@@ -34,6 +35,7 @@ export default app => {
     'Brando.DragDrop': DragDropHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
+    'Brando.LegacyImageUpload': LegacyImageUploadHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
     'Brando.Popover': PopoverHook(app),

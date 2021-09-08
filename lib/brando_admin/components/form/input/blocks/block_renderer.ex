@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   prop insert_datasource, :event, required: true
   prop duplicate_block, :event, required: true
   prop show_module_picker, :event, required: true
+  prop uploads, :any
 
   @doc "If sections should be visible in the module picker"
   prop hide_sections, :boolean
@@ -54,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
       {#for {block_form, index} <- Enum.with_index(@blocks)}
         <Blocks.DynamicBlock
+          uploads={@uploads}
           index={index}
           base_form={@base_form}
           block_count={@block_count}

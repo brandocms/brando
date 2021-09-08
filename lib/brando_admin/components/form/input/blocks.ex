@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   prop form, :form
   prop blueprint, :any
+  prop uploads, :any
 
   data blocks, :any
   data insert_index, :integer
@@ -40,6 +41,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         id={"#{@form.id}-#{name}-blocks"}
         base_form={@form}
         blocks={@blocks}
+        uploads={@uploads}
         insert_index={@insert_index}
         insert_block="insert_block"
         insert_section="insert_section"

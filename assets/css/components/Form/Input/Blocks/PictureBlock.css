@@ -1,4 +1,8 @@
 .picture-block {
+  .file-input {
+    display: none;
+  }
+
   .empty {
     @color bg peach;
     @color fg dark;

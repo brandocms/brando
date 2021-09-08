@@ -465,7 +465,7 @@ defmodule BrandoAdmin.Components.Form do
       pid = self()
 
       Task.start_link(fn ->
-        image_struct = Brando.Upload.process_upload(image_struct, cfg, current_user)
+        {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
 
         send_update(pid, __MODULE__,
           id: form_id,
@@ -513,7 +513,7 @@ defmodule BrandoAdmin.Components.Form do
       pid = self()
 
       Task.start_link(fn ->
-        image_struct = Brando.Upload.process_upload(image_struct, cfg, current_user)
+        {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
 
         send_update(pid, __MODULE__,
           id: form_id,

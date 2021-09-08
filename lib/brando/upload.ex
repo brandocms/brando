@@ -4,12 +4,9 @@ defmodule Brando.Upload do
 
   There are two distinct paths of travel within Brando for file uploading.
 
-    1) `ImageField` and `FileField`.
-        Called from the schema's changeset -> validate_upload
+    1) LiveView uploads for image fields within the Blueprint
 
-    2) `Brando.Image` / `Brando.Portfolio.Image`.
-       Manually initiated from the controller by invoking `check_for_uploads` which is retrieved
-       through `use Brando.Images.Upload`.
+    2) Villain content block uploads
 
   This module contains helper functions for both paths.
   """
@@ -53,9 +50,10 @@ defmodule Brando.Upload do
   def process_upload(image_struct, cfg, user) do
     with {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
          {:ok, results} <- Images.Operations.perform(operations, user) do
-      results
-      |> List.first()
-      |> Map.get(:image_struct)
+      {:ok,
+       results
+       |> List.first()
+       |> Map.get(:image_struct)}
     end
   end
 

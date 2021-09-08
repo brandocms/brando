@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   prop ref_name, :string
   prop ref_description, :string
   prop id, :any
+  prop uploads, :any
 
   prop insert_block, :event
   prop duplicate_block, :event
@@ -65,7 +66,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       ref_description: @ref_description,
       block_count: @block_count,
       insert_block: @insert_block,
-      duplicate_block: @duplicate_block
+      duplicate_block: @duplicate_block,
+      uploads: @uploads
     )}
     """
   end

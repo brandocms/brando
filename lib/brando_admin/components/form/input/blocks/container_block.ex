@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   prop block, :any
   prop base_form, :any
   prop index, :any
+  prop uploads, :any
   # prop block_count, :integer
 
   prop insert_block, :event, required: true
@@ -147,6 +148,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
           blocks={@block_forms}
+          uploads={@uploads}
           insert_index={@insert_index}
           insert_block="insert_block"
           insert_section="insert_section"

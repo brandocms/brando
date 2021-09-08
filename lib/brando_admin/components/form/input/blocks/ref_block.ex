@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
   prop module_refs, :list, required: true
   prop module_ref_name, :string, required: true
   prop base_form, :any
+  prop uploads, :any
 
   # prop insert_block, :event, required: true
   # prop duplicate_block, :event, required: true
@@ -70,7 +71,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
         index={@ref_index}
         block_count={@block_count}
         block={@ref_block}
-        base_form={@base_form} />
+        base_form={@base_form}
+        uploads={@uploads} />
 
       <HiddenInput form={@ref_form} field={:description} />
       <HiddenInput form={@ref_form} field={:name} />

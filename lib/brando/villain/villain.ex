@@ -10,8 +10,21 @@ defmodule Brando.Villain do
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Content.Module
+  alias Brando.Blueprint.Villain.Blocks
   alias Ecto.Changeset
   alias Liquex.Context
+
+  @default_blocks %{
+    container: Blocks.ContainerBlock,
+    datasource: Blocks.DatasourceBlock,
+    gallery: Blocks.GalleryBlock,
+    header: Blocks.HeaderBlock,
+    html: Blocks.HtmlBlock,
+    module: Blocks.ModuleBlock,
+    picture: Blocks.PictureBlock,
+    svg: Blocks.SvgBlock,
+    text: Blocks.TextBlock
+  }
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
@@ -287,6 +300,10 @@ defmodule Brando.Villain do
   def list_villains do
     blueprint_impls = Trait.Villain.list_implementations()
     Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
+  end
+
+  def get_block_by_type(block_type) do
+    Map.get(@default_blocks, block_type)
   end
 
   def update_section_in_fields(section_id) do

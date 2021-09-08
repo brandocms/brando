@@ -32,6 +32,16 @@ defmodule Brando.Content do
   alias Brando.Villain
   alias Brando.Content.Module
   alias Brando.Content.Section
+  alias Brando.Content.Var
+
+  @default_vars %{
+    boolean: Var.Boolean,
+    string: Var.String,
+    text: Var.Text,
+    color: Var.Color,
+    html: Var.Html,
+    datetime: Var.Datetime
+  }
 
   query :list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
@@ -177,4 +187,8 @@ defmodule Brando.Content do
 
   mutation :delete, Section
   mutation :duplicate, {Section, change_fields: [:name, :class]}
+
+  def get_var_by_type(var_type) do
+    Map.get(@default_vars, var_type)
+  end
 end

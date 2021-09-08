@@ -39,6 +39,10 @@
 
 @europa base;
 
+.hidden {
+  display: none !important;
+}
+
 .button-group-horizontal {
   display: flex;
 

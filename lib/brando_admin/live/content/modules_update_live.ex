@@ -10,8 +10,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias Brando.Villain
-  alias Brando.Content.Module.Ref
   alias Brando.Content.Var
+  alias Brando.Content.Module.Ref
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
@@ -325,11 +325,16 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
       ) do
     refs = get_field(changeset, :refs)
 
+    block_module =
+      block_type
+      |> String.to_existing_atom()
+      |> Villain.get_block_by_type()
+
+    ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
+
     new_ref = %Ref{
       name: ref_name,
-      data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
-        data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{}
-      }
+      data: ref_data
     }
 
     updated_changeset = put_change(changeset, :refs, [new_ref | refs])
@@ -358,12 +363,21 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{"type" => var_type, "id" => modal_id},
         %{assigns: %{var_name: var_name, changeset: changeset}} = socket
       ) do
-    vars = get_field(changeset, :vars)
+    vars = get_field(changeset, :vars) || []
 
-    new_var = %Var.Boolean{
-      key: var_name,
-      type: var_type
-    }
+    require Logger
+    Logger.error(inspect(var_type))
+
+    var_module =
+      var_type
+      |> String.to_existing_atom()
+      |> Brando.Content.get_var_by_type()
+
+    new_var =
+      struct(var_module, %{
+        key: var_name,
+        type: var_type
+      })
 
     updated_changeset = put_change(changeset, :vars, [new_var | vars])
     Modal.hide(modal_id)

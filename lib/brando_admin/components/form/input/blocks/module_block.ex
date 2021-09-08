@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop base_form, :any
   prop index, :any
   prop block_count, :integer
+  prop uploads, :any
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -27,8 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   data module_not_found, :boolean
 
   def v(form, field) do
-    # input_value(form, field)
-    Ecto.Changeset.get_field(form.source, field)
+    input_value(form, field)
+    # Ecto.Changeset.get_field(form.source, field)
     # |> IO.inspect(pretty: true, label: "module_v")
   end
 
@@ -144,6 +145,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             {#case split}
               {#match {:ref, ref}}
                 <Ref
+                  uploads={@uploads}
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />

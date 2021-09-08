@@ -70,6 +70,8 @@ defmodule Brando.Router do
       scope unquote(path), as: :admin do
         pipe_through [:admin, :root_layout, :require_authenticated_user]
 
+        post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
+
         live_session :admin do
           # brando routes
           live "/navigation", BrandoAdmin.NavigationLive
