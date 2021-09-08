@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.Identifier do
   """
 
   defstruct [:id, :title, :type, :status, :absolute_url, :cover, :schema]
+  @derive Jason.Encoder
 
   defmacro identifier(tpl) when is_binary(tpl) do
     {:ok, parsed_identifier} = Liquex.parse(tpl, Brando.Villain.LiquexParser)

@@ -31,19 +31,7 @@ defmodule Brando.Content do
   import Ecto.Query
   alias Brando.Villain
   alias Brando.Content.Module
-
-  mutation :create, Module
-
-  mutation :update, Module do
-    fn entry ->
-      Villain.update_module_in_fields(entry.id)
-
-      {:ok, entry}
-    end
-  end
-
-  mutation :delete, Module
-  mutation :duplicate, {Module, change_fields: [:name, :class]}
+  alias Brando.Content.Section
 
   query :list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
@@ -97,6 +85,19 @@ defmodule Brando.Content do
     end
   end
 
+  mutation :create, Module
+
+  mutation :update, Module do
+    fn entry ->
+      Villain.update_module_in_fields(entry.id)
+
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, Module
+  mutation :duplicate, {Module, change_fields: [:name, :class]}
+
   @doc """
   Find module with `id` in `modules`
   """
@@ -108,4 +109,72 @@ defmodule Brando.Content do
       mod -> {:ok, mod}
     end
   end
+
+  ## Sections
+  ##
+
+  query :list, Section, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+
+  filters Section do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+
+      {:class, class}, query ->
+        from(q in query, where: ilike(q.class, ^"%#{class}%"))
+
+      {:namespace, namespace}, query ->
+        query =
+          from(t in query,
+            where: is_nil(t.deleted_at),
+            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+          )
+
+        namespace =
+          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
+        case namespace do
+          "all" ->
+            query
+
+          namespace_list when is_list(namespace_list) ->
+            from(t in query, where: t.namespace in ^namespace_list)
+
+          _ ->
+            from(t in query, where: t.namespace == ^namespace)
+        end
+    end
+  end
+
+  query :single, Section, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+
+  matches Section do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:name, name}, query ->
+        from(t in query,
+          where: t.name == ^name
+        )
+
+      {:namespace, namespace}, query ->
+        from(t in query,
+          where: t.namespace == ^namespace
+        )
+    end
+  end
+
+  mutation :create, Section
+
+  mutation :update, Section do
+    fn entry ->
+      Villain.update_section_in_fields(entry.id)
+
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, Section
+  mutation :duplicate, {Section, change_fields: [:name, :class]}
 end

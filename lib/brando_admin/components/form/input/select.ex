@@ -192,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <#slot />
             {#else}
               {#if @selected_option}
-                {@label}
+                {@label |> raw}
               {#else}
                 No selection
               {/if}
@@ -239,7 +239,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   data-label={opt.label}
                   value={opt.value}
                   :on-click="select_option">
-                  {opt.label}
+                  {opt.label |> raw}
                 </button>
               {/for}
             </div>
@@ -358,7 +358,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   data-label={opt.label}
                   value={opt.value}
                   :on-click="select_option">
-                  {opt.label}
+                  {opt.label |> raw}
                 </button>
               {/for}
             </div>

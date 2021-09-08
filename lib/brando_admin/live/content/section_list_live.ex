@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Villain.SectionListLive do
+defmodule BrandoAdmin.Content.SectionListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Section
 
   alias BrandoAdmin.Components.Content

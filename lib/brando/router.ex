@@ -77,9 +77,9 @@ defmodule Brando.Router do
           live "/config/globals", BrandoAdmin.Sites.GlobalsLive
           live "/config/content/modules", BrandoAdmin.Villain.ModuleListLive
           live "/config/content/modules/update/:entry_id", BrandoAdmin.Villain.ModuleUpdateLive
-          live "/config/content/sections", BrandoAdmin.Villain.SectionListLive
-          live "/config/content/sections/create", BrandoAdmin.Villain.SectionCreateLive
-          live "/config/content/sections/update/:entry_id", BrandoAdmin.Villain.SectionUpdateLive
+          live "/config/content/sections", BrandoAdmin.Content.SectionListLive
+          live "/config/content/sections/create", BrandoAdmin.Content.SectionCreateLive
+          live "/config/content/sections/update/:entry_id", BrandoAdmin.Content.SectionUpdateLive
           live "/pages", BrandoAdmin.Pages.PageListLive
           live "/pages/create", BrandoAdmin.Pages.PageCreateLive
           live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive

@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   prop insert_section, :event, required: true
   prop insert_datasource, :event, required: true
   prop insert_index, :integer, required: true
+  prop hide_sections, :boolean, default: false
 
   data modules_by_namespace, :list
 
@@ -31,6 +32,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
       <Modal title="Add content block" id={@id} medium>
         <div class="button-group-horizontal">
           <button
+            :if={!@hide_sections}
             type="button"
             class="builtin-button"
             :on-click={@insert_section}

@@ -289,6 +289,13 @@ defmodule Brando.Villain do
     Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
   end
 
+  def update_section_in_fields(section_id) do
+    # TODO
+    require Logger
+    Logger.error("==> TODO: update_section_in_fields")
+    :ok
+  end
+
   @doc """
   Update all villain fields in database that has a module with `id`.
   """

@@ -10,7 +10,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   alias BrandoAdmin.Components.Modal
 
   alias Brando.Content
-  alias Brando.Villain
 
   prop block, :any
   prop base_form, :any
@@ -21,20 +20,65 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   prop duplicate_block, :event, required: true
 
   data uid, :string
-  data class, :string
   data blocks, :list
   data block_forms, :list
   data block_data, :form
   data block_count, :integer
   data insert_index, :integer
 
+  data selected_section, :map
+  data available_sections, :list
+  data section_options, :list
+
   def v(form, field), do: get_field(form.source, field)
 
   def mount(socket) do
-    {:ok, assign(socket, block_count: 0, insert_index: 0)}
+    {:ok,
+     socket
+     |> assign(insert_index: 0)}
+  end
+
+  def assign_available_sections(socket) do
+    socket
+    |> assign_new(:available_sections, fn ->
+      {:ok, available_sections} = Content.list_sections(%{cache: {:ttl, :infinite}})
+      available_sections
+    end)
+  end
+
+  def assign_section_options(%{assigns: %{available_sections: available_sections}} = socket) do
+    assign_new(socket, :section_options, fn ->
+      Enum.map(
+        available_sections,
+        &%{
+          label:
+            ~s(<span class="circle small" style="margin-right: 12px;background-color:#{&1.color_bg}"></span> #{&1.name}),
+          value: &1.id
+        }
+      )
+    end)
+  end
+
+  def get_section(nil), do: nil
+
+  def get_section(section_id, available_sections) do
+    Enum.find(available_sections, &(&1.id == section_id))
+  end
+
+  def assign_selected_section(
+        %{assigns: %{available_sections: available_sections, block_data: block_data}} = socket
+      ) do
+    assign(
+      socket,
+      :selected_section,
+      get_section(v(block_data, :section_id), available_sections)
+    )
   end
 
   def update(%{block: block} = assigns, socket) do
+    require Logger
+    Logger.error(inspect("==> updating container_block!"))
+
     block_data =
       block
       |> inputs_for(:data)
@@ -42,18 +86,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     blocks = v(block_data, :blocks)
     block_forms = inputs_for_blocks(block_data, :blocks)
-
     block_count = Enum.count(blocks || [])
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:uid, v(block, :uid))
-     |> assign(:class, v(block_data, :class))
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms || [])
      |> assign(:block_data, block_data)
-     |> assign(:block_count, block_count)}
+     |> assign(:block_count, block_count)
+     |> assign_available_sections()
+     |> assign_section_options()
+     |> assign_selected_section()}
   end
 
   def render(assigns) do
@@ -71,18 +116,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         base_form={@base_form}
         block={@block}
         insert_block={@insert_block}
-        duplicate_block={@duplicate_block}>
-        <:description>Container</:description>
+        duplicate_block={@duplicate_block}
+        bg_color={@selected_section && "#{@selected_section.color_bg}22"}>
+        <:description>
+          {#if @selected_section}
+            <span class="circle tiny" style={"background-color:#{@selected_section.color_bg}"}></span> {@selected_section.name}
+          {#else}
+            No section selected
+          {/if}
+        </:description>
         <:config></:config>
-        {#if @class}
+        {#if @selected_section}
 
         {#else}
-          Choose a section template here
+          <Input.Select
+            id={"#{@block_data.id}-section-select"}
+            form={@block_data}
+            field={:section_id}
+            options={@section_options}
+          />
         {/if}
-
-        <Input.Text form={@block_data} field={:class} />
-        <Input.Text form={@block_data} field={:description} />
-        <Input.Text form={@block_data} field={:wrapper} />
 
         <Blocks.BlockRenderer
           id={"#{@block.id}-container-blocks"}
@@ -94,7 +147,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           insert_section="insert_section"
           insert_datasource="insert_datasource"
           show_module_picker="show_module_picker"
-          duplicate_block="duplicate_block" />
+          duplicate_block="duplicate_block"
+          hide_sections />
       </Blocks.Block>
     </div>
     """

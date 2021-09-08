@@ -34,28 +34,11 @@ defmodule Brando.Villain.Filters do
 
   # {{ entry.inserted_at | date:"%A","nb_NO" }}
   def date(%DateTime{} = value, format, locale, _) do
-    value
-    |> DateTime.shift_zone!(Brando.timezone())
-    |> Calendar.strftime(format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Brando.Utils.format_datetime(value, format, locale)
   end
 
   def date(value, format, locale, _) do
-    value
-    |> Calendar.strftime(format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Brando.Utils.format_datetime(value, format, locale)
   end
 
   def humanize(value, _) do
@@ -145,25 +128,11 @@ defmodule Brando.Villain.Filters do
   """
   def publish_date(%{publish_at: publish_at}, format, locale, _)
       when not is_nil(publish_at) do
-    Calendar.strftime(publish_at, format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Brando.Utils.Datetime.format_datetime(publish_at, format, locale)
   end
 
   def publish_date(%{inserted_at: inserted_at}, format, locale, _) do
-    Calendar.strftime(inserted_at, format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Brando.Utils.Datetime.format_datetime(inserted_at, format, locale)
   end
 
   @doc """
@@ -206,17 +175,5 @@ defmodule Brando.Villain.Filters do
     str
     |> Brando.HTML.render_markdown()
     |> Phoenix.HTML.safe_to_string()
-  end
-
-  def get_month_name(month, locale) do
-    Gettext.with_locale(locale, fn ->
-      Gettext.dgettext(Brando.Gettext, "months", "month_#{month}")
-    end)
-  end
-
-  def get_day_name(day, locale) do
-    Gettext.with_locale(locale, fn ->
-      Gettext.dgettext(Brando.Gettext, "days", "day_#{day}")
-    end)
   end
 end

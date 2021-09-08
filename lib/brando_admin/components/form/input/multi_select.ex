@@ -212,7 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <#slot />
             {#else}
               {#if @selected_options}
-                {@label}
+                {@label |> raw}
               {#else}
                 No selection
               {/if}
@@ -266,7 +266,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       data-label={opt.label}
                       value={opt.value}
                       :on-click="select_option">
-                      {opt.label}
+                      {opt.label |> raw}
                     </button>
                   {/for}
                 </div>

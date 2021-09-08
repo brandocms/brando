@@ -119,7 +119,7 @@
   min-height: 105px;
   position: relative;
   border: 1px solid theme(colors.villain.blockBorder);
-  transition: border 500ms ease;
+  transition: border 500ms ease, background-color 1500ms ease;
 
   &.ref_block {
     border-radius: 15px;
@@ -305,6 +305,13 @@
     text-transform: uppercase;
     align-items: center;
 
+    .circle {
+      width: 20px;
+      height: 13px;
+      margin-left: 7px;
+      margin-right: 8px;
+    }
+
     .block-type {
       @space margin-x 8px;
       display: block;
@@ -331,7 +338,7 @@
     display: flex;
     flex-direction: row-reverse;
     align-items: center;
-    background-color: white;
+    background-color: transparent;
 
     > * {
       opacity: 0;
@@ -344,9 +351,11 @@
       padding: 3px 6px;
       background-color: transparent;
       color: theme(colors.villain.mainFaded);
+      border: 1px solid transparent;
 
       &:hover {
-        background-color: palegoldenrod;
+        @color bg white;
+        border: 1px solid theme(colors.dark);
         border-radius: 7px;
       }
 

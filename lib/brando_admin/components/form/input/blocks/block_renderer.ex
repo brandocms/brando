@@ -14,6 +14,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   prop duplicate_block, :event, required: true
   prop show_module_picker, :event, required: true
 
+  @doc "If sections should be visible in the module picker"
+  prop hide_sections, :boolean
+
   def render(assigns) do
     ~F"""
     <div class="blocks-wrapper">
@@ -22,7 +25,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         insert_block={@insert_block}
         insert_section={@insert_section}
         insert_datasource={@insert_datasource}
-        insert_index={@insert_index} />
+        insert_index={@insert_index}
+        hide_sections={@hide_sections} />
 
       {#if Enum.empty?(@blocks)}
         <div class="blocks-empty-instructions">

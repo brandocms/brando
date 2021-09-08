@@ -81,9 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     new_block = %Brando.Blueprint.Villain.Blocks.ContainerBlock{
       type: "container",
       data: %Brando.Blueprint.Villain.Blocks.ContainerBlock.Data{
-        class: nil,
-        description: nil,
-        wrapper: nil,
+        section_id: nil,
         blocks: []
       },
       uid: Brando.Utils.generate_uid()

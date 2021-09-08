@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Content.List.Row.Creator do
   use Surface.Component
+  import Brando.Utils.Datetime
 
   prop entry, :any, required: true
   prop soft_delete?, :boolean, required: true
@@ -40,9 +41,9 @@ defmodule BrandoAdmin.Components.Content.List.Row.Creator do
               phx-hook="Brando.Popover"
               data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}>
               {#if @soft_delete? and @entry.deleted_at}
-                {Calendar.strftime(@entry.deleted_at, "%d/%m/%y")} <span>•</span> {Calendar.strftime(@entry.deleted_at, "%H:%M")}
+                {format_datetime(@entry.deleted_at, "%d/%m/%y")} <span>•</span> {format_datetime(@entry.deleted_at, "%H:%M")}
               {#else}
-                {Calendar.strftime(@entry.updated_at, "%d/%m/%y")} <span>•</span> {Calendar.strftime(@entry.updated_at, "%H:%M")}
+                {format_datetime(@entry.updated_at, "%d/%m/%y")} <span>•</span> {format_datetime(@entry.updated_at, "%H:%M")}
               {/if}
             </div>
           </div>

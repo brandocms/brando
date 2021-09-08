@@ -35,6 +35,25 @@ defmodule Brando.Content.Section do
     attribute :rendered_css, :text
   end
 
+  forms do
+    form do
+      tab gettext("Content") do
+        fieldset size: :half do
+          input :name, :text
+          input :namespace, :text, monospace: true
+          input :class, :text, monospace: true
+          input :instructions, :textarea
+          input :color_bg, :text, monospace: true
+          input :color_fg, :text, monospace: true
+        end
+
+        fieldset size: :half do
+          input :css, :code
+        end
+      end
+    end
+  end
+
   listings do
     listing do
       listing_query %{
@@ -64,7 +83,7 @@ defmodule Brando.Content.Section do
 
       template(
         """
-        <div class="monospace">{{ entry.namespace }}</div><br>
+        <div class="monospace small">{{ entry.namespace }}</div>
         """,
         columns: 3
       )
@@ -78,8 +97,9 @@ defmodule Brando.Content.Section do
           class="entry-link">
           {{ entry.name }}
         </a>
+        <div class="monospace tiny">{{ entry.color_bg }} / {{ entry.color_fg }}</div>
         """,
-        columns: 9
+        columns: 6
       )
     end
   end

@@ -15,6 +15,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   prop index, :integer
   prop block_count, :integer
   prop is_ref?, :boolean, default: false
+  @doc "A slight hint of background color for the block. Often used with Containers/sections"
+  prop bg_color, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -74,6 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         id={@uid}
         data-block-uid={@uid}
         data-block-type={@type}
+        style={"background-color": @bg_color}
         class={"block", ref_block: @is_ref?}
         phx-hook="Brando.Block">
 

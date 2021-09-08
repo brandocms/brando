@@ -87,6 +87,8 @@ h2.titlecase {
     overflow-y: scroll;
 
     .options-option {
+      display: flex;
+      align-items: center;
       cursor: pointer;
       color: theme(colors.dark);
       background-color: theme(colors.peach);

@@ -48,11 +48,13 @@
 
   > button {
     &:first-of-type {
-      border-radius: 25px 0 0 25px;
+      border-top-left-radius: 25px;
+      border-bottom-left-radius: 25px;
     }
 
     &:last-of-type {
-      border-radius: 0 25px 25px 0;
+      border-top-right-radius: 25px;
+      border-bottom-right-radius: 25px;
     }
   }
 }
@@ -182,6 +184,14 @@ code {
 
 .monospace {
   @font mono;
+
+  &.small {
+    @fontsize sm;
+  }
+
+  &.tiny {
+    @fontsize xs;
+  }
 }
 
 .presences {

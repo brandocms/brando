@@ -1,4 +1,4 @@
-defmodule Koi.Repo.Migrations.MoveModulesToContentNamespace do
+defmodule Brando.Repo.Migrations.MoveModulesToContentNamespace do
   use Ecto.Migration
 
   def change do
