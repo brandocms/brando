@@ -34,13 +34,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   slot render
 
   def update(assigns, socket) do
-    require Logger
-    Logger.error("block:hidden -> #{inspect(input_value(assigns.block, :hidden))}")
-
-    Logger.error(
-      "block:marked_as_deleted -> #{inspect(input_value(assigns.block, :marked_as_deleted))}"
-    )
-
     {:ok,
      socket
      |> assign(:last_block?, last_block?(assigns))

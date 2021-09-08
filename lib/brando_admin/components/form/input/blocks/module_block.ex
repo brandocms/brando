@@ -4,8 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Surface.Components.Form.HiddenInput
   alias Brando.Content
-  alias Brando.Villain
-  alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
@@ -19,6 +17,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop duplicate_block, :event, required: true
 
   data splits, :list
+  data block_data, :map
   data module_name, :string
   data module_class, :string
   data module_code, :string
@@ -66,7 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           |> List.first()
 
         refs = Enum.with_index(inputs_for(block_data, :refs))
-        vars = v(block_data, :vars)
+        vars = v(block_data, :vars) || []
 
         socket
         |> assign(:uid, v(block, :uid))
@@ -85,11 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     socket
   end
 
-  defp parse_module_code(
-         %{assigns: %{module_code: module_code, block: block_form, base_form: base_form}} = socket
-       ) do
-    require Logger
-
+  defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
       ~r/%{(\w+)}/
       |> Regex.split(module_code, include_captures: true)
@@ -100,13 +95,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         end
       end)
 
-    socket
-    |> assign(:splits, splits)
+    assign(socket, :splits, splits)
   end
 
   def render(%{module_not_found: true} = assigns) do
     ~F"""
-    Missing module!
+    <div class="module-missing">
+      Missing module!
+    </div>
     """
   end
 
@@ -126,45 +122,40 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>
         <:config>
+          {#for var <- inputs_for_poly(@block_data, :vars)}
+            <RenderVar var={var} render={:only_regular} />
+          {/for}
+
           <button type="button" class="secondary" :on-click="reinit_vars">
             Reinitialize variables
           </button>
         </:config>
 
-        {#for block_data <- inputs_for(@block, :data)}
-          <div class="module-block" b-editor-tpl={@module_class}>
+        <div class="module-block" b-editor-tpl={@module_class}>
+          {#unless Enum.empty?(@important_vars)}
+            <div class="important-vars">
+              {#for var <- inputs_for_poly(@block_data, :vars)}
+                <RenderVar var={var} render={:only_important} />
+              {/for}
+            </div>
+          {/unless}
 
-            {#unless Enum.empty?(@important_vars)}
-              <div class="important-vars">
-                {#for var <- inputs_for_poly(block_data, :vars)}
-                  <RenderVar var={var} important />
-                {/for}
-              </div>
-            {/unless}
+          {#for split <- @splits}
+            {#case split}
+              {#match {:ref, ref}}
+                <Ref
+                  module_refs={@refs}
+                  module_ref_name={ref}
+                  base_form={@base_form} />
+              {#match _}
+                {raw split}
+            {/case}
+          {/for}
 
-            {#for split <- @splits}
-              {#case split}
-                {#match {:ref, ref}}
-                  <Ref
-                    module_refs={@refs}
-                    module_ref_name={ref}
-                    base_form={@base_form} />
-                {#match _}
-                  {raw split}
-              {/case}
-            {/for}
-
-            <HiddenInput form={block_data} field={:module_id} />
-            <HiddenInput form={block_data} field={:sequence} />
-            <HiddenInput form={block_data} field={:multi} />
-            <MapInputs
-              :let={value: value, name: name}
-              form={block_data}
-              for={:vars}>
-              {name} -> {inspect value}
-            </MapInputs>
-          </div>
-        {/for}
+          <HiddenInput form={@block_data} field={:module_id} />
+          <HiddenInput form={@block_data} field={:sequence} />
+          <HiddenInput form={@block_data} field={:multi} />
+        </div>
       </Block>
     </div>
     """

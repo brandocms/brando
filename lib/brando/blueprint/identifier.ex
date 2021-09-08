@@ -3,8 +3,8 @@ defmodule Brando.Blueprint.Identifier do
   Identifies the entry
   """
 
-  defstruct [:id, :title, :type, :status, :absolute_url, :cover, :schema]
   @derive Jason.Encoder
+  defstruct [:id, :title, :type, :status, :absolute_url, :cover, :schema]
 
   defmacro identifier(tpl) when is_binary(tpl) do
     {:ok, parsed_identifier} = Liquex.parse(tpl, Brando.Villain.LiquexParser)

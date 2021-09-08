@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   alias BrandoAdmin.Components.Form.Input.Blocks
 
   prop blocks, :list, required: true
-  prop block_count, :integer, required: true
   prop base_form, :form, required: true
   prop insert_index, :integer
   prop insert_block, :event, required: true
@@ -16,6 +15,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
   @doc "If sections should be visible in the module picker"
   prop hide_sections, :boolean
+
+  data block_count, :integer
+
+  def update(assigns, socket) do
+    # TODO: Only count on initial render, then trigger a count from
+    # "insert_block", "delete_block", "duplicate_block", "insert_section", "insert_datasource" etc?
+    block_count =
+      assigns.blocks
+      |> Enum.reject(& &1.data.marked_as_deleted)
+      |> Enum.count()
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(block_count: block_count)}
+  end
 
   def render(assigns) do
     ~F"""
@@ -28,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         insert_index={@insert_index}
         hide_sections={@hide_sections} />
 
-      {#if Enum.empty?(@blocks)}
+      {#if @block_count == 0}
         <div class="blocks-empty-instructions">
           Click the plus to start adding content blocks
         </div>

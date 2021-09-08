@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias Brando.Content
-  alias Brando.Villain
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
@@ -15,22 +14,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   prop blueprint, :any
 
   data blocks, :any
-  data block_count, :integer
   data insert_index, :integer
 
   def mount(socket) do
-    {:ok, assign(socket, block_count: 0, insert_index: 0)}
+    {:ok, assign(socket, insert_index: 0)}
   end
 
   def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
     blocks = inputs_for_blocks(assigns.form, name)
-    block_count = Enum.count(blocks)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:blocks, blocks)
-     |> assign(:block_count, block_count)}
+     |> assign(:blocks, blocks)}
   end
 
   def render(%{input: %{name: name}} = assigns) do
@@ -44,7 +40,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         id={"#{@form.id}-#{name}-blocks"}
         base_form={@form}
         blocks={@blocks}
-        block_count={@block_count}
         insert_index={@insert_index}
         insert_block="insert_block"
         insert_section="insert_section"

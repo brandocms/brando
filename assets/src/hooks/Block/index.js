@@ -29,8 +29,8 @@ export default (app) => ({
     this.timeline = gsap.timeline()
 
     this.timeline
-      .to(this.$baseBlock, { duration: 0.25, opacity: 1, ease: 'none' }, '<')
-      .to([description, content, actions], { duration: 0.25, opacity: 1, stagger: 0.1, ease: 'none' }, '<0.1')
+      .to(this.$baseBlock, { duration: 0.2, opacity: 1, ease: 'none' }, '<')
+      .to([description, content, actions], { duration: 0.2, opacity: 1, stagger: 0.08, ease: 'none' }, '<0.08')
       .call(() => {
         this.$baseBlock.dataset.bInitialized = ''
       })

@@ -6,6 +6,10 @@
     @space margin-top 15px;
   }
 
+  [data-block-type="container"] & {
+    padding: 0;
+  }
+
   > [data-block-uid] {
     &.is-sorting {
       opacity: 0.5;
@@ -15,6 +19,10 @@
       }
     }
   }
+}
+
+[data-block-type="container"] .blocks-wrapper [data-block-index="0"] .block-plus:first-of-type {
+  margin-top: 0;
 }
 
 .blocks-empty-instructions {

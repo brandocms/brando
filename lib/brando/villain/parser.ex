@@ -735,7 +735,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{blocks: blocks, class: class, wrapper: wrapper}, opts) do
+      def container(%{blocks: blocks, section_id: section_id}, opts) do
         blocks_html =
           (blocks || [])
           |> Enum.reduce([], fn d, acc ->
@@ -744,17 +744,11 @@ defmodule Brando.Villain.Parser do
           |> Enum.reverse()
           |> Enum.join("")
 
-        wrapper = (is_binary(wrapper) && String.length(wrapper) > 0 && wrapper) || nil
-
-        if wrapper do
-          String.replace(wrapper, "{{ content }}", blocks_html)
-        else
-          """
-          <section b-section="#{class}">
-            #{blocks_html}
-          </section>
-          """
-        end
+        """
+        <section b-section="TODO">
+          #{blocks_html}
+        </section>
+        """
       end
 
       defoverridable container: 2

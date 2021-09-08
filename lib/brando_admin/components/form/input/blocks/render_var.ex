@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias BrandoAdmin.Components.Form.Input
 
   prop var, :any
-  prop important, :boolean, default: false
+  prop render, :atom, values: [:all, :only_important, :only_regular], default: :all
   prop edit, :boolean, default: false
 
   data should_render?, :boolean
@@ -15,14 +15,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     input_value(form, field)
   end
 
-  def update(%{var: var, important: render_important, edit: edit}, socket) do
+  def update(%{var: var, render: render, edit: edit}, socket) do
     important = v(var, :important)
 
     should_render? =
       cond do
-        render_important and important -> true
-        render_important and !important -> false
-        true -> true
+        render == :all -> true
+        render == :only_important and important -> true
+        render == :only_regular and !important -> true
+        true -> false
       end
 
     {:ok,

@@ -290,20 +290,11 @@
   width: 650px;
   position: fixed;
   right: 0;
-  
   top: 0;
   background-color: #052753;
   color: azure;
   overflow-x: hidden;
   overflow-y: scroll;
-
-  &.open {
-    transform: translateX(0%);
-    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-  }
-
-  transition: transform 0.6s cubic-bezier(0.5, 0, 0.75, 0);
-  transform: translateX(100%);
 
   .inner {
     @space padding-y 15px;

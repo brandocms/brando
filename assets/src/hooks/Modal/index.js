@@ -1,4 +1,4 @@
-import { Dom, gsap } from '@brandocms/jupiter'
+import { gsap } from '@brandocms/jupiter'
 
 export default (app) => ({
   show() {

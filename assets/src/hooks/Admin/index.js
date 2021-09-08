@@ -3,7 +3,7 @@ import { alertError } from '../../alerts'
 
 export default (app) => ({
   mounted() {
-    console.log('==> Brando/Admin mounted')
+    console.log('==> Brando/Admin mounted.')
     this.animateNav()
 
     window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))

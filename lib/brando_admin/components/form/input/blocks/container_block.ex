@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   data available_sections, :list
   data section_options, :list
 
-  def v(form, field), do: get_field(form.source, field)
+  def v(form, field), do: input_value(form, field)
 
   def mount(socket) do
     {:ok,
@@ -86,7 +86,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     blocks = v(block_data, :blocks)
     block_forms = inputs_for_blocks(block_data, :blocks)
-    block_count = Enum.count(blocks || [])
 
     {:ok,
      socket
@@ -95,7 +94,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms || [])
      |> assign(:block_data, block_data)
-     |> assign(:block_count, block_count)
      |> assign_available_sections()
      |> assign_section_options()
      |> assign_selected_section()}
@@ -125,10 +123,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
             No section selected
           {/if}
         </:description>
-        <:config></:config>
-        {#if @selected_section}
-
-        {#else}
+        <:config>
+          {#if @selected_section}
+            Select a new section<br>
+            <Input.Select
+              id={"#{@block_data.id}-section-select"}
+              form={@block_data}
+              field={:section_id}
+              options={@section_options}
+            />
+          {/if}
+        </:config>
+        {#if !@selected_section}
           <Input.Select
             id={"#{@block_data.id}-section-select"}
             form={@block_data}
@@ -141,7 +147,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
           blocks={@block_forms}
-          block_count={@block_count}
           insert_index={@insert_index}
           insert_block="insert_block"
           insert_section="insert_section"

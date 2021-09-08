@@ -97,7 +97,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
             <div class="vars">
               {#for var <- inputs_for_poly(category_form, :globals)}
                 <div id={"#{category_form.id}-#{var.id}"} class={"var", shaded: @config?}>
-                  <RenderVar var={var} edit={@config?} />
+                  <RenderVar render={:all} var={var} edit={@config?} />
                 </div>
               {/for}
               <button class="primary">
