@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop index, :any
   prop block_count, :integer
   prop uploads, :any
+  prop data_field, :atom
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -113,6 +114,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
+
       <Block
         id={"#{@uid}-base"}
         index={@index}
@@ -145,6 +147,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             {#case split}
               {#match {:ref, ref}}
                 <Ref
+                  data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
                   module_ref_name={ref}
@@ -166,17 +169,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   def handle_event(
         "reinit_vars",
         _,
-        %{assigns: %{base_form: base_form, uid: block_uid, block_data: block_data}} = socket
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
       ) do
-    require Logger
-    Logger.error(inspect("reinit_vars"))
     module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
-    # update_block(uid, %{vars: vars_blueprint})
+    # update_block_in_changeset(changeset, uid, [Access.key(:data), Access.key(:vars)], module.vars)
+    # Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{vars: module.vars}})
     changeset = base_form.source
-    # TODO -- get data field name somehow
-    blocks = Ecto.Changeset.get_field(changeset, :data)
+    blocks = Ecto.Changeset.get_field(changeset, data_field)
 
     # TODO -- deep search? inside sections, etc
     source_position = Enum.find_index(blocks, &(&1.uid == block_uid))

@@ -2,18 +2,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
   use Surface.Component
   use Phoenix.HTML
   alias Surface.Components.Form.HiddenInput
-  alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   prop module_refs, :list, required: true
   prop module_ref_name, :string, required: true
   prop base_form, :any
   prop uploads, :any
-
-  # prop insert_block, :event, required: true
-  # prop duplicate_block, :event, required: true
+  prop data_field, :atom
 
   data module_name, :string
   data ref_index, :any
@@ -23,11 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
   data ref_form, :form
   data block_count, :integer
 
-  def v(form, field) do
-    # input_value(form, field)
-    Ecto.Changeset.get_field(form.source, field)
-    # |> IO.inspect(pretty: true, label: "module_v")
-  end
+  def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
     {:ok,
@@ -51,10 +43,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
 
       nil ->
         require Logger
-        Logger.error("--- ref not found v")
-        Logger.error(inspect(Enum.map(refs, &elem(&1, 0).data), pretty: true))
-        Logger.error(inspect(ref, pretty: true))
-        Logger.error("--- end ^")
+
+        Logger.error("""
+        ==> Ref not found
+
+        Available refs:
+        #{inspect(Enum.map(refs, &elem(&1, 0).data), pretty: true)}
+
+        Ref name:
+        #{inspect(ref, pretty: true)}
+
+        --- end ^
+        """)
 
         socket
     end
@@ -66,6 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
       <Blocks.DynamicBlock
         id={@ref_uid}
         is_ref?={true}
+        data_field={@data_field}
         ref_name={@ref.name}
         ref_description={@ref.description}
         index={@ref_index}

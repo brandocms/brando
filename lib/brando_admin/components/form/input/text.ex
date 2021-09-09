@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
   prop class, :string
   prop monospace, :boolean, default: false
   prop disabled, :boolean
+  prop debounce, :integer
 
   def update(%{blueprint: blueprint, input: %{name: name, opts: opts}} = assigns, socket) do
     translations = get_in(blueprint.translations, [:fields, name]) || []
@@ -29,7 +30,8 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
        value: value,
        class: opts[:class],
        monospace: opts[:monospace] || false,
-       disabled: assigns[:disabled] || false
+       disabled: assigns[:disabled] || false,
+       debounce: assigns[:debounce]
      )}
   end
 
@@ -42,7 +44,8 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
      |> assign(
        value: value,
        class: assigns.class,
-       monospace: assigns.monospace || false
+       monospace: assigns.monospace || false,
+       debounce: assigns[:debounce]
      )}
   end
 
@@ -57,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
         form={@form}
         field={name}
         value={@value}
-        opts={placeholder: @placeholder, disabled: @disabled}
+        opts={placeholder: @placeholder, disabled: @disabled, phx_debounce: @debounce}
         class={"text", monospace: @monospace} />
     </FieldBase>
     """
@@ -75,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
         form={@form}
         field={@field}
         value={@value}
-        opts={disabled: @disabled}
+        opts={disabled: @disabled, phx_debounce: @debounce}
         class={"text", monospace: @monospace} />
     </FieldBase>
     """

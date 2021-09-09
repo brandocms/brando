@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
   prop blocks, :list, required: true
   prop base_form, :form, required: true
+  prop data_field, :atom, required: true
   prop insert_index, :integer
   prop insert_block, :event, required: true
   prop insert_section, :event, required: true
@@ -57,6 +58,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         <Blocks.DynamicBlock
           uploads={@uploads}
           index={index}
+          data_field={@data_field}
           base_form={@base_form}
           block_count={@block_count}
           block={block_form}

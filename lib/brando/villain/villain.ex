@@ -509,4 +509,125 @@ defmodule Brando.Villain do
       ids -> for id <- ids, do: update_module_in_fields(id)
     end
   end
+
+  @doc """
+  Scan recursively through `blocks` looking for `uid` and replace with `new_block`
+  """
+  def replace_block(blocks, uid, new_block) do
+    Enum.reduce(blocks, [], fn
+      %{uid: ^uid}, acc ->
+        [new_block | acc]
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            replace_block(refs, uid, new_block)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            replace_block(blocks, uid, new_block)
+          )
+          | acc
+        ]
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid}} = ref, acc ->
+        [%{ref | data: new_block} | acc]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
+  """
+  def merge_block(blocks, uid, merge_data) do
+    Enum.reduce(blocks, [], fn
+      %{uid: ^uid} = block, acc ->
+        [Utils.deep_merge(block, merge_data) | acc]
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            replace_block(refs, uid, merge_data)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            replace_block(blocks, uid, merge_data)
+          )
+          | acc
+        ]
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} = ref, acc ->
+        [%{ref | data: Utils.deep_merge(block, merge_data)} | acc]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Recursively search a list of blocks for block matching `uid`
+  """
+  def find_block(blocks, uid) do
+    Enum.reduce(blocks, nil, fn
+      %{uid: ^uid} = block -> block
+      %{type: "container", data: %{blocks: blocks}} -> find_block(blocks, uid)
+      %{type: "module", data: %{refs: refs}} -> find_block(refs, uid)
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} -> block
+    end)
+  end
+
+  @doc """
+  Search for block in changeset
+  """
+  def get_block_in_changeset(changeset, data_field, block_uid) do
+    blocks = Changeset.get_field(changeset, data_field)
+    find_block(blocks, block_uid)
+  end
+
+  @doc """
+  Switch out a block by uid in changeset
+  """
+  def replace_block_in_changeset(changeset, data_field, block_uid, new_block) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.replace_block(blocks, block_uid, new_block)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def update_block_in_changeset(changeset, data_field, block_uid, merge_data) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
 end

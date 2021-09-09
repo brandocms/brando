@@ -54,6 +54,10 @@ button.primary, a.primary {
     border-color: theme(colors.dark);
   }
 
+  &.small {
+    @extend %btnSmall;
+  }
+
   .processing {
     display: flex;
 
@@ -77,6 +81,56 @@ button.secondary {
   padding-top: 6px;
 }
 
+%btnSmall {
+  @fontsize sm;
+  padding: 10px 15px;
+  min-width: auto;
+}
+
+a.danger, button.danger {
+  @fontsize button;
+
+  white-space: nowrap;
+  border: none;
+  background-color: #be1010;
+  padding: 15px 25px;
+  color: white;
+  border-radius: 34px;
+
+  min-width: 205px;
+  text-align: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  &.small {
+    @extend %btnSmall;
+  }
+
+  &:first-of-type {
+    @space margin-top 15px;
+  }
+
+  &.fullWidth {
+    min-width: auto;
+  }
+
+  &.narrow {
+    min-width: auto;
+    padding: 15px 18px 16px;
+  }
+
+  &.disabled {
+    color: #aaa;
+  }
+
+  &.fw {
+    width: 100%;
+  }
+
+  &:hover {
+    background-color: theme(colors.dark);
+  }
+}
+
 a.secondary, button.secondary {
   @fontsize button;
 
@@ -91,6 +145,10 @@ a.secondary, button.secondary {
 
   &:first-of-type {
     @space margin-top 15px;
+  }
+
+  &.small {
+    @extend %btnSmall;
   }
 
   &.fullWidth {

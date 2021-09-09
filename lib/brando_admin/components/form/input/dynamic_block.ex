@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   prop ref_description, :string
   prop id, :any
   prop uploads, :any
+  prop data_field, :atom
 
   prop insert_block, :event
   prop duplicate_block, :event
@@ -21,7 +22,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   data random_id, :string
 
   def v(form, field), do: input_value(form, field)
-  # Ecto.Changeset.get_field(form.source, field)
 
   def update(assigns, socket) do
     socket =
@@ -61,6 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       block: @block,
       is_ref?: @is_ref?,
       base_form: @base_form,
+      data_field: @data_field,
       index: @index,
       ref_name: @ref_name,
       ref_description: @ref_description,

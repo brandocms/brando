@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   data blocks, :any
   data insert_index, :integer
+  data data_field, :atom
 
   def mount(socket) do
     {:ok, assign(socket, insert_index: 0)}
@@ -27,7 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:blocks, blocks)}
+     |> assign(:blocks, blocks)
+     |> assign(:data_field, name)}
   end
 
   def render(%{input: %{name: name}} = assigns) do
@@ -42,6 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@form}
         blocks={@blocks}
         uploads={@uploads}
+        data_field={@data_field}
         insert_index={@insert_index}
         insert_block="insert_block"
         insert_section="insert_section"

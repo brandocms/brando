@@ -3,19 +3,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use Phoenix.HTML
 
   import Brando.Gettext
+  alias Brando.Blueprint.Villain.Blocks.PictureBlock
+  alias Brando.Utils
+  alias Brando.Villain
 
-  alias Surface.Components.Form.Inputs
-  alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
+
+  alias Surface.Components.Form.Inputs
+  alias Surface.Components.Form.HiddenInput
 
   prop uploads, :any
   prop base_form, :any
   prop block, :any
   prop block_count, :integer
   prop index, :any
+  prop data_field, :atom
   prop is_ref?, :boolean, default: false
   prop ref_name, :string
   prop ref_description, :string
@@ -28,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   data block_data, :form
   data images, :list
 
-  def v(form, field), do: input_value(form, field) |> IO.inspect(label: "v #{field}")
+  def v(form, field), do: input_value(form, field)
 
   def mount(socket) do
     {:ok,
@@ -39,15 +44,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def update(assigns, socket) do
     extracted_path = v(assigns.block, :data).path
 
+    block_data =
+      assigns.block
+      |> inputs_for(:data)
+      |> List.first()
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:block_data, fn ->
-       assigns.block
-       |> inputs_for(:data)
-       |> List.first()
-     end)
-     |> assign_new(:extracted_path, fn -> extracted_path end)
+     |> assign(:block_data, block_data)
+     |> assign(:extracted_path, extracted_path)
      |> assign(:uid, v(assigns.block, :uid))}
   end
 
@@ -59,8 +65,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       phx-hook="Brando.LegacyImageUpload"
       data-block-index={@index}
       data-block-uid={@uid}>
-
-      {inspect @block, pretty: true}
 
       <Block
         id={"#{@uid}-base"}
@@ -83,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
             <figcaption :on-click="show_config">
-              <span>{gettext("Caption")}</span> {v(@block_data, :caption) || gettext("<empty>")}<br>
+              <span>{gettext("Caption")}</span> {(v(@block_data, :title) || gettext("<empty>")) |> raw}<br>
               <span>{gettext("Alt. text")}</span> {v(@block_data, :alt) || gettext("<empty>")}
             </figcaption>
           </div>
@@ -120,7 +124,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         </Modal>
         <:config>
           <Input.RichText form={@block_data} field={:title} />
-          <Input.Text form={@block_data} field={:alt} />
+          <Input.Text form={@block_data} field={:alt} debounce={500} />
+
+          <button type="button" class="secondary small upload-image">
+            {gettext("Upload new image")}
+          </button>
+          <button type="button" class="secondary small" :on-click="select_image">
+            {gettext("Select image")}
+          </button>
+          <button type="button" class="danger small" :on-click="reset_image">
+            {gettext("Reset image")}
+          </button>
+
           <HiddenInput form={@block_data} field={:cdn} />
           <HiddenInput form={@block_data} field={:credits} />
           <HiddenInput form={@block_data} field={:dominant_color} />
@@ -161,46 +176,76 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event(
         "image_uploaded",
         %{"id" => id},
-        %{assigns: %{block: block, base_form: base_form}} = socket
+        %{
+          assigns: %{
+            block: block,
+            base_form: base_form,
+            uid: uid,
+            data_field: data_field
+          }
+        } = socket
       ) do
-    require Logger
-    Logger.error("==> got image uploaded! #{id}")
     {:ok, image} = Brando.Images.get_image(id)
-    require Logger
-    Logger.error(inspect(image, pretty: true))
-    Logger.error("stick it in the form herre!")
 
-    changeset = block.source
     block_data = input_value(block, :data)
-
-    Logger.error("changeset was #{inspect(changeset, pretty: true)}")
 
     updated_data_map =
       block_data
       |> Map.merge(image.image)
       |> Map.from_struct()
-      |> IO.inspect(label: "updated_data_map")
 
-    updated_data_struct =
-      struct(Brando.Blueprint.Villain.Blocks.PictureBlock.Data, updated_data_map)
+    updated_data_struct = struct(PictureBlock.Data, updated_data_map)
 
-    require Logger
-    Logger.error(inspect(updated_data_struct, pretty: true))
+    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
 
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, updated_data_struct)
-    Logger.error(inspect(updated_changeset, pretty: true))
+    changeset = base_form.source
+    schema = changeset.data.__struct__
 
-    new_block = Map.put(block, :source, updated_changeset)
-    new_block_data = inputs_for(new_block, :data) |> List.first()
+    updated_changeset =
+      Villain.replace_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        updated_picture_block
+      )
 
-    {:noreply,
-     socket
-     |> assign(:block_data, new_block_data)
-     |> assign(:extracted_path, updated_data_struct.path)
-     |> push_event("b:validate", %{})}
+    form_id = "#{schema.__naming__.singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
   end
 
-  def handle_event("select_image", %{"id" => id}, %{assigns: %{uid: uid}} = socket) do
+  def handle_event(
+        "reset_image",
+        _,
+        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
+      ) do
+    changeset = base_form.source
+
+    empty_block = %PictureBlock{
+      uid: Utils.generate_uid(),
+      data: %PictureBlock.Data{}
+    }
+
+    updated_changeset =
+      Villain.replace_block_in_changeset(changeset, data_field, uid, empty_block)
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__.singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("select_image", %{"id" => _id}, %{assigns: %{uid: uid}} = socket) do
     image_picker_modal_id = "#{uid}-image-picker"
     image_info_modal_id = "#{uid}-image-info"
     Modal.hide(image_picker_modal_id)
