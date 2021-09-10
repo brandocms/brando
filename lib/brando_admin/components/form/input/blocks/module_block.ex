@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Surface.Components.Form.HiddenInput
   alias Brando.Content
+  alias Brando.Villain
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
@@ -181,30 +182,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
-    # update_block_in_changeset(changeset, uid, [Access.key(:data), Access.key(:vars)], module.vars)
-    # Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{vars: module.vars}})
     changeset = base_form.source
-    blocks = Ecto.Changeset.get_field(changeset, data_field)
 
-    # TODO -- deep search? inside sections, etc
-    source_position = Enum.find_index(blocks, &(&1.uid == block_uid))
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{vars: module.vars}}
+      )
 
     schema = changeset.data.__struct__
     form_id = "#{schema.__naming__.singular}_form"
-
-    old_block = Enum.at(blocks, source_position)
-    new_block = put_in(old_block, [Access.key(:data), Access.key(:vars)], module.vars)
-
-    new_blocks =
-      put_in(
-        blocks,
-        [
-          Access.filter(&match?(%{uid: ^block_uid}, &1))
-        ],
-        new_block
-      )
-
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_blocks)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

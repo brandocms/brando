@@ -175,11 +175,18 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Section
+  mutation :create, Section do
+    fn entry ->
+      Brando.Cache.Sections.set()
+
+      {:ok, entry}
+    end
+  end
 
   mutation :update, Section do
     fn entry ->
       Villain.update_section_in_fields(entry.id)
+      Brando.Cache.Sections.set()
 
       {:ok, entry}
     end
@@ -187,6 +194,18 @@ defmodule Brando.Content do
 
   mutation :delete, Section
   mutation :duplicate, {Section, change_fields: [:name, :class]}
+
+  @doc """
+  Find section with `id` in `sections`
+  """
+  def find_section(sections, id) do
+    sections
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, {:section, :not_found, id}}
+      section -> {:ok, section}
+    end
+  end
 
   def get_var_by_type(var_type) do
     Map.get(@default_vars, var_type)

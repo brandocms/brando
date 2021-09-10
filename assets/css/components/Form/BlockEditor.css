@@ -32,6 +32,7 @@
       }
 
       .refs, .vars {
+        
         @space margin-top 20px;
         
         .button-group {
@@ -66,6 +67,10 @@
           li {
             @space padding-y 8px;
             @space padding-x 8px;
+            
+            user-select: none;
+            pointer-events: all;
+
             display: flex;
             align-items: center;
             justify-content: space-between;

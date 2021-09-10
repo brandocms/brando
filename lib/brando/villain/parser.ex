@@ -76,6 +76,7 @@ defmodule Brando.Villain.Parser do
       alias Brando.Cache
       alias Brando.Content
       alias Brando.Datasource
+      alias Brando.Utils
       alias Brando.Villain
 
       alias Liquex.Context
@@ -342,7 +343,6 @@ defmodule Brando.Villain.Parser do
       def picture(%{url: ""}, _), do: ""
 
       def picture(data, _) do
-        data = Brando.Utils.coerce_struct(data, Brando.Images.Image)
         title = Map.get(data, :title, nil)
         credits = Map.get(data, :credits, nil)
         alt = Map.get(data, :alt, nil)
@@ -350,14 +350,15 @@ defmodule Brando.Villain.Parser do
         height = Map.get(data, :height, nil)
         orientation = (width > height && "landscape") || "portrait"
         lightbox = Map.get(data, :lightbox, nil)
+        placeholder = Map.get(data, :placeholder, nil)
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         link = Map.get(data, :link) || ""
         img_class = Map.get(data, :img_class, "")
         picture_class = Map.get(data, :picture_class, "")
-        srcset = Map.get(data, :srcset, "")
+        srcset = Map.get(data, :srcset)
 
-        media_queries = Map.get(data, :media_queries, "")
+        media_queries = Map.get(data, :media_queries)
 
         title = if title == "", do: nil, else: title
         credits = if credits == "", do: nil, else: credits
@@ -378,15 +379,7 @@ defmodule Brando.Villain.Parser do
 
         caption = render_caption(Map.merge(data, %{title: title, credits: credits}))
 
-        srcset =
-          if srcset == "",
-            do: default_srcset,
-            else: Code.string_to_quoted!(srcset, existing_atoms_only: true)
-
-        media_queries =
-          if media_queries != "",
-            do: Code.string_to_quoted!(media_queries, existing_atoms_only: true),
-            else: nil
+        media_queries = nil
 
         alt =
           cond do
@@ -404,11 +397,12 @@ defmodule Brando.Villain.Parser do
             width: true,
             height: true,
             lightbox: lightbox,
-            placeholder: :svg,
+            placeholder: placeholder || :svg,
             lazyload: true,
             sizes: "auto",
-            srcset: srcset,
-            cache: :timestamp
+            srcset: srcset || default_srcset,
+            cache: :timestamp,
+            prefix: Utils.media_url()
           )
           |> safe_to_string
 
@@ -736,6 +730,10 @@ defmodule Brando.Villain.Parser do
       Convert container to html. Recursive parsing.
       """
       def container(%{blocks: blocks, section_id: section_id}, opts) do
+        sections = opts.sections
+
+        {:ok, section} = Content.find_section(sections, section_id)
+
         blocks_html =
           (blocks || [])
           |> Enum.reduce([], fn d, acc ->
@@ -745,7 +743,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.join("")
 
         """
-        <section b-section="TODO">
+        <section b-section="#{section.class}" style="--bg-color: #{section.color_bg}; --fg-color: #{section.color_fg}">
           #{blocks_html}
         </section>
         """

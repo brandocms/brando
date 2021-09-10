@@ -3,7 +3,8 @@
   import { Editor } from '@tiptap/core'
   import StarterKit from '@tiptap/starter-kit'
   import Typography from '@tiptap/extension-typography'
-  import Link from '@tiptap/extension-link'
+  import Subscript from '@tiptap/extension-subscript'
+  import Link from './extensions/Link'
   import Button from './extensions/Button'
   import PreventDrop from './extensions/PreventDrop'
   import Focus from '@tiptap/extension-focus'
@@ -19,6 +20,42 @@
   }
 
   const showSchema = () => {}
+
+  const toggleLink = () => {
+    if (editor.isActive('link')) {
+      console.log('link is active. deactivate!')
+      editor.chain().focus().unsetLink().run()
+    } else {
+      const url = window.prompt('URL')
+
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange('link')
+        .setLink({ href: url })
+        .run()
+
+      console.log('link is not active, show the window')
+    }
+  }
+
+  const toggleButton = () => {
+    if (editor.isActive('button')) {
+      console.log('button is active. deactivate!')
+      editor.chain().focus().unsetButton().run()
+    } else {
+      const url = window.prompt('URL')
+
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange('button')
+        .setButton({ href: url })
+        .run()
+
+      console.log('button is not active, show the window')
+    }
+  }
 
   onMount(() => {
     if (!element.parentNode.parentNode) {
@@ -37,6 +74,7 @@
         Link.configure({
           openOnClick: false
         }),
+        Subscript,
         Button,
         Focus.configure({
           className: 'has-focus',
@@ -125,15 +163,21 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8 4h13v2H8V4zM4.5 6.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 6.9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM8 11h13v2H8v-2zm0 7h13v2H8v-2z"/></svg>
     </button>
 
-    <button type="button" title="Link" class="menu-item" data-command="link" :on-click="show_link_modal" phx-value-id={"#{v(@block, :uid)}-link"}>
+    <button 
+      on:click={() => toggleLink()}
+      type="button" 
+      title="Link" 
+      class="menu-item" 
+      class:active={editor.isActive('link')}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17.657 14.828l-1.414-1.414L17.657 12A4 4 0 1 0 12 6.343l-1.414 1.414-1.414-1.414 1.414-1.414a6 6 0 0 1 8.485 8.485l-1.414 1.414zm-2.829 2.829l-1.414 1.414a6 6 0 1 1-8.485-8.485l1.414-1.414 1.414 1.414L6.343 12A4 4 0 1 0 12 17.657l1.414-1.414 1.414 1.414zm0-9.9l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z"/></svg>
     </button>
 
     <button 
-      on:click={() => showSchema()}
+      on:click={() => toggleButton()}
       type="button" 
-      title="Button" 
-      class="menu-item" >
+      title="Link" 
+      class="menu-item" 
+      class:active={editor.isActive('button')}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v14h14V5H5z"/></svg>
     </button>
 
@@ -152,6 +196,14 @@
       type="button"
       title="Italic">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M15 20H7v-2h2.927l2.116-12H9V4h8v2h-2.927l-2.116 12H15z" fill="rgba(0,0,0,1)"/></svg>
+    </button>
+    <button 
+      on:click={() => editor.chain().focus().toggleSubscript().run()}
+      class="menu-item"
+      class:active={editor.isActive('subscript')}
+      type="button"
+      title="Subscript">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 6v13H9V6H3V4h14v2h-6zm8.55 10.58a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 14a2 2 0 0 1 1.373 3.454L18.744 19H21v1h-4v-1l2.55-2.42z"/></svg>
     </button>
   </div>
 {/if}

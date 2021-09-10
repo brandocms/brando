@@ -20,7 +20,7 @@
       svg {
         width: 200px;
 
-        path:nth-of-type(2) {
+        path:nth-of-type(2), .plus, circle {
           fill: theme(colors.dark);
         }
       }

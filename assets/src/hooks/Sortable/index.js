@@ -6,6 +6,7 @@ export default (app) => ({
     this.target = this.el.dataset.target
     this.sortableSelector = this.el.dataset.sortableSelector
     this.handle = this.el.dataset.sortableHandle
+    this.sortableId = this.el.dataset.sortableId
     this.bindSortable()
   },
 
@@ -24,23 +25,21 @@ export default (app) => ({
     })
   },
 
-  // updated () {
-  //   this.bindSortable()
-  //   console.log(this.sortable)
-  // },
-
   getOrder () {
     const items = this.el.querySelectorAll(this.sortableSelector)
     this.currentOrder = Array.from(items).map(r => parseInt(r.dataset.id))
+    console.log('this.currentOrder', this.currentOrder)
     return []
   },
 
   setOrder (sortable) {
     const sortedArray = sortable.toArray().map(Number)
     if (!isEqual(this.currentOrder, sortedArray)) {
-      this.pushEventTo(this.target, 'sequenced', {
-        ids: sortedArray
-      })
+      if (this.target) {
+        this.pushEventTo(this.target, 'sequenced', { ids: sortedArray, sortable_id: this.sortableId })
+      } else {
+        this.pushEvent('sequenced', { ids: sortedArray, sortable_id: this.sortableId })
+      }
       this.currentOrder = sortedArray
     }
   }

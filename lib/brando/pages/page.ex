@@ -26,6 +26,7 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.ScheduledPublishing
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete, obfuscated_fields: [:uri]
+  trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Villain
@@ -64,7 +65,7 @@ defmodule Brando.Pages.Page do
     attribute :template, :string, required: true
     attribute :is_homepage, :boolean
     attribute :data, :villain
-    attribute :status, :status
+    # attribute :status, :status
     attribute :css_classes, :string
   end
 

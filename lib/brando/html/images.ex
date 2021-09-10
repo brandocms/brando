@@ -55,7 +55,7 @@ defmodule Brando.HTML.Images do
   def picture_tag(image_struct, opts \\ [])
 
   def picture_tag(%struct_type{} = image_struct, opts)
-      when struct_type in [Brando.Images.Image] do
+      when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
       img: [],
       picture: [],
@@ -64,6 +64,10 @@ defmodule Brando.HTML.Images do
       mq_sources: [],
       opts: opts
     }
+
+    require Logger
+    Logger.error(inspect(image_struct, pretty: true))
+    Logger.error(inspect(opts, pretty: true))
 
     attrs =
       initial_map
@@ -642,15 +646,7 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    #! TODO Remove this when we move to Blueprints completely
-    {:ok, cfg} =
-      if {:get_image_cfg, 1} in mod.__info__(:functions) do
-        apply(mod, :get_image_cfg, [field])
-      else
-        {:ok, apply(mod, :__attribute_opts__, [field])}
-      end
-
-    #! END
+    {:ok, cfg} = {:ok, apply(mod, :__attribute_opts__, [field])}
 
     if !cfg.srcset do
       raise ArgumentError,

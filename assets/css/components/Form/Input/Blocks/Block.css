@@ -129,12 +129,18 @@
     @fontsize 10px;
     @space margin-top 5px;
     cursor: help;
+    display: flex;
+    justify-content: space-between;
+
+    div {
+      &:last-of-type {
+        text-align: right;
+      }
+    }
 
     span {
       font-weight: bold;
-      margin-right: 5px;
-      min-width: 45px;
-      display: inline-block;
+      display: block;
     }
   }
 

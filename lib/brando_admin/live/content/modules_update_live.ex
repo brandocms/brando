@@ -10,14 +10,11 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias Brando.Villain
-  alias Brando.Content.Var
   alias Brando.Content.Module.Ref
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.PolyInputs
-  alias BrandoAdmin.Components.Form.MapValueInputs
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Toast
 
@@ -95,8 +92,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                     <button type="button" :on-click="create_ref" phx-value-type={"text"} phx-value-id={"#{form.id}-create-ref"} class="secondary">
                       Text
                     </button>
-                    <button type="button" :on-click="create_ref" phx-value-type={"heading"} phx-value-id={"#{form.id}-create-ref"} class="secondary">
-                      Heading
+                    <button type="button" :on-click="create_ref" phx-value-type={"header"} phx-value-id={"#{form.id}-create-ref"} class="secondary">
+                      Header
                     </button>
                     <button type="button" :on-click="create_ref" phx-value-type={"picture"} phx-value-id={"#{form.id}-create-ref"} class="secondary">
                       Picture
@@ -159,6 +156,12 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                                   <Input.Text form={block_data} field={:picture_class} />
                                   <Input.Text form={block_data} field={:img_class} />
                                   <Input.Toggle form={block_data} field={:webp} />
+                                  <Input.Select form={block_data} field={:placeholder} options={[
+                                    %{label: "SVG", value: :svg},
+                                    %{label: "Dominant Color", value: :dominant_color},
+                                    %{label: "Micro", value: :micro},
+                                    %{label: "None", value: :none},
+                                  ]} />
                                 {/for}
 
                               {#match "gallery"}
@@ -216,6 +219,12 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                 <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"string"} phx-value-id={"#{form.id}-create-var"} class="secondary">
                   String
                 </button>
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"html"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  Html
+                </button>
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"datetime"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  Datetime
+                </button>
                 <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"boolean"} phx-value-id={"#{form.id}-create-var"} class="secondary">
                   Boolean
                 </button>
@@ -232,9 +241,14 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
                 </button>
               </h2>
-              <ul>
+              <ul
+                id="vars-list"
+                phx-hook="Brando.Sortable"
+                data-sortable-id={"sortable-vars"}
+                data-sortable-selector=".var"
+                data-sortable-handle=".sort-handle">
                 <PolyInputs form={form} for={:vars} :let={form: var, index: idx}>
-                  <li class="padded">
+                  <li class="var padded sort-handle draggable" data-id={idx}>
                     <Modal title="Edit var" id={"#{form.id}-var-#{idx}"}>
                       <Input.Toggle form={var} field={:important} />
                       <Input.Text form={var} field={:key} />
@@ -305,6 +319,18 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
      |> assign(:uri, uri)}
   end
 
+  def handle_event(
+        "sequenced",
+        %{"ids" => order_indices, "sortable_id" => "sortable-vars"},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars)
+    sorted_vars = Enum.map(order_indices, &Enum.at(vars, &1))
+    updated_changeset = put_change(changeset, :vars, sorted_vars)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
   def handle_event("show_modal", %{"id" => modal_id}, socket) do
     Modal.show(modal_id)
     {:noreply, socket}
@@ -365,9 +391,6 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
       ) do
     vars = get_field(changeset, :vars) || []
 
-    require Logger
-    Logger.error(inspect(var_type))
-
     var_module =
       var_type
       |> String.to_existing_atom()
@@ -390,12 +413,12 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   def handle_event(
         "delete_var",
-        %{"id" => var_name},
+        %{"id" => var_key},
         %{assigns: %{changeset: changeset}} = socket
       ) do
     vars = get_field(changeset, :vars)
-    filtered_vars = Enum.reject(vars, &(&1.name == var_name))
-    updated_changeset = put_embed(changeset, :vars, filtered_vars)
+    filtered_vars = Enum.reject(vars, &(&1.key == var_key))
+    updated_changeset = put_change(changeset, :vars, filtered_vars)
 
     {:noreply, assign(socket, :changeset, updated_changeset)}
   end

@@ -18,7 +18,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
 
-  def v(form, field), do: get_field(form.source, field)
+  data uid, :string
+  data text_type, :string
+
+  def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
     {:ok,
@@ -57,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
           {/for}
         </:config>
         {#for block_data <- inputs_for(@block, :data)}
-          <div class="text-block">
+          <div class={"text-block", @text_type}>
             <div class="tiptap-wrapper">
               <HiddenInput
                 class="tiptap-text"

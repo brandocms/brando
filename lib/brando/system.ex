@@ -17,6 +17,7 @@ defmodule Brando.System do
     Cache.SEO.set()
     Cache.Globals.set()
     Cache.Navigation.set()
+    Cache.Sections.set()
     :ok
   end
 

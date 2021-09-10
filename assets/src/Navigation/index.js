@@ -3,6 +3,7 @@ import { Dom, gsap } from '@brandocms/jupiter'
 export default class Navigation {
   constructor (app) {
     this.app = app
+    this.fullscreen = false
 
     if (!Dom.find('#navigation')) {
       return
@@ -12,6 +13,15 @@ export default class Navigation {
     this.setupNavDropdowns()
     this.setupNavListeners()
     this.setupCurrentUserDropdown()
+    this.setupFullscreenToggle()
+  }
+
+  setupFullscreenToggle () {
+    const fsToggle = Dom.find('.fullscreen-toggle')
+    fsToggle.addEventListener('click', e => {
+      console.log('CLICK!')
+      this.setFullscreen(!this.fullscreen)
+    })
   }
 
   setupNavListeners() {
@@ -122,5 +132,26 @@ export default class Navigation {
     this.showCircle(circle)
     const top = el.getBoundingClientRect().top
     gsap.to(circle, { ease: 'expo.ease', duration: 0.35, top: top - navTop })
+  }
+
+  setFullscreen (value) {
+    const main = document.querySelector('main')
+    const navigation = document.querySelector('#navigation')
+
+    this.fullscreen = value
+
+    if (value) {
+      gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '-100' })
+      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 0 })
+    } else {
+      const marginLeft = getCSSVar(main, '--main-margin-left')
+      gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '0' })
+      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft })
+    }
+  }
+
+  getCSSVar (el, varName) {
+    const styles = window.getComputedStyle(el)
+    return styles.getPropertyValue(varName)
   }
 }

@@ -6,7 +6,9 @@ export default (app) => ({
 
     this.$btns.forEach(btn => {
       let content = btn.nextElementSibling
+      console.log('content', content)
       gsap.set(content, { display: 'none' })
+
       btn.addEventListener('click', e => {
         e.stopPropagation()
         this.toggle(btn, content)
@@ -17,6 +19,7 @@ export default (app) => ({
   toggle(btn, content) {
     const open = Dom.hasClass(content, 'open')
 
+    console.log('open', open)
     if (open) {
       Dom.removeClass(content, 'open')
       gsap.set(content, { display: 'none' })

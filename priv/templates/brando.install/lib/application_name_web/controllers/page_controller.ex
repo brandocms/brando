@@ -2,7 +2,7 @@ defmodule <%= application_module %>Web.PageController do
   use <%= application_module %>Web, :controller
   alias Brando.I18n
   alias Brando.Pages
-  alias Brando.FallbackController
+  alias BrandoWeb.FallbackController
 
   @type conn :: Plug.Conn.t()
   @type page_not_found :: {:error, {:page, :not_found}}

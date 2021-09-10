@@ -1,5 +1,8 @@
 <section
   id="navigation">
+  <div class="fullscreen-toggle">
+    x
+  </div>
   <div
     id="navigation-content">
     <header class="navigation-header">

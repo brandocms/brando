@@ -55,6 +55,15 @@ defmodule Brando.HTML do
     )
   end
 
+  def render_sections_css do
+    """
+    <style>
+    #{Brando.Cache.Sections.get()}
+    </style>
+    """
+    |> raw
+  end
+
   @doc """
   Replace $csrftoken in `html` with .. csrf token!
 

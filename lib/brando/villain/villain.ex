@@ -27,6 +27,7 @@ defmodule Brando.Villain do
   }
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @section_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parses `json` (in Villain-format).
@@ -45,6 +46,7 @@ defmodule Brando.Villain do
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, sections} = Content.list_sections(@section_cache_ttl)
 
     entry =
       entry
@@ -57,6 +59,7 @@ defmodule Brando.Villain do
       opts_map
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
+      |> Map.put(:sections, sections)
 
     html =
       data

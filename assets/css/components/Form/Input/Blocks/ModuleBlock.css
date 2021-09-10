@@ -9,6 +9,10 @@
       @space margin-bottom 1;
     }
 
+    .tiptap-wrapper {
+      @color bg white;
+    }
+
     input.text, textarea.text {
       @color bg white;
       @color fg dark;

@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   prop base_form, :any
   prop index, :any
   prop uploads, :any
+  prop data_field, :atom
   # prop block_count, :integer
 
   prop insert_block, :event, required: true
@@ -148,6 +149,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
           blocks={@block_forms}
+          data_field={@data_field}
           uploads={@uploads}
           insert_index={@insert_index}
           insert_block="insert_block"
@@ -179,7 +181,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           assigns: %{
             base_form: form,
             uid: block_uid,
-            block: %{id: block_id}
+            block: %{id: block_id},
+            data_field: data_field
           }
         } = socket
       ) do
@@ -194,8 +197,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     module = Enum.find(modules, &(&1.id == module_id))
 
     # build a module block from module
-
-    generated_uid = Brando.Utils.generate_uid() |> IO.inspect(label: "generated UID")
+    generated_uid = Brando.Utils.generate_uid()
 
     {_, refs_with_generated_uids} =
       get_and_update_in(
@@ -215,28 +217,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    # TODO -- deep search? inside sections, etc
-    data = get_field(changeset, :data)
+    # TODO -- Villain.replace_block_in_changeset
+    data = get_field(changeset, data_field)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
     original_block = Enum.at(data, source_position)
     sub_blocks = original_block.data.blocks || []
 
-    # TODO: use dynamic data field
     {index, ""} = Integer.parse(index_binary)
     new_blocks = List.insert_at(sub_blocks, index, new_block)
     updated_block = put_in(original_block, [Access.key(:data), Access.key(:blocks)], new_blocks)
 
     # switch out container block
-    # TODO: deep search?
-    # TODO: use dynamic data field here
 
     new_data = put_in(data, [Access.filter(&match?(%{uid: ^block_uid}, &1))], updated_block)
-
-    updated_changeset = put_change(changeset, :data, new_data)
-
-    require Logger
-    Logger.error("updated_changeset")
-    Logger.error(inspect(updated_changeset.changes, pretty: true))
+    updated_changeset = put_change(changeset, data_field, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

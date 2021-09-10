@@ -11,6 +11,11 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   prop label, :string
   prop placeholder, :string
   prop instructions, :string
+  prop debounce, :any
+
+  def update(assigns, socket) do
+    {:ok, socket |> assign(assigns) |> assign(:debounce, assigns[:debounce])}
+  end
 
   def render(%{blueprint: _, input: %{name: name, opts: opts}} = assigns) do
     ~F"""
@@ -22,7 +27,8 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       <TextArea
         form={@form}
         field={name}
-        class={"text"} />
+        class={"text"}
+        opts={phx_debounce: @debounce} />
     </FieldBase>
     """
   end
@@ -38,7 +44,8 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       <TextArea
         form={@form}
         field={@field}
-        class={"text"} />
+        class={"text"}
+        opts={phx_debounce: @debounce} />
     </FieldBase>
     """
   end

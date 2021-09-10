@@ -16,14 +16,16 @@ export const pasteRegex = /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a
 export const pasteRegexExact = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,}\b(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)$/gi
 
 export default Mark.create({
-  name: 'button',
-  priority: 1100,
+  name: 'link',
+
+  priority: 1000,
+
   inclusive: false,
 
   defaultOptions: {
+    openOnClick: false,
     linkOnPaste: true,
     HTMLAttributes: {
-      class: 'action-button',
       target: '_blank',
       rel: 'noopener noreferrer nofollow',
     },
@@ -37,13 +39,16 @@ export default Mark.create({
       target: {
         default: this.options.HTMLAttributes.target,
         renderHTML: attributes => {
+          console.log('renderHTML', attributes)
           if (attributes.href.startsWith('/')) {
+            console.log('starts with /')
             return {
               target: null,
               rel: null
             }
           }
           if (attributes.href.startsWith('#')) {
+            console.log('starts with #')
             return {
               target: null,
               rel: null
@@ -61,7 +66,7 @@ export default Mark.create({
 
   parseHTML() {
     return [
-      { tag: 'a[class="action-button"]' },
+      { tag: 'a[href]' },
     ]
   },
 
@@ -71,14 +76,14 @@ export default Mark.create({
 
   addCommands() {
     return {
-      setButton: attributes => ({ commands }) => {
-        return commands.setMark('button', attributes)
+      setLink: attributes => ({ commands }) => {
+        return commands.setMark('link', attributes)
       },
-      toggleButton: attributes => ({ commands }) => {
-        return commands.toggleMark('button', attributes)
+      toggleLink: attributes => ({ commands }) => {
+        return commands.toggleMark('link', attributes, { extendEmptyMarkRange: true })
       },
-      unsetButton: () => ({ commands }) => {
-        return commands.unsetMark('button')
+      unsetLink: () => ({ commands }) => {
+        return commands.unsetMark('link', { extendEmptyMarkRange: true })
       },
     }
   },
@@ -95,7 +100,7 @@ export default Mark.create({
     if (this.options.linkOnPaste) {
       plugins.push(
         new Plugin({
-          key: new PluginKey('handlePasteButton'),
+          key: new PluginKey('handlePasteLink'),
           props: {
             handlePaste: (view, event, slice) => {
               const { state } = view
@@ -118,7 +123,6 @@ export default Mark.create({
 
               this.editor.commands.setMark(this.type, {
                 href: textContent,
-                class: 'action-button'
               })
 
               return true

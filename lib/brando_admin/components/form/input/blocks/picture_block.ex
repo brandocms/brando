@@ -87,15 +87,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
             <figcaption :on-click="show_config">
-              <span>{gettext("Caption")}</span> {(v(@block_data, :title) || gettext("<empty>")) |> raw}<br>
-              <span>{gettext("Alt. text")}</span> {v(@block_data, :alt) || gettext("<empty>")}
+              <div>
+                <span>{gettext("Caption")}</span> {v(@block_data, :title) |> raw}<br>
+              </div>
+              <div>
+                <span>{gettext("Alt. text")}</span> {v(@block_data, :alt)}
+              </div>
             </figcaption>
           </div>
         {/if}
 
         <div class={"empty upload-canvas", hidden: @extracted_path}>
           <figure>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M21 15v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2zm.008-12c.548 0 .992.445.992.993V13h-2V5H4v13.999L14 9l3 3v2.829l-3-3L6.827 19H14v2H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016zM8 7a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+            <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+              <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+              <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+              <circle cx="8" cy="9" r="2"/>
+            </svg>
           </figure>
           <div class="instructions">
             Click or drag an image to upload or
@@ -136,6 +145,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             {gettext("Reset image")}
           </button>
 
+          <HiddenInput form={@block_data} field={:placeholder} />
           <HiddenInput form={@block_data} field={:cdn} />
           <HiddenInput form={@block_data} field={:credits} />
           <HiddenInput form={@block_data} field={:dominant_color} />

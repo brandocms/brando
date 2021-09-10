@@ -121,12 +121,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         {/if}
 
         {#if !Enum.empty?(@gallery)}
-        <!--
-          data-target={@target}
-          data-sortable-id={"content_listing_#{@listing_name}"}
-          class="sort-container"
-          -->
-
           <div
             id={"sortable-#{@form.id}-#{name}-images"}
             class={"image-previews", @preview_layout}

@@ -67,16 +67,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <div class="brando-input">
                 {#case @type}
                   {#match "string"}
-                    <Input.Text form={@var} field={:value} label={@label} />
+                    <Input.Text form={@var} field={:value} label={@label} debounce={750} />
 
                   {#match "text"}
-                    <Input.Textarea form={@var} field={:value} label={@label} />
+                    <Input.Textarea form={@var} field={:value} label={@label} debounce={750} />
 
                   {#match "boolean"}
                     <Input.Toggle form={@var} field={:value} label={@label} />
 
                   {#match "color"}
-                    <Input.Text form={@var} field={:value} label={@label} />
+                    <Input.Text form={@var} field={:value} label={@label} debounce={750} />
 
                   {#match "datetime"}
                     <Input.Datetime form={@var} field={:value} label={@label} />

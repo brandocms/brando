@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
 
         <div
           class="modules"
-          phx-hook="Brando.ModulePicker"
+          phx-hook={!@hide_sections && "Brando.ModulePicker"}
           id={"#{@id}-modules"}>
           {#for {namespace, modules} <- @modules_by_namespace}
             {#unless namespace == "general"}

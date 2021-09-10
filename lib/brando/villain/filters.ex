@@ -1,5 +1,6 @@
 defmodule Brando.Villain.Filters do
   use Liquex.Filter
+  alias Brando.Utils
 
   @doc """
   Converts `value` timestamp into another date `format`.
@@ -34,11 +35,11 @@ defmodule Brando.Villain.Filters do
 
   # {{ entry.inserted_at | date:"%A","nb_NO" }}
   def date(%DateTime{} = value, format, locale, _) do
-    Brando.Utils.format_datetime(value, format, locale)
+    Utils.Datetime.format_datetime(value, format, locale)
   end
 
   def date(value, format, locale, _) do
-    Brando.Utils.format_datetime(value, format, locale)
+    Utils.Datetime.format_datetime(value, format, locale)
   end
 
   def humanize(value, _) do
@@ -128,11 +129,11 @@ defmodule Brando.Villain.Filters do
   """
   def publish_date(%{publish_at: publish_at}, format, locale, _)
       when not is_nil(publish_at) do
-    Brando.Utils.Datetime.format_datetime(publish_at, format, locale)
+    Utils.Datetime.format_datetime(publish_at, format, locale)
   end
 
   def publish_date(%{inserted_at: inserted_at}, format, locale, _) do
-    Brando.Utils.Datetime.format_datetime(inserted_at, format, locale)
+    Utils.Datetime.format_datetime(inserted_at, format, locale)
   end
 
   @doc """

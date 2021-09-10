@@ -83,7 +83,7 @@ defmodule Brando.Content.Module do
         """
         <div class="svg">{{ entry.svg }}</div><br>
         """,
-        columns: 3
+        columns: 2
       )
 
       template(

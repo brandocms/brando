@@ -31,6 +31,7 @@ defmodule Brando.Content.Section do
     attribute :class, :string, required: true
     attribute :color_bg, :text
     attribute :color_fg, :text
+    attribute :color_accent, :text
     attribute :css, :text
     attribute :rendered_css, :text
   end
@@ -45,6 +46,7 @@ defmodule Brando.Content.Section do
           input :instructions, :textarea
           input :color_bg, :text, monospace: true
           input :color_fg, :text, monospace: true
+          input :color_accent, :text, monospace: true
         end
 
         fieldset size: :half do
@@ -97,10 +99,27 @@ defmodule Brando.Content.Section do
           class="entry-link">
           {{ entry.name }}
         </a>
-        <div class="monospace tiny">{{ entry.color_bg }} / {{ entry.color_fg }}</div>
+        <div class="monospace tiny">{{ entry.color_bg }} / {{ entry.color_fg }} / {{ entry.color_accent }}</div>
         """,
         columns: 6
       )
+    end
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("section")
+      translate :plural, t("sections")
+    end
+
+    context :fields do
+      translate :css do
+        label t("CSS")
+
+        instructions t(
+                       "This will be namespaced under your section's class name, minified and included on page load"
+                     )
+      end
     end
   end
 end

@@ -151,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
 
-    generated_uid = Brando.Utils.generate_uid() |> IO.inspect(label: "generated UID")
+    generated_uid = Brando.Utils.generate_uid()
 
     {_, refs_with_generated_uids} =
       get_and_update_in(
@@ -170,10 +170,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       },
       uid: generated_uid
     }
-
-    require Logger
-    Logger.error("--- New block:")
-    Logger.error(inspect(new_block, pretty: true))
 
     {index, ""} = Integer.parse(index_binary)
 

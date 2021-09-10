@@ -32,6 +32,10 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
       attribute :cdn, :boolean, default: false
       attribute :webp, :boolean, default: false
       attribute :dominant_color, :text
+
+      attribute :placeholder, :enum,
+        values: [:svg, :dominant_color, :micro, :none],
+        default: :dominant_color
     end
 
     relations do
