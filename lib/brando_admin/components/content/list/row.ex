@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
   use Surface.LiveComponent
-  import Brando.Gettext
 
   alias Brando.Trait.SoftDelete
   alias BrandoAdmin.Components.Content.List.Row
@@ -18,6 +17,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   data soft_delete?, :boolean
   data show_children, :boolean
   data child_fields, :list
+  data selected?, :boolean
 
   def mount(socket) do
     {:ok, assign(socket, show_children: false, child_fields: [])}
@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:selected?, assigns.entry.id in assigns.selected_rows)
      |> assign(:singular, assigns.schema.__naming__.singular)
      |> assign(:soft_delete?, assigns.schema.has_trait(SoftDelete))}
   end
@@ -38,7 +39,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   def render(assigns) do
     ~F"""
     <div
-      class={"list-row", "draggable", selected: @entry.id in @selected_rows}
+      id={"list-row-#{@entry.id}"}
+      class={"list-row", "draggable", selected: @selected?}
       data-id={@entry.id}
       :on-click={@click}
       phx-value-id={@entry.id}
@@ -71,6 +73,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           entry={@entry}
           listing={@listing} />
       </div>
+
       {#if @show_children}
         {#for child_field <- @child_fields}
           {#for child_entry <- Map.get(@entry, child_field)}
@@ -80,9 +83,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
               child_listing={@listing.child_listing} />
           {/for}
         {/for}
-        {!--
-
-        --}
       {/if}
     </div>
     """

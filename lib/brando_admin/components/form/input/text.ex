@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
        class: opts[:class],
        monospace: opts[:monospace] || false,
        disabled: assigns[:disabled] || false,
-       debounce: assigns[:debounce]
+       debounce: assigns[:debounce] || 750
      )}
   end
 
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
        value: value,
        class: assigns.class,
        monospace: assigns.monospace || false,
-       debounce: assigns[:debounce]
+       debounce: assigns[:debounce] || 750
      )}
   end
 

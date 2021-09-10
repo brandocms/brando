@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Content.List do
   use Surface.LiveComponent
   use BrandoAdmin.Toast
 
-  import Phoenix.HTML
   import Brando.Gettext
 
   alias Brando.Trait.Creator

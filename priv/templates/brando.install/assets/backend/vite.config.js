@@ -7,6 +7,12 @@ export default defineConfig({
   server: {
     port: 3333
   },
+  optimizeDeps: {
+    include: [
+      'vex-js',
+      'vex-dialog'
+    ]
+  },
   build: {
     manifest: true,
     emptyOutDir: false,

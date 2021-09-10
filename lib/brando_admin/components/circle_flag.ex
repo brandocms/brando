@@ -2,6 +2,11 @@ defmodule BrandoAdmin.Components.CircleFlag do
   use Surface.Component
 
   prop language, :string, required: true
+  data uid, :string
+
+  def mount(socket) do
+    {:ok, assign(socket, :uid, Brando.Utils.generate_uid())}
+  end
 
   def render(assigns) do
     ~F"""
@@ -11,11 +16,11 @@ defmodule BrandoAdmin.Components.CircleFlag do
         {#match :en}
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 512 512"><mask id="en_flag"><circle
+            viewBox="0 0 512 512"><mask id={"en_flag_#{@uid}"}><circle
               cx="256"
               cy="256"
               r="256"
-              fill="#fff" /></mask><g mask="url(#en_flag)"><path
+              fill="#fff" /></mask><g mask={"url(#en_flag_#{@uid})"}><path
                 fill="#eee"
                 d="M0 0h47.4l76.4 21 65.4-21h33.4l34.2 16.6L289.4 0h33.4l70.4 22.8L464.8 0h15.8l12.2 7.3L512 0v47.3l-19.9 78 19.9 63.9v33.4l-16.4 30.6 16.4 36.2v33.4l-15.1 68.7 15.1 73.3v15.9l-7.8 10.9L512 512h-47.3l-71-17.5-70.9 17.5h-33.4l-30-19.7-36.8 19.7h-33.3l-63.7-20.2L47.3 512H31.4l-10.6-8L0 512v-47.3l22.8-79L0 322.9v-33.4l25.3-32L0 222.6v-33.4l22.2-64.6L0 47.2V31.4l8-7.8z" /><path
                   fill="#0052b4"
@@ -28,11 +33,11 @@ defmodule BrandoAdmin.Components.CircleFlag do
         {#match :no}
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 512 512"><mask id="no_flag"><circle
+            viewBox="0 0 512 512"><mask id={"no_flag_#{@uid}"}><circle
               cx="256"
               cy="256"
               r="256"
-              fill="#fff" /></mask><g mask="url(#no_flag)"><path
+              fill="#fff" /></mask><g mask={"url(#no_flag_#{@uid})"}><path
                 fill="#d80027"
                 d="M0 0h100.2l66.1 53.5L233.7 0H512v189.3L466.3 257l45.7 65.8V512H233.7l-68-50.7-65.5 50.7H0V322.8l51.4-68.5-51.4-65z" /><path
                   fill="#eee"
@@ -42,11 +47,11 @@ defmodule BrandoAdmin.Components.CircleFlag do
         {#match :sv}
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 512 512"><mask id="sv_flag"><circle
+            viewBox="0 0 512 512"><mask id={"sv_flag_#{@uid}"}><circle
               cx="256"
               cy="256"
               r="256"
-              fill="#fff" /></mask><g mask="url(#sv_flag)"><path
+              fill="#fff" /></mask><g mask={"url(#sv_flag_#{@uid})"}><path
                 fill="#0052b4"
                 d="M0 0h133.6l35.3 16.7L200.3 0H512v222.6l-22.6 31.7 22.6 35.1V512H200.3l-32-19.8-34.7 19.8H0V289.4l22.1-33.3L0 222.6z" /><path
                   fill="#ffda44"

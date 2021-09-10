@@ -104,7 +104,7 @@ defmodule Brando.Utils do
   @doc """
   Tries to access `keys` as a path to `map`
   """
-  @spec try_path(map :: map, keys :: [atom] | nil) :: any | nil
+  @spec try_path(data :: map | list, keys :: [atom] | nil) :: any | nil
   def try_path(_, nil), do: nil
 
   def try_path(map, keys) when is_map(map) do

@@ -19,7 +19,6 @@ export default class Navigation {
   setupFullscreenToggle () {
     const fsToggle = Dom.find('.fullscreen-toggle')
     fsToggle.addEventListener('click', e => {
-      console.log('CLICK!')
       this.setFullscreen(!this.fullscreen)
     })
   }
@@ -95,8 +94,6 @@ export default class Navigation {
       Dom.all('#navigation-content .navigation-section > *')
     ]
 
-    console.log(targets.filter(t => t !== null))
-
     if (targets.filter(t => t !== null).length > 0) {
       gsap.set(targets, { opacity: 0, x: -10 })
     }
@@ -142,11 +139,20 @@ export default class Navigation {
 
     if (value) {
       gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '-100' })
-      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 0 })
+      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 30 })
     } else {
-      const marginLeft = getCSSVar(main, '--main-margin-left')
+      const marginLeft = this.getCSSVar(main, '--main-margin-left')
       gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '0' })
-      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft })
+      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft, onComplete: () => {
+        gsap.set(main, { clearProps: 'margin-left'})
+      } })
+    }
+  }
+
+  checkFullscreen () {
+    if (this.fullscreen) {
+      const main = document.querySelector('main')
+      gsap.set(main, { marginLeft: 30 })
     }
   }
 

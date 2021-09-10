@@ -156,12 +156,16 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                                   <Input.Text form={block_data} field={:picture_class} />
                                   <Input.Text form={block_data} field={:img_class} />
                                   <Input.Toggle form={block_data} field={:webp} />
-                                  <Input.Select form={block_data} field={:placeholder} options={[
-                                    %{label: "SVG", value: :svg},
-                                    %{label: "Dominant Color", value: :dominant_color},
-                                    %{label: "Micro", value: :micro},
-                                    %{label: "None", value: :none},
-                                  ]} />
+                                  <Input.Select
+                                    id={"#{form.id}-ref-#{input_value(ref, :name)}-placeholder"}
+                                    form={block_data}
+                                    field={:placeholder}
+                                    options={[
+                                      %{label: "SVG", value: :svg},
+                                      %{label: "Dominant Color", value: :dominant_color},
+                                      %{label: "Micro", value: :micro},
+                                      %{label: "None", value: :none},
+                                    ]} />
                                 {/for}
 
                               {#match "gallery"}

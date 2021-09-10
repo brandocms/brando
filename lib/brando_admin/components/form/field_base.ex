@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
       <div :if={@field} class="label-wrapper">
         <label
           for={input_id(@form, @field)}
-          class={"control-label", failed: assigns[:failed]}>
+          class={"control-label", failed: @failed}>
           <span>{@label}</span>
         </label>
         {#if @form}

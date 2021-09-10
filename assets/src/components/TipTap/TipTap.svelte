@@ -9,6 +9,8 @@
   import PreventDrop from './extensions/PreventDrop'
   import Focus from '@tiptap/extension-focus'
 
+  import { alertPrompt } from '../../alerts'
+
   export let content
   let element
   let editor
@@ -19,42 +21,48 @@
     tiptapInput.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
-  const showSchema = () => {}
-
   const toggleLink = () => {
+    let currentHref = ''
+
     if (editor.isActive('link')) {
-      console.log('link is active. deactivate!')
-      editor.chain().focus().unsetLink().run()
-    } else {
-      const url = window.prompt('URL')
-
-      editor
-        .chain()
-        .focus()
-        .extendMarkRange('link')
-        .setLink({ href: url })
-        .run()
-
-      console.log('link is not active, show the window')
+      const linkAttributes = editor.getAttributes('link')
+      currentHref = linkAttributes.href
     }
+
+    alertPrompt('URL/Link', currentHref, ({ data }) => {
+      if (!data) {
+        editor.chain().focus().unsetLink().run()
+      } else {
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange('link')
+          .setLink({ href: data })
+          .run()
+      }
+    })
   }
 
   const toggleButton = () => {
+    let currentHref = ''
+
     if (editor.isActive('button')) {
-      console.log('button is active. deactivate!')
-      editor.chain().focus().unsetButton().run()
-    } else {
-      const url = window.prompt('URL')
-
-      editor
-        .chain()
-        .focus()
-        .extendMarkRange('button')
-        .setButton({ href: url })
-        .run()
-
-      console.log('button is not active, show the window')
+      const buttonAttributes = editor.getAttributes('button')
+      currentHref = buttonAttributes.href
     }
+
+    alertPrompt('URL/Link', currentHref, ({ data }) => {
+      if (!data) {
+        editor.chain().focus().unsetButton().run()
+      } else {
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange('button')
+          .setButton({ href: data })
+          .run()
+      }
+    })
   }
 
   onMount(() => {

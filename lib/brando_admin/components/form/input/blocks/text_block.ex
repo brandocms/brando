@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   prop index, :integer
   prop block_count, :integer
   prop is_ref?, :boolean, default: false
+  prop ref_description, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -46,7 +47,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
         block={@block}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>{@text_type}</:description>
+        <:description>
+          {#if @ref_description}
+            {@ref_description}
+          {#else}
+            {@text_type}
+          {/if}
+        </:description>
         <:config>
           {#for block_data <- inputs_for(@block, :data)}
             <Radios

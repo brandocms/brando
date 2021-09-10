@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
         class={"text monospace"}
         opts={
           phx_hook: "Brando.Slug",
+          phx_debounce: 750,
           data_slug_for: "#{@form.id}_#{@slug_for}",
           autocorrect: "off",
           spellcheck: "false"}

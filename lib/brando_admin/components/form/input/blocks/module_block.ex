@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   alias Surface.Components.Form.HiddenInput
   alias Brando.Content
   alias Brando.Villain
+  alias Brando.Blueprint.Villain.Blocks
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
@@ -133,6 +134,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           <button type="button" class="secondary" :on-click="reinit_vars">
             Reinitialize variables
           </button>
+
+          <button type="button" class="secondary" :on-click="reinit_refs">
+            Reset block refs
+          </button>
         </:config>
 
         <div class="module-block" b-editor-tpl={@module_class}>
@@ -190,6 +195,44 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         data_field,
         block_uid,
         %{data: %{vars: module.vars}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__.singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reinit_refs",
+        _,
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    module_id = input_value(block_data, :module_id)
+    {:ok, module} = Brando.Content.get_module(module_id)
+
+    changeset = base_form.source
+
+    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{refs: refs_with_generated_uids}}
       )
 
     schema = changeset.data.__struct__

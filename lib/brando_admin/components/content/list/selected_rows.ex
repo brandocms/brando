@@ -7,12 +7,14 @@ defmodule BrandoAdmin.Components.Content.List.SelectedRows do
   prop target, :any, required: true
 
   data encoded_selected_rows, :string
+  data selected_rows_count, :integer
 
   def update(%{selected_rows: selected_rows} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:encoded_selected_rows, Jason.encode!(selected_rows))}
+     |> assign(:encoded_selected_rows, Jason.encode!(selected_rows))
+     |> assign(:selected_rows_count, Enum.count(selected_rows))}
   end
 
   def render(assigns) do
@@ -29,7 +31,7 @@ defmodule BrandoAdmin.Components.Content.List.SelectedRows do
       </div>
       <div class="selection-actions">
         {gettext("With")}
-        <div class="circle"><span>{Enum.count(@selected_rows)}</span></div>
+        <div class="circle"><span>{@selected_rows_count}</span></div>
         {gettext("selected, perform action")}: →
         <div
           id="selected_rows_dropdown"
@@ -48,12 +50,12 @@ defmodule BrandoAdmin.Components.Content.List.SelectedRows do
             </svg>
           </button>
           <ul data-testid="circle-dropdown-content" class="dropdown-content">
-            {#for action <- @selection_actions}
+            {#for %{event: event, label: label} <- @selection_actions}
               <li>
                 <button
-                  :on-click={action[:event], target: :live_view}
+                  :on-click={event, target: :live_view}
                   phx-value-ids={@encoded_selected_rows}>
-                  {action[:label]}
+                  {label}
                 </button>
               </li>
             {/for}

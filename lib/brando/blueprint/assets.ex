@@ -18,22 +18,33 @@ defmodule Brando.Blueprint.Assets do
 
   def build_asset(name, :image, opts) do
     opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
-    cfg = Map.get(opts_map, :cfg)
+    default_config = Brando.config(Brando.Images)[:default_config]
 
-    if !cfg do
-      raise Brando.Exception.BlueprintError,
-        message: """
-        Missing :cfg key for image asset `#{inspect(name)}`
+    cfg =
+      case Map.get(opts_map, :cfg) do
+        nil ->
+          raise Brando.Exception.BlueprintError,
+            message: """
+            Missing :cfg key for image asset `#{inspect(name)}`
 
-            assets do
-              asset #{inspect(name)}, :image, cfg: [...]
-            end
-        """
-    end
+                assets do
+                  asset #{inspect(name)}, :image, cfg: [...]
+                end
+            """
 
-    cfg_struct = struct(Brando.Type.ImageConfig, cfg)
+        fun when is_function(fun) ->
+          fun.()
 
-    opts_map = Map.put(opts_map, :cfg, cfg_struct)
+        map when is_map(map) ->
+          map = Brando.Utils.deep_merge(default_config, map)
+          struct(Brando.Type.ImageConfig, map)
+
+        kwlist when is_list(kwlist) ->
+          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          struct(Brando.Type.ImageConfig, kwlist)
+      end
+
+    opts_map = Map.put(opts_map, :cfg, cfg)
 
     %Asset{
       name: name,
@@ -60,22 +71,33 @@ defmodule Brando.Blueprint.Assets do
 
   def build_asset(name, :gallery, opts) do
     opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
-    cfg = Map.get(opts_map, :cfg)
+    default_config = Brando.config(Brando.Images)[:default_config]
 
-    if !cfg do
-      raise Brando.Exception.BlueprintError,
-        message: """
-        Missing :cfg key for gallery asset `#{inspect(name)}`
+    cfg =
+      case Map.get(opts_map, :cfg) do
+        nil ->
+          raise Brando.Exception.BlueprintError,
+            message: """
+            Missing :cfg key for gallery asset `#{inspect(name)}`
 
-            assets do
-              asset #{inspect(name)}, :gallery, cfg: [...]
-            end
-        """
-    end
+                assets do
+                  asset #{inspect(name)}, :gallery, cfg: [...]
+                end
+            """
 
-    cfg_struct = struct(Brando.Type.ImageConfig, cfg)
+        fun when is_function(fun) ->
+          fun.()
 
-    opts_map = Map.put(opts_map, :cfg, cfg_struct)
+        map when is_map(map) ->
+          Brando.Utils.deep_merge(default_config, map)
+          struct(Brando.Type.ImageConfig, map)
+
+        kwlist when is_list(kwlist) ->
+          Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          struct(Brando.Type.ImageConfig, kwlist)
+      end
+
+    opts_map = Map.put(opts_map, :cfg, cfg)
 
     %Asset{
       name: name,

@@ -1,3 +1,11 @@
+.fullscreen-toggle {
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  cursor: pointer;
+  z-index: 9;
+}
+
 #navigation {
   @responsive desktop_xl {
     width: 370px;

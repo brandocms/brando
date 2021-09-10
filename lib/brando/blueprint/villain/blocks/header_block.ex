@@ -8,8 +8,6 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
       plural: "header_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
-
     @primary_key false
     data_layer :embedded
     identifier "{{ entry.type }}"

@@ -25,6 +25,13 @@
   margin-top: 0;
 }
 
+section.alert.danger {
+  background-color: yellow;
+  margin: 15px 0;
+  padding: 15px;
+  font-size: 14px;
+}
+
 .blocks-empty-instructions {
   text-align: center;
   @space margin-y 25px;

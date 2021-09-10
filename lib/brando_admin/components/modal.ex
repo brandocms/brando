@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Modal do
   slot header
   slot footer
 
-  def update(assigns, socket) do
+  def update(%{id: id} = assigns, socket) do
     socket = assign(socket, assigns)
 
     socket =
@@ -25,12 +25,12 @@ defmodule BrandoAdmin.Components.Modal do
 
         :show ->
           socket
-          |> push_event("b:modal:show:#{assigns.id}", %{})
+          |> push_event("b:modal:show:#{id}", %{})
           |> assign(:show, true)
 
         :hide ->
           socket
-          |> push_event("b:modal:hide:#{assigns.id}", %{})
+          |> push_event("b:modal:hide:#{id}", %{})
           |> assign(:show, false)
       end
       |> assign(:action, nil)

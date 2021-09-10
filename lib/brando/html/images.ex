@@ -693,6 +693,31 @@ defmodule Brando.HTML.Images do
     {false, Enum.join(srcset_values, ", ")}
   end
 
+  # a keyed srcset map, without a key. try to get default
+  def get_srcset(image_field, %{default: srcset}, opts, placeholder) do
+    srcset_values =
+      for {k, v} <- srcset do
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
+        "#{path} #{v}"
+      end
+
+    {false, Enum.join(srcset_values, ", ")}
+  end
+
+  def get_srcset(_, srcset, _, _) when is_map(srcset) do
+    raise """
+    Trying to get srcset from a keyed srcset with no key given and no `default` key in srcset
+
+    #{inspect(srcset, pretty: true)}
+    """
+  end
+
   def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do

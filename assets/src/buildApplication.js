@@ -42,7 +42,6 @@ export default () => {
     window.addEventListener('phx:page-loading-start', ({ detail }) => {
       NProgress.start()
 
-      console.log(detail.kind, app.reconnected)
       if ((detail.kind === 'initial' || detail.kind === 'redirect') && !app.reconnected) {
         const $main = Dom.find('main .content')
         gsap.to($main, { opacity: 0 })
@@ -59,6 +58,7 @@ export default () => {
       if (detail.kind === 'initial' && !app.reconnected) {
         const $main = Dom.find('main .content')
         app.moonwalk = new Moonwalk(app, configureMoonwalk(), $main)
+        app.navigation.checkFullscreen()
         gsap.to($main, { clearProps: 'opacity' })
         app.moonwalk.ready()
       }

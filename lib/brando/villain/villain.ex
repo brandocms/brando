@@ -310,10 +310,25 @@ defmodule Brando.Villain do
   end
 
   def update_section_in_fields(section_id) do
-    # TODO
-    require Logger
-    Logger.error("==> TODO: update_section_in_fields")
-    :ok
+    villains = list_villains()
+
+    result =
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn
+          data_field, acc ->
+            html_field = get_html_field(schema, data_field)
+
+            case list_ids_with_section(schema, data_field.name, section_id) do
+              [] ->
+                acc
+
+              ids ->
+                [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+            end
+        end)
+      end
+
+    {:ok, result}
   end
 
   @doc """
@@ -355,6 +370,23 @@ defmodule Brando.Villain do
     |> String.replace("_data", "_html")
     |> String.to_existing_atom()
     |> schema.__attribute__
+  end
+
+  @doc """
+  List ids of `schema` records that has a container block with
+  `section_id` in `data_field`.
+  """
+  def list_ids_with_section(schema, data_field, section_id) do
+    t = [
+      %{type: "container", data: %{section_id: section_id}}
+    ]
+
+    Brando.repo().all(
+      from(s in schema,
+        select: s.id,
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+      )
+    )
   end
 
   @doc """
@@ -572,7 +604,7 @@ defmodule Brando.Villain do
               Access.key(:data),
               Access.key(:refs)
             ],
-            replace_block(refs, uid, merge_data)
+            merge_block(refs, uid, merge_data)
           )
           | acc
         ]
@@ -585,7 +617,7 @@ defmodule Brando.Villain do
               Access.key(:data),
               Access.key(:blocks)
             ],
-            replace_block(blocks, uid, merge_data)
+            merge_block(blocks, uid, merge_data)
           )
           | acc
         ]
@@ -632,5 +664,16 @@ defmodule Brando.Villain do
     blocks = Changeset.get_field(changeset, data_field)
     updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data)
     Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def add_uid_to_refs(refs) do
+    {_, refs_with_generated_uids} =
+      get_and_update_in(
+        refs,
+        [Access.all(), Access.key(:data), Access.key(:uid)],
+        &{&1, Brando.Utils.generate_uid()}
+      )
+
+    refs_with_generated_uids
   end
 end

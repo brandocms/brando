@@ -1,7 +1,9 @@
 import vex from 'vex-js'
 import vexDialog from 'vex-dialog'
 
-vex.registerPlugin(vexDialog)
+if (!vex.dialog) {
+  vex.registerPlugin(vexDialog)
+}
 vex.defaultOptions.className = 'vex-theme-b'
 
 function alertError(title, text, callback) {
@@ -88,7 +90,7 @@ function alertWarning(title, text, callback) {
   })
 }
 
-function alertPrompt(text, callback) {
+function alertPrompt(text, value, callback) {
   if (!callback) {
     callback = () => { }
   }
@@ -101,7 +103,7 @@ function alertPrompt(text, callback) {
         ${text}
       </div>
     `,
-    input: '<input name="data" type="text" required />',
+    input: `<input name="data" type="text" value="${value}" />`,
     showCloseButton: true,
     buttons: [vex.dialog.buttons.YES],
     callback

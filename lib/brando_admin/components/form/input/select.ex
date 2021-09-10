@@ -102,10 +102,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def update_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
+    require Logger
+    Logger.error("update_input_options!?")
     assign(socket, :input_options, get_input_options(form, opts))
   end
 
   def update_input_options(%{assigns: %{form: _form, options: options}} = socket) do
+    require Logger
+    Logger.error("update_input_options!?")
     assign(socket, :input_options, Enum.map(options, &ensure_string_values/1))
   end
 

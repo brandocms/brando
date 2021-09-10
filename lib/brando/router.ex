@@ -74,7 +74,8 @@ defmodule Brando.Router do
 
         live_session :admin do
           # brando routes
-          live "/navigation", BrandoAdmin.NavigationLive
+          live "/", BrandoAdmin.DashboardLive
+          live "/config/navigation", BrandoAdmin.NavigationLive
           live "/config/identity", BrandoAdmin.Sites.IdentityLive
           live "/config/globals", BrandoAdmin.Sites.GlobalsLive
           live "/config/content/modules", BrandoAdmin.Villain.ModuleListLive

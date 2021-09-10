@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   def update(assigns, socket) do
     {:ok,
      socket
+     |> assign(:bg_color, assigns[:bg_color])
      |> assign(:last_block?, last_block?(assigns))
      |> assign(:uid, input_value(assigns.block, :uid))
      |> assign(:type, input_value(assigns.block, :type))

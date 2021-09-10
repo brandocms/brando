@@ -43,11 +43,24 @@ defmodule Brando.Cache.Sections do
     {:ok, sections} = Content.list_sections()
 
     Enum.reduce(sections, [], fn section, acc ->
-      [section.css | acc]
+      [namespace_css(section) | acc]
     end)
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("\r\n")
     |> minify_css
+  end
+
+  defp namespace_css(%{css: css, class: class} = section) do
+    opening_tag = [~s([b-section="#{class}"] {)]
+
+    Enum.reduce([:color_bg, :color_fg, :color_accent], opening_tag, fn prop, acc ->
+      case Map.get(section, prop) do
+        nil -> acc
+        val -> acc ++ ["--#{prop}: #{val};"]
+      end
+    end)
+    |> Kernel.++([css, "}"])
+    |> Enum.reject(&(&1 == nil))
   end
 
   @css_minification_regex ~r/( "(?:[^"\\]+|\\.)*" | '(?:[^'\\]+|\\.)*' )|\s* ; \s* ( } ) \s*|\s* ( [*$~^|]?= | [{};,>~] | !important\b ) \s*|\s*([+-])\s*(?=[^}]*{)|( [[(:] ) \s+|\s+ ( [])] )|\s+(:)(?![^\}]*\{)|^ \s+ | \s+ \z|(\s)\s+/si

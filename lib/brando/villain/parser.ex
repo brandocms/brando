@@ -743,7 +743,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.join("")
 
         """
-        <section b-section="#{section.class}" style="--bg-color: #{section.color_bg}; --fg-color: #{section.color_fg}">
+        <section b-section="#{section.class}">
           #{blocks_html}
         </section>
         """

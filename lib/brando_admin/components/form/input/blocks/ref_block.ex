@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
   data ref_index, :any
   data ref, :any
   data ref_uid, :string
+  data ref_name, :string
   data ref_block, :any
   data ref_form, :form
   data block_count, :integer
@@ -40,44 +41,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
         |> assign(:ref_block, ref_block)
         |> assign(:ref_uid, v(ref_block, :uid))
         |> assign(:ref, ref_form.data)
+        |> assign(:ref_name, ref)
 
       nil ->
-        require Logger
-
-        Logger.error("""
-        ==> Ref not found
-
-        Available refs:
-        #{inspect(Enum.map(refs, &elem(&1, 0).data), pretty: true)}
-
-        Ref name:
-        #{inspect(ref, pretty: true)}
-
-        --- end ^
-        """)
-
         socket
+        |> assign(:block_count, Enum.count(refs))
+        |> assign(:ref_index, 0)
+        |> assign(:ref_form, nil)
+        |> assign(:ref_block, nil)
+        |> assign(:ref_uid, nil)
+        |> assign(:ref, nil)
+        |> assign(:ref_name, ref)
     end
   end
 
   def render(assigns) do
     ~F"""
-    <section b-ref={@ref.name}>
-      <Blocks.DynamicBlock
-        id={@ref_uid}
-        is_ref?={true}
-        data_field={@data_field}
-        ref_name={@ref.name}
-        ref_description={@ref.description}
-        index={@ref_index}
-        block_count={@block_count}
-        block={@ref_block}
-        base_form={@base_form}
-        uploads={@uploads} />
+    {#if @ref}
+      <section b-ref={@ref.name}>
+        <Blocks.DynamicBlock
+          id={@ref_uid}
+          is_ref?={true}
+          data_field={@data_field}
+          ref_name={@ref.name}
+          ref_description={@ref.description}
+          index={@ref_index}
+          block_count={@block_count}
+          block={@ref_block}
+          base_form={@base_form}
+          uploads={@uploads} />
 
-      <HiddenInput form={@ref_form} field={:description} />
-      <HiddenInput form={@ref_form} field={:name} />
-    </section>
+        <HiddenInput form={@ref_form} field={:description} />
+        <HiddenInput form={@ref_form} field={:name} />
+      </section>
+    {#else}
+      <section class="alert danger">
+        Ref <code>{@ref_name}</code> is missing!<br><br>
+        If the module has been changed, this block might be out of sync!<br><br>
+        Available refs are:<br><br>
+        {#for available_ref <- @module_refs}
+          &rarr; {inspect @module_refs}
+        {/for}
+      </section>
+    {/if}
     """
   end
 end

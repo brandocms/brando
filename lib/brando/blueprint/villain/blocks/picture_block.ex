@@ -8,7 +8,6 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
       plural: "picture_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
     alias Brando.Images.Focal
 
     @primary_key false

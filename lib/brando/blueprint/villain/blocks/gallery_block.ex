@@ -9,7 +9,6 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
       gettext_module: Brando.Gettext
 
     alias Brando.Blueprint.Villain.Blocks
-    alias Brando.Images.Focal
 
     @primary_key false
     data_layer :embedded

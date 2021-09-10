@@ -39,10 +39,6 @@
 
 @europa base;
 
-.hidden {
-  display: none !important;
-}
-
 .button-group-horizontal {
   display: flex;
 
@@ -338,8 +334,8 @@ html {
 
 body {
   @fontsize base;
-  color: theme(colors.dark);
-  background-color: theme(colors.dark);
+  @color fg dark;
+  @color bg peach;
 }
 
 .main-content .circle-dropdown.wrapper {

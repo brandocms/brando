@@ -157,8 +157,8 @@ defmodule Brando.Blueprint.Listings do
       query: query,
       fields: fields,
       filters: filters,
-      actions: actions,
-      selection_actions: selection_actions,
+      actions: Enum.map(actions, &Enum.into(&1, %{})),
+      selection_actions: Enum.map(selection_actions, &Enum.into(&1, %{})),
       child_listing: child_listing
     }
   end
