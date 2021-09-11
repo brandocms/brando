@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
+  alias BrandoAdmin.Components.Form.Submit
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Toast
 
@@ -29,56 +30,76 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
      |> assign_changeset()
      |> set_admin_locale()
      |> assign(ref_name: nil)
-     |> assign(var_name: nil)}
+     |> assign(var_name: nil)
+     |> assign(entry_ref_name: nil)
+     |> assign(entry_var_name: nil)}
   end
 
   def render(assigns) do
     ~F"""
-    <Content.Header
-      title={gettext("Content Modules")}
-      subtitle={gettext("Edit module")} />
+    <Content.Header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
-    <Form for={@changeset} :let={form: form} change="validate" submit="save">
-      <div class="block-editor">
-        <div class="code">
-          <Input.Code id={"#{form.id}-code"} form={form} field={:code} />
-        </div>
+    <div id="module-form-el">
+      <Form for={@changeset} :let={form: form} change="validate" submit="save">
+        <div class="block-editor">
+          <div class="code">
+            <Input.Code id={"#{form.id}-code"} form={form} field={:code} />
+          </div>
 
-        <ModuleProps
-          form={form}
-          ref_name={@ref_name}
-          var_name={@var_name}
-          create_ref="create_ref"
-          delete_ref="delete_ref"
-          update_ref_name="update_ref_name"
-          create_var="create_var"
-          delete_var="delete_var"
-          update_var_name="update_var_name"
-          show_modal="show_modal"
+          <ModuleProps
+            form={form}
+            ref_name={@ref_name}
+            var_name={@var_name}
+            create_ref="create_ref"
+            delete_ref="delete_ref"
+            update_ref_name="update_ref_name"
+            create_var="create_var"
+            delete_var="delete_var"
+            update_var_name="update_var_name"
+            show_modal="show_modal"
           />
-      </div>
-      {#if input_value(form, :entry_template)}
-        <Inputs form={form} for={:entry_template} :let={form: entry, index: _idx}>
-          <div class="entry-template">
-            <hr />
-            <h2>Entry template</h2>
-            <p>
-              This module will be used as a template when generating new entries inside the wrapper module
-            </p>
+        </div>
+        {#if input_value(form, :entry_template)}
+          <Inputs form={form} for={:entry_template} :let={form: entry, index: _idx}>
+            <div class="entry-template">
+              <hr>
+              <h2>Entry template</h2>
+              <p>
+                This module will be used as a template when generating new entries inside the wrapper module
+              </p>
 
-            <div class="block-editor">
-              <div class="code">
-                <Input.Code id={"#{form.id}-entry-code"} form={entry} field={:code} />
+              <div class="block-editor">
+                <div class="code">
+                  <Input.Code id={"#{entry.id}-entry-code"} form={entry} field={:code} />
+                </div>
+
+                <ModuleProps
+                  form={entry}
+                  ref_name={@entry_ref_name}
+                  var_name={@entry_var_name}
+                  entry_form
+                  create_ref="entry_create_ref"
+                  delete_ref="entry_delete_ref"
+                  update_ref_name="entry_update_ref_name"
+                  create_var="entry_create_var"
+                  delete_var="entry_delete_var"
+                  update_var_name="entry_update_var_name"
+                  show_modal="show_modal"
+                />
               </div>
             </div>
-          </div>
-        </Inputs>
-      {/if}
+          </Inputs>
+        {/if}
 
-      <div class="button-group">
-        <button class="primary">Save module</button>
-      </div>
-    </Form>
+        <div class="button-group">
+          <Submit
+            processing={false}
+            form_id={"module-form"}
+            label={gettext("Save (⌘S)")}
+            class="primary submit-button" />
+        </div>
+      </Form>
+    </div>
     """
   end
 
@@ -185,6 +206,105 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   def handle_event(
         "delete_var",
+        %{"id" => var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars)
+    filtered_vars = Enum.reject(vars, &(&1.key == var_key))
+    updated_changeset = put_change(changeset, :vars, filtered_vars)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  ## Entry events
+
+  def handle_event("entry_update_ref_name", %{"ref_name" => ref_name}, socket) do
+    require Logger
+    Logger.error("=> entry_update_ref_name #{inspect(ref_name)}")
+    {:noreply, assign(socket, :entry_ref_name, ref_name)}
+  end
+
+  def handle_event("entry_update_var_name", %{"var_name" => var_name}, socket) do
+    {:noreply, assign(socket, :entry_var_name, var_name)}
+  end
+
+  def handle_event(
+        "entry_create_ref",
+        %{"type" => block_type, "id" => modal_id},
+        %{assigns: %{entry_ref_name: ref_name, changeset: changeset}} = socket
+      ) do
+    entry_template = get_field(changeset, :entry_template)
+    refs = entry_template.refs
+
+    block_module =
+      block_type
+      |> String.to_existing_atom()
+      |> Villain.get_block_by_type()
+
+    ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
+
+    new_ref = %Ref{
+      name: ref_name,
+      data: ref_data
+    }
+
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__])
+      |> Map.put(:refs, [new_ref | refs])
+
+    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
+
+    Modal.hide(modal_id)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:entry_ref_name, nil)}
+  end
+
+  def handle_event(
+        "entry_delete_ref",
+        %{"id" => ref_name},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    refs = get_field(changeset, :refs)
+    filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
+    updated_changeset = put_change(changeset, :refs, filtered_refs)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
+        "entry_create_var",
+        %{"type" => var_type, "id" => modal_id},
+        %{assigns: %{var_name: var_name, changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars) || []
+
+    var_module =
+      var_type
+      |> String.to_existing_atom()
+      |> Brando.Content.get_var_by_type()
+
+    new_var =
+      struct(var_module, %{
+        key: var_name,
+        type: var_type
+      })
+
+    updated_changeset = put_change(changeset, :vars, [new_var | vars])
+    Modal.hide(modal_id)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
+  end
+
+  def handle_event(
+        "entry_delete_var",
         %{"id" => var_key},
         %{assigns: %{changeset: changeset}} = socket
       ) do

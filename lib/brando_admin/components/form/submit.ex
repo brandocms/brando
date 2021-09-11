@@ -22,9 +22,6 @@ defmodule BrandoAdmin.Components.Form.Submit do
   @doc "If there is image processing happening"
   prop processing, :boolean, required: true
 
-  @doc "Keyword list with options to be passed down to `submit/3`"
-  prop opts, :keyword, default: []
-
   @doc "Slot used for having children other than plain text in the button"
   slot default
 
@@ -36,8 +33,8 @@ defmodule BrandoAdmin.Components.Form.Submit do
       disabled={@processing}
       data-processing={@processing}
       data-form-id={@form_id}
-      phx-hook="Brando.Submit"
-      :attrs={to_attrs(assigns)}>
+      class={@class}
+      phx-hook="Brando.Submit">
       <#slot>
         {#if @processing}
           <div class="processing">
@@ -50,10 +47,5 @@ defmodule BrandoAdmin.Components.Form.Submit do
       </#slot>
     </button>
     """
-  end
-
-  defp to_attrs(assigns) do
-    (prop_to_attr_opts(assigns.class, :class) ++ assigns.opts ++ events_to_opts(assigns))
-    |> opts_to_attrs()
   end
 end
