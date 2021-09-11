@@ -102,10 +102,9 @@ defmodule Brando.Factory do
       class: "class",
       code: "code here",
       refs: [],
-      vars: %{},
+      vars: [],
       svg: nil,
-      multi: false,
-      wrapper: nil
+      wrapper: false
     }
   end
 

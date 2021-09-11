@@ -33,7 +33,6 @@ defmodule Brando.System do
     {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, {:env, :exists}} = check_env()
-    {:ok, _} = check_invalid_wrapper_content()
 
     Logger.info("==> Brando >> System checks complete!")
   end
@@ -241,30 +240,6 @@ defmodule Brando.System do
       Id........: #{inspect(id)}
       """)
     end
-  end
-
-  # wrapper should be moved from datasource block to module
-  defp check_invalid_wrapper_content do
-    {:ok, modules} = Content.list_modules(%{filter: %{namespace: "all"}})
-
-    if Enum.count(modules) > 0 do
-      for t <- modules do
-        if t.wrapper && String.contains?(t.wrapper, ["${content}", "${CONTENT}"]) do
-          log_invalid_wrapper_content(t)
-        end
-      end
-    end
-
-    {:ok, {:wrappers, :ok}}
-  end
-
-  defp log_invalid_wrapper_content(t) do
-    Log.warn("""
-    Found deprecated wrapper content format `${CONTENT}` or {{ CONTENT }}. Use `{{ content }}` instead.
-
-    Schema.: Module
-    Id.....: #{t.id} - #{t.name}
-    """)
   end
 end
 

@@ -1,3 +1,19 @@
+.entry-template {
+  @space margin-top 50px;
+  > h2 {
+    @space margin-bottom 10px;
+  }
+
+  > p {
+    max-width: 40ch;
+  }
+
+  > .block-editor {
+    @space margin-top 35px;
+  }
+
+}
+
 .block-editor {
   @row 2;
 

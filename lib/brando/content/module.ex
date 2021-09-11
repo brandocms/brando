@@ -36,8 +36,7 @@ defmodule Brando.Content.Module do
     attribute :class, :string, required: true
     attribute :code, :text, required: true
     attribute :svg, :text
-    attribute :multi, :boolean
-    attribute :wrapper, :text
+    attribute :wrapper, :boolean
 
     attribute :vars, {:array, PolymorphicEmbed},
       types: [
@@ -54,6 +53,7 @@ defmodule Brando.Content.Module do
   end
 
   relations do
+    relation :entry_template, :embeds_one, module: __MODULE__, on_replace: :delete
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
   end
 

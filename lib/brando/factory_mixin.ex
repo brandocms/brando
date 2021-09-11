@@ -71,7 +71,6 @@ defmodule Brando.FactoryMixin do
             "<article data-v=\"text center\" data-moonwalk-section>\n  <div class=\"inner\" data-moonwalk>\n    <div class=\"text\">\n      %{H2}\n    </div>\n  </div>\n</article>",
           deleted_at: nil,
           help_text: "Help Text",
-          multi: false,
           name: "Heading",
           namespace: "general",
           refs: [
@@ -89,8 +88,8 @@ defmodule Brando.FactoryMixin do
               "name" => "H2"
             }
           ],
-          vars: %{},
-          wrapper: nil
+          vars: [],
+          wrapper: false
         }
       end
 
