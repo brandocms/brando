@@ -1,3 +1,8 @@
+## 0.52.0-dev
+
+* Switch your backend gettext module in `gettext.ex` from 
+  `YourApp.Backend.Gettext` to `YourAppAdmin.Gettext`
+
 ## 0.51.0
 
 * If you use legacy schemas/changeset and use `generate_html` with a custom villain name,
