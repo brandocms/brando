@@ -199,18 +199,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     # build a module block from module
     generated_uid = Brando.Utils.generate_uid()
 
-    {_, refs_with_generated_uids} =
-      get_and_update_in(
-        module.refs,
-        [Access.all(), Access.key(:data), Access.key(:uid)],
-        &{&1, Brando.Utils.generate_uid()}
-      )
+    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
 
+    # if module.wrapper is true, this is a multi block!
     new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
       type: "module",
       data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
         module_id: module_id,
-        multi: module.multi,
+        multi: module.wrapper,
         vars: module.vars,
         refs: refs_with_generated_uids
       },
