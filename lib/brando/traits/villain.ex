@@ -68,5 +68,4 @@ defmodule Brando.Trait.Villain do
       PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
     end)
   end
-
 end
