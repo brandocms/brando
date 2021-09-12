@@ -156,7 +156,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp assign_default_params(%{assigns: %{name: name, schema: schema}} = socket) do
+  defp assign_default_params(%{assigns: %{name: name, schema: schema}}) do
     raise Brando.Exception.BlueprintError,
       message: "Missing form `#{inspect(name)}` for `#{inspect(schema)}`"
   end
