@@ -27,7 +27,6 @@ defmodule Brando.Content.Module do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
-  trait __MODULE__.Trait.ValidateCode
 
   attributes do
     attribute :name, :string, required: true

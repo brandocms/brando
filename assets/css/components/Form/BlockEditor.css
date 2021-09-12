@@ -1,6 +1,8 @@
 .entry-template {
   @space margin-top 50px;
+  
   > h2 {
+    @space margin-top 25px;
     @space margin-bottom 10px;
   }
 

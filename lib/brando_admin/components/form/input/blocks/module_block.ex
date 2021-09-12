@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   alias Brando.Blueprint.Villain.Blocks
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Form.Input.Blocks.Ref
+  alias BrandoAdmin.Components.Form.Input.Blocks.Module
 
   prop block, :any
   prop base_form, :any
@@ -25,6 +25,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   data module_name, :string
   data module_class, :string
   data module_code, :string
+  data entry_template, :any
+  data module_multi, :boolean
   data refs, :list
   data important_vars, :list
   data uid, :string
@@ -32,8 +34,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   def v(form, field) do
     input_value(form, field)
-    # Ecto.Changeset.get_field(form.source, field)
-    # |> IO.inspect(pretty: true, label: "module_v")
   end
 
   defp get_module(id) do
@@ -46,7 +46,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def mount(socket) do
-    {:ok, assign(socket, :module_not_found, false)}
+    {:ok, assign(socket, module_not_found: false, entry_template: nil)}
   end
 
   def update(assigns, socket) do
@@ -77,29 +77,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_name, module.name)
         |> assign(:module_class, module.class)
         |> assign(:module_code, module.code)
+        |> assign(:module_multi, input_value(block_data, :multi))
+        |> assign(:entry_template, module.entry_template)
         |> assign(:refs, refs)
         |> assign_new(:important_vars, fn ->
           Enum.filter(vars, &(&1.important == true))
         end)
     end
-  end
-
-  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket) do
-    socket
-  end
-
-  defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
-    splits =
-      ~r/%{(\w+)}/
-      |> Regex.split(module_code, include_captures: true)
-      |> Enum.map(fn split ->
-        case Regex.run(~r/%{(\w+)}/, split, capture: :all_but_first) do
-          nil -> split
-          [ref] -> {:ref, ref}
-        end
-      end)
-
-    assign(socket, :splits, splits)
   end
 
   def render(%{module_not_found: true} = assigns) do
@@ -152,12 +136,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           {#for split <- @splits}
             {#case split}
               {#match {:ref, ref}}
-                <Ref
+                <Module.Ref
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />
+
+              {#match {:content, _}}
+                {#if @module_multi}
+                  MULTI
+
+                  <Module.Entries
+                    id={"#{@uid}-entries"}
+                    uid={@uid}
+                    entry_template={@entry_template}
+                    block_data={@block_data}
+                    data_field={@data_field}
+                    base_form={@base_form}
+                  />
+                {#else}
+                  {"{{ content }}"}
+                {/if}
+
               {#match _}
                 {raw split}
             {/case}
@@ -244,5 +245,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     )
 
     {:noreply, socket}
+  end
+
+  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket) do
+    socket
+  end
+
+  defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
+    splits =
+      ~r/%{(\w+)}|{{ (\w+) }}/
+      |> Regex.split(module_code, include_captures: true)
+      |> Enum.map(fn chunk ->
+        case Regex.run(~r/%{(?<ref>\w+)}|{{ (?<content>\w+) }}/, chunk, capture: :all_names) do
+          nil -> chunk
+          [content, ""] -> {:content, content}
+          ["", ref] -> {:ref, ref}
+        end
+      end)
+
+    assign(socket, :splits, splits)
   end
 end

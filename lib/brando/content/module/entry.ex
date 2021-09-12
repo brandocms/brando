@@ -1,15 +1,15 @@
-defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
-  alias Brando.Content.Module
-  alias Brando.Content.Var
-
+defmodule Brando.Content.Module.Entry do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
-      schema: "ModuleBlockData",
-      singular: "module_block_data",
-      plural: "module_blocks_data",
+      schema: "ModuleEntryData",
+      singular: "module_entry_data",
+      plural: "module_entry_datas",
       gettext_module: Brando.Gettext
+
+    alias Brando.Content.Var
+    alias Brando.Content.Module
 
     @primary_key false
     data_layer :embedded
@@ -18,9 +18,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
     trait Brando.Trait.CastPolymorphicEmbeds
 
     attributes do
-      attribute :module_id, :integer, required: true
       attribute :sequence, :integer
-      attribute :multi, :boolean, default: false
 
       attribute :vars, {:array, PolymorphicEmbed},
         types: [
@@ -38,21 +36,21 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
 
     relations do
       relation :refs, :embeds_many, module: Module.Ref, on_replace: :delete
-      relation :entries, :embeds_many, module: Module.Entry, on_replace: :delete
     end
   end
 
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Villain",
-    schema: "ModuleBlock",
-    singular: "module_block",
-    plural: "module_blocks",
+    domain: "Content",
+    schema: "ModuleEntry",
+    singular: "module_entry",
+    plural: "module_entries",
     gettext_module: Brando.Gettext
 
-  @primary_key false
   data_layer :embedded
-  identifier "{{ entry.type }}"
+  @primary_key false
+
+  identifier "{{ entry.label }}"
 
   attributes do
     attribute :uid, :string

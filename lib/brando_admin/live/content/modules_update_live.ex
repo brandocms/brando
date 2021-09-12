@@ -28,11 +28,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
      |> assign_entry(entry_id)
      |> assign_current_user(token)
      |> assign_changeset()
-     |> set_admin_locale()
-     |> assign(ref_name: nil)
-     |> assign(var_name: nil)
-     |> assign(entry_ref_name: nil)
-     |> assign(entry_var_name: nil)}
+     |> set_admin_locale()}
   end
 
   def render(assigns) do
@@ -48,14 +44,10 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
           <ModuleProps
             form={form}
-            ref_name={@ref_name}
-            var_name={@var_name}
             create_ref="create_ref"
             delete_ref="delete_ref"
-            update_ref_name="update_ref_name"
             create_var="create_var"
             delete_var="delete_var"
-            update_var_name="update_var_name"
             show_modal="show_modal"
           />
         </div>
@@ -73,17 +65,15 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                   <Input.Code id={"#{entry.id}-entry-code"} form={entry} field={:code} />
                 </div>
 
+                {hidden_input entry, :id, value: 2107}
+
                 <ModuleProps
                   form={entry}
-                  ref_name={@entry_ref_name}
-                  var_name={@entry_var_name}
                   entry_form
                   create_ref="entry_create_ref"
                   delete_ref="entry_delete_ref"
-                  update_ref_name="entry_update_ref_name"
                   create_var="entry_create_var"
                   delete_var="entry_delete_var"
-                  update_var_name="entry_update_var_name"
                   show_modal="show_modal"
                 />
               </div>
@@ -129,18 +119,10 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     {:noreply, socket}
   end
 
-  def handle_event("update_ref_name", %{"ref_name" => ref_name}, socket) do
-    {:noreply, assign(socket, :ref_name, ref_name)}
-  end
-
-  def handle_event("update_var_name", %{"var_name" => var_name}, socket) do
-    {:noreply, assign(socket, :var_name, var_name)}
-  end
-
   def handle_event(
         "create_ref",
         %{"type" => block_type, "id" => modal_id},
-        %{assigns: %{ref_name: ref_name, changeset: changeset}} = socket
+        %{assigns: %{changeset: changeset}} = socket
       ) do
     refs = get_field(changeset, :refs)
 
@@ -152,7 +134,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
 
     new_ref = %Ref{
-      name: ref_name,
+      name: Brando.Utils.random_string(5),
       data: ref_data
     }
 
@@ -161,8 +143,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
     {:noreply,
      socket
-     |> assign(:changeset, updated_changeset)
-     |> assign(:ref_name, nil)}
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -180,7 +161,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   def handle_event(
         "create_var",
         %{"type" => var_type, "id" => modal_id},
-        %{assigns: %{var_name: var_name, changeset: changeset}} = socket
+        %{assigns: %{changeset: changeset}} = socket
       ) do
     vars = get_field(changeset, :vars) || []
 
@@ -191,7 +172,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
     new_var =
       struct(var_module, %{
-        key: var_name,
+        key: Brando.Utils.random_string(5),
+        label: "Label",
         type: var_type
       })
 
@@ -218,20 +200,10 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   ## Entry events
 
-  def handle_event("entry_update_ref_name", %{"ref_name" => ref_name}, socket) do
-    require Logger
-    Logger.error("=> entry_update_ref_name #{inspect(ref_name)}")
-    {:noreply, assign(socket, :entry_ref_name, ref_name)}
-  end
-
-  def handle_event("entry_update_var_name", %{"var_name" => var_name}, socket) do
-    {:noreply, assign(socket, :entry_var_name, var_name)}
-  end
-
   def handle_event(
         "entry_create_ref",
         %{"type" => block_type, "id" => modal_id},
-        %{assigns: %{entry_ref_name: ref_name, changeset: changeset}} = socket
+        %{assigns: %{changeset: changeset}} = socket
       ) do
     entry_template = get_field(changeset, :entry_template)
     refs = entry_template.refs
@@ -244,7 +216,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
 
     new_ref = %Ref{
-      name: ref_name,
+      name: Brando.Utils.random_string(5),
       data: ref_data
     }
 
@@ -253,6 +225,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
       |> Map.from_struct()
       |> Map.drop([:__meta__])
       |> Map.put(:refs, [new_ref | refs])
+      |> Map.put(:id, 2107)
 
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
 
@@ -260,8 +233,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
     {:noreply,
      socket
-     |> assign(:changeset, updated_changeset)
-     |> assign(:entry_ref_name, nil)}
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -269,9 +241,19 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{"id" => ref_name},
         %{assigns: %{changeset: changeset}} = socket
       ) do
-    refs = get_field(changeset, :refs)
+    entry_template = get_field(changeset, :entry_template)
+
+    refs = entry_template.refs
     filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
-    updated_changeset = put_change(changeset, :refs, filtered_refs)
+
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__])
+      |> Map.put(:refs, filtered_refs)
+      |> Map.put(:id, 2107)
+
+    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
 
     {:noreply, assign(socket, :changeset, updated_changeset)}
   end
@@ -279,9 +261,10 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
   def handle_event(
         "entry_create_var",
         %{"type" => var_type, "id" => modal_id},
-        %{assigns: %{var_name: var_name, changeset: changeset}} = socket
+        %{assigns: %{changeset: changeset}} = socket
       ) do
-    vars = get_field(changeset, :vars) || []
+    entry_template = get_field(changeset, :entry_template)
+    vars = entry_template.vars || []
 
     var_module =
       var_type
@@ -290,17 +273,26 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
     new_var =
       struct(var_module, %{
-        key: var_name,
+        key: Brando.Utils.random_string(5),
+        label: "Label",
         type: var_type
       })
 
-    updated_changeset = put_change(changeset, :vars, [new_var | vars])
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__])
+      |> Map.put(:vars, [new_var | vars])
+      |> Map.put(:id, 2107)
+
+    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
+
     Modal.hide(modal_id)
 
     {:noreply,
      socket
      |> assign(:changeset, updated_changeset)
-     |> assign(:var_name, nil)}
+     |> push_event("b:validate", %{})}
   end
 
   def handle_event(
@@ -308,9 +300,19 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{"id" => var_key},
         %{assigns: %{changeset: changeset}} = socket
       ) do
-    vars = get_field(changeset, :vars)
+    entry_template = get_field(changeset, :entry_template)
+
+    vars = entry_template.vars
     filtered_vars = Enum.reject(vars, &(&1.key == var_key))
-    updated_changeset = put_change(changeset, :vars, filtered_vars)
+
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__])
+      |> Map.put(:vars, filtered_vars)
+      |> Map.put(:id, 2107)
+
+    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
 
     {:noreply, assign(socket, :changeset, updated_changeset)}
   end
@@ -320,6 +322,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{"module" => module_params},
         %{assigns: %{current_user: current_user, entry: entry}} = socket
       ) do
+    require Logger
+    Logger.error(inspect("==> validating!"))
     changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
 
     {:noreply, assign(socket, :changeset, changeset)}
@@ -331,8 +335,6 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
         %{assigns: %{current_user: user, changeset: changeset}} = socket
       ) do
     changeset = %{changeset | action: :update}
-    require Logger
-    Logger.error("==> saving module!")
 
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->

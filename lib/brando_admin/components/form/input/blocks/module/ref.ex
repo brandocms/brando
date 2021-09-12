@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Components.Form.Input.Blocks.Ref do
+defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   use Surface.Component
   use Phoenix.HTML
   alias Surface.Components.Form.HiddenInput

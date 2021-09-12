@@ -62,7 +62,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                 </figure>
                 <div class="info">
                   <div class="name">{namespace}</div>
-                  <div class="instructions">{Enum.count(modules)} modules</div>
                 </div>
               </button>
               <div class="namespace-modules">

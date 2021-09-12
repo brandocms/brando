@@ -8,21 +8,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.PolyInputs
 
-  alias Surface.Components.Form
   alias Surface.Components.Form.Inputs
 
   prop form, :form, required: true
   prop key, :string, default: "default"
   prop entry_form, :boolean, default: false
-  prop ref_name, :string
-  prop var_name, :string
   prop show_modal, :event, required: true
   prop create_ref, :event, required: true
   prop delete_ref, :event, required: true
-  prop update_ref_name, :event, required: true
   prop create_var, :event, required: true
   prop delete_var, :event, required: true
-  prop update_var_name, :event, required: true
 
   def render(assigns) do
     ~F"""
@@ -49,18 +44,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </Modal>
 
         <Modal title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
-          <Form for={:ref_form} change={@update_ref_name}>
-            <input
-              id={"#{@form.id}-#{@key}-create-ref-input"}
-              type="text"
-              class="text"
-              name="ref_name"
-              value={@ref_name}
-              placeholder="ref name"
-              autocomplete="off"
-            />
-          </Form>
-
           <div class="button-group">
             <button
               type="button"
@@ -214,20 +197,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </div>
 
         <Modal title="Create var" id={"#{@form.id}-#{@key}-create-var"} narrow>
-          <Form for={:var_form} change={@update_var_name}>
-            <input
-              id={"#{@form.id}-#{@key}-create-var-input"}
-              type="text"
-              name="var_name"
-              value={@var_name}
-              placeholder="var name"
-              autocomplete="off"
-            />
-          </Form>
-
           <div class="button-group">
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="text"
@@ -237,7 +208,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Text
             </button>
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="string"
@@ -247,7 +217,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               String
             </button>
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="html"
@@ -257,7 +226,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Html
             </button>
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="datetime"
@@ -267,7 +235,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Datetime
             </button>
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="boolean"
@@ -277,7 +244,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Boolean
             </button>
             <button
-              disabled={!@var_name}
               type="button"
               :on-click={@create_var}
               phx-value-type="color"

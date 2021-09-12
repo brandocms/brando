@@ -29,7 +29,11 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
     modules = Brando.repo().all(query)
 
     for module <- modules do
-      entry_template = Map.drop(module, [:multi, :wrapper, :id])
+      entry_template =
+        module
+        |> Map.drop([:multi, :wrapper, :id])
+        |> Map.put(:id, 2107)
+
       wrapper_code = module.wrapper
 
       query =

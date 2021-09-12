@@ -33,7 +33,9 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
           <div phx-update="ignore">
             <TextArea
               form={@form}
-              field={name} />
+              field={name}
+              opts={phx_debounce: 750}
+            />
 
             <div class="editor"></div>
           </div>
@@ -55,7 +57,9 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
             <TextArea
               form={@form}
               field={@field}
-              value={@value} />
+              value={@value}
+              opts={phx_debounce: 750}
+            />
 
             <div class="editor"></div>
           </div>
