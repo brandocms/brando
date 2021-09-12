@@ -8,7 +8,7 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
     for module <- modules do
       # convert from string map to list of objects
       vars =
-        module.vars
+        (module.vars || [])
         |> Enum.map(fn
           {k, v} ->
             Map.put(v, "name", k)

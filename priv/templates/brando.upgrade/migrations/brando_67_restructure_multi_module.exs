@@ -43,8 +43,8 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
             entry_template: ^entry_template,
             code: ^wrapper_code,
             wrapper_boolean: true,
-            vars: [],
-            refs: []
+            vars: "[]",
+            refs: "[]"
           ]]
         )
 
