@@ -589,6 +589,46 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Scan recursively through `blocks` looking for `uid` and remove
+  """
+  def delete_block(blocks, uid) do
+    Enum.reduce(blocks, [], fn
+      %{uid: ^uid}, acc ->
+        acc
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            delete_block(refs, uid)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            delete_block(blocks, uid)
+          )
+          | acc
+        ]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
   Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
   """
   def merge_block(blocks, uid, merge_data) do
@@ -663,6 +703,12 @@ defmodule Brando.Villain do
   def update_block_in_changeset(changeset, data_field, block_uid, merge_data) do
     blocks = Changeset.get_field(changeset, data_field)
     updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def delete_block_in_changeset(changeset, data_field, block_uid) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.delete_block(blocks, block_uid)
     Changeset.put_change(changeset, data_field, updated_blocks)
   end
 
