@@ -21,11 +21,16 @@ defmodule Brando.Query do
       end
       ```
 
-  You can pass preloads to the `:update` mutation:
+  You can pass preloads to the mutations:
 
       ```
       mutation :update, {Project, preload: [:tags]}
       ```
+
+  For `create` operations, the preloads will execute after insertion
+  For `update` operations, the preloads will execute on fetching entry for update
+
+  This can be useful if your `identifier` function references associations on the entry
 
   # Select
 
@@ -117,12 +122,19 @@ defmodule Brando.Query do
   defmacro query(:single, module, do: block),
     do: query_single(Macro.expand(module, __CALLER__), block)
 
+  defmacro mutation(:create, {module, opts}),
+    do: mutation_create({Macro.expand(module, __CALLER__), opts})
+
   defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:update, {module, opts}),
     do: mutation_update({Macro.expand(module, __CALLER__), opts})
 
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
+
+  defmacro mutation(:delete, {module, opts}),
+    do: mutation_delete({Macro.expand(module, __CALLER__), opts})
+
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:duplicate, {module, opts}),
@@ -491,7 +503,9 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_create(module, callback_block \\ nil) do
+  defp mutation_create(module, callback_block \\ nil)
+
+  defp mutation_create({module, opts}, callback_block) do
     singular_schema =
       module
       |> Module.split()
@@ -499,6 +513,22 @@ defmodule Brando.Query do
       |> Inflex.underscore()
 
     callback_block = callback_block || @default_callback
+    do_mutation_create(module, singular_schema, callback_block, opts)
+  end
+
+  defp mutation_create(module, callback_block) do
+    singular_schema =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    callback_block = callback_block || @default_callback
+    do_mutation_create(module, singular_schema, callback_block)
+  end
+
+  defp do_mutation_create(module, singular_schema, callback_block, opts \\ []) do
+    preloads = Keyword.get(opts, :preload)
 
     quote generated: true do
       @spec unquote(:"create_#{singular_schema}")(map, map | :system) ::
@@ -510,6 +540,7 @@ defmodule Brando.Query do
           unquote(module),
           changeset,
           user,
+          unquote(preloads),
           unquote(callback_block)
         )
       end
@@ -519,6 +550,7 @@ defmodule Brando.Query do
           unquote(module),
           params,
           user,
+          unquote(preloads),
           unquote(callback_block),
           Keyword.get(opts, :changeset, nil)
         )
@@ -632,7 +664,9 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_delete(module, callback_block \\ nil) do
+  defp mutation_delete(module, callback_block \\ nil)
+
+  defp mutation_delete({module, opts}, callback_block) do
     singular_schema =
       module
       |> Module.split()
@@ -640,6 +674,24 @@ defmodule Brando.Query do
       |> Inflex.underscore()
 
     callback_block = callback_block || @default_callback
+
+    do_mutation_delete(module, singular_schema, callback_block, opts)
+  end
+
+  defp mutation_delete(module, callback_block) do
+    singular_schema =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    callback_block = callback_block || @default_callback
+
+    do_mutation_delete(module, singular_schema, callback_block)
+  end
+
+  defp do_mutation_delete(module, singular_schema, callback_block, opts \\ []) do
+    preloads = Keyword.get(opts, :preload)
 
     quote do
       @spec unquote(:"delete_#{singular_schema}")(integer | binary) ::
@@ -651,6 +703,7 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           user,
+          unquote(preloads),
           unquote(callback_block)
         )
       end

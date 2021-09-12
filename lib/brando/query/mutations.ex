@@ -11,12 +11,13 @@ defmodule Brando.Query.Mutations do
   alias Brando.Trait
   alias Brando.Utils
 
-  def create(module, params, user, callback_block, custom_changeset) do
+  def create(module, params, user, preloads, callback_block, custom_changeset) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
 
     with changeset <- changeset_fun.(struct(module), params, user),
          changeset <- Publisher.maybe_override_status(changeset),
          {:ok, entry} <- Query.insert(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       revisioned? = module.__trait__(Trait.Revisioned)
@@ -36,10 +37,11 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def create_with_changeset(module, changeset, user, callback_block) do
+  def create_with_changeset(module, changeset, user, preloads, callback_block) do
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :insert),
          {:ok, entry} <- Query.insert(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       revisioned? = module.__trait__(Trait.Revisioned)
@@ -58,6 +60,9 @@ defmodule Brando.Query.Mutations do
       err -> err
     end
   end
+
+  defp maybe_preload(entry, nil), do: {:ok, entry}
+  defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.repo().preload(preloads)}
 
   def update(context, module, name, id, params, user, preloads, callback_block, custom_changeset) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
@@ -171,16 +176,17 @@ defmodule Brando.Query.Mutations do
 
   defp set_action(changeset, action), do: %{changeset | action: action}
 
-  def delete(context, module, name, id, user, callback_block) do
-    {:ok, entry} = apply(context, :"get_#{name}", [id])
-
-    #! TODO: Remove when moving to Blueprints
-    soft_deletable? =
-      if Brando.Blueprint.blueprint?(module) do
-        module.__trait__(Trait.SoftDelete)
+  def delete(context, module, name, id, user, preloads, callback_block) do
+    get_opts =
+      if preloads do
+        %{matches: %{id: id}, preload: preloads}
       else
-        {:__soft_delete__, 0} in module.__info__(:functions)
+        %{matches: %{id: id}}
       end
+
+    {:ok, entry} = apply(context, :"get_#{name}", [get_opts])
+
+    soft_deletable? = module.__trait__(Trait.SoftDelete)
 
     {:ok, entry} =
       if soft_deletable? do
