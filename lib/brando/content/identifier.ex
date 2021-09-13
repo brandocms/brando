@@ -18,7 +18,7 @@ defmodule Brando.Content.Identifier do
     field :status, Brando.Type.Status
     field :absolute_url, :string
     field :cover, :string
-    field :schema, :string
+    field :schema, Brando.Type.Module
   end
 
   def changeset(struct, params \\ %{}) do

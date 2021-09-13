@@ -141,10 +141,36 @@
     color: theme(colors.dark) !important;
     border: none !important;
   }
+
   input {
     background-color: theme(colors.input) !important;
     color: theme(colors.dark) !important;
     border: none !important;
+  }
+
+  .button-group-vertical {
+    @space margin-bottom 20px;
+    display: flex;
+    flex-direction: column;
+
+    button {
+      margin-top: 0;
+      text-align: center !important;
+
+      &:first-of-type {
+        border-top-left-radius: 30px;
+        border-top-right-radius: 30px;
+      }
+
+      &:last-of-type {
+        border-bottom-left-radius: 30px;
+        border-bottom-right-radius: 30px;
+      }    
+
+      + button {
+        margin-top: -1px;
+      }
+    }
   }
 
   .panels {

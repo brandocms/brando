@@ -156,6 +156,23 @@ defmodule Brando.Blueprint.Relations do
   end
 
   ##
+  ## embeds_many
+  def run_cast_relation(
+        %{type: :entries, name: name, opts: opts},
+        changeset,
+        _user
+      ) do
+    require Logger
+    Logger.error("==> casting :entries")
+    Logger.error(inspect(Map.get(changeset.params, to_string(name))))
+
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, [])
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    end
+  end
+
+  ##
   ## catch all for non casted relations
   def run_cast_relation(_, changeset, _user), do: changeset
 end

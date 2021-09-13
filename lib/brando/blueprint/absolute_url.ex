@@ -14,6 +14,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
         |> Liquex.Render.render(@parsed_absolute_url, context)
         |> elem(0)
         |> Enum.join()
+        |> String.trim()
       end
     end
   end

@@ -211,3 +211,32 @@ button.tiny, a.tiny {
 .submit-button {
   @space margin-top 30px;
 }
+
+.add-entry-button {
+  border: 1px solid theme(colors.dark);
+  font-size: 17px;
+  padding: 12px 20px 10px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  margin-top: 15px;
+  transition: background-color 250ms ease, color 250ms ease;
+
+  svg {
+    margin-bottom: 4px;
+    margin-right: 10px;
+
+    path:nth-of-type(2) {
+      transition: fill 250ms ease;
+      fill: theme(colors.dark);
+    }
+  }
+
+  &:hover {
+    @color bg dark;
+    @color fg peach;
+    svg path:nth-of-type(2) {
+      fill: theme(colors.peach);
+    }
+  }
+}

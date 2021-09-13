@@ -103,10 +103,11 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def update_with_changeset(module, changeset, user, callback_block) do
+  def update_with_changeset(module, changeset, user, preloads, callback_block) do
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do

@@ -629,6 +629,7 @@ defmodule Brando.Query do
           unquote(module),
           changeset,
           user,
+          unquote(preloads),
           unquote(callback_block)
         )
       end

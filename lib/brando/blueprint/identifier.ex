@@ -37,6 +37,44 @@ defmodule Brando.Blueprint.Identifier do
     end
   end
 
+  def list_entry_types do
+    blueprints = Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page]
+    entry_types = Enum.map(blueprints, &{Brando.Blueprint.get_plural(&1), &1})
+    {:ok, entry_types}
+  end
+
+  def get_entry_types(wanted_types) do
+    wanted_types
+    |> Enum.reduce([], fn {wanted_type, list_opts}, acc ->
+      [{Brando.Blueprint.get_plural(wanted_type), wanted_type, list_opts} | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  def list_entries_for(schema, list_opts \\ %{})
+
+  def list_entries_for(schema_binary, list_opts) when is_binary(schema_binary) do
+    schema_binary
+    |> List.wrap()
+    |> Module.concat()
+    |> list_entries_for(list_opts)
+  end
+
+  def list_entries_for(schema, list_opts) when is_atom(schema) do
+    context = schema.__modules__.context
+    plural = schema.__naming__.plural
+
+    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
+    identifiers_for(entries)
+  end
+
+  def get_entry_for_identifier(%Brando.Content.Identifier{id: id, schema: schema}) do
+    context = schema.__modules__.context
+    singular = schema.__naming__.singular
+    opts = %{matches: %{id: id}}
+    apply(context, :"get_#{singular}", [opts])
+  end
+
   @spec identifiers_for([map]) :: {:ok, list}
   def identifiers_for(entries) do
     {:ok, Enum.map(entries, &identifier_for/1)}

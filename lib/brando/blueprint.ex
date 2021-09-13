@@ -282,7 +282,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_many(
             name,
             Brando.Content.Identifier,
-            to_ecto_opts(:embeds_many, opts)
+            to_ecto_opts(:embeds_many, opts) ++ [on_replace: :delete]
           )
 
         relation ->
@@ -887,29 +887,7 @@ defmodule Brando.Blueprint do
     |> Enum.filter(&__MODULE__.blueprint?/1)
   end
 
-  def list_entry_types do
-    blueprints = list_blueprints() ++ [Brando.Pages.Page]
-    entry_types = Enum.map(blueprints, &{get_plural(&1), &1})
-    {:ok, entry_types}
-  end
-
-  def list_entries_for(schema) do
-    list_opts = %{}
-    context = schema.__modules__.context
-    plural = schema.__naming__.plural
-
-    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
-    Brando.Blueprint.Identifier.identifiers_for(entries)
-  end
-
-  def get_entry_for_identifier(%Brando.Content.Identifier{id: id, schema: schema}) do
-    context = schema.__modules__.context
-    singular = schema.__naming__.singular
-    opts = %{matches: %{id: id}}
-    apply(context, :"get_#{singular}", [opts])
-  end
-
-  defp get_plural(module) do
+  def get_plural(module) do
     plural = Brando.Utils.try_path(module.__translations__, [:naming, :plural])
     String.capitalize(plural || module.__naming__.plural)
   end

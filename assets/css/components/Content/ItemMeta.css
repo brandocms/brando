@@ -56,14 +56,35 @@
 }
 
 .identifier {
-  background-color: #ffeb00;
+  @fontsize 16px;
+  background-color: #ffffff;
+  border: 1px solid theme(colors.dark);
   padding: 7px 15px 7px 7px;
   border-radius: 50px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+
+  &.selected {
+    @color bg dark;
+    @color fg peach;
+    border: 1px solid transparent;
+  }
 
   .content {
+    flex-grow: 1;
     .name {
       font-weight: 500;
     }
+  }
+
+  .remove button {
+    @color bg peach;
+    border: none;
+    font-size: 28px;
+    width: 35px;
+    border-radius: 50%;
+    height: 35px;
+    margin-left: auto;
   }
 }
 
