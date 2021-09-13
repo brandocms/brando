@@ -3,27 +3,28 @@ defmodule Brando.Blueprint.Identifier do
   Identifies the entry
   """
 
-  @derive Jason.Encoder
-  defstruct [:id, :title, :type, :status, :absolute_url, :cover, :schema]
+  alias Brando.Villain
+  alias Brando.Villain.LiquexParser
+  alias Brando.Utils
 
   defmacro identifier(tpl) when is_binary(tpl) do
-    {:ok, parsed_identifier} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+    {:ok, parsed_identifier} = Liquex.parse(tpl, LiquexParser)
 
     quote location: :keep do
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry) do
-        context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
+        context = Liquex.Context.assign(Villain.get_base_context(), "entry", entry)
         {result, _} = Liquex.Render.render([], @parsed_identifier, context)
         title = Enum.join(result)
 
         translated_type =
-          Brando.Utils.try_path(__MODULE__.__translations__(), [:naming, :singular]) || @singular
+          Utils.try_path(__MODULE__.__translations__(), [:naming, :singular]) || @singular
 
         status = Map.get(entry, :status, nil)
         absolute_url = __MODULE__.__absolute_url__(entry)
         cover = Brando.Blueprint.Identifier.extract_cover(entry)
 
-        %Brando.Blueprint.Identifier{
+        %Brando.Content.Identifier{
           id: entry.id,
           title: title,
           type: String.capitalize(translated_type),
@@ -50,7 +51,7 @@ defmodule Brando.Blueprint.Identifier do
   end
 
   def extract_cover(%{cover: cover}) do
-    Brando.Utils.img_url(cover, :thumb, prefix: Brando.Utils.media_url())
+    Utils.img_url(cover, :thumb, prefix: Utils.media_url())
   end
 
   def extract_cover(_) do
