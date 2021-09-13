@@ -24,3 +24,20 @@
     }
   }
 }
+
+.module-entries {
+  padding: 1rem;
+  background-color: gold;
+  margin-bottom: 1rem;
+
+  .add-module-entry {
+    @font mono;
+    @fontsize 16px;
+
+    width: 100%;
+    border: none;
+    background-color: white;
+    border-radius: 35px;
+    padding: 1rem;
+  }
+}
