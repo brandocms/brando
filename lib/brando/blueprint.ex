@@ -838,7 +838,15 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
-      %{changeset | action: :delete}
+      # setting this to delete triggers an Ecto error:
+      #
+      # (RuntimeError) cannot delete related <embedded_struct> because it already
+      # exists and it is not currently associated with the given struct.
+      # Ecto forbids casting existing records through the association field
+      # for security reasons. Instead, set the foreign key value accordingly
+      #
+      # So we IGNORE instead, and enum through the changeset...
+      %{changeset | action: :ignore}
     else
       changeset
     end
