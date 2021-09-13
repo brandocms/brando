@@ -154,7 +154,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.with_index()
           |> Enum.map(fn {entry, index} ->
             # add vars to context
-            vars = process_vars(entry.vars)
+            vars = process_vars(entry.data.vars)
 
             forloop = %{
               "index" => index + 1,
@@ -164,21 +164,25 @@ defmodule Brando.Villain.Parser do
 
             context =
               base_context
-              |> add_vars_to_context(entry.vars)
+              |> add_vars_to_context(vars)
               |> Context.assign("forloop", forloop)
 
             module.entry_template.code
-            |> render_refs(entry.refs, id)
+            |> render_refs(entry.data.refs, id)
             |> Villain.parse_and_render(context)
           end)
           |> Enum.join("\n")
+
+        base_vars = process_vars(block.vars)
 
         context =
           base_context
           |> Context.assign("entries", entries)
           |> Context.assign("content", content)
 
-        Villain.parse_and_render(module.code, context)
+        module.code
+        |> render_refs(block.refs, 0)
+        |> Villain.parse_and_render(context)
       end
 
       def module(%{module_id: id, refs: refs} = block, opts) do
