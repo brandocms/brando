@@ -722,4 +722,69 @@ defmodule Brando.Villain do
 
     refs_with_generated_uids
   end
+
+  def reject_blocks_marked_as_deleted(schema, changeset) do
+    Enum.reduce(schema.__villain_fields__(), changeset, fn vf, mutated_changeset ->
+      case Changeset.get_field(mutated_changeset, vf.name) do
+        nil ->
+          mutated_changeset
+
+        data when is_list(data) ->
+          Changeset.put_change(
+            mutated_changeset,
+            vf.name,
+            find_and_reject_deleted(data)
+          )
+      end
+    end)
+  end
+
+  defp find_and_reject_deleted(blocks) when is_list(blocks) do
+    Enum.reduce(blocks, [], fn
+      %{marked_as_deleted: true}, acc ->
+        acc
+
+      %{type: "module", data: %{refs: refs, entries: entries}} = module, acc ->
+        # module can have entries and refs!
+
+        processed_refs_module =
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            find_and_reject_deleted(refs || [])
+          )
+
+        processed_entries_and_refs_module =
+          put_in(
+            processed_refs_module,
+            [
+              Access.key(:data),
+              Access.key(:entries)
+            ],
+            find_and_reject_deleted(entries || [])
+          )
+
+        [processed_entries_and_refs_module | acc]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            find_and_reject_deleted(blocks)
+          )
+          | acc
+        ]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
 end
