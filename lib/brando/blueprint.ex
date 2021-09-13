@@ -278,6 +278,13 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:embeds_many, opts)
           )
 
+        %{type: :entries, name: name, opts: opts} ->
+          Ecto.Schema.embeds_many(
+            name,
+            Brando.Content.Identifier,
+            to_ecto_opts(:embeds_many, opts)
+          )
+
         relation ->
           require Logger
           Logger.error("==> relation type not caught")
