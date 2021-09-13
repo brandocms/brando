@@ -902,7 +902,7 @@ defmodule Brando.Blueprint do
     Brando.Blueprint.Identifier.identifiers_for(entries)
   end
 
-  def get_entry_for_identifier(%__MODULE__.Identifier{id: id, schema: schema}) do
+  def get_entry_for_identifier(%Brando.Content.Identifier{id: id, schema: schema}) do
     context = schema.__modules__.context
     singular = schema.__naming__.singular
     opts = %{matches: %{id: id}}
