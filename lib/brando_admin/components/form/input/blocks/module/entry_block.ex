@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
+defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop block_count, :integer
   prop uploads, :any
   prop data_field, :atom
+  prop entry_template, :map
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -25,7 +26,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   data module_name, :string
   data module_class, :string
   data module_code, :string
-  data entry_template, :any
   data module_multi, :boolean
   data refs, :list
   data important_vars, :list
@@ -36,19 +36,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     input_value(form, field)
   end
 
-  defp get_module(id) do
-    {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
-
-    case Enum.find(modules, &(&1.id == id)) do
-      nil -> nil
-      module -> module
-    end
-  end
-
-  def mount(socket) do
-    {:ok, assign(socket, module_not_found: false, entry_template: nil)}
-  end
-
   def update(assigns, socket) do
     {:ok,
      socket
@@ -57,41 +44,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
      |> parse_module_code()}
   end
 
-  defp assign_module_data(%{assigns: %{block: block}} = socket) do
-    case get_module(v(block, :data).module_id) do
-      nil ->
-        assign(socket, :module_not_found, true)
+  defp assign_module_data(%{assigns: %{block: block, entry_template: entry_template}} = socket) do
+    block_data =
+      block
+      |> inputs_for(:data)
+      |> List.first()
 
-      module ->
-        block_data =
-          block
-          |> inputs_for(:data)
-          |> List.first()
+    refs = Enum.with_index(inputs_for(block_data, :refs))
+    vars = v(block_data, :vars) || []
 
-        refs = Enum.with_index(inputs_for(block_data, :refs))
-        vars = v(block_data, :vars) || []
-
-        socket
-        |> assign(:uid, v(block, :uid))
-        |> assign(:block_data, block_data)
-        |> assign(:module_name, module.name)
-        |> assign(:module_class, module.class)
-        |> assign(:module_code, module.code)
-        |> assign(:module_multi, input_value(block_data, :multi))
-        |> assign(:entry_template, module.entry_template)
-        |> assign(:refs, refs)
-        |> assign_new(:important_vars, fn ->
-          Enum.filter(vars, &(&1.important == true))
-        end)
-    end
-  end
-
-  def render(%{module_not_found: true} = assigns) do
-    ~F"""
-    <div class="module-missing">
-      Missing module!
-    </div>
-    """
+    socket
+    |> assign(:uid, v(block, :uid))
+    |> assign(:block_data, block_data)
+    |> assign(:module_name, entry_template.name)
+    |> assign(:module_class, entry_template.class)
+    |> assign(:module_code, entry_template.code)
+    |> assign(:module_multi, true)
+    |> assign(:refs, refs)
+    |> assign_new(:important_vars, fn ->
+      Enum.filter(vars, &(&1.important == true))
+    end)
   end
 
   def render(assigns) do
@@ -107,6 +79,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         block_count={@block_count}
         base_form={@base_form}
         block={@block}
+        is_entry?={true}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>
@@ -142,20 +115,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />
-
-              {#match {:content, _}}
-                {#if @module_multi}
-                  <Module.Entries
-                    id={"#{@uid}-entries"}
-                    uid={@uid}
-                    entry_template={@entry_template}
-                    block_data={@block_data}
-                    data_field={@data_field}
-                    base_form={@base_form}
-                  />
-                {#else}
-                  {"{{ content }}"}
-                {/if}
 
               {#match _}
                 {raw split}

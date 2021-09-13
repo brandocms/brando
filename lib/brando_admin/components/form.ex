@@ -5,6 +5,8 @@ defmodule BrandoAdmin.Components.Form do
   import Brando.Gettext
   import Ecto.Changeset
 
+  alias Brando.Villain
+
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
@@ -379,7 +381,8 @@ defmodule BrandoAdmin.Components.Form do
       |> Map.put(:action, :update)
 
     # clear out deleted villain blocks
-    new_changeset = filter_deleted(schema, changeset)
+    # one day i will figure out why this is neccessary...
+    new_changeset = Villain.reject_blocks_marked_as_deleted(schema, changeset)
 
     case new_changeset.valid? do
       true ->
@@ -422,19 +425,6 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
-  end
-
-  def filter_deleted(schema, changeset) do
-    Enum.reduce(schema.__villain_fields__(), changeset, fn vf, mutated_changeset ->
-      case get_field(mutated_changeset, vf.name) do
-        nil ->
-          mutated_changeset
-
-        data when is_list(data) ->
-          new_data = Enum.reject(data, & &1.marked_as_deleted)
-          put_change(mutated_changeset, vf.name, new_data)
-      end
-    end)
   end
 
   def handle_gallery_progress(

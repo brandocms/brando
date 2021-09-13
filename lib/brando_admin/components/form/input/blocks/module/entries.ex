@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use Phoenix.HTML
   alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   prop block_data, :form, required: true
@@ -11,30 +12,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   prop entry_template, :map, required: true
   prop uid, :string, required: true
 
+  data entry_forms, :list
+
   def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
-    entries = input_value(assigns.block_data, :entries)
-
     require Logger
-    Logger.error("==> entries: #{inspect(entries, pretty: true)}")
-    Logger.error("==> entry_template: #{inspect(assigns.entry_template, pretty: true)}")
+    Logger.error("==> entries/update:")
+    Logger.error(inspect(v(assigns.block_data, :entries), pretty: true))
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:entries, entries)}
+     |> assign(:entry_forms, inputs_for_blocks(assigns.block_data, :entries))}
   end
 
   def render(assigns) do
     ~F"""
     <div class="module-entries">
-      {#for entry <- @entries}
-        ENTRY: {entry.uid}<br>
+      {#for {entry_form, idx} <- Enum.with_index(@entry_forms)}
+        <EntryBlock
+          id={v(entry_form, :uid)}
+          block={entry_form}
+          base_form={@base_form}
+          data_field={@data_field}
+          entry_template={@entry_template}
+          index={idx}
+          block_count={Enum.count(@entry_forms)}
+          insert_block=""
+          duplicate_block=""
+        />
+
       {/for}
 
-      <button type="button" :on-click="add_entry">
-        Add new entry
+      <button class="add-module-entry" type="button" :on-click="add_entry">
+        Add new entry [{@entry_template.name}]
       </button>
     </div>
     """
@@ -73,9 +85,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     entries = input_value(block_data, :entries)
     updated_entries = entries ++ [new_entry]
 
-    require Logger
-    Logger.error(inspect(updated_entries, pretty: true))
-
     updated_changeset =
       Brando.Villain.update_block_in_changeset(
         changeset,
@@ -83,9 +92,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
         block_uid,
         %{data: %{entries: updated_entries}}
       )
-
-    require Logger
-    Logger.error(inspect(updated_changeset, pretty: true))
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

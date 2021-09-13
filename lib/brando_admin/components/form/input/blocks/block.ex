@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   prop index, :integer
   prop block_count, :integer
   prop is_ref?, :boolean, default: false
+  prop is_entry?, :boolean, default: false
   @doc "A slight hint of background color for the block. Often used with Containers/sections"
   prop bg_color, :string
 
@@ -55,7 +56,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         deleted: @marked_as_deleted
       }>
       <Blocks.Plus
-        :if={!@is_ref?}
+        :if={!@is_ref? and !@is_entry?}
         index={@index}
         click={@insert_block} />
 
@@ -137,7 +138,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
       </div>
       {#if @last_block?}
         <Blocks.Plus
-          :if={!@is_ref?}
+          :if={!@is_ref? and !@is_entry?}
           index={@index + 1}
           click={@insert_block} />
       {/if}
