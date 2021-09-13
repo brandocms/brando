@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Villain.ModuleListLive do
+defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
 
   alias BrandoAdmin.Components.Content
@@ -46,7 +46,7 @@ defmodule BrandoAdmin.Villain.ModuleListLive do
        to:
          Brando.routes().admin_live_path(
            socket,
-           BrandoAdmin.Villain.ModuleUpdateLive,
+           BrandoAdmin.Content.ModuleUpdateLive,
            new_module.id
          )
      )}

@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Villain.ModuleUpdateLive do
+defmodule BrandoAdmin.Content.ModuleUpdateLive do
   use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
   use BrandoAdmin.Toast
   use BrandoAdmin.Presence
