@@ -17,6 +17,12 @@ import configureBreakpoints from './config/BREAKPOINTS'
 import configureFader from './config/FADER'
 import configureMoonwalk from './config/MOONWALK'
 
+const PREFERS_REDUCED_MOTION = Dom.find('meta[name="prefers_reduced_motion"]').getAttribute('content')
+
+if (PREFERS_REDUCED_MOTION) {
+  gsap.globalTimeline.timeScale(200)
+}
+
 export default () => {
   const app = new Application({
     breakpointConfig: configureBreakpoints(),

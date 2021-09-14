@@ -3,6 +3,7 @@ defmodule Brando.Cache.GlobalsTest do
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 
+  alias Brando.Globals
   alias Brando.Factory
 
   setup do
@@ -13,8 +14,13 @@ defmodule Brando.Cache.GlobalsTest do
     assert Brando.Cache.Globals.set()
     assert Brando.Cache.Globals.get() == %{}
 
-    globals = Factory.build_list(2, :global)
-    Factory.insert(:global_category, globals: globals)
+    category_params =
+      :global_category
+      |> Factory.params_for()
+      |> Brando.Utils.map_from_struct()
+
+    {:ok, _category} = Globals.create_global_category(category_params, :system)
+
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
 
     global_map = Brando.Cache.Globals.get()

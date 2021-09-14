@@ -65,10 +65,6 @@ defmodule Brando.HTML.Images do
       opts: opts
     }
 
-    require Logger
-    Logger.error(inspect(image_struct, pretty: true))
-    Logger.error(inspect(opts, pretty: true))
-
     attrs =
       initial_map
       |> add_lazyload()

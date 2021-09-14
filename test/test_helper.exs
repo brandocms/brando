@@ -86,7 +86,6 @@ defmodule BrandoIntegration.AdminSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "admin", BrandoIntegration.AdminChannel
   channel "user:*", Brando.UserChannel
   channel "live_preview:*", Brando.LivePreviewChannel
 
@@ -115,28 +114,6 @@ defmodule BrandoIntegration.AdminSocket do
   # Returning `nil` makes this socket anonymous.
   @impl true
   def id(_socket), do: nil
-end
-
-defmodule BrandoIntegration.AdminChannel do
-  @moduledoc """
-  Administration control channel
-  """
-
-  use Phoenix.Channel
-
-  # ++imports
-  use Brando.Sequence.Channel
-  # __imports
-
-  # ++macros
-  # __macros
-
-  # ++functions
-  # __functions
-
-  # def handle_in("domain:action", %{"params" => params}, socket) do
-  #   {:reply, {:ok, %{code: 200, params: params}}, socket}
-  # end
 end
 
 defmodule BrandoIntegration.Processor.Commands do

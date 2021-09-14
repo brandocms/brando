@@ -193,6 +193,7 @@ defmodule Brando.Users.User do
           inputs_for :config do
             input :reset_password_on_first_login, :toggle
             input :show_mutation_notifications, :toggle
+            input :prefers_reduced_motion, :toggle
           end
         end
       end

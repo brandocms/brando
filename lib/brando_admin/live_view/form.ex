@@ -40,33 +40,53 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   # with entry_id means it's an update
-  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token} = assigns, socket, schema) do
-    socket =
-      socket
-      |> Surface.init()
-      |> assign_action(:update)
-      |> assign_schema(schema)
-      |> assign_title()
-      |> assign_entry_id(entry_id)
-      |> assign_current_user(token)
-      |> set_admin_locale()
-      |> attach_hooks(schema)
+  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
+    require Logger
 
-    {:cont, socket}
+    if connected?(socket) do
+      Logger.error("==> form|update: Socket is connected.")
+
+      socket =
+        socket
+        |> Surface.init()
+        |> assign(:socket_connected, true)
+        |> assign_action(:update)
+        |> assign_schema(schema)
+        |> assign_title()
+        |> assign_entry_id(entry_id)
+        |> assign_current_user(token)
+        |> set_admin_locale()
+        |> attach_hooks(schema)
+
+      {:cont, socket}
+    else
+      Logger.error("==> form|update: Socket is not connected.")
+      {:cont, assign(socket, :socket_connected, false)}
+    end
   end
 
   def hooks(_params, %{"user_token" => token}, socket, schema) do
-    socket =
-      socket
-      |> Surface.init()
-      |> assign_action(:create)
-      |> assign_schema(schema)
-      |> assign_title()
-      |> assign_current_user(token)
-      |> set_admin_locale()
-      |> attach_hooks(schema)
+    require Logger
 
-    {:cont, socket}
+    if connected?(socket) do
+      Logger.error("==> form|create: Socket is connected.")
+
+      socket =
+        socket
+        |> Surface.init()
+        |> assign(:socket_connected, true)
+        |> assign_action(:create)
+        |> assign_schema(schema)
+        |> assign_title()
+        |> assign_current_user(token)
+        |> set_admin_locale()
+        |> attach_hooks(schema)
+
+      {:cont, socket}
+    else
+      Logger.error("==> form|create: Socket is not connected.")
+      {:cont, assign(socket, :socket_connected, false)}
+    end
   end
 
   defp assign_action(socket, action) do

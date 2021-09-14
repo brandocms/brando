@@ -48,6 +48,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
     socket =
       socket
+      |> assign(:socket_connected, true)
       |> assign_current_user(token)
       |> set_admin_locale()
       |> assign_schema(schema)

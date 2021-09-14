@@ -1,7 +1,6 @@
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
-  alias Brando.Sites
   alias Brando.Sites.GlobalCategory
   alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
@@ -12,6 +11,7 @@ defmodule Brando.Factory do
   alias Brando.Users.User
   alias Brando.Content
   alias Brando.Content.Module
+  alias Brando.Content.Section
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -30,7 +30,7 @@ defmodule Brando.Factory do
     %GlobalCategory{
       label: "System",
       key: "system",
-      globals: [build_list(2, :var_text)]
+      globals: build_list(2, :var_text)
     }
   end
 
@@ -91,6 +91,18 @@ defmodule Brando.Factory do
       },
       role: :superuser,
       language: "en"
+    }
+  end
+
+  def section_factory do
+    %Section{
+      name: "green",
+      namespace: "general",
+      instructions: "help",
+      class: "green",
+      color_bg: "#000000",
+      color_fg: "#FFFFFF",
+      color_accent: "#FF00FF"
     }
   end
 

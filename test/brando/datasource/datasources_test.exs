@@ -85,49 +85,6 @@ defmodule Brando.DatasourcesTest do
     }
   ]
 
-  @data_contained_datasource [
-    %{
-      type: "text",
-      data: %{
-        text: "<p>Hello world</p>"
-      }
-    },
-    %{
-      type: "container",
-      data: %{
-        class: "test",
-        wrapper: "",
-        blocks: [
-          %{
-            type: "text",
-            data: %{
-              text: "<p>Hello world</p>"
-            }
-          },
-          %{
-            type: "datasource",
-            data: %{
-              module: "Elixir.Brando.DatasourcesTest.TestDatasource",
-              type: "list",
-              query: "all_of_them",
-              code: """
-              {% for entry in entries %}
-              <li>{{ entry.name }}</li>
-              {% endfor %}
-              """
-            }
-          }
-        ]
-      }
-    },
-    %{
-      type: "text",
-      data: %{
-        text: "<p>Hello world</p>"
-      }
-    }
-  ]
-
   defmodule TestDatasource do
     use Brando.Datasource
 
@@ -303,6 +260,50 @@ defmodule Brando.DatasourcesTest do
       }
     ]
 
+    section = Factory.insert(:section)
+
+    data_contained_datasource = [
+      %{
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
+        }
+      },
+      %{
+        type: "container",
+        data: %{
+          section_id: section.id,
+          blocks: [
+            %{
+              type: "text",
+              data: %{
+                text: "<p>Hello world</p>"
+              }
+            },
+            %{
+              type: "datasource",
+              data: %{
+                module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+                type: "list",
+                query: "all_of_them",
+                code: """
+                {% for entry in entries %}
+                <li>{{ entry.name }}</li>
+                {% endfor %}
+                """
+              }
+            }
+          ]
+        }
+      },
+      %{
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
+        }
+      }
+    ]
+
     # insert pages
     page_params = Factory.params_for(:page, data: @data_root_level_datasource)
     {:ok, page_with_root_level_ds} = Brando.Pages.create_page(page_params, user)
@@ -310,7 +311,7 @@ defmodule Brando.DatasourcesTest do
     page_params = Factory.params_for(:page, data: data_refed_datasource)
     {:ok, page_with_refed_datasource} = Brando.Pages.create_page(page_params, user)
 
-    page_params = Factory.params_for(:page, data: @data_contained_datasource)
+    page_params = Factory.params_for(:page, data: data_contained_datasource)
     {:ok, page_with_contained_datasource} = Brando.Pages.create_page(page_params, user)
 
     page_params = Factory.params_for(:page, data: @data_no_datasource)

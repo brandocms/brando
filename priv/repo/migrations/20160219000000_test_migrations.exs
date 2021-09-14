@@ -154,13 +154,30 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :vars, :jsonb
       add :svg, :string
       add :multi, :boolean
-      add :wrapper, :string
+      add :wrapper, :boolean
+      add :entry_template, :jsonb
       sequenced()
       timestamps()
       soft_delete()
     end
 
     create index(:content_modules, [:namespace])
+
+    create table(:content_sections) do
+      add :name, :string
+      add :namespace, :string
+      add :instructions, :text
+      add :class, :string
+      add :color_bg, :text
+      add :color_fg, :text
+      add :color_accent, :text
+      add :css, :text
+      add :rendered_css, :text
+      add :creator_id, references(:users, on_delete: :nilify_all)
+      sequenced()
+      timestamps()
+      soft_delete()
+    end
 
     create table(:projects) do
       add :title, :string
@@ -247,14 +264,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create table(:sites_global_categories) do
       add :key, :string
       add :label, :text
-    end
-
-    create table(:sites_globals) do
-      add :key, :string
-      add :label, :text
-      add :type, :string
-      add :data, :jsonb
-      add :global_category_id, references(:sites_global_categories, on_delete: :delete_all)
+      add :globals, :jsonb
     end
 
     create table(:navigation_menus) do
