@@ -37,15 +37,17 @@ defmodule BrandoAdmin.Components.Form.MapInputs do
      |> assign(:subform, subform)}
   end
 
+  def render(%{input_value: nil} = assigns) do
+    ~F"""
+    No value
+    """
+  end
+
   def render(assigns) do
     ~F"""
-    {#if @input_value}
-      {#for {mk, mv} <- @input_value}
-        <#slot :args={name: "#{@form.name}[#{@for}][#{mk}]", key: mk, value: mv, subform: @subform}/>
-      {/for}
-    {#else}
-      No value?
-    {/if}
+    {#for {mk, mv} <- @input_value}
+      <#slot :args={name: "#{@form.name}[#{@for}][#{mk}]", key: mk, value: mv, subform: @subform}/>
+    {/for}
     """
   end
 end

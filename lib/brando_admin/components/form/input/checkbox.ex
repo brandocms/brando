@@ -1,9 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Checkbox do
   use Surface.Component
   use Phoenix.HTML
-  import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.TextInput
 
   prop form, :form
   prop blueprint, :any

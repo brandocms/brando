@@ -13,13 +13,13 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.ModuleProps
   alias BrandoAdmin.Components.Form.Submit
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Toast
 
   alias Surface.Components.Form
-  alias Surface.Components.Form.Inputs
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
     {:ok,

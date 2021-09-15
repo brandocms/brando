@@ -5,10 +5,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.FieldBase
+  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Identifier
-  alias Surface.Components.Form.Inputs
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop field, :any
@@ -44,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           Logger.error("==> identifier: #{inspect(identifier, pretty: true)}")
           identifier
 
-        %Ecto.Changeset{action: :replace} = changeset ->
+        %Ecto.Changeset{action: :replace} ->
           nil
 
         %Ecto.Changeset{} = changeset ->
@@ -127,14 +126,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <Inputs
         form={@form}
-        for={name}>
-        <HiddenInput field={:id} />
-        <HiddenInput field={:schema} />
-        <HiddenInput field={:status} />
-        <HiddenInput field={:title} />
-        <HiddenInput field={:cover} />
-        <HiddenInput field={:type} />
-        <HiddenInput field={:absolute_url} />
+        for={name}
+        :let={form: identifier_form}>
+        {hidden_input identifier_form, :id}
+        {hidden_input identifier_form, :schema}
+        {hidden_input identifier_form, :status}
+        {hidden_input identifier_form, :title}
+        {hidden_input identifier_form, :cover}
+        {hidden_input identifier_form, :type}
+        {hidden_input identifier_form, :absolute_url}
       </Inputs>
 
       {#for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers)}

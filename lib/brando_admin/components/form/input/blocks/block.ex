@@ -4,11 +4,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   """
   use Surface.LiveComponent
   use Phoenix.HTML
-  alias Surface.Components.Form.Label
-  alias Surface.Components.Form.Checkbox
-  alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Label
 
   prop block, :any
   prop base_form, :any
@@ -64,8 +62,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         <#slot name="config" />
       </Modal>
 
-      <HiddenInput form={@block} field={:uid} />
-      <HiddenInput form={@block} field={:type} />
+      {hidden_input @block, :uid}
+      {hidden_input @block, :type}
 
       <div
         id={@uid}
@@ -75,14 +73,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         class={"block", ref_block: @is_ref?}
         phx-hook="Brando.Block">
 
-        <div class="block-description">
+        <div class="block-description" id={"#{@uid}-block-description"}>
           <Label form={@block} field={:hidden} class="switch small inverse">
-            <Checkbox form={@block} field={:hidden} />
+            {checkbox @block, :hidden}
             <div class="slider round"></div>
           </Label>
           <span class="block-type">{@type}</span> &rarr; <#slot name="description" />
         </div>
-        <div class="block-content">
+        <div class="block-content" id={"#{@uid}-block-content"}>
           <#slot />
         </div>
         {#if slot_assigned?(:render)}
@@ -91,8 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             <#slot name="render" />
           </div>
         {/if}
-        <div class="block-actions">
-
+        <div class="block-actions" id={"#{@uid}-block-actions"}>
           <div
             :if={!@is_ref?}
             class="block-action move">
@@ -132,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             field={:marked_as_deleted}
             class="block-action toggler">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
-            <Checkbox form={@block} field={:marked_as_deleted} />
+            {checkbox @block, :marked_as_deleted}
           </Label>
         </div>
       </div>

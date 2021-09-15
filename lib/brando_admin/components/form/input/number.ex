@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Number do
   # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.NumberInput
 
   prop form, :form
   prop field, :any
@@ -20,10 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Number do
       field={name}
       class={opts[:class]}
       form={@form}>
-      <NumberInput
-        form={@form}
-        field={name}
-        class={"text"} />
+      {number_input @form, name, class: "text"}
     </FieldBase>
     """
   end
@@ -36,10 +32,7 @@ defmodule BrandoAdmin.Components.Form.Input.Number do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      <NumberInput
-        form={@form}
-        field={@field}
-        class={"text"} />
+      {number_input @form, @field, class: "text"}
     </FieldBase>
     """
   end

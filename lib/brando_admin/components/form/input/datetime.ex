@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
   # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop field, :any
@@ -60,11 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
               class="clear-datetime">
               Clear
             </button>
-            <HiddenInput
-              form={@form}
-              field={name}
-              value={@value}
-              class="flatpickr" />
+            {hidden_input @form, name, value: @value, class: "flatpickr"}
             <div class="timezone">&mdash; Your timezone is: <span>Unknown</span></div>
           </div>
       </div>
@@ -89,11 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
               class="clear-datetime">
               Clear
             </button>
-            <HiddenInput
-              form={@form}
-              field={@field}
-              value={@value}
-              class="flatpickr" />
+            {hidden_input @form, @field, value: @value, class: "flatpickr"}
             <div class="timezone">&mdash; Your timezone is: <span>Unknown</span></div>
           </div>
       </div>

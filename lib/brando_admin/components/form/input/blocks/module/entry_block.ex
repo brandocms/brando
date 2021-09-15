@@ -2,10 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
-  alias Surface.Components.Form.HiddenInput
-  alias Brando.Content
   alias Brando.Villain
-  alias Brando.Blueprint.Villain.Blocks
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
@@ -120,10 +117,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                 {raw split}
             {/case}
           {/for}
-
-          <HiddenInput form={@block_data} field={:module_id} />
-          <HiddenInput form={@block_data} field={:sequence} />
-          <HiddenInput form={@block_data} field={:multi} />
+          {hidden_input @block_data, :module_id}
+          {hidden_input @block_data, :sequence}
+          {hidden_input @block_data, :multi}
         </div>
       </Block>
     </div>

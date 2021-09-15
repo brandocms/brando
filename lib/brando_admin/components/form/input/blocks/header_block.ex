@@ -1,8 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
-  alias Surface.Components.Form.TextArea
-  alias Surface.Components.Form.HiddenInput
+
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Radios
 
@@ -51,15 +50,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
         </:config>
         {#for block_data <- inputs_for(@block, :data)}
           <div class="header-block">
-            <TextArea
-              id={"#{v(@block, :uid)}-textarea"}
-              class={"h#{v(block_data, :level)}"}
-              form={block_data}
-              field={:text}
-              opts={data_autosize: true, phx_debounce: 750}
-              rows="1" />
-            <HiddenInput form={block_data} field={:class} />
-            <HiddenInput form={block_data} field={:placeholder} />
+            {textarea block_data, :text,
+              id: "#{v(@block, :uid)}-textarea",
+              class: "h#{v(block_data, :level)}",
+              data_autosize: true,
+              phx_debounce: 750,
+              rows: 1
+            }
+            {hidden_input block_data, :class}
+            {hidden_input block_data, :placeholder}
           </div>
         {/for}
       </Block>

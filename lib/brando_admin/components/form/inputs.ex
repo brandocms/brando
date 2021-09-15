@@ -1,20 +1,23 @@
-defmodule BrandoAdmin.Components.Form.PolyInputs do
+defmodule BrandoAdmin.Components.Form.Inputs do
   @moduledoc """
+  A wrapper for `Phoenix.HTML.Form.html.inputs_for/3`.
   """
+
   use Surface.Component
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+
+  import Phoenix.HTML.Form
 
   @doc """
   The parent form.
 
   It should either be a `Phoenix.HTML.Form` emitted by `form_for` or an atom.
   """
-  prop form, :form, required: true
+  prop form, :form
 
   @doc """
   The name of the field related to the child inputs.
   """
-  prop for, :atom, required: true
+  prop for, :atom
 
   @doc """
   Extra options for `inputs_for/3`.
@@ -28,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.PolyInputs do
 
   def render(assigns) do
     ~F"""
-    {#for {f, index} <- Enum.with_index(inputs_for_poly(@form, @for, @opts))}
+    {#for {f, index} <- Enum.with_index(inputs_for(@form, @for, @opts))}
       <#slot :args={form: f, index: index}/>
     {/for}
     """

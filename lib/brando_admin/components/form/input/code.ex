@@ -2,8 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
   use Surface.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.HiddenInput
-  alias Surface.Components.Form.TextArea
 
   prop form, :form
   prop field, :any
@@ -31,12 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
         class="code-editor"
         phx-hook="Brando.CodeEditor">
           <div phx-update="ignore">
-            <TextArea
-              form={@form}
-              field={name}
-              opts={phx_debounce: 750}
-            />
-
+            {textarea @form, name, phx_debounce: 750}
             <div class="editor"></div>
           </div>
       </div>
@@ -54,12 +47,7 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
         class="code-editor"
         phx-hook="Brando.CodeEditor">
           <div phx-update="ignore">
-            <TextArea
-              form={@form}
-              field={@field}
-              value={@value}
-              opts={phx_debounce: 750}
-            />
+            {textarea @form, @field, value: @value, phx_debounce: 750}
 
             <div class="editor"></div>
           </div>

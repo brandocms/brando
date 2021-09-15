@@ -1,20 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery.ImagePreview do
   use Surface.Component
   use Phoenix.HTML
-
   import Ecto.Changeset
-
-  alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
-  alias BrandoAdmin.Components.Form.MapInputs
-  alias Brando.Images
   alias Brando.Utils
-
-  alias Surface.Components.Form.Inputs
-  alias Surface.Components.Form.Input.InputContext
-  alias Surface.Components.Form.TextInput
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop layout, :atom
@@ -27,9 +15,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImagePreview do
     sizes = get_field(image, :sizes)
     cdn = get_field(image, :cdn)
     constructed_image = %{sizes: sizes, cdn: cdn}
-
-    require Logger
-    Logger.error(inspect(sizes, pretty: true))
 
     thumb_url =
       if sizes == %{},

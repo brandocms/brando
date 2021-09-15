@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Date do
   # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop field, :any
@@ -50,11 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Date do
               class="clear-datetime">
               Clear
             </button>
-            <HiddenInput
-              form={@form}
-              field={name}
-              value={@value}
-              class="flatpickr" />
+            {hidden_input @form, name, value: @value, class: "flatpickr"}
           </div>
       </div>
     </FieldBase>

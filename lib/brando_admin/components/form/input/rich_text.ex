@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
   # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop field, :any
@@ -15,10 +14,38 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
   prop instructions, :string
   prop class, :string
 
-  def mount(socket) do
-    # TODO: Since we're calling this component through `live_component` we lose the default props.
-    # When there is proper support for dynamic components in Surface, we can change this hopefully.
-    {:ok, assign(socket, :value, nil)}
+  data initial_props, :map
+
+  def update(%{form: form, input: %{name: name}} = assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:initial_props, fn ->
+       Jason.encode!(%{content: v(form, name)})
+     end)}
+  end
+
+  def update(%{form: form, field: field} = assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:initial_props, fn ->
+       require Logger
+       Logger.error("==> set rich_text value: #{inspect(v(form, field), pretty: true)}")
+       Jason.encode!(%{content: v(form, field)})
+     end)}
+  end
+
+  def update(%{value: value} = assigns, socket) do
+    require Logger
+    Logger.error("==> update rich_text value: #{inspect(value, pretty: true)}")
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:initial_props, fn ->
+       Jason.encode!(%{content: value})
+     end)}
   end
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
@@ -31,19 +58,36 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       class={opts[:class]}
       form={@form}>
       <div class="tiptap-wrapper">
-        <HiddenInput
-          class="tiptap-text"
-          form={@form}
-          field={name}
-          value={@value}
-          opts={phx_debounce: 500}
-        />
+        {hidden_input @form, name, class: "tiptap-text", phx_debounce: 500}
         <div
           id={"#{@form.id}-#{name}-text"}
           phx-update="ignore"
           phx-hook="Brando.TipTap"
           data-name="TipTap"
-          data-props={Jason.encode!(%{content: @value || v(@form, name)})}>
+          data-props={@initial_props}>
+        </div>
+      </div>
+    </FieldBase>
+    """
+  end
+
+  def render(%{form: _form, field: _field} = assigns) do
+    ~F"""
+    <FieldBase
+      class={@class}
+      label={@label}
+      placeholder={@placeholder}
+      instructions={@instructions}
+      field={@field}
+      form={@form}>
+      <div class="tiptap-wrapper">
+        {hidden_input @form, @field, class: "tiptap-text", phx_debounce: 500}
+        <div
+          id={"#{@form.id}-#{@field}-text"}
+          phx-update="ignore"
+          phx-hook="Brando.TipTap"
+          data-name="TipTap"
+          data-props={@initial_props}>
         </div>
       </div>
     </FieldBase>
@@ -60,19 +104,13 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       field={@field}
       form={@form}>
       <div class="tiptap-wrapper">
-        <HiddenInput
-          class="tiptap-text"
-          form={@form}
-          field={@field}
-          value={@value}
-          opts={phx_debounce: 500}
-        />
+        {hidden_input @form, @field, value: @value, class: "tiptap-text", phx_debounce: 500}
         <div
           id={"#{@form.id}-#{@field}-text"}
           phx-update="ignore"
           phx-hook="Brando.TipTap"
           data-name="TipTap"
-          data-props={Jason.encode!(%{content: @value || v(@form, @field)})}>
+          data-props={@initial_props}>
         </div>
       </div>
     </FieldBase>

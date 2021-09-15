@@ -25,13 +25,13 @@ defmodule BrandoAdmin.Components.Modal do
 
         :show ->
           socket
-          |> push_event("b:modal:show:#{id}", %{})
           |> assign(:show, true)
+          |> push_event("b:modal:show:#{id}", %{})
 
         :hide ->
           socket
-          |> push_event("b:modal:hide:#{id}", %{})
           |> assign(:show, false)
+          |> push_event("b:modal:hide:#{id}", %{})
       end
       |> assign(:action, nil)
 
@@ -40,7 +40,6 @@ defmodule BrandoAdmin.Components.Modal do
 
   def render(assigns) do
     ~F"""
-
     <div
       id={@id}
       class={"modal", narrow: @narrow, medium: @medium}
@@ -48,7 +47,6 @@ defmodule BrandoAdmin.Components.Modal do
       data-b-modal={@show && "show" || "hide"}
       phx-hook="Brando.Modal"
       :on-window-keydown={@close}>
-
       <div class="modal-backdrop" />
       <div class="modal-dialog" role="document">
         <div class="modal-content">

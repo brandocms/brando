@@ -1,8 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use Surface.LiveComponent
   use Phoenix.HTML
-  alias Surface.Components.Form.HiddenInput
-  alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -17,10 +15,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
-    require Logger
-    Logger.error("==> entries/update:")
-    Logger.error(inspect(v(assigns.block_data, :entries), pretty: true))
-
     {:ok,
      socket
      |> assign(assigns)

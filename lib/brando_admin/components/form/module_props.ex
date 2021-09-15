@@ -5,10 +5,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.PolyInputs
-
-  alias Surface.Components.Form.Inputs
 
   prop form, :form, required: true
   prop key, :string, default: "default"

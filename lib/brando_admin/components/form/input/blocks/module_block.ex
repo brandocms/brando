@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
-  alias Surface.Components.Form.HiddenInput
   alias Brando.Content
   alias Brando.Villain
   alias Brando.Blueprint.Villain.Blocks
@@ -114,16 +113,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           {#for var <- inputs_for_poly(@block_data, :vars)}
             <RenderVar var={var} render={:only_regular} />
           {/for}
-
           <button type="button" class="secondary" :on-click="reinit_vars">
             Reinitialize variables
           </button>
-
           <button type="button" class="secondary" :on-click="reinit_refs">
             Reset block refs
           </button>
         </:config>
-
         <div class="module-block" b-editor-tpl={@module_class}>
           {#unless Enum.empty?(@important_vars)}
             <div class="important-vars">
@@ -132,7 +128,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               {/for}
             </div>
           {/unless}
-
           {#for split <- @splits}
             {#case split}
               {#match {:ref, ref}}
@@ -156,15 +151,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 {#else}
                   {"{{ content }}"}
                 {/if}
-
               {#match _}
                 {raw split}
             {/case}
           {/for}
-
-          <HiddenInput form={@block_data} field={:module_id} />
-          <HiddenInput form={@block_data} field={:sequence} />
-          <HiddenInput form={@block_data} field={:multi} />
+          {hidden_input @block_data, :module_id}
+          {hidden_input @block_data, :sequence}
+          {hidden_input @block_data, :multi}
         </div>
       </Block>
     </div>

@@ -1,8 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
-  alias Surface.Components.Form.TextInput
-  alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
   prop base_form, :any
@@ -34,12 +32,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         <:description>{v(@block, :data).url}</:description>
         <:config>
           {#for block_data <- inputs_for(@block, :data)}
-            <TextInput class="text" form={block_data} field={:url} />
-            <TextInput class="text" form={block_data} field={:source} />
-            <TextInput class="text" form={block_data} field={:remote_id} />
-            <TextInput class="text" form={block_data} field={:width} />
-            <TextInput class="text" form={block_data} field={:height} />
-            <TextInput class="text" form={block_data} field={:thumbnail_url} />
+            {text_input block_data, :url, class: "text"}
+            {text_input block_data, :source, class: "text"}
+            {text_input block_data, :remote_id, class: "text"}
+            {text_input block_data, :width, class: "text"}
+            {text_input block_data, :height, class: "text"}
+            {text_input block_data, :thumbnail_url, class: "text"}
           {/for}
         </:config>
         {#for block_data <- inputs_for(@block, :data)}

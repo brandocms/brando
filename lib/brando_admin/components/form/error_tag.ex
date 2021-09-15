@@ -45,8 +45,6 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
 
   import Phoenix.HTML.Form, only: [input_id: 2]
 
-  alias Surface.Components.Form.Input.InputContext
-
   @doc "An identifier for the form"
   prop form, :form
 
@@ -87,13 +85,11 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
 
   def render(assigns) do
     ~F"""
-    <InputContext assigns={assigns} :let={form: form, field: field}>
-      <span
-        :for={error <- Keyword.get_values(form.errors, field)}
-        class="field-error"
-        phx-feedback-for={@feedback_for || input_id(form, field)}
-      >{@translate_fn.(error)}</span>
-    </InputContext>
+    <span
+      :for={error <- Keyword.get_values(@form.errors, @field)}
+      class="field-error"
+      phx-feedback-for={@feedback_for || input_id(@form, @field)}
+    >{@translate_fn.(error)}</span>
     """
   end
 end

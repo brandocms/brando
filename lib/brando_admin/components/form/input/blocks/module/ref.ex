@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   use Surface.Component
   use Phoenix.HTML
-  alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -30,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   end
 
   def assign_ref(%{assigns: %{module_refs: refs, module_ref_name: ref}} = socket) do
+    # TODO: assign_new this stuff? do we need to process them every time?
     case Enum.find(refs, &(elem(&1, 0).data.name == ref)) do
       {ref_form, ref_index} ->
         ref_block = inputs_for_block(ref_form, :data) |> List.first()
@@ -70,9 +70,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block={@ref_block}
           base_form={@base_form}
           uploads={@uploads} />
-
-        <HiddenInput form={@ref_form} field={:description} />
-        <HiddenInput form={@ref_form} field={:name} />
+        {hidden_input @ref_form, :description}
+        {hidden_input @ref_form, :name}
       </section>
     {#else}
       <section class="alert danger">

@@ -1,10 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
-  import Ecto.Changeset
-  import BrandoAdmin.ErrorHelpers
-  alias Surface.Components.Form.TextInput
-  alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Radios
@@ -69,12 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
         {#for block_data <- inputs_for(@block, :data)}
           <div class={"text-block", @text_type}>
             <div class="tiptap-wrapper">
-              <HiddenInput
-                class="tiptap-text"
-                form={block_data}
-                field={:text}
-                opts={phx_debounce: 750}
-              />
+              {hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750}
               <div
                 id={"#{@uid}-text"}
                 data-block-uid={@id}
@@ -84,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 data-props={Jason.encode!(%{content: v(block_data, :text)})}>
               </div>
             </div>
-            <HiddenInput form={block_data} field={:extensions} />
+            {hidden_input block_data, :extensions}
           </div>
         {/for}
       </Block>

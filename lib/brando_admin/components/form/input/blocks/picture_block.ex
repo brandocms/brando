@@ -9,11 +9,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
-
-  alias Surface.Components.Form.Inputs
-  alias Surface.Components.Form.HiddenInput
 
   prop uploads, :any
   prop base_form, :any
@@ -145,25 +143,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             {gettext("Reset image")}
           </button>
 
-          <HiddenInput form={@block_data} field={:placeholder} />
-          <HiddenInput form={@block_data} field={:cdn} />
-          <HiddenInput form={@block_data} field={:credits} />
-          <HiddenInput form={@block_data} field={:dominant_color} />
-          <HiddenInput form={@block_data} field={:height} />
-          <HiddenInput form={@block_data} field={:webp} />
-          <HiddenInput form={@block_data} field={:width} />
+          {hidden_input @block_data, :placeholder}
+          {hidden_input @block_data, :cdn}
+          {hidden_input @block_data, :credits}
+          {hidden_input @block_data, :dominant_color}
+          {hidden_input @block_data, :height}
+          {hidden_input @block_data, :webp}
+          {hidden_input @block_data, :width}
 
           {#if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes))}
-            <HiddenInput form={@block_data} field={:path} value={@extracted_path} />
-          {#else}
-            <HiddenInput form={@block_data} field={:path} />
+            {hidden_input @block_data, :path, value: @extracted_path}
+            {#else}
+            {hidden_input @block_data, :path}
           {/if}
 
           <Inputs
             form={@block_data}
-            for={:focal}>
-            <HiddenInput field={:x} />
-            <HiddenInput field={:y} />
+            for={:focal}
+            :let={form: focal_form}>
+            {hidden_input focal_form, :x}
+            {hidden_input focal_form, :y}
           </Inputs>
 
           <MapInputs

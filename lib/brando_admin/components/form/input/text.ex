@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
   use Surface.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.TextInput
 
   prop form, :form
   prop field, :any
@@ -56,12 +55,11 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
       field={name}
       class={@class}
       form={@form}>
-      <TextInput
-        form={@form}
-        field={name}
-        value={@value}
-        opts={placeholder: @placeholder, disabled: @disabled, phx_debounce: @debounce}
-        class={"text", monospace: @monospace} />
+      {text_input @form, name,
+        placeholder: @placeholder,
+        disabled: @disabled,
+        phx_debounce: @debounce,
+        class: "text#{@monospace && " monospace" || ""}"}
     </FieldBase>
     """
   end
@@ -74,12 +72,12 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      <TextInput
-        form={@form}
-        field={@field}
-        value={@value}
-        opts={disabled: @disabled, phx_debounce: @debounce}
-        class={"text", monospace: @monospace} />
+      {text_input @form, @field,
+        value: @value,
+        placeholder: @placeholder,
+        disabled: @disabled,
+        phx_debounce: @debounce,
+        class: "text#{@monospace && " monospace" || ""}"}
     </FieldBase>
     """
   end

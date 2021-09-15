@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
   # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.TextInput
 
   prop form, :form
   prop blueprint, :any
@@ -28,17 +27,13 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
       field={@name}
       class={@class}
       form={@form}>
-      <TextInput
-        form={@form}
-        field={@name}
-        class={"text monospace"}
-        opts={
-          phx_hook: "Brando.Slug",
-          phx_debounce: 750,
-          data_slug_for: "#{@form.id}_#{@slug_for}",
-          autocorrect: "off",
-          spellcheck: "false"}
-        />
+      {text_input @form, @name,
+        class: "text monospace",
+        phx_hook: "Brando.Slug",
+        phx_debounce: 750,
+        data_slug_for: "#{@form.id}_#{@slug_for}",
+        autocorrect: "off",
+        spellcheck: "false"}
     </FieldBase>
     """
   end

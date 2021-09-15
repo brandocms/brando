@@ -3,8 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input
-  alias Surface.Components.Form.Label
-  alias Surface.Components.Form.Checkbox
+  alias BrandoAdmin.Components.Form.Label
 
   prop form, :form
   prop field, :any
@@ -51,7 +50,7 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
         {#if slot_assigned?(:default)}
           <#slot />
         {#else}
-          <Checkbox form={@form} field={@field} />
+          {checkbox @form, @field}
         {/if}
         <div class="slider round"></div>
       </Label>
@@ -70,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
         {#if slot_assigned?(:default)}
           <#slot />
         {#else}
-          <Checkbox form={@form} field={@field_name} />
+          {checkbox @form, @field_name}
         {/if}
         <div class="slider round"></div>
       </Label>

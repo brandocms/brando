@@ -8,14 +8,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.Input.Gallery.ImagePreview
+  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.MapInputs
   alias Brando.Images
   alias Brando.Utils
-
-  alias Surface.Components.Form.Inputs
-  alias Surface.Components.Form.Input.InputContext
-  alias Surface.Components.Form.TextInput
-  alias Surface.Components.Form.HiddenInput
 
   prop form, :form
   prop blueprint, :any
@@ -167,7 +163,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Caption/Title</span></label>
                       </div>
                       <div class="field-base">
-                        <TextInput class="text" form={sf} field={:title} />
+                        {text_input sf, :title, class: "text"}
                       </div>
                     </div>
                     <div class="field-wrapper">
@@ -175,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Alt text (for accessibility)</span></label>
                       </div>
                       <div class="field-base">
-                        <TextInput class="text" form={sf} field={:alt} />
+                        {text_input sf, :alt, class: "text"}
                       </div>
                     </div>
                     <div class="field-wrapper">
@@ -183,24 +179,25 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Credits</span></label>
                       </div>
                       <div class="field-base">
-                        <TextInput class="text" form={sf} field={:credits} />
+                        {text_input sf, :credits, class: "text"}
                       </div>
                     </div>
 
-                    <HiddenInput form={sf} field={:id} />
-                    <HiddenInput form={sf} field={:cdn} />
-                    <HiddenInput form={sf} field={:dominant_color} />
-                    <HiddenInput form={sf} field={:height} />
-                    <HiddenInput form={sf} field={:path} />
-                    <HiddenInput form={sf} field={:webp} />
-                    <HiddenInput form={sf} field={:width} />
-                    <HiddenInput form={sf} field={:marked_as_deleted} />
+                    {hidden_input sf, :id}
+                    {hidden_input sf, :cdn}
+                    {hidden_input sf, :dominant_color}
+                    {hidden_input sf, :height}
+                    {hidden_input sf, :path}
+                    {hidden_input sf, :webp}
+                    {hidden_input sf, :width}
+                    {hidden_input sf, :marked_as_deleted}
 
                     <Inputs
                       form={sf}
-                      for={:focal}>
-                      <HiddenInput field={:x} />
-                      <HiddenInput field={:y} />
+                      for={:focal}
+                      :let={form: focal_form}>
+                      {hidden_input focal_form, :x}
+                      {hidden_input focal_form, :y}
                     </Inputs>
 
                     <MapInputs

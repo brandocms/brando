@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   use Surface.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Surface.Components.Form.TextArea
 
   prop form, :form
   prop field, :any
@@ -24,11 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       field={name}
       class={opts[:class]}
       form={@form}>
-      <TextArea
-        form={@form}
-        field={name}
-        class={"text"}
-        opts={phx_debounce: @debounce} />
+      {textarea @form, name, class: "text", phx_debounce: @debounce}
     </FieldBase>
     """
   end
@@ -41,11 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      <TextArea
-        form={@form}
-        field={@field}
-        class={"text"}
-        opts={phx_debounce: @debounce} />
+      {textarea @form, @field, class: "text", phx_debounce: @debounce}
     </FieldBase>
     """
   end
