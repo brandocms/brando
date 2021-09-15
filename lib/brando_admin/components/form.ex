@@ -317,7 +317,10 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("open_revisions_drawer", _, socket) do
     if Ecto.Changeset.get_field(socket.assigns.changeset, :id) do
-      {:noreply, push_event(socket, "b:drawer:open", %{id: ".revisions-drawer"})}
+      {:noreply,
+       socket
+       |> assign(:status_revisions, :open)
+       |> push_event("b:drawer:open", %{id: ".revisions-drawer"})}
     else
       error_title = "Notice"
 
@@ -329,7 +332,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("close_revisions_drawer", _, socket) do
-    {:noreply, push_event(socket, "b:drawer:close", %{id: ".revisions-drawer"})}
+    {:noreply,
+     socket
+     |> assign(:status_revisions, :closed)
+     |> push_event("b:drawer:close", %{id: ".revisions-drawer"})}
   end
 
   def handle_event("select_tab", %{"name" => tab}, socket) do
