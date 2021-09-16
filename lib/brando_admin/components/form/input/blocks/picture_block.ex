@@ -85,10 +85,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
             <figcaption :on-click="show_config">
-              <div>
+              <div id={"#{@uid}-figcaption-title"}>
                 <span>{gettext("Caption")}</span> {v(@block_data, :title) |> raw}<br>
               </div>
-              <div>
+              <div id={"#{@uid}-figcaption-alt"}>
                 <span>{gettext("Alt. text")}</span> {v(@block_data, :alt)}
               </div>
             </figcaption>

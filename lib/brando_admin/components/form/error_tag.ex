@@ -86,6 +86,7 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
   def render(assigns) do
     ~F"""
     <span
+      id={"#{@form.id}-#{@field}-error"}
       :for={error <- Keyword.get_values(@form.errors, @field)}
       class="field-error"
       phx-feedback-for={@feedback_for || input_id(@form, @field)}

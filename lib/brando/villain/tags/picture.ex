@@ -2,6 +2,7 @@ defmodule Brando.Villain.Tags.Picture do
   @moduledoc """
   """
   import NimbleParsec
+  alias Liquex.Parser.Argument
   alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
@@ -14,7 +15,7 @@ defmodule Brando.Villain.Tags.Picture do
     |> ignore(Tag.open_tag())
     |> ignore(string("picture"))
     |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Literal.argument(), :source)
+    |> unwrap_and_tag(Argument.argument(), :source)
     |> ignore(Literal.whitespace())
     |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())

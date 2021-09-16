@@ -5,8 +5,6 @@ defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
       @changeset_phase :before_validate_required
 
       def changeset_mutator(_module, _config, changeset, _user, _opts) do
-        require Logger
-        Logger.error(inspect(changeset, pretty: true))
         changeset
       end
     end

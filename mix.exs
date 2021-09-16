@@ -11,7 +11,7 @@ defmodule Brando.Mixfile do
       elixir: "~> 1.10",
       deps: deps(),
       package: package(),
-      compilers: [:gettext, :phoenix] ++ Mix.compilers(),
+      compilers: [:gettext] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
       description: @description,

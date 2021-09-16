@@ -30,8 +30,6 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
      socket
      |> assign(assigns)
      |> assign_new(:initial_props, fn ->
-       require Logger
-       Logger.error("==> set rich_text value: #{inspect(v(form, field), pretty: true)}")
        Jason.encode!(%{content: v(form, field)})
      end)}
   end
@@ -57,14 +55,22 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       field={name}
       class={opts[:class]}
       form={@form}>
-      <div class="tiptap-wrapper">
-        {hidden_input @form, name, class: "tiptap-text", phx_debounce: 500}
+      {hidden_input @form, name, class: "tiptap-text", phx_debounce: 500}
+      <div class="tiptap-wrapper" id={"#{@form.id}-#{name}-rich-text-wrapper"}>
         <div
-          id={"#{@form.id}-#{name}-text"}
-          phx-update="ignore"
+          id={"#{@form.id}-#{name}-rich-text"}
           phx-hook="Brando.TipTap"
           data-name="TipTap"
           data-props={@initial_props}>
+          <div
+            id={"#{@form.id}-#{name}-rich-text-target-wrapper"}
+            class="tiptap-target-wrapper"
+            phx-update="ignore">
+            <div
+              id={"#{@form.id}-#{name}-rich-text-target"}
+              class="tiptap-target">
+            </div>
+          </div>
         </div>
       </div>
     </FieldBase>
@@ -80,14 +86,20 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      <div class="tiptap-wrapper">
-        {hidden_input @form, @field, class: "tiptap-text", phx_debounce: 500}
+      {hidden_input @form, @field, class: "tiptap-text", phx_debounce: 500}
+      <div class="tiptap-wrapper" id={"#{@form.id}-#{@field}-rich-text-wrapper"}>
         <div
           id={"#{@form.id}-#{@field}-text"}
-          phx-update="ignore"
           phx-hook="Brando.TipTap"
           data-name="TipTap"
           data-props={@initial_props}>
+          <div
+            id={"#{@form.id}-#{@field}-text-target-wrapper"}
+            class="tiptap-target-wrapper"
+            phx-update="ignore">
+            <div class="tiptap-target" id={"#{@form.id}-#{@field}-text-target"}>
+            </div>
+          </div>
         </div>
       </div>
     </FieldBase>
@@ -103,14 +115,20 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      <div class="tiptap-wrapper">
-        {hidden_input @form, @field, value: @value, class: "tiptap-text", phx_debounce: 500}
+      {hidden_input @form, @field, value: @value, class: "tiptap-text", phx_debounce: 500}
+      <div class="tiptap-wrapper" id={"#{@form.id}-#{@field}-rich-text-wrapper"}>
         <div
           id={"#{@form.id}-#{@field}-text"}
-          phx-update="ignore"
           phx-hook="Brando.TipTap"
           data-name="TipTap"
           data-props={@initial_props}>
+          <div
+            id={"#{@form.id}-#{@field}-text-target-wrapper"}
+            class="tiptap-target-wrapper"
+            phx-update="ignore">
+            <div class="tiptap-target" id={"#{@form.id}-#{@field}-text-target"}>
+            </div>
+          </div>
         </div>
       </div>
     </FieldBase>

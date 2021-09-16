@@ -9,7 +9,7 @@ defmodule Brando.Images.ProcessingTest do
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium",
     upload_path: Path.join("images", "avatars"),
-    random_filename: true,
+    random_filename: false,
     size_limit: 10_240_000,
     sizes: %{
       "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
@@ -38,25 +38,17 @@ defmodule Brando.Images.ProcessingTest do
   }
 
   test "create_image_type_struct" do
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
-    assert image_struct == %Brando.Images.Image{
-             alt: nil,
-             credits: nil,
-             focal: %{x: 50, y: 50},
-             height: 576,
-             path: Path.join(upload.cfg.upload_path, upload.meta.filename),
-             sizes: %{},
-             title: nil,
-             width: 608,
-             dominant_color: nil
-           }
+    assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
+    assert image_struct.path =~ "images/avatars/sample"
+
+    assert image_struct.height == 576
+    assert image_struct.width == 608
   end
 
   test "recreate_sizes_for_image_field" do
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
     u1 = Factory.insert(:random_user, avatar: image_struct)
 
@@ -65,8 +57,7 @@ defmodule Brando.Images.ProcessingTest do
   end
 
   test "recreate_sizes_for_image_field_record" do
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
     u1 = Factory.insert(:random_user, avatar: image_struct)
     changeset = Ecto.Changeset.change(u1)

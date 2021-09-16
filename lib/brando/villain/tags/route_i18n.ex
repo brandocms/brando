@@ -3,6 +3,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   {% route_i18n entry.language page_path show { entry.uri } %}
   """
   import NimbleParsec
+  alias Liquex.Parser.Argument
   alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Field
@@ -13,7 +14,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
     |> ignore(Tag.open_tag())
     |> ignore(string("route_i18n"))
     |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Literal.argument(), :locale)
+    |> unwrap_and_tag(Argument.argument(), :locale)
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Field.identifier(), :function)
     |> ignore(Literal.whitespace())
@@ -36,12 +37,12 @@ defmodule Brando.Villain.Tags.RouteI18n do
 
   def arg_list(combinator \\ empty()) do
     combinator
-    |> Literal.argument()
+    |> Argument.argument()
     |> repeat(
       ignore(Literal.whitespace())
       |> ignore(string(","))
       |> ignore(Literal.whitespace())
-      |> concat(Literal.argument())
+      |> concat(Argument.argument())
     )
   end
 

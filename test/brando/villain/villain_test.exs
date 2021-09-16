@@ -226,13 +226,14 @@ defmodule Brando.VillainTest do
         multi: false,
         refs: [],
         sequence: 0,
-        vars: %{
-          testvar: %{
+        vars: [
+          %{
+            key: "testvar",
             label: "Field name",
             type: "text",
             value: "Some text!"
           }
-        }
+        ]
       },
       type: "module"
     }
@@ -257,18 +258,30 @@ defmodule Brando.VillainTest do
       name: "Name",
       help_text: "Help text",
       refs: [],
+      vars: [],
       namespace: "all",
       class: "css class"
     }
 
     {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
+    section_params = %{
+      name: "green",
+      namespace: "general",
+      instructions: "help",
+      class: "green",
+      color_bg: "#000000",
+      color_fg: "#FFFFFF",
+      color_accent: "#FF00FF"
+    }
+
+    {:ok, section} = Brando.Content.create_section(section_params, user)
+
     data = [
       %{
         type: "container",
         data: %{
-          class: "a-container-class",
-          wrapper: "",
+          section_id: section.id,
           blocks: [
             %{
               type: "module",
@@ -277,13 +290,14 @@ defmodule Brando.VillainTest do
                 multi: false,
                 refs: [],
                 sequence: 0,
-                vars: %{
-                  testvar: %{
+                vars: [
+                  %{
+                    key: "testvar",
                     label: "Field name",
                     type: "text",
                     value: "Some text!"
                   }
-                }
+                ]
               }
             }
           ]
@@ -291,18 +305,17 @@ defmodule Brando.VillainTest do
       }
     ]
 
-    params = Factory.params_for(:page, %{data: data})
+    params = Factory.params_for(:page, %{data: data}) |> Brando.Utils.map_from_struct()
     {:ok, page} = Brando.Pages.create_page(params, user)
 
     assert page.html ==
-             "<section b-section=\"a-container-class\">\n  -- this is some code Some text! --\n</section>\n"
+             "<section b-section=\"green\">\n  -- this is some code Some text! --\n</section>\n"
 
     data = [
       %{
         type: "container",
         data: %{
-          class: "a-container-class",
-          wrapper: "<div>{{ content }}</div>",
+          section_id: section.id,
           blocks: [
             %{
               type: "module",
@@ -312,13 +325,14 @@ defmodule Brando.VillainTest do
                 multi: false,
                 refs: [],
                 sequence: 0,
-                vars: %{
-                  testvar: %{
+                vars: [
+                  %{
+                    key: "testvar",
                     label: "Field name",
                     type: "text",
                     value: "Some text!"
                   }
-                }
+                ]
               }
             }
           ]
@@ -326,11 +340,11 @@ defmodule Brando.VillainTest do
       }
     ]
 
-    params = Factory.params_for(:page, %{data: data})
+    params = Factory.params_for(:page, %{data: data}) |> Brando.Utils.map_from_struct()
     {:ok, page2} = Brando.Pages.create_page(params, user)
 
     assert page2.html ==
-             "<div>-- this is some code Some text! --</div>"
+             "<section b-section=\"green\">\n  -- this is some code Some text! --\n</section>\n"
 
     tp2 =
       tp1
@@ -343,13 +357,14 @@ defmodule Brando.VillainTest do
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
     assert updated_page.html ==
-             "<section b-section=\"a-container-class\">\n  -- this is some NEW code Some text! --\n</section>\n"
+             "<section b-section=\"green\">\n  -- this is some NEW code Some text! --\n</section>\n"
   end
 
   test "rerender_villains_for", %{user: user} do
     {:ok, _} =
       Brando.Pages.create_page(
         Map.merge(@data, %{
+          status: :published,
           creator_id: user.id,
           title: "a",
           uri: "a",
@@ -362,6 +377,7 @@ defmodule Brando.VillainTest do
     {:ok, _} =
       Brando.Pages.create_page(
         Map.merge(@data, %{
+          status: :published,
           creator_id: user.id,
           title: "a",
           uri: "a",
@@ -374,6 +390,7 @@ defmodule Brando.VillainTest do
     {:ok, _} =
       Brando.Pages.create_page(
         Map.merge(@data, %{
+          status: :published,
           creator_id: user.id,
           title: "a",
           uri: "a",
@@ -418,22 +435,26 @@ defmodule Brando.VillainTest do
       label: "System",
       key: "system",
       globals: [
-        %{type: "text", label: "Text", key: "text", data: %{value: "My text"}}
+        %{type: "text", label: "Text", key: "text", value: "My text"}
       ]
     }
 
     pf_params = pf_data("So the global says: '{{ globals.system.text }}'.")
 
-    {:ok, gc1} = Brando.Globals.create_global_category(global_category_params)
+    {:ok, gc1} = Brando.Globals.create_global_category(global_category_params, :system)
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
     assert pf1.html == "<div class=\"paragraph\">So the global says: 'My text'.</div>"
 
-    Brando.Globals.update_global_category(gc1.id, %{
-      globals: [
-        %{type: "text", label: "Text", key: "text", data: %{value: "My replaced text"}}
-      ]
-    })
+    Brando.Globals.update_global_category(
+      gc1.id,
+      %{
+        globals: [
+          %{type: "text", label: "Text", key: "text", value: "My replaced text"}
+        ]
+      },
+      :system
+    )
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
 

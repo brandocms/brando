@@ -26,14 +26,14 @@ export default (app) => ({
     const content = this.el.querySelectorAll('.block-content')
     const actions = this.el.querySelectorAll('.block-actions')
 
-    this.timeline = gsap.timeline()
+    // this.timeline = gsap.timeline()
 
-    this.timeline
-      .to(this.$baseBlock, { duration: 0.2, opacity: 1, ease: 'none' }, '<')
-      .to([description, content, actions], { duration: 0.2, opacity: 1, stagger: 0.08, ease: 'none' }, '<0.08')
-      .call(() => {
-        this.$baseBlock.dataset.bInitialized = ''
-      })
+    // this.timeline
+    //   .to(this.$baseBlock, { duration: 0.2, opacity: 1, ease: 'none' }, '<')
+    //   .to([description, content, actions], { duration: 0.2, opacity: 1, stagger: 0.08, ease: 'none' }, '<0.08')
+    //   .call(() => {
+    //     this.$baseBlock.dataset.bInitialized = ''
+    //   })
   },
 
   autosizeElements() {

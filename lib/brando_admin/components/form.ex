@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form do
   data tabs, :list
   data active_tab, :string
   data processing, :boolean
+  data initial_update, :boolean
 
   data status_meta, :atom
   data status_scheduled, :atom
@@ -111,8 +112,18 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_addon_statuses()
      |> assign_default_params()
      |> extract_tab_names()
-     |> allow_uploads()
-     |> assign_changeset()}
+     |> assign_changeset()
+     |> maybe_assign_uploads()}
+  end
+
+  defp maybe_assign_uploads(socket) do
+    if connected?(socket) && !socket.assigns[:initial_update] do
+      socket
+      |> assign(:initial_update, true)
+      |> allow_uploads()
+    else
+      socket
+    end
   end
 
   defp assign_entry(%{assigns: %{entry_id: nil}} = socket) do
@@ -177,9 +188,11 @@ defmodule BrandoAdmin.Components.Form do
     ~F"""
     <div
       id={"#{@id}-el"}
-      class="brando-form"
-      data-moonwalk-run="brandoForm"
+      class="brando-form b-rendered"
+
       phx-hook="Brando.Form">
+
+      {!-- data-moonwalk-run="brandoForm" --}
 
       {!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? --}
       <div class="form-tabs">

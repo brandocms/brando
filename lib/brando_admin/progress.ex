@@ -19,9 +19,6 @@ defmodule BrandoAdmin.Progress do
   def update(:system, _, _), do: nil
 
   def update(%Brando.Users.User{id: id}, status, content) do
-    require Logger
-    Logger.error(inspect(content, pretty: true))
-
     Brando.endpoint().broadcast!("user:#{id}", "progress:update", %{
       status: status,
       content: content

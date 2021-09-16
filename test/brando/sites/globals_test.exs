@@ -10,8 +10,8 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "get_global" do
-    globals = Factory.build_list(2, :global)
-    Factory.insert(:global_category, globals: globals)
+    params = Factory.params_for(:global_category) |> Brando.Utils.map_from_struct()
+    Brando.Globals.create_global_category(params, :system)
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
     assert Brando.Globals.get_global("non_existing") == {:error, {:global, :not_found}}
 
@@ -20,8 +20,9 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "get_global!" do
-    globals = Factory.build_list(2, :global)
-    Factory.insert(:global_category, globals: globals)
+    params = Factory.params_for(:global_category) |> Brando.Utils.map_from_struct()
+    Brando.Globals.create_global_category(params, :system)
+
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
     assert Brando.Globals.get_global!("non_existing") == ""
 
@@ -30,8 +31,9 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "render_global" do
-    globals = Factory.build_list(2, :global)
-    Factory.insert(:global_category, globals: globals)
+    params = Factory.params_for(:global_category) |> Brando.Utils.map_from_struct()
+    Brando.Globals.create_global_category(params, :system)
+
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
     assert Brando.Globals.render_global("non_existing") == ""
 
@@ -40,8 +42,8 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "get_global_category" do
-    globals = Factory.build_list(2, :global)
-    c1 = Factory.insert(:global_category, globals: globals)
+    params = Factory.params_for(:global_category) |> Brando.Utils.map_from_struct()
+    {:ok, c1} = Brando.Globals.create_global_category(params, :system)
 
     assert Brando.Globals.get_global_category(999_999_999) ==
              {:error, {:global_category, :not_found}}
@@ -51,14 +53,14 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "create_global_category" do
-    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"})
+    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"}, :system)
     assert c1.label == "System"
   end
 
   test "update_global_category" do
-    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"})
+    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"}, :system)
     assert c1.label == "System"
-    {:ok, c2} = Brando.Globals.update_global_category(c1.id, %{label: "New"})
+    {:ok, c2} = Brando.Globals.update_global_category(c1.id, %{label: "New"}, :system)
     assert c2.label == "New"
     refute c1 == c2
   end

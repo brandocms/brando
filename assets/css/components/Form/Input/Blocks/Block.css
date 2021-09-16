@@ -113,6 +113,14 @@
   }
 }
 
+.b-rendered .base-block {
+  opacity: 1 !important;
+
+  .block-description, .block-content {
+    opacity: 1 !important;
+  }
+}
+
 .block {
   background-color: theme(colors.villain.blockBackground);
   padding: 45px 15px 15px;

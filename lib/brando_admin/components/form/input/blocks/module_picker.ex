@@ -12,6 +12,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   prop hide_sections, :boolean, default: false
 
   data modules_by_namespace, :list
+  data active_namespace, :string
+
+  def mount(socket) do
+    {:ok, assign(socket, active_namespace: nil)}
+  end
 
   def update(assigns, socket) do
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
@@ -52,11 +57,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
 
         <div
           class="modules"
-          phx-hook={!@hide_sections && "Brando.ModulePicker"}
           id={"#{@id}-modules"}>
           {#for {namespace, modules} <- @modules_by_namespace}
             {#unless namespace == "general"}
-              <button type="button" class="namespace-button">
+              <button type="button" class="namespace-button" :on-click="toggle_namespace" phx-value-id={namespace}>
                 <figure>
                   &rarr;
                 </figure>
@@ -64,7 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                   <div class="name">{namespace}</div>
                 </div>
               </button>
-              <div class="namespace-modules">
+              <div class={"namespace-modules", active: @active_namespace == namespace}>
                 {#for module <- modules}
                   <button
                     type="button"
@@ -108,6 +112,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
       </Modal>
     </div>
     """
+  end
+
+  def handle_event(
+        "toggle_namespace",
+        %{"id" => namespace},
+        %{assigns: %{active_namespace: active_namespace}} = socket
+      ) do
+    {:noreply, assign(socket, active_namespace: active_namespace != namespace && namespace)}
   end
 
   def sort_namespace({namespace, modules}) do

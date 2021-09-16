@@ -3,6 +3,7 @@ defmodule Brando.Villain.Tags.Route do
   {% route page_path show entry.uri %}
   """
   import NimbleParsec
+  alias Liquex.Parser.Argument
   alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Field
@@ -34,12 +35,12 @@ defmodule Brando.Villain.Tags.Route do
 
   def arg_list(combinator \\ empty()) do
     combinator
-    |> Literal.argument()
+    |> Argument.argument()
     |> repeat(
       ignore(Literal.whitespace())
       |> ignore(string(","))
       |> ignore(Literal.whitespace())
-      |> concat(Literal.argument())
+      |> concat(Argument.argument())
     )
   end
 

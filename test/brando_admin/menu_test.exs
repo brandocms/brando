@@ -30,7 +30,7 @@ defmodule BrandoAdmin.MenuTest do
 
   test "menu_item blueprint" do
     assert __MODULE__.MenuItemBlueprint.__menus__() == [
-             %{name: "Projects", url: "/admin/projects?status=published"}
+             %{name: "Projects", url: "/admin/projects/projects?status=published"}
            ]
   end
 

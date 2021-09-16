@@ -4,7 +4,7 @@ export default (app) => ({
   mounted() {
     this.$form = this.el.querySelector('form')
     this.$input = this.$form.querySelector('input')
-    this.$input.dispatchEvent(new Event('input', { bubbles: true }))
+    // this.$input.dispatchEvent(new Event('input', { bubbles: true }))
 
     // set drawers off screen
     gsap.set('.drawer', { xPercent: 100 })

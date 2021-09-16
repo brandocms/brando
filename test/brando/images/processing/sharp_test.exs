@@ -43,20 +43,12 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
-    assert image_struct == %Brando.Images.Image{
-             alt: nil,
-             credits: nil,
-             focal: %{x: 50, y: 50},
-             height: 576,
-             path: Path.join(upload.cfg.upload_path, upload.meta.filename),
-             sizes: %{},
-             title: nil,
-             width: 608,
-             dominant_color: nil
-           }
+    assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
+    assert image_struct.height == 576
+    assert image_struct.width == 608
+    assert image_struct.path =~ "images/avatars/"
 
     Application.put_env(:brando, Brando.Images, prev_cfg)
   end
@@ -66,8 +58,7 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
     u1 = Factory.insert(:random_user, avatar: image_struct)
 
@@ -81,8 +72,7 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, upload} = Brando.Upload.preprocess_upload(@meta, @upload_entry, @cfg)
-    {:ok, image_struct} = Brando.Upload.handle_upload_type(upload)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
     u1 = Factory.insert(:random_user, avatar: image_struct)
     changeset = Ecto.Changeset.change(u1)

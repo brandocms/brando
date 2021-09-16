@@ -53,7 +53,9 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
 
   def render(assigns) do
     ~F"""
-    <div class={"field-wrapper", @class}>
+    <div
+      class={"field-wrapper", @class}
+      id={"#{@form.id}-#{@field}-field-wrapper"}>
       <div :if={@field} class="label-wrapper">
         <label
           for={input_id(@form, @field)}
@@ -72,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
           </div>
         {/if}
       </div>
-      <div class="field-base">
+      <div class="field-base" id={"#{@form.id}-#{@field}-field-base"}>
         <#slot></#slot>
       </div>
       {#if @instructions || slot_assigned?(:meta)}

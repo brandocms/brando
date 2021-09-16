@@ -124,3 +124,11 @@ section.alert.danger {
     }
   }
 }
+
+.namespace-modules {
+  display: none;
+
+  &.active {
+    display: block;
+  }
+}

@@ -3,7 +3,6 @@ defmodule Brando.DatasourcesTest do
   use Brando.ConnCase
 
   alias Brando.Factory
-  alias Brando.Villain
 
   @dummy_module %{
     code: """
@@ -117,9 +116,27 @@ defmodule Brando.DatasourcesTest do
         end,
         fn _, ids ->
           all = [
-            %{id: 1, name: "The actual entry"},
-            %{id: 2, name: "The actual entry 2"},
-            %{id: 3, name: "The actual entry 3"}
+            %Brando.Pages.Page{
+              id: 1,
+              status: :draft,
+              uri: "test1",
+              language: "en",
+              title: "The actual entry"
+            },
+            %Brando.Pages.Page{
+              id: 2,
+              status: :published,
+              uri: "test2",
+              language: "en",
+              title: "The actual entry 2"
+            },
+            %Brando.Pages.Page{
+              id: 3,
+              status: :published,
+              uri: "test3",
+              language: "en",
+              title: "The actual entry 3"
+            }
           ]
 
           {:ok, Enum.filter(all, &(&1.id in ids)) |> Enum.reverse()}
@@ -168,8 +185,24 @@ defmodule Brando.DatasourcesTest do
     get_result =
       {:ok,
        [
-         %{id: 3, name: "The actual entry 3"},
-         %{id: 1, name: "The actual entry"}
+         %Brando.Content.Identifier{
+           id: 3,
+           status: :published,
+           title: "The actual entry 3 [en]",
+           absolute_url: "/test3",
+           cover: nil,
+           schema: Brando.Pages.Page,
+           type: "Page"
+         },
+         %Brando.Content.Identifier{
+           id: 1,
+           status: :draft,
+           title: "The actual entry [en]",
+           absolute_url: "/test1",
+           cover: nil,
+           schema: Brando.Pages.Page,
+           type: "Page"
+         }
        ]}
 
     assert Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1]) == get_result
@@ -260,7 +293,17 @@ defmodule Brando.DatasourcesTest do
       }
     ]
 
-    section = Factory.insert(:section)
+    section_params = %{
+      name: "green",
+      namespace: "general",
+      instructions: "help",
+      class: "green",
+      color_bg: "#000000",
+      color_fg: "#FFFFFF",
+      color_accent: "#FF00FF"
+    }
+
+    {:ok, section} = Brando.Content.create_section(section_params, user)
 
     data_contained_datasource = [
       %{

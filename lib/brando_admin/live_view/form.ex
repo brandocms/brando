@@ -60,7 +60,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
       {:cont, socket}
     else
-      Logger.error("==> form|update: Socket is not connected.")
+      Logger.error("==> form|update: Socket is --not connected.")
       {:cont, assign(socket, :socket_connected, false)}
     end
   end

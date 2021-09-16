@@ -144,9 +144,6 @@ defmodule Brando.Query.Mutations do
           |> Utils.map_from_struct()
           |> drop_id()
 
-        require Logger
-        Logger.error(inspect(params, pretty: true))
-
         apply(context, :"create_#{name}", [params, user])
 
       err ->

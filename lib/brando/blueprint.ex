@@ -788,6 +788,8 @@ defmodule Brando.Blueprint do
         all_optional_attrs,
         opts
       ) do
+    start = System.monotonic_time()
+
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
@@ -796,35 +798,46 @@ defmodule Brando.Blueprint do
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
 
-    schema
-    |> Changeset.cast(params, fields_to_cast)
-    |> Relations.run_cast_relations(all_relations, user)
-    |> Assets.run_cast_assets(all_assets, user)
-    |> Trait.run_changeset_mutators(
-      module,
-      traits_before_validate_required,
-      user,
-      opts
+    changeset =
+      schema
+      |> Changeset.cast(params, fields_to_cast)
+      |> Relations.run_cast_relations(all_relations, user)
+      |> Assets.run_cast_assets(all_assets, user)
+      |> Trait.run_changeset_mutators(
+        module,
+        traits_before_validate_required,
+        user,
+        opts
+      )
+      |> Changeset.validate_required(all_required_attrs)
+      |> Unique.run_unique_attribute_constraints(module, all_attributes)
+      |> Unique.run_unique_relation_constraints(module, all_relations)
+      |> Constraints.run_validations(module, all_attributes)
+      |> Constraints.run_validations(module, all_relations)
+      |> Constraints.run_fk_constraints(module, all_relations)
+      |> Upload.run_upload_validations(
+        module,
+        all_attributes,
+        user,
+        Keyword.get(opts, :image_db_config)
+      )
+      |> Trait.run_changeset_mutators(
+        module,
+        traits_after_validate_required,
+        user,
+        opts
+      )
+      |> maybe_mark_for_deletion(module)
+
+    :telemetry.execute(
+      [:brando, :villain, :run_changeset],
+      %{
+        duration: System.monotonic_time() - start
+      },
+      %{schema: changeset.data.__struct__}
     )
-    |> Changeset.validate_required(all_required_attrs)
-    |> Unique.run_unique_attribute_constraints(module, all_attributes)
-    |> Unique.run_unique_relation_constraints(module, all_relations)
-    |> Constraints.run_validations(module, all_attributes)
-    |> Constraints.run_validations(module, all_relations)
-    |> Constraints.run_fk_constraints(module, all_relations)
-    |> Upload.run_upload_validations(
-      module,
-      all_attributes,
-      user,
-      Keyword.get(opts, :image_db_config)
-    )
-    |> Trait.run_changeset_mutators(
-      module,
-      traits_after_validate_required,
-      user,
-      opts
-    )
-    |> maybe_mark_for_deletion(module)
+
+    changeset
   end
 
   defmacro query(arg) do

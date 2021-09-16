@@ -45,6 +45,7 @@ defmodule Brando.Villain do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
+
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
     {:ok, sections} = Content.list_sections(@section_cache_ttl)
 

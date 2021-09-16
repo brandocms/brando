@@ -1,3 +1,4 @@
+import { Dom } from '@brandocms/jupiter'
 import TipTap from '../../components/TipTap/TipTap.svelte'
 
 export default (app) => ({
@@ -7,11 +8,12 @@ export default (app) => ({
   },
 
   mount() {
+    console.log('==> MOUNTING TIPTAP.')
     const props = this.el.getAttribute('data-props')
     const parsedProps = props ? JSON.parse(props) : {}
 
     this._instance = new TipTap({
-      target: this.el,
+      target: Dom.find(this.el, '.tiptap-target'),
       props: parsedProps,
     })
   },

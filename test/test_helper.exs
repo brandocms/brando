@@ -1,4 +1,5 @@
 # Logger.configure(level: :debug)
+:erlang.system_flag(:backtrace_depth, 30)
 
 # Clear tmp dir
 File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
@@ -35,6 +36,10 @@ end
 
 defmodule BrandoIntegrationWeb.Gettext do
   use Gettext, otp_app: :brando, priv: "priv/gettext/frontend"
+end
+
+defmodule BrandoIntegrationAdmin.Gettext do
+  use Gettext, otp_app: :brando, priv: "priv/gettext/backend"
 end
 
 defmodule Brando.Villain.ParserTest.Parser do

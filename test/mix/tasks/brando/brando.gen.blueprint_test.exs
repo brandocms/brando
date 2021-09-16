@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintTest do
       # test gallery
       assert_file("lib/brando/my_domain/my_schema.ex", fn file ->
         assert file =~
-                 "defmodule BrandoIntegration.MyDomain.MySchema do\n  use Brando.Blueprint,\n    application: \"BrandoIntegration\""
+                 "defmodule BrandoIntegration.MyDomain.MySchema do\n  @moduledoc \"\"\"\n  Blueprint for MySchema\n  \"\"\"\n\n  use Brando.Blueprint,\n    application: \"BrandoIntegration\",\n    domain: \"MyDomain\",\n    schema: \"MySchema\",\n    singular: \"my_schema\",\n    plural: \"my_schemas\""
       end)
     end)
   end

@@ -34,6 +34,17 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
      )}
   end
 
+  def update(%{form: _form, field: _field} = assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       class: assigns.class,
+       monospace: assigns.monospace || false,
+       debounce: assigns[:debounce] || 750
+     )}
+  end
+
   def update(assigns, socket) do
     value = assigns[:value]
 
@@ -56,6 +67,23 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
       class={@class}
       form={@form}>
       {text_input @form, name,
+        placeholder: @placeholder,
+        disabled: @disabled,
+        phx_debounce: @debounce,
+        class: "text#{@monospace && " monospace" || ""}"}
+    </FieldBase>
+    """
+  end
+
+  def render(%{form: _form, field: _field} = assigns) do
+    ~F"""
+    <FieldBase
+      label={@label}
+      placeholder={@placeholder}
+      instructions={@instructions}
+      field={@field}
+      form={@form}>
+      {text_input @form, @field,
         placeholder: @placeholder,
         disabled: @disabled,
         phx_debounce: @debounce,
