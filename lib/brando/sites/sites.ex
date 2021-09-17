@@ -4,11 +4,8 @@ defmodule Brando.Sites do
   """
   use Brando.Query
   import Ecto.Query
-  import Brando.Gettext
 
   alias Brando.Cache
-  alias Brando.Schema
-  alias Brando.Notifications
   alias Brando.Sites.Identity
   alias Brando.Sites.Preview
   alias Brando.Sites.SEO

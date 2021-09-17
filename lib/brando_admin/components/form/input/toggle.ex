@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
   use Surface.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Label
 
   prop form, :form

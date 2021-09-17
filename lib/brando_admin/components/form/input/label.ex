@@ -18,6 +18,8 @@ defmodule BrandoAdmin.Components.Form.Label do
   """
   slot default
 
+  data input_id, :string
+
   def update(assigns, socket) do
     {:ok,
      socket

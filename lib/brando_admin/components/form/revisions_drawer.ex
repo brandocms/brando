@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   defp assign_form_id(%{assigns: %{form: form}} = socket) do
     module = form.source.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     assign(socket, :form_id, form_id)
   end

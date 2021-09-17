@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       ) do
     select_changeset = changeset_fun.(default, %{}, current_user, [])
     module = select_changeset.data.__struct__
-    singular = module.__naming__.singular
+    singular = module.__naming__().singular
 
     socket
     |> assign(:select_changeset, select_changeset)
@@ -374,7 +374,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           }
         } = socket
       ) do
-    context = module.__modules__.context
+    context = module.__modules__().context
 
     select_changeset =
       select_changeset

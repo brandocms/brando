@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Content
   alias Brando.Villain
-  alias Brando.Blueprint.Villain.Blocks
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
@@ -190,7 +189,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       )
 
     schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__.singular}_form"
+    form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -228,7 +227,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       )
 
     schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__.singular}_form"
+    form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

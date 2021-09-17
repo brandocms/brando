@@ -190,7 +190,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
     module_id = String.to_integer(module_id_binary)
 
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})

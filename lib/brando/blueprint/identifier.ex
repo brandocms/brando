@@ -61,16 +61,16 @@ defmodule Brando.Blueprint.Identifier do
   end
 
   def list_entries_for(schema, list_opts) when is_atom(schema) do
-    context = schema.__modules__.context
-    plural = schema.__naming__.plural
+    context = schema.__modules__().context
+    plural = schema.__naming__().plural
 
     {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
     identifiers_for(entries)
   end
 
   def get_entry_for_identifier(%Brando.Content.Identifier{id: id, schema: schema}) do
-    context = schema.__modules__.context
-    singular = schema.__naming__.singular
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
     opts = %{matches: %{id: id}}
     apply(context, :"get_#{singular}", [opts])
   end

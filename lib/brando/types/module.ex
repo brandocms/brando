@@ -28,13 +28,7 @@ defmodule Brando.Type.Module do
   # Cast anything else is a failure
   def cast(_), do: :error
 
-  def blank?(""), do: true
-  def blank?(_), do: false
-
-  @doc """
-  Loading from string
-  """
-  def cast(binary) when is_binary(binary) do
+  def load(binary) when is_binary(binary) do
     module =
       binary
       |> List.wrap()
@@ -42,6 +36,9 @@ defmodule Brando.Type.Module do
 
     {:ok, module}
   end
+
+  def blank?(""), do: true
+  def blank?(_), do: false
 
   @doc """
   When dumping data to the database we expect a `list`, but check for

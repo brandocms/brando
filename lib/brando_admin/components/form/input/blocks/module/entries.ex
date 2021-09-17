@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       ) do
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     generated_uid = Brando.Utils.generate_uid()
 

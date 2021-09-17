@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Components.Pages.PropertyData do
   def render(assigns) do
     ~F"""
     <MapInputs
-      :let={value: value, name: name, subform: sform}
+      :let={value: value, subform: sform}
       form={@form}
       for={:data}>
       {#case @type}

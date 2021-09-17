@@ -1,8 +1,7 @@
 defmodule Brando.Images.Uploads.Schema do
   @moduledoc """
   Handles uploads of Brando.Image{}
-
-  For ImageFields, see Brando.Images.Uploads.Field
+  - Used with Villain uploads!
   """
 
   alias Brando.Images

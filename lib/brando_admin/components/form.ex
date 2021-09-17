@@ -104,9 +104,9 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__ end)
-     |> assign_new(:singular, fn -> assigns.schema.__naming__.singular end)
-     |> assign_new(:context, fn -> assigns.schema.__modules__.context end)
+     |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
+     |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
+     |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
      |> assign_new(:form, fn -> assigns.schema.__form__(form_name) end)
      |> assign_entry()
      |> assign_addon_statuses()

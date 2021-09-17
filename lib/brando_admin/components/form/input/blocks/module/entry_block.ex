@@ -152,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       )
 
     schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__.singular}_form"
+    form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -190,7 +190,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       )
 
     schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__.singular}_form"
+    form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

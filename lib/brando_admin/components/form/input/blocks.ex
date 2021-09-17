@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     new_block = %Brando.Blueprint.Villain.Blocks.ContainerBlock{
       type: "container",
@@ -112,7 +112,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     new_block = %Brando.Blueprint.Villain.Blocks.DatasourceBlock{
       type: "datasource",
@@ -145,7 +145,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
     module_id = String.to_integer(module_id_binary)
 
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     duplicated_block =
       data

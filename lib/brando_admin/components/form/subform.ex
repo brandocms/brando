@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   prop form, :any
   prop blueprint, :any
   prop uploads, :any
+  prop current_user, :map
 
   def render(assigns) do
     ~F"""
@@ -30,7 +31,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   input={input}
                   form={sub_form}
                   blueprint={@blueprint}
-                  uploads={@uploads} />
+                  uploads={@uploads}
+                  current_user={@current_user} />
               {/for}
             </div>
           {/for}
@@ -97,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     field_name = socket.assigns.subform.field
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_field =
       changeset
@@ -127,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_entries =
       changeset
@@ -161,7 +163,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     entries = Ecto.Changeset.get_field(changeset, field_name)
     sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))

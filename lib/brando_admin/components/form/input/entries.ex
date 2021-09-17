@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{
           assigns: %{
             input: %{name: field_name},
-            form: %{source: changeset} = form,
+            form: %{source: changeset},
             identifiers: identifiers,
             selected_identifiers: selected_identifiers
           }
@@ -212,7 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       end
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, updated_identifiers)
 
@@ -230,7 +230,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{
           assigns: %{
             input: %{name: field_name},
-            form: %{source: changeset} = form,
+            form: %{source: changeset},
             selected_identifiers: selected_identifiers
           }
         } = socket
@@ -238,7 +238,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {_, new_list} = List.pop_at(selected_identifiers, String.to_integer(idx))
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, new_list)
 

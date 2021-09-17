@@ -10,7 +10,8 @@ defmodule BrandoAdmin.Components.Content.List.Row.ChildRow do
   data sortable?, :boolean
   data status?, :boolean
   data creator?, :boolean
-  data soft_deletable?, :boolean
+  data soft_delete?, :boolean
+  data listing, :map
 
   def mount(socket) do
     {:ok,
@@ -22,7 +23,7 @@ defmodule BrandoAdmin.Components.Content.List.Row.ChildRow do
      )}
   end
 
-  def update(%{schema: schema, entry: entry, child_listing: child_listing} = assigns, socket) do
+  def update(%{schema: schema, entry: entry, child_listing: child_listing}, socket) do
     {:ok,
      socket
      |> assign(schema: schema, entry: entry)
@@ -33,7 +34,7 @@ defmodule BrandoAdmin.Components.Content.List.Row.ChildRow do
      |> assign_new(:listing, fn ->
        entry_schema = entry.__struct__
 
-       listing_for_schema = Keyword.fetch!(assigns.child_listing, entry_schema)
+       listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
        listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
 
        if !listing do

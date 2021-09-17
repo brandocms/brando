@@ -2,7 +2,6 @@ defmodule Brando.Blueprint.Upload do
   @moduledoc """
   Villain parsing
   """
-  alias Brando.Files
   alias Brando.Images
   alias Brando.Utils
   alias Brando.Type
@@ -17,25 +16,12 @@ defmodule Brando.Blueprint.Upload do
     do_validate_upload(changeset, {:image, field_name}, user, cfg)
   end
 
-  def validate_upload(changeset, {:file, field_name}, _user, cfg) do
-    with {:ok, plug} <- Utils.field_has_changed(changeset, field_name),
-         {:ok, _} <- Utils.changeset_has_no_errors(changeset),
-         {:ok, {:handled, name, field}} <-
-           Files.Upload.Field.handle_upload(field_name, plug, cfg) do
-      put_change(changeset, name, field)
-    else
-      :unchanged ->
-        changeset
-
-      :has_errors ->
-        changeset
-
-      {:error, {name, {:error, error_msg}}} ->
-        add_error(changeset, name, error_msg)
-    end
+  def validate_upload(changeset, {:file, field_name}, user, cfg) do
+    do_validate_upload(changeset, {:file, field_name}, user, cfg)
   end
 
-  defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
+  # TODO: Clean up this -- check focal if image, maybe upload to CDN etc
+  defp do_validate_upload(changeset, {_, field_name}, _user, _cfg) do
     case Utils.field_has_changed(changeset, field_name) do
       :unchanged ->
         changeset

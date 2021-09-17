@@ -302,7 +302,7 @@ defmodule Brando.LivePreview do
 
     if function_exported?(preview_module, :render, 5) do
       schema_module = Module.concat([schema])
-      context = schema.module.__modules__.context
+      context = schema.module.__modules__().context
 
       singular =
         schema_module

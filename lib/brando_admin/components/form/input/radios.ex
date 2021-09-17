@@ -12,7 +12,9 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
   prop class, :string
   prop options, :any
 
-  def update(%{input: %{name: name, opts: opts}, blueprint: blueprint} = assigns, socket) do
+  data input_options, :list
+
+  def update(%{input: %{opts: opts}, blueprint: _} = assigns, socket) do
     input_options =
       case Keyword.get(opts, :options) do
         :languages ->
@@ -32,13 +34,13 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
      |> assign(:input_options, input_options)}
   end
 
-  def update(%{options: input_options} = assigns, socket) do
+  def update(%{options: _input_options} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)}
   end
 
-  def render(%{input: %{name: name, opts: opts}, blueprint: blueprint} = assigns) do
+  def render(%{input: %{name: name, opts: opts}, blueprint: _} = assigns) do
     ~F"""
     <FieldBase
       blueprint={@blueprint}

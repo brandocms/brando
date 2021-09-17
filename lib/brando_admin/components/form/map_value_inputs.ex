@@ -2,8 +2,6 @@ defmodule BrandoAdmin.Components.Form.MapValueInputs do
   use Surface.Component
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  import Phoenix.HTML.Form
-
   @doc """
   The parent form.
   It should either be a `Phoenix.HTML.Form` emitted by `form_for` or an atom.

@@ -6,9 +6,6 @@ defmodule BrandoAdmin.Components.Form.Submit do
   """
 
   use Surface.Component
-  use Surface.Components.Events
-
-  import Surface.Components.Utils, only: [events_to_opts: 1, opts_to_attrs: 1]
 
   @doc "The ID of the form to submit"
   prop form_id, :string

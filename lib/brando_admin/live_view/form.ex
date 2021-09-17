@@ -120,12 +120,12 @@ defmodule BrandoAdmin.LiveView.Form do
         redirect_fn =
           (form.redirect_on_save && form.redirect_on_save) ||
             fn socket, _entry ->
-              generated_list_view = schema.__modules__.admin_list_view
+              generated_list_view = schema.__modules__().admin_list_view
               Brando.routes().admin_live_path(socket, generated_list_view)
             end
 
-        singular = schema.__naming__.singular
-        context = schema.__modules__.context
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
 
         mutation_type = (Ecto.Changeset.get_field(changeset, :id) && "update") || "create"
 
@@ -165,7 +165,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
     translated_singular =
-      schema.__translations__
+      schema.__translations__()
       |> Utils.try_path([:naming, :singular])
 
     assign(

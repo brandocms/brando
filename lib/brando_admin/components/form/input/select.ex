@@ -102,14 +102,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def update_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
-    require Logger
-    Logger.error("update_input_options!?")
     assign(socket, :input_options, get_input_options(form, opts))
   end
 
   def update_input_options(%{assigns: %{form: _form, options: options}} = socket) do
-    require Logger
-    Logger.error("update_input_options!?")
     assign(socket, :input_options, Enum.map(options, &ensure_string_values/1))
   end
 
@@ -130,7 +126,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
 
       nil ->
-        # schema = blueprint.modules.schema
         []
 
       options_fun when is_function(options_fun) ->
@@ -171,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       ) do
     select_changeset = changeset_fun.(default, %{}, current_user, [])
     module = select_changeset.data.__struct__
-    singular = module.__naming__.singular
+    singular = module.__naming__().singular
 
     socket
     |> assign(:select_changeset, select_changeset)
@@ -221,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">
-                      <span>Filter options</span>
+                      <span>{gettext("Filter options")}</span>
                     </label>
                   </div>
                   <div class="field-base">
@@ -234,7 +229,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             <div class="options">
               <h2 class="titlecase">Available options</h2>
               {#if Enum.empty?(@input_options)}
-                No options found
+                {gettext("No options found")}
               {/if}
               {#for opt <- @input_options}
                 <button
@@ -253,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 for={@select_changeset}
                 change="validate_new_entry"
                 :let={form: entry_form}>
-                Create entry
+                {gettext("Create entry")}
 
                 <code style="font-family: monospace; font-size: 11px"><pre>
                 {inspect @select_changeset, pretty: true}
@@ -278,7 +273,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <button
                   :on-click="save_new_entry"
                   type="button" class="primary">
-                  Save
+                  {gettext("Save")}
                 </button>
               </Form>
             {/if}
@@ -289,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   type="button"
                   class="secondary"
                   :on-click="reset">
-                  Reset value
+                  {gettext("Reset value")}
                 </button>
               </div>
             {/if}
@@ -328,9 +323,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           :on-click="toggle"
           phx-value-id={@modal_id}>
           {#if @open}
-            Close
+            {gettext("Close")}
           {#else}
-            Select
+            {gettext("Select")}
           {/if}
         </button>
         <Modal title="Select option" id={@modal_id} narrow={@narrow}>
@@ -340,7 +335,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">
-                      <span>Filter options</span>
+                      <span>{gettext("Filter options")}</span>
                     </label>
                   </div>
                   <div class="field-base">
@@ -353,7 +348,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             <div class="options">
               <h2 class="titlecase">Available options</h2>
               {#if Enum.empty?(@input_options)}
-                No options found
+                {gettext("No options found")}
               {/if}
               {#for opt <- @input_options}
                 <button
@@ -372,7 +367,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 for={@select_changeset}
                 change="validate_new_entry"
                 :let={form: entry_form}>
-                Create entry
+                {gettext("Create entry")}
 
                 <code style="font-family: monospace; font-size: 11px"><pre>
                 {inspect @select_changeset, pretty: true}
@@ -408,7 +403,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   type="button"
                   class="secondary"
                   :on-click="reset">
-                  Reset value
+                  {gettext("Reset value")}
                 </button>
               </div>
             {/if}
@@ -421,7 +416,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp get_label(input_options, selected_option) do
     case Enum.find(input_options, &(&1.value == selected_option)) do
-      nil -> "<No value>"
+      nil -> gettext("No options found")
       %{label: label} -> label
     end
   end
@@ -438,7 +433,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           }
         } = socket
       ) do
-    context = module.__modules__.context
+    context = module.__modules__().context
 
     select_changeset =
       select_changeset

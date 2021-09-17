@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Content.List.Row.Field do
   data columns, :any, default: nil
   data entry_field, :any, default: nil
   data rendered_tpl, :any, default: nil
+  data offset, :any
 
   def update(%{field: %{__struct__: Template}} = assigns, socket) do
     class = Keyword.get(assigns.field.opts, :class)

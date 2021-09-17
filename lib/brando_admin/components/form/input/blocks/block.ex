@@ -155,7 +155,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
       ) do
     changeset = form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     blocks = Ecto.Changeset.get_field(changeset, :data)
 

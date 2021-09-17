@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.ChildrenButton do
     entry = assigns.entry
     fields = assigns.fields
     count = Enum.reduce(fields, 0, fn x, acc -> Enum.count(Map.get(entry, x)) + acc end)
-    singular = entry.__struct__.__naming__.singular
+    singular = entry.__struct__.__naming__().singular
 
     {:ok,
      socket

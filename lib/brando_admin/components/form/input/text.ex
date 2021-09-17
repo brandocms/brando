@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
      )}
   end
 
-  def render(%{blueprint: _, input: %{name: name, opts: opts}} = assigns) do
+  def render(%{blueprint: _, input: %{name: name}} = assigns) do
     ~F"""
     <FieldBase
       blueprint={@blueprint}

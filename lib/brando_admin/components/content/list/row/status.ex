@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
   import Brando.Gettext
 
   prop entry, :any, required: true
-  # prop target, :any, required: true
   prop soft_delete?, :boolean, required: true
+  prop target, :any, required: true
 
   def render(assigns) do
     ~F"""

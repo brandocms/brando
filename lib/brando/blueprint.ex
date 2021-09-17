@@ -108,12 +108,10 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Asset
   alias Brando.Blueprint.Assets
-  alias Brando.Blueprint.Relation
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
-  alias Brando.Blueprint.Villain.Blocks
   alias Brando.Trait
 
   defstruct naming: %{},
@@ -901,8 +899,8 @@ defmodule Brando.Blueprint do
   end
 
   def get_plural(module) do
-    plural = Brando.Utils.try_path(module.__translations__, [:naming, :plural])
-    String.capitalize(plural || module.__naming__.plural)
+    plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
+    String.capitalize(plural || module.__naming__().plural)
   end
 
   defmacro __after_compile__(env, _) do

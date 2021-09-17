@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
                 <Input.Text form={sub_form} field={:key} />
 
                 <MapInputs
-                  :let={value: value, name: name, subform: sform}
+                  :let={value: value, subform: sform}
                   form={sub_form}
                   for={:data}>
                   <div class="brando-input">
@@ -121,7 +121,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
                   {hidden_input sub_form, :key}
                   <div>
                     <MapInputs
-                      :let={value: value, name: name, subform: sform}
+                      :let={value: value, subform: sform}
                       form={sub_form}
                       for={:data}>
                       <div class="brando-input">
@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
     field_name = :properties
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_field =
       changeset
@@ -215,7 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_entries =
       changeset
@@ -249,7 +249,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     entries = Ecto.Changeset.get_field(changeset, field_name)
     sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))

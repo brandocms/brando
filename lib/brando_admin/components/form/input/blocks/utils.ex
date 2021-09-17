@@ -1,21 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
   use Phoenix.HTML
-  import Phoenix.LiveView.Helpers
-
-  def inputs_for_map(form, field, opts \\ []) do
-    val = input_value(form, field)
-    has_value? = !is_nil(val) && is_map(val)
-    base_name = "#{form.name}[#{field}]"
-    assigns = %{}
-
-    if has_value? do
-      ~L"""
-      <%= for {mk, mv} <- val do %>
-        <input type="text" name="<%= base_name %>[<%= mk %>]" value="<%= mv %>" />
-      <% end %>
-      """
-    end
-  end
 
   def form_for_map(form, field, opts \\ []) do
     id = to_string(form.id <> "_#{field}")
@@ -117,7 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     list_data
     |> Enum.with_index()
     |> Enum.map(fn
-      {%{type: type} = block, i} ->
+      {%{type: _type} = block, i} ->
         params = Enum.at(params, i) || %{}
 
         changeset =

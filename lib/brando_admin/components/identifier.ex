@@ -2,9 +2,6 @@ defmodule BrandoAdmin.Components.Identifier do
   use Surface.Component
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Identifier
-  import Brando.Gettext
-
   prop identifier, :map
   prop identifier_form, :form
   prop param, :any

@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             {text_input block_data, :thumbnail_url, class: "text"}
           {/for}
         </:config>
-        {#for block_data <- inputs_for(@block, :data)}
+        {#for _block_data <- inputs_for(@block, :data)}
           <div class="picture-block">
             Vid!
           </div>

@@ -137,6 +137,10 @@ defmodule Brando.Upload do
     {:error, message}
   end
 
+  def error_to_string(:too_large), do: gettext("File is too large")
+  def error_to_string(:too_many_files), do: gettext("You have selected too many files")
+  def error_to_string(:not_accepted), do: gettext("You have selected an unacceptable file type")
+
   defp create_upload_struct(meta, upload_entry, cfg_struct) do
     {:ok, %__MODULE__{meta: meta, upload_entry: upload_entry, cfg: cfg_struct}}
   end

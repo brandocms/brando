@@ -6,12 +6,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.Input.Gallery.ImagePreview
   alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.MapInputs
-  alias Brando.Images
-  alias Brando.Utils
 
   prop form, :form
   prop blueprint, :any
@@ -40,7 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     assign(socket, :gallery, gallery)
   end
 
-  def render(%{blueprint: _, input: %{name: name, opts: opts}} = assigns) do
+  def render(%{blueprint: _, input: %{name: name}} = assigns) do
     ~F"""
     <FieldBase
       blueprint={@blueprint}
@@ -109,7 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
                   <p
                     :for={err <- upload_errors(@uploads[name], entry)}
-                    class="alert alert-danger">{Phoenix.LiveView.Helpers.error_to_string(err)}</p>
+                    class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
                 </article>
               {/if}
             {/for}
@@ -221,7 +218,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     field_name = socket.assigns.input.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     entries = Ecto.Changeset.get_field(changeset, field_name)
     sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
@@ -239,7 +236,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, select_row(socket, String.to_integer(id))}
   end
 
-  def handle_event("edit_image", %{"id" => id}, socket) do
+  def handle_event("edit_image", %{"id" => _id}, socket) do
     {:noreply, socket}
   end
 
@@ -252,7 +249,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     field_name = socket.assigns.input.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     entries = Ecto.Changeset.get_field(changeset, field_name)
 

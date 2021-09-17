@@ -16,8 +16,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
     <fieldset class={
       @fieldset.size,
       "align-end": @fieldset.align == :end,
-      "inline": @fieldset.style == :inline,
-      "shaded": @fieldset.shaded
+      inline: @fieldset.style == :inline,
+      shaded: @fieldset.shaded
     }>
       {#for input <- @fieldset.fields}
         {#if input.__struct__ == Brando.Blueprint.Form.Subform}

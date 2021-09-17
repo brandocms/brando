@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
         If the module has been changed, this block might be out of sync!<br><br>
         Available refs are:<br><br>
         {#for available_ref <- @module_refs}
-          &rarr; {inspect @module_refs}
+          &rarr; {inspect available_ref}
         {/for}
       </section>
     {/if}

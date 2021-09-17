@@ -7,7 +7,6 @@ defmodule Brando.System do
   alias Brando.Exception.ConfigError
   alias Brando.Cache
   alias Brando.CDN
-  alias Brando.Content
   alias Brando.System.Log
   alias Brando.Villain
 

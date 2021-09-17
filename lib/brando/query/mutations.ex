@@ -7,7 +7,6 @@ defmodule Brando.Query.Mutations do
   alias Brando.Publisher
   alias Brando.Query
   alias Brando.Revisions
-  alias Brando.Schema
   alias Brando.Trait
   alias Brando.Utils
 

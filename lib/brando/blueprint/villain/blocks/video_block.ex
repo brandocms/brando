@@ -1,7 +1,7 @@
 defmodule Brando.Blueprint.Villain.Blocks.VideoBlock do
+  # TODO -- move to Block Blueprint?
   use Ecto.Schema
   import Ecto.Changeset
-  alias Brando.Blueprint.Villain.Blocks
 
   @primary_key false
 

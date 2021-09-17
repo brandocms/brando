@@ -67,7 +67,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
     available_sources =
       Enum.map(
         available_sources,
-        &%{label: String.capitalize(Module.concat(List.wrap(&1)).__naming__.singular), value: &1}
+        &%{
+          label: String.capitalize(Module.concat(List.wrap(&1)).__naming__().singular),
+          value: &1
+        }
       )
 
     assign(socket, :available_sources, available_sources)

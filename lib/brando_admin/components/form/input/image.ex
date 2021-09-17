@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
+  # alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.Inputs
   alias Brando.Images
@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   data class, :any
   data file_name, :any
   data field_name, :any
+  data upload_field, :any
 
   def update(%{field: field} = assigns, socket) do
     image = get_field(assigns.form.source, field)
@@ -154,7 +155,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         --}
                         <p
                           :for={err <- upload_errors(@upload_field, entry)}
-                          class="alert alert-danger">{Phoenix.LiveView.Helpers.error_to_string(err)}</p>
+                          class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
                       </article>
                     </div>
                     {!--
@@ -292,7 +293,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     field_name = socket.assigns.field_name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__.singular}_form"
+    form_id = "#{module.__naming__().singular}_form"
 
     require Logger
     Logger.error("==> reset_field")

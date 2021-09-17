@@ -63,14 +63,14 @@ defmodule BrandoAdmin.LiveView.Listing do
     socket
     |> attach_hook(:b_listing_events, :handle_event, fn
       "edit_entry", %{"id" => id}, socket ->
-        update_view = schema.__modules__.admin_update_view
+        update_view = schema.__modules__().admin_update_view
 
         {:halt,
          push_redirect(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
 
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
-        singular = schema.__naming__.singular
-        context = schema.__modules__.context
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
 
         case apply(context, :"delete_#{singular}", [entry_id, user]) do
           {:ok, _} ->
@@ -90,8 +90,8 @@ defmodule BrandoAdmin.LiveView.Listing do
         {:halt, socket}
 
       "duplicate_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
-        singular = schema.__naming__.singular
-        context = schema.__modules__.context
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
 
         case apply(context, :"duplicate_#{singular}", [entry_id, user]) do
           {:ok, _} ->
@@ -161,7 +161,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
     translated_plural =
-      schema.__translations__
+      schema.__translations__()
       |> Utils.try_path([:naming, :plural])
 
     assign(

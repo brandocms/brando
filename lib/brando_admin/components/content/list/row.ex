@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
      socket
      |> assign(assigns)
      |> assign(:selected?, assigns.entry.id in assigns.selected_rows)
-     |> assign(:singular, assigns.schema.__naming__.singular)
+     |> assign(:singular, assigns.schema.__naming__().singular)
      |> assign(:soft_delete?, assigns.schema.has_trait(SoftDelete))}
   end
 
