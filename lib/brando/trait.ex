@@ -46,6 +46,9 @@ defmodule Brando.Trait do
       def validate(_, _), do: true
       defoverridable validate: 2
 
+      def trait_attributes(_, _, _), do: []
+      defoverridable trait_attributes: 3
+
       def list_implementations, do: list_implementations(__MODULE__)
     end
   end
@@ -53,14 +56,13 @@ defmodule Brando.Trait do
   defmacro __before_compile__(_) do
     quote do
       if Module.get_attribute(__MODULE__, :attrs) do
-        def trait_attributes(_, _, _) do
-          @attrs
+        def all_trait_attributes(attrs, assets, relations) do
+          trait_attributes(attrs, assets, relations) ++ @attrs
         end
-
-        defoverridable trait_attributes: 3
       else
-        def trait_attributes(_, _, _), do: []
-        defoverridable trait_attributes: 3
+        def all_trait_attributes(attrs, assets, relations) do
+          trait_attributes(attrs, assets, relations)
+        end
       end
 
       if Module.get_attribute(__MODULE__, :relations) do
@@ -129,7 +131,7 @@ defmodule Brando.Trait do
   """
   def get_attributes(attrs, assets, relations, traits) do
     Enum.reduce(traits, [], fn {trait, _opts}, rf ->
-      trait.trait_attributes(attrs, assets, relations) ++ rf
+      trait.all_trait_attributes(attrs, assets, relations) ++ rf
     end)
   end
 

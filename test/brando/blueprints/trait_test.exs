@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "status trait" do
     test "exposes attribute" do
-      assert Trait.Status.trait_attributes(nil, nil, nil) == [
+      assert Trait.Status.all_trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :status,
                  opts: %{required: true},
@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Trait.Sequenced.trait_attributes(nil, nil, nil) == [
+      assert Trait.Sequenced.all_trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :sequence,
                  opts: %{default: 0},
@@ -44,6 +44,18 @@ defmodule Brando.Blueprint.TraitTest do
   end
 
   describe "villain trait" do
+    test "exposes attributes" do
+      attrs = [
+        %Brando.Blueprint.Attribute{name: :data, type: :villain},
+        %Brando.Blueprint.Attribute{name: :bio_data, type: :villain}
+      ]
+
+      assert Trait.Villain.all_trait_attributes(attrs, nil, nil) == [
+               %Brando.Blueprint.Attribute{name: :html, opts: %{}, type: :text},
+               %Brando.Blueprint.Attribute{name: :bio_html, opts: %{}, type: :text}
+             ]
+    end
+
     test "adds _html field" do
       assert :html in Brando.TraitTest.Project.__schema__(:fields)
       assert :bio_html in Brando.TraitTest.Project.__schema__(:fields)

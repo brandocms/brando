@@ -4,7 +4,11 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
 
   prop entry, :any, required: true
   prop soft_delete?, :boolean, required: true
-  prop target, :any, required: true
+  data json_statuses, :string
+
+  def mount(socket) do
+    {:ok, assign(socket, :json_statuses, json_statuses())}
+  end
 
   def render(assigns) do
     ~F"""
@@ -18,10 +22,9 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
       <div class="status">
         <div
           id={"entry_status_#{@entry.id}"}
-          data-statuses={json_statuses()}
+          data-statuses={@json_statuses}
           phx-hook="Brando.StatusDropdown"
-          phx-value-id={@entry.id}
-          phx-target={@target}>
+          phx-value-id={@entry.id}>
           <svg data-testid="status-pending" width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle class="pending" cx="7.5" cy="7.5" r="7.5" />
             <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="white" />
