@@ -221,6 +221,10 @@
   &[data-type="container"] {
     border: 1px solid #000;
 
+    > .block-actions {
+      opacity: 1;
+    }
+
     > .block-actions > * {
       opacity: 1;
     }
