@@ -54,7 +54,7 @@ defmodule Brando.Villain do
       |> maybe_nil_fields(opts_map)
       |> maybe_put_timestamps()
 
-    context = Context.assign(get_base_context(), "entry", entry)
+    context = Brando.Villain.get_base_context(entry)
 
     opts_map =
       opts_map
@@ -96,7 +96,7 @@ defmodule Brando.Villain do
   defp maybe_nil_fields(entry, %{html_field: html_field}), do: %{entry | html_field => nil}
   defp maybe_nil_fields(entry, _), do: entry
 
-  def get_base_context() do
+  def get_base_context do
     identity = Cache.Identity.get()
     globals = Cache.Globals.get()
     navigation = Cache.Navigation.get()
@@ -109,6 +109,41 @@ defmodule Brando.Villain do
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)
     |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
+    |> add_to_context("locale", Gettext.get_locale(Brando.gettext()))
+  end
+
+  def get_base_context(%{language: entry_language} = entry) do
+    identity = Cache.Identity.get()
+    globals = Cache.Globals.get()
+    navigation = Cache.Navigation.get()
+
+    %{}
+    |> create_context()
+    |> add_to_context("identity", identity)
+    |> add_to_context("configs", identity.configs)
+    |> add_to_context("links", identity.links)
+    |> add_to_context("globals", globals)
+    |> add_to_context("navigation", navigation)
+    |> add_to_context("locale", to_string(entry_language))
+    |> add_to_context("language", to_string(entry_language))
+    |> add_to_context("entry", entry)
+  end
+
+  def get_base_context(entry) do
+    identity = Cache.Identity.get()
+    globals = Cache.Globals.get()
+    navigation = Cache.Navigation.get()
+
+    %{}
+    |> create_context()
+    |> add_to_context("identity", identity)
+    |> add_to_context("configs", identity.configs)
+    |> add_to_context("links", identity.links)
+    |> add_to_context("globals", globals)
+    |> add_to_context("navigation", navigation)
+    |> add_to_context("locale", Gettext.get_locale(Brando.gettext()))
+    |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
+    |> add_to_context("entry", entry)
   end
 
   def create_context(vars) do

@@ -33,8 +33,7 @@ defmodule BrandoAdmin.Components.Content.List.Row.Field do
          tpl ->
            {:ok, parsed_template} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-           context =
-             Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", assigns.entry)
+           context = Brando.Villain.get_base_context(assigns.entry)
 
            []
            |> Liquex.Render.render(parsed_template, context)

@@ -632,4 +632,22 @@ defmodule Brando.VillainTest do
     assert r2["old_for_loops"] == nil
     assert r2["old_vars"] == ["${testoldvar}"]
   end
+
+  test "render template locale by entry's language", %{user: user} do
+    pf_params =
+      pf_data("""
+      {% if locale == "en" %}
+        ENGLISH
+      {% else %}
+        NORWEGIAN
+      {% endif %}
+      """)
+      |> Map.put(:language, "en")
+
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
+    assert pf1.html == "<div class=\"paragraph\">\n  ENGLISH\n\n</div>"
+
+    {:ok, pf2} = Brando.Pages.update_fragment(pf1, %{"language" => "no"}, user)
+    assert pf2.html == "<div class=\"paragraph\">\n  NORWEGIAN\n\n</div>"
+  end
 end

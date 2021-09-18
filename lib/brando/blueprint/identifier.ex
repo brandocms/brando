@@ -13,7 +13,7 @@ defmodule Brando.Blueprint.Identifier do
     quote location: :keep do
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry) do
-        context = Liquex.Context.assign(Villain.get_base_context(), "entry", entry)
+        context = context = Villain.get_base_context(entry)
         {result, _} = Liquex.Render.render([], @parsed_identifier, context)
         title = Enum.join(result)
 
