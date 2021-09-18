@@ -14,6 +14,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   prop duplicate_block, :event, required: true
   prop show_module_picker, :event, required: true
   prop uploads, :any
+  prop type, :string, default: "root"
+  prop uid, :string
 
   @doc "If sections should be visible in the module picker"
   prop hide_sections, :boolean
@@ -36,7 +38,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
   def render(assigns) do
     ~F"""
-    <div class="blocks-wrapper">
+    <div
+      id={"#{@id}-blocks-wrapper"}
+      class="blocks-wrapper"
+      phx-hook="Brando.Blocks"
+      data-blocks-wrapper-type={@type}>
       <Blocks.ModulePicker
         id={"#{@id}-module-picker"}
         insert_block={@insert_block}
@@ -62,10 +68,58 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           base_form={@base_form}
           block_count={@block_count}
           block={block_form}
+          belongs_to={@type}
           insert_block={@show_module_picker}
           duplicate_block={@duplicate_block} />
       {/for}
     </div>
     """
+  end
+
+  def handle_event(
+        "blocks:reorder",
+        %{"order" => order_indices, "type" => "root"},
+        %{assigns: %{base_form: form}} = socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    blocks = Ecto.Changeset.get_field(changeset, :data)
+
+    new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
+    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "blocks:reorder",
+        %{"order" => order_indices, "type" => "container"},
+        %{assigns: %{base_form: form, uid: uid, blocks: blocks}} = socket
+      ) do
+    require Logger
+    Logger.error("=> reorder container blocks for #{uid}")
+    Logger.error(inspect(blocks, pretty: true))
+    # changeset = form.source
+    # module = changeset.data.__struct__
+    # form_id = "#{module.__naming__().singular}_form"
+
+    # blocks = Ecto.Changeset.get_field(changeset, :data)
+
+    # new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
+    # updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+
+    # send_update(BrandoAdmin.Components.Form,
+    #   id: form_id,
+    #   updated_changeset: updated_changeset
+    # )
+
+    {:noreply, socket}
   end
 end

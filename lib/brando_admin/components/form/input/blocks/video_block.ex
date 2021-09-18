@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   prop block_count, :integer
   prop index, :any
   prop is_ref?, :boolean, default: false
+  prop belongs_to, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -27,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         block_count={@block_count}
         base_form={@base_form}
         block={@block}
+        belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>{v(@block, :data).url}</:description>

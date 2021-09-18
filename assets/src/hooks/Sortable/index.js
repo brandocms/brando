@@ -12,6 +12,7 @@ export default (app) => ({
 
   bindSortable () {
     this.sortable = new Sortable(this.el, {
+      group: this.sortableId,
       animation: 150,
       ghostClass: 'is-sorting',
       swapThreshold: 0.50,

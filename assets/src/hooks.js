@@ -1,6 +1,7 @@
 // hooks and callbacks
 import AdminHook from './hooks/Admin'
 import BlockHook from './hooks/Block'
+import BlocksHook from './hooks/Blocks'
 import CodeEditorHook from './hooks/CodeEditor'
 import CircleDropdownHook from './hooks/CircleDropdown'
 import ConfirmClickHook from './hooks/ConfirmClick'
@@ -28,6 +29,7 @@ export default app => {
   return {
     'Brando.Admin': AdminHook(app),
     'Brando.Block': BlockHook(app),
+    'Brando.Blocks': BlocksHook(app),
     'Brando.CircleDropdown': CircleDropdownHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),

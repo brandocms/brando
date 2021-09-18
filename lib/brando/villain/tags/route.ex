@@ -1,13 +1,12 @@
 defmodule Brando.Villain.Tags.Route do
-  @moduledoc false
-  @behaviour Liquex.Tag
-
   @moduledoc """
   {% route page_path show entry.uri %}
   """
+
+  @behaviour Liquex.Tag
+
   import NimbleParsec
   alias Liquex.Parser.Argument
-  alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Field
   alias Liquex.Parser.Tag

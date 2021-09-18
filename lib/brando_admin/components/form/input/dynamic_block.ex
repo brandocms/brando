@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   prop id, :any
   prop uploads, :any
   prop data_field, :atom
+  prop belongs_to, :string
 
   prop insert_block, :event
   prop duplicate_block, :event
@@ -63,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       base_form: @base_form,
       data_field: @data_field,
       index: @index,
+      belongs_to: @belongs_to,
       ref_name: @ref_name,
       ref_description: @ref_description,
       block_count: @block_count,

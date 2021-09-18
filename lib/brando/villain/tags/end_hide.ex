@@ -3,11 +3,8 @@ defmodule Brando.Villain.Tags.EndHide do
   @behaviour Liquex.Tag
 
   import NimbleParsec
-  alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
   alias Liquex.Parser.Tag
-  alias Brando.Pages
 
   @impl true
   def parse() do

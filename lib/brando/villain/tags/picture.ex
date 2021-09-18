@@ -1,16 +1,14 @@
 defmodule Brando.Villain.Tags.Picture do
-  @moduledoc false
+  @moduledoc """
+  {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.regular', prefix: 'media' } %}
+  """
   @behaviour Liquex.Tag
 
   import NimbleParsec
   alias Liquex.Parser.Argument
-  alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
   alias Liquex.Parser.Object
-  alias Brando.Pages
-
-  # {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.regular', prefix: 'media' } %}
 
   @impl true
   def parse() do

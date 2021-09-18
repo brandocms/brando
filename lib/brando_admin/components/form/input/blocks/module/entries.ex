@@ -23,7 +23,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
 
   def render(assigns) do
     ~F"""
-    <div class="module-entries">
+    <div
+      id={"#{@uid}-module-entries"}
+      class="module-entries"
+      phx-hook="Brando.Sortable"
+      data-sortable-id={"block_entries"}
+      data-sortable-handle=".move"
+      data-sortable-selector="[data-block-type=module_entry]">
       {#for {entry_form, idx} <- Enum.with_index(@entry_forms)}
         <EntryBlock
           id={v(entry_form, :uid)}
@@ -36,7 +42,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           insert_block=""
           duplicate_block=""
         />
-
       {/for}
 
       <button class="add-module-entry" type="button" :on-click="add_entry">

@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   prop is_entry?, :boolean, default: false
   @doc "A slight hint of background color for the block. Often used with Containers/sections"
   prop bg_color, :string
+  prop belongs_to, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -92,7 +93,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         <div class="block-actions" id={"#{@uid}-block-actions"}>
           <div
             :if={!@is_ref?}
-            class="block-action move">
+            class="block-action move"
+            data-sortable-group={@belongs_to}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5.828L9.172 7.657 7.757 6.243 12 2l4.243 4.243-1.415 1.414L13 5.828V11h5.172l-1.829-1.828 1.414-1.415L22 12l-4.243 4.243-1.414-1.415L18.172 13H13v5.172l1.828-1.829 1.415 1.414L12 22l-4.243-4.243 1.415-1.414L11 18.172V13H5.828l1.829 1.828-1.414 1.415L2 12l4.243-4.243 1.414 1.415L5.828 11z"/></svg>
           </div>
           <div
@@ -145,28 +147,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
   def handle_event("show_config_modal", %{"id" => modal_id}, socket) do
     Modal.show(modal_id)
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "blocks:reorder",
-        %{"order" => order_indices},
-        %{assigns: %{base_form: form}} = socket
-      ) do
-    changeset = form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    blocks = Ecto.Changeset.get_field(changeset, :data)
-
-    new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
-
     {:noreply, socket}
   end
 

@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   prop index, :any
   prop uploads, :any
   prop data_field, :atom
-  # prop block_count, :integer
+  prop belongs_to, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -115,6 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         block_count={@block_count}
         base_form={@base_form}
         block={@block}
+        belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
         bg_color={@selected_section && "#{@selected_section.color_bg}22"}>
@@ -151,6 +152,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           blocks={@block_forms}
           data_field={@data_field}
           uploads={@uploads}
+          type="container"
+          uid={@uid}
           insert_index={@insert_index}
           insert_block="insert_block"
           insert_section="insert_section"

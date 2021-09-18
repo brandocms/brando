@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop block_count, :integer
   prop uploads, :any
   prop data_field, :atom
+  prop belongs_to, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -105,6 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         block_count={@block_count}
         base_form={@base_form}
         block={@block}
+        belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>

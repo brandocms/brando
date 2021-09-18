@@ -4,12 +4,10 @@ defmodule Brando.Villain.Tags.RouteI18n do
 
   import NimbleParsec
   alias Liquex.Parser.Argument
-  alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Field
   alias Liquex.Parser.Tag
 
-  alias Brando.Pages
   alias Brando.I18n
 
   # {% route_i18n entry.language page_path show { entry.uri } %}

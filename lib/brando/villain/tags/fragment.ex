@@ -3,7 +3,6 @@ defmodule Brando.Villain.Tags.Fragment do
   @behaviour Liquex.Tag
 
   import NimbleParsec
-  alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Field
   alias Liquex.Parser.Tag

@@ -1,6 +1,4 @@
-import { Dom, gsap } from '@brandocms/jupiter'
 import autosize from 'autosize'
-import Sortable from 'sortablejs'
 
 export default (app) => ({
   mounted() {
@@ -16,7 +14,6 @@ export default (app) => ({
     })
 
     this.autosized = this.el.querySelectorAll('[data-autosize]')
-    this.bindSortable()
     this.autosizeElements()
     this.reveal()
   },
@@ -42,32 +39,5 @@ export default (app) => ({
 
   updated() {
     this.autosizeElements()
-  },
-
-  bindSortable() {
-    this.$blocksWrapper = this.el.closest('.blocks-wrapper')
-
-    this.sortable = new Sortable(this.$blocksWrapper, {
-      animation: 150,
-      ghostClass: 'is-sorting',
-      // swapThreshold: 0.50,
-      sort: true,
-      handle: '.block-action.move',
-      dataIdAttr: 'data-block-index',
-      draggable: '> [data-phx-component][data-block-uid]',
-      store: {
-        get: this.getOrder.bind(this),
-        set: this.setOrder.bind(this)
-      }
-    })
-  },
-
-  getOrder() {
-
-  },
-
-  setOrder() {
-    let order = this.sortable.toArray().map(Number)
-    this.pushEventTo(this.el, 'blocks:reorder', { order })
   }
 })
