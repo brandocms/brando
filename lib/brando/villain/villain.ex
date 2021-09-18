@@ -149,8 +149,7 @@ defmodule Brando.Villain do
   def create_context(vars) do
     Context.new(
       vars,
-      filter_module: Brando.Villain.Filters,
-      render_module: Brando.Villain.LiquexRenderer
+      filter_module: Brando.Villain.Filters
     )
   end
 

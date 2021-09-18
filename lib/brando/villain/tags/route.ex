@@ -1,4 +1,7 @@
 defmodule Brando.Villain.Tags.Route do
+  @moduledoc false
+  @behaviour Liquex.Tag
+
   @moduledoc """
   {% route page_path show entry.uri %}
   """
@@ -9,9 +12,9 @@ defmodule Brando.Villain.Tags.Route do
   alias Liquex.Parser.Field
   alias Liquex.Parser.Tag
 
-  def route_tag(combinator \\ empty()) do
-    combinator
-    |> ignore(Tag.open_tag())
+  @impl true
+  def parse() do
+    ignore(Tag.open_tag())
     |> ignore(string("route"))
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Field.identifier(), :function)
@@ -20,7 +23,25 @@ defmodule Brando.Villain.Tags.Route do
     |> ignore(Literal.whitespace())
     |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())
-    |> tag(:route_tag)
+  end
+
+  @impl true
+  def render([function: function, action: action, args: args], context) do
+    evaled_args = Enum.map(args, &Liquex.Argument.eval(&1, context))
+
+    evaled_args =
+      if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args
+
+    rendered_route =
+      apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"] ++ evaled_args)
+
+    {[rendered_route], context}
+  end
+
+  def render([function: function, action: action], context) do
+    rendered_route = apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"])
+
+    {[rendered_route], context}
   end
 
   def braced_args(combinator \\ empty()) do
@@ -42,11 +63,5 @@ defmodule Brando.Villain.Tags.Route do
       |> ignore(Literal.whitespace())
       |> concat(Argument.argument())
     )
-  end
-
-  def element(combinator \\ empty()) do
-    # Add the `custom_tag/1` parsing function to the supported element tag list
-    combinator
-    |> choice([route_tag(), Base.base_element()])
   end
 end

@@ -1,9 +1,13 @@
 defmodule Brando.Villain.LiquexParser do
-  @moduledoc false
-  # parsec:Brando.Villain.LiquexParser
-  import NimbleParsec
+  alias Brando.Villain.Tags
 
-  defcombinatorp(:document, repeat(Brando.Villain.Tags.Base.base_element()))
-  defparsec(:parse, parsec(:document) |> eos())
-  # parsec:Brando.Villain.LiquexParser
+  use Liquex.Parser,
+    tags: [
+      Tags.Picture,
+      Tags.Route,
+      Tags.RouteI18n,
+      Tags.Fragment,
+      Tags.Hide,
+      Tags.EndHide
+    ]
 end

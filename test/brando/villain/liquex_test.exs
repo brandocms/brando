@@ -55,11 +55,8 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
-              [
-                function: "project_path",
-                action: "index"
-              ]}
+             {{:custom_tag, Brando.Villain.Tags.Route},
+              [function: "project_path", action: "index"]}
            ]
 
     # render it
@@ -76,11 +73,11 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
+             {{:custom_tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
-                args: [{:field, [key: "entry", key: "uri"]}]
+                args: [field: [key: "entry", key: "uri"]]
               ]}
            ]
 
@@ -99,11 +96,11 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
+             {{:custom_tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
-                args: [{:field, [key: "entry", key: "uri"]}, {:field, [key: "entry", key: "id"]}]
+                args: [field: [key: "entry", key: "uri"], field: [key: "entry", key: "id"]]
               ]}
            ]
 
@@ -122,7 +119,10 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [{:picture_tag, [source: {:field, [key: "entry", key: "cover"]}]}]
+    assert parsed_tpl == [
+             {{:custom_tag, Brando.Villain.Tags.Picture},
+              [source: {:field, [key: "entry", key: "cover"]}]}
+           ]
 
     tpl =
       """
@@ -133,19 +133,21 @@ defmodule Brando.Villain.LiquexTest do
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
     assert parsed_tpl == [
-             picture_tag: [
-               {:source, {:field, [key: "entry", key: "avatar"]}},
-               {:args,
-                [
-                  keyword: ["size", {:literal, "auto"}],
-                  keyword: ["lazyload", {:literal, true}],
-                  keyword: ["srcset", {:literal, "Brando.Users.User:avatar"}]
-                ]}
-             ]
+             {
+               {:custom_tag, Brando.Villain.Tags.Picture},
+               [
+                 source: {:field, [key: "entry", key: "avatar"]},
+                 args: [
+                   keyword: ["size", {:literal, "auto"}],
+                   keyword: ["lazyload", {:literal, true}],
+                   keyword: ["srcset", {:literal, "Brando.Users.User:avatar"}]
+                 ]
+               ]
+             }
            ]
 
     user = Factory.insert(:random_user)
-    context = Brando.Villain.get_base_context(entry)
+    context = Brando.Villain.get_base_context(user)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
 
     assert Enum.join(result) ==

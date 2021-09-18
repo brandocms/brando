@@ -1,7 +1,7 @@
 defmodule Brando.Villain.Tags.RouteI18n do
-  @moduledoc """
-  {% route_i18n entry.language page_path show { entry.uri } %}
-  """
+  @moduledoc false
+  @behaviour Liquex.Tag
+
   import NimbleParsec
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Base
@@ -9,9 +9,14 @@ defmodule Brando.Villain.Tags.RouteI18n do
   alias Liquex.Parser.Field
   alias Liquex.Parser.Tag
 
-  def route_i18n_tag(combinator \\ empty()) do
-    combinator
-    |> ignore(Tag.open_tag())
+  alias Brando.Pages
+  alias Brando.I18n
+
+  # {% route_i18n entry.language page_path show { entry.uri } %}
+
+  @impl true
+  def parse() do
+    ignore(Tag.open_tag())
     |> ignore(string("route_i18n"))
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Argument.argument(), :locale)
@@ -22,7 +27,33 @@ defmodule Brando.Villain.Tags.RouteI18n do
     |> ignore(Literal.whitespace())
     |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())
-    |> tag(:route_i18n_tag)
+  end
+
+  @impl true
+  def render([locale: locale, function: function, action: action, args: args], context) do
+    evaled_locale = Liquex.Argument.eval(locale, context)
+    evaled_args = Enum.map(args, &Liquex.Argument.eval(&1, context))
+
+    evaled_args =
+      if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args
+
+    rendered_route =
+      I18n.Helpers.localized_path(
+        evaled_locale,
+        :"#{function}",
+        [Brando.endpoint(), :"#{action}"] ++ evaled_args
+      )
+
+    {[rendered_route], context}
+  end
+
+  def render([locale: locale, function: function, action: action], context) do
+    evaled_locale = Liquex.Argument.eval(locale, context)
+
+    rendered_route =
+      I18n.Helpers.localized_path(evaled_locale, :"#{function}", [Brando.endpoint(), :"#{action}"])
+
+    {[rendered_route], context}
   end
 
   def braced_args(combinator \\ empty()) do
@@ -44,11 +75,5 @@ defmodule Brando.Villain.Tags.RouteI18n do
       |> ignore(Literal.whitespace())
       |> concat(Argument.argument())
     )
-  end
-
-  def element(combinator \\ empty()) do
-    # Add the `custom_tag/1` parsing function to the supported element tag list
-    combinator
-    |> choice([route_i18n_tag(), Base.base_element()])
   end
 end
