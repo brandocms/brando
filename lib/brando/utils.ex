@@ -152,10 +152,14 @@ defmodule Brando.Utils do
     rnd_basename_1 <> rnd_basename_2
   end
 
-  def deep_take(map, paths) do
-    paths
-    |> Enum.map(fn {key, path} -> {key, get_in(map, Enum.map(List.wrap(path), &Access.key/1))} end)
-    |> Enum.into(%{})
+  @doc """
+  Pull multiple paths out of a data tree into a map.
+  """
+  @spec deep_select(Access.t(), map()) :: map
+  def deep_select(map, paths) do
+    Map.new(paths, fn {key, path} ->
+      {key, get_in(map, Enum.map(List.wrap(path), &Access.key/1))}
+    end)
   end
 
   @doc """
