@@ -152,6 +152,12 @@ defmodule Brando.Utils do
     rnd_basename_1 <> rnd_basename_2
   end
 
+  def deep_take(map, paths) do
+    paths
+    |> Enum.map(fn {key, path} -> {key, get_in(map, Enum.map(List.wrap(path), &Access.key/1))} end)
+    |> Enum.into(%{})
+  end
+
   @doc """
   Adds an unique postfix to `filename`
   """
