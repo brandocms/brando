@@ -87,14 +87,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       |> List.first()
 
     blocks = v(block_data, :blocks)
-    block_forms = inputs_for_blocks(block_data, :blocks)
+    block_forms = inputs_for_blocks(block_data, :blocks) || []
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:uid, v(block, :uid))
      |> assign(:blocks, blocks || [])
-     |> assign(:block_forms, block_forms || [])
+     |> assign(:block_forms, block_forms)
      |> assign(:block_data, block_data)
      |> assign_available_sections()
      |> assign_section_options()
@@ -149,7 +149,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         <Blocks.BlockRenderer
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
-          blocks={@block_forms}
+          blocks={@blocks}
+          block_forms={@block_forms}
           data_field={@data_field}
           uploads={@uploads}
           type="container"

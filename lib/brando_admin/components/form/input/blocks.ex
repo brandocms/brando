@@ -23,12 +23,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
-    blocks = inputs_for_blocks(assigns.form, name)
+    blocks = input_value(assigns.form, name)
+    block_forms = inputs_for_blocks(assigns.form, name) || []
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:blocks, blocks)
+     |> assign(:block_forms, block_forms)
      |> assign(:data_field, name)}
   end
 
@@ -43,6 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         id={"#{@form.id}-#{name}-blocks"}
         base_form={@form}
         blocks={@blocks}
+        block_forms={@block_forms}
         uploads={@uploads}
         data_field={@data_field}
         insert_index={@insert_index}

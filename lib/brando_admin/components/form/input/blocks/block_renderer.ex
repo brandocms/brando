@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   alias BrandoAdmin.Components.Form.Input.Blocks
 
   prop blocks, :list, required: true
+  prop block_forms, :list, required: true
   prop base_form, :form, required: true
   prop data_field, :atom, required: true
   prop insert_index, :integer
@@ -60,7 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           click={@show_module_picker} />
       {/if}
 
-      {#for {block_form, index} <- Enum.with_index(@blocks)}
+      {#for {block_form, index} <- Enum.with_index(@block_forms)}
         <Blocks.DynamicBlock
           uploads={@uploads}
           index={index}
@@ -101,24 +102,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   def handle_event(
         "blocks:reorder",
         %{"order" => order_indices, "type" => "container"},
-        %{assigns: %{base_form: form, uid: uid, blocks: blocks}} = socket
+        %{assigns: %{base_form: form, uid: uid, blocks: blocks, data_field: data_field}} = socket
       ) do
-    require Logger
-    Logger.error("=> reorder container blocks for #{uid}")
-    Logger.error(inspect(blocks, pretty: true))
-    # changeset = form.source
-    # module = changeset.data.__struct__
-    # form_id = "#{module.__naming__().singular}_form"
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
 
-    # blocks = Ecto.Changeset.get_field(changeset, :data)
+    ordered_blocks = Enum.map(order_indices, &Enum.at(blocks, &1))
 
-    # new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
-    # updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        %{
+          data: %{blocks: ordered_blocks}
+        }
+      )
 
-    # send_update(BrandoAdmin.Components.Form,
-    #   id: form_id,
-    #   updated_changeset: updated_changeset
-    # )
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
 
     {:noreply, socket}
   end
