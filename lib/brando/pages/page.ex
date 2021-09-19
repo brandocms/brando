@@ -65,7 +65,6 @@ defmodule Brando.Pages.Page do
     attribute :template, :string, required: true
     attribute :is_homepage, :boolean
     attribute :data, :villain
-    # attribute :status, :status
     attribute :css_classes, :string
   end
 
