@@ -14,7 +14,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   prop blueprint, :any
   prop uploads, :any
 
-  data blocks, :any
+  data blocks, :list
+  data block_forms, :list
   data insert_index, :integer
   data data_field, :atom
 
