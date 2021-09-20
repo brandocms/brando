@@ -155,13 +155,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           uploads={@uploads}
           type="container"
           uid={@uid}
+          hide_sections
           insert_index={@insert_index}
           insert_block="insert_block"
           insert_section="insert_section"
           insert_datasource="insert_datasource"
           show_module_picker="show_module_picker"
           duplicate_block="duplicate_block"
-          hide_sections />
+        />
       </Blocks.Block>
     </div>
     """
@@ -200,9 +201,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
 
-    # build a module block from module
     generated_uid = Brando.Utils.generate_uid()
-
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
 
     # if module.wrapper is true, this is a multi block!
@@ -217,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    # TODO -- Villain.replace_block_in_changeset
+    # TODO -- Villain.update_block_in_changeset
     data = get_field(changeset, data_field)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
     original_block = Enum.at(data, source_position)
