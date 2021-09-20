@@ -8,7 +8,7 @@ export default (app) => ({
   },
 
   bindSortable() {
-    this.$blocksWrapper = this.el.closest('.blocks-wrapper')
+    this.$blocksWrapper = this.el
     this.type = this.el.dataset.blocksWrapperType
 
     this.sortable = new Sortable(this.$blocksWrapper, {

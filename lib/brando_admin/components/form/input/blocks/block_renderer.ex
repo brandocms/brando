@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     <div
       id={"#{@id}-blocks-wrapper"}
       class="blocks-wrapper"
-      phx-hook="Brando.Blocks"
+      phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type={@type}>
       <Blocks.ModulePicker
         id={"#{@id}-module-picker"}

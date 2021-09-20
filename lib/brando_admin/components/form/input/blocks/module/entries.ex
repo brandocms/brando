@@ -26,10 +26,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     <div
       id={"#{@uid}-module-entries"}
       class="module-entries"
-      phx-hook="Brando.Sortable"
-      data-sortable-id={"block_entries"}
-      data-sortable-handle=".move"
-      data-sortable-selector="[data-block-type=module_entry]">
+      phx-hook="Brando.SortableBlocks"
+      data-blocks-wrapper-type="module_entry">
       {#for {entry_form, idx} <- Enum.with_index(@entry_forms)}
         <EntryBlock
           id={v(entry_form, :uid)}
@@ -37,6 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           base_form={@base_form}
           data_field={@data_field}
           entry_template={@entry_template}
+          belongs_to="module_entry"
           index={idx}
           block_count={Enum.count(@entry_forms)}
           insert_block=""
@@ -100,8 +99,34 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     {:noreply, socket}
   end
 
-  def prepare_entry_template(entry_template) do
-    require Logger
-    Logger.error(inspect(entry_template))
+  def handle_event(
+        "blocks:reorder",
+        %{"order" => order_indices, "type" => "module_entry"},
+        %{assigns: %{base_form: form, uid: uid, data_field: data_field, block_data: block_data}} =
+          socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+    blocks = input_value(block_data, :entries)
+
+    ordered_blocks = Enum.map(order_indices, &Enum.at(blocks, &1))
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        %{
+          data: %{entries: ordered_blocks}
+        }
+      )
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
   end
 end

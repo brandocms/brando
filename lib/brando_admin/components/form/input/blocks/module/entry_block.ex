@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   prop uploads, :any
   prop data_field, :atom
   prop entry_template, :map
+  prop belongs_to, :string
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -76,6 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         block_count={@block_count}
         base_form={@base_form}
         block={@block}
+        belongs_to={@belongs_to}
         is_entry?={true}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
