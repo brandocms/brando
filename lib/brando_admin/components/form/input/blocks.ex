@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
-    blocks = input_value(assigns.form, name)
+    blocks = input_value(assigns.form, name) || []
     block_forms = inputs_for_blocks(assigns.form, name) || []
 
     {:ok,
