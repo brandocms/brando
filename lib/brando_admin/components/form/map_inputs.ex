@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Components.Form.MapInputs do
 
   def render(%{input_value: nil} = assigns) do
     ~F"""
-    No value
+    <!-- no value -->
     """
   end
 
