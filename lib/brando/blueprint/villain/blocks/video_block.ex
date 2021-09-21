@@ -1,22 +1,32 @@
 defmodule Brando.Blueprint.Villain.Blocks.VideoBlock do
-  # TODO -- move to Block Blueprint?
-  use Ecto.Schema
-  import Ecto.Changeset
+  defmodule Data do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Villain",
+      schema: "VideoBlockData",
+      singular: "video_block_data",
+      plural: "video_block_datas",
+      gettext_module: Brando.Gettext
 
-  @primary_key false
+    @primary_key false
+    data_layer :embedded
+    identifier "{{ entry.type }}"
 
-  embedded_schema do
-    field :uid, :string
-    field :type, :string
-    field :hidden, :boolean, default: false
-    field :marked_as_deleted, :boolean, default: false, virtual: true
-
-    embeds_one :data, Brando.Videos.Video
+    attributes do
+      attribute :url, :string
+      attribute :source, :enum, values: [:youtube, :vimeo, :file]
+      attribute :remote_id, :string
+      attribute :poster, :string
+      attribute :width, :integer
+      attribute :height, :integer
+      attribute :autoplay, :boolean, default: false
+      attribute :opacity, :integer, default: 0
+      attribute :preload, :boolean, default: false
+      attribute :play_button, :boolean, default: false
+      attribute :cover, :string, default: "false"
+    end
   end
 
-  def changeset(struct, params \\ %{}) do
-    struct
-    |> cast(params, ~w(uid type hidden marked_as_deleted)a)
-    |> cast_embed(:data)
-  end
+  use Brando.Blueprint.Villain.Block,
+    type: "video"
 end

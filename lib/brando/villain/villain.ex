@@ -23,7 +23,8 @@ defmodule Brando.Villain do
     module: Blocks.ModuleBlock,
     picture: Blocks.PictureBlock,
     svg: Blocks.SvgBlock,
-    text: Blocks.TextBlock
+    text: Blocks.TextBlock,
+    video: Blocks.VideoBlock
   }
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}

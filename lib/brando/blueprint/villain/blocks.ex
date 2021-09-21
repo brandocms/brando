@@ -11,7 +11,8 @@ defmodule Brando.Blueprint.Villain.Blocks do
       module: Blocks.ModuleBlock,
       picture: Blocks.PictureBlock,
       svg: Blocks.SvgBlock,
-      text: Blocks.TextBlock
+      text: Blocks.TextBlock,
+      video: Blocks.VideoBlock
     ]
   end
 end

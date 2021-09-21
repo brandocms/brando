@@ -22,13 +22,26 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   alias Surface.Components.Form
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
-    {:ok,
-     socket
-     |> Surface.init()
-     |> assign_entry(entry_id)
-     |> assign_current_user(token)
-     |> assign_changeset()
-     |> set_admin_locale()}
+    if connected?(socket) do
+      {:ok,
+       socket
+       |> Surface.init()
+       |> assign(:socket_connected, true)
+       |> assign_entry(entry_id)
+       |> assign_current_user(token)
+       |> assign_changeset()
+       |> set_admin_locale()}
+    else
+      {:ok,
+       socket
+       |> Surface.init()
+       |> assign(:socket_connected, false)}
+    end
+  end
+
+  def render(%{socket_connected: false} = assigns) do
+    ~F"""
+    """
   end
 
   def render(assigns) do

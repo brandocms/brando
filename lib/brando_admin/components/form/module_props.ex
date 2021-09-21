@@ -71,6 +71,33 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               Picture
             </button>
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="gallery"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Gallery
+            </button>
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="video"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Video
+            </button>
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="media"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Media
+            </button>
           </div>
         </Modal>
 
@@ -175,6 +202,30 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 ]}
                               />
                             {/for}
+
+                          {#match "video"}
+                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                              <Input.Text form={block_data} field={:url} />
+                              <Input.Radios
+                                form={block_data}
+                                field={:source}
+                                options={[
+                                  %{label: "YouTube", value: "youtube"},
+                                  %{label: "Vimeo", value: "vimeo"},
+                                  %{label: "File", value: "file"}
+                                ]}
+                              />
+                              {hidden_input(block_data, :width)}
+                              {hidden_input(block_data, :height)}
+                              <Input.Text form={block_data} field={:remote_id} />
+                              <Input.Text form={block_data} field={:poster} />
+                              <Input.Text form={block_data} field={:cover} />
+                              <Input.Number form={block_data} field={:opacity} />
+                              <Input.Toggle form={block_data} field={:autoplay} />
+                              <Input.Toggle form={block_data} field={:preload} />
+                              <Input.Toggle form={block_data} field={:play_button} />
+                            {/for}
+
                           {#match type}
                             No matching block {type} found
                         {/case}
