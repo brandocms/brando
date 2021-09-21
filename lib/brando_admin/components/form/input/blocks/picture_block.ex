@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   data uid, :string
   data block_data, :form
   data images, :list
+  data image, :any
 
   def v(form, field), do: input_value(form, field)
 
@@ -52,6 +53,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
+     |> assign(:image, v(assigns.block, :data))
      |> assign(:extracted_path, extracted_path)
      |> assign(:uid, v(assigns.block, :uid))}
   end
@@ -62,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       id={"#{@uid}-wrapper"}
       class="picture-block"
       phx-hook="Brando.LegacyImageUpload"
+      data-text-uploading={gettext("Uploading...")}
       data-block-index={@index}
       data-block-uid={@uid}>
 
@@ -107,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </svg>
           </figure>
           <div class="instructions">
-            Click or drag an image to upload or
+            <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span><br>
             <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
           </div>
         </div>
@@ -132,18 +135,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           Info about the image here :)
         </Modal>
         <:config>
-          <Input.RichText form={@block_data} field={:title} />
-          <Input.Text form={@block_data} field={:alt} debounce={500} />
+          <div class="panels">
+            <div class="panel">
+              {#if @extracted_path}
+                <img
+                  width={"#{@image.width}"}
+                  height={"#{@image.height}"}
+                  src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
 
-          <button type="button" class="secondary small upload-image">
-            {gettext("Upload new image")}
-          </button>
-          <button type="button" class="secondary small" :on-click="select_image">
-            {gettext("Select image")}
-          </button>
-          <button type="button" class="danger small" :on-click="reset_image">
-            {gettext("Reset image")}
-          </button>
+                <div class="image-info">
+                  Path: {@image.path}<br>
+                  Dimensions: {@image.width}&times;{@image.height}<br>
+                </div>
+              {/if}
+              {#if !@extracted_path}
+                <div class="img-placeholder empty upload-canvas">
+                  <div class="placeholder-wrapper">
+                    <div class="svg-wrapper">
+                      <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                        <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                        <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                        <circle cx="8" cy="9" r="2"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="instructions">
+                    <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
+                  </div>
+                </div>
+              {/if}
+            </div>
+            <div class="panel">
+              <Input.RichText form={@block_data} field={:title} />
+              <Input.Text form={@block_data} field={:alt} debounce={500} />
+
+              <div class="button-group-vertical">
+                <button type="button" class="secondary" :on-click="show_image_picker">
+                  {gettext("Select image")}
+                </button>
+
+                <button type="button" class="danger" :on-click="reset_image">
+                  {gettext("Reset image")}
+                </button>
+              </div>
+            </div>
+          </div>
 
           {hidden_input @block_data, :placeholder}
           {hidden_input @block_data, :cdn}
@@ -181,6 +218,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("show_config", _, socket) do
     Modal.show("#{socket.assigns.uid}_config")
+    {:noreply, socket}
+  end
+
+  def handle_event("close_config", _, socket) do
+    Modal.hide("#{socket.assigns.uid}_config")
     {:noreply, socket}
   end
 
@@ -256,11 +298,50 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, socket}
   end
 
-  def handle_event("select_image", %{"id" => _id}, %{assigns: %{uid: uid}} = socket) do
+  def handle_event(
+        "select_image",
+        %{"id" => id},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: uid,
+            block: block,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
     image_picker_modal_id = "#{uid}-image-picker"
-    image_info_modal_id = "#{uid}-image-info"
     Modal.hide(image_picker_modal_id)
-    Modal.show(image_info_modal_id)
+
+    {:ok, image} = Brando.Images.get_image(id)
+
+    updated_data_map =
+      block_data
+      |> Map.merge(image.image)
+      |> Map.from_struct()
+
+    updated_data_struct = struct(PictureBlock.Data, updated_data_map)
+
+    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
+
+    changeset = base_form.source
+    schema = changeset.data.__struct__
+
+    updated_changeset =
+      Villain.replace_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        updated_picture_block
+      )
+
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
 
     {:noreply, socket}
   end

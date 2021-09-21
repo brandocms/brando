@@ -21,10 +21,15 @@
 
     figure {
       @space margin-bottom 35px;
+
       svg {
         width: 200px;
+        user-select: none;
+        pointer-events: none;
 
         path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
           fill: theme(colors.dark);
         }
       }
@@ -39,10 +44,54 @@
     }
   }
 
+  .upload-canvas {
+    &.dragging {
+      background-color: theme(colors.peachDarker) !important;
+      cursor: plus;
+
+      svg .plus {
+        backface-visibility: hidden;
+      }
+    }
+  }
+
   .image-picker-images {
     display: grid;
     grid-gap: 1vw;
     grid-template-columns: 1fr 1fr 1fr 1fr;
     grid-template-rows: min-content;
+  }
+
+  .modal-content {
+    .image-info {
+      @space margin-top 15px;
+      @fontsize 13px;
+    }
+
+    .img-placeholder {
+      @color bg peach;
+      @color fg dark;
+      padding: 2vw;
+
+      .instructions {
+        text-align: center;
+        font-size: 15px;
+      }
+
+      svg {
+        @space margin-bottom 1.5vw;
+        margin-left: auto;
+        margin-right: auto;
+        user-select: none;
+        pointer-events: none;
+        width: 200px;
+
+        path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
+          fill: theme(colors.dark);
+        }
+      }
+    }
   }
 }

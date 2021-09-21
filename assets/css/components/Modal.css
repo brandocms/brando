@@ -160,15 +160,35 @@
       &:first-of-type {
         border-top-left-radius: 30px;
         border-top-right-radius: 30px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
       }
 
       &:last-of-type {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
         border-bottom-left-radius: 30px;
         border-bottom-right-radius: 30px;
       }    
 
       + button {
         margin-top: -1px;
+      }
+
+      &:hover {
+        background-color: theme(colors.dark);
+        color: white;
+      }
+
+      &.danger {
+        border: 1px solid theme(colors.dark);
+        color: #be1010;
+        background-color: white;
+
+        &:hover {
+          background-color: #be1010;
+          color: white;
+        }
       }
     }
   }
@@ -179,6 +199,7 @@
     .panel {
       @column 6:1/12;
       @space padding-left 0.5;
+      @space padding-right 1;
 
       &:nth-of-type(1) {
         @column 6/12;

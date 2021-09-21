@@ -6,13 +6,16 @@ const UPLOAD_URL = '/admin/api/content/upload/image'
 
 export default (app) => ({
   mounted() {
+    this.strings = {}
+    this.strings.idle = Dom.find(this.el, '.instructions span')
+    this.strings.uploading = this.el.dataset.textUploading
     this.status = IDLE
     this.uid = this.el.dataset.blockUid
     this.csrfToken = Dom.find('meta[name="csrf-token"]').content
-    this.plus = Dom.find(this.el, '.empty .plus')
+    this.pluses = Dom.all(this.el, '.upload-canvas .plus')
 
     this.plusTimeline = gsap.timeline({ repeat: -1 })
-    this.plusTimeline.to(this.plus, { rotate: 360, ease: 'none', transformOrigin: '50% 50%' })
+    this.plusTimeline.to(this.pluses, { duration: 3, rotate: 360, ease: 'none', transformOrigin: '50% 50%' })
     this.plusTimeline.timeScale(0)
 
     this.$fileInput = Dom.find(this.el, '.file-input')
@@ -24,27 +27,57 @@ export default (app) => ({
         this.upload(e.target.files[0])
       }
     })
-    this.$uploadCanvas = Dom.find(this.el, '.upload-canvas figure')
-    this.$uploadCanvas.addEventListener('click', e => {
-      this.$fileInput.click()
+
+    this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
+
+    this.$uploadCanvases.forEach(uploadCanvas => {
+      uploadCanvas.addEventListener('click', e => {
+        console.log(e.target.tagName)
+        if (e.target.tagName === 'BUTTON') {
+          return
+        }
+        
+        if (Dom.hasClass(uploadCanvas, 'empty')) {
+          this.$fileInput.click()
+        } else {
+          e.preventDefault()
+        }
+      })
+
+      uploadCanvas.addEventListener('dragenter', () => { uploadCanvas.classList.add('dragging') })
+      uploadCanvas.addEventListener('dragover', () => { uploadCanvas.classList.add('dragging') })
+      uploadCanvas.addEventListener('dragleave', () => { uploadCanvas.classList.remove('dragging') })
+
+      uploadCanvas.addEventListener('drop', event => {
+        event.preventDefault()
+        const files = event.dataTransfer.files
+
+        if (files.length > 1) {
+          console.log('too many files!')
+          return false
+        }
+
+        const f = files.item(0)
+        this.upload(f)
+      })
     })
+    
+  },
 
-    this.$uploadCanvas.addEventListener('drop', event => {
-      event.preventDefault()
-      const files = event.dataTransfer.files
-
-      if (files.length > 1) {
-        console.log('too many files!')
-        return false
-      }
-
-      const f = files.item(0)
-      this.upload(f)
-    })
+  setStatusText () {
+    if (this.status === IDLE) {
+      Dom.all(this.el, '.instructions span').forEach(sp => {
+        sp.innerHTML = this.strings.idle
+      })
+    } else {
+      Dom.all(this.el, '.instructions span').forEach(sp => {
+        sp.innerHTML = this.strings.uploading
+      })
+    }
   },
 
   spinPlus () {
-    gsap.to(this.plusTimeline, { timeScale: 1 })
+    gsap.to(this.plusTimeline, { timeScale: 0.009 })
   },
 
   stopPlus () {
@@ -66,6 +99,7 @@ export default (app) => ({
 
     try {
       this.status = UPLOADING
+      this.setStatusText()
       this.spinPlus()
       const response = await fetch(UPLOAD_URL, { headers, method: 'post', body: formData })
       const data = await response.json()
@@ -79,11 +113,13 @@ export default (app) => ({
         this.pushEventTo(this.el, 'image_uploaded', { id: image.id })
       } else {
         this.status = IDLE
+        this.setStatusText()
         this.stopPlus()
         console.error('error uploading', { error: data.error })
       }
     } catch (e) {
       this.status = IDLE
+      this.setStatusText()
       this.stopPlus()
       console.error('error uploading', { error: e })
     }
