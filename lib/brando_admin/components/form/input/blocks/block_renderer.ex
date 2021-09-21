@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     # "insert_block", "delete_block", "duplicate_block", "insert_section", "insert_datasource" etc?
     block_count =
       assigns.blocks
-      |> Enum.reject(& &1.data.marked_as_deleted)
+      |> Enum.reject(& &1.marked_as_deleted)
       |> Enum.count()
 
     {:ok,
