@@ -17,6 +17,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   @doc "A slight hint of background color for the block. Often used with Containers/sections"
   prop bg_color, :string
   prop belongs_to, :string
+  prop wide_config, :boolean, default: false
 
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
@@ -59,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         index={@index}
         click={@insert_block} />
 
-      <Modal title="Configure" id={"#{@uid}_config"}>
+      <Modal title="Configure" id={"#{@uid}_config"} wide={@wide_config}>
         <#slot name="config" />
       </Modal>
 

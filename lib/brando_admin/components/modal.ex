@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Modal do
   prop center_header, :boolean, default: false
   prop narrow, :boolean, default: false
   prop medium, :boolean, default: false
+  prop wide, :boolean, default: false
 
   data action, :atom
   data show, :boolean, default: false
@@ -42,7 +43,7 @@ defmodule BrandoAdmin.Components.Modal do
     ~F"""
     <div
       id={@id}
-      class={"modal", narrow: @narrow, medium: @medium}
+      class={"modal", narrow: @narrow, medium: @medium, wide: @wide}
       phx-key="Escape"
       data-b-modal={@show && "show" || "hide"}
       phx-hook="Brando.Modal"
