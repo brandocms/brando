@@ -22,7 +22,9 @@ import SubFormSortableHook from './hooks/SubFormSortable'
 import SubEntryAddButtonHook from './hooks/SubEntryAddButton'
 import SubmitHook from './hooks/Submit'
 import StatusDropdownHook from './hooks/StatusDropdown'
+import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
+import VideoURLParserHook from './hooks/VideoURLParser'
 
 // Brando hooks
 export default app => {
@@ -50,6 +52,8 @@ export default app => {
     'Brando.SubEntryAddButton': SubEntryAddButtonHook(app),
     'Brando.SubFormSortable': SubFormSortableHook(app),
     'Brando.Submit': SubmitHook(app),
-    'Brando.TipTap': TipTapHook(app)
+    'Brando.SVGDrop': SVGDropHook(app),
+    'Brando.TipTap': TipTapHook(app),
+    'Brando.VideoURLParser': VideoURLParserHook(app)
   }
 }

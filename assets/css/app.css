@@ -29,7 +29,9 @@
 @import './components/Form/Input/Blocks/HeaderBlock.css';
 @import './components/Form/Input/Blocks/ModuleBlock.css';
 @import './components/Form/Input/Blocks/PictureBlock.css';
+@import './components/Form/Input/Blocks/SVGBlock.css';
 @import './components/Form/Input/Blocks/TextBlock.css';
+@import './components/Form/Input/Blocks/VideoBlock.css';
 @import './components/SideBar/CurrentUser.css';
 @import './components/SideBar/NavigationHeader.css';
 @import './components/SideBar/NavigationMenu.css';

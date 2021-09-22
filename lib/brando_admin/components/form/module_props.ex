@@ -98,6 +98,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               Media
             </button>
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="html"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              HTML
+            </button>
+
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="svg"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              SVG
+            </button>
           </div>
         </Modal>
 
