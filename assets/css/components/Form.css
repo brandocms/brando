@@ -257,20 +257,30 @@
     > button {
       &:first-of-type {
         border-radius: 18px 0 0 18px;
+        padding-left: 15px;
       }
 
       &:last-of-type {
         border-radius: 0 18px 18px 0;
+        padding-right: 15px;
       }
+    }
+
+    .tab-text {
+      @space padding-left 10px;
     }
 
     button {
       font-size: 15px;
       display: inline-flex;
       border: 1px solid theme(colors.dark);    
-      padding: 8px 12px;
+      padding: 7px 12px 8px;
       margin-left: -1px;
       background-color: white;
+
+      &:hover {
+        @color bg peachDarker;
+      }
 
       &:first-of-type {
         margin-left: 0;
@@ -278,7 +288,6 @@
 
       svg {
         margin-top: 1px;
-        margin-right: 10px;
       }
     }
   }

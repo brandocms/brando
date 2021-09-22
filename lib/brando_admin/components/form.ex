@@ -239,6 +239,11 @@ defmodule BrandoAdmin.Components.Form do
             type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
           </button>
+          <button
+            :on-click="push_submit_event"
+            type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
+          </button>
         </div>
       </div>
 
@@ -318,6 +323,10 @@ defmodule BrandoAdmin.Components.Form do
         progress: &__MODULE__.handle_gallery_progress/3
       )
     end)
+  end
+
+  def handle_event("push_submit_event", _, socket) do
+    {:noreply, push_event(socket, "b:submit", %{})}
   end
 
   def handle_event("open_meta_drawer", _, socket) do
