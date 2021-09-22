@@ -14,19 +14,6 @@ defmodule Brando.Villain do
   alias Ecto.Changeset
   alias Liquex.Context
 
-  @default_blocks %{
-    container: Blocks.ContainerBlock,
-    datasource: Blocks.DatasourceBlock,
-    gallery: Blocks.GalleryBlock,
-    header: Blocks.HeaderBlock,
-    html: Blocks.HtmlBlock,
-    module: Blocks.ModuleBlock,
-    picture: Blocks.PictureBlock,
-    svg: Blocks.SvgBlock,
-    text: Blocks.TextBlock,
-    video: Blocks.VideoBlock
-  }
-
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @section_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
@@ -342,7 +329,8 @@ defmodule Brando.Villain do
   end
 
   def get_block_by_type(block_type) do
-    Map.get(@default_blocks, block_type)
+    default_blocks = Blocks.list_blocks()
+    Keyword.get(default_blocks, block_type)
   end
 
   def update_section_in_fields(section_id) do
