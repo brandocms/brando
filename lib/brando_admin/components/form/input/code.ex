@@ -28,10 +28,10 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
         id={"#{@form.id}-#{name}-code"}
         class="code-editor"
         phx-hook="Brando.CodeEditor">
-          <div phx-update="ignore">
-            {textarea @form, name, phx_debounce: 750}
-            <div class="editor"></div>
-          </div>
+        {textarea @form, name, phx_debounce: 750}
+        <div phx-update="ignore">
+          <div class="editor"></div>
+        </div>
       </div>
     </FieldBase>
     """
@@ -47,10 +47,10 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
         id={"#{@form.id}-#{@field}-code"}
         class="code-editor"
         phx-hook="Brando.CodeEditor">
-          <div phx-update="ignore">
-            {textarea @form, @field, phx_debounce: 750}
-            <div class="editor"></div>
-          </div>
+        {textarea @form, @field, phx_debounce: 750}
+        <div phx-update="ignore">
+          <div class="editor"></div>
+        </div>
       </div>
     </FieldBase>
     """
@@ -65,11 +65,10 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
         id={"#{@form.id}-#{@field}-code"}
         class="code-editor"
         phx-hook="Brando.CodeEditor">
-          <div phx-update="ignore">
-            {textarea @form, @field, value: @value, phx_debounce: 750}
-
-            <div class="editor"></div>
-          </div>
+        {textarea @form, @field, value: @value, phx_debounce: 750}
+        <div phx-update="ignore">
+          <div class="editor"></div>
+        </div>
       </div>
     </FieldBase>
     """
