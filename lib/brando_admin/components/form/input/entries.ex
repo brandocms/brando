@@ -39,26 +39,17 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       |> input_value(name)
       |> Enum.map(fn
         %Brando.Content.Identifier{} = identifier ->
-          require Logger
-          Logger.error("==> identifier: #{inspect(identifier, pretty: true)}")
           identifier
 
         %Ecto.Changeset{action: :replace} ->
           nil
 
         %Ecto.Changeset{} = changeset ->
-          require Logger
-          Logger.error("==> changeset: #{inspect(changeset, pretty: true)}")
           Ecto.Changeset.apply_changes(changeset)
       end)
       |> Enum.reject(&(&1 == nil))
 
     selected_identifiers_forms = inputs_for(assigns.form, name)
-
-    require Logger
-    Logger.error("== selected_identifiers ==")
-    Logger.error(inspect(selected_identifiers, pretty: true))
-
     wanted_schemas = Keyword.get(opts, :for)
 
     if !wanted_schemas do
@@ -200,10 +191,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         } = socket
       ) do
     selected_identifier = Enum.at(identifiers, String.to_integer(idx))
-
-    require Logger
-    Logger.error(inspect(selected_identifier, pretty: true))
-    Logger.error(inspect(selected_identifiers, pretty: true))
 
     updated_identifiers =
       case Enum.find(selected_identifiers, &(&1 == selected_identifier)) do
