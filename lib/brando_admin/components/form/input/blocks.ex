@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias Brando.Content
+  alias Brando.Utils
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
@@ -24,7 +25,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
-    blocks = input_value(assigns.form, name) || []
+    # TODO: when using input_value here, we sometimes end up with the whole block field as a params map %{"0" => ...}
+    blocks = Utils.iv(assigns.form, name) || []
     block_forms = inputs_for_blocks(assigns.form, name) || []
 
     {:ok,
