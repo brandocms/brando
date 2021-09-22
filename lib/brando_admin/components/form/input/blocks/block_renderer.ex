@@ -26,10 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   def update(assigns, socket) do
     # TODO: Only count on initial render, then trigger a count from
     # "insert_block", "delete_block", "duplicate_block", "insert_section", "insert_datasource" etc?
-    block_count =
-      assigns.blocks
-      |> Enum.reject(& &1.marked_as_deleted)
-      |> Enum.count()
+    block_count = Enum.count(assigns.block_forms)
 
     {:ok,
      socket
