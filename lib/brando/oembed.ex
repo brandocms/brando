@@ -1,6 +1,6 @@
 defmodule Brando.OEmbed do
   @providers %{
-    "youtube" => "http://www.youtube.com/oembed?format=json&url=",
+    "youtube" => "https://www.youtube.com/oembed?format=json&url=",
     "vimeo" => "https://vimeo.com/api/oembed.json?url="
   }
 
