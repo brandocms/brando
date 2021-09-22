@@ -41,6 +41,10 @@
   }
 }
 
+.block[data-block-type="comment"] {
+  background-color: yellow;
+}
+
 .base-block {
   opacity: 0;
 

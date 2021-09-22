@@ -127,6 +127,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               Markdown
             </button>
+
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="comment"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Comment
+            </button>
           </div>
         </Modal>
 

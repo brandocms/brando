@@ -3,6 +3,7 @@ defmodule Brando.Blueprint.Villain.Blocks do
 
   def list_blocks do
     [
+      comment: Blocks.CommentBlock,
       container: Blocks.ContainerBlock,
       datasource: Blocks.DatasourceBlock,
       gallery: Blocks.GalleryBlock,
