@@ -917,4 +917,8 @@ defmodule Brando.Utils do
   defp deep_resolve(_key, _left, right) do
     right
   end
+
+  def iv(%{source: %{data: data}}, field) do
+    Map.get(data, field)
+  end
 end
