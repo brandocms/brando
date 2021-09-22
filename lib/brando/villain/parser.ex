@@ -296,7 +296,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert YouTube video to iframe html
       """
-      def video(%{remote_id: remote_id, source: "youtube"}, _) do
+      def video(%{remote_id: remote_id, source: :youtube}, _) do
         params = "autoplay=1&controls=0&showinfo=0&rel=0"
         ~s(<div class="video-wrapper">
              <iframe width="420"
@@ -308,7 +308,7 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      def video(%{remote_id: remote_id, source: "vimeo"}, _) do
+      def video(%{remote_id: remote_id, source: :vimeo}, _) do
         ~s(<div class="video-wrapper">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
@@ -322,7 +322,7 @@ defmodule Brando.Villain.Parser do
       end
 
       # Convert file video to html
-      def video(%{remote_id: src, source: "file"} = data, _) do
+      def video(%{remote_id: src, source: :file} = data, _) do
         video_tag(src,
           width: data.width,
           height: data.height,
@@ -334,6 +334,8 @@ defmodule Brando.Villain.Parser do
         )
         |> safe_to_string()
       end
+
+      def video(_, _), do: ""
 
       defoverridable video: 2
 
