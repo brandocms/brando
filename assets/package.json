@@ -11,6 +11,7 @@
     "@brandocms/jupiter": "^3.42.0",
     "@codemirror/basic-setup": "^0.19.0",
     "@codemirror/lang-html": "^0.19.1",
+    "@codemirror/lang-markdown": "^0.19.1",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
     "@tiptap/core": "^2.0.0-beta.105",

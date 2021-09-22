@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.Villain.Blocks do
       gallery: Blocks.GalleryBlock,
       header: Blocks.HeaderBlock,
       html: Blocks.HtmlBlock,
+      markdown: Blocks.MarkdownBlock,
       module: Blocks.ModuleBlock,
       picture: Blocks.PictureBlock,
       svg: Blocks.SvgBlock,

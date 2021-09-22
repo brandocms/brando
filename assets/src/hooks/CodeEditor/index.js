@@ -4,7 +4,6 @@ import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { html } from '@codemirror/lang-html'
 
-
 export default (app) => ({
   mounted() {
     this.initialize()    

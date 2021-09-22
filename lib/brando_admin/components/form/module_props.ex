@@ -117,6 +117,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               SVG
             </button>
+
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="markdown"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Markdown
+            </button>
           </div>
         </Modal>
 

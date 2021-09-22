@@ -142,6 +142,20 @@
     "@codemirror/state" "^0.19.0"
     "@lezer/css" "^0.15.0"
 
+"@codemirror/lang-html@^0.19.0":
+  version "0.19.2"
+  resolved "https://registry.yarnpkg.com/@codemirror/lang-html/-/lang-html-0.19.2.tgz#255f90eef6255190b5c4ab0afaabb9a47f96870d"
+  integrity sha512-FGayRusY5BPpjYTPWP1P6AiYzV/tq5xAFYcX1IWbCoJU8GhW1hcfgY9ls7Ru4ysCC/6vJ38HXvqoNwkEgjS7+A==
+  dependencies:
+    "@codemirror/autocomplete" "^0.19.0"
+    "@codemirror/highlight" "^0.19.0"
+    "@codemirror/lang-css" "^0.19.0"
+    "@codemirror/lang-javascript" "^0.19.0"
+    "@codemirror/language" "^0.19.0"
+    "@codemirror/state" "^0.19.0"
+    "@lezer/common" "^0.15.0"
+    "@lezer/html" "^0.15.0"
+
 "@codemirror/lang-html@^0.19.1":
   version "0.19.1"
   resolved "https://registry.yarnpkg.com/@codemirror/lang-html/-/lang-html-0.19.1.tgz#9d71842d247eae9746fcee14a8dc41405911e01d"
@@ -168,6 +182,19 @@
     "@codemirror/state" "^0.19.0"
     "@codemirror/view" "^0.19.0"
     "@lezer/javascript" "^0.15.0"
+
+"@codemirror/lang-markdown@^0.19.1":
+  version "0.19.1"
+  resolved "https://registry.yarnpkg.com/@codemirror/lang-markdown/-/lang-markdown-0.19.1.tgz#4d03378cad8939394b54a991d534c906e779b6b0"
+  integrity sha512-J79Y27G7rlDtEEe5ObtRhHeSpyHCClQUEin9D+22jQf41SDdND1f4Qxm2Q5itQGF9IvWBhqbfvSRYfj+1sTZrg==
+  dependencies:
+    "@codemirror/highlight" "^0.19.0"
+    "@codemirror/lang-html" "^0.19.0"
+    "@codemirror/language" "^0.19.0"
+    "@codemirror/state" "^0.19.0"
+    "@codemirror/view" "^0.19.0"
+    "@lezer/common" "^0.15.0"
+    "@lezer/markdown" "^0.15.0"
 
 "@codemirror/language@^0.19.0":
   version "0.19.2"
@@ -310,6 +337,13 @@
   version "0.15.1"
   resolved "https://registry.yarnpkg.com/@lezer/lr/-/lr-0.15.1.tgz#a4f7fac3a13b76955a4a6d5da3c8a6ea4a0da7f0"
   integrity sha512-NnFhj1zyiyFqrZWFEBdxHoqtlFLTbXumMXLTO8oFSfR0jUaRSW+bQKwLqfNig1twyKEuSGpvkk2D27oEPFzFog==
+  dependencies:
+    "@lezer/common" "^0.15.0"
+
+"@lezer/markdown@^0.15.0":
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/@lezer/markdown/-/markdown-0.15.0.tgz#efd7ccb8f0c22baa707db74e29010e93d34cbb9c"
+  integrity sha512-uaCWymcUIvVr7jxDki0V4wGOcSasFt9H8cS/tgk7FAHUpq622rCkmRgGpv8DtN74yNlShcl1jhdyoRhop1f69g==
   dependencies:
     "@lezer/common" "^0.15.0"
 
