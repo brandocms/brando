@@ -128,12 +128,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </div>
         </Modal>
 
-        <Modal
-          title="Image info"
-          center_header={true}
-          id={"#{@uid}-image-info"}>
-          Info about the image here :)
-        </Modal>
         <:config>
           <div class="panels">
             <div class="panel">
