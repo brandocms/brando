@@ -78,9 +78,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def update(%{block: block} = assigns, socket) do
-    require Logger
-    Logger.error(inspect("==> updating container_block!"))
-
     block_data =
       block
       |> inputs_for(:data)

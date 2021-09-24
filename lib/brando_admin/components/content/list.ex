@@ -187,9 +187,7 @@ defmodule BrandoAdmin.Components.Content.List do
   def handle_event("sequenced", params, socket) do
     schema = socket.assigns.schema
     Sequenced.sequence(schema, params)
-    require Logger
-    Logger.error(inspect(self(), pretty: true))
-    send(self(), {:toast, "Sequence updated!"})
+    send(self(), {:toast, "Sequence updated"})
     {:noreply, assign_entries(socket, socket.assigns)}
   end
 
@@ -262,12 +260,6 @@ defmodule BrandoAdmin.Components.Content.List do
       |> params_to_list_opts(params, schema)
 
     {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
-
-    require Logger
-
-    Logger.error(
-      "==> entries are now #{inspect(Enum.map(entries.entries, &Map.take(&1, [:id, :status, :updated_at])), pretty: true)}"
-    )
 
     socket
     |> assign(:list_opts, list_opts)

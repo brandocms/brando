@@ -166,9 +166,6 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
   end
 
   def handle_event("toggle_advanced", _, socket) do
-    require Logger
-    Logger.error("toggle_advanced!")
-    Logger.error("advanced: #{inspect(socket.assigns.advanced)}")
     {:noreply, socket |> assign(:advanced, !socket.assigns.advanced)}
   end
 

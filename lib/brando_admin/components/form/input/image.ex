@@ -295,18 +295,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    require Logger
-    Logger.error("==> reset_field")
-
     updated_changeset =
       Ecto.Changeset.put_embed(
         changeset,
         field_name,
         nil
       )
-
-    require Logger
-    Logger.error("==> updated_changeset: #{inspect(updated_changeset, pretty: true)}")
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

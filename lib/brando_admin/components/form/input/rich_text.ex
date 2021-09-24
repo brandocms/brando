@@ -35,9 +35,6 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
   end
 
   def update(%{value: value} = assigns, socket) do
-    require Logger
-    Logger.error("==> update rich_text value: #{inspect(value, pretty: true)}")
-
     {:ok,
      socket
      |> assign(assigns)

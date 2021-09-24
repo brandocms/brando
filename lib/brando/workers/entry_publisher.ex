@@ -66,10 +66,6 @@ defmodule Brando.Worker.EntryPublisher do
         Map.put(params, :publish_at, DateTime.utc_now())
       end
 
-    require Logger
-    Logger.error("-- pub")
-    Logger.error(inspect(schema, pretty: true))
-
     schema_module = Module.concat(List.wrap(schema))
     context = schema_module.__modules__().context
     singular = schema_module.__naming__().singular

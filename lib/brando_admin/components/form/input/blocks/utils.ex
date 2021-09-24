@@ -27,10 +27,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
 
     params = Map.get(form.params || %{}, to_string(field), %{})
 
-    require Logger
-    Logger.error(inspect(form.params, pretty: true))
-    Logger.error(inspect(form.source.params, pretty: true))
-
     %Phoenix.HTML.Form{
       source: form.source,
       impl: Phoenix.HTML.FormData.Ecto.Changeset,
