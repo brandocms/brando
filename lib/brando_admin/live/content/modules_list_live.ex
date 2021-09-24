@@ -1,9 +1,7 @@
 defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
-
-  alias BrandoAdmin.Components.Content
-
   import Brando.Gettext
+  alias BrandoAdmin.Components.Content
 
   def render(assigns) do
     ~F"""

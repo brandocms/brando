@@ -335,10 +335,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{"module" => module_params},
         %{assigns: %{current_user: current_user, entry: entry}} = socket
       ) do
-    require Logger
-    Logger.error(inspect("==> validating!"))
     changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
-
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
