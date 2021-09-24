@@ -47,12 +47,14 @@ h2.titlecase {
 
 .multiselect {
   @fontsize base/1;
+  @space height 51px <=desktop_md;
+  @space height 55px desktop_lg;
+  @space height 55px desktop_xl;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding-left: 15px;
   padding-right: 15px;
-  height: 51px;
   width: 100%;
   background-color: theme(colors.input);
   border: 0;

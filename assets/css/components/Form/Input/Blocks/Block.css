@@ -240,14 +240,8 @@
     }
   }
 
-  &[data-type="module"] {
-    border-radius: 10px;
-
-    > .module-description,
-    > .block-description {
-      transition: opacity 300ms ease;
-      opacity: 1;
-    }
+  &[data-block-type="container"] {
+    border-radius: 15px;
   }
 
   .block-render {

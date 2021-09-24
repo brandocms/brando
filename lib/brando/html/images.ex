@@ -612,8 +612,14 @@ defmodule Brando.HTML.Images do
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end
 
+    list =
+      case cfg.srcset do
+        %{default: list} -> list
+        list when is_list(list) -> list
+      end
+
     srcset_values =
-      for {k, v} <- cfg.srcset do
+      for {k, v} <- list do
         path =
           Utils.img_url(
             image_field,
@@ -642,11 +648,21 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    {:ok, cfg} = {:ok, apply(mod, :__attribute_opts__, [field])}
+    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
+
+    require Logger
+    Logger.error(inspect(cfg, pretty: true))
+    Logger.error(inspect(cfg.srcset, pretty: true))
 
     if !cfg.srcset do
       raise ArgumentError,
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
+    end
+
+    if !Map.get(cfg.srcset, key) do
+      raise ArgumentError,
+        message:
+          "no `#{inspect(key)}` key set in #{inspect(mod)}'s #{inspect(field)} srcset config"
     end
 
     # check if it is cropped

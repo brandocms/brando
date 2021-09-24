@@ -69,7 +69,7 @@
   }
 
   p {
-    @fontsize base(0.95);
+    @fontsize base;
     margin-bottom: 22px;
 
     &:last-of-type {

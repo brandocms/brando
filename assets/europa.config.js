@@ -260,8 +260,8 @@ module.exports = {
           ipad_portrait: '20px',
           ipad_landscape: '1.3888888888888888vw',
           desktop_md: '1.3888888888888888vw',
-          desktop_lg: '20px',
-          desktop_xl: '20px'
+          desktop_lg: '1.3888888888888888vw',
+          desktop_xl: '23px'
         },
 
         badge: {

@@ -486,8 +486,7 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     if upload_entry.done? do
-      asset_opts = schema.__asset_opts__(key)
-      cfg = Map.get(asset_opts, :cfg)
+      %{cfg: cfg} = schema.__asset_opts__(key)
 
       {:ok, image_struct} =
         consume_uploaded_entry(
@@ -534,8 +533,7 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     if upload_entry.done? do
-      asset_opts = schema.__asset_opts__(key)
-      cfg = Map.get(asset_opts, :cfg)
+      %{cfg: cfg} = schema.__asset_opts__(key)
 
       {:ok, image_struct} =
         consume_uploaded_entry(
