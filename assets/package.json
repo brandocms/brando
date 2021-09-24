@@ -10,17 +10,17 @@
   "dependencies": {
     "@brandocms/jupiter": "^3.42.0",
     "@codemirror/basic-setup": "^0.19.0",
-    "@codemirror/lang-html": "^0.19.1",
+    "@codemirror/lang-html": "^0.19.3",
     "@codemirror/lang-markdown": "^0.19.1",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
-    "@tiptap/core": "^2.0.0-beta.105",
+    "@tiptap/core": "^2.0.0-beta.112",
     "@tiptap/extension-character-count": "^2.0.0-beta.13",
-    "@tiptap/extension-focus": "^2.0.0-beta.25",
+    "@tiptap/extension-focus": "^2.0.0-beta.26",
     "@tiptap/extension-link": "^2.0.0-beta.20",
     "@tiptap/extension-subscript": "^2.0.0-beta.4",
     "@tiptap/extension-typography": "^2.0.0-beta.14",
-    "@tiptap/starter-kit": "^2.0.0-beta.104",
+    "@tiptap/starter-kit": "^2.0.0-beta.111",
     "autosize": "^5.0.1",
     "flatpickr": "^4.6.9",
     "gsap": "^3.7.1",
@@ -28,9 +28,9 @@
     "lodash": "^4.17.21",
     "morphdom": "^2.6.1",
     "nprogress": "^0.2.0",
-    "phoenix": "^1.6.0-rc.0",
-    "phoenix_html": "^3.0.0",
-    "phoenix_live_view": "^0.16.3",
+    "phoenix": "^1.6.0-rc.1",
+    "phoenix_html": "^3.0.4",
+    "phoenix_live_view": "^0.16.4",
     "slugify": "^1.6.0",
     "sortablejs": "^1.14.0",
     "tippy.js": "^6.3.1",
@@ -41,9 +41,9 @@
   "devDependencies": {
     "@brandocms/europacss": "^0.6.2",
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.24",
-    "autoprefixer": "^10.3.4",
-    "svelte": "^3.42.5",
-    "svelte-preprocess": "^4.9.4",
-    "vite": "^2.5.7"
+    "autoprefixer": "^10.3.5",
+    "svelte": "^3.43.0",
+    "svelte-preprocess": "^4.9.5",
+    "vite": "^2.5.10"
   }
 }
