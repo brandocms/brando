@@ -129,6 +129,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
       options_fun when is_function(options_fun) ->
         options_fun.(form, opts)
+
+      options when is_list(options) ->
+        options
     end
     |> Enum.map(&ensure_string_values/1)
   end

@@ -64,6 +64,16 @@
       }
     }
 
+    .multiselect {
+      @fontsize sm;
+      background-color: #fff;
+      height: 45px;
+
+      .button-edit {
+        font-size: 14px;
+      }
+    }
+
     .label-wrapper {
       margin-bottom: 15px;
     }
