@@ -42,12 +42,7 @@ defmodule Brando.Type.ImageConfig do
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: %Brando.Type.ImageConfig{})
-    {:ok, val}
-  end
-
-  def cast(val) when is_map(val), do: {:ok, val}
+  def cast(val) when is_map(val), do: {:ok, Brando.Utils.map_to_struct(val, __MODULE__)}
 
   @doc """
   Integers are never considered blank

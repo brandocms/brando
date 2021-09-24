@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Main application file
     {:eex, "lib/application_name/application.ex", "lib/application_name/application.ex"},
 
-    # Tuple implementation for Poison
+    # Tuple implementation for Jason
     {:eex, "lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
 
     # Presence

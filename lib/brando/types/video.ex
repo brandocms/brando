@@ -17,14 +17,13 @@ defmodule Brando.Type.Video do
             thumbnail_url: nil
 
   @doc """
-  Returns the internal type representation of our `Role` type for pg
+  Returns the internal type representation of our cfg type for pg
   """
   def type, do: :map
 
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(val) when is_binary(val), do: {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
   def cast(%__MODULE__{} = val), do: {:ok, val}
   def cast(val) when is_map(val), do: {:ok, Utils.map_to_struct(val, %__MODULE__{})}
 
@@ -40,18 +39,10 @@ defmodule Brando.Type.Video do
     {:ok, Utils.map_to_struct(val, %__MODULE__{})}
   end
 
-  def load(val) when is_binary(val) do
-    {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
-  end
-
   @doc """
   When dumping data to the database we expect a map, but check for
   other options as well.
   """
-  def dump(val) when is_binary(val) do
-    {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
-  end
-
   def dump(val) when is_map(val) do
     {:ok, val}
   end

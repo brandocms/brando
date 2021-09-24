@@ -21,10 +21,6 @@ defmodule Brando.Type.FileConfig do
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: %Brando.Type.FileConfig{})
-    {:ok, val}
-  end
 
   def cast(val) when is_map(val) do
     {:ok, val}
