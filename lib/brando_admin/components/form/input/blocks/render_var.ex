@@ -10,6 +10,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   data should_render?, :boolean
   data label, :string
   data type, :string
+  data instructions, :string
+  data placeholder, :string
 
   def v(form, field) do
     input_value(form, field)
@@ -33,6 +35,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      |> assign(:important, important)
      |> assign(:label, v(var, :label))
      |> assign(:type, v(var, :type))
+     |> assign(:instructions, v(var, :instructions))
+     |> assign(:placeholder, v(var, :placeholder))
      |> assign(:var, var)}
   end
 
@@ -47,6 +51,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <Input.Toggle form={@var} field={:important} />
               <Input.Text form={@var} field={:key} />
               <Input.Text form={@var} field={:label} />
+              <Input.Text form={@var} field={:instructions} />
+              <Input.Text form={@var} field={:placeholder} />
               <Input.Radios form={@var} field={:type} options={[
                 %{label: "Boolean", value: "boolean"},
                 %{label: "Color", value: "color"},
@@ -63,26 +69,28 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               {hidden_input @var, :label}
               {hidden_input @var, :type}
               {hidden_input @var, :important}
+              {hidden_input @var, :instructions}
+              {hidden_input @var, :placeholder}
 
               <div class="brando-input">
                 {#case @type}
                   {#match "string"}
-                    <Input.Text form={@var} field={:value} label={@label} debounce={750} />
+                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
 
                   {#match "text"}
-                    <Input.Textarea form={@var} field={:value} label={@label} debounce={750} />
+                    <Input.Textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
 
                   {#match "boolean"}
-                    <Input.Toggle form={@var} field={:value} label={@label} />
+                    <Input.Toggle form={@var} field={:value} label={@label} instructions={@instructions} />
 
                   {#match "color"}
-                    <Input.Text form={@var} field={:value} label={@label} debounce={750} />
+                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
 
                   {#match "datetime"}
-                    <Input.Datetime form={@var} field={:value} label={@label} />
+                    <Input.Datetime form={@var} field={:value} label={@label} instructions={@instructions} />
 
                   {#match "html"}
-                    <Input.RichText form={@var} field={:value} label={@label} />
+                    <Input.RichText form={@var} field={:value} label={@label} instructions={@instructions} />
                 {/case}
               </div>
             </div>

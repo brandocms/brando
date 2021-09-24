@@ -18,5 +18,7 @@ defmodule Brando.Content.Var.Html do
     attribute :key, :string, required: true
     attribute :value, :text
     attribute :important, :boolean, default: false
+    attribute :placeholder, :string
+    attribute :instructions, :string
   end
 end

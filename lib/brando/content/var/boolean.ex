@@ -18,5 +18,7 @@ defmodule Brando.Content.Var.Boolean do
     attribute :key, :string, required: true
     attribute :value, :boolean, required: true, default: false
     attribute :important, :boolean, default: false
+    attribute :placeholder, :string
+    attribute :instructions, :string
   end
 end

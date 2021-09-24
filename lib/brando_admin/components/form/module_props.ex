@@ -369,6 +369,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   <Input.Toggle form={var} field={:important} />
                   <Input.Text form={var} field={:key} />
                   <Input.Text form={var} field={:label} />
+                  <Input.Text form={var} field={:instructions} />
+                  <Input.Text form={var} field={:placeholder} />
                   <Input.Radios
                     form={var}
                     field={:type}
