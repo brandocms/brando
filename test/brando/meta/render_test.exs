@@ -83,7 +83,9 @@ defmodule Brando.MetaRenderTest do
     # change identity values
     {:ok, identity} = Brando.Sites.get_identity()
     Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
-    Brando.Sites.update_seo(%{fallback_meta_image: @img})
+
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
@@ -92,7 +94,9 @@ defmodule Brando.MetaRenderTest do
 
     {:ok, identity} = Brando.Sites.get_identity()
     Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
-    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
   test "meta_tag" do

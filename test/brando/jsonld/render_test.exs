@@ -42,7 +42,9 @@ defmodule Brando.JSONLDRenderTest do
   test "render json ld" do
     {:ok, identity} = Brando.Sites.get_identity()
     Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
-    Brando.Sites.update_seo(%{fallback_meta_image: @img})
+
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
     mock_conn = Brando.Plug.HTML.put_json_ld(%Plug.Conn{}, Brando.Pages.Page, @mock_data)
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
 
@@ -74,13 +76,17 @@ defmodule Brando.JSONLDRenderTest do
               ]}
            ]
 
-    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
   test "render json ld :corporation" do
     {:ok, identity} = Brando.Sites.get_identity()
     Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
-    Brando.Sites.update_seo(%{fallback_meta_image: @img})
+
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
+
     rendered_json_ld = Brando.HTML.render_json_ld(:corporation)
 
     assert rendered_json_ld == [
@@ -102,11 +108,13 @@ defmodule Brando.JSONLDRenderTest do
              []
            ]
 
-    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
   test "render json ld :breadcrumbs" do
-    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+    {:ok, seo} = Brando.Sites.get_seo()
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
 
     breadcrumbs = [
       {"Home", "/"},
