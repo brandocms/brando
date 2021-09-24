@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Sites.CacheLive do
   use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-  use BrandoAdmin.Presence
   use Phoenix.HTML
 
   import Brando.Gettext

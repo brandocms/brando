@@ -15,7 +15,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
     quote do
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-      use BrandoAdmin.Presence
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
 

@@ -17,7 +17,7 @@ import configureBreakpoints from './config/BREAKPOINTS'
 import configureFader from './config/FADER'
 import configureMoonwalk from './config/MOONWALK'
 
-const PREFERS_REDUCED_MOTION = Dom.find('meta[name="prefers_reduced_motion"]').getAttribute('content')
+const PREFERS_REDUCED_MOTION = Dom.find('meta[name="prefers_reduced_motion"]').getAttribute('content') === 'true' ? true : false
 
 if (PREFERS_REDUCED_MOTION) {
   gsap.globalTimeline.timeScale(200)
@@ -79,6 +79,20 @@ export default () => {
 
     app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
     app.lobbyChannel = app.userSocket.channel('lobby', {})
+    
+    app.lobbyChannel.on('toast', data => {
+      app.toast.mutation(data.level, data.payload)
+    })
+
+    app.lobbyChannel.on('presence_state', state => {
+      console.log('presence_state', state)
+      app.presence.storeLobbyPresences(state)
+    })
+
+    app.lobbyChannel.on('presence_diff', diff => {
+      console.log('presence_diff', diff)
+      app.presence.storeLobbyPresencesDiff(diff)
+    })
 
     app.userChannel.on('progress:show', () => {
       gsap.to($progressWrapper, { yPercent: 0, ease: 'circ.out', duration: 0.35 })
@@ -92,9 +106,6 @@ export default () => {
       app.toast.notification(data.level, data.payload)
     })
 
-    app.lobbyChannel.on('toast', data => {
-      app.toast.mutation(data.level, data.payload)
-    })
 
     const getHeights = () => {
       const progressItems = Dom.all('.progress-item')
@@ -165,7 +176,8 @@ export default () => {
       console.debug('==> Joined user_channel')
     })
 
-    app.lobbyChannel.join().receive('ok', () => {
+    app.lobbyChannel.join().receive('ok', payload => {
+      app.presence.setUsers(payload.users)
       console.debug('==> Joined lobby_channel')
     })
   })

@@ -217,6 +217,7 @@ code {
   display: block;
   margin-right: 5px;
   margin-top: 5px;
+  
   &:last-of-type {
     margin-right: 0;
   }

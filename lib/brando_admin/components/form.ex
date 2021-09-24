@@ -190,10 +190,8 @@ defmodule BrandoAdmin.Components.Form do
     <div
       id={"#{@id}-el"}
       class="brando-form b-rendered"
-
+      data-moonwalk-run="brandoForm"
       phx-hook="Brando.Form">
-
-      {!-- data-moonwalk-run="brandoForm" --}
 
       {!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? --}
       <div class="form-tabs">
@@ -279,7 +277,6 @@ defmodule BrandoAdmin.Components.Form do
         {#if @has_scheduled_publishing?}
           <ScheduledPublishingDrawer
             id={"#{@id}-scheduled-publishing-drawer"}
-            current_user={@current_user}
             blueprint={@blueprint}
             form={f}
             status={@status_scheduled}

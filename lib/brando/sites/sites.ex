@@ -18,6 +18,9 @@ defmodule Brando.Sites do
   @type params :: map
   @type user :: Brando.Users.User.t()
 
+  #
+  # Identity
+
   query :single, Identity, do: fn q -> q end
 
   matches Identity do
@@ -141,6 +144,18 @@ defmodule Brando.Sites do
     {:ok, identity}
   end
 
+  #
+  # SEO
+
+  query :single, SEO, do: fn q -> q end
+
+  matches SEO do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+    end
+  end
+
   @doc """
   Get seo
   """
@@ -156,26 +171,18 @@ defmodule Brando.Sites do
   @doc """
   Create new seo
   """
-  @spec create_seo(params, user | :system) ::
-          {:ok, seo} | {:error, Ecto.Changeset.t()}
-  def create_seo(seo_params, user \\ :system) do
-    changeset = Identity.changeset(%SEO{}, seo_params, user)
-    Brando.repo().insert(changeset)
-  end
+  mutation :create, SEO
 
   @doc """
   Update existing seo
   """
-  @spec update_seo(params, user | :system) :: {:ok, seo} | {:error, changeset}
-  def update_seo(seo_params, user \\ :system) do
-    {:ok, seo} = get_seo()
+  mutation :update, SEO do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.SEO.update()
 
-    seo
-    |> SEO.changeset(seo_params, user)
-    |> Brando.repo().update()
-    |> Cache.SEO.update()
-
-    #! TODO: |> update_villains_referencing_seo()
+      #! TODO: |> update_villains_referencing_seo()
+    end
   end
 
   @doc """
@@ -183,6 +190,7 @@ defmodule Brando.Sites do
   """
   def create_default_seo, do: Brando.repo().insert!(%SEO{})
 
+  #
   # Previews
 
   query :list, Preview, do: fn q -> q end

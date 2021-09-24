@@ -33,7 +33,7 @@ export default () => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
-        const toolEls = [Dom.all(el, '.list-tools .statuses > *'), Dom.all(el, '.list-tools .filters > *')]
+        const toolEls = Dom.all(el, '.list-tools .statuses > *, .list-tools .filters > *') || []
         const listRows = Dom.all(el, '.list-row')
         const paginationEls = Dom.all(el, '.pagination > *')
 

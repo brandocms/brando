@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Content.ModuleUpdateLive do
   use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-  use BrandoAdmin.Presence
   use BrandoAdmin.Toast
   use Phoenix.HTML
 

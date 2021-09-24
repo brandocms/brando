@@ -7,11 +7,11 @@ export default (app) => ({
     
     this.el.addEventListener('click', e => {
       e.preventDefault()
-      this.$form.dispatchEvent(new Event('submit', { bubbles: true }))
+      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     })
 
     this.handleEvent('b:submit', () => {
-      this.$form.dispatchEvent(new Event('submit', { bubbles: true }))
+      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     })
   }
 })

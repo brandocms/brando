@@ -12,7 +12,6 @@ import LegacyImageUploadHook from './hooks/LegacyImageUpload'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
 import PopoverHook from './hooks/Popover'
-import PresenceHook from './hooks/Presence'
 import SelectFilterHook from './hooks/SelectFilter'
 import SelectOptionsScrollerHook from './hooks/SelectOptionsScroller'
 import SlugHook from './hooks/Slug'
@@ -42,7 +41,6 @@ export default app => {
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
     'Brando.Popover': PopoverHook(app),
-    'Brando.Presence': PresenceHook(app),
     'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.SelectOptionsScroller': SelectOptionsScrollerHook(app),
     'Brando.Slug': SlugHook(app),

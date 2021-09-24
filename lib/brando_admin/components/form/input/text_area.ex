@@ -12,6 +12,22 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   prop instructions, :string
   prop debounce, :any
 
+  def update(%{blueprint: blueprint, input: %{name: name, opts: opts}} = assigns, socket) do
+    translations = get_in(blueprint.translations, [:fields, name]) || []
+    placeholder = Keyword.get(translations, :placeholder, assigns[:placeholder])
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       placeholder: placeholder,
+       class: opts[:class],
+       monospace: opts[:monospace] || false,
+       disabled: assigns[:disabled] || false,
+       debounce: assigns[:debounce] || 750
+     )}
+  end
+
   def update(assigns, socket) do
     {:ok, socket |> assign(assigns) |> assign(:debounce, assigns[:debounce])}
   end
@@ -23,7 +39,10 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       field={name}
       class={opts[:class]}
       form={@form}>
-      {textarea @form, name, class: "text", phx_debounce: @debounce}
+      {textarea @form, name,
+        class: "text",
+        placeholder: @placeholder,
+        phx_debounce: @debounce}
     </FieldBase>
     """
   end
