@@ -75,6 +75,7 @@ defmodule Brando.Router do
           live "/config/globals", BrandoAdmin.Sites.GlobalsLive
           live "/config/identity", BrandoAdmin.Sites.IdentityLive
           live "/config/navigation", BrandoAdmin.NavigationLive
+          live "/config/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
           live "/config/content/modules", BrandoAdmin.Content.ModuleListLive
           live "/config/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleUpdateLive
           live "/config/content/sections", BrandoAdmin.Content.SectionListLive

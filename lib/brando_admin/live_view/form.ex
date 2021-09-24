@@ -9,14 +9,12 @@ defmodule BrandoAdmin.LiveView.Form do
   """
   import Phoenix.LiveView
   alias Brando.Utils
-  alias BrandoAdmin.Toast
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-      use BrandoAdmin.Toast
       use BrandoAdmin.Presence
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
@@ -131,12 +129,16 @@ defmodule BrandoAdmin.LiveView.Form do
 
         case apply(context, :"#{mutation_type}_#{singular}", [changeset, user]) do
           {:ok, entry} ->
-            Toast.send_delayed("#{String.capitalize(singular)} #{mutation_type}d")
+            send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
             {:halt, push_redirect(socket, to: redirect_fn.(socket, entry))}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:halt, assign(socket, changeset: changeset)}
         end
+
+      {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
+        BrandoAdmin.Toast.send_to(current_user, message)
+        {:halt, socket}
 
       _, socket ->
         {:cont, socket}

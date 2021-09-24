@@ -1,33 +1,20 @@
 defmodule BrandoAdmin.Toast do
-  @topic "b:toast"
-
   defmacro __using__(_) do
     quote do
-      def handle_info({:toast, data}, socket) do
-        {:noreply, push_event(socket, "b:toast", data)}
+      def handle_info({:toast, message}, %{assigns: %{current_user: current_user}} = socket) do
+        BrandoAdmin.Toast.send_to(current_user, message)
+        {:noreply, socket}
       end
     end
   end
 
-  def send(payload, opts \\ [type: :notification, level: :success]) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      @topic,
-      {:toast,
-       %{type: Keyword.get(opts, :type), level: Keyword.get(opts, :level), payload: payload}}
-    )
+  def send(payload, %{type: :mutation} = opts \\ %{type: :notification, level: :success}) do
+    Brando.endpoint().broadcast("lobby", "toast", Map.merge(%{payload: payload}, opts))
   end
 
-  def send_delayed(payload, opts \\ [type: :notification, level: :success]) do
-    Task.start(fn ->
-      :timer.sleep(500)
+  def send_to(user, message, opts \\ %{level: :success, type: :notification})
 
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        @topic,
-        {:toast,
-         %{type: Keyword.get(opts, :type), level: Keyword.get(opts, :level), payload: payload}}
-      )
-    end)
+  def send_to(user, message, opts) do
+    Brando.endpoint().broadcast("user:#{user.id}", "toast", Map.merge(%{payload: message}, opts))
   end
 end

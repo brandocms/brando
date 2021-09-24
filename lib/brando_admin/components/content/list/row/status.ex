@@ -25,7 +25,13 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
           data-statuses={@json_statuses}
           phx-hook="Brando.StatusDropdown"
           phx-value-id={@entry.id}>
-          <svg data-testid="status-pending" width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            data-testid="status-pending"
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg">
             <circle class="pending" cx="7.5" cy="7.5" r="7.5" />
             <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="white" />
             <line x1="3.5" y1="7.5" x2="8" y2="7.5" stroke="white" />
@@ -44,7 +50,9 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
             xmlns="http://www.w3.org/2000/svg"
             width="15"
             height="15"
-            viewBox="0 0 15 15"><circle r="7.5" cy="7.5" cx="7.5" class={@entry.status}"></circle></svg>
+            viewBox="0 0 15 15">
+            <circle r="7.5" cy="7.5" cx="7.5" class={@entry.status} />
+          </svg>
         </div>
       </div>
     {/if}

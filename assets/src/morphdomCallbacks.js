@@ -28,11 +28,15 @@ export default {
     }
 
     if (fromEl.hasAttribute('data-b-hover')) {
+      console.log('hasATtr b-hover')
       toEl.dataset.bHover = ''
+      console.log('hasATtr b-hover done')
     }
 
     if (fromEl.hasAttribute('data-b-loaded')) {
+      console.log('hasATtr b-loaded')
       toEl.dataset.bLoaded = ''
+      console.log('hasATtr b-loaded done')
     }
 
     return toEl

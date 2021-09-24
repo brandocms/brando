@@ -11,6 +11,6 @@ defmodule Brando.Notifications do
       user: user
     }
 
-    Toast.send(payload, type: :mutation)
+    Toast.send(payload, %{type: :mutation})
   end
 end

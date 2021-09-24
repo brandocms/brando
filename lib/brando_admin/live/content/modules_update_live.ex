@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Content.ModuleUpdateLive do
   use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-  use BrandoAdmin.Toast
   use BrandoAdmin.Presence
+  use BrandoAdmin.Toast
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -17,7 +17,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   alias BrandoAdmin.Components.Form.ModuleProps
   alias BrandoAdmin.Components.Form.Submit
   alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Toast
 
   alias Surface.Components.Form
 
@@ -348,7 +347,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->
-        Toast.send_delayed("Module updated")
+        send(self(), {:toast, gettext("Module updated")})
         {:noreply, push_redirect(socket, to: "/admin/config/content/modules")}
 
       {:error, %Ecto.Changeset{} = changeset} ->

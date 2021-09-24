@@ -240,8 +240,8 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/globals"
               },
               %{
-                name: Brando.Gettext.gettext("Planned publishing"),
-                url: "/admin/config/planned-publishing"
+                name: Brando.Gettext.gettext("Scheduled publishing"),
+                url: "/admin/config/scheduled_publishing"
               },
               %{
                 name: Brando.Gettext.gettext("Cache"),

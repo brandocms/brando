@@ -14,7 +14,6 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Toast
 
   def mount(_, %{"user_token" => token}, socket) do
     {:ok,
@@ -120,7 +119,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
       ) do
     case Globals.create_global_category(Map.put(params, "globals", []), user) do
       {:ok, _} ->
-        Toast.send_delayed("Category created")
+        send(self(), {:toast, "Category created"})
         Modal.hide("modal-create-category")
         {:noreply, assign_globals(socket)}
 
@@ -141,7 +140,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
 
     case Globals.update_global_category(changeset, user) do
       {:ok, _} ->
-        Toast.send_delayed("Category updated")
+        send(self(), {:toast, "Category updated"})
 
         {:noreply,
          socket
@@ -153,7 +152,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
          )}
 
       {:error, changeset} ->
-        Toast.send_delayed("Error updating category")
+        send(self(), {:toast, "Error updating category"})
         require Logger
         Logger.error(inspect(changeset, pretty: true))
         Logger.error(inspect(changeset.errors, pretty: true))

@@ -39,6 +39,7 @@
 @import './components/SideBar/NavigationMenuSectionItem.css';
 @import './views/config/Cache.css';
 @import './views/config/Globals.css';
+@import './views/config/ScheduledPublishing.css';
 
 @europa base;
 

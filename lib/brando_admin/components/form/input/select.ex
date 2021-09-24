@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Toast
   alias Surface.Components.Form
 
   prop blueprint, :any
@@ -441,7 +440,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     case apply(context, :"create_#{singular}", [select_changeset, current_user]) do
       {:ok, _} ->
-        Toast.send_delayed("#{String.capitalize(singular)} created")
+        send(self(), {:toast, "#{String.capitalize(singular)} created"})
 
         {:noreply,
          socket

@@ -14,26 +14,6 @@ export default class Toast {
       iconColor: '#ffffff',
       theme: 'brando'
     })
-
-
-    this.setupListener()
-  }
-
-  setupListener () {
-    window.addEventListener('phx:hook:b:toast', ({ detail: { type, level, payload }}) => {
-      switch (type) {
-        case 'notification':
-          this.notification(level, payload)
-          break
-
-        case 'mutation':
-          this.mutation(level, payload)
-          break
-
-        default:
-          break
-      }
-    })
   }
 
   notification (level, message) {
@@ -61,7 +41,7 @@ export default class Toast {
 
   mutation (level, payload) {
     this.izitoast.show({
-      title: payload.user.name,
+      title: payload.user.name || '',
       message: `${payload.action} [${payload.identifier.type}#<strong>${payload.identifier.id}</strong>] &raquo; "${payload.identifier.title}"`,
       theme: 'mutations',
       displayMode: 2,

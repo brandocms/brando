@@ -9,14 +9,12 @@ defmodule BrandoAdmin.LiveView.Listing do
   """
   import Phoenix.LiveView
   alias Brando.Utils
-  alias BrandoAdmin.Toast
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-      use BrandoAdmin.Toast
       use BrandoAdmin.Presence
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
@@ -40,8 +38,6 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   def hooks(_params, %{"user_token" => token}, socket, schema) do
-    subscribe_listing("content_listing_#{schema}_default")
-
     if Phoenix.LiveView.connected?(socket) do
       subscribe(schema)
     end
@@ -74,11 +70,11 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         case apply(context, :"delete_#{singular}", [entry_id, user]) do
           {:ok, _} ->
-            Toast.send_delayed("#{String.capitalize(singular)} deleted")
+            send(self(), {:toast, "#{String.capitalize(singular)} deleted"})
             update_list_entries(schema)
 
           {:error, _error} ->
-            Toast.send_delayed("Error deleting #{String.capitalize(singular)}")
+            send(self(), {:toast, "Error deleting #{String.capitalize(singular)}"})
         end
 
         {:halt, socket}
@@ -95,11 +91,11 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         case apply(context, :"duplicate_#{singular}", [entry_id, user]) do
           {:ok, _} ->
-            Toast.send_delayed("#{String.capitalize(singular)} duplicated")
+            send(self(), {:toast, "#{String.capitalize(singular)} duplicated"})
             update_list_entries(schema)
 
           {:error, _error} ->
-            Toast.send_delayed("Error duplicating #{String.capitalize(singular)}")
+            send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
         end
 
         {:halt, socket}
@@ -116,12 +112,19 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         {:halt, socket}
 
+      {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
+        BrandoAdmin.Toast.send_to(current_user, message)
+        {:halt, socket}
+
       _, socket ->
         {:cont, socket}
     end)
   end
 
-  defp update_list_entries(schema) do
+  def update_list_entries(schema) do
+    require Logger
+    Logger.error("==> update_list_entries for #{inspect(schema)}")
+
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       "brando:listing:content_listing_#{schema}_default",
@@ -133,10 +136,6 @@ defmodule BrandoAdmin.LiveView.Listing do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:listing:content_listing_#{schema}_default",
       link: true
     )
-  end
-
-  defp subscribe_listing(list_id) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:admin:list:#{list_id}", link: true)
   end
 
   defp assign_current_user(socket, token) do

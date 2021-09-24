@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Content.SectionListLive do
     <Content.List
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
+      current_user={@current_user}
       uri={@uri}
       params={@params}
       listing={:default} />

@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Sites.CacheLive do
   use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-  use BrandoAdmin.Toast
   use BrandoAdmin.Presence
   use Phoenix.HTML
 
@@ -8,7 +7,6 @@ defmodule BrandoAdmin.Sites.CacheLive do
   import Phoenix.LiveView.Helpers
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Toast
 
   def mount(_, %{"user_token" => token}, socket) do
     if connected?(socket) do
@@ -111,7 +109,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
   def handle_event("empty_caches", _, socket) do
     Cachex.clear(:query)
-    Toast.send(gettext("Caches cleared!"))
+    send(self(), {:toast, gettext("Caches cleared!")})
 
     {:noreply, socket |> assign_caches()}
   end

@@ -53,6 +53,7 @@ defmodule Brando.Worker.EntryPublisher do
           "user_id" => user_id
         }
       }) do
+    {:ok, user} = Brando.Users.get_user(user_id)
     now = DateTime.utc_now()
 
     params = %{
@@ -65,25 +66,23 @@ defmodule Brando.Worker.EntryPublisher do
         Map.put(params, :publish_at, DateTime.utc_now())
       end
 
-    context =
-      schema
-      |> String.split(".")
-      |> Enum.drop(-1)
-      |> Module.concat()
+    require Logger
+    Logger.error("-- pub")
+    Logger.error(inspect(schema, pretty: true))
 
-    single =
-      schema
-      |> String.split(".")
-      |> List.last()
-      |> String.downcase()
+    schema_module = Module.concat(List.wrap(schema))
+    context = schema_module.__modules__().context
+    singular = schema_module.__naming__().singular
 
-    case apply(context, :"update_#{single}", [id, params, %{id: user_id}]) do
+    case apply(context, :"update_#{singular}", [id, params, user]) do
       {:ok, _} ->
         Logger.info("""
 
-        ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{single} ##{id}
+        ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{singular} ##{id}
         ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
         """)
+
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
 
         :ok
 

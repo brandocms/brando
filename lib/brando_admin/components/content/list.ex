@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Components.Content.List do
   use Surface.LiveComponent
-  use BrandoAdmin.Toast
 
   import Brando.Gettext
 
@@ -8,7 +7,6 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.Sequenced
   alias Brando.Trait.SoftDelete
   alias Brando.Trait.Status
-  alias BrandoAdmin.Toast
 
   alias BrandoAdmin.Components.Content.List.Entries
   alias BrandoAdmin.Components.Content.List.Pagination
@@ -18,6 +16,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   prop listing, :any
   prop blueprint, :any
+  prop current_user, :map
   prop uri, :any
   prop params, :any
 
@@ -188,7 +187,9 @@ defmodule BrandoAdmin.Components.Content.List do
   def handle_event("sequenced", params, socket) do
     schema = socket.assigns.schema
     Sequenced.sequence(schema, params)
-    Toast.send("Sequence updated")
+    require Logger
+    Logger.error(inspect(self(), pretty: true))
+    send(self(), {:toast, "Sequence updated!"})
     {:noreply, assign_entries(socket, socket.assigns)}
   end
 
@@ -214,6 +215,7 @@ defmodule BrandoAdmin.Components.Content.List do
     socket
     |> assign(:uri, assigns.uri)
     |> assign(:params, assigns.params)
+    |> assign(:current_user, assigns.current_user)
     |> assign_new(:schema, fn -> schema end)
     |> assign_new(:context, fn -> context end)
     |> assign_new(:singular, fn -> singular end)
@@ -260,6 +262,12 @@ defmodule BrandoAdmin.Components.Content.List do
       |> params_to_list_opts(params, schema)
 
     {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
+
+    require Logger
+
+    Logger.error(
+      "==> entries are now #{inspect(Enum.map(entries.entries, &Map.take(&1, [:id, :status, :updated_at])), pretty: true)}"
+    )
 
     socket
     |> assign(:list_opts, list_opts)

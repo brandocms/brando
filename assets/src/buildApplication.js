@@ -76,7 +76,9 @@ export default () => {
 
     app.userSocket = new Socket('/admin/socket', { params: { token: app.userToken } })
     app.userSocket.connect()
+
     app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
+    app.lobbyChannel = app.userSocket.channel('lobby', {})
 
     app.userChannel.on('progress:show', () => {
       gsap.to($progressWrapper, { yPercent: 0, ease: 'circ.out', duration: 0.35 })
@@ -84,6 +86,14 @@ export default () => {
 
     app.userChannel.on('progress:hide', () => {
       gsap.to($progressWrapper, { yPercent: -100, ease: 'circ.in', duration: 0.35 })
+    })
+
+    app.userChannel.on('toast', data => {
+      app.toast.notification(data.level, data.payload)
+    })
+
+    app.lobbyChannel.on('toast', data => {
+      app.toast.mutation(data.level, data.payload)
     })
 
     const getHeights = () => {
@@ -153,6 +163,10 @@ export default () => {
 
     app.userChannel.join().receive('ok', () => {
       console.debug('==> Joined user_channel')
+    })
+
+    app.lobbyChannel.join().receive('ok', () => {
+      console.debug('==> Joined lobby_channel')
     })
   })
 
