@@ -815,6 +815,10 @@ h3 {
   @fontsize sm;
 }
 
+.inline {
+  display: inline;
+}
+
 .badge {
   @fontsize badge;
   display: inline-flex;
@@ -835,6 +839,10 @@ h3 {
     font-size: 22px;
     transform: translateY(-4px);
     margin-left: 5px;
+  }
+
+  &.lowercase {
+    text-transform: lowercase;
   }
 
   svg {

@@ -74,7 +74,7 @@ defmodule Brando.Router do
           live "/config/cache", BrandoAdmin.Sites.CacheLive
           live "/config/globals", BrandoAdmin.Sites.GlobalsLive
           live "/config/identity", BrandoAdmin.Sites.IdentityLive
-          live "/config/navigation", BrandoAdmin.NavigationLive
+          live "/config/navigation/menus", BrandoAdmin.Navigation.MenuListLive
           live "/config/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
           live "/config/seo", BrandoAdmin.Sites.SEOLive
           live "/config/content/modules", BrandoAdmin.Content.ModuleListLive

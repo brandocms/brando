@@ -225,7 +225,7 @@ defmodule BrandoAdmin.Menu do
             items: [
               %{
                 name: Brando.Gettext.gettext("Navigation"),
-                url: "/admin/config/navigation"
+                url: "/admin/config/navigation/menus"
               },
               %{
                 name: Brando.Gettext.gettext("Identity"),
