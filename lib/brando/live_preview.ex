@@ -35,24 +35,6 @@ defmodule Brando.LivePreview do
     end
   end
 
-  defmacro target(_, _) do
-    raise """
-    Brando.LivePreview.target/2 is deprecated, use preview_target/2 instead:
-
-        preview_target Brando.Pages.Page do
-          mutate_data fn entry -> %{entry | title: "custom"} end
-
-          layout_module MyAppWeb.LayoutView
-          view_module MyAppWeb.PageView
-          view_template fn e -> e.template end
-          template_section fn e -> e.key end
-
-          assign :navigation, fn _ -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
-          assign :partials, fn _ -> Brando.Pages.get_fragments("partials") |> elem(1) end
-        end
-    """
-  end
-
   @doc """
   Generates a render function for live previewing
 
@@ -133,8 +115,7 @@ defmodule Brando.LivePreview do
           end)
 
         # build conn
-        conn = Phoenix.ConnTest.build_conn()
-        conn = Brando.Plug.HTML.put_section(conn, section)
+        conn = Brando.Plug.HTML.put_section(Phoenix.ConnTest.build_conn(), section)
 
         render_assigns =
           ([
