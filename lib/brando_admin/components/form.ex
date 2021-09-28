@@ -42,6 +42,7 @@ defmodule BrandoAdmin.Components.Form do
   data has_live_preview?, :boolean
 
   data live_preview_active?, :boolean
+  data live_preview_cache_key, :string
 
   def mount(socket) do
     {:ok,
@@ -51,7 +52,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:status_scheduled, :closed)
      |> assign(:status_revisions, :closed)
      |> assign(:live_preview_active?, false)
-     |> assign(:processing, false)}
+     |> assign(:processing, false)
+     |> assign(:live_preview_cache_key, nil)}
   end
 
   def update(
@@ -159,7 +161,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp check_live_preview(schema) do
-    function_exported?(Brando.live_preview(), :render, 3) and
+    function_exported?(Brando.live_preview(), :__info__, 1) &&
+      {:render, 3} in Brando.live_preview().__info__(:functions) &&
       Brando.live_preview().has_preview_target(schema)
   end
 
@@ -360,6 +363,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:live_preview_active?, true)
+         |> assign(:live_preview_cache_key, cache_key)
          |> push_event("b:live_preview", %{cache_key: cache_key})}
 
       {:error, err} ->
@@ -423,7 +427,9 @@ defmodule BrandoAdmin.Components.Form do
             schema: schema,
             entry: entry,
             current_user: current_user,
-            singular: singular
+            singular: singular,
+            live_preview_active?: live_preview_active?,
+            live_preview_cache_key: live_preview_cache_key
           }
         } = socket
       ) do
@@ -434,6 +440,10 @@ defmodule BrandoAdmin.Components.Form do
       entry_or_default
       |> schema.changeset(entry_params, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
+
+    if live_preview_active? do
+      Brando.LivePreview.update(schema, changeset, live_preview_cache_key)
+    end
 
     {:noreply, assign(socket, changeset: changeset)}
   end
