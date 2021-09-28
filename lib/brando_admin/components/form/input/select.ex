@@ -418,7 +418,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp get_label(input_options, selected_option) do
     case Enum.find(input_options, &(&1.value == selected_option)) do
-      nil -> gettext("No options found")
+      nil -> gettext("No selection")
       %{label: label} -> label
     end
   end
