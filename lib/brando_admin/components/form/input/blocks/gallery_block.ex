@@ -87,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {hidden_input(@block_data, :type)}
+          {input_value(@block_data, :type)}
           {#if @ref_description}
             — {@ref_description}
           {/if}
