@@ -264,6 +264,26 @@
         border-radius: 0 18px 18px 0;
         padding-right: 15px;
       }
+
+      &.active {
+        @color bg dark;
+        @color fg peach;
+        svg {
+          path:nth-of-type(2) {
+            fill: theme(colors.peach);
+          }
+        }
+
+        &:hover {
+          @color bg dark;
+          @color fg peach;
+          svg {
+            path:nth-of-type(2) {
+              fill: theme(colors.peach);
+            }
+          } 
+        }
+      }
     }
 
     .tab-text {
