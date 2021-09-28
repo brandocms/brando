@@ -26,7 +26,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   def update(assigns, socket) do
     # TODO: Only count on initial render, then trigger a count from
     # "insert_block", "delete_block", "duplicate_block", "insert_section", "insert_datasource" etc?
-    block_count = Enum.count(assigns.block_forms)
+
+    block_count =
+      assigns.block_forms
+      |> Enum.map(&input_value(&1, :marked_as_deleted))
+      |> Enum.reject(&(&1 == true))
+      |> Enum.count()
 
     {:ok,
      socket
@@ -41,6 +46,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       class="blocks-wrapper"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type={@type}>
+
       <Blocks.ModulePicker
         id={"#{@id}-module-picker"}
         insert_block={@insert_block}
