@@ -18,7 +18,18 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
       attribute :class, :string
       attribute :series_slug, :string, default: "post"
       attribute :lightbox, :boolean, default: false
-      attribute :placeholder, :string, default: "dominant_color"
+
+      attribute :placeholder, :enum,
+        values: [:svg, :dominant_color, :micro, :none],
+        default: :dominant_color
+
+      attribute :display, :enum,
+        values: [:list, :grid],
+        default: :grid
+
+      attribute :type, :enum,
+        values: [:gallery, :slider, :slideshow],
+        default: :gallery
     end
 
     relations do

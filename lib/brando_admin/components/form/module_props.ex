@@ -226,7 +226,21 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                             {/for}
                           {#match "gallery"}
                             {#for block_data <- inputs_for_block(ref_data, :data)}
-                              {hidden_input(block_data, :cdn)}
+                              <Input.Radios
+                                form={block_data}
+                                field={:type}
+                                options={[
+                                  %{label: "Gallery", value: :gallery},
+                                  %{label: "Slider", value: :slider},
+                                  %{label: "Slideshow", value: :slideshow},
+                                ]} />
+                              <Input.Radios
+                                form={block_data}
+                                field={:display}
+                                options={[
+                                  %{label: "Grid", value: :grid},
+                                  %{label: "List", value: :list},
+                                ]} />
                               <Input.Text form={block_data} field={:class} />
                               <Input.Text form={block_data} field={:series_slug} />
                               <Input.Toggle form={block_data} field={:lightbox} />

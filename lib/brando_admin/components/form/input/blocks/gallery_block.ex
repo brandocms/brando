@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use Phoenix.HTML
 
   import Brando.Gettext
+  alias Brando.Blueprint.Villain.Blocks
   alias Brando.Blueprint.Villain.Blocks.GalleryBlock
   alias Brando.Utils
   alias Brando.Villain
@@ -30,28 +31,40 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   data extracted_path, :string
   data uid, :string
   data block_data, :form
+  data available_images, :list
   data images, :list
+  data has_images?, :boolean
   data image, :any
+  data selected_images_paths, :list
+  data display, :atom
+  data show_only_selected?, :boolean
 
   def v(form, field), do: input_value(form, field)
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign(images: [])}
+    {:ok, assign(socket, available_images: [], show_only_selected?: false)}
   end
 
   def update(assigns, socket) do
+    require Logger
+    Logger.error(inspect("block is #{inspect(assigns.block)}"))
+
     block_data =
       assigns.block
       |> inputs_for(:data)
       |> List.first()
 
+    images = input_value(block_data, :images)
+    selected_images_paths = Enum.map(images, & &1.path)
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
-     #  |> assign(:, v(assigns.block, :data))
+     |> assign(:images, images)
+     |> assign(:display, v(block_data, :display))
+     |> assign(:selected_images_paths, selected_images_paths)
+     |> assign(:has_images?, !Enum.empty?(images))
      |> assign(:uid, v(assigns.block, :uid))}
   end
 
@@ -61,6 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       id={"#{@uid}-wrapper"}
       class="gallery-block"
       phx-hook="Brando.LegacyImageUpload"
+      data-upload-multi="true"
       data-text-uploading={gettext("Uploading...")}
       data-block-index={@index}
       data-block-uid={@uid}>
@@ -76,119 +90,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
+          {hidden_input(@block_data, :type)}
           {#if @ref_description}
-            {@ref_description}
-          {#else}
-            {@extracted_path}
+            — {@ref_description}
           {/if}
         </:description>
-        <input class="file-input" type="file" />
-        {#if @extracted_path}
-          <div class="preview">
-            <img src={"/media/#{@extracted_path}"} />
-            <figcaption :on-click="show_config">
-              <div id={"#{@uid}-figcaption-title"}>
-                <span>{gettext("Caption")}</span> {v(@block_data, :title) |> raw}<br>
-              </div>
-              <div id={"#{@uid}-figcaption-alt"}>
-                <span>{gettext("Alt. text")}</span> {v(@block_data, :alt)}
-              </div>
-            </figcaption>
-          </div>
-        {/if}
 
-        <div class={"empty upload-canvas", hidden: @extracted_path}>
-          <figure>
-            <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-              <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-              <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-              <circle cx="8" cy="9" r="2"/>
-            </svg>
-          </figure>
-          <div class="instructions">
-            <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span><br>
-            <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
-          </div>
+        <div phx-update="ignore">
+          <input
+            name={"#{@uid}-f-in"}
+            class="file-input"
+            type="file"
+            multiple>
         </div>
 
-        <Modal
-          title="Pick image"
-          center_header={true}
-          id={"#{@uid}-image-picker"}>
-          <div class="image-picker-images">
-            {#for image <- @images}
-              <div class="image-picker-image" :on-click="select_image" phx-value-id={image.id}>
-                <img src={"/media/#{image.image.sizes["thumb"]}"} />
-              </div>
-            {/for}
-          </div>
-        </Modal>
-
-        <:config>
-          <div class="panels">
-            <div class="panel">
-              {#if @extracted_path}
-                <img
-                  width={"#{@image.width}"}
-                  height={"#{@image.height}"}
-                  src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
-
-                <div class="image-info">
-                  Path: {@image.path}<br>
-                  Dimensions: {@image.width}&times;{@image.height}<br>
-                </div>
-              {/if}
-              {#if !@extracted_path}
-                <div class="img-placeholder empty upload-canvas">
-                  <div class="placeholder-wrapper">
-                    <div class="svg-wrapper">
-                      <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                        <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                        <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                        <circle cx="8" cy="9" r="2"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="instructions">
-                    <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
-                  </div>
-                </div>
-              {/if}
-            </div>
-            <div class="panel">
-              <Input.RichText form={@block_data} field={:title} />
-              <Input.Text form={@block_data} field={:alt} debounce={500} />
-
-              <div class="button-group-vertical">
-                <button type="button" class="secondary" :on-click="show_image_picker">
-                  {gettext("Select image")}
-                </button>
-
-                <button type="button" class="danger" :on-click="reset_image">
-                  {gettext("Reset image")}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {hidden_input @block_data, :placeholder}
-          {hidden_input @block_data, :cdn}
-          {hidden_input @block_data, :credits}
-          {hidden_input @block_data, :dominant_color}
-          {hidden_input @block_data, :height}
-          {hidden_input @block_data, :webp}
-          {hidden_input @block_data, :width}
-
-          {#if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes))}
-            {hidden_input @block_data, :path, value: @extracted_path}
-            {#else}
-            {hidden_input @block_data, :path}
-          {/if}
+        {#for image <- inputs_for(@block_data, :images)}
+          {hidden_input image, :placeholder}
+          {hidden_input image, :cdn}
+          {hidden_input image, :dominant_color}
+          {hidden_input image, :height}
+          {hidden_input image, :webp}
+          {hidden_input image, :width}
+          {hidden_input image, :path}
 
           <Inputs
-            form={@block_data}
+            form={image}
             for={:focal}
             :let={form: focal_form}>
             {hidden_input focal_form, :x}
@@ -197,14 +123,168 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <MapInputs
             :let={value: value, name: name}
-            form={@block_data}
+            form={image}
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </MapInputs>
+        {/for}
+
+        {#if @has_images?}
+          <span phx-update="ignore">
+            <button type="button" class="tiny file-upload" id={"#{@uid}-up-btn"}>Upload images</button>
+          </span>
+          <button type="button" class="tiny" :on-click="show_image_picker">Select images</button>
+          <button type="button" class="tiny" :on-click="show_captions">Edit captions</button>
+          <div
+            id={"sortable-#{@block_data.id}-images"}
+            class={"images", @display == :grid && "images-grid" || "images-list"}
+            phx-hook="Brando.Sortable"
+            data-target={@myself}
+            data-sortable-id={"sortable-#{@block_data.id}-images"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".preview">
+            {#if @display == :grid}
+              {#for {img, idx} <- Enum.with_index(@images)}
+                <div
+                  class={
+                    "preview",
+                    "sort-handle",
+                    "draggable"
+                  }
+                  data-id={idx}>
+                  <img src={"/media/#{img.path}"} />
+                  <figcaption :on-click="show_captions">
+                    <div>
+                      <span>{gettext("Caption")}</span>
+                      {raw(img.title || "{ No caption }")}
+                    </div>
+                    <div>
+                      <span>{gettext("Alt. text")}</span>
+                      {img.alt || "{ No alt text }"}
+                    </div>
+                  </figcaption>
+                </div>
+              {/for}
+            {#else}
+              {#for img <- @images}
+                <div class="preview">
+                  <figure>
+                    <img src={"/media/#{img.path}"} />
+                  </figure>
+                  <figcaption :on-click="show_config">
+                    <div>
+                      <span>{gettext("Caption")}</span>
+                      {raw(img.title || "{ No caption }")}
+                    </div>
+                    <div>
+                      <span>{gettext("Alt. text")}</span>
+                      {img.alt || "{ No alt text }"}
+                    </div>
+                    <div>
+                      <span>{gettext("Dimensions")}</span>
+                      {img.width}&times;{img.height}
+                    </div>
+                  </figcaption>
+                </div>
+              {/for}
+            {/if}
+          </div>
+        {#else}
+          <div class={"empty upload-canvas", hidden: @has_images?}>
+            <figure>
+              <svg class="icon-add-gallery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path fill="none" d="M0 0h24v24H0z"/><path d="M8 1v4H4v14h16V3h1.008c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3H6V1h2zm4 7l4 4h-3v4h-2v-4H8l4-4zm6-7v4h-8V3h6V1h2z"/>
+              </svg>
+            </figure>
+            <div class="instructions">
+              <span>{gettext("Click or drag images here &uarr; to upload") |> raw()}</span><br>
+              <button type="button" class="tiny" :on-click="show_image_picker">pick existing images</button>
+            </div>
+          </div>
+
+        {/if}
+
+        <Modal
+          title="Pick images"
+          center_header={true}
+          remember_scroll_position
+          id={"#{@uid}-image-picker"}>
+          <div class="buttons">
+            <button type="button" class="tiny" :on-click="toggle_only_selected">
+              {#if @show_only_selected?}
+                {gettext("Show all available and selected")}
+              {#else}
+                {gettext("Show only selected")}
+              {/if}
+            </button>
+          </div>
+          <div class="image-picker-images">
+            {#for image <- @available_images}
+              <div
+                class={
+                  "image-picker-image",
+                  selected: image.image.path in @selected_images_paths,
+                  hidden: @show_only_selected? && image.image.path not in @selected_images_paths
+                }
+                :on-click="select_image"
+                phx-value-id={image.id}
+                phx-value-selected={image.image.path in @selected_images_paths && "true" || "false"}>
+                <img src={"/media/#{image.image.sizes["thumb"]}"} />
+              </div>
+            {/for}
+          </div>
+        </Modal>
+
+        <Modal
+          title="Edit captions"
+          id={"#{@uid}_captions"}>
+          <div class="caption-editor">
+            {#for image <- inputs_for(@block_data, :images)}
+              <div class="caption-row">
+                <figure>
+                  <img src={"/media/#{input_value(image, :path)}"} />
+                </figure>
+                <div>
+                  <Input.RichText form={image} field={:title} />
+                  <Input.Text form={image} field={:credits} debounce={750} />
+                  <Input.Text form={image} field={:alt} debounce={750} />
+                </div>
+              </div>
+            {/for}
+          </div>
+        </Modal>
+
+        <:config>
+          {hidden_input(@block_data, :type)}
+          <Input.Radios
+            form={@block_data}
+            field={:display}
+            label={gettext("Display")}
+            options={[
+              %{label: "Grid", value: :grid},
+              %{label: "List", value: :list},
+            ]} />
+          <Input.Text form={@block_data} field={:class} debounce={750} />
+          <Input.Text form={@block_data} field={:series_slug} debounce={750} />
+          <Input.Toggle form={@block_data} field={:lightbox} />
+
+          <Input.Radios
+            form={@block_data}
+            field={:placeholder}
+            options={[
+              %{label: "SVG", value: :svg},
+              %{label: "Dominant Color", value: :dominant_color},
+              %{label: "Micro", value: :micro},
+              %{label: "None", value: :none}
+            ]} />
         </:config>
       </Block>
     </div>
     """
+  end
+
+  def handle_event("toggle_only_selected", _, socket) do
+    {:noreply, assign(socket, :show_only_selected?, !socket.assigns.show_only_selected?)}
   end
 
   def handle_event("show_config", _, socket) do
@@ -217,12 +297,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
+  def handle_event("show_captions", _, socket) do
+    Modal.show("#{socket.assigns.uid}_captions")
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "sequenced",
+        %{"ids" => order_indices},
+        %{
+          assigns: %{
+            base_form: form,
+            block_data: block_data,
+            data_field: data_field,
+            uid: uid
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    images = input_value(block_data, :images)
+    sorted_images = Enum.map(order_indices, &Enum.at(images, &1))
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %{images: sorted_images}
+      })
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
   def handle_event(
         "image_uploaded",
         %{"id" => id},
         %{
           assigns: %{
-            block: block,
+            block_data: block_data,
             base_form: base_form,
             uid: uid,
             data_field: data_field
@@ -230,30 +347,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
+    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image.image))
 
-    block_data = input_value(block, :data)
-
-    updated_data_map =
-      block_data
-      |> Map.merge(image.image)
-      |> Map.from_struct()
-
-    updated_data_struct = struct(GalleryBlock.Data, updated_data_map)
-
-    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
+    images = input_value(block_data, :images) ++ [picture_data_tpl]
 
     changeset = base_form.source
-    schema = changeset.data.__struct__
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_changeset =
-      Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_picture_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -291,43 +394,57 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def handle_event(
         "select_image",
-        %{"id" => id},
+        %{"id" => id, "selected" => "false"},
         %{
           assigns: %{
             base_form: base_form,
             uid: uid,
-            block: block,
             block_data: block_data,
             data_field: data_field
           }
         } = socket
       ) do
-    image_picker_modal_id = "#{uid}-image-picker"
-    Modal.hide(image_picker_modal_id)
-
     {:ok, image} = Brando.Images.get_image(id)
+    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image.image))
 
-    updated_data_map =
-      block_data
-      |> Map.merge(image.image)
-      |> Map.from_struct()
-
-    updated_data_struct = struct(GalleryBlock.Data, updated_data_map)
-
-    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
+    images = input_value(block_data, :images) ++ [picture_data_tpl]
 
     changeset = base_form.source
-    schema = changeset.data.__struct__
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
 
     updated_changeset =
-      Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_picture_block
-      )
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
 
-    form_id = "#{schema.__naming__().singular}_form"
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_image",
+        %{"id" => id, "selected" => "true"},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    {:ok, image} = Brando.Images.get_image(id)
+    images = Enum.reject(input_value(block_data, :images), &(&1.path == image.image.path))
+
+    changeset = base_form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -342,6 +459,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image_series} = Brando.Images.get_series_by_slug("post", "post")
     Modal.show(modal_id)
 
-    {:noreply, assign(socket, :images, image_series.images)}
+    {:noreply, assign(socket, :available_images, image_series.images)}
   end
 end
