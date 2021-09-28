@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       field={name}
       class={opts[:class]}
       form={@form}>
-      {hidden_input @form, name, class: "tiptap-text", phx_debounce: 500}
+      {hidden_input @form, name, class: "tiptap-text", phx_debounce: 750}
       <div class="tiptap-wrapper" id={"#{@form.id}-#{name}-rich-text-wrapper"}>
         <div
           id={"#{@form.id}-#{name}-rich-text"}
