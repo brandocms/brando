@@ -63,7 +63,7 @@
   --checkmark-width: 16px;
   --padding-size: 35px;
   @extend %circular-checkbox;
-  margin-bottom: 15px;
+  margin-bottom: 0.5vw;
   &.small {
     --checkbox-size: 18px;
     --checkmark-width: 14px;

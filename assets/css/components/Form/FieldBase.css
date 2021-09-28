@@ -29,7 +29,11 @@
 
 .field-wrapper {
   width: 100%;
-  margin-bottom: 30px;
+  margin-bottom: 1vw;
+
+  &.compact {
+    margin-bottom: 0.5vw !important;
+  }
 
   .shaded & {
     &:last-of-type {

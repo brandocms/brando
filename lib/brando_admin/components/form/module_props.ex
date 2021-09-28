@@ -6,8 +6,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Inputs
-  alias BrandoAdmin.Components.Modal
+  alias BrandoAdmin.Components.Form.ArrayInputsFromData
   alias BrandoAdmin.Components.Form.PolyInputs
+  alias BrandoAdmin.Components.Modal
 
   prop form, :form, required: true
   prop key, :string, default: "default"
@@ -187,6 +188,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Text form={block_data} field={:level} />
                               <Input.Text form={block_data} field={:text} />
                             {/for}
+
                           {#match "svg"}
                             {#for block_data <- inputs_for_block(ref_data, :data)}
                               <Input.Text form={block_data} field={:class} />
@@ -196,12 +198,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 field={:code}
                               />
                             {/for}
+
                           {#match "text"}
                             {#for block_data <- inputs_for_block(ref_data, :data)}
                               <Input.Text form={block_data} field={:text} />
                               <Input.Text form={block_data} field={:type} />
                               <Input.Text form={block_data} field={:extensions} />
                             {/for}
+
                           {#match "picture"}
                             {#for block_data <- inputs_for_block(ref_data, :data)}
                               {hidden_input(block_data, :cdn)}
@@ -224,6 +228,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 ]}
                               />
                             {/for}
+
                           {#match "gallery"}
                             {#for block_data <- inputs_for_block(ref_data, :data)}
                               <Input.Radios
@@ -279,6 +284,98 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Toggle form={block_data} field={:play_button} />
                             {/for}
 
+                          {#match "media"}
+                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                              <ArrayInputsFromData
+                                :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
+                                form={block_data}
+                                for={:available_blocks}
+                                options={[
+                                  %{label: "Picture", value: "picture"},
+                                  %{label: "Video", value: "video"},
+                                  %{label: "Gallery", value: "gallery"},
+                                  %{label: "SVG", value: "svg"}
+                                ]}>
+                                <div class="field-wrapper compact">
+                                  <div class="check-wrapper small">
+                                    <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+                                    <label class="control-label small" for={array_id}>{array_label}</label>
+                                  </div>
+                                </div>
+                              </ArrayInputsFromData>
+
+                              {#if "picture" in input_value(block_data, :available_blocks)}
+                                <h2>Picture block template</h2>
+                                {#for tpl_data <- inputs_for(block_data, :template_picture)}
+                                  <Input.Text form={tpl_data} field={:picture_class} />
+                                  <Input.Text form={tpl_data} field={:img_class} />
+                                  <Input.Toggle form={tpl_data} field={:webp} />
+                                  <Input.Select
+                                    id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
+                                    form={tpl_data}
+                                    field={:placeholder}
+                                    options={[
+                                      %{label: "SVG", value: :svg},
+                                      %{label: "Dominant Color", value: :dominant_color},
+                                      %{label: "Micro", value: :micro},
+                                      %{label: "None", value: :none}
+                                    ]}
+                                  />
+                                {/for}
+                              {/if}
+
+                              {#if "video" in input_value(block_data, :available_blocks)}
+                                <h2>Video block template</h2>
+                                {#for tpl_data <- inputs_for(block_data, :template_video)}
+                                  <Input.Number form={tpl_data} field={:opacity} />
+                                  <Input.Toggle form={tpl_data} field={:autoplay} />
+                                  <Input.Toggle form={tpl_data} field={:preload} />
+                                  <Input.Toggle form={tpl_data} field={:play_button} />
+                                {/for}
+                              {/if}
+
+                              {#if "gallery" in input_value(block_data, :available_blocks)}
+                                <h2>Gallery block template</h2>
+                                {#for tpl_data <- inputs_for(block_data, :template_gallery)}
+                                  <Input.Radios
+                                    form={tpl_data}
+                                    field={:type}
+                                    options={[
+                                      %{label: "Gallery", value: :gallery},
+                                      %{label: "Slider", value: :slider},
+                                      %{label: "Slideshow", value: :slideshow},
+                                    ]} />
+                                  <Input.Radios
+                                    form={tpl_data}
+                                    field={:display}
+                                    options={[
+                                      %{label: "Grid", value: :grid},
+                                      %{label: "List", value: :list},
+                                    ]} />
+                                  <Input.Text form={tpl_data} field={:class} />
+                                  <Input.Text form={tpl_data} field={:series_slug} />
+                                  <Input.Toggle form={tpl_data} field={:lightbox} />
+                                  <Input.Radios
+                                    form={tpl_data}
+                                    field={:placeholder}
+                                    options={[
+                                      %{label: "Dominant color", value: "dominant_color"},
+                                      %{label: "SVG", value: "svg"},
+                                      %{label: "Micro", value: "micro"},
+                                      %{label: "None", value: "none"}
+                                    ]}
+                                  />
+                                {/for}
+                              {/if}
+
+                              {#if "svg" in input_value(block_data, :available_blocks)}
+                                <h2>SVG block template</h2>
+                                {#for tpl_data <- inputs_for(block_data, :template_svg)}
+                                  <Input.Text form={tpl_data} field={:class} />
+                                {/for}
+                              {/if}
+
+                            {/for}
                           {#match type}
                             No matching block {type} found
                         {/case}

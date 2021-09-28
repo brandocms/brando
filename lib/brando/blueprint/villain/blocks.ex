@@ -10,6 +10,7 @@ defmodule Brando.Blueprint.Villain.Blocks do
       header: Blocks.HeaderBlock,
       html: Blocks.HtmlBlock,
       markdown: Blocks.MarkdownBlock,
+      media: Blocks.MediaBlock,
       module: Blocks.ModuleBlock,
       picture: Blocks.PictureBlock,
       svg: Blocks.SvgBlock,
