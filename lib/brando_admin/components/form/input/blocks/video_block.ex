@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Modal
 
   prop base_form, :any
   prop data_field, :atom
@@ -66,27 +67,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
               </div>
               <div class="panel">
-                  {hidden_input @block_data, :url}
-                  {hidden_input @block_data, :source}
-                  {hidden_input(@block_data, :width)}
-                  {hidden_input(@block_data, :height)}
-                  {hidden_input(@block_data, :remote_id)}
-                  {hidden_input(@block_data, :thumbnail_url)}
+                {hidden_input @block_data, :url}
+                {hidden_input @block_data, :source}
+                {hidden_input(@block_data, :width)}
+                {hidden_input(@block_data, :height)}
+                {hidden_input(@block_data, :remote_id)}
+                {hidden_input(@block_data, :thumbnail_url)}
 
-                  <Input.Text form={@block_data} field={:title} />
-                  <Input.Text form={@block_data} field={:poster} />
-                  {#if v(@block_data, :cover) in ["false", "svg"]}
-                    {hidden_input(@block_data, :cover)}
-                  {#else}
-                    <Input.Text form={@block_data} field={:cover} />
-                  {/if}
+                <Input.Text form={@block_data} field={:title} />
+                <Input.Text form={@block_data} field={:poster} />
+                {#if v(@block_data, :cover) in ["false", "svg"]}
+                  {hidden_input(@block_data, :cover)}
+                {#else}
+                  <Input.Text form={@block_data} field={:cover} />
+                {/if}
 
-                  {hidden_input(@block_data, :opacity)}
-                  {hidden_input(@block_data, :play_button)}
+                {hidden_input(@block_data, :opacity)}
+                {hidden_input(@block_data, :play_button)}
 
-                  <Input.Toggle form={@block_data} field={:autoplay} />
-                  <Input.Toggle form={@block_data} field={:preload} />
-
+                <Input.Toggle form={@block_data} field={:autoplay} />
+                <Input.Toggle form={@block_data} field={:preload} />
               </div>
             </div>
           {#else}
@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0H24V24H0z"/><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z"/></svg>
             </figure>
             <div class="instructions">
-              <button type="button" class="tiny" :on-click="show_image_picker">Configure video block</button>
+              <button type="button" class="tiny" :on-click="show_config">Configure video block</button>
             </div>
           </div>
         {/if}
@@ -148,6 +148,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       </Block>
     </div>
     """
+  end
+
+  def handle_event("show_config", _, socket) do
+    Modal.show("#{socket.assigns.uid}_config")
+    {:noreply, socket}
   end
 
   def handle_event(
