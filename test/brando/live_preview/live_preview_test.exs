@@ -46,9 +46,10 @@ defmodule Brando.LivePreviewTest do
 
   test "generate render function" do
     assert LivePreview.__info__(:functions) == [
+             {:has_preview_target, 1},
              {:list_employees!, 0},
              {:list_restaurants!, 0},
-             {:render, 5}
+             {:render, 3}
            ]
   end
 
@@ -59,7 +60,7 @@ defmodule Brando.LivePreviewTest do
       key: "about"
     }
 
-    assert LivePreview.render(Brando.Pages.Page, entry, nil, "page", "MY_CACHE_KEY") ==
+    assert LivePreview.render(Brando.Pages.Page, entry, "MY_CACHE_KEY") ==
              "Hello Todd :)"
   end
 end
