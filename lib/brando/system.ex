@@ -108,20 +108,22 @@ defmodule Brando.System do
   end
 
   defp check_authorization_exists do
-    if function_exported?(Brando.authorization(), :__info__, 1) do
-      {:ok, {:authorization, :exists}}
-    else
-      raise ConfigError,
-        message: """
+    case Code.ensure_loaded(Brando.authorization()) do
+      {:module, _} ->
+        {:ok, {:authorization, :exists}}
+
+      {:error, _} ->
+        raise ConfigError,
+          message: """
 
 
-        Authorization module not found!
+          Authorization module not found!
 
-        Generate with:
+          Generate with:
 
-        mix brando.gen.authorization
+              mix brando.gen.authorization
 
-        """
+          """
     end
   end
 
