@@ -254,6 +254,16 @@ module.exports = {
           desktop_xl: '16px'
         },
 
+        input: {
+          iphone: '16px',
+          mobile: '16px',
+          ipad_portrait: '20px',
+          ipad_landscape: '18px',
+          desktop_md: '19px',
+          desktop_lg: '20px',
+          desktop_xl: '20px'
+        },
+
         base: {
           iphone: '16px',
           mobile: '16px',
