@@ -1,5 +1,5 @@
 input.text {
-  @fontsize base;
+  @fontsize input;
   @color bg input;
   padding-top: 12px;
   padding-bottom: 12px;
@@ -23,7 +23,7 @@ input.text {
 }
 
 textarea.text {
-  @fontsize base;
+  @fontsize input;
   padding-top: 12px;
   padding-bottom: 12px;
   padding-left: 15px;

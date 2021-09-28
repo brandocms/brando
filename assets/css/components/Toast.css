@@ -103,7 +103,7 @@
     @color fg peach;
 
     > .iziToast-body .iziToast-message {
-      @fontsize base;
+      @fontsize input;
       margin-left: 5px;
     }
 

@@ -164,7 +164,7 @@
       }
 
       input {
-        @fontsize base;
+        @fontsize input;
         background-color: transparent;
         padding-top: 15px;
         padding-bottom: 11px;

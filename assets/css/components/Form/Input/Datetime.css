@@ -21,7 +21,7 @@
 
 
 .flatpickr {
-  @fontsize base;
+  @fontsize input;
   padding-top: 12px;
   padding-bottom: 12px;
   padding-left: 15px;

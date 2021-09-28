@@ -46,7 +46,7 @@ h2.titlecase {
 }
 
 .multiselect {
-  @fontsize base/1;
+  @fontsize input/1;
   @space height 51px <=desktop_md;
   @space height 55px desktop_lg;
   @space height 55px desktop_xl;
@@ -128,7 +128,7 @@ h2.titlecase {
   }
 
   .search {
-    @fontsize base/1;
+    @fontsize input/1;
     width: 100%;
     border: 0;
     outline: none;

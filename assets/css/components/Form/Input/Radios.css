@@ -11,6 +11,7 @@
   }
 
   label {
+    @fontsize input;
     display: flex;
     align-items: baseline;
   }

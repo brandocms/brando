@@ -26,6 +26,7 @@
 @import './components/Form/Input/Blocks/Block.css';
 @import './components/Form/Input/Blocks/Blocks.css';
 @import './components/Form/Input/Blocks/DatasourceBlock.css';
+@import './components/Form/Input/Blocks/GalleryBlock.css';
 @import './components/Form/Input/Blocks/HeaderBlock.css';
 @import './components/Form/Input/Blocks/ModuleBlock.css';
 @import './components/Form/Input/Blocks/PictureBlock.css';
@@ -913,19 +914,19 @@ h3 {
 
 input::-webkit-input-placeholder {
   @font main;
-  @fontsize base;
+  @fontsize input;
 }
 input:-ms-input-placeholder {
   @font main;
-  @fontsize base;
+  @fontsize input;
 }
 input:-moz-placeholder {
   @font main;
-  @fontsize base;
+  @fontsize input;
 }
 input::-moz-placeholder {
   @font main;
-  @fontsize base;
+  @fontsize input;
 }
 
 .avatar-sm {
