@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Modal do
   prop narrow, :boolean, default: false
   prop medium, :boolean, default: false
   prop wide, :boolean, default: false
+  prop remember_scroll_position, :boolean, default: false
 
   data action, :atom
   data show, :boolean, default: false
@@ -63,7 +64,7 @@ defmodule BrandoAdmin.Components.Modal do
               </button>
             </div>
           </header>
-          <section class="modal-body">
+          <section id={"#{@id}-body"} class="modal-body" phx-hook={@remember_scroll_position && "Brando.RememberScrollPosition"}>
             <#slot />
           </section>
           {#if slot_assigned?(:footer)}

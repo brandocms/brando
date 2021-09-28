@@ -253,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <div class="select-modal-wrapper">
             {#if !@creating}
               <div class="select-modal">
-                <div id={"#{@form.name}-#{name}-options"} class="options" phx-hook="Brando.SelectOptionsScroller">
+                <div id={"#{@form.name}-#{name}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                   <h2 class="titlecase">Available options</h2>
                   {#if Enum.empty?(@input_options)}
                     No options found
