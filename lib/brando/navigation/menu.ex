@@ -31,6 +31,7 @@ defmodule Brando.Navigation.Menu do
     form do
       tab "Content" do
         fieldset size: :half do
+          input :status, :status
           input :language, :select, options: :languages, narrow: true
           input :title, :text
           input :key, :text, monospace: true
