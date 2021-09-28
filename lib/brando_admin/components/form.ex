@@ -39,6 +39,9 @@ defmodule BrandoAdmin.Components.Form do
   data has_meta?, :boolean
   data has_revisioning?, :boolean
   data has_scheduled_publishing?, :boolean
+  data has_live_preview?, :boolean
+
+  data live_preview_active?, :boolean
 
   def mount(socket) do
     {:ok,
@@ -47,6 +50,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:status_meta, :closed)
      |> assign(:status_scheduled, :closed)
      |> assign(:status_revisions, :closed)
+     |> assign(:live_preview_active?, false)
      |> assign(:processing, false)}
   end
 
@@ -149,8 +153,14 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket,
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
-      has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing)
+      has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
+      has_live_preview?: check_live_preview(schema)
     )
+  end
+
+  defp check_live_preview(schema) do
+    function_exported?(Brando.live_preview(), :render, 3) and
+      Brando.live_preview().has_preview_target(schema)
   end
 
   defp assign_default_params(%{assigns: %{initial_params: initial_params}} = socket)
@@ -231,14 +241,18 @@ defmodule BrandoAdmin.Components.Form do
               <span class="tab-text">Scheduled publishing</span>
             </button>
           {/if}
-          <button
-            type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
-          </button>
-          <button
-            type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
-          </button>
+          {#if @has_live_preview?}
+            <button
+              :on-click="open_live_preview"
+              class={active: @live_preview_active?}
+              type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+            </button>
+            <button
+              type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
+            </button>
+            {/if}
           <button
             :on-click="push_submit_event"
             type="button">
@@ -333,6 +347,25 @@ defmodule BrandoAdmin.Components.Form do
         progress: &__MODULE__.handle_gallery_progress/3
       )
     end)
+  end
+
+  def handle_event(
+        "open_live_preview",
+        _,
+        %{assigns: %{changeset: changeset, schema: schema}} = socket
+      ) do
+    # initialize
+    case Brando.LivePreview.initialize(schema, changeset) do
+      {:ok, cache_key} ->
+        {:noreply,
+         socket
+         |> assign(:live_preview_active?, true)
+         |> push_event("b:live_preview", %{cache_key: cache_key})}
+
+      {:error, err} ->
+        {:noreply,
+         socket |> push_event("b:alert", %{title: "Live Preview error", message: inspect(err)})}
+    end
   end
 
   def handle_event("push_submit_event", _, socket) do

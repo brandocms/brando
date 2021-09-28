@@ -1,7 +1,7 @@
 /* Add live preview class to html */
 document.documentElement.classList.add('is-live-preview');
-var token = localStorage.getItem('token');
-var previewSocket = new Phoenix.Socket('/admin/socket', { params: { guardian_token: token } });
+var token = document.querySelector('meta[name="user_token"]').getAttribute('content');
+var previewSocket = new Phoenix.Socket('/admin/socket', { params: { token: token } });
 var main = document.querySelector('main')
 var parser = new DOMParser();
 previewSocket.connect();

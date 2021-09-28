@@ -32,6 +32,13 @@ defmodule Brando.LivePreview do
   defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
+    end
+  end
+
+  defmacro __before_compile__(_) do
+    quote generated: true do
+      def has_preview_target(_), do: false
     end
   end
 
@@ -54,14 +61,12 @@ defmodule Brando.LivePreview do
 
   """
   defmacro preview_target(schema_module, do: block) do
-    quote location: :keep do
+    quote location: :keep, generated: true do
       @doc """
-      `entry` - data structure of our entry
-      `key` - refers to the Villain `data` key. If nil, then ignore
       `prop` - the variable name we store the entry under
       `cache_key` - unique key for this live preview
       """
-      def render(unquote(schema_module), entry, key, prop, cache_key) do
+      def render(unquote(schema_module), entry, cache_key) do
         var!(cache_key) = cache_key
 
         var!(opts) = [
@@ -88,30 +93,23 @@ defmodule Brando.LivePreview do
         atom_prop =
           if processed_opts[:template_prop] !== nil,
             do: processed_opts[:template_prop],
-            else: String.to_existing_atom(prop)
+            else: :entry
 
-        # if key, then parse villain
+        villain_fields = unquote(schema_module).__villain_fields__
+
         var!(entry) =
-          Enum.reduce(List.wrap(key), var!(entry), fn k, updated_entry ->
-            html_key =
-              k
-              |> Recase.to_snake()
-              |> String.replace("data", "html")
-              |> String.to_existing_atom()
+          Enum.reduce(villain_fields, var!(entry), fn attr, updated_entry ->
+            html_attr = Brando.Villain.get_html_field(unquote(schema_module), attr)
+            atom_key = attr.name
 
-            atom_key =
-              k
-              |> Recase.to_snake()
-              |> String.to_existing_atom()
-
-            html =
+            parsed_villain =
               Brando.Villain.parse(Map.get(var!(entry), atom_key), var!(entry),
                 cache_modules: true,
                 data_field: atom_key,
-                html_field: html_key
+                html_field: html_attr.name
               )
 
-            Map.put(updated_entry, html_key, html)
+            Map.put(updated_entry, html_attr.name, parsed_villain)
           end)
 
         # build conn
@@ -135,6 +133,8 @@ defmodule Brando.LivePreview do
           root_assigns
         )
       end
+
+      def has_preview_target(unquote(schema_module)), do: true
     end
   end
 
@@ -214,18 +214,17 @@ defmodule Brando.LivePreview do
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
-  @spec initialize(any, any, any, any) :: {:error, <<_::384>>} | {:ok, <<_::64, _::_*8>>}
-  def initialize(schema, entry, key, prop) do
-    preview_module = get_preview_module()
+  @spec initialize(any, any) :: {:error, <<_::384>>} | {:ok, <<_::64, _::_*8>>}
+  def initialize(schema, changeset) do
+    preview_module = Brando.live_preview()
 
-    if function_exported?(preview_module, :render, 5) do
+    if function_exported?(preview_module, :render, 3) do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
-      entry_struct = Utils.coerce_struct(entry, schema_module)
-      set_entry(cache_key, entry_struct)
+      entry_struct = Ecto.Changeset.apply_changes(changeset)
 
       try do
-        wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
+        wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
 
         if Cachex.get(:cache, cache_key) == {:ok, nil} do
           Brando.LivePreview.store_cache(cache_key, wrapper_html)
@@ -257,20 +256,17 @@ defmodule Brando.LivePreview do
           {:error, "Initialization failed. #{inspect(err)}"}
       end
     else
-      {:error, "No render/5 function found in LivePreview module"}
+      {:error, "No render/3 function found in LivePreview module"}
     end
   end
 
-  def update(schema, entry_diff, key, prop, cache_key) do
-    preview_module = get_preview_module()
+  def update(schema, changeset, cache_key) do
+    # TODO: consider if it's worth trying to diff
+    preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])
-    coerced_diff = Utils.coerce_struct(entry_diff, schema_module, :take_keys)
+    entry = Ecto.Changeset.apply_changes(changeset)
 
-    entry = get_entry(cache_key)
-    diffed_entry = Map.merge(entry, coerced_diff)
-    set_entry(cache_key, diffed_entry)
-
-    wrapper_html = preview_module.render(schema_module, diffed_entry, key, prop, cache_key)
+    wrapper_html = preview_module.render(schema_module, entry, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end
@@ -279,9 +275,9 @@ defmodule Brando.LivePreview do
   Renders the entry, stores in DB and returns URL
   """
   def share(schema, id, revision, key, prop, user) do
-    preview_module = get_preview_module()
+    preview_module = Brando.live_preview()
 
-    if function_exported?(preview_module, :render, 5) do
+    if function_exported?(preview_module, :render, 3) do
       schema_module = Module.concat([schema])
       context = schema.module.__modules__().context
 
@@ -355,12 +351,5 @@ defmodule Brando.LivePreview do
       {:ok, val} ->
         val
     end
-  end
-
-  defp get_preview_module do
-    Brando.endpoint()
-    |> to_string
-    |> String.replace("Endpoint", "LivePreview")
-    |> String.to_atom()
   end
 end

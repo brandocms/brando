@@ -24,9 +24,15 @@ defmodule Brando.Plug.LivePreview do
         #! GRAB THE COMPLETE HTML FROM ETS AND TAG ON THE JAVASCRIPT PORTION.
         #! CONSECUTIVE UPDATES WILL ONLY TARGET <MAIN>
 
+        require Logger
+        conn_copy = Plug.Conn.fetch_session(conn)
+        conn_copy = BrandoAdmin.UserAuth.fetch_current_user(conn_copy, nil)
+        current_user = conn_copy.assigns[:current_user]
+
         try do
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
+          <meta name="user_token" content="#{Brando.Users.build_token(current_user.id)}">
           <script>
           var livePreviewKey = '#{key}';
           #{File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))}

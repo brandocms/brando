@@ -38,6 +38,11 @@ defmodule Brando do
   def endpoint, do: web_module(Endpoint)
 
   @doc """
+  Gets the parent app's live preview module
+  """
+  def live_preview, do: web_module(LivePreview)
+
+  @doc """
   Gets the parent app's repo
   """
   def repo, do: app_module(Repo)

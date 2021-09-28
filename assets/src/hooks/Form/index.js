@@ -11,6 +11,13 @@ export default (app) => ({
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
     })
 
+    this.handleEvent(`b:live_preview`, ({ cache_key: cacheKey }) => {
+      window.open(
+        '/__livepreview?key=' + cacheKey,
+        '_blank'
+      )
+    })
+
     // set drawers off screen
     gsap.set('.drawer', { xPercent: 100 })
 
