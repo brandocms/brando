@@ -698,12 +698,13 @@ defmodule Brando.Villain do
   @doc """
   Recursively search a list of blocks for block matching `uid`
   """
+  @spec find_block(list(), binary()) :: map
   def find_block(blocks, uid) do
     Enum.reduce(blocks, nil, fn
-      %{uid: ^uid} = block -> block
-      %{type: "container", data: %{blocks: blocks}} -> find_block(blocks, uid)
-      %{type: "module", data: %{refs: refs}} -> find_block(refs, uid)
-      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} -> block
+      %{uid: ^uid} = block, _ -> block
+      %{type: "container", data: %{blocks: blocks}}, _ -> find_block(blocks, uid)
+      %{type: "module", data: %{refs: refs}}, _ -> find_block(refs, uid)
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ -> block
     end)
   end
 
