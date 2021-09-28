@@ -46,9 +46,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(assigns, socket) do
-    require Logger
-    Logger.error(inspect("block is #{inspect(assigns.block)}"))
-
     block_data =
       assigns.block
       |> inputs_for(:data)
