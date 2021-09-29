@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.ModuleProps do
-  use Surface.Component
+  use Surface.LiveComponent
   use Phoenix.HTML
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -13,11 +13,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   prop form, :form, required: true
   prop key, :string, default: "default"
   prop entry_form, :boolean, default: false
+
   prop show_modal, :event, required: true
   prop create_ref, :event, required: true
   prop delete_ref, :event, required: true
   prop create_var, :event, required: true
   prop delete_var, :event, required: true
+
+  prop add_table_template, :event, required: true
+  prop add_table_row, :event, required: true
+  prop add_table_col, :event, required: true
+
+  data open_col_vars, :list
+
+  def mount(socket) do
+    {:ok, assign(socket, open_col_vars: [])}
+  end
 
   def render(assigns) do
     ~F"""
@@ -99,6 +110,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               Media
             </button>
+
+            <button
+              type="button"
+              :on-click={@create_ref}
+              phx-value-type="table"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Table
+            </button>
+
             <button
               type="button"
               :on-click={@create_ref}
@@ -186,7 +208,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   </div>
                 {/for}
 
-                <Modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"}>
+                <Modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"} wide>
                   <div class="panels">
                     {#for ref_data <- inputs_for_block(ref, :data)}
                       {hidden_input(ref_data, :type, value: input_value(ref_data, :type))}
@@ -386,6 +408,82 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               {/if}
 
                             {/for}
+
+                          {#match "table"}
+                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                              <Input.Text form={block_data} field={:key} />
+                              <Input.Textarea form={block_data} field={:instructions} />
+
+                              {#for tpl_row <- inputs_for(block_data, :template_row)}
+                                {#if !input_value(tpl_row, :cols)}
+                                  <button type="button" :on-click={@add_table_template} phx-value-id={input_value(ref, :name)}>Create table row template</button>
+                                {#else}
+                                  <div
+                                    id={"#{@form.id}-refs-#{@key}-table-cols"}
+                                    class="col-vars"
+                                    phx-hook="Brando.Sortable"
+                                    data-sortable-id="sortable-table-cols"
+                                    data-sortable-selector=".col-var"
+                                    data-sortable-handle=".sort-handle"
+                                    data-sortable-params={input_value(ref, :name)}
+                                    >
+                                    <PolyInputs form={tpl_row} for={:cols} :let={form: var, index: var_idx}>
+                                      <div class="col-var draggable" data-id={var_idx}">
+                                        <div
+                                          class="col-var-toggle"
+                                          :on-click="toggle_col_var"
+                                          phx-value-id={input_value(var, :key)}>
+                                          {input_value(var, :type)} — {input_value(var, :label)}
+                                          <div class="sort-handle">
+                                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="7.5" cy="1.5" r="1.5"></circle><circle cx="13.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="7.5" cy="7.5" r="1.5"></circle><circle cx="13.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle><circle cx="13.5" cy="13.5" r="1.5"></circle></svg>
+                                          </div>
+                                        </div>
+                                        <div class={
+                                          "col-var-form",
+                                          hidden: input_value(var, :key) not in @open_col_vars
+                                        }>
+                                          {hidden_input var, :key}
+                                          {hidden_input var, :type}
+                                          {hidden_input var, :important}
+                                          <Input.Text form={var} field={:label} />
+                                          <Input.Text form={var} field={:instructions} />
+                                          <Input.Text form={var} field={:placeholder} />
+                                          {#case input_value(var, :type)}
+                                            {#match "text"}
+                                              <Input.Text form={var} field={:value} />
+                                            {#match "string"}
+                                              <Input.Text form={var} field={:value} />
+                                            {#match "boolean"}
+                                              <Input.Toggle form={var} field={:value} />
+                                            {#match "datetime"}
+                                              <Input.Datetime form={var} field={:value} />
+                                            {#match "html"}
+                                              <Input.RichText form={var} field={:value} />
+                                            {#match "color"}
+                                              {!-- #TODO: Input.Color --}
+                                              <Input.Text form={var} field={:value} />
+                                            {#match _}
+                                              <Input.Text form={var} field={:value} />
+                                          {/case}
+                                        </div>
+                                      </div>
+                                    </PolyInputs>
+                                  </div>
+
+                                  {#for type <- ["string", "text", "html", "boolean", "datetime", "color"]}
+                                    <button
+                                      type="button"
+                                      class="tiny"
+                                      :on-click={@add_table_col}
+                                      phx-value-id={input_value(ref, :name)}
+                                      phx-value-type={type}>
+                                      {type}
+                                    </button>
+                                  {/for}
+                                {/if}
+                              {/for}
+                            {/for}
+
                           {#match type}
                             No matching block {type} found
                         {/case}
@@ -543,5 +641,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
       </div>
     </div>
     """
+  end
+
+  def handle_event(
+        "toggle_col_var",
+        %{"id" => col_name},
+        %{assigns: %{open_col_vars: open_col_vars}} = socket
+      ) do
+    updated_open_col_vars =
+      if col_name in open_col_vars do
+        Enum.reject(open_col_vars, &(&1 == col_name))
+      else
+        [col_name | open_col_vars]
+      end
+
+    {:noreply, assign(socket, :open_col_vars, updated_open_col_vars)}
   end
 end

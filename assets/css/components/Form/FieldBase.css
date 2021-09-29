@@ -9,6 +9,57 @@
   }
 }
 
+.subform-tools {
+  display: flex;
+  flex-direction: column;
+  padding-right: 15px;
+  justify-content: flex-end;
+
+  button {
+    border: none;
+    background-color: white;
+    padding: 5px;
+    border-radius: 50%;
+
+    &:first-of-type {
+      margin-bottom: 5px;
+    }
+
+    &:hover {
+      @color bg dark;
+      svg path.s {
+        fill: theme(colors.peach);
+      }
+    }
+  }
+
+  label.subform-delete {
+    cursor: pointer;
+    background-color: white;
+    padding: 5px;
+    border-radius: 50%;
+
+    &:hover {
+      @color bg dark;
+      svg path.s {
+        fill: theme(colors.peach);
+      }
+    }
+
+    input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+    }
+
+    svg {
+      pointer-events: none;
+    }
+  }
+}
+
 .compact {
   display: flex;
   align-items: center;
@@ -97,57 +148,6 @@
         margin-bottom: 15px;
         padding-left: 0;
         border-left: none;
-
-        .subform-tools {
-          display: flex;
-          flex-direction: column;
-          padding-right: 15px;
-          justify-content: flex-end;
-
-          button {
-            border: none;
-            background-color: white;
-            padding: 5px;
-            border-radius: 50%;
-
-            &:first-of-type {
-              margin-bottom: 5px;
-            }
-
-            &:hover {
-              @color bg dark;
-              svg path.s {
-                fill: theme(colors.peach);
-              }
-            }
-          }
-
-          label.subform-delete {
-            cursor: pointer;
-            background-color: white;
-            padding: 5px;
-            border-radius: 50%;
-
-            &:hover {
-              @color bg dark;
-              svg path.s {
-                fill: theme(colors.peach);
-              }
-            }
-
-            input {
-              position: absolute;
-              opacity: 0;
-              cursor: pointer;
-              height: 0;
-              width: 0;
-            }
-
-            svg {
-              pointer-events: none;
-            }
-          }
-        }
 
         .brando-input {
           flex-grow: 1;

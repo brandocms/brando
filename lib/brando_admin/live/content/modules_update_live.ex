@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   alias Brando.Villain
   alias Brando.Content.Module.Ref
+  alias Brando.Blueprint.Villain.Blocks
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
@@ -54,11 +55,15 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           </div>
 
           <ModuleProps
+            id="module-props"
             form={form}
             create_ref="create_ref"
             delete_ref="delete_ref"
             create_var="create_var"
             delete_var="delete_var"
+            add_table_row="add_table_row"
+            add_table_col="add_table_col"
+            add_table_template="add_table_template"
             show_modal="show_modal"
           />
         </div>
@@ -79,6 +84,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                 {hidden_input entry, :id, value: 2107}
 
                 <ModuleProps
+                  id={"entry-module-props-#{entry.id}"}
                   form={entry}
                   entry_form
                   create_ref="entry_create_ref"
@@ -111,6 +117,132 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
      socket
      |> assign(:params, params)
      |> assign(:uri, uri)}
+  end
+
+  ## Table events
+
+  def handle_event(
+        "add_table_template",
+        %{"id" => ref_name},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    new_row = %Blocks.TableBlock.Row{cols: []}
+    refs = get_field(changeset, :refs)
+    ref = Enum.find(refs, &(&1.name == ref_name))
+
+    updated_ref =
+      put_in(ref, [Access.key(:data), Access.key(:data), Access.key(:template_row)], new_row)
+
+    require Logger
+    Logger.error(inspect(ref, pretty: true))
+    Logger.error(inspect(updated_ref, pretty: true))
+
+    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
+
+    updated_changeset = put_change(changeset, :refs, updated_refs)
+
+    require Logger
+    Logger.error("==> add_table_row #{inspect(updated_changeset, pretty: true)}")
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
+        "add_table_col",
+        %{"id" => ref_name, "type" => var_type},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    var_module =
+      var_type
+      |> String.to_existing_atom()
+      |> Brando.Content.get_var_by_type()
+
+    new_col =
+      struct(var_module, %{
+        key: Brando.Utils.random_string(5),
+        label: "Label",
+        type: var_type,
+        important: true
+      })
+
+    refs = get_field(changeset, :refs)
+    ref = Enum.find(refs, &(&1.name == ref_name))
+
+    updated_ref =
+      update_in(
+        ref,
+        [
+          Access.key(:data),
+          Access.key(:data),
+          Access.key(:template_row),
+          Access.key(:cols)
+        ],
+        &(&1 ++ [new_col])
+      )
+
+    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
+    updated_changeset = put_change(changeset, :refs, updated_refs)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
+        "add_table_row",
+        %{"id" => ref_name},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    new_row = %Blocks.TableBlock.Row{}
+    refs = get_field(changeset, :refs)
+    ref = Enum.find(refs, &(&1.name == ref_name))
+    update_in(ref, [Access.key(:data), Access.key(:data), Access.key(:rows)], &[new_row | &1])
+
+    require Logger
+    Logger.error(inspect(ref, pretty: true))
+    Logger.error(inspect(new_row, pretty: true))
+
+    # filtered_vars = Enum.reject(vars, &(&1.key == var_key))
+    # updated_changeset = put_change(changeset, :vars, filtered_vars)
+
+    # {:noreply, assign(socket, :changeset, updated_changeset)}
+
+    require Logger
+    Logger.error("==> add_table_row #{ref_name}")
+    {:noreply, socket}
+  end
+
+  ## Sequence event
+
+  def handle_event(
+        "sequenced",
+        %{
+          "ids" => order_indices,
+          "sortable_id" => "sortable-table-cols",
+          "sortable_params" => ref_name
+        },
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    refs = get_field(changeset, :refs)
+    ref = Enum.find(refs, &(&1.name == ref_name))
+
+    cols = ref.data.data.template_row.cols
+    sorted_cols = Enum.map(order_indices, &Enum.at(cols, &1))
+
+    updated_ref =
+      put_in(
+        ref,
+        [
+          Access.key(:data),
+          Access.key(:data),
+          Access.key(:template_row),
+          Access.key(:cols)
+        ],
+        sorted_cols
+      )
+
+    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
+    updated_changeset = put_change(changeset, :refs, updated_refs)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
   end
 
   def handle_event(

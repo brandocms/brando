@@ -1,0 +1,129 @@
+.table-block {
+  .empty {
+    @color bg peach;
+    @color fg dark;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    padding: 3vw;
+    border-radius: 25px;
+
+    &.hidden {
+      display: none !important;
+    }
+
+    figure {
+      @space margin-bottom 35px;
+
+      svg {
+        width: 200px;
+        user-select: none;
+        pointer-events: none;
+
+        path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
+          fill: theme(colors.dark);
+        }
+      }
+    }
+
+    .instructions {
+      font-size: 16px;
+
+      button {
+        margin-top: 10px;
+      }
+    }
+  }
+
+  .block-content {
+    .table-content {
+    }
+  }
+
+  .table-instructions {
+    @color bg peach;
+    padding: 1vw;
+    margin-bottom: 2vw;
+    font-size: 1.2vw;
+  }
+
+  .table-row {
+    @space margin-bottom 8px;
+    @space padding-top 8px;
+    @space padding-x 8px;
+
+    display: flex;
+
+    &:nth-of-type(even) {
+      @color bg peach;
+      border-radius: 12px;
+
+      .field-wrapper {
+        .text {
+          @color bg white;
+        }
+      }
+    }
+
+    .subform-tools {
+      justify-content: flex-start;
+    }
+
+    .label-wrapper {
+      height: 0;
+      overflow: hidden;
+    }
+
+    .help-text {
+      display: none;
+    }
+
+    &:first-of-type {
+      .label-wrapper {
+        @space margin-bottom 1vw;
+        height: auto;
+        overflow: visible;
+        border-bottom: 1px solid gainsboro;
+      }
+
+      .help-text {
+        display: block;
+      }
+
+      .subform-tools {
+        padding-top: 20px;
+      }
+    }
+
+    .variable {
+      @space padding-right 1vw;
+
+      &:last-of-type {
+        @space padding-right 0;
+      }
+
+      &.boolean {
+        flex-grow: 0;
+      }
+
+      &.string, &.text {
+        flex-grow: 1;
+      }
+
+      .label-wrapper {
+        label span {
+          @fontsize 14px;
+        }
+      }
+    }
+  }
+
+  .add-row {
+    @space margin-top 15px;
+  }
+}

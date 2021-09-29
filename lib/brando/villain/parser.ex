@@ -21,34 +21,37 @@ defmodule Brando.Villain.Parser do
   @doc "Parses map"
   @callback map(data :: map, opts :: map) :: binary
 
-  @doc "Parses image"
+  @doc "Parses image (deprecated)"
   @callback image(data :: map, opts :: map) :: binary
 
-  @doc "Parses input"
+  @doc "Parses input (deprecated)"
   @callback input(data :: map, opts :: map) :: binary
 
-  @doc "Parses slideshow"
+  @doc "Parses slideshow (deprecated)"
   @callback slideshow(data :: map, opts :: map) :: binary
 
   @doc "Parses gallery"
   @callback gallery(data :: map, opts :: map) :: binary
 
-  @doc "Parses divider"
+  @doc "Parses divider (deprecated)"
   @callback divider(data :: map, opts :: map) :: binary
 
-  @doc "Parses list"
+  @doc "Parses list (deprecated)"
   @callback list(data :: map, opts :: map) :: binary
 
-  @doc "Parses blockquote"
+  @doc "Parses blockquote (deprecated)"
   @callback blockquote(data :: map, opts :: map) :: binary
 
-  @doc "Parses columns"
+  @doc "Parses columns (deprecated)"
   @callback columns(data :: map, opts :: map) :: binary
 
-  @doc "Parses datatables"
+  @doc "Parses datatables (deprecated)"
   @callback datatable(data :: map, opts :: map) :: binary
 
-  @doc "Parses markdown"
+  @doc "Parses table"
+  @callback table(data :: map, opts :: map) :: binary
+
+  @doc "Parses markdown (deprecated)"
   @callback markdown(data :: map, opts :: map) :: binary
 
   @doc "Parses html"
@@ -669,6 +672,16 @@ defmodule Brando.Villain.Parser do
       end
 
       defoverridable datatable: 2
+
+      @doc """
+      Datatable
+      """
+      def table(_, _) do
+        # TODO
+        ""
+      end
+
+      defoverridable table: 2
 
       @doc """
       Convert divider/hr to html

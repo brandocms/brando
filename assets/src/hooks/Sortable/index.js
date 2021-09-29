@@ -7,6 +7,8 @@ export default (app) => ({
     this.sortableSelector = this.el.dataset.sortableSelector
     this.handle = this.el.dataset.sortableHandle
     this.sortableId = this.el.dataset.sortableId
+    this.sortableParams = this.el.dataset.sortableParams
+    console.log('params', this.sortableParams)
     this.bindSortable()
   },
 
@@ -37,9 +39,17 @@ export default (app) => ({
     const sortedArray = sortable.toArray().map(Number)
     if (!isEqual(this.currentOrder, sortedArray)) {
       if (this.target) {
-        this.pushEventTo(this.target, 'sequenced', { ids: sortedArray, sortable_id: this.sortableId })
+        this.pushEventTo(this.target, 'sequenced', { 
+          ids: sortedArray, 
+          sortable_id: this.sortableId, 
+          sortable_params: this.sortableParams 
+        })
       } else {
-        this.pushEvent('sequenced', { ids: sortedArray, sortable_id: this.sortableId })
+        this.pushEvent('sequenced', { 
+          ids: sortedArray, 
+          sortable_id: this.sortableId,
+          sortable_params: this.sortableParams 
+        })
       }
       this.currentOrder = sortedArray
     }

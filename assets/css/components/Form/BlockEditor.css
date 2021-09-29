@@ -49,8 +49,37 @@
         font-size: 15px;
       }
 
-      .refs, .vars {
+      .refs {
+        .col-var {
+          @color bg peach;
+          padding: 1vw;
+          border-radius: 10px;
+          margin-bottom: 15px;
+          font-family: 'Mono';
+
+          .col-var-toggle {
+            display: flex;
+            justify-content: space-between;
+
+            svg {
+              circle {
+                fill: theme(colors.dark);
+              }
+            }
+          }
+
+          .col-var-form {          
+            @space margin-top 15px;
+            &.hidden {
+              display: none;
+            }
+          }
+        }
+
         
+      }
+
+      .refs, .vars {
         @space margin-top 20px;
         
         .button-group {

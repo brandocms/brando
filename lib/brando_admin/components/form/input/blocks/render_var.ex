@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~F"""
-      <div>
+      <div class={"variable", input_value(@var, :type)}>
         {#if @should_render?}
           {#if @edit}
             <div id={"#{@var.id}-edit"}>
