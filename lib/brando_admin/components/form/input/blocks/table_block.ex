@@ -75,15 +75,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
             </div>
           </div>
         {#else}
-          <div class="table-rows">
+          <div
+            id={"sortable-#{@uid}-rows"}
+            class="table-rows"
+            phx-hook="Brando.Sortable"
+            data-target={@myself}
+            data-sortable-id={"sortable-#{@uid}-rows"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".table-row">
             {#for {row, index} <- Enum.with_index(inputs_for(@block_data, :rows))}
-              <div class="table-row">
+              <div class="table-row draggable" data-id={index}">
                 <div class="subform-tools">
-                  <button type="button" class="subform-handle">
+                  <button type="button" class="sort-handle">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path class="s" d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z" fill="rgba(5,39,82,1)"/></svg>
                   </button>
                   <button
-                    :on-click="remove_subentry"
+                    :on-click="delete_row"
                     phx-value-index={index}
                     type="button"
                     class="subform-delete"
@@ -120,6 +127,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   end
 
   def handle_event(
+        "sequenced",
+        %{"ids" => order_indices},
+        %{assigns: %{uid: uid, data_field: data_field, base_form: form, block_data: block_data}} =
+          socket
+      ) do
+    changeset = form.source
+    rows = input_value(block_data, :rows)
+
+    sorted_rows = Enum.map(order_indices, &Enum.at(rows, &1))
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %{rows: sorted_rows}
+      })
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
         "add_row",
         _,
         %{assigns: %{uid: uid, data_field: data_field, base_form: form, block_data: block_data}} =
@@ -131,6 +165,34 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
     new_row = input_value(block_data, :template_row)
 
     new_rows = rows ++ [new_row]
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %{rows: new_rows}
+      })
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "delete_row",
+        %{"index" => index},
+        %{assigns: %{uid: uid, data_field: data_field, base_form: form, block_data: block_data}} =
+          socket
+      ) do
+    # replace block
+    changeset = form.source
+    rows = input_value(block_data, :rows)
+
+    {_, new_rows} = List.pop_at(rows, String.to_integer(index))
 
     updated_changeset =
       Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
