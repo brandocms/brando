@@ -132,6 +132,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               :on-click={@create_ref}
+              phx-value-type="map"
+              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              class="secondary"
+            >
+              Map
+            </button>
+
+            <button
+              type="button"
+              :on-click={@create_ref}
               phx-value-type="comment"
               phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary"

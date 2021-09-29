@@ -280,11 +280,11 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert GMaps url to iframe html
       """
-      def map(%{embed_url: embed_url, source: "gmaps"}, _) do
+      def map(%{embed_url: embed_url, source: :gmaps}, _) do
         ~s(<div class="map-wrapper">
              <iframe width="420"
                      height="315"
-                     src="https:#{embed_url}"
+                     src="#{embed_url}"
                      frameborder="0"
                      allowfullscreen>
              </iframe>
