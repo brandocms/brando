@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
 
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Modal
 

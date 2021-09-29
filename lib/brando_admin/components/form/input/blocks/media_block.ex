@@ -4,8 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
   prop block, :form
