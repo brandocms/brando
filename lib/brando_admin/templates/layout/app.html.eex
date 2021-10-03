@@ -1,1 +1,2 @@
+<%# This is used as a layout template for auth.html.heex %>
 <%= @inner_content %>
