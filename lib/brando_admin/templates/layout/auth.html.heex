@@ -8,7 +8,7 @@
     <script type="module" src="http://localhost:3333/@vite/client"></script>
     <script type="module" src="http://localhost:3333/src/auth.js"></script>
   </head>
-  <%= body_tag @conn, id: "app" %>
+  <body id="app">
     <div class="fader" id="fader">
       <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
       <div class="loading-container"></div>
