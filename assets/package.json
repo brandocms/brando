@@ -8,22 +8,22 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.42.0",
+    "@brandocms/jupiter": "^3.42.1",
     "@codemirror/basic-setup": "^0.19.0",
     "@codemirror/lang-html": "^0.19.3",
     "@codemirror/lang-markdown": "^0.19.1",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
-    "@tiptap/core": "^2.0.0-beta.112",
+    "@tiptap/core": "^2.0.0-beta.117",
     "@tiptap/extension-character-count": "^2.0.0-beta.13",
     "@tiptap/extension-focus": "^2.0.0-beta.26",
     "@tiptap/extension-link": "^2.0.0-beta.20",
     "@tiptap/extension-subscript": "^2.0.0-beta.4",
     "@tiptap/extension-typography": "^2.0.0-beta.14",
-    "@tiptap/starter-kit": "^2.0.0-beta.111",
+    "@tiptap/starter-kit": "^2.0.0-beta.116",
     "autosize": "^5.0.1",
     "flatpickr": "^4.6.9",
-    "gsap": "^3.7.1",
+    "gsap": "^3.8.0",
     "izitoast": "^1.4.0",
     "lodash": "^4.17.21",
     "morphdom": "^2.6.1",
@@ -33,17 +33,17 @@
     "phoenix_live_view": "^0.16.4",
     "slugify": "^1.6.0",
     "sortablejs": "^1.14.0",
-    "tippy.js": "^6.3.1",
+    "tippy.js": "^6.3.2",
     "vanilla-click-outside": "^2.1.0",
     "vex-dialog": "^1.1.0",
     "vex-js": "^4.1.0"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.6.2",
-    "@sveltejs/vite-plugin-svelte": "1.0.0-next.24",
-    "autoprefixer": "^10.3.5",
-    "svelte": "^3.43.0",
-    "svelte-preprocess": "^4.9.5",
-    "vite": "^2.5.10"
+    "@brandocms/europacss": "^0.6.3",
+    "@sveltejs/vite-plugin-svelte": "1.0.0-next.26",
+    "autoprefixer": "^10.3.6",
+    "svelte": "^3.43.1",
+    "svelte-preprocess": "^4.9.8",
+    "vite": "^2.6.2"
   }
 }
