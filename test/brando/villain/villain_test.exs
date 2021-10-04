@@ -10,6 +10,7 @@ defmodule Brando.VillainTest do
     def input(_, _), do: nil
     def html(_, _), do: nil
     def svg(_, _), do: nil
+    def table(_, _), do: nil
     def map(_, _), do: nil
     def blockquote(_, _), do: nil
     def columns(_, _), do: nil
