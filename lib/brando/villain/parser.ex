@@ -156,8 +156,8 @@ defmodule Brando.Villain.Parser do
           entries
           |> Enum.with_index()
           |> Enum.map(fn {entry, index} ->
-            # add vars to context
             vars = process_vars(entry.data.vars)
+            refs = process_refs(entry.data.refs)
 
             forloop = %{
               "index" => index + 1,
@@ -168,6 +168,7 @@ defmodule Brando.Villain.Parser do
             context =
               base_context
               |> add_vars_to_context(vars)
+              |> add_refs_to_context(refs)
               |> Context.assign("forloop", forloop)
 
             module.entry_template.code
@@ -177,9 +178,12 @@ defmodule Brando.Villain.Parser do
           |> Enum.join("\n")
 
         base_vars = process_vars(block.vars)
+        base_refs = process_refs(block.refs)
 
         context =
           base_context
+          |> add_vars_to_context(base_vars)
+          |> add_refs_to_context(base_refs)
           |> Context.assign("entries", entries)
           |> Context.assign("content", content)
 
@@ -188,17 +192,20 @@ defmodule Brando.Villain.Parser do
         |> Villain.parse_and_render(context)
       end
 
-      def module(%{module_id: id, refs: refs} = block, opts) do
+      def module(%{module_id: id, refs: refs, vars: vars} = block, opts) do
         base_context = opts.context
         modules = opts.modules
 
         {:ok, module} = Content.find_module(modules, id)
 
-        vars = Map.get(block, :vars)
         base_context = opts.context
         vars = process_vars(vars)
+        refs = process_refs(refs)
 
-        context = add_vars_to_context(base_context, vars)
+        context =
+          base_context
+          |> add_vars_to_context(vars)
+          |> add_refs_to_context(refs)
 
         module.code
         |> render_refs(refs, id, opts)
@@ -805,8 +812,16 @@ defmodule Brando.Villain.Parser do
 
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
+      defp process_refs(nil), do: %{}
+      defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
+
+      defp process_ref(%{name: ref_name, data: ref_block}), do: {ref_name, ref_block}
+
       defp add_vars_to_context(context, vars),
         do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
+
+      defp add_refs_to_context(context, refs),
+        do: Context.assign(context, :refs, refs)
 
       defp render_datasource_entries({:code, code}, entries, opts) do
         base_context = opts.context

@@ -361,6 +361,57 @@ defmodule Brando.VillainTest do
              "<section b-section=\"green\">\n  -- this is some NEW code Some text! --\n</section>\n"
   end
 
+  test "access refs in context", %{user: user} do
+    module_params = %{
+      code: "A variable: {{ testvar }} -- A ref: {{ refs.lede.data.text }}",
+      name: "Name",
+      help_text: "Help text",
+      refs: [],
+      namespace: "all",
+      class: "css class"
+    }
+
+    {:ok, tp1} = Brando.Content.create_module(module_params, user)
+
+    data = %{
+      data: %{
+        deleted_at: nil,
+        module_id: tp1.id,
+        multi: false,
+        refs: [
+          %{
+            data: %{
+              uid: "1wUr4ZLoOx53fqIslbP1dg",
+              type: "text",
+              hidden: false,
+              data: %{
+                text: "<p>A REF!</p>",
+                extensions: nil,
+                type: "lede"
+              }
+            },
+            description: nil,
+            name: "lede"
+          }
+        ],
+        sequence: 0,
+        vars: [
+          %{
+            key: "testvar",
+            label: "Field name",
+            type: "text",
+            value: "VARIABLE!"
+          }
+        ]
+      },
+      type: "module"
+    }
+
+    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+
+    assert page.html == "A variable: VARIABLE! -- A ref: <p>A REF!</p>"
+  end
+
   test "rerender_villains_for", %{user: user} do
     {:ok, _} =
       Brando.Pages.create_page(
