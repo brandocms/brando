@@ -23,6 +23,20 @@
       }
     }
   }
+
+  .modal-content {
+    .var, .ref {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      align-items: center;
+
+      .key {
+        @font mono;
+        font-weight: 600;
+      }
+    }
+  }
 }
 
 .module-entries {

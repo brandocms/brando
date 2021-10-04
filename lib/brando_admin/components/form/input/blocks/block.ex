@@ -4,6 +4,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   """
   use Surface.LiveComponent
   use Phoenix.HTML
+
+  import Brando.Gettext
+
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Label
@@ -30,6 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
   slot default, required: true
   slot config
+  slot config_footer
   slot description
   slot instructions
   slot render
@@ -62,6 +66,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
       <Modal title="Configure" id={"#{@uid}_config"} wide={@wide_config}>
         <#slot name="config" />
+        <:footer>
+          <button type="button" class="primary" :on-click="hide_config_modal" phx-value-id={"#{@uid}_config"}>
+            {gettext "Close"}
+          </button>
+          <#slot name="config_footer" />
+        </:footer>
       </Modal>
 
       {hidden_input @block, :uid}
@@ -148,6 +158,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
   def handle_event("show_config_modal", %{"id" => modal_id}, socket) do
     Modal.show(modal_id)
+    {:noreply, socket}
+  end
+
+  def handle_event("hide_config_modal", %{"id" => modal_id}, socket) do
+    Modal.hide(modal_id)
     {:noreply, socket}
   end
 

@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
+
+  import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
+
   alias Brando.Content
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -97,6 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     ~F"""
     <div
       id={"#{@uid}-wrapper"}
+      class="module-block"
       data-block-index={@index}
       data-block-uid={@uid}>
 
@@ -111,17 +115,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>
         <:config>
-          {#for var <- inputs_for_poly(@block_data, :vars)}
-            <RenderVar var={var} render={:only_regular} />
-          {/for}
-          <button type="button" class="secondary" :on-click="reinit_vars">
-            Reinitialize variables
-          </button>
-          <button type="button" class="secondary" :on-click="reinit_refs">
-            Reset block refs
-          </button>
+          <div class="panels">
+            <div class="panel">
+              {#for var <- inputs_for_poly(@block_data, :vars)}
+                <RenderVar var={var} render={:only_regular} />
+              {/for}
+            </div>
+            <div class="panel">
+              <h2 class="titlecase">Vars</h2>
+              {#for var <- v(@block_data, :vars) || []}
+                <div class="var">
+                  <div class="key">{var.key}</div>
+                  <button type="button" class="tiny" :on-click="reset_var" phx-value-id={var.key}>{gettext "Reset"}</button>
+                </div>
+              {/for}
+
+              <h2 class="titlecase">Refs</h2>
+              {#for ref <- v(@block_data, :refs) || []}
+                <div class="ref">
+                  <div class="key">{ref.name}</div>
+                  <button type="button" class="tiny" :on-click="reset_ref" phx-value-id={ref.name}>{gettext "Reset"}</button>
+                </div>
+              {/for}
+            </div>
+          </div>
         </:config>
-        <div class="module-block" b-editor-tpl={@module_class}>
+        <:config_footer>
+          <button type="button" class="secondary" :on-click="reset_vars">
+            Reset all variables
+          </button>
+          <button type="button" class="secondary" :on-click="reset_refs">
+            Reset all block refs
+          </button>
+        </:config_footer>
+
+        <div b-editor-tpl={@module_class}>
           {#unless Enum.empty?(@important_vars)}
             <div class="important-vars">
               {#for var <- inputs_for_poly(@block_data, :vars)}
@@ -166,7 +194,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def handle_event(
-        "reinit_vars",
+        "reset_vars",
         _,
         %{
           assigns: %{
@@ -202,7 +230,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def handle_event(
-        "reinit_refs",
+        "reset_var",
+        %{"id" => var_id},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    module_id = input_value(block_data, :module_id)
+    {:ok, module} = Brando.Content.get_module(module_id)
+
+    changeset = base_form.source
+
+    reset_var = Enum.find(module.vars, &(&1.key == var_id))
+    current_vars = input_value(block_data, :vars)
+
+    updated_vars =
+      Enum.map(current_vars, fn
+        %{key: ^var_id} -> reset_var
+        var -> var
+      end)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{vars: updated_vars}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reset_refs",
         _,
         %{
           assigns: %{
@@ -226,6 +299,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         data_field,
         block_uid,
         %{data: %{refs: refs_with_generated_uids}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reset_ref",
+        %{"id" => ref_id},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    module_id = input_value(block_data, :module_id)
+    {:ok, module} = Brando.Content.get_module(module_id)
+
+    changeset = base_form.source
+
+    reset_ref = Enum.find(module.refs, &(&1.name == ref_id))
+    current_refs = input_value(block_data, :refs)
+
+    updated_refs =
+      Enum.map(current_refs, fn
+        %{name: ^ref_id} -> reset_ref
+        ref -> ref
+      end)
+
+    updated_refs_with_generated_uids = Brando.Villain.add_uid_to_refs(updated_refs)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{refs: updated_refs_with_generated_uids}}
       )
 
     schema = changeset.data.__struct__
