@@ -7,7 +7,6 @@ defmodule Brando.Pages do
 
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
-  alias Brando.Pages.Property
   alias Brando.Users.User
   alias Brando.Villain
   alias Ecto.Changeset
