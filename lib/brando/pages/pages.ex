@@ -37,6 +37,7 @@ defmodule Brando.Pages do
 
   filters Page do
     fn
+      {:language, language}, query -> from q in query, where: q.language == ^language
       {:uri, uri}, query -> from q in query, where: ilike(q.uri, ^"%#{uri}%")
       {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
       {:parents, true}, query -> from q in query, where: is_nil(q.parent_id)

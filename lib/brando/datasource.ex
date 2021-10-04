@@ -2,9 +2,18 @@ defmodule Brando.Datasource do
   @moduledoc """
   Helpers to register datasources for interfacing with the block editor
 
-  ### many
+  ### List
 
   A set of entries is returned automatically
+
+  #### Example
+
+        list :all_posts_from_year, fn module, arg ->
+          {:ok, Repo.all(from t in module, where: t.year == ^arg)}
+        end
+
+        list :all_posts, fn _, _ -> Posts.list_posts() end
+
 
   ### Selection
 

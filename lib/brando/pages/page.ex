@@ -170,7 +170,7 @@ defmodule Brando.Pages.Page do
           data-phx-link="redirect"
           data-phx-link-state="push"
           href="/admin/pages/fragments/update/{{ entry.id }}"
-          class="entry-link">
+          class="entry-link smaller">
           {{ entry.title }}
         </a>
         <br>
@@ -203,7 +203,7 @@ defmodule Brando.Pages.Page do
           data-phx-link="redirect"
           data-phx-link-state="push"
           href="/admin/pages/update/{{ entry.id }}"
-          class="entry-link">
+          class="entry-link smaller">
           {{ entry.title }}
         </a>
         <br>

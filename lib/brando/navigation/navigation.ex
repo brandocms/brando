@@ -52,8 +52,12 @@ defmodule Brando.Navigation do
   query :list, Menu, do: fn query -> from(q in query) end
 
   filters Menu do
-    fn {:title, title}, query ->
-      from q in query, where: ilike(q.title, ^"%#{title}%")
+    fn
+      {:title, title}, query ->
+        from q in query, where: ilike(q.title, ^"%#{title}%")
+
+      {:language, language}, query ->
+        from q in query, where: q.language == ^language
     end
   end
 

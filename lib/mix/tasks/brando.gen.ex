@@ -55,6 +55,7 @@ defmodule Mix.Tasks.Brando.Gen do
 
     sequenced? = blueprint_module.has_trait(Brando.Trait.Sequenced)
     soft_delete? = blueprint_module.has_trait(Brando.Trait.SoftDelete)
+    translatable? = blueprint_module.has_trait(Brando.Trait.Translatable)
     creator? = blueprint_module.has_trait(Brando.Trait.Creator)
     revisioned? = blueprint_module.has_trait(Brando.Trait.Revisioned)
     meta? = blueprint_module.has_trait(Brando.Trait.Meta)
@@ -138,6 +139,7 @@ defmodule Mix.Tasks.Brando.Gen do
           slug: slug?,
           sequenced: sequenced?,
           soft_delete: soft_delete?,
+          translatable: translatable?,
           creator: creator?,
           revisioned: revisioned?,
           meta: meta?,

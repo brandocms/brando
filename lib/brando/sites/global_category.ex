@@ -10,12 +10,13 @@ defmodule Brando.Sites.GlobalCategory do
   alias Brando.Content.Var
 
   trait Brando.Trait.CastPolymorphicEmbeds
+  trait Brando.Trait.Translatable
 
   identifier "{{ entry.label }}"
 
   attributes do
     attribute :label, :string, required: true
-    attribute :key, :string, unique: [prevent_collision: true], required: true
+    attribute :key, :string, unique: [prevent_collision: :language], required: true
 
     attribute :globals, {:array, PolymorphicEmbed},
       types: [

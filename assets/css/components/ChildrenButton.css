@@ -24,6 +24,7 @@
     user-select: none;
     text-align: center;
     transition: background-color 0.25s ease, border-color 0.25s ease;
+    max-width: 44px;
 
     &.active {
       background-color: theme(colors.dark);

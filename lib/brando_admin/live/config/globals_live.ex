@@ -18,9 +18,9 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
   def mount(_, %{"user_token" => token}, socket) do
     {:ok,
      socket
-     |> assign_globals()
-     |> assign_new_category_changeset()
      |> assign_defaults(token)
+     |> assign_new_category_changeset()
+     |> assign_globals()
      |> assign(
        config?: false,
        category_changeset: nil,
@@ -218,8 +218,14 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
     {:noreply, socket}
   end
 
-  def assign_globals(socket) do
-    assign(socket, :global_categories, Brando.Globals.list_global_categories() |> elem(1))
+  def assign_globals(
+        %{assigns: %{current_user: %{config: %{content_language: language}}}} = socket
+      ) do
+    assign(
+      socket,
+      :global_categories,
+      Brando.Globals.list_global_categories(%{filter: %{language: language}}) |> elem(1)
+    )
   end
 
   def assign_defaults(socket, token) do

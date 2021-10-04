@@ -1,0 +1,75 @@
+.content-language-selector {
+  @color bg peachDarker;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 370px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+
+  &:hover {
+    cursor: pointer;
+  }
+
+  .inner {
+    @space padding-x sm;
+  }
+
+  h2 {
+    @fontsize 13px;
+    @space margin-bottom 10px;
+
+    &:after {
+      content: '↑';
+      right: 15px;
+      position: absolute;
+      top: 11px;
+    }
+  }
+
+  .selected-language {
+    @space margin-top 4px;
+    display: flex;
+    align-items: center;
+
+    .circle {
+      font-size: 12px;
+      width: 35px;
+      height: 35px;
+    }
+
+    span {
+      display: block;
+      margin-top: 2px;
+      font-size: 18px;
+      margin-left: 10px;
+    }
+  }
+
+  .instructions {
+    @fontsize sm;
+    margin-top: 15px;
+    padding-right: 35px;
+  }
+
+  .languages {
+    margin-top: 10px;
+
+    button {
+      width: 100%;
+      font-size: 18px;
+      text-align: center;
+      border: 1px solid;
+      padding: 15px;
+      margin-bottom: 8px;
+      border-radius: 34px;
+      font-weight: 500;
+      transition: color 250ms ease, background-color 250ms ease;
+
+      &:hover {
+        @color bg dark;
+        @color fg peach;
+      }
+    }
+  }
+}

@@ -61,19 +61,19 @@
   }
 
   .list-tools-wrapper {
-    @space margin-bottom xs;
+    @space margin-bottom 1vw;
   }
 
   .list-tools {
     display: flex;
-    min-height: 50px;
+    min-height: 3.5vw;
 
     > .statuses {
       @color bg input;
       display: flex;
       height: 100%;
       margin-right: 5px;
-      min-height: 52px;
+      min-height: 3.5vw;
       align-items: center;
 
       .status {
@@ -82,11 +82,11 @@
         display: flex;
         cursor: pointer;
         user-select: none;
-        font-size: 14px;
+        font-size: 1vw;
         text-transform: uppercase;
         padding-left: 15px;
         padding-right: 15px;
-        height: 52px;
+        height: 3.5vw;
         border: none;
 
         &.active {
@@ -150,7 +150,7 @@
 
     .filter {
       @color bg input;
-      height: 52px;
+      height: 3.5vw;
       display: flex;
       align-items: center;
       display: none;
@@ -164,17 +164,22 @@
       }
 
       input {
-        @fontsize input;
+        @fontsize 1.2vw;
         background-color: transparent;
         padding-top: 15px;
         padding-bottom: 11px;
         padding-right: 15px;
         width: 100%;
         border: 0;
+
+        &::placeholder {
+          @fontsize 1.2vw;
+        }
+
       }
 
       .filter-key {
-        @font mono 12px;
+        @font mono 0.8vw;
         cursor: pointer;
         user-select: none;
         border: 1px solid theme(colors.blue);
@@ -295,6 +300,16 @@
       .main-content .img-placeholder {
         background-color: #ffffff;
       }
+
+      .main-content .circle-flag {
+        background-color: #ffffff;
+      }
+    }
+
+    &:nth-of-type(odd) {
+      .main-content .circle-flag {
+        background-color: #fafafa;
+      }
     }
 
     .center {
@@ -311,6 +326,11 @@
       text-decoration: none;
       text-decoration-color: transparent;
       transition: text-decoration-color 1s ease;
+
+      &.smaller {
+        font-size: 85%;
+        font-weight: normal;
+      }
 
       &:after {
         content: '»';
@@ -459,14 +479,17 @@
 }
 
 .active-filters {
-  margin-top: 5px;
-  font-size: 10px;
+  margin-top: 0.8vw;
+  font-size: 0.9vw;
+
   .filter {
+    @font mono;
     background-color: palegoldenrod;
     border: 0;
-    font-size: 10px;
+    font-size: 0.8vw;
     text-transform: uppercase;
-    padding: 4px 8px 3px;
-    border-radius: 10px;
+    padding: 0.2vw 0.7vw 0.2vw 0.5vw;
+    border-radius: 1vw;
+    margin-left: 0.2vw;
   }
 }

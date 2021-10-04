@@ -63,7 +63,18 @@ defmodule Brando.Query.Mutations do
   defp maybe_preload(entry, nil), do: {:ok, entry}
   defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.repo().preload(preloads)}
 
-  def update(context, module, name, id, params, user, preloads, callback_block, custom_changeset) do
+  def update(
+        context,
+        module,
+        name,
+        id,
+        params,
+        user,
+        preloads,
+        callback_block,
+        custom_changeset,
+        show_notification
+      ) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
 
     get_opts =
@@ -87,9 +98,11 @@ defmodule Brando.Query.Mutations do
           Revisions.create_revision(entry, user)
         end
 
-        case Brando.Blueprint.Identifier.identifier_for(entry) do
-          nil -> nil
-          identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+        if show_notification do
+          case Brando.Blueprint.Identifier.identifier_for(entry) do
+            nil -> nil
+            identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+          end
         end
 
         callback_block.(entry)

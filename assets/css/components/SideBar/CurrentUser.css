@@ -110,6 +110,7 @@
         }
 
         a {
+          @fontsize input;
           display: block;
           padding: 14px 0 14px calc(8px + 64px + 15px);
         }

@@ -158,19 +158,6 @@ defmodule Brando.Query do
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
 
-  defmacro filters(do: _),
-    do:
-      raise("""
-
-      filters/1 is deprecated.
-
-      Specify Schema as argument:
-
-          filters Post do
-            ...
-          end
-      """)
-
   defp query_list(module, block) do
     source = module.__schema__(:source)
 
@@ -589,9 +576,10 @@ defmodule Brando.Query do
 
     quote do
       @spec unquote(:"update_#{singular_schema}")(
-              integer | binary,
+              integer | binary | map,
               map,
-              Brando.Users.User.t() | :system
+              Brando.Users.User.t() | :system,
+              list()
             ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"update_#{singular_schema}")(schema, params, user, opts \\ [])
@@ -606,7 +594,8 @@ defmodule Brando.Query do
           user,
           unquote(preloads),
           unquote(callback_block),
-          Keyword.get(opts, :changeset, nil)
+          Keyword.get(opts, :changeset, nil),
+          Keyword.get(opts, :show_notification, true)
         )
       end
 
@@ -620,7 +609,8 @@ defmodule Brando.Query do
           user,
           unquote(preloads),
           unquote(callback_block),
-          Keyword.get(opts, :changeset, nil)
+          Keyword.get(opts, :changeset, nil),
+          Keyword.get(opts, :show_notification, true)
         )
       end
 

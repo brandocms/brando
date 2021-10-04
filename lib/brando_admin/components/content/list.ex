@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   prop listing, :any
   prop blueprint, :any
-  prop current_user, :map
+  prop current_user, :map, required: true
   prop uri, :any
   prop params, :any
 
@@ -249,14 +249,17 @@ defmodule BrandoAdmin.Components.Content.List do
              context: context,
              plural: plural,
              listing: listing,
-             params: params
+             params: params,
+             current_user: current_user
            }
          } = socket,
          _
        ) do
+    content_language = current_user.config.content_language
+
     list_opts =
       listing
-      |> build_list_opts(schema)
+      |> build_list_opts(schema, content_language)
       |> params_to_list_opts(params, schema)
 
     {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
@@ -268,15 +271,26 @@ defmodule BrandoAdmin.Components.Content.List do
 
   # TODO: Read paginate true/false from listing
   # TODO: Read limit from listing
-  defp build_list_opts(listing, schema) do
+  defp build_list_opts(listing, schema, content_language) do
     %{paginate: true, limit: 25}
     |> maybe_merge_listing_query(listing)
+    |> IO.inspect()
+    |> maybe_merge_content_language(schema, content_language)
+    |> IO.inspect()
     |> maybe_preload_creator(schema)
     |> maybe_order_by_sequence(schema)
   end
 
   defp maybe_merge_listing_query(query_params, listing) do
     Map.merge(query_params, listing.query)
+  end
+
+  defp maybe_merge_content_language(query_params, schema, content_language) do
+    if schema.has_trait(Brando.Trait.Translatable) do
+      Brando.Utils.deep_merge(query_params, %{filter: %{language: content_language}})
+    else
+      query_params
+    end
   end
 
   defp params_to_list_opts(list_opts, params, _) do

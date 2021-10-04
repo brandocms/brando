@@ -7,29 +7,10 @@
 }
 
 #navigation {
-  @responsive desktop_xl {
-    width: 370px;
-  }
-
-  @responsive desktop_lg {
-    width: 370px;
-  }
-
-  @responsive desktop_md {
-    width: 330px;
-  }
-
-  @responsive ipad_landscape {
-    width: 330px;
-  }
-
-  @responsive mobile {
-    width: 330px;
-  }
-
-  @responsive iphone {
-    width: 330px;
-  }
+  @space padding-bottom 50px;
+  @space width 370px desktop_lg/desktop_xl;
+  @space width 330px ipad_portrait/ipad_landscape/desktop_md;
+  @space width 330px $mobile;
 
   @space padding-x sm;
   position: fixed;

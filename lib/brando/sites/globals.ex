@@ -17,6 +17,9 @@ defmodule Brando.Globals do
 
   filters GlobalCategory do
     fn
+      {:language, language}, query ->
+        from(q in query, where: q.language == ^language)
+
       {:key, key}, query ->
         from(q in query, where: ilike(q.key, ^"%#{key}%"))
 

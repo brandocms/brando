@@ -12,7 +12,10 @@ end
 filters <%= alias %> do
   fn
     {:<%= main_field %>, <%= main_field %>}, query ->
-      from q in query, where: ilike(q.<%= main_field %>, ^"%#{<%= main_field %>}%")
+      from q in query, where: ilike(q.<%= main_field %>, ^"%#{<%= main_field %>}%")<%= if translatable do %>
+
+    {:language, language}, query ->
+      from q in query, where: q.language == ^language<% end %>
   end
 end
 

@@ -105,7 +105,7 @@ defmodule BrandoAdmin.LiveView.Form do
           |> Map.from_struct()
           |> Map.put(:focal, updated_focal)
 
-        updated_changeset = Ecto.Changeset.put_change(changeset, field, updated_field)
+        updated_changeset = Ecto.Changeset.put_change(changeset, field_atom, updated_field)
         {:halt, assign(socket, changeset: updated_changeset)}
 
       _, _, socket ->
@@ -138,6 +138,17 @@ defmodule BrandoAdmin.LiveView.Form do
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}
+
+      {:set_content_language, language}, %{assigns: %{current_user: current_user}} = socket ->
+        {:ok, updated_current_user} =
+          Brando.Users.update_user(
+            current_user,
+            %{config: %{content_language: language}},
+            :system,
+            show_notification: false
+          )
+
+        {:halt, assign(socket, :current_user, updated_current_user)}
 
       _, socket ->
         {:cont, socket}
