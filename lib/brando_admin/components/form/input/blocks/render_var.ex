@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   data type, :string
   data instructions, :string
   data placeholder, :string
+  data value, :any
 
   def v(form, field) do
     input_value(form, field)
