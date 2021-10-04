@@ -13,13 +13,14 @@ defmodule Brando.Pages.Page do
     plural: "pages",
     gettext_module: Brando.Gettext
 
+  alias Brando.Content.Var
   alias Brando.Pages
   alias Brando.Pages.Fragment
-  alias Brando.Pages.Property
 
   import Brando.Gettext
 
   # ++ Traits
+  trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Creator
   trait Brando.Trait.Meta
   trait Brando.Trait.Revisioned
@@ -52,7 +53,7 @@ defmodule Brando.Pages.Page do
     meta_description
     meta_image
     sequence
-    properties
+    vars
     inserted_at
     updated_at
     deleted_at
@@ -66,13 +67,25 @@ defmodule Brando.Pages.Page do
     attribute :is_homepage, :boolean
     attribute :data, :villain
     attribute :css_classes, :string
+
+    attribute :vars, {:array, PolymorphicEmbed},
+      types: [
+        boolean: Var.Boolean,
+        text: Var.Text,
+        string: Var.String,
+        datetime: Var.Datetime,
+        html: Var.Html,
+        color: Var.Color
+      ],
+      type_field: :type,
+      on_type_not_found: :raise,
+      on_replace: :delete
   end
 
   relations do
     relation :parent, :belongs_to, module: __MODULE__
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
     relation :fragments, :has_many, module: Fragment
-    relation :properties, :has_many, module: Property, on_replace: :delete_if_exists, cast: true
   end
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -212,7 +225,7 @@ defmodule Brando.Pages.Page do
 
   forms do
     form default_params: %{status: :draft} do
-      tab "Content" do
+      tab gettext("Content") do
         fieldset size: :full do
           input :status, :status
         end
@@ -232,7 +245,7 @@ defmodule Brando.Pages.Page do
         end
       end
 
-      tab "Advanced" do
+      tab gettext("Advanced") do
         fieldset size: :half do
           input :is_homepage, :toggle
           input :template, :select, options: &__MODULE__.get_templates/2
@@ -240,7 +253,7 @@ defmodule Brando.Pages.Page do
         end
 
         fieldset size: :full do
-          inputs_for :properties, {:component, BrandoAdmin.Components.Form.Input.PageProperties}
+          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.PageVars}
         end
       end
     end

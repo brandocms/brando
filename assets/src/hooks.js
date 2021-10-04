@@ -19,7 +19,6 @@ import SlugHook from './hooks/Slug'
 import SortableHook from './hooks/Sortable'
 import SortableBlocksHook from './hooks/SortableBlocks'
 import SubFormSortableHook from './hooks/SubFormSortable'
-import SubEntryAddButtonHook from './hooks/SubEntryAddButton'
 import SubmitHook from './hooks/Submit'
 import StatusDropdownHook from './hooks/StatusDropdown'
 import SVGDropHook from './hooks/SVGDrop'
@@ -49,7 +48,6 @@ export default app => {
     'Brando.Sortable': SortableHook(app),
     'Brando.SortableBlocks': SortableBlocksHook(app),
     'Brando.StatusDropdown': StatusDropdownHook(app),
-    'Brando.SubEntryAddButton': SubEntryAddButtonHook(app),
     'Brando.SubFormSortable': SubFormSortableHook(app),
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),

@@ -1,13 +1,16 @@
-defmodule BrandoAdmin.Components.Form.Input.PageProperties do
+defmodule BrandoAdmin.Components.Form.Input.PageVars do
   # use Surface.Component
   use Surface.LiveComponent
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.MapInputs
+  alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Form.FieldBase
 
   import Brando.Gettext
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
 
   prop subform, :any
   prop form, :any
@@ -47,13 +50,13 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
-            {#if Enum.empty?(inputs_for(@form, @subform.field))}
+            {#if Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
               <div class="subform-empty">&rarr; No associated entries</div>
             {/if}
-            {#for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field))}
+            <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
               <div
-                class={"subform-entry", "inline"}
+                class={"subform-entry"}
                 data-id={index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
@@ -68,96 +71,24 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
                   </button>
                 </div>
 
-                <Input.Text form={sub_form} field={:type} />
-                <Input.Text form={sub_form} field={:label} />
-                <Input.Text form={sub_form} field={:key} />
-
-                <MapInputs
-                  :let={value: value, subform: sform}
-                  form={sub_form}
-                  for={:data}>
-                  <div class="brando-input">
-                    {#case input_value(sub_form, :type)}
-                      {#match "boolean"}
-                        <Input.Toggle form={sform} field={:value} label={input_value(sub_form, :label)}>
-                          {checkbox sform, :value, value: value}
-                        </Input.Toggle>
-
-                      {#match "color"}
-                        <Input.Toggle form={sform} field={:value} label={input_value(sub_form, :label)}>
-                          {checkbox sform, :value, value: value}
-                        </Input.Toggle>
-
-                      {#match "html"}
-                        <Input.RichText form={sform} field={:value} value={value} class="full" label={input_value(sub_form, :label)} />
-
-                      {#match _}
-                        <Input.Text form={sform} field={:value} value={value} />
-                    {/case}
-                  </div>
-                </MapInputs>
+                <RenderVar var={var} render={:only_important} edit />
               </div>
-            {/for}
+            </PolyInputs>
           </div>
           <button
             id={"#{@form.id}-#{@subform.field}-add-entry"}
             type="button"
             class="add-entry-button"
-            phx-hook="Brando.SubEntryAddButton">
+            :on-click="add_subentry"
+            phx-page-loading>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
             {gettext("Add entry")}
           </button>
         {#else}
-          {#unless Enum.empty?(inputs_for(@form, @subform.field))}
-            <div
-              id={"#{@form.id}-#{@subform.field}-sortable"}
-              phx-hook="Brando.SubFormSortable">
-              {#for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field))}
-                <div
-                  class={"subform-entry"}
-                  data-id={index}>
-                  {hidden_input sub_form, :type}
-                  {hidden_input sub_form, :label}
-                  {hidden_input sub_form, :key}
-                  <div>
-                    <MapInputs
-                      :let={value: value, subform: sform}
-                      form={sub_form}
-                      for={:data}>
-                      <div class="brando-input">
-                        {#case input_value(sub_form, :type)}
-                          {#match "boolean"}
-                            <Input.Toggle form={sform} field={:value} label={input_value(sub_form, :label)}>
-                              {checkbox sform, :value, value: value}
-                            </Input.Toggle>
-
-                          {#match "color"}
-                            <Input.Toggle form={sform} field={:value} label={input_value(sub_form, :label)}>
-                              {checkbox sform, :value, value: value}
-                            </Input.Toggle>
-
-                          {#match "html"}
-                            <Input.RichText form={sform} field={:value} value={value} class="full" label={input_value(sub_form, :label)} />
-
-                          {#match _}
-                            <Input.Text form={sform} field={:value} value={value} />
-                        {/case}
-                      </div>
-                    </MapInputs>
-                  </div>
-                  {!--
-                  {#for input <- @subform.sub_fields}
-                    <Input
-                      id={"#{@id}-#{sub_form.id}-input-#{input.name}"}
-                      input={input}
-                      form={sub_form}
-                      blueprint={@blueprint}
-                      uploads={@uploads} />
-                  {/for}
-                  --}
-                </div>
-              {/for}
-            </div>
+          {#unless Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
+            <PolyInputs form={@form} for={@subform.field} :let={form: var}>
+              <RenderVar var={var} render={:only_important} />
+            </PolyInputs>
           {/unless}
         {/if}
       </FieldBase>
@@ -172,14 +103,14 @@ defmodule BrandoAdmin.Components.Form.Input.PageProperties do
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.form.source
 
-    default = %Brando.Pages.Property{
+    default = %Brando.Content.Var.Boolean{
       type: "boolean",
       label: "Label",
       key: "key",
-      data: %{"value" => true}
+      value: true
     }
 
-    field_name = :properties
+    field_name = socket.assigns.subform.field
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"

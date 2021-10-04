@@ -46,7 +46,7 @@ defmodule Brando.Pages do
 
   query :single, Page,
     do: fn query ->
-      from q in query, where: is_nil(q.deleted_at), preload: [:properties, :parent]
+      from q in query, where: is_nil(q.deleted_at), preload: [:parent]
     end
 
   matches Page do
@@ -290,37 +290,37 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get a property from Page.
+  Get a var from Page.
 
-  Returns the rendered value of the property.
+  Returns the rendered value of the var.
   """
-  @spec get_prop(page, binary) :: any
-  def get_prop(%Page{properties: []}, _), do: nil
+  @spec get_var(page, binary) :: any
+  def get_var(%Page{vars: []}, _), do: nil
 
-  def get_prop(%Page{properties: properties}, property) do
-    case Enum.find(properties, &(&1.key == property)) do
+  def get_var(%Page{vars: vars}, var_key) do
+    case Enum.find(vars, &(&1.key == var_key)) do
       nil -> nil
-      prop -> render_prop(prop)
+      var -> render_var(var)
     end
   end
 
   @doc """
-  Checks if page has property
+  Checks if page has var
   """
-  @spec has_prop?(page, binary) :: boolean
-  def has_prop?(%Page{properties: []}, _), do: nil
+  @spec has_var?(page, binary) :: boolean
+  def has_var?(%Page{vars: []}, _), do: nil
 
-  def has_prop?(%Page{properties: properties}, property) do
-    case Enum.find(properties, &(&1.key == property)) do
+  def has_var?(%Page{vars: vars}, var) do
+    case Enum.find(vars, &(&1.key == var)) do
       nil -> false
       _ -> true
     end
   end
 
-  def render_prop(%Property{type: "text", data: data}), do: Map.get(data, "value", "")
-  def render_prop(%Property{type: "boolean", data: data}), do: Map.get(data, "value", false)
-  def render_prop(%Property{type: "html", data: data}), do: Map.get(data, "value", "")
-  def render_prop(%Property{type: "color", data: data}), do: Map.get(data, "value", "")
+  def render_var(%{type: "text", value: value}), do: value
+  def render_var(%{type: "boolean", value: value}), do: value || false
+  def render_var(%{type: "html", value: value}), do: value
+  def render_var(%{type: "color", value: value}), do: value
 
   @doc """
   Check all fields for references to `fragment`.

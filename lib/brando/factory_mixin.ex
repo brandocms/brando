@@ -46,7 +46,7 @@ defmodule Brando.FactoryMixin do
           title: "Page Title",
           html: nil,
           data: nil,
-          properties: [],
+          vars: [],
           status: :published,
           creator: build(:user),
           parent_id: nil

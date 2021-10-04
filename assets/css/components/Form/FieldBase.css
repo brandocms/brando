@@ -20,6 +20,7 @@
     background-color: white;
     padding: 5px;
     border-radius: 50%;
+    width: fit-content;
 
     &:first-of-type {
       margin-bottom: 5px;

@@ -109,6 +109,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:title, :text)
       add(:data, :jsonb)
       add(:html, :text)
+      add(:vars, :jsonb)
       add(:status, :integer)
       add(:is_homepage, :boolean)
       add(:parent_id, references(:pages), default: nil)
@@ -127,14 +128,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(unique_index(:pages, [:uri, :language]))
     create(index(:pages, [:parent_id]))
     create(index(:pages, [:status]))
-
-    create table(:pages_properties) do
-      add :key, :string
-      add :label, :text
-      add :type, :string
-      add :data, :jsonb
-      add :page_id, references(:pages, on_delete: :delete_all)
-    end
 
     create table(:pages_fragments) do
       add(:key, :text)

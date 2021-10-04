@@ -36,6 +36,7 @@
 @import './components/Form/Input/Blocks/TableBlock.css';
 @import './components/Form/Input/Blocks/TextBlock.css';
 @import './components/Form/Input/Blocks/VideoBlock.css';
+@import './components/SideBar/ContentLanguageSelector.css';
 @import './components/SideBar/CurrentUser.css';
 @import './components/SideBar/NavigationHeader.css';
 @import './components/SideBar/NavigationMenu.css';
@@ -212,7 +213,7 @@ code {
   flex-wrap: wrap;
   flex-direction: row;
   position: fixed;
-  left: 5px;
+  right: 10px;
   bottom: 5px;
   width: auto;
 }
@@ -255,6 +256,7 @@ code {
 
   &[data-user-status="offline"] {
     > .avatar {
+      border: 1px solid #aaa;
       img {
         filter: grayscale(100%);
         cursor: pointer;
@@ -897,6 +899,13 @@ h3 {
       }
     }
   }
+}
+
+.dbg-breakpoints {
+  left: auto;
+  bottom: auto;
+  top: 4px;
+  right: 4px;
 }
 
 .dbg-grid {

@@ -28,17 +28,42 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         true -> false
       end
 
+    type = v(var, :type)
+    value = v(var, :value)
+
+    value = control_value(type, value)
+
     {:ok,
      socket
      |> assign(:edit, edit)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
      |> assign(:label, v(var, :label))
-     |> assign(:type, v(var, :type))
+     |> assign(:type, type)
+     |> assign(:value, value)
      |> assign(:instructions, v(var, :instructions))
      |> assign(:placeholder, v(var, :placeholder))
      |> assign(:var, var)}
   end
+
+  defp control_value("string", value) when is_binary(value), do: value
+  defp control_value("string", _value), do: ""
+
+  defp control_value("text", value) when is_binary(value), do: value
+  defp control_value("text", _value), do: ""
+
+  defp control_value("datetime", %DateTime{} = value), do: value
+  defp control_value("datetime", %Date{} = value), do: value
+  defp control_value("datetime", _value), do: DateTime.utc_now()
+
+  defp control_value("boolean", value) when is_boolean(value), do: value
+  defp control_value("boolean", _value), do: false
+
+  defp control_value("color", "#" <> value), do: "##{value}"
+  defp control_value("color", _value), do: "#000000"
+
+  defp control_value("html", value) when is_binary(value), do: value
+  defp control_value("html", _value), do: "<p></p>"
 
   def render(assigns) do
     ~F"""
@@ -61,7 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 %{label: "String", value: "string"},
                 %{label: "Text", value: "text"}
               ]} />
-              {hidden_input @var, :value}
+              {hidden_input @var, :value, value: @value}
             </div>
           {#else}
             <div id={"#{@var.id}-value"}>
