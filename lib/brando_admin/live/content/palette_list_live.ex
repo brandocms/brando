@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Content.SectionListLive do
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Section
+defmodule BrandoAdmin.Content.PaletteListLive do
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Palette
 
   alias BrandoAdmin.Components.Content
   alias Surface.Components.LivePatch
@@ -8,9 +8,9 @@ defmodule BrandoAdmin.Content.SectionListLive do
   def render(assigns) do
     ~F"""
     <Content.Header
-      title={gettext("Content Sections")}
+      title={gettext("Content Palettes")}
       subtitle={gettext("Overview")}>
-      <LivePatch to="/admin/config/content/sections/create" class="primary">
+      <LivePatch to="/admin/config/content/palettes/create" class="primary">
         Create new
       </LivePatch>
     </Content.Header>

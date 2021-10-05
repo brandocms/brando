@@ -266,7 +266,7 @@ defmodule Brando.VillainTest do
 
     {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
-    section_params = %{
+    palette_params = %{
       name: "green",
       namespace: "general",
       instructions: "help",
@@ -276,13 +276,13 @@ defmodule Brando.VillainTest do
       color_accent: "#FF00FF"
     }
 
-    {:ok, section} = Brando.Content.create_section(section_params, user)
+    {:ok, palette} = Brando.Content.create_palette(palette_params, user)
 
     data = [
       %{
         type: "container",
         data: %{
-          section_id: section.id,
+          palette_id: palette.id,
           blocks: [
             %{
               type: "module",
@@ -316,7 +316,7 @@ defmodule Brando.VillainTest do
       %{
         type: "container",
         data: %{
-          section_id: section.id,
+          palette_id: palette.id,
           blocks: [
             %{
               type: "module",

@@ -71,6 +71,11 @@ h2.titlecase {
     }
   }
 
+  .select-label {
+    display: flex;
+    align-items: center;
+  }
+
   .selected-items {
     .selected-item-row {
       align-items: center;

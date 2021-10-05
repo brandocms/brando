@@ -29,10 +29,10 @@ defmodule Brando.Content do
   """
   use Brando.Query
   import Ecto.Query
-  alias Brando.Villain
   alias Brando.Content.Module
-  alias Brando.Content.Section
+  alias Brando.Content.Palette
   alias Brando.Content.Var
+  alias Brando.Villain
 
   @default_vars %{
     boolean: Var.Boolean,
@@ -120,18 +120,22 @@ defmodule Brando.Content do
     end
   end
 
-  ## Sections
+  ## Palettes
   ##
 
-  query :list, Section, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :list, Palette, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
-  filters Section do
+  filters Palette do
     fn
       {:name, name}, query ->
         from(q in query, where: ilike(q.name, ^"%#{name}%"))
 
-      {:class, class}, query ->
-        from(q in query, where: ilike(q.class, ^"%#{class}%"))
+      {:key, key}, query ->
+        from(q in query, where: ilike(q.key, ^"%#{key}%"))
+
+      {:color, color}, query ->
+        from q in query,
+          where: fragment("?::jsonb @> ?::jsonb", field(q, :colors), ^[%{hex_value: color}])
 
       {:namespace, namespace}, query ->
         query =
@@ -156,16 +160,16 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Section, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :single, Palette, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
-  matches Section do
+  matches Palette do
     fn
       {:id, id}, query ->
         from(t in query, where: t.id == ^id)
 
-      {:name, name}, query ->
+      {:key, key}, query ->
         from(t in query,
-          where: t.name == ^name
+          where: t.key == ^key
         )
 
       {:namespace, namespace}, query ->
@@ -175,35 +179,35 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Section do
+  mutation :create, Palette do
     fn entry ->
-      Brando.Cache.Sections.set()
+      Brando.Cache.Palettes.set()
 
       {:ok, entry}
     end
   end
 
-  mutation :update, Section do
+  mutation :update, Palette do
     fn entry ->
-      Villain.update_section_in_fields(entry.id)
-      Brando.Cache.Sections.set()
+      Villain.update_palette_in_fields(entry.id)
+      Brando.Cache.Palettes.set()
 
       {:ok, entry}
     end
   end
 
-  mutation :delete, Section
-  mutation :duplicate, {Section, change_fields: [:name, :class]}
+  mutation :delete, Palette
+  mutation :duplicate, {Palette, change_fields: [:name, :key]}
 
   @doc """
-  Find section with `id` in `sections`
+  Find palette with `id` in `palettes`
   """
-  def find_section(sections, id) do
-    sections
+  def find_palette(palettes, id) do
+    palettes
     |> Enum.find(&(&1.id == id))
     |> case do
-      nil -> {:error, {:section, :not_found, id}}
-      section -> {:ok, section}
+      nil -> {:error, {:palette, :not_found, id}}
+      palette -> {:ok, palette}
     end
   end
 

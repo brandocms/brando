@@ -11,7 +11,7 @@ defmodule Brando.Factory do
   alias Brando.Users.User
   alias Brando.Content
   alias Brando.Content.Module
-  alias Brando.Content.Section
+  alias Brando.Content.Palette
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -95,15 +95,20 @@ defmodule Brando.Factory do
     }
   end
 
-  def section_factory do
-    %Section{
-      name: "green",
-      namespace: "general",
-      instructions: "help",
-      class: "green",
-      color_bg: "#000000",
-      color_fg: "#FFFFFF",
-      color_accent: "#FF00FF"
+  def palette_factory do
+    %Palette{
+      name: "base",
+      key: "base",
+      namespace: "site",
+      instructions: "Instructions"
+    }
+  end
+
+  def color_factory do
+    %Palette.Color{
+      name: "Color Name",
+      key: "colorName",
+      hex_value: "#112233"
     }
   end
 

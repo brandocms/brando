@@ -12,7 +12,7 @@
 
     <%%= render_meta(@conn) %>
     <%%= render_rel(@conn) %>
-    <%%= render_sections_css() %>
+    <%%= render_palettes_css() %>
 
     <link rel="shortcut icon" href="/ico/favicon.ico">
 

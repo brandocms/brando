@@ -6,6 +6,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * `Trait.changeset_mutator/4` is now `Trait.changeset_mutator/5`. It receives 
   some additional opts from changeset, that normally would not be touched.
 * Page properties are now page vars. `get_prop` -> `get_var`
+* `render_sections_css` -> `render_palettes_css`
 
 ## 0.51.0
 

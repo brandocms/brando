@@ -315,7 +315,7 @@ defmodule Brando.DatasourcesTest do
       %{
         type: "container",
         data: %{
-          section_id: section.id,
+          palette_id: palette.id,
           blocks: [
             %{
               type: "text",

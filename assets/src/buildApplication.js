@@ -106,7 +106,6 @@ export default () => {
       app.toast.notification(data.level, data.payload)
     })
 
-
     const getHeights = () => {
       const progressItems = Dom.all('.progress-item')
 

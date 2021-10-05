@@ -38,7 +38,6 @@ defmodule BrandoAdmin.Components.Content.List.Row.Creator do
             <div
               class="time"
               id={"entry_creator_time_icon_#{@entry.id}"}
-              phx-hook="Brando.Popover"
               data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}>
               {#if @soft_delete? and @entry.deleted_at}
                 {format_datetime(@entry.deleted_at, "%d/%m/%y")} <span>•</span> {format_datetime(@entry.deleted_at, "%H:%M")}

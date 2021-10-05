@@ -15,7 +15,7 @@ defmodule Brando.Villain do
   alias Liquex.Context
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
-  @section_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parses `json` (in Villain-format).
@@ -35,7 +35,7 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
-    {:ok, sections} = Content.list_sections(@section_cache_ttl)
+    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
 
     entry =
       entry
@@ -48,7 +48,7 @@ defmodule Brando.Villain do
       opts_map
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
-      |> Map.put(:sections, sections)
+      |> Map.put(:palettes, palettes)
 
     html =
       data
@@ -317,7 +317,7 @@ defmodule Brando.Villain do
     Keyword.get(default_blocks, block_type)
   end
 
-  def update_section_in_fields(section_id) do
+  def update_palette_in_fields(palette_id) do
     villains = list_villains()
 
     result =
@@ -326,7 +326,7 @@ defmodule Brando.Villain do
           data_field, acc ->
             html_field = get_html_field(schema, data_field)
 
-            case list_ids_with_section(schema, data_field.name, section_id) do
+            case list_ids_with_palette(schema, data_field.name, palette_id) do
               [] ->
                 acc
 
@@ -382,11 +382,11 @@ defmodule Brando.Villain do
 
   @doc """
   List ids of `schema` records that has a container block with
-  `section_id` in `data_field`.
+  `palette_id` in `data_field`.
   """
-  def list_ids_with_section(schema, data_field, section_id) do
+  def list_ids_with_palette(schema, data_field, palette_id) do
     t = [
-      %{type: "container", data: %{section_id: section_id}}
+      %{type: "container", data: %{palette_id: palette_id}}
     ]
 
     Brando.repo().all(

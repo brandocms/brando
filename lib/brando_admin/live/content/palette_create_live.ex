@@ -1,15 +1,15 @@
-defmodule BrandoAdmin.Content.SectionCreateLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Section
+defmodule BrandoAdmin.Content.PaletteCreateLive do
+  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Palette
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
   def render(assigns) do
     ~F"""
-    <Content.Header title={gettext("Create section")} />
+    <Content.Header title={gettext("Create palette")} />
 
     <Form
-      id="section_form"
+      id="palette_form"
       current_user={@current_user}
       schema={@schema}
     />

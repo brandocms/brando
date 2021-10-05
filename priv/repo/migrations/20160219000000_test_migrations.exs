@@ -167,20 +167,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:content_modules, [:namespace])
 
-    create table(:content_sections) do
-      add :name, :string
-      add :namespace, :string
+    create table(:content_palettes) do
+      add :name, :text
+      add :key, :text
+      add :namespace, :text
+      add :sequence, :integer
+      add :global, :boolean, default: false
       add :instructions, :text
-      add :class, :string
-      add :color_bg, :text
-      add :color_fg, :text
-      add :color_accent, :text
-      add :css, :text
-      add :rendered_css, :text
+      add :colors, :jsonb
+      add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nilify_all)
-      sequenced()
+
       timestamps()
-      soft_delete()
     end
 
     create table(:projects) do

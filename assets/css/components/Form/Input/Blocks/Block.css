@@ -334,12 +334,27 @@
     text-transform: uppercase;
     align-items: center;
 
-    .circle {
-      width: 20px;
-      height: 13px;
-      margin-left: 7px;
-      margin-right: 8px;
+    .circle-stack {
+      @space margin-left 5px;
+
+      &:hover {
+        .circle {
+          cursor: help;
+          margin-left: 3px;
+        }
+      }
+
+      .circle {
+        width: 13px;
+        height: 13px;
+        margin-left: -8px;
+
+        &:nth-of-type(1) {
+          margin-left: 0;
+        }
+      }
     }
+
 
     .block-type {
       @space margin-x 8px;

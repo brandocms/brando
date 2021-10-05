@@ -24,7 +24,7 @@ export default {
     // }
 
     if (fromEl.style.cssText) {
-      toEl.style.cssText = fromEl.style.cssText
+      toEl.style.cssText = !toEl.style.cssText ? fromEl.style.cssText : toEl.style.cssText
     }
 
     if (fromEl.hasAttribute('data-b-hover')) {

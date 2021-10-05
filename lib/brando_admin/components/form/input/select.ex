@@ -188,7 +188,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
       <div class="multiselect">
         <div>
-          <span>
+          <span class="select-label">
             {#if slot_assigned?(:default)}
               <#slot />
             {#else}
@@ -307,12 +307,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
       <div class="multiselect">
         <div>
-          <span>
+          <span class="select-label">
             {#if slot_assigned?(:default)}
               <#slot />
             {#else}
               {#if @selected_option}
-                {@label}
+                {@label |> raw}
               {#else}
                 No selection
               {/if}

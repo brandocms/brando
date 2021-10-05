@@ -256,8 +256,8 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/content/templates"
               },
               %{
-                name: Brando.Gettext.gettext("Sections"),
-                url: "/admin/config/content/sections"
+                name: Brando.Gettext.gettext("Palettes"),
+                url: "/admin/config/content/palettes"
               }
             ]
           },

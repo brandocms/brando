@@ -80,9 +80,9 @@ defmodule Brando.Router do
           live "/config/seo", BrandoAdmin.Sites.SEOLive
           live "/config/content/modules", BrandoAdmin.Content.ModuleListLive
           live "/config/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleUpdateLive
-          live "/config/content/sections", BrandoAdmin.Content.SectionListLive
-          live "/config/content/sections/create", BrandoAdmin.Content.SectionCreateLive
-          live "/config/content/sections/update/:entry_id", BrandoAdmin.Content.SectionUpdateLive
+          live "/config/content/palettes", BrandoAdmin.Content.PaletteListLive
+          live "/config/content/palettes/create", BrandoAdmin.Content.PaletteCreateLive
+          live "/config/content/palettes/update/:entry_id", BrandoAdmin.Content.PaletteUpdateLive
           live "/pages", BrandoAdmin.Pages.PageListLive
           live "/pages/create", BrandoAdmin.Pages.PageCreateLive
           live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive

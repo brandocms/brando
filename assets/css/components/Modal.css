@@ -132,7 +132,7 @@
   flex-direction: column;
   outline: 0;
   position: relative;
-  @space padding-bottom 25px;
+  @space padding-bottom 15px;
   border-radius: 10px;
   height: 100%;
 
@@ -242,10 +242,8 @@
 
 .modal-footer {
   @space padding-x 20px;
-  border-top: 1px solid #ccc;
   padding-top: 15px;
   justify-content: flex-end;
-  margin-top: 15px;
 }
 
 .modal-no-chrome-content {

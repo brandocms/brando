@@ -17,7 +17,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ContainerBlock do
     trait Brando.Trait.CastPolymorphicEmbeds
 
     attributes do
-      attribute :section_id, :id
+      attribute :palette_id, :id
 
       attribute :blocks, {:array, PolymorphicEmbed},
         types: Blocks.list_blocks(),

@@ -10,6 +10,7 @@ export default (app) => ({
       .to(this.elements.backdrop, { opacity: 1, duration: 0.25 })
       .to(this.elements.dialog, { opacity: 1, duration: 0.3 }, '-=0.2')
       .to(this.elements.dialog, { y: 0, duration: 0.3, ease: 'circ.out' }, '<')
+      .set(this.elements.dialog, { clearProps: 'transform' })
   },
 
   hide() {
@@ -19,6 +20,7 @@ export default (app) => ({
       .to(this.elements.dialog, { y: 30, duration: 0.3, ease: 'circ.in' }, '<')
       .to(this.elements.backdrop, { opacity: 0, duration: 0.25 }, '-=0.2')
       .set(this.el, { display: 'none' })
+      .set(this.elements.dialog, { clearProps: 'transform' })
   },
 
   mounted() {

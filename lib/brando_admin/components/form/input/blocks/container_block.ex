@@ -28,9 +28,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   data block_count, :integer
   data insert_index, :integer
 
-  data selected_section, :map
-  data available_sections, :list
-  data section_options, :list
+  data selected_palette, :map
+  data available_palettes, :list
+  data palette_options, :list
+  data first_color, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -40,41 +41,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
      |> assign(insert_index: 0)}
   end
 
-  def assign_available_sections(socket) do
+  def assign_available_palettes(socket) do
     socket
-    |> assign_new(:available_sections, fn ->
-      {:ok, available_sections} = Content.list_sections(%{cache: {:ttl, :infinite}})
-      available_sections
+    |> assign_new(:available_palettes, fn ->
+      {:ok, available_palettes} = Content.list_palettes(%{cache: {:ttl, :infinite}})
+      available_palettes
     end)
   end
 
-  def assign_section_options(%{assigns: %{available_sections: available_sections}} = socket) do
-    assign_new(socket, :section_options, fn ->
-      Enum.map(
-        available_sections,
-        &%{
-          label:
-            ~s(<span class="circle small" style="margin-right: 12px;background-color:#{&1.color_bg}"></span> #{&1.name}),
-          value: &1.id
-        }
-      )
+  def assign_palette_options(%{assigns: %{available_palettes: available_palettes}} = socket) do
+    assign_new(socket, :palette_options, fn ->
+      Enum.map(available_palettes, fn palette ->
+        colors =
+          Enum.map(Enum.reverse(palette.colors), fn color ->
+            """
+            <span
+              class="circle tiny"
+              style="background-color:#{color.hex_value}"></span>
+            """
+          end)
+
+        label = """
+        <div class="circle-stack mr-1">
+          #{colors}
+        </div>
+        - #{palette.name}
+        """
+
+        %{label: label, value: palette.id}
+      end)
     end)
   end
 
-  def get_section(nil), do: nil
+  def get_palette(nil), do: nil
 
-  def get_section(section_id, available_sections) do
-    Enum.find(available_sections, &(&1.id == section_id))
+  def get_palette(palette_id, available_palettes) do
+    Enum.find(available_palettes, &(&1.id == palette_id))
   end
 
-  def assign_selected_section(
-        %{assigns: %{available_sections: available_sections, block_data: block_data}} = socket
+  def assign_selected_palette(
+        %{assigns: %{available_palettes: available_palettes, block_data: block_data}} = socket
       ) do
-    assign(
-      socket,
-      :selected_section,
-      get_section(v(block_data, :section_id), available_sections)
-    )
+    selected_palette = get_palette(v(block_data, :palette_id), available_palettes)
+
+    socket
+    |> assign(:selected_palette, selected_palette)
+    |> assign(:first_color, List.first(selected_palette.colors))
   end
 
   def update(%{block: block} = assigns, socket) do
@@ -93,9 +105,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms)
      |> assign(:block_data, block_data)
-     |> assign_available_sections()
-     |> assign_section_options()
-     |> assign_selected_section()}
+     |> assign_available_palettes()
+     |> assign_palette_options()
+     |> assign_selected_palette()}
   end
 
   def render(assigns) do
@@ -115,31 +127,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
-        bg_color={@selected_section && "#{@selected_section.color_bg}22"}>
+        bg_color={@selected_palette && "#{@first_color.hex_value}22"}>
         <:description>
-          {#if @selected_section}
-            <span class="circle tiny" style={"background-color:#{@selected_section.color_bg}"}></span> {@selected_section.name}
+          {#if @selected_palette}
+            {@selected_palette.name}
+            <div class="circle-stack">
+              {#for color <- Enum.reverse(@selected_palette.colors)}
+                <span
+                  class="circle tiny"
+                  style={"background-color:#{color.hex_value}"}
+                  data-popover={"#{color.name}"}></span>
+              {/for}
+            </div>
           {#else}
-            No section selected
+            No palette selected
           {/if}
         </:description>
         <:config>
-          {#if @selected_section}
-            Select a new section<br>
+          {#if @selected_palette}
+            <div class="instructions mb-1">Select a new palette:</div>
             <Input.Select
-              id={"#{@block_data.id}-section-select"}
+              id={"#{@block_data.id}-palette-select"}
               form={@block_data}
-              field={:section_id}
-              options={@section_options}
+              field={:palette_id}
+              options={@palette_options}
             />
           {/if}
         </:config>
-        {#if !@selected_section}
+        {#if !@selected_palette}
           <Input.Select
-            id={"#{@block_data.id}-section-select"}
+            id={"#{@block_data.id}-palette-select"}
             form={@block_data}
-            field={:section_id}
-            options={@section_options}
+            field={:palette_id}
+            options={@palette_options}
           />
         {/if}
 

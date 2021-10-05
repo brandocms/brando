@@ -199,13 +199,13 @@ defmodule Brando.Villain.Parser do
         {:ok, module} = Content.find_module(modules, id)
 
         base_context = opts.context
-        vars = process_vars(vars)
-        refs = process_refs(refs)
+        processed_vars = process_vars(vars)
+        processed_refs = process_refs(refs)
 
         context =
           base_context
-          |> add_vars_to_context(vars)
-          |> add_refs_to_context(refs)
+          |> add_vars_to_context(processed_vars)
+          |> add_refs_to_context(processed_refs)
 
         module.code
         |> render_refs(refs, id, opts)
@@ -757,10 +757,10 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{blocks: blocks, section_id: section_id}, opts) do
-        sections = opts.sections
+      def container(%{blocks: blocks, palette_id: palette_id}, opts) do
+        palettes = opts.palettes
 
-        {:ok, section} = Content.find_section(sections, section_id)
+        {:ok, palette} = Content.find_palette(palettes, palette_id)
 
         blocks_html =
           (blocks || [])
@@ -771,7 +771,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.join("")
 
         """
-        <section b-section="#{section.class}">
+        <section b-section="#{palette.namespace}-#{palette.key}">
           #{blocks_html}
         </section>
         """

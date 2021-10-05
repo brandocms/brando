@@ -55,10 +55,10 @@ defmodule Brando.HTML do
     )
   end
 
-  def render_sections_css do
+  def render_palettes_css do
     """
     <style>
-    #{Brando.Cache.Sections.get()}
+    #{Brando.Cache.Palettes.get()}
     </style>
     """
     |> raw

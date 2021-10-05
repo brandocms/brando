@@ -12,7 +12,6 @@ import LegacyImageUploadHook from './hooks/LegacyImageUpload'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
-import PopoverHook from './hooks/Popover'
 import SelectFilterHook from './hooks/SelectFilter'
 import RememberScrollPositionHook from './hooks/RememberScrollPosition'
 import SlugHook from './hooks/Slug'
@@ -41,7 +40,6 @@ export default app => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
-    'Brando.Popover': PopoverHook(app),
     'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.RememberScrollPosition': RememberScrollPositionHook(app),
     'Brando.Slug': SlugHook(app),
