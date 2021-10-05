@@ -1,9 +1,11 @@
 .content-language-selector {
   @color bg peachDarker;
+  @space width 370px desktop_lg/desktop_xl;
+  @space width 330px ipad_portrait/ipad_landscape/desktop_md;
+  @space width 330px $mobile;
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 370px;
   padding-top: 12px;
   padding-bottom: 12px;
 

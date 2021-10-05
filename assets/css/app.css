@@ -465,7 +465,7 @@ p:last-of-type {
 
 h1 {
   @fontsize h1;
-  @space margin-bottom 10px;
+  @space margin-bottom 0;
   line-height: 1.05 !important;
   font-feature-settings: 'kern', 'liga', 'dlig', 'hlig', 'cswh';
 }
