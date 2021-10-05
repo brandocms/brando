@@ -268,6 +268,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create table(:sites_global_categories) do
       add :key, :string
       add :label, :text
+      add :language, :text
       add :globals, :jsonb
     end
 

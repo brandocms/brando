@@ -30,6 +30,7 @@ defmodule Brando.Factory do
     %GlobalCategory{
       label: "System",
       key: "system",
+      language: "en",
       globals: build_list(2, :var_text)
     }
   end

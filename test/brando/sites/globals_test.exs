@@ -53,12 +53,22 @@ defmodule Brando.Sites.GlobalsTest do
   end
 
   test "create_global_category" do
-    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"}, :system)
+    {:ok, c1} =
+      Brando.Globals.create_global_category(
+        %{label: "System", key: "system", language: "en"},
+        :system
+      )
+
     assert c1.label == "System"
   end
 
   test "update_global_category" do
-    {:ok, c1} = Brando.Globals.create_global_category(%{label: "System", key: "system"}, :system)
+    {:ok, c1} =
+      Brando.Globals.create_global_category(
+        %{label: "System", key: "system", language: "en"},
+        :system
+      )
+
     assert c1.label == "System"
     {:ok, c2} = Brando.Globals.update_global_category(c1.id, %{label: "New"}, :system)
     assert c2.label == "New"

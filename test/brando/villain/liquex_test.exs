@@ -9,6 +9,7 @@ defmodule Brando.Villain.LiquexTest do
     global_category_params = %{
       "label" => "System",
       "key" => "system",
+      "language" => "en",
       "globals" => [
         %{type: "text", label: "Text", key: "text", value: "My text"},
         %{type: "boolean", label: "Text", key: "boolean", value: false}

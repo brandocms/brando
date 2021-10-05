@@ -486,6 +486,7 @@ defmodule Brando.VillainTest do
     global_category_params = %{
       label: "System",
       key: "system",
+      language: "en",
       globals: [
         %{type: "text", label: "Text", key: "text", value: "My text"}
       ]
