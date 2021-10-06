@@ -6,7 +6,7 @@ defmodule Brando.Villain.LiquexTest do
   test "if statement" do
     Brando.Cache.Globals.set()
 
-    global_category_params = %{
+    global_set_params = %{
       "label" => "System",
       "key" => "system",
       "language" => "en",
@@ -16,7 +16,7 @@ defmodule Brando.Villain.LiquexTest do
       ]
     }
 
-    {:ok, _gc1} = Brando.Globals.create_global_category(global_category_params, :system)
+    {:ok, _gc1} = Brando.Sites.create_global_set(global_set_params, :system)
 
     context = Brando.Villain.get_base_context()
 

@@ -606,21 +606,21 @@ defmodule Brando.Blueprint do
           Module.concat([
             admin_module,
             @domain,
-            "#{String.capitalize(@singular)}ListLive"
+            "#{Recase.to_pascal(@singular)}ListLive"
           ])
 
         admin_create_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{String.capitalize(@singular)}CreateLive"
+            "#{Recase.to_pascal(@singular)}CreateLive"
           ])
 
         admin_update_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{String.capitalize(@singular)}UpdateLive"
+            "#{Recase.to_pascal(@singular)}UpdateLive"
           ])
 
         %{

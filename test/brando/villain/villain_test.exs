@@ -487,7 +487,7 @@ defmodule Brando.VillainTest do
   test "ensure villains update on globals changes", %{user: user} do
     Brando.Cache.Globals.set()
 
-    global_category_params = %{
+    global_set_params = %{
       label: "System",
       key: "system",
       language: "en",
@@ -498,12 +498,12 @@ defmodule Brando.VillainTest do
 
     pf_params = pf_data("So the global says: '{{ globals.system.text }}'.")
 
-    {:ok, gc1} = Brando.Globals.create_global_category(global_category_params, :system)
+    {:ok, gc1} = Brando.Sites.create_global_set(global_set_params, :system)
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
     assert pf1.html == "<div class=\"paragraph\">So the global says: 'My text'.</div>"
 
-    Brando.Globals.update_global_category(
+    Brando.Sites.update_global_set(
       gc1.id,
       %{
         globals: [

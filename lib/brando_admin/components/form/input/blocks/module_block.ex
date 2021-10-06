@@ -117,8 +117,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         <:config>
           <div class="panels">
             <div class="panel">
-              {#for var <- inputs_for_poly(@block_data, :vars)}
-                <RenderVar var={var} render={:only_regular} />
+              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
+                <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
               {/for}
             </div>
             <div class="panel">
@@ -152,8 +152,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         <div b-editor-tpl={@module_class}>
           {#unless Enum.empty?(@important_vars)}
             <div class="important-vars">
-              {#for var <- inputs_for_poly(@block_data, :vars)}
-                <RenderVar var={var} render={:only_important} />
+              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
+                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               {/for}
             </div>
           {/unless}

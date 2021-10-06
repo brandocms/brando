@@ -1,7 +1,7 @@
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
-  alias Brando.Sites.GlobalCategory
+  alias Brando.Sites.GlobalSet
   alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
@@ -26,8 +26,8 @@ defmodule Brando.Factory do
 
   @encrypted_password Bcrypt.hash_pwd_salt("admin")
 
-  def global_category_factory do
-    %GlobalCategory{
+  def global_set_factory do
+    %GlobalSet{
       label: "System",
       key: "system",
       language: "en",

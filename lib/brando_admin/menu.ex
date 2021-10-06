@@ -236,8 +236,8 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/seo"
               },
               %{
-                name: Brando.Gettext.gettext("Global variables"),
-                url: "/admin/config/globals"
+                name: Brando.Gettext.gettext("Globals"),
+                url: "/admin/config/global_sets"
               },
               %{
                 name: Brando.Gettext.gettext("Scheduled publishing"),

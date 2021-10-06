@@ -142,6 +142,11 @@
       border-left: 4px solid #dac5d1;
       padding-left: 15px;
 
+      display: flex;
+      align-items: flex-start;
+
+      margin-bottom: 15px;
+
       &.inline {
         display: flex;
         flex-wrap: nowrap;

@@ -277,7 +277,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-    create table(:sites_global_categories) do
+    create table(:sites_global_sets) do
       add :key, :string
       add :label, :text
       add :language, :text
@@ -347,7 +347,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     drop(index(:pages_fragments, [:language]))
     drop(index(:pages_fragments, [:key]))
 
-    drop table(:sites_global_categories)
+    drop table(:sites_global_sets)
     drop table(:sites_globals)
   end
 end

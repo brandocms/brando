@@ -5,7 +5,7 @@ defmodule Brando.Cache.Globals do
   Globals get stored as a map with a key path
   """
   alias Brando.Cache
-  alias Brando.Globals
+  alias Brando.Sites
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -20,8 +20,8 @@ defmodule Brando.Cache.Globals do
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    {:ok, global_categories} = Globals.list_global_categories()
-    global_map = process_globals(global_categories)
+    {:ok, global_sets} = Sites.list_global_sets()
+    global_map = process_globals(global_sets)
     Cachex.put(:cache, :globals, global_map)
   end
 
@@ -30,17 +30,17 @@ defmodule Brando.Cache.Globals do
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
-  def update({:ok, global_category}) do
-    {:ok, global_categories} = Globals.list_global_categories()
-    global_map = process_globals(global_categories)
+  def update({:ok, global_set}) do
+    {:ok, global_sets} = Sites.list_global_sets()
+    global_map = process_globals(global_sets)
     Cachex.update(:cache, :globals, global_map)
-    {:ok, global_category}
+    {:ok, global_set}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
 
-  defp process_globals(global_categories) do
-    Enum.map(global_categories, fn
+  defp process_globals(global_sets) do
+    Enum.map(global_sets, fn
       %{globals: nil} = cat ->
         {cat.key, []}
 

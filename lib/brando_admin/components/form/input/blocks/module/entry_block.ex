@@ -83,8 +83,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>
         <:config>
-          {#for var <- inputs_for_poly(@block_data, :vars)}
-            <RenderVar var={var} render={:only_regular} />
+          {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
+            <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
           {/for}
 
           <button type="button" class="secondary" :on-click="reinit_vars">
@@ -99,8 +99,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <div class="module-block" b-editor-tpl={@module_class}>
           {#unless Enum.empty?(@important_vars)}
             <div class="important-vars">
-              {#for var <- inputs_for_poly(@block_data, :vars)}
-                <RenderVar var={var} render={:only_important} />
+              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
+                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               {/for}
             </div>
           {/unless}

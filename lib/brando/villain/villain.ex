@@ -135,9 +135,9 @@ defmodule Brando.Villain do
     Context.assign(context, key, links)
   end
 
-  def add_to_context(context, "globals" = key, global_categories) do
+  def add_to_context(context, "globals" = key, global_sets) do
     parsed_globals =
-      Enum.map(global_categories, fn {g_key, g_category} ->
+      Enum.map(global_sets, fn {g_key, g_category} ->
         cat_globs =
           Enum.map(g_category, fn
             {key, %{value: value}} -> {key, value}

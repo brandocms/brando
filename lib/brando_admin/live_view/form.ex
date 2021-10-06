@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   """
   import Phoenix.LiveView
+  import Brando.Gettext
   alias Brando.Utils
 
   defmacro __using__(opts) do
@@ -147,6 +148,12 @@ defmodule BrandoAdmin.LiveView.Form do
             :system,
             show_notification: false
           )
+
+        send(
+          self(),
+          {:toast,
+           gettext("Content language is now %{language}", language: String.upcase(language))}
+        )
 
         {:halt, assign(socket, :current_user, updated_current_user)}
 

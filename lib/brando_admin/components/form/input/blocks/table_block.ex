@@ -99,8 +99,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   </button>
                 </div>
 
-                <PolyInputs form={row} for={:cols} :let={form: var}>
-                  <RenderVar var={var} render={:only_important} />
+                <PolyInputs form={row} for={:cols} :let={form: var, index: index}>
+                  <RenderVar id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
                 </PolyInputs>
               </div>
             {/for}

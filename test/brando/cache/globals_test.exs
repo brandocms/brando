@@ -3,7 +3,7 @@ defmodule Brando.Cache.GlobalsTest do
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 
-  alias Brando.Globals
+  alias Brando.Sites
   alias Brando.Factory
 
   setup do
@@ -11,19 +11,19 @@ defmodule Brando.Cache.GlobalsTest do
   end
 
   test "set and get" do
-    assert Brando.Cache.Globals.set()
-    assert Brando.Cache.Globals.get() == %{}
+    assert Brando.Cache.Sites.set()
+    assert Brando.Cache.Sites.get() == %{}
 
     category_params =
-      :global_category
+      :global_set
       |> Factory.params_for()
       |> Brando.Utils.map_from_struct()
 
-    {:ok, _category} = Globals.create_global_category(category_params, :system)
+    {:ok, _category} = Sites.create_global_set(category_params, :system)
 
-    assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
+    assert Brando.Cache.Sites.update({:ok, :dummy}) === {:ok, :dummy}
 
-    global_map = Brando.Cache.Globals.get()
+    global_map = Brando.Cache.Sites.get()
     assert Map.keys(global_map) === ["system"]
 
     assert get_in(global_map, [Access.key("system"), Access.key("key-0"), Access.key(:key)]) ===

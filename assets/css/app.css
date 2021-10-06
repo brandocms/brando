@@ -479,6 +479,49 @@ h3 {
   font-weight: 400;
 }
 
+.subform-entry.globals {
+  .variable {
+    width: 100%;
+  }
+}
+
+.variable-content {
+  border-radius: 15px;
+  padding: 1vw;
+  margin-top: 1vw;
+  @color bg peachDarker;
+
+  &.hidden {
+    display: none;
+  }
+}
+
+.variable-header {
+  display: flex;
+  @space padding-y 0.5vw;
+  @space padding-x 1vw;
+
+  &:hover {
+    @color bg peachDarker;
+    cursor: pointer;
+  }
+
+  svg {
+    width: 25px;
+    margin-right: 1vw;
+  }
+
+  .variable-key {
+    @font mono;
+
+    span {
+      @font main;
+      @fontsize 14px;
+      display: block;
+    }
+  }
+}
+
 .pos-relative {
   position: relative;
 }

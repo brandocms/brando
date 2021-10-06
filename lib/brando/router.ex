@@ -72,7 +72,9 @@ defmodule Brando.Router do
           # brando routes
           live "/", BrandoAdmin.DashboardLive
           live "/config/cache", BrandoAdmin.Sites.CacheLive
-          live "/config/globals", BrandoAdmin.Sites.GlobalsLive
+          live "/config/global_sets", BrandoAdmin.Sites.GlobalSetListLive
+          live "/config/global_sets/create", BrandoAdmin.Sites.GlobalSetCreateLive
+          live "/config/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetUpdateLive
           live "/config/identity", BrandoAdmin.Sites.IdentityLive
           live "/config/navigation/menus", BrandoAdmin.Navigation.MenuListLive
           live "/config/navigation/menus/update/:entry_id", BrandoAdmin.Navigation.MenuUpdateLive
