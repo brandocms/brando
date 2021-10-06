@@ -59,9 +59,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       {#if @block_count == 0}
 
         <div class="blocks-empty-instructions">
-          Click the plus to start adding content blocks
+          {gettext "Click the plus to start adding content blocks"}
           {#if @templates}
-            <br>or get started with a prefab'ed template:<br>
+            <br>{gettext "or get started with a prefab'ed template"}:<br>
             <div class="blocks-templates">
               {#for template <- @templates}
                 <button type="button" :on-click="use_template" phx-value-id={template.id}>
