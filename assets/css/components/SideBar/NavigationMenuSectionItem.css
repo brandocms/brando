@@ -13,7 +13,7 @@
       color: theme(colors.dark);
       cursor: pointer;
       user-select: none;
-      font-weight: 200;
+      font-weight: 400;
 
       [data-nav-expand] {
         display: flex;
@@ -34,7 +34,7 @@
       }
 
       a {
-        font-weight: 300;
+        font-weight: 400;
         display: block;
 
         &:before {
@@ -89,7 +89,7 @@
             @fontsize 20px;
             line-height: 34px;
             display: block;
-            font-weight: 200;
+            font-weight: 400;
 
             &.active {
               font-weight: 400;

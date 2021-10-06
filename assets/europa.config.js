@@ -344,37 +344,37 @@ module.exports = {
           iphone: {
             'font-size': '27px',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           mobile: {
             'font-size': '30px',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           ipad_portrait: {
             'font-size': '30px',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           ipad_landscape: {
             'font-size': '30px',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           desktop_md: {
-            'font-size': '45px',
+            'font-size': '3.5vw',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           desktop_lg: {
-            'font-size': '49px',
+            'font-size': '3.5vw',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           },
           desktop_xl: {
-            'font-size': '54px',
+            'font-size': '3.5vw',
             'letter-spacing': '-0.5px',
-            'font-weight': '500'
+            'font-weight': '600'
           }
         },
 

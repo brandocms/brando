@@ -16,7 +16,7 @@
     .actions {
       @column 8/16;
       @fontsize lg;
-      font-weight: 200;
+      font-weight: 400;
       display: flex;
       justify-content: flex-end;
     }

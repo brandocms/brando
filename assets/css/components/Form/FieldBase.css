@@ -81,7 +81,7 @@
 
 .field-wrapper {
   width: 100%;
-  margin-bottom: 1vw;
+  margin-bottom: 1.3vw;
 
   &.compact {
     margin-bottom: 0.5vw !important;
