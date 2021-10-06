@@ -85,28 +85,32 @@ defmodule Brando.Villain do
   defp maybe_nil_fields(entry, _), do: entry
 
   def get_base_context do
-    do_get_base_context()
-    |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
-    |> add_to_context("locale", Gettext.get_locale(Brando.gettext()))
+    locale = Gettext.get_locale(Brando.gettext())
+
+    do_get_base_context(locale)
+    |> add_to_context("language", locale)
+    |> add_to_context("locale", locale)
   end
 
   def get_base_context(%{language: entry_language} = entry) do
-    do_get_base_context()
+    do_get_base_context(to_string(entry_language))
     |> add_to_context("language", to_string(entry_language))
     |> add_to_context("locale", to_string(entry_language))
     |> add_to_context("entry", entry)
   end
 
   def get_base_context(entry) do
-    do_get_base_context()
-    |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
-    |> add_to_context("locale", Gettext.get_locale(Brando.gettext()))
+    locale = Gettext.get_locale(Brando.gettext())
+
+    do_get_base_context(locale)
+    |> add_to_context("language", locale)
+    |> add_to_context("locale", locale)
     |> add_to_context("entry", entry)
   end
 
-  defp do_get_base_context do
+  defp do_get_base_context(language) do
     identity = Cache.Identity.get()
-    globals = Cache.Globals.get()
+    globals = Cache.Globals.get(language)
     navigation = Cache.Navigation.get()
 
     %{}

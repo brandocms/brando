@@ -31,7 +31,8 @@ defmodule Brando.Factory do
       label: "System",
       key: "system",
       language: "en",
-      globals: build_list(2, :var_text)
+      globals: build_list(2, :var_text),
+      creator: build(:random_user)
     }
   end
 

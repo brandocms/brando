@@ -282,6 +282,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :label, :text
       add :language, :text
       add :globals, :jsonb
+      add :creator_id, references(:users)
+      timestamps()
     end
 
     create table(:navigation_menus) do

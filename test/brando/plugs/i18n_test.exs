@@ -20,6 +20,18 @@ defmodule Brando.Plug.I18nTest do
     assert conn.private.plug_session["language"] == "en"
   end
 
+  test "put_locale host_map" do
+    opts = [by_host: %{"myapp.se" => "se", "myapp.dk" => "dk"}]
+    mock_conn_se = %Plug.Conn{host: "myapp.se", path_info: ["/"], private: %{plug_session: %{}}}
+    mock_conn_dk = %Plug.Conn{host: "myapp.dk", path_info: ["/"], private: %{plug_session: %{}}}
+    conn = I18n.put_locale(mock_conn_se, opts)
+    assert conn.assigns.language == "se"
+    assert conn.private.plug_session["language"] == "se"
+    conn = I18n.put_locale(mock_conn_dk, opts)
+    assert conn.assigns.language == "dk"
+    assert conn.private.plug_session["language"] == "dk"
+  end
+
   test "put_admin_locale returns default when no current_user" do
     mock_conn = %Plug.Conn{path_info: ["news"], private: %{plug_session: %{}}}
     _conn = I18n.put_admin_locale(mock_conn, [])

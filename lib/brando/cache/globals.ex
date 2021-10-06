@@ -12,8 +12,8 @@ defmodule Brando.Cache.Globals do
   @doc """
   Get globals from cache
   """
-  @spec get :: map()
-  def get, do: Cache.get(:globals)
+  @spec get(binary()) :: map()
+  def get(language), do: Map.get(Cache.get(:globals), language, %{})
 
   @doc """
   Set initial globals cache. Called on startup
@@ -40,18 +40,31 @@ defmodule Brando.Cache.Globals do
   def update({:error, changeset}), do: {:error, changeset}
 
   defp process_globals(global_sets) do
-    Enum.map(global_sets, fn
-      %{globals: nil} = cat ->
-        {cat.key, []}
+    Enum.reduce(global_sets, %{}, fn
+      %{language: language, globals: nil} = set, acc ->
+        put_in(
+          acc,
+          [
+            Brando.Utils.access_map(to_string(language)),
+            Brando.Utils.access_map(set.key)
+          ],
+          []
+        )
 
-      cat ->
-        globals_for_cat =
-          cat.globals
+      %{language: language, globals: globals} = set, acc ->
+        set_globals =
+          globals
           |> Enum.map(&{&1.key, &1})
           |> Enum.into(%{})
 
-        {cat.key, globals_for_cat}
+        put_in(
+          acc,
+          [
+            Brando.Utils.access_map(to_string(language)),
+            Brando.Utils.access_map(set.key)
+          ],
+          set_globals
+        )
     end)
-    |> Enum.into(%{})
   end
 end

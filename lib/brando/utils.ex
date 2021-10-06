@@ -162,6 +162,36 @@ defmodule Brando.Utils do
     end)
   end
 
+  def access_key(key) do
+    fn
+      :get, data, next ->
+        next.(Keyword.get(data, key, []))
+
+      :get_and_update, data, next ->
+        value = Keyword.get(data, key, [])
+
+        case next.(value) do
+          {get, update} -> {get, Keyword.put(data, key, update)}
+          :pop -> {value, Keyword.delete(data, key)}
+        end
+    end
+  end
+
+  def access_map(key) do
+    fn
+      :get, data, next ->
+        next.(Map.get(data, key, %{}))
+
+      :get_and_update, data, next ->
+        value = Map.get(data, key, %{})
+
+        case next.(value) do
+          {get, update} -> {get, Map.put(data, key, update)}
+          :pop -> {value, Map.delete(data, key)}
+        end
+    end
+  end
+
   @doc """
   Adds an unique postfix to `filename`
   """

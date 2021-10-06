@@ -9,6 +9,13 @@ defmodule Brando.Plug.I18n do
   Add and assign current locale to `conn`
 
   Also sets Gettext locale.
+
+  ## Opts
+
+      - `by_host`: A map of hostnames -> language. I.e:
+        `%{"myapp.dk" => "dk", "myapp.se" => "se"}`
+      - `skip_session`: If you don't want to set language in session
+
   """
   @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_locale(conn, opts) do

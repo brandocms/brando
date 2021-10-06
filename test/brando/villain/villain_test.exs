@@ -496,12 +496,24 @@ defmodule Brando.VillainTest do
       ]
     }
 
+    global_set_params_no = %{
+      label: "System",
+      key: "system",
+      language: "no",
+      globals: [
+        %{type: "text", label: "Text", key: "text", value: "Min tekst"}
+      ]
+    }
+
     pf_params = pf_data("So the global says: '{{ globals.system.text }}'.")
 
-    {:ok, gc1} = Brando.Sites.create_global_set(global_set_params, :system)
+    {:ok, gc1} = Brando.Sites.create_global_set(global_set_params, user)
+    {:ok, _} = Brando.Sites.create_global_set(global_set_params_no, user)
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
+    {:ok, pf2} = Brando.Pages.create_fragment(Map.put(pf_params, :language, "no"), user)
 
     assert pf1.html == "<div class=\"paragraph\">So the global says: 'My text'.</div>"
+    assert pf2.html == "<div class=\"paragraph\">So the global says: 'Min tekst'.</div>"
 
     Brando.Sites.update_global_set(
       gc1.id,

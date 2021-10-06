@@ -8,22 +8,24 @@ defmodule Brando.Cache.GlobalsTest do
 
   setup do
     ExMachina.Sequence.reset()
+    user = Factory.insert(:user)
+    {:ok, %{user: user}}
   end
 
-  test "set and get" do
-    assert Brando.Cache.Sites.set()
-    assert Brando.Cache.Sites.get() == %{}
+  test "set and get", %{user: user} do
+    assert Brando.Cache.Globals.set()
+    assert Brando.Cache.Globals.get("en") == %{}
 
     category_params =
       :global_set
-      |> Factory.params_for()
+      |> Factory.params_for(creator_id: user.id)
       |> Brando.Utils.map_from_struct()
 
     {:ok, _category} = Sites.create_global_set(category_params, :system)
 
-    assert Brando.Cache.Sites.update({:ok, :dummy}) === {:ok, :dummy}
+    assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
 
-    global_map = Brando.Cache.Sites.get()
+    global_map = Brando.Cache.Globals.get("en")
     assert Map.keys(global_map) === ["system"]
 
     assert get_in(global_map, [Access.key("system"), Access.key("key-0"), Access.key(:key)]) ===

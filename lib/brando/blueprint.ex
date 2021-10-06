@@ -380,21 +380,6 @@ defmodule Brando.Blueprint do
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
-  def access_key(key) do
-    fn
-      :get, data, next ->
-        next.(Keyword.get(data, key, []))
-
-      :get_and_update, data, next ->
-        value = Keyword.get(data, key, [])
-
-        case next.(value) do
-          {get, update} -> {get, Keyword.put(data, key, update)}
-          :pop -> {value, Keyword.delete(data, key)}
-        end
-    end
-  end
-
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)
     %{domain: domain, schema: schema} = module.__naming__()

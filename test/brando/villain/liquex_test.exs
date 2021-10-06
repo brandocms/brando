@@ -16,7 +16,9 @@ defmodule Brando.Villain.LiquexTest do
       ]
     }
 
-    {:ok, _gc1} = Brando.Sites.create_global_set(global_set_params, :system)
+    usr = Factory.insert(:random_user)
+
+    {:ok, _gc1} = Brando.Sites.create_global_set(global_set_params, usr)
 
     context = Brando.Villain.get_base_context()
 

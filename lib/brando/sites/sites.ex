@@ -101,13 +101,6 @@ defmodule Brando.Sites do
     Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name))) || ""
   end
 
-  @deprecated """
-  Use Brando.Globals.render_global(key_path) instead
-  """
-  def get_global(key_path) do
-    Brando.Globals.render_global(key_path)
-  end
-
   def get_language(id) do
     identity = Brando.Cache.get(:identity)
 
@@ -268,26 +261,33 @@ defmodule Brando.Sites do
     end
   end
 
+  def get_global(language, cat_key, key) do
+    case get_in(Cache.Globals.get(language), [cat_key, key]) do
+      nil -> {:error, {:global, :not_found}}
+      val -> {:ok, val}
+    end
+  end
+
   @doc """
   Get global by key path
   """
-  def get_global(key_path, globals) when is_map(globals) do
+  def get_global_path(key_path, globals) when is_map(globals) do
     case String.split(key_path, ".") do
       [cat_key, key] -> get_global(cat_key, key, globals)
       _ -> {:error, {:global, :not_found}}
     end
   end
 
-  def get_global(cat_key, key) do
-    case get_in(Cache.Globals.get(), [cat_key, key]) do
-      nil -> {:error, {:global, :not_found}}
-      val -> {:ok, val}
+  def get_global_path(language, key_path) do
+    case String.split(key_path, ".") do
+      [cat_key, key] -> get_global(cat_key, key, Cache.Globals.get(language))
+      _ -> {:error, {:global, :not_found}}
     end
   end
 
-  def get_global(key_path) do
+  def get_global_path(key_path) do
     case String.split(key_path, ".") do
-      [cat_key, key] -> get_global(cat_key, key, Cache.Globals.get())
+      [language, cat_key, key] -> get_global(cat_key, key, Cache.Globals.get(language))
       _ -> {:error, {:global, :not_found}}
     end
   end
@@ -295,39 +295,15 @@ defmodule Brando.Sites do
   @doc """
   Get global, return global or empty string
   """
-  def get_global!(key_path) do
-    case get_global(key_path) do
+  def get_global_path!(key_path) do
+    case get_global_path(key_path) do
       {:ok, global} -> global
       _ -> ""
     end
   end
 
-  def get_global!(key_path, globals) do
-    case get_global(key_path, globals) do
-      {:ok, global} -> global
-      _ -> ""
-    end
-  end
-
-  def get_global_value!(key_path) when is_binary(key_path) do
-    get_global!(key_path)
-    |> get_global_value!()
-  end
-
-  def get_global_value!(%{type: "boolean", data: %{"value" => ""}}), do: false
-  def get_global_value!(%{type: "boolean", data: %{"value" => false}}), do: false
-  def get_global_value!(%{type: "boolean", data: %{"value" => _}}), do: true
-
-  def get_global_value!(%{type: "datetime", data: %{"value" => value}}) do
-    {:ok, datetime, _} = DateTime.from_iso8601(value)
-    datetime
-  end
-
-  @doc """
-  Render global by key path
-  """
-  def render_global(key_path, globals \\ Cache.Globals.get()) do
-    case get_global(key_path, globals) do
+  def get_global_path!(key_path, globals) do
+    case get_global_path(key_path, globals) do
       {:ok, global} -> global
       _ -> ""
     end
