@@ -1,14 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
-
-  import Ecto.Changeset
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Modal
-
   alias Brando.Content
 
   prop block, :any
@@ -86,7 +83,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     socket
     |> assign(:selected_palette, selected_palette)
-    |> assign(:first_color, List.first(selected_palette.colors))
+    |> assign(
+      :first_color,
+      List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
+    )
   end
 
   def update(%{block: block} = assigns, socket) do
@@ -233,20 +233,60 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    # TODO -- Villain.update_block_in_changeset
-    data = get_field(changeset, data_field)
-    source_position = Enum.find_index(data, &(&1.uid == block_uid))
-    original_block = Enum.at(data, source_position)
+    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
     sub_blocks = original_block.data.blocks || []
-
     {index, ""} = Integer.parse(index_binary)
     new_blocks = List.insert_at(sub_blocks, index, new_block)
-    updated_block = put_in(original_block, [Access.key(:data), Access.key(:blocks)], new_blocks)
 
-    # switch out container block
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
+        data: %{blocks: new_blocks}
+      })
 
-    new_data = put_in(data, [Access.filter(&match?(%{uid: ^block_uid}, &1))], updated_block)
-    updated_changeset = put_change(changeset, data_field, new_data)
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    Modal.hide(modal_id)
+    selector = "[data-block-uid=\"#{new_block.uid}\"]"
+
+    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+  end
+
+  def handle_event(
+        "insert_datasource",
+        %{"index" => index_binary},
+        %{
+          assigns: %{
+            base_form: form,
+            uid: block_uid,
+            block: %{id: block_id},
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    modal_id = "#{block_id}-container-blocks-module-picker"
+
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    new_block = %Brando.Blueprint.Villain.Blocks.DatasourceBlock{
+      type: "datasource",
+      data: %Brando.Blueprint.Villain.Blocks.DatasourceBlock.Data{},
+      uid: Brando.Utils.generate_uid()
+    }
+
+    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
+    sub_blocks = original_block.data.blocks || []
+    {index, ""} = Integer.parse(index_binary)
+    new_blocks = List.insert_at(sub_blocks, index, new_block)
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
+        data: %{blocks: new_blocks}
+      })
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
