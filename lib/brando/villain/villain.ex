@@ -640,7 +640,7 @@ defmodule Brando.Villain do
   Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
   """
   def merge_block(blocks, uid, merge_data) do
-    Enum.reduce(blocks, [], fn
+    Enum.reduce(blocks || [], [], fn
       %{uid: ^uid} = block, acc ->
         [Utils.deep_merge(block, merge_data) | acc]
 
@@ -683,12 +683,22 @@ defmodule Brando.Villain do
   Recursively search a list of blocks for block matching `uid`
   """
   @spec find_block(list(), binary()) :: map
+  def find_block(_, nil), do: nil
+  def find_block(nil, _), do: nil
+
   def find_block(blocks, uid) do
-    Enum.reduce(blocks, nil, fn
-      %{uid: ^uid} = block, _ -> block
-      %{type: "container", data: %{blocks: blocks}}, _ -> find_block(blocks, uid)
-      %{type: "module", data: %{refs: refs}}, _ -> find_block(refs, uid)
-      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ -> block
+    Enum.reduce_while(blocks, nil, fn
+      %{uid: ^uid} = block, _ ->
+        {:halt, block}
+
+      %{type: "container", data: %{blocks: blocks}}, _ ->
+        {:cont, find_block(blocks, uid)}
+
+      %{type: "module", data: %{refs: refs}}, _ ->
+        {:cont, find_block(refs, uid)}
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
+        {:halt, block}
     end)
   end
 
@@ -746,6 +756,10 @@ defmodule Brando.Villain do
           )
       end
     end)
+  end
+
+  defp find_and_reject_deleted(nil) do
+    []
   end
 
   defp find_and_reject_deleted(blocks) when is_list(blocks) do
