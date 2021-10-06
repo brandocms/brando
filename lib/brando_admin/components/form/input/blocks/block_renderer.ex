@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   use Surface.LiveComponent
   use Phoenix.HTML
+  import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input.Blocks
 
