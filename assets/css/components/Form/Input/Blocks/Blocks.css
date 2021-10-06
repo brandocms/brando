@@ -37,6 +37,31 @@ section.alert.danger {
   @space margin-y 25px;
 }
 
+.blocks-templates {
+  width: 28vw;
+  margin: 0 auto;
+  margin-top: 2vw;
+
+  button {
+    border: 1px solid;
+    width: 100%;
+    padding: 1vw;
+    font-weight: 500;
+
+    small {
+      font-weight: 400;
+    }
+
+    &:hover {
+      @color bg peach;
+    }
+
+    + button {
+      margin-top: -1px;
+    }
+  }
+}
+
 .namespace-button {
   @color bg peachDarker;
 

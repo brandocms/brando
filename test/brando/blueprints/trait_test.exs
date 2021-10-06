@@ -114,6 +114,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.BlueprintTest.Project,
                Brando.Content.Module,
                Brando.Content.Palette,
+               Brando.Content.Template,
                Brando.Image,
                Brando.ImageCategory,
                Brando.ImageSeries,

@@ -1,6 +1,18 @@
 defmodule Brando.Blueprint.Form do
   @moduledoc """
-  ### Form
+  # Form
+
+  ## Input types
+
+  ### `blocks`
+
+  Block editor
+
+  #### Options
+
+      - `template_namespace`: Show templates from this namespace as starting
+        points when presented with a blank editor
+
   """
   import Brando.Gettext
 

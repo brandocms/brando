@@ -181,6 +181,20 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+
+    create table(:content_templates) do
+      add :name, :text
+      add :namespace, :text
+      add :sequence, :integer
+      add :instructions, :text
+      add :deleted_at, :utc_datetime
+      add :creator_id, references(:users, on_delete: :nilify_all)
+      add :data, :jsonb
+      add :html, :text
+
+      timestamps()
+    end
+
     create table(:projects) do
       add :title, :string
       add :status, :integer

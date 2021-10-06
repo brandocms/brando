@@ -293,17 +293,19 @@ defmodule Brando.DatasourcesTest do
       }
     ]
 
-    section_params = %{
+    palette_params = %{
       name: "green",
+      key: "green",
       namespace: "general",
       instructions: "help",
-      class: "green",
-      color_bg: "#000000",
-      color_fg: "#FFFFFF",
-      color_accent: "#FF00FF"
+      colors: [
+        %{name: "Background color", key: "color_bg", hex_value: "#000000"},
+        %{name: "Foreground color", key: "color_fg", hex_value: "#FFFFFF"},
+        %{name: "Accent color", key: "color_accent", hex_value: "#FF00FF"}
+      ]
     }
 
-    {:ok, section} = Brando.Content.create_section(section_params, user)
+    {:ok, palette} = Brando.Content.create_palette(palette_params, user)
 
     data_contained_datasource = [
       %{

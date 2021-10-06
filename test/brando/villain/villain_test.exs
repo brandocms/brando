@@ -86,6 +86,8 @@ defmodule Brando.VillainTest do
 
   test "list_villains" do
     assert Enum.sort(Brando.Villain.list_villains()) == [
+             {Brando.Content.Template,
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]},
              {Brando.Pages.Fragment,
               [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]},
              {Brando.Pages.Page,
@@ -268,12 +270,14 @@ defmodule Brando.VillainTest do
 
     palette_params = %{
       name: "green",
+      key: "green",
       namespace: "general",
       instructions: "help",
-      class: "green",
-      color_bg: "#000000",
-      color_fg: "#FFFFFF",
-      color_accent: "#FF00FF"
+      colors: [
+        %{name: "Background color", key: "color_bg", hex_value: "#000000"},
+        %{name: "Foreground color", key: "color_fg", hex_value: "#FFFFFF"},
+        %{name: "Accent color", key: "color_accent", hex_value: "#FF00FF"}
+      ]
     }
 
     {:ok, palette} = Brando.Content.create_palette(palette_params, user)
@@ -310,7 +314,7 @@ defmodule Brando.VillainTest do
     {:ok, page} = Brando.Pages.create_page(params, user)
 
     assert page.html ==
-             "<section b-section=\"green\">\n  -- this is some code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some code Some text! --\n</section>\n"
 
     data = [
       %{
@@ -345,7 +349,7 @@ defmodule Brando.VillainTest do
     {:ok, page2} = Brando.Pages.create_page(params, user)
 
     assert page2.html ==
-             "<section b-section=\"green\">\n  -- this is some code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some code Some text! --\n</section>\n"
 
     tp2 =
       tp1
@@ -358,7 +362,7 @@ defmodule Brando.VillainTest do
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
     assert updated_page.html ==
-             "<section b-section=\"green\">\n  -- this is some NEW code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some NEW code Some text! --\n</section>\n"
   end
 
   test "access refs in context", %{user: user} do

@@ -19,19 +19,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   data block_forms, :list
   data insert_index, :integer
   data data_field, :atom
+  data templates, :any
 
   def mount(socket) do
     {:ok, assign(socket, insert_index: 0)}
   end
 
-  def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
+  def update(%{form: form, input: %{name: name, opts: opts}} = assigns, socket) do
     # TODO: when using input_value here, we sometimes end up with the whole block field as a params map %{"0" => ...}
     blocks = Utils.iv(assigns.form, name) || []
-    block_forms = inputs_for_blocks(assigns.form, name) || []
+    block_forms = inputs_for_blocks(form, name) || []
 
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:templates, fn ->
+       if template_namespace = opts[:template_namespace] do
+         {:ok, templates} = Content.list_templates(%{filter: %{namespace: template_namespace}})
+         templates
+       else
+         nil
+       end
+     end)
      |> assign(:blocks, blocks)
      |> assign(:block_forms, block_forms)
      |> assign(:data_field, name)}
@@ -50,6 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         blocks={@blocks}
         block_forms={@block_forms}
         uploads={@uploads}
+        templates={@templates}
         data_field={@data_field}
         insert_index={@insert_index}
         insert_block="insert_block"

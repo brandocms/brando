@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   prop duplicate_block, :event, required: true
   prop show_module_picker, :event, required: true
   prop uploads, :any
+  prop templates, :any
   prop type, :string, default: "root"
   prop uid, :string
 
@@ -56,8 +57,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         hide_sections={@hide_sections} />
 
       {#if @block_count == 0}
+
         <div class="blocks-empty-instructions">
           Click the plus to start adding content blocks
+          {#if @templates}
+            <br>or get started with a prefab'ed template:<br>
+            <div class="blocks-templates">
+              {#for template <- @templates}
+                <button type="button" :on-click="use_template" phx-value-id={template.id}>
+                  {template.name}<br>
+                  <small>{template.instructions}</small>
+                </button>
+              {/for}
+            </div>
+          {/if}
         </div>
         <Blocks.Plus
           index={0}
@@ -81,18 +94,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   end
 
   def handle_event(
-        "blocks:reorder",
-        %{"order" => order_indices, "type" => "root"},
-        %{assigns: %{base_form: form}} = socket
+        "use_template",
+        %{"id" => template_id},
+        %{assigns: %{templates: templates, base_form: form, data_field: data_field}} = socket
       ) do
     changeset = form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    blocks = Ecto.Changeset.get_field(changeset, :data)
+    template = Enum.find(templates, &(&1.id == String.to_integer(template_id)))
+
+    updated_changeset = Ecto.Changeset.put_change(changeset, data_field, template.data)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "blocks:reorder",
+        %{"order" => order_indices, "type" => "root"},
+        %{assigns: %{base_form: form, data_field: data_field}} = socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    blocks = Ecto.Changeset.get_field(changeset, data_field)
 
     new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+    updated_changeset = Ecto.Changeset.put_change(changeset, data_field, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

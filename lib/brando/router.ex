@@ -83,6 +83,12 @@ defmodule Brando.Router do
           live "/config/content/palettes", BrandoAdmin.Content.PaletteListLive
           live "/config/content/palettes/create", BrandoAdmin.Content.PaletteCreateLive
           live "/config/content/palettes/update/:entry_id", BrandoAdmin.Content.PaletteUpdateLive
+          live "/config/content/templates", BrandoAdmin.Content.TemplateListLive
+          live "/config/content/templates/create", BrandoAdmin.Content.TemplateCreateLive
+
+          live "/config/content/templates/update/:entry_id",
+               BrandoAdmin.Content.TemplateUpdateLive
+
           live "/pages", BrandoAdmin.Pages.PageListLive
           live "/pages/create", BrandoAdmin.Pages.PageCreateLive
           live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive

@@ -29,8 +29,10 @@ defmodule Brando.Content do
   """
   use Brando.Query
   import Ecto.Query
+
   alias Brando.Content.Module
   alias Brando.Content.Palette
+  alias Brando.Content.Template
   alias Brando.Content.Var
   alias Brando.Villain
 
@@ -210,6 +212,58 @@ defmodule Brando.Content do
       palette -> {:ok, palette}
     end
   end
+
+  ## Templates
+  ##
+
+  query :list, Template, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+
+  filters Template do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+
+      {:namespace, namespace}, query ->
+        query =
+          from(t in query,
+            where: is_nil(t.deleted_at),
+            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+          )
+
+        namespace =
+          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
+        case namespace do
+          "all" ->
+            query
+
+          namespace_list when is_list(namespace_list) ->
+            from(t in query, where: t.namespace in ^namespace_list)
+
+          _ ->
+            from(t in query, where: t.namespace == ^namespace)
+        end
+    end
+  end
+
+  query :single, Template, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+
+  matches Template do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:namespace, namespace}, query ->
+        from(t in query,
+          where: t.namespace == ^namespace
+        )
+    end
+  end
+
+  mutation :create, Template
+  mutation :update, Template
+  mutation :delete, Template
+  mutation :duplicate, {Template, change_fields: [:name]}
 
   def get_var_by_type(var_type) do
     Map.get(@default_vars, var_type)
