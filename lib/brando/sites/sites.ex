@@ -133,24 +133,24 @@ defmodule Brando.Sites do
   #
   # SEO
 
+  query :list, SEO, do: fn query -> from(q in query) end
+
+  filters SEO do
+    fn
+      {:language, language}, query ->
+        from(q in query, where: q.language == ^language)
+    end
+  end
+
   query :single, SEO, do: fn q -> q end
 
   matches SEO do
     fn
       {:id, id}, query ->
         from t in query, where: t.id == ^id
-    end
-  end
 
-  @doc """
-  Get seo
-  """
-  @spec get_seo() ::
-          {:ok, seo} | {:error, {:seo, :not_found}}
-  def get_seo do
-    case SEO |> first() |> Brando.repo().one do
-      nil -> {:error, {:seo, :not_found}}
-      seo -> {:ok, seo}
+      {:language, language}, query ->
+        from(q in query, where: q.language == ^language)
     end
   end
 
@@ -171,10 +171,12 @@ defmodule Brando.Sites do
     end
   end
 
+  mutation :duplicate, {SEO, change_fields: [:fallback_meta_title]}
+
   @doc """
   Create default seo
   """
-  def create_default_seo, do: Brando.repo().insert!(%SEO{})
+  def create_default_seo, do: Brando.repo().insert!(%SEO{language: :en})
 
   #
   # Previews

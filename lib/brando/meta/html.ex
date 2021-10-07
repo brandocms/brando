@@ -31,9 +31,9 @@ defmodule Brando.Meta.HTML do
   Renders all meta/opengraph
   """
   @spec render_meta(conn) :: {:safe, term}
-  def render_meta(conn) do
+  def render_meta(%{assigns: %{language: language}} = conn) do
     app_name = Brando.config(:app_name)
-    seo = Brando.Cache.SEO.get()
+    seo = Brando.Cache.SEO.get(language)
 
     conn
     |> put_meta_if_missing("title", seo.fallback_meta_title)

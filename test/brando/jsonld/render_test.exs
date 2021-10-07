@@ -43,7 +43,7 @@ defmodule Brando.JSONLDRenderTest do
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
 
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
     mock_conn =
@@ -81,7 +81,7 @@ defmodule Brando.JSONLDRenderTest do
               ]}
            ]
 
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
@@ -89,10 +89,10 @@ defmodule Brando.JSONLDRenderTest do
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     {:ok, identity} = Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
 
-    {:ok, seo} = Brando.Sites.get_seo()
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    {:ok, updated_seo} = Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
-    rendered_json_ld = Brando.HTML.render_json_ld(:corporation, identity)
+    rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {identity, updated_seo})
 
     assert rendered_json_ld ==
              {:safe,
@@ -108,12 +108,12 @@ defmodule Brando.JSONLDRenderTest do
                 62
               ]}
 
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
   test "render json ld :breadcrumbs" do
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
 
     breadcrumbs = [

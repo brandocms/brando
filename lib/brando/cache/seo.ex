@@ -9,29 +9,45 @@ defmodule Brando.Cache.SEO do
   @type changeset :: Ecto.Changeset.t()
 
   @doc """
-  Get Identity from cache
+  Get SEO from cache
   """
-  @spec get :: seo
-  def get, do: Cache.get(:seo)
+  @spec get(binary()) :: map()
+  def get(language), do: Map.get(Cache.get(:seo), language, %{})
 
   @doc """
-  Set initial seo cache. Called on startup
+  Set initial SEO cache. Called on startup
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    {:ok, seo} = Sites.get_seo()
-    Cachex.put(:cache, :seo, seo)
+    {:ok, seos} = Sites.list_seos()
+    seo_map = process_seos(seos)
+    Cachex.put(:cache, :seo, seo_map)
   end
 
   @doc """
-  Update seo cache
+  Update seos cache
   """
-  @spec update({:ok, seo} | {:error, changeset}) ::
-          {:ok, seo} | {:error, changeset}
-  def update({:ok, updated_seo}) do
-    Cachex.update(:cache, :seo, updated_seo)
-    {:ok, updated_seo}
+  @spec update({:ok, any()} | {:error, changeset}) ::
+          {:ok, map()} | {:error, changeset}
+  def update({:ok, seo}) do
+    {:ok, seos} = Sites.list_seos()
+    seo_map = process_seos(seos)
+    Cachex.update(:cache, :seo, seo_map)
+    {:ok, seo}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
+
+  defp process_seos(seos) do
+    Enum.reduce(seos, %{}, fn
+      %{language: language} = seo, acc ->
+        put_in(
+          acc,
+          [
+            Brando.Utils.access_map(to_string(language))
+          ],
+          seo
+        )
+    end)
+  end
 end

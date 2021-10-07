@@ -90,7 +90,7 @@ defmodule Brando.MetaRenderTest do
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
 
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
@@ -101,7 +101,7 @@ defmodule Brando.MetaRenderTest do
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
 
-    {:ok, seo} = Brando.Sites.get_seo()
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 

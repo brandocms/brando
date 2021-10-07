@@ -2,11 +2,11 @@ defmodule Brando.Sites.Redirects do
   @doc """
   Check `test_path` against registered redirects
   """
-  @spec test_redirect(list) ::
+  @spec test_redirect(list, binary) ::
           {:ok, {:redirect, {binary, binary}}} | {:error, {:redirects, :no_match}}
-  def test_redirect(test_path) do
+  def test_redirect(test_path, language) do
     test_url = "/" <> Enum.join(test_path, "/")
-    seo = Brando.Cache.SEO.get()
+    seo = Brando.Cache.SEO.get(language)
 
     Enum.reduce_while(seo.redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
       case match_redirect(test_url, redirect.from, redirect.to) do

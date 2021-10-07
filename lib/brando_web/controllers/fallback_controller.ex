@@ -5,8 +5,8 @@ defmodule BrandoWeb.FallbackController do
   @doc """
   Handle errors
   """
-  def call(conn, {:error, {_, :not_found}}) do
-    case Redirects.test_redirect(conn.path_info) do
+  def call(%{assigns: %{language: language}} = conn, {:error, {_, :not_found}}) do
+    case Redirects.test_redirect(conn.path_info, language) do
       {:error, {:redirects, :no_match}} ->
         conn
         |> put_status(:not_found)

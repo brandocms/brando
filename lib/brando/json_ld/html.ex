@@ -15,9 +15,13 @@ defmodule Brando.JSONLD.HTML do
   @spec render_json_ld(conn) :: [{:safe, term}]
   def render_json_ld(%{assigns: %{language: language}} = conn) do
     cached_identity = Brando.Cache.Identity.get(language)
+    cached_seo = Brando.Cache.SEO.get(language)
 
     breadcrumbs = render_json_ld(:breadcrumbs, conn)
-    identity = render_json_ld(String.to_existing_atom(cached_identity.type), cached_identity)
+
+    identity =
+      render_json_ld(String.to_existing_atom(cached_identity.type), {cached_identity, cached_seo})
+
     entity = render_json_ld(:entity, conn)
 
     [breadcrumbs, identity, entity]
@@ -34,18 +38,18 @@ defmodule Brando.JSONLD.HTML do
     content_tag(:script, raw(breadcrumb_json), type: "application/ld+json")
   end
 
-  def render_json_ld(:corporation, cached_identity) do
+  def render_json_ld(:corporation, {cached_identity, cached_seo}) do
     corporation_json =
-      {cached_identity, Brando.Cache.get(:seo)}
+      {cached_identity, cached_seo}
       |> JSONLD.Schema.Corporation.build()
       |> JSONLD.to_json()
 
     content_tag(:script, raw(corporation_json), type: "application/ld+json")
   end
 
-  def render_json_ld(:organization, cached_identity) do
+  def render_json_ld(:organization, {cached_identity, cached_seo}) do
     organization_json =
-      {cached_identity, Brando.Cache.get(:seo)}
+      {cached_identity, cached_seo}
       |> JSONLD.Schema.Organization.build()
       |> JSONLD.to_json()
 

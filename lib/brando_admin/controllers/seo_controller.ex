@@ -11,8 +11,8 @@ defmodule Brando.SEOController do
   """
 
   @doc false
-  def robots(conn, _) do
-    seo = Cache.SEO.get()
+  def robots(%{assigns: %{language: language}} = conn, _) do
+    seo = Cache.SEO.get(language)
 
     case Map.get(seo, :robots) do
       nil ->

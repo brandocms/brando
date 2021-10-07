@@ -4,7 +4,7 @@ defmodule Brando.Sites.SEO do
     domain: "Sites",
     schema: "SEO",
     singular: "seo",
-    plural: "seo",
+    plural: "seos",
     gettext_module: Brando.Gettext
 
   @image_cfg [
@@ -23,6 +23,7 @@ defmodule Brando.Sites.SEO do
   import Brando.Gettext
 
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   identifier "SEO"
 

@@ -124,7 +124,7 @@ defmodule Brando.JSONLDSchemaTest do
 
   test "Brando.JSONLD.Schema.Corporation" do
     cached_identity = Brando.Cache.Identity.get("en")
-    cached_seo = Brando.Cache.get(:seo)
+    cached_seo = Brando.Cache.SEO.get("en")
 
     assert Brando.JSONLD.Schema.Corporation.build({cached_identity, cached_seo}) ==
              %Brando.JSONLD.Schema.Corporation{
