@@ -1,6 +1,0 @@
-#import "./USER_FRAGMENT.graphql"
-query Me {
-  me {
-    ...user
-  }
-}

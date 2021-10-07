@@ -1,5 +1,0 @@
-query LoggedWarnings {
-  loggedWarnings {
-    msg
-  }
-}

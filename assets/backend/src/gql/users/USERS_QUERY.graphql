@@ -1,8 +1,0 @@
-#import "./USER_FRAGMENT.graphql"
-query Users {
-  users {
-    entries {
-      ...user
-    }
-  }
-}

@@ -1,7 +1,0 @@
-mutation DeleteImageCategory($imageCategoryId: ID!) {
-  deleteImageCategory(
-    imageCategoryId: $imageCategoryId
-  ) {
-    id
-  }
-}

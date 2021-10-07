@@ -1,6 +1,0 @@
-#import "./PAGE_FRAGMENT.graphql"
-query Page ($matches: PageMatches, $status: String, $revision: ID) {
-  page (matches: $matches, status: $status, revision: $revision) {
-    ...page
-  }
-}

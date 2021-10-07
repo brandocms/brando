@@ -1,6 +1,0 @@
-#import "./SEO_FRAGMENT.graphql"
-query Seo {
-  seo {
-    ...seo
-  }
-}
