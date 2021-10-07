@@ -3,14 +3,12 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
   use Surface.LiveComponent
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.MapInputs
-  alias BrandoAdmin.Components.Form.PolyInputs
-  alias BrandoAdmin.Components.Form.FieldBase
-
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+
+  alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.PolyInputs
+  alias BrandoAdmin.Components.Form.FieldBase
 
   prop subform, :any
   prop form, :any
@@ -20,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
   data advanced, :boolean
 
   def mount(socket) do
-    {:ok, socket |> assign(:advanced, false)}
+    {:ok, assign(socket, :advanced, false)}
   end
 
   def render(assigns) do

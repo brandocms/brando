@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   use Surface.LiveComponent
   use Phoenix.HTML
-  import Brando.Gettext
+
   alias BrandoAdmin.Components.Form.Input
 
   prop var, :any
