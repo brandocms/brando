@@ -202,7 +202,7 @@ defmodule Brando.Upload do
   defp copy_uploaded_file(
          %__MODULE__{
            meta: %{filename: fname, path: src, upload_path: ul_path},
-           cfg: %{upload_path: media_target_path}
+           cfg: %{upload_path: media_target_path} = cfg
          } = upload
        ) do
     joined_dest = Path.join(ul_path, fname)
