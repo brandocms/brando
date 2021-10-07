@@ -199,7 +199,6 @@ defmodule Mix.Tasks.Brando.Install do
     # Backend src
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
     {:copy, "assets/backend/src/auth.js", "assets/backend/src/auth.js"},
-    {:copy, "assets/backend/src/hooks/index.js", "assets/backend/src/hooks/index.js"},
     {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
     {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"},
     {:copy, "assets/backend/css/fonts.css", "assets/backend/css/fonts.css"},
