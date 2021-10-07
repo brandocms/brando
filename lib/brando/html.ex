@@ -374,7 +374,6 @@ defmodule Brando.HTML do
       [
         content_tag(:script, polyfill, type: "module"),
         content_tag(:script, "",
-          defer: true,
           src: modern_route,
           type: "module",
           crossorigin: cdn?

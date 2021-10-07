@@ -1,0 +1,6 @@
+#import "./MODULE_FRAGMENT.graphql"
+query Modules ($order: Order, $limit: Int, $offset: Int, $filter: ModuleFilter) {
+  modules (order: $order, limit: $limit, offset: $offset, filter: $filter) {
+    ...module
+  }
+}

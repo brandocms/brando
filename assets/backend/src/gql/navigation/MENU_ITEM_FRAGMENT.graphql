@@ -1,0 +1,30 @@
+fragment menuFields on MenuItem {
+  id
+  status
+  key
+  title
+  url
+  openInNewWindow
+}
+
+fragment recursiveMenuItem on MenuItem {
+  items {
+    ...menuFields
+    items {
+      ...menuFields
+      items {
+        ...menuFields
+      }
+    }
+  }
+}
+
+fragment menuItem on MenuItem {
+  id
+  status
+  key
+  title
+  url
+  openInNewWindow
+  ...recursiveMenuItem
+}

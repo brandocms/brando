@@ -1,0 +1,11 @@
+fragment imageType on ImageType {
+  title
+  credits
+  alt
+  path
+  focal
+  sizes
+
+  thumb: url(size: "thumb")
+  original: url(size: "original")
+}

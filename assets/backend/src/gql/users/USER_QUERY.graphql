@@ -1,0 +1,6 @@
+#import "./USER_FRAGMENT.graphql"
+query User ($matches: UserMatches, $status: String, $revision: ID) {
+  user (matches: $matches, status: $status, revision: $revision) {
+    ...user
+  }
+}

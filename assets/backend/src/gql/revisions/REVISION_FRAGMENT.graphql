@@ -1,0 +1,15 @@
+fragment revision on Revision {
+  entryId
+  entryType
+  revision
+  active
+  protected
+  description
+
+  creator {
+    id
+    name
+  }
+
+  insertedAt
+}

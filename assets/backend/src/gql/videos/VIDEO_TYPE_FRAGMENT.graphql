@@ -1,0 +1,8 @@
+fragment videoType on VideoType {
+  url
+  source
+  remoteId
+  width
+  height
+  thumbnailUrl
+}

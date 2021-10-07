@@ -1,0 +1,31 @@
+{
+  "code": "en",
+  "messages": {
+    "alpha": "may only contain alphabetic characters",
+    "alpha_num": "may only contain alpha-numeric characters",
+    "alpha_dash": "may contain alpha-numeric characters as well as dashes and underscores",
+    "alpha_spaces": "may only contain alphabetic characters as well as spaces",
+    "between": "must be between {min} and {max}",
+    "confirmed": "confirmation does not match",
+    "digits": "must be numeric and exactly contain {length} digits",
+    "dimensions": "must be {width} pixels by {height} pixels",
+    "email": "must be a valid email",
+    "excluded": "is not a valid value",
+    "ext": "is not a valid file",
+    "image": "must be an image",
+    "integer": "must be an integer",
+    "length": "must be {length} long",
+    "max_value": "must be {max} or less",
+    "max": "may not be greater than {length} characters",
+    "mimes": "must have a valid file type",
+    "min_value": "must be {min} or more",
+    "min": "must be at least {length} characters",
+    "numeric": "may only contain numeric characters",
+    "oneOf": "is not a valid value",
+    "regex": "format is invalid",
+    "required_if": "is required",
+    "required": "is required",
+    "size": "size must be less than {size}KB",
+    "double": "must be a valid decimal"
+  }
+}

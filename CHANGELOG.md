@@ -8,6 +8,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Page properties are now page vars. `get_prop` -> `get_var`
 * `render_sections_css` -> `render_palettes_css`
 
+
 ## 0.51.0
 
 * NOTE: This will be the final GraphQL/Vue version. Next version will be with LiveViews!

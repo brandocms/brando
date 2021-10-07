@@ -1,0 +1,24 @@
+#import "./MENU_ITEM_FRAGMENT.graphql"
+fragment menu on Menu {
+  id
+  status
+  key
+  title
+  template
+  language
+
+  creator {
+    id
+    name
+    avatar {
+      thumb: url(size: "xlarge")
+    }
+  }
+
+  items {
+    ...menuItem
+  }
+
+  insertedAt
+  updatedAt
+}

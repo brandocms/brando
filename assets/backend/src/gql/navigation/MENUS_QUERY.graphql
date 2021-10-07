@@ -1,0 +1,6 @@
+#import "./MENU_FRAGMENT.graphql"
+query Menus ($order: Order, $limit: Int, $offset: Int, $filter: MenuFilter, $status: String) {
+  menus (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
+    ...menu
+  }
+}

@@ -1,0 +1,6 @@
+#import "./IDENTITY_FRAGMENT.graphql"
+query Identity {
+  identity {
+    ...identity
+  }
+}
