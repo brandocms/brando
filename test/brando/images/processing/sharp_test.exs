@@ -18,33 +18,37 @@ defmodule Brando.Images.SharpTest do
     }
   }
 
-  @up %Plug.Upload{
-    content_type: "image/png",
-    filename: "sample.png",
+  @meta %{
     path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"
   }
 
-  test "create_image_type_struct" do
+  @upload_entry %Phoenix.LiveView.UploadEntry{
+    cancelled?: false,
+    client_last_modified: nil,
+    client_name: "sample.png",
+    client_size: 251_094,
+    client_type: "image/png",
+    done?: true,
+    preflighted?: true,
+    progress: 100,
+    ref: "0",
+    upload_config: :cover,
+    upload_ref: "phx-FphlQp2qJhgx2QsB",
+    uuid: "f4dd9ef5-1c0d-4b29-87b8-643d7144e86d",
+    valid?: true
+  }
+
+  test "handle_upload_type" do
     prev_cfg = Brando.config(Brando.Images)
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    u1 = Factory.insert(:random_user)
-    {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
 
-    {:ok, image_struct} = Processing.create_image_type_struct(upload, u1)
-
-    assert image_struct == %Brando.Type.Image{
-             alt: nil,
-             credits: nil,
-             focal: %{x: 50, y: 50},
-             height: 576,
-             path: Path.join(upload.cfg.upload_path, upload.plug.filename),
-             sizes: %{},
-             title: nil,
-             width: 608,
-             dominant_color: nil
-           }
+    assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
+    assert image_struct.height == 576
+    assert image_struct.width == 608
+    assert image_struct.path =~ "images/avatars/"
 
     Application.put_env(:brando, Brando.Images, prev_cfg)
   end
@@ -54,8 +58,8 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
-    {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
+
     u1 = Factory.insert(:random_user, avatar: image_struct)
 
     [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
@@ -68,8 +72,8 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
-    {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
+
     u1 = Factory.insert(:random_user, avatar: image_struct)
     changeset = Ecto.Changeset.change(u1)
 

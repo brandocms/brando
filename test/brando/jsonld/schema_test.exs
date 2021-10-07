@@ -17,7 +17,7 @@ defmodule Brando.JSONLDSchemaTest do
     {:copyrightYear, :string, [:inserted_at, :year]}
   ]
 
-  @image %Brando.Type.Image{
+  @image %Brando.Images.Image{
     credits: nil,
     path: "images/avatars/27i97a.jpeg",
     title: nil,
@@ -123,8 +123,8 @@ defmodule Brando.JSONLDSchemaTest do
   end
 
   test "Brando.JSONLD.Schema.Corporation" do
-    cached_identity = Brando.Cache.get(:identity)
-    cached_seo = Brando.Cache.get(:seo)
+    cached_identity = Brando.Cache.Identity.get("en")
+    cached_seo = Brando.Cache.SEO.get("en")
 
     assert Brando.JSONLD.Schema.Corporation.build({cached_identity, cached_seo}) ==
              %Brando.JSONLD.Schema.Corporation{
@@ -138,12 +138,12 @@ defmodule Brando.JSONLDSchemaTest do
                  addressRegion: "Oslo",
                  postalCode: "0000"
                },
-               alternateName: "Kortversjon av navnet",
+               alternateName: "Shortform name",
                description: "Fallback meta description",
                email: "mail@domain.tld",
                image: nil,
                logo: nil,
-               name: "Organisasjonens navn",
+               name: "Organization name",
                sameAs: ["https://instagram.com/test", "https://facebook.com/test"],
                url: "https://www.domain.tld"
              }

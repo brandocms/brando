@@ -11,103 +11,52 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/images/operations/sizing.ex:455
-msgid "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/_feedback.html.eex:4
-msgid "A short description of the events leading to the error"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/500.html.eex:3
-#: lib/web/templates/error/admin_500.html.eex:3
-msgid "Application error"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/bad_request.html.eex:3
-msgid "Bad request"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/db_error.html.eex:3
-msgid "Database error"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/_feedback.html.eex:3
-msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:70
+#: lib/brando/upload.ex:117
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr ""
 
 #, elixir-format
-#: lib/web/templates/error/catch_all.html.eex:2
-msgid "Error"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:85
+#: lib/brando/upload.ex:132
 msgid "Error while copying"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/upload.ex:79
+#: lib/brando/upload.ex:126
 msgid "Error while creating image sizes"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/upload.ex:67
+#: lib/brando/upload.ex:114
 msgid "Failed creating image type struct"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/upload.ex:73
+#: lib/brando/upload.ex:120
 msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
 msgstr ""
 
 #, elixir-format
-#: lib/web/templates/error/not_found.html.eex:3
-msgid "Page not found"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:82
+#: lib/brando/upload.ex:129
 msgid "Path creation failed"
 msgstr ""
 
 #, elixir-format
-#: lib/web/templates/error/server_error.html.eex:3
-msgid "Server error"
-msgstr ""
-
-#, elixir-format
-#: lib/web/templates/error/_feedback.html.eex:16
-msgid "Thanks!"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:89
+#: lib/brando/upload.ex:136
 msgid "Unknown error while creating image sizes."
 msgstr ""
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:35
+#: lib/brando/query/mutations.ex:30 lib/brando/query/mutations.ex:53
 msgid "created"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:157
+#: lib/brando/query/mutations.ex:203
 msgid "deleted"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:75
+#: lib/brando/query/mutations.ex:88 lib/brando/query/mutations.ex:116
 msgid "updated"
 msgstr ""
 
@@ -132,6 +81,427 @@ msgid "published"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/traits/villain/prevent_circular_references.ex:26
+#: lib/brando/traits/villain/prevent_circular_references.ex:21
 msgid "Fragment contains circular reference to itself, %{ref_string}"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:184
+msgid "Admin"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:240
+msgid "Cache"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:216
+msgid "Configuration"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/blueprint/form.ex:202 lib/brando_admin/menu.ex:282
+msgid "Content"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:67
+msgid "Corporation"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:212
+msgid "Dashboard"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/admin/_sidebar.html.eex:51
+msgid "Edit profile"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:185
+msgid "Editor"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:145
+#: lib/brando_admin/templates/user_session/new.html.eex:33
+msgid "Email"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:232
+msgid "Global variables"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:224
+msgid "Identity"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/user_session/new.html.eex:48
+msgid "Keep me logged in for 60 days"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/admin/_sidebar.html.eex:59
+msgid "Log out"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:144 lib/brando/villain/module.ex:69
+msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:220
+msgid "Navigation"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:66
+msgid "Organization"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:286
+msgid "Pages & Sections"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/user_session/new.html.eex:40
+msgid "Password"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:236
+msgid "Planned publishing"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:228
+msgid "SEO"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:183
+msgid "Superuser"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:209
+msgid "System"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:186
+msgid "User"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/live/users/user_list_live.ex:11 lib/brando_admin/menu.ex:276
+msgid "Users"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/_feedback.html.eex:4
+msgid "A short description of the events leading to the error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form/input/page_properties.ex:108
+#: lib/brando_admin/components/form/subform.ex:88
+msgid "Add entry"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/500.html.eex:3
+#: lib/brando_admin/templates/error/admin_500.html.eex:3
+msgid "Application error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:107 lib/brando/pages/page.ex:171
+#: lib/brando/pages/page.ex:204 lib/brando/users/user.ex:153 lib/brando/villain/module.ex:79
+msgid "Are you sure?"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:258
+msgid "Assets"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/bad_request.html.eex:3
+msgid "Bad request"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:244
+msgid "Block modules"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/villain/module.ex:71
+msgid "Class"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/selected_rows.ex:27
+msgid "Clear selection"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/live/villain/modules_list_live.ex:12
+#: lib/brando_admin/live/villain/modules_update_live.ex:42
+msgid "Content Modules"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:111
+#: lib/brando_admin/live/pages/page_fragment_create_live.ex:17
+msgid "Create fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/live/pages/page_create_live.ex:23
+msgid "Create page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:110
+msgid "Create subpage"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/images/operations/sizing.ex:460
+msgid "Creating image size: <strong>%{size_key}</strong>/%{format}"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/db_error.html.eex:3
+msgid "Database error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form/input/blocks/datasource_block.ex:58
+msgid "Datasource"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form/input/status.ex:25
+msgid "Deactivated"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:169
+msgid "Delete fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/villain/module.ex:77
+msgid "Delete module"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:105
+msgid "Delete page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:115
+msgid "Delete pages"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:202
+msgid "Delete sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/row/status.ex:61
+#: lib/brando_admin/components/content/list/tools.ex:140
+msgid "Deleted"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/_feedback.html.eex:3
+msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:151
+msgid "Disable user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/row/status.ex:57
+#: lib/brando_admin/components/content/list/tools.ex:136
+msgid "Disabled"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/row/status.ex:58
+#: lib/brando_admin/components/content/list/tools.ex:137 lib/brando_admin/components/form/input/status.ex:22
+msgid "Draft"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/villain/module.ex:81
+msgid "Duplicate module"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:109
+msgid "Duplicate page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:167
+#: lib/brando_admin/live/pages/page_fragment_update_live.ex:10
+msgid "Edit fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/villain/module.ex:75
+#: lib/brando_admin/live/villain/modules_update_live.ex:43
+msgid "Edit module"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:103
+#: lib/brando_admin/live/pages/page_update_live.ex:9
+msgid "Edit page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:200
+msgid "Edit sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:149
+msgid "Edit user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form.ex:400
+#: lib/brando_admin/templates/error/catch_all.html.eex:2
+msgid "Error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form.ex:401
+msgid "Error while saving form. Please correct marked fields and resubmit"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:262
+msgid "Files"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/tools.ex:88
+msgid "Filter"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:266
+msgid "Images"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/villain/module.ex:70
+msgid "Namespace"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list.ex:77
+msgid "No matching entries found"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/live/pages/page_list_live.ex:12
+#: lib/brando_admin/live/users/user_list_live.ex:12 lib/brando_admin/live/villain/modules_list_live.ex:13
+msgid "Overview"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/not_found.html.eex:3
+msgid "Page not found"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/live/pages/page_list_live.ex:11
+msgid "Pages & sections"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/row/status.ex:59
+#: lib/brando_admin/components/content/list/tools.ex:138 lib/brando_admin/components/form/input/status.ex:23
+msgid "Pending"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/row/status.ex:60
+#: lib/brando_admin/components/content/list/tools.ex:139 lib/brando_admin/components/form/input/status.ex:24
+msgid "Published"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/form.ex:279
+msgid "Save (⌘S)"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:252
+msgid "Sections"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/server_error.html.eex:3
+msgid "Server error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:248
+msgid "Templates"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/error/_feedback.html.eex:16
+msgid "Thanks!"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:99
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:98
+msgid "URI"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:270
+msgid "Videos"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/selected_rows.ex:31
+msgid "With"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/pagination.ex:14
+msgid "entries"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/components/content/list/selected_rows.ex:33
+msgid "selected, perform action"
 msgstr ""

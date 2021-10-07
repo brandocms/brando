@@ -33,7 +33,8 @@ defmodule Brando.Users.User do
     domain: "Users",
     schema: "User",
     singular: "user",
-    plural: "users"
+    plural: "users",
+    gettext_module: Brando.Gettext
 
   import Brando.Gettext
 
@@ -49,9 +50,7 @@ defmodule Brando.Users.User do
       unique: true,
       required: true
 
-    attribute :avatar, :image, @avatar_cfg
-    attribute :role, Brando.Type.Role
-    attribute :config, Brando.Type.UserConfig, default: %Brando.Type.UserConfig{}
+    attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
     attribute :language, :language, languages: Brando.config(:admin_languages)
@@ -59,6 +58,14 @@ defmodule Brando.Users.User do
     attribute :password, :string,
       constraints: [min_length: 6],
       required: true
+  end
+
+  assets do
+    asset :avatar, :image, cfg: @avatar_cfg
+  end
+
+  relations do
+    relation :config, :embeds_one, module: Brando.Users.UserConfig
   end
 
   identifier "{{ entry.name }}"
@@ -95,6 +102,24 @@ defmodule Brando.Users.User do
         label t("Email")
         placeholder t("Email")
       end
+
+      translate :password do
+        label t("Password")
+        placeholder t("Password")
+      end
+
+      translate :language do
+        label t("Language")
+        placeholder t("Language")
+      end
+
+      translate :role do
+        label t("Role")
+      end
+
+      translate :avatar do
+        label t("Profile picture")
+      end
     end
 
     context :strings do
@@ -108,6 +133,70 @@ defmodule Brando.Users.User do
       translate [:user, :activated], t("User activated")
       translate [:user, :deactivate], t("Deactivate user")
       translate [:user, :deactivated], t("User deactivated")
+    end
+  end
+
+  listings do
+    listing do
+      field :avatar, :image, columns: 2
+
+      filters([
+        [label: gettext("Name"), filter: "name"],
+        [label: gettext("Email"), filter: "email"]
+      ])
+
+      actions([
+        [label: gettext("Edit user"), event: "edit_entry"],
+        [
+          label: gettext("Disable user"),
+          event: "disable_user",
+          confirm: gettext("Are you sure?")
+        ]
+      ])
+
+      template """
+               <a
+                class="entry-link"
+                data-phx-link="redirect"
+                data-phx-link-state="push"
+                href="/admin/users/update/{{ entry.id }}">
+                {{ entry.name }}
+               </a><br>
+               <small>{{ entry.email }}</small><br>
+               <div class="badge">{{ entry.role }}</div>
+               """,
+               columns: 13
+    end
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset size: :half do
+          input :name, :text
+          input :email, :email
+          input :password, :password
+          input :language, :radios, options: :languages
+
+          input :role, :radios,
+            options: [
+              %{label: gettext("Superuser"), value: :superuser},
+              %{label: gettext("Admin"), value: :admin},
+              %{label: gettext("Editor"), value: :editor},
+              %{label: gettext("User"), value: :user}
+            ]
+        end
+
+        fieldset size: :half do
+          input :avatar, :image
+
+          inputs_for :config do
+            input :reset_password_on_first_login, :toggle
+            input :show_mutation_notifications, :toggle
+            input :prefers_reduced_motion, :toggle
+          end
+        end
+      end
     end
   end
 end

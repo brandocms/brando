@@ -10,9 +10,9 @@ defmodule Brando.I18nTest do
   end
 
   test "extract" do
-    assert I18n.parse_path([]) == {"no", ["index"]}
+    assert I18n.parse_path([]) == {"en", ["index"]}
     assert I18n.parse_path(["en"]) == {"en", ["index"]}
-    assert I18n.parse_path(["test"]) == {"no", ["test"]}
+    assert I18n.parse_path(["test"]) == {"en", ["test"]}
     assert I18n.parse_path(["no", "test"]) == {"no", ["test"]}
     assert I18n.parse_path(["en", "test"]) == {"en", ["test"]}
   end

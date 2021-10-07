@@ -1,0 +1,178 @@
+.gallery-block {
+  .file-input {
+    display: none;
+  }
+
+  .images {
+    @space margin-top 15px;
+  }
+
+  .images-grid {
+    @row 3/wrap/1vw;
+    
+    .preview {
+      @column 4/12;
+      @color bg peach;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+
+      figcaption {
+        padding-top: 15px;
+      }
+    }
+  }
+
+  .caption-editor {
+    .caption-row {
+      @row 2;
+      @space margin-bottom 15px;
+
+      > figure {
+        @column 2/8;
+      }
+
+      > div {
+        @column 6/8;
+      }
+    }
+  }
+
+  .images-list {
+    width: 100%;
+
+    .preview {
+      @row 3;
+      @space margin-bottom 1vw;
+      @color bg peach;
+      padding: 10px;
+
+      figure {
+        @column 2/12;
+      }
+
+      figcaption {
+        @column 7/12;
+        @fontsize sm;
+
+        display: block;
+
+        div {
+          @space margin-bottom 8px;
+          display: block;
+          text-align: left;
+        }
+      }
+    }
+  }
+
+  .empty {
+    @color bg peach;
+    @color fg dark;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    padding: 3vw;
+    border-radius: 25px;
+
+    &.hidden {
+      display: none !important;
+    }
+
+    figure {
+      @space margin-bottom 35px;
+
+      svg {
+        width: 200px;
+        user-select: none;
+        pointer-events: none;
+
+        path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
+          fill: theme(colors.dark);
+        }
+      }
+    }
+
+    .instructions {
+      font-size: 16px;
+
+      button {
+        margin-top: 10px;
+      }
+    }
+  }
+
+  .upload-canvas {
+    &.dragging {
+      background-color: theme(colors.peachDarker) !important;
+      cursor: plus;
+
+      svg .plus {
+        backface-visibility: hidden;
+      }
+    }
+  }
+
+  .image-picker-images {
+    display: grid;
+    grid-gap: 1vw;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: min-content;
+
+    .image-picker-image {
+      border: 5px solid transparent;
+
+      &.selected {
+        border: 5px solid theme(colors.blue);
+      }
+
+      &.hidden {
+        display: none;
+      }
+    }
+  }
+
+  .modal-content {
+    .buttons {
+      @space margin-bottom 15px;
+    }
+
+
+    .image-info {
+      @space margin-top 15px;
+      @fontsize 13px;
+    }
+
+    .img-placeholder {
+      @color bg peach;
+      @color fg dark;
+      padding: 2vw;
+
+      .instructions {
+        text-align: center;
+        font-size: 15px;
+      }
+
+      svg {
+        @space margin-bottom 1.5vw;
+        margin-left: auto;
+        margin-right: auto;
+        user-select: none;
+        pointer-events: none;
+        width: 200px;
+
+        path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
+          fill: theme(colors.dark);
+        }
+      }
+    }
+  }
+}

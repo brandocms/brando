@@ -19,25 +19,23 @@ defmodule Brando.Router do
     end
   end
 
-  defmacro admin_routes(path \\ "/admin") do
+  defmacro admin_routes(path \\ "/admin", do: block) do
     quote do
-      upload_ctrl = Brando.Admin.API.Images.UploadController
-      villain_ctrl = Brando.Admin.API.Villain.VillainController
+      import BrandoAdmin.UserAuth
+
+      upload_ctrl = BrandoAdmin.API.Images.UploadController
+      villain_ctrl = BrandoAdmin.API.Villain.VillainController
 
       pipeline :admin do
-        plug :accepts, ~w(html json)
+        plug :accepts, ["html"]
         plug :fetch_session
-        plug :fetch_flash
-        plug :put_admin_locale
-        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+        plug :fetch_live_flash
+        plug :protect_from_forgery
         plug :put_secure_browser_headers
-      end
-
-      pipeline :graphql do
-        # plug RemoteIp
-        plug Brando.web_module(Guardian.GQLPipeline)
-        plug Brando.Plug.APIContext
-        plug Brando.Plug.SentryUserContext
+        plug :put_extra_secure_browser_headers
+        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+        plug :fetch_current_user
+        plug :put_admin_locale
       end
 
       pipeline :api do
@@ -46,44 +44,67 @@ defmodule Brando.Router do
         # plug :refresh_token
       end
 
-      pipeline :token do
-        plug Brando.web_module(Guardian.TokenPipeline)
-        plug Brando.Plug.SentryUserContext
-      end
-
-      pipeline :authenticated do
-        plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler.APIAuthHandler
+      pipeline :root_layout do
+        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
       end
 
       scope unquote(path), as: :admin do
-        pipe_through :admin
+        scope "/", BrandoAdmin do
+          pipe_through [:admin, :redirect_if_user_is_authenticated]
 
-        forward "/auth", Brando.Plug.Authentication,
-          guardian_module: Brando.web_module(Guardian),
-          authorization_module: Brando.app_module(Authorization)
-
-        scope "/api" do
-          pipe_through [:api, :token, :authenticated]
-
-          # General image uploads
-          post "/images/upload/image_series/:image_series_id", upload_ctrl, :post
-
-          # Villain
-          post "/villain/upload", villain_ctrl, :upload_image
-          get "/villain/modules/:slug", villain_ctrl, :modules
-          post "/villain/modules/", villain_ctrl, :store_module
-          post "/villain/modules/delete", villain_ctrl, :delete_module
-          post "/villain/modules/sequence", villain_ctrl, :sequence_modules
-          get "/villain/browse/:slug", villain_ctrl, :browse_images
+          get "/login", UserSessionController, :new
+          post "/login", UserSessionController, :create
         end
 
-        # Main API scope for GraphQL
-        scope "/graphql" do
-          pipe_through [:graphql]
-          forward "/", Absinthe.Plug, schema: Brando.app_module(Schema)
-        end
+        scope "/", BrandoAdmin do
+          pipe_through [:admin]
 
-        get "/*path", Brando.AdminController, :index
+          get "/logout", UserSessionController, :delete
+        end
+      end
+
+      scope unquote(path), as: :admin do
+        pipe_through [:admin, :root_layout, :require_authenticated_user]
+
+        post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
+
+        live_session :admin do
+          # brando routes
+          live "/", BrandoAdmin.DashboardLive
+          live "/config/cache", BrandoAdmin.Sites.CacheLive
+          live "/config/global_sets", BrandoAdmin.Sites.GlobalSetListLive
+          live "/config/global_sets/create", BrandoAdmin.Sites.GlobalSetCreateLive
+          live "/config/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetUpdateLive
+          live "/config/identity", BrandoAdmin.Sites.IdentityLive
+          live "/config/navigation/menus", BrandoAdmin.Navigation.MenuListLive
+          live "/config/navigation/menus/update/:entry_id", BrandoAdmin.Navigation.MenuUpdateLive
+          live "/config/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
+          live "/config/seo", BrandoAdmin.Sites.SEOLive
+          live "/config/content/modules", BrandoAdmin.Content.ModuleListLive
+          live "/config/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleUpdateLive
+          live "/config/content/palettes", BrandoAdmin.Content.PaletteListLive
+          live "/config/content/palettes/create", BrandoAdmin.Content.PaletteCreateLive
+          live "/config/content/palettes/update/:entry_id", BrandoAdmin.Content.PaletteUpdateLive
+          live "/config/content/templates", BrandoAdmin.Content.TemplateListLive
+          live "/config/content/templates/create", BrandoAdmin.Content.TemplateCreateLive
+
+          live "/config/content/templates/update/:entry_id",
+               BrandoAdmin.Content.TemplateUpdateLive
+
+          live "/pages", BrandoAdmin.Pages.PageListLive
+          live "/pages/create", BrandoAdmin.Pages.PageCreateLive
+          live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive
+          live "/pages/update/:entry_id", BrandoAdmin.Pages.PageUpdateLive
+          live "/pages/fragments/create", BrandoAdmin.Pages.PageFragmentCreateLive
+          live "/pages/fragments/create/:parent_id", BrandoAdmin.Pages.PageFragmentCreateLive
+          live "/pages/fragments/update/:entry_id", BrandoAdmin.Pages.PageFragmentUpdateLive
+          live "/users", BrandoAdmin.Users.UserListLive
+          live "/users/create", BrandoAdmin.Users.UserCreateLive
+          live "/users/update/:entry_id", BrandoAdmin.Users.UserUpdateLive
+
+          # app routes
+          unquote(block)
+        end
       end
     end
   end

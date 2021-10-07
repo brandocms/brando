@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= csrf_meta_tag() %>
+    <%= live_title_tag assigns[:page_title] || "Brando" %>
+    <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>
+    <style>html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}</style>
+    <script type="module" src="http://localhost:3333/@vite/client"></script>
+    <script type="module" src="http://localhost:3333/src/auth.js"></script>
+  </head>
+  <body id="app">
+    <div class="fader" id="fader">
+      <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
+      <div class="loading-container"></div>
+    </div>
+    <%= @inner_content %>
+  </body>
+</html>

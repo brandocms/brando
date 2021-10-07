@@ -1,0 +1,58 @@
+main {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--main-margin-left);
+
+  > .content {
+    @space padding-x sm;
+    @space padding-bottom md;
+    min-height: 100vh;
+  }
+
+  > .progress {
+    @container;
+    z-index: 999999;
+    color: theme(colors.peach);
+    background-color: #000080e6;
+    height: auto;
+    transform: translateY(-100%);
+    overflow-y: scroll;
+    display: flex;
+    position: fixed;
+    left: 0;
+    padding-top: 20px;
+    padding-bottom: 25px;
+    transition: transform 350ms ease;
+
+    &.visible {
+      transform: translateY(0%);
+    }
+
+    .progress-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+
+      > div {
+        &:first-of-type {
+          padding-top: 5px;
+        }
+        width: 100%;
+        padding-top: 15px;
+        padding-bottom: 5px;
+      }
+    }
+
+    .bar {
+      margin-top: 5px;
+      height: 2px;
+      background-color: theme(colors.peach);
+      transition: width 0.75s ease;
+    }
+  }
+}

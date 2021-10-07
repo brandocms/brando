@@ -1,15 +1,16 @@
 %Brando.Sites.Identity{
   type: "organization",
-  name: "Organisasjonens navn",
-  alternate_name: "Kortversjon av navnet",
+  name: "Organization name",
+  alternate_name: "Shortform name",
   email: "mail@domain.tld",
   phone: "+47 00 00 00 00",
   address: "Testveien 1",
   zipcode: "0000",
   city: "Oslo",
   country: "NO",
-  title_prefix: "Firma | ",
-  title: "Velkommen!",
+  language: :en,
+  title_prefix: "CompanyName | ",
+  title: "Welcome!",
   title_postfix: "",
   logo: nil,
   links: [
@@ -46,6 +47,7 @@
   fallback_meta_title: "Fallback meta title",
   fallback_meta_image: nil,
   base_url: "https://www.domain.tld",
+  language: :en,
   robots: """
   User-agent: *
   Disallow: /admin/

@@ -6,12 +6,13 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
   def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: {:array, :map}
+  def to_ecto_type(:villain), do: {:array, PolymorphicEmbed}
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
 
-  @strip_ecto_opts [:cast, :module, :required, :unique]
+  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints]
+  @strip_embeds_opts [:cast, :module, :unique, :constraints]
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
 
   def to_ecto_opts(:belongs_to, opts),
@@ -34,10 +35,10 @@ defmodule Brando.Blueprint.Utils do
     do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
   def to_changeset_opts(:embeds_one, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+    do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
 
   def to_changeset_opts(:embeds_many, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+    do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
 
   def to_changeset_opts(_type, opts), do: Map.to_list(opts)
 end

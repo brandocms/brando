@@ -1,9 +1,0 @@
-{
-  "version": "v1",
-  "packages": {
-    "brandojs": {
-      "signature": "8ba417540e5c0fed92d54f2bf94ebdaa",
-      "file": true
-    }
-  }
-}

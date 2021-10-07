@@ -16,6 +16,7 @@ defmodule Brando.System do
     Cache.SEO.set()
     Cache.Globals.set()
     Cache.Navigation.set()
+    Cache.Palettes.set()
     :ok
   end
 
@@ -31,7 +32,6 @@ defmodule Brando.System do
     {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, {:env, :exists}} = check_env()
-    {:ok, _} = check_invalid_wrapper_content()
 
     Logger.info("==> Brando >> System checks complete!")
   end
@@ -108,20 +108,22 @@ defmodule Brando.System do
   end
 
   defp check_authorization_exists do
-    if function_exported?(Brando.authorization(), :__info__, 1) do
-      {:ok, {:authorization, :exists}}
-    else
-      raise ConfigError,
-        message: """
+    case Code.ensure_loaded(Brando.authorization()) do
+      {:module, _} ->
+        {:ok, {:authorization, :exists}}
+
+      {:error, _} ->
+        raise ConfigError,
+          message: """
 
 
-        Authorization module not found!
+          Authorization module not found!
 
-        Generate with:
+          Generate with:
 
-        mix brando.gen.authorization
+              mix brando.gen.authorization
 
-        """
+          """
     end
   end
 
@@ -145,6 +147,17 @@ defmodule Brando.System do
         Web module not set in `config/brando.exs`. Add:
 
         config :brando, app_module: MyApp
+        """
+    end
+
+    if Application.get_env(:brando, :admin_module) == nil do
+      raise ConfigError,
+        message: """
+
+
+        Admin module not set in `config/brando.exs`. Add:
+
+        config :brando, admin_module: MyAppAdmin
         """
     end
 
@@ -228,30 +241,6 @@ defmodule Brando.System do
       Id........: #{inspect(id)}
       """)
     end
-  end
-
-  # wrapper should be moved from datasource block to module
-  defp check_invalid_wrapper_content do
-    {:ok, modules} = Brando.Villain.list_modules(%{filter: %{namespace: "all"}})
-
-    if Enum.count(modules) > 0 do
-      for t <- modules do
-        if t.wrapper && String.contains?(t.wrapper, ["${content}", "${CONTENT}"]) do
-          log_invalid_wrapper_content(t)
-        end
-      end
-    end
-
-    {:ok, {:wrappers, :ok}}
-  end
-
-  defp log_invalid_wrapper_content(t) do
-    Log.warn("""
-    Found deprecated wrapper content format `${CONTENT}` or {{ CONTENT }}. Use `{{ content }}` instead.
-
-    Schema.: Module
-    Id.....: #{t.id} - #{t.name}
-    """)
   end
 end
 

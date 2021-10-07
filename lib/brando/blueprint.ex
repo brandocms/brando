@@ -1,6 +1,23 @@
 defmodule Brando.Blueprint do
   @moduledoc """
 
+  # Override Gettext module
+
+  If you have a nonstandard named gettext module for your app (not MyAppAdmin.Gettext),
+  you can supply a `gettext_module` option to your use statement:
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        # ...
+        gettext_module: MyApp.Gettext.Frontend
+
+
+  # Assets
+
+      assets do
+        asset :cover, :image, cfg: [...]
+      end
+
   # Relations
 
   ## Many to many
@@ -29,10 +46,10 @@ defmodule Brando.Blueprint do
         plural: "projects"
 
       relations do
-        relation :projects_workers, :many_to_many, module: ProjectWorker
+        relation :projects_workers, :many_to_many, module: ProjectWorker, cast: true
       end
 
-    # add `cast: :collection` to :projects_workers opts if you need M2M casting
+    # add `cast: :true` to :projects_workers opts if you need M2M casting
 
 
   ## Embedded schema
@@ -62,13 +79,38 @@ defmodule Brando.Blueprint do
         relation :some_module, :belongs_to, module: SomeModule, type: :binary_id
       end
 
+  # Extra changesets
+
+  Sometimes you will need additional changeset functions to process different
+  subsets of your fields. Currently you'd just add your own function to your schema:
+
+  ```elixir
+  def name_changeset(schema, params, user \\ :system) do
+    schema
+    |> cast(params, [:name])
+    |> validate_required([:name])
+  end
+  ```
+
+  Then force your mutation to use this changeset by passing it explicitly:
+
+  ```elixir
+  {:ok, project} = Projects.update_project(
+    project_id,
+    %{"name" => "New Name"},
+    user, changeset: &Projects.Project.name_changeset/3)
+  )
+  ```
+
   """
   alias Ecto.Changeset
 
   alias Brando.Blueprint.Constraints
+  alias Brando.Blueprint.Asset
+  alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Relations
-  alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Unique
+  alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
   alias Brando.Trait
 
@@ -77,40 +119,49 @@ defmodule Brando.Blueprint do
             translations: [],
             attributes: [],
             relations: [],
+            assets: [],
+            listings: [],
+            form: %{},
             traits: []
 
   defmacro __using__(opts) do
     Module.register_attribute(__CALLER__.module, :application, accumulate: false)
     Module.put_attribute(__CALLER__.module, :application, Keyword.fetch!(opts, :application))
-
     Module.register_attribute(__CALLER__.module, :domain, accumulate: false)
     Module.put_attribute(__CALLER__.module, :domain, Keyword.fetch!(opts, :domain))
-
     Module.register_attribute(__CALLER__.module, :schema, accumulate: false)
     Module.put_attribute(__CALLER__.module, :schema, Keyword.fetch!(opts, :schema))
-
     Module.register_attribute(__CALLER__.module, :singular, accumulate: false)
     Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
-
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
+    Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :brando_macro_context, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :brando_macro_context, nil)
+
+    Module.put_attribute(
+      __CALLER__.module,
+      :gettext_module,
+      Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__)
+    )
 
     Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
-    Module.put_attribute(__CALLER__.module, :ctx, nil)
+    Module.register_attribute(__CALLER__.module, :json_ld_fields, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :json_ld_schema, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :meta_fields, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :assets, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :forms, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :listings, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :allow_mark_as_deleted, accumulate: false)
 
     quote location: :keep do
-      Module.register_attribute(__MODULE__, :json_ld_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :json_ld_schema, accumulate: false)
-      Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :traits, accumulate: true)
-      Module.register_attribute(__MODULE__, :attrs, accumulate: true)
-      Module.register_attribute(__MODULE__, :relations, accumulate: true)
-      Module.register_attribute(__MODULE__, :translations, accumulate: false)
-      Module.register_attribute(__MODULE__, :table_name, accumulate: false)
-      Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
-      Module.register_attribute(__MODULE__, :primary_key, accumulate: false)
-      Module.register_attribute(__MODULE__, :allow_mark_as_deleted, accumulate: false)
-
       @data_layer :database
       @allow_mark_as_deleted false
       @primary_key {:id, :id, autogenerate: true}
@@ -130,9 +181,12 @@ defmodule Brando.Blueprint do
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).AbsoluteURL
+      import unquote(__MODULE__).Assets
       import unquote(__MODULE__).Attributes
+      import unquote(__MODULE__).Form
       import unquote(__MODULE__).Identifier
       import unquote(__MODULE__).JSONLD
+      import unquote(__MODULE__).Listings
       import unquote(__MODULE__).Meta
       import unquote(__MODULE__).Naming
       import unquote(__MODULE__).Relations
@@ -158,6 +212,19 @@ defmodule Brando.Blueprint do
 
         %{name: :updated_at} ->
           []
+
+        %{type: :villain} = attr ->
+          Ecto.Schema.field(
+            attr.name,
+            to_ecto_type(:villain),
+            to_ecto_opts(attr.type, attr.opts) ++
+              [
+                types: Brando.Blueprint.Villain.Blocks.list_blocks(),
+                type_field: :type,
+                on_type_not_found: :raise,
+                on_replace: :delete
+              ]
+          )
 
         attr ->
           Ecto.Schema.field(
@@ -199,7 +266,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             name,
             Map.fetch!(opts, :module),
-            to_ecto_opts(:embeds_one, opts)
+            to_ecto_opts(:embeds_one, opts) ++ [on_replace: :update]
           )
 
         %{type: :embeds_many, name: name, opts: opts} ->
@@ -209,27 +276,78 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:embeds_many, opts)
           )
 
-        attr ->
+        %{type: :entries, name: name, opts: opts} ->
+          Ecto.Schema.embeds_many(
+            name,
+            Brando.Content.Identifier,
+            to_ecto_opts(:embeds_many, opts) ++ [on_replace: :delete]
+          )
+
+        relation ->
           require Logger
           Logger.error("==> relation type not caught")
-          Logger.error(inspect(attr, pretty: true))
+          Logger.error(inspect(relation, pretty: true))
       end)
     end
   end
 
-  defmacro build_schema(name, attrs, relations) do
+  defmacro build_assets(assets) do
+    quote do
+      Enum.map(unquote(assets), fn
+        %Asset{type: :image, name: name} ->
+          # images are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Images.Image,
+            on_replace: :delete
+          )
+
+        %Asset{type: :video, name: name} ->
+          # videoes are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Videos.Video,
+            on_replace: :delete
+          )
+
+        %Asset{type: :file, name: name} ->
+          # videoes are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Files.File,
+            on_replace: :delete
+          )
+
+        %Asset{type: :gallery, name: name} ->
+          # galleries are embedded
+          Ecto.Schema.embeds_many(
+            name,
+            Brando.Images.Image,
+            on_replace: :delete
+          )
+
+        asset ->
+          require Logger
+          Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")
+      end)
+    end
+  end
+
+  defmacro build_schema(name, attrs, relations, assets) do
     quote location: :keep do
       schema unquote(name) do
         build_attrs(unquote(attrs))
+        build_assets(unquote(assets))
         build_relations(unquote(relations))
       end
     end
   end
 
-  defmacro build_embedded_schema(_name, attrs, relations) do
+  defmacro build_embedded_schema(_name, attrs, relations, assets) do
     quote location: :keep do
       embedded_schema do
         build_attrs(unquote(attrs))
+        build_assets(unquote(assets))
         build_relations(unquote(relations))
       end
     end
@@ -262,21 +380,6 @@ defmodule Brando.Blueprint do
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
-  def access_key(key) do
-    fn
-      :get, data, next ->
-        next.(Keyword.get(data, key, []))
-
-      :get_and_update, data, next ->
-        value = Keyword.get(data, key, [])
-
-        case next.(value) do
-          {get, update} -> {get, Keyword.put(data, key, update)}
-          :pop -> {value, Keyword.delete(data, key)}
-        end
-    end
-  end
-
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)
     %{domain: domain, schema: schema} = module.__naming__()
@@ -290,6 +393,12 @@ defmodule Brando.Blueprint do
       {key, value} ->
         {key, Gettext.dgettext(gettext_module, gettext_domain, value)}
     end)
+  end
+
+  def build_id(application, domain, schema) do
+    [application, domain, schema]
+    |> Enum.map(&String.downcase/1)
+    |> Enum.join("-")
   end
 
   defmacro table(table_name) do
@@ -331,7 +440,10 @@ defmodule Brando.Blueprint do
       end
 
       @all_attributes Enum.reverse(@attrs) ++
-                        Brando.Trait.get_attributes(@attrs, @relations, @traits)
+                        Brando.Trait.get_attributes(@attrs, @assets, @relations, @traits) ++
+                        Brando.Blueprint.Attributes.maybe_add_marked_as_deleted_attribute(
+                          @allow_mark_as_deleted
+                        )
       def __attributes__ do
         @all_attributes
       end
@@ -342,6 +454,8 @@ defmodule Brando.Blueprint do
         end
       end
 
+      def __attribute__(_), do: nil
+
       unless Enum.empty?(@all_attributes) do
         def __attribute_opts__(name) do
           Map.get(__attribute__(name), :opts, [])
@@ -349,7 +463,7 @@ defmodule Brando.Blueprint do
       end
 
       @all_relations Enum.reverse(@relations) ++
-                       Brando.Trait.get_relations(@attrs, @relations, @traits)
+                       Brando.Trait.get_relations(@attrs, @assets, @relations, @traits)
       def __relations__ do
         @all_relations
       end
@@ -363,6 +477,24 @@ defmodule Brando.Blueprint do
       unless Enum.empty?(@all_relations) do
         def __relation_opts__(name) do
           Map.get(__relation__(name), :opts, [])
+        end
+      end
+
+      @all_assets Enum.reverse(@assets) ++
+                    Brando.Trait.get_assets(@attrs, @assets, @relations, @traits)
+      def __assets__ do
+        @all_assets
+      end
+
+      for asset <- @all_assets do
+        def __asset__(unquote(asset.name)) do
+          unquote(Macro.escape(asset))
+        end
+      end
+
+      unless Enum.empty?(@all_assets) do
+        def __asset_opts__(name) do
+          Map.get(__asset__(name), :opts, [])
         end
       end
 
@@ -404,7 +536,8 @@ defmodule Brando.Blueprint do
           schema: @schema,
           singular: @singular,
           plural: @plural,
-          table_name: @table_name
+          table_name: @table_name,
+          id: build_id(@application, @domain, @schema)
         }
       end
 
@@ -413,6 +546,24 @@ defmodule Brando.Blueprint do
           Module.concat([
             @application
           ])
+
+        admin_module =
+          if @application == "Brando" do
+            BrandoAdmin
+          else
+            Module.concat([
+              :"#{@application}Admin"
+            ])
+          end
+
+        web_module =
+          if @application == "Brando" do
+            BrandoAdmin
+          else
+            Module.concat([
+              :"#{@application}Web"
+            ])
+          end
 
         context_module =
           Module.concat([
@@ -428,39 +579,71 @@ defmodule Brando.Blueprint do
           ])
 
         gettext_module =
+          if @gettext_module,
+            do: @gettext_module,
+            else:
+              Module.concat([
+                admin_module,
+                "Gettext"
+              ])
+
+        admin_list_view =
           Module.concat([
-            @application,
-            "Gettext"
+            admin_module,
+            @domain,
+            "#{Recase.to_pascal(@singular)}ListLive"
+          ])
+
+        admin_create_view =
+          Module.concat([
+            admin_module,
+            @domain,
+            "#{Recase.to_pascal(@singular)}CreateLive"
+          ])
+
+        admin_update_view =
+          Module.concat([
+            admin_module,
+            @domain,
+            "#{Recase.to_pascal(@singular)}UpdateLive"
           ])
 
         %{
           application: application_module,
           context: context_module,
           schema: schema_module,
-          gettext: gettext_module
+          gettext: gettext_module,
+          admin_list_view: admin_list_view,
+          admin_create_view: admin_create_view,
+          admin_update_view: admin_update_view
         }
       end
 
       def __modules__(type), do: Map.get(__modules__(), type)
 
-      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
-      def __villain_fields__ do
-        @villain_fields
-      end
-
-      @image_fields Enum.filter(@attrs, &(&1.type == :image))
-      def __image_fields__ do
-        @image_fields
-      end
-
-      @file_fields Enum.filter(@attrs, &(&1.type == :file))
+      @file_fields Enum.filter(@all_assets, &(&1.type == :file))
       def __file_fields__ do
         @file_fields
       end
 
-      @video_fields Enum.filter(@attrs, &(&1.type == :video))
+      @image_fields Enum.filter(@all_assets, &(&1.type == :image))
+      def __image_fields__ do
+        @image_fields
+      end
+
+      @video_fields Enum.filter(@all_assets, &(&1.type == :video))
       def __video_fields__ do
         @video_fields
+      end
+
+      @gallery_fields Enum.filter(@all_assets, &(&1.type == :gallery))
+      def __gallery_fields__ do
+        @gallery_fields
+      end
+
+      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
+      def __villain_fields__ do
+        @villain_fields
       end
 
       @slug_fields Enum.filter(@attrs, &(&1.type == :slug))
@@ -473,9 +656,18 @@ defmodule Brando.Blueprint do
         @status_fields
       end
 
-      @gallery_fields Enum.filter(@attrs, &(&1.type == :gallery))
-      def __gallery_fields__ do
-        @gallery_fields
+      if Enum.empty?(@status_fields) do
+        def has_status?, do: false
+      else
+        def has_status?, do: true
+      end
+
+      @poly_fields Enum.filter(
+                     @attrs,
+                     &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
+                   )
+      def __poly_fields__ do
+        @poly_fields
       end
 
       def __translations__ do
@@ -490,18 +682,36 @@ defmodule Brando.Blueprint do
         build_embedded_schema(
           @table_name,
           @all_attributes,
-          @all_relations
+          @all_relations,
+          @all_assets
         )
       else
         build_schema(
           @table_name,
           @all_attributes,
-          @all_relations
+          @all_relations,
+          @all_assets
         )
       end
 
+      def __listings__ do
+        @listings
+      end
+
+      def __forms__ do
+        Enum.reverse(@forms)
+      end
+
+      def __form__ do
+        Enum.find(@forms, &(&1.name == :default))
+      end
+
+      def __form__(name) do
+        Enum.find(@forms, &(&1.name == name))
+      end
+
       # generate changeset
-      def changeset(schema, params \\ %{}, user \\ :system, extra \\ []) do
+      def changeset(schema, params \\ %{}, user \\ :system, opts \\ []) do
         run_changeset(
           __MODULE__,
           schema,
@@ -510,10 +720,11 @@ defmodule Brando.Blueprint do
           @all_traits,
           @all_attributes,
           @all_relations,
+          @all_assets,
           @castable_relations,
           @all_required_attrs,
           @all_optional_attrs,
-          extra
+          opts
         )
       end
 
@@ -524,6 +735,9 @@ defmodule Brando.Blueprint do
           translations: __translations__(),
           attributes: __attributes__(),
           relations: __relations__(),
+          assets: __assets__(),
+          listings: __listings__(),
+          form: __form__(),
           traits: __traits__()
         }
       end
@@ -551,54 +765,128 @@ defmodule Brando.Blueprint do
         all_traits,
         all_attributes,
         all_relations,
+        all_assets,
         castable_relations,
         all_required_attrs,
         all_optional_attrs,
-        extra
+        opts
       ) do
+    start = System.monotonic_time()
+
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
-    schema
-    |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs ++ castable_relations)
-    |> Relations.run_cast_relations(all_relations, user)
-    |> Trait.run_changeset_mutators(
-      module,
-      traits_before_validate_required,
-      user
+    fields_to_cast =
+      (all_required_attrs ++ all_optional_attrs ++ castable_relations)
+      |> strip_villains_from_fields_to_cast(module)
+      |> strip_polymorphic_embeds_from_fields_to_cast(module)
+
+    changeset =
+      schema
+      |> Changeset.cast(params, fields_to_cast)
+      |> Relations.run_cast_relations(all_relations, user)
+      |> Assets.run_cast_assets(all_assets, user)
+      |> Trait.run_changeset_mutators(
+        module,
+        traits_before_validate_required,
+        user,
+        opts
+      )
+      |> Changeset.validate_required(all_required_attrs)
+      |> Unique.run_unique_attribute_constraints(module, all_attributes)
+      |> Unique.run_unique_relation_constraints(module, all_relations)
+      |> Constraints.run_validations(module, all_attributes)
+      |> Constraints.run_validations(module, all_relations)
+      |> Constraints.run_fk_constraints(module, all_relations)
+      |> Upload.run_upload_validations(
+        module,
+        all_attributes,
+        user,
+        Keyword.get(opts, :image_db_config)
+      )
+      |> Trait.run_changeset_mutators(
+        module,
+        traits_after_validate_required,
+        user,
+        opts
+      )
+      |> maybe_mark_for_deletion(module)
+
+    :telemetry.execute(
+      [:brando, :villain, :run_changeset],
+      %{
+        duration: System.monotonic_time() - start
+      },
+      %{schema: changeset.data.__struct__}
     )
-    |> Changeset.validate_required(all_required_attrs)
-    |> Unique.run_unique_attribute_constraints(module, all_attributes)
-    |> Unique.run_unique_relation_constraints(module, all_relations)
-    |> Constraints.run_validations(module, all_attributes)
-    |> Constraints.run_fk_constraints(module, all_relations)
-    |> Upload.run_upload_validations(
-      module,
-      all_attributes,
-      user,
-      Keyword.get(extra, :image_db_config)
-    )
-    |> Trait.run_changeset_mutators(
-      module,
-      traits_after_validate_required,
-      user
-    )
-    |> maybe_mark_for_deletion(module, params)
+
+    changeset
   end
 
-  defp maybe_mark_for_deletion(changeset, module, %{"delete" => "true"}) do
+  defmacro query(arg) do
+    quote generated: true, location: :keep do
+      case Module.get_attribute(__MODULE__, :brando_macro_context) do
+        :form ->
+          Brando.Blueprint.Form.form_query(unquote(arg))
+
+        :listing ->
+          Brando.Blueprint.Listing.listing_query(unquote(arg))
+
+        _ ->
+          raise Brando.Exception.BlueprintError,
+            message: "query/1 can only be used inside of listing or form declarations"
+      end
+    end
+  end
+
+  defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
-      %{changeset | action: :delete}
+      # setting this to delete triggers an Ecto error:
+      #
+      # (RuntimeError) cannot delete related <embedded_struct> because it already
+      # exists and it is not currently associated with the given struct.
+      # Ecto forbids casting existing records through the association field
+      # for security reasons. Instead, set the foreign key value accordingly
+      #
+      # So we IGNORE instead, and enum through the changeset...
+      %{changeset | action: :ignore}
     else
       changeset
     end
   end
 
-  defp maybe_mark_for_deletion(changeset, _, _) do
+  defp maybe_mark_for_deletion(changeset, _) do
     changeset
   end
 
+  defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
+    villain_fields = Enum.map(module.__villain_fields__(), & &1.name)
+    Enum.reject(fields_to_cast, &(&1 in villain_fields))
+  end
+
+  defp strip_polymorphic_embeds_from_fields_to_cast(fields_to_cast, module) do
+    poly_fields = Enum.map(module.__poly_fields__(), & &1.name)
+    Enum.reject(fields_to_cast, &(&1 in poly_fields))
+  end
+
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
+
+  @doc """
+  List all blueprints
+  """
+  @spec list_blueprints :: [module()]
+  def list_blueprints do
+    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+
+    app_modules
+    |> Enum.uniq()
+    |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  def get_plural(module) do
+    plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
+    String.capitalize(plural || module.__naming__().plural)
+  end
 
   defmacro __after_compile__(env, _) do
     # validate traits

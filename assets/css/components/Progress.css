@@ -1,0 +1,55 @@
+.progress-wrapper {
+  @space padding-x container/2;
+  position: fixed;
+  width: 100%;
+  background-color: black;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  color: #fff;
+  font-size: 15px;
+  min-height: 33px;
+  
+  .progress {
+    display: flex;
+    flex-wrap: wrap;
+
+    .progress-item {
+      width: 100%;
+      display: flex;
+      padding: 8px 0;
+      align-items: center;
+
+      svg {
+        animation: spin 2s linear infinite;
+        @space margin-right container/2;
+        path:nth-of-type(2) {
+          fill: white;
+        }
+      }
+
+      code {
+        @space margin-left container/2;
+        border: 1px solid white;
+        border-radius: 15px;
+        padding: 4px 6px;
+        font-size: 11px;
+      }
+
+      .filename {
+        @space margin-right container/2;
+        @font mono 13px;
+      }
+
+      .description {
+        @fontsize 12px;
+      }
+
+      .percent {
+        position: absolute;
+        @space right container/2;
+      }
+    }
+  }
+
+}

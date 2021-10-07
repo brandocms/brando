@@ -1,9 +1,0 @@
-        <KInputImageSeries
-          v-model="<%= vue_singular %>.<%= k %>"
-          :image-series-name="<%= vue_singular %>.<%= main_field %>"
-          :show-delete="false"
-          :show-config="false"
-          image-category-slug="<%= vue_plural %>"
-          name="<%= vue_singular %>[<%= k %>]"
-          :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
-          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.helpText')" />

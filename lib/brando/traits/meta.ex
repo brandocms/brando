@@ -17,6 +17,9 @@ defmodule Brando.Trait.Meta do
   attributes do
     attribute :meta_title, :text
     attribute :meta_description, :text
-    attribute :meta_image, :image, @meta_image_cfg
+  end
+
+  assets do
+    asset :meta_image, :image, cfg: @meta_image_cfg
   end
 end

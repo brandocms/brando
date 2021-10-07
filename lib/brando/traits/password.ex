@@ -12,15 +12,15 @@ defmodule Brando.Trait.Password do
   @doc """
   Update password if changed
   """
-  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(_module, _config, %{valid?: true} = changeset, _user) do
+  def changeset_mutator(_module, _config, %{valid?: true} = changeset, _user, _) do
     maybe_update_password(changeset)
   end
 
-  def changeset_mutator(_, _, changeset, _), do: maybe_update_password(changeset)
+  def changeset_mutator(_, _, changeset, _, _), do: maybe_update_password(changeset)
 
-  defp maybe_update_password(%{changes: %{password: password}} = changeset),
-    do: put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+  defp maybe_update_password(%{changes: %{password: password}} = changeset) do
+    put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+  end
 
   defp maybe_update_password(changeset) do
     changeset

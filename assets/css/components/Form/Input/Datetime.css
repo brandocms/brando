@@ -1,0 +1,63 @@
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  font-weight: 400;
+}
+
+.flatpickr-current-month input.cur-year {
+  font-weight: 400;
+}
+
+.flatpickr-time {
+  input.flatpickr-minute {
+    font-family: mono;
+    font-size: 20px;
+  }
+
+  input.flatpickr-hour {
+    font-family: mono;
+    font-size: 20px;
+  }
+}
+
+
+.flatpickr {
+  @fontsize input;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 100%;
+  background-color: theme(colors.input);
+  border: 0;
+}
+
+.flatpickr-day.selected {
+  background-color: theme(colors.blue);
+  border-color: theme(colors.blue);
+}
+
+.datetime-wrapper {
+  position: relative;
+
+  .clear-datetime {
+    @fontsize sm/1;
+    position: absolute;
+    top: 7px;
+    right: 15px;
+    border: 1px solid theme(colors.dark);
+    padding: 8px 12px 10px;
+    transition: all 0.25s ease;
+
+    &:hover {
+      background-color: theme(colors.dark);
+      color: theme(colors.input);
+    }
+  }
+
+  .timezone {
+    position: absolute;
+    font-size: 13px;
+    margin-top: 3px;
+    right: 0;
+  }
+}

@@ -1,0 +1,14 @@
+.circle.circle-flag {
+  font-size: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 20px;
+  border-color: transparent !important;
+  
+  line-height: 1;
+  background-color: #fff;
+
+  svg {
+    width: 22px;
+  }
+}

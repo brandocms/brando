@@ -1,0 +1,41 @@
+.cache-live {
+  .help {
+    max-width: 60ch;
+  }
+
+  h1 {
+    @space margin-top 4vw;
+    @space margin-bottom 20px;
+    text-transform: capitalize;
+  }
+
+  table {
+    @column 10/16;
+    @space margin-bottom 35px;
+    @space margin-top 10px;
+    width: 100%;
+
+    th {
+      @fontsize base(0.6);
+      padding-left: 15px;
+      text-align: left;
+    }
+
+    td {
+      @font mono;
+      @fontsize base(0.8);
+      border: 1px solid;
+      padding: 10px 15px;
+
+      .badge {
+        width: 100%;
+        text-align: center !important;
+        justify-content: center;
+      }
+
+      svg {
+        display: inline;
+      }
+    }
+  }
+}

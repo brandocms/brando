@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.51.0"
+  @version "0.52.0-dev"
   @description "Brando CMS"
 
   def project do
@@ -11,7 +11,7 @@ defmodule Brando.Mixfile do
       elixir: "~> 1.10",
       deps: deps(),
       package: package(),
-      compilers: [:gettext, :phoenix] ++ Mix.compilers(),
+      compilers: [:gettext] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
       description: @description,
@@ -28,21 +28,23 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.4"},
-      {:phoenix_html, "~> 2.6"},
+      {:phoenix, "~> 1.6.0"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
-      {:ecto, "~> 3.5"},
-      {:ecto_sql, "~> 3.5"},
+      {:ecto, "~> 3.7"},
+      {:ecto_sql, "~> 3.7"},
 
-      # graphql
-      {:absinthe, "~> 1.6", override: true},
-      {:absinthe_plug, "~> 1.5"},
-      {:dataloader, "~> 1.0"},
+      # liveview
+      {:phoenix_live_view, "~> 0.16"},
+      {:phoenix_html, "~> 3.0"},
+      {:surface, "~> 0.5"},
+      {:surface_formatter, "~> 0.5.4"},
+      {:floki, ">= 0.27.0", only: :test},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 2.0"},
       {:comeonin, "~> 5.0"},
+      {:base62, "~> 1.2"},
 
       # tokens/auth
       {:guardian, "~> 2.0"},
@@ -77,12 +79,12 @@ defmodule Brando.Mixfile do
 
       # Misc
       # {:brotli, "~> 0.2"},
+      {:polymorphic_embed, "~> 1.6"},
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
       {:timex, "~> 3.0"},
       {:earmark, "1.4.4"},
       {:jason, "~> 1.0"},
-      {:poison, "~> 4.0"},
       {:flow, "~> 1.0"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},

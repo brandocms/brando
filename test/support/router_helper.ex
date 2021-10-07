@@ -19,45 +19,6 @@ defmodule BrandoIntegrationWeb.PageController do
   def show(conn, _), do: send_resp(conn, 200, "show")
 end
 
-defmodule BrandoIntegration.TestSchema do
-  use Absinthe.Schema
-  use Brando.GraphQL.Schema
-
-  import_types Absinthe.Plug.Types
-  import_types Brando.GraphQL.Schema.Types
-
-  def context(ctx) do
-    loader =
-      Dataloader.new()
-      |> import_brando_dataloaders(ctx)
-
-    Map.put(ctx, :loader, loader)
-  end
-
-  def plugins do
-    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
-  end
-
-  query do
-    import_brando_queries()
-  end
-
-  mutation do
-    import_brando_mutations()
-  end
-
-  enum :sort_order do
-    value :asc
-    value :desc
-  end
-
-  def middleware(middleware, _field, %{identifier: :mutation}),
-    do: middleware ++ [Brando.GraphQL.Schema.Middleware.ChangesetErrors]
-
-  def middleware(middleware, _field, _object),
-    do: middleware ++ [Brando.GraphQL.Schema.Middleware.QueryErrors]
-end
-
 defmodule RouterHelper do
   @moduledoc """
   Conveniences for testing routers and controllers.
@@ -120,38 +81,12 @@ defmodule RouterHelper do
   end
 end
 
-defmodule BrandoIntegrationWeb.Guardian.TokenPipeline do
-  @moduledoc """
-  Guardian token pipeline
-  """
-  use Guardian.Plug.Pipeline,
-    otp_app: :brando,
-    module: BrandoIntegration.Guardian,
-    error_handler: Brando.Guardian.GQLErrorHandler
-
-  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-  plug Guardian.Plug.LoadResource, allow_blank: true
-end
-
-defmodule BrandoIntegrationWeb.Guardian.GQLPipeline do
-  @moduledoc """
-  Guardian pipeline
-  """
-  use Guardian.Plug.Pipeline,
-    otp_app: :brando,
-    module: BrandoIntegration.Guardian,
-    error_handler: Brando.Guardian.GQLErrorHandler
-
-  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-  plug Guardian.Plug.EnsureAuthenticated
-  plug Guardian.Plug.LoadResource, ensure: true
-end
-
 defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
   import Brando.Router
   import Brando.Plug.I18n
+  import Phoenix.LiveView.Router
 
   pipeline :browser do
     plug :accepts, ~w(html)
@@ -159,7 +94,8 @@ defmodule BrandoIntegrationWeb.Router do
     plug :fetch_flash
   end
 
-  admin_routes()
+  admin_routes do
+  end
 
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index

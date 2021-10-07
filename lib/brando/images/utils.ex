@@ -6,7 +6,7 @@ defmodule Brando.Images.Utils do
   @type image_kind :: :image | :image_series | :image_field
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
-  @type image_struct :: Brando.Type.Image.t()
+  @type image_struct :: Brando.Images.Image.t()
   @type user :: Brando.Users.User.t() | :system
 
   alias Brando.Image
@@ -93,6 +93,10 @@ defmodule Brando.Images.Utils do
   @spec get_sized_path(path :: binary, size :: atom | binary, type :: atom | nil) ::
           binary
   def get_sized_path(path, size, type \\ nil)
+
+  def get_sized_path(path, :original, _type) do
+    path
+  end
 
   def get_sized_path(path, size, type) when is_binary(size) do
     {dir, filename} = split_path(path)

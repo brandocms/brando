@@ -21,11 +21,16 @@ defmodule Brando.Query do
       end
       ```
 
-  You can pass preloads to the `:update` mutation:
+  You can pass preloads to the mutations:
 
       ```
       mutation :update, {Project, preload: [:tags]}
       ```
+
+  For `create` operations, the preloads will execute after insertion
+  For `update` operations, the preloads will execute on fetching entry for update
+
+  This can be useful if your `identifier` function references associations on the entry
 
   # Select
 
@@ -117,12 +122,19 @@ defmodule Brando.Query do
   defmacro query(:single, module, do: block),
     do: query_single(Macro.expand(module, __CALLER__), block)
 
+  defmacro mutation(:create, {module, opts}),
+    do: mutation_create({Macro.expand(module, __CALLER__), opts})
+
   defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:update, {module, opts}),
     do: mutation_update({Macro.expand(module, __CALLER__), opts})
 
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
+
+  defmacro mutation(:delete, {module, opts}),
+    do: mutation_delete({Macro.expand(module, __CALLER__), opts})
+
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:duplicate, {module, opts}),
@@ -145,19 +157,6 @@ defmodule Brando.Query do
 
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
-
-  defmacro filters(do: _),
-    do:
-      raise("""
-
-      filters/1 is deprecated.
-
-      Specify Schema as argument:
-
-          filters Post do
-            ...
-          end
-      """)
 
   defp query_list(module, block) do
     source = module.__schema__(:source)
@@ -419,10 +418,10 @@ defmodule Brando.Query do
   def with_preload(query, preloads) do
     Enum.reduce(preloads, query, fn
       {key, {mod, pre}}, query ->
-        from t in query, preload: [{^key, ^from(p in mod, order_by: ^pre)}]
+        from(t in query, preload: [{^key, ^from(p in mod, order_by: ^pre)}])
 
       {key, preload_query}, query ->
-        from t in query, preload: [{^key, ^preload_query}]
+        from(t in query, preload: [{^key, ^preload_query}])
 
       preload, query ->
         preload(query, ^preload)
@@ -466,7 +465,7 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
-      {:paginated, true}, q -> q
+      {:paginate, true}, q -> q
     end)
   end
 
@@ -491,7 +490,9 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_create(module, callback_block \\ nil) do
+  defp mutation_create(module, callback_block \\ nil)
+
+  defp mutation_create({module, opts}, callback_block) do
     singular_schema =
       module
       |> Module.split()
@@ -499,15 +500,44 @@ defmodule Brando.Query do
       |> Inflex.underscore()
 
     callback_block = callback_block || @default_callback
+    do_mutation_create(module, singular_schema, callback_block, opts)
+  end
+
+  defp mutation_create(module, callback_block) do
+    singular_schema =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    callback_block = callback_block || @default_callback
+    do_mutation_create(module, singular_schema, callback_block)
+  end
+
+  defp do_mutation_create(module, singular_schema, callback_block, opts \\ []) do
+    preloads = Keyword.get(opts, :preload)
 
     quote generated: true do
-      @spec unquote(:"create_#{singular_schema}")(map, Brando.Users.User.t() | :system) ::
+      @spec unquote(:"create_#{singular_schema}")(map, map | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"create_#{singular_schema}")(params, user, opts \\ []) do
+      def unquote(:"create_#{singular_schema}")(params, user, opts \\ [])
+
+      def unquote(:"create_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, _) do
+        Brando.Query.Mutations.create_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(preloads),
+          unquote(callback_block)
+        )
+      end
+
+      def unquote(:"create_#{singular_schema}")(params, user, opts) do
         Brando.Query.Mutations.create(
           unquote(module),
           params,
           user,
+          unquote(preloads),
           unquote(callback_block),
           Keyword.get(opts, :changeset, nil)
         )
@@ -546,12 +576,15 @@ defmodule Brando.Query do
 
     quote do
       @spec unquote(:"update_#{singular_schema}")(
-              integer | binary,
+              integer | binary | map,
               map,
-              Brando.Users.User.t() | :system
+              Brando.Users.User.t() | :system,
+              list()
             ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"update_#{singular_schema}")(id, params, user, opts \\ []) do
+      def unquote(:"update_#{singular_schema}")(schema, params, user, opts \\ [])
+
+      def unquote(:"update_#{singular_schema}")(%{id: id}, params, user, opts) do
         Brando.Query.Mutations.update(
           __MODULE__,
           unquote(module),
@@ -561,7 +594,33 @@ defmodule Brando.Query do
           user,
           unquote(preloads),
           unquote(callback_block),
-          Keyword.get(opts, :changeset, nil)
+          Keyword.get(opts, :changeset, nil),
+          Keyword.get(opts, :show_notification, true)
+        )
+      end
+
+      def unquote(:"update_#{singular_schema}")(id, params, user, opts) do
+        Brando.Query.Mutations.update(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          params,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          Keyword.get(opts, :changeset, nil),
+          Keyword.get(opts, :show_notification, true)
+        )
+      end
+
+      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user) do
+        Brando.Query.Mutations.update_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(preloads),
+          unquote(callback_block)
         )
       end
     end
@@ -596,7 +655,9 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_delete(module, callback_block \\ nil) do
+  defp mutation_delete(module, callback_block \\ nil)
+
+  defp mutation_delete({module, opts}, callback_block) do
     singular_schema =
       module
       |> Module.split()
@@ -604,6 +665,24 @@ defmodule Brando.Query do
       |> Inflex.underscore()
 
     callback_block = callback_block || @default_callback
+
+    do_mutation_delete(module, singular_schema, callback_block, opts)
+  end
+
+  defp mutation_delete(module, callback_block) do
+    singular_schema =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    callback_block = callback_block || @default_callback
+
+    do_mutation_delete(module, singular_schema, callback_block)
+  end
+
+  defp do_mutation_delete(module, singular_schema, callback_block, opts \\ []) do
+    preloads = Keyword.get(opts, :preload)
 
     quote do
       @spec unquote(:"delete_#{singular_schema}")(integer | binary) ::
@@ -615,6 +694,7 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           user,
+          unquote(preloads),
           unquote(callback_block)
         )
       end
@@ -622,10 +702,10 @@ defmodule Brando.Query do
   end
 
   # only build pagination_meta if offset & limit is set
-  def maybe_build_pagination_meta(query, %{paginated: true, limit: page_size, offset: offset}) do
+  def maybe_build_pagination_meta(query, %{paginate: true, limit: page_size} = list_opts) do
     total_entries = get_total_entries(query)
     total_pages = total_pages(total_entries, page_size)
-    offset = offset || 0
+    offset = Map.get(list_opts, :offset, 0)
     current_page = round(offset / page_size + 1)
     previous_page = get_previous_page(current_page)
     next_page = get_next_page(current_page, total_pages)
@@ -635,12 +715,16 @@ defmodule Brando.Query do
       total_pages: total_pages,
       current_page: current_page,
       previous_page: previous_page,
-      next_page: next_page
+      next_page: next_page,
+      offset: offset,
+      next_offset: offset + page_size,
+      previous_offset: max(offset - page_size, 0),
+      page_size: page_size
     }
   end
 
-  def maybe_build_pagination_meta(_, %{paginated: true}) do
-    raise "==> QUERY: When `paginated` is true, you must supply `limit` and `offset` args"
+  def maybe_build_pagination_meta(_, %{paginate: true}) do
+    raise "==> QUERY: When `paginate` is true, you must supply `limit` args"
   end
 
   def maybe_build_pagination_meta(_, _), do: nil
@@ -707,17 +791,17 @@ defmodule Brando.Query do
     (total_entries / page_size) |> Float.ceil() |> round
   end
 
-  def insert(changeset) do
+  def insert(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :insert)
-    |> Brando.repo().insert()
+    |> Brando.repo().insert(opts)
     |> Cache.Query.evict()
   end
 
-  def update(changeset) do
+  def update(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :update)
-    |> Brando.repo().update()
+    |> Brando.repo().update(opts)
     |> Cache.Query.evict()
   end
 

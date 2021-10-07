@@ -1,8 +1,7 @@
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
-  alias Brando.Sites.Global
-  alias Brando.Sites.GlobalCategory
+  alias Brando.Sites.GlobalSet
   alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
@@ -10,7 +9,9 @@ defmodule Brando.Factory do
   alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Users.User
-  alias Brando.Villain.Module
+  alias Brando.Content
+  alias Brando.Content.Module
+  alias Brando.Content.Palette
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -25,23 +26,22 @@ defmodule Brando.Factory do
 
   @encrypted_password Bcrypt.hash_pwd_salt("admin")
 
-  def global_category_factory do
-    %GlobalCategory{
+  def global_set_factory do
+    %GlobalSet{
       label: "System",
       key: "system",
-      globals: [build_list(2, :global)]
+      language: "en",
+      globals: build_list(2, :var_text),
+      creator: build(:random_user)
     }
   end
 
-  def global_factory do
-    %Global{
+  def var_text_factory do
+    %Content.Var.Text{
       type: "text",
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
-      data: %{
-        "type" => "string",
-        "value" => "Hello!"
-      }
+      value: "Hello!"
     }
   end
 
@@ -50,7 +50,7 @@ defmodule Brando.Factory do
       name: "James Williamson",
       email: "james@thestooges.com",
       password: @encrypted_password,
-      avatar: %Brando.Type.Image{
+      avatar: %Brando.Images.Image{
         width: 300,
         height: 200,
         credits: nil,
@@ -76,7 +76,7 @@ defmodule Brando.Factory do
       name: "James Williamson",
       email: sequence(:email, &"james#{&1}@thestooges.com"),
       password: @encrypted_password,
-      avatar: %Brando.Type.Image{
+      avatar: %Brando.Images.Image{
         width: 300,
         height: 200,
         credits: nil,
@@ -96,6 +96,23 @@ defmodule Brando.Factory do
     }
   end
 
+  def palette_factory do
+    %Palette{
+      name: "base",
+      key: "base",
+      namespace: "site",
+      instructions: "Instructions"
+    }
+  end
+
+  def color_factory do
+    %Palette.Color{
+      name: "Color Name",
+      key: "colorName",
+      hex_value: "#112233"
+    }
+  end
+
   def module_factory do
     %Module{
       name: "test",
@@ -104,10 +121,9 @@ defmodule Brando.Factory do
       class: "class",
       code: "code here",
       refs: [],
-      vars: %{},
+      vars: [],
       svg: nil,
-      multi: false,
-      wrapper: nil
+      wrapper: false
     }
   end
 
@@ -149,7 +165,7 @@ defmodule Brando.Factory do
     %Image{
       image_series_id: nil,
       creator_id: nil,
-      image: %Brando.Type.Image{
+      image: %Brando.Images.Image{
         width: 300,
         height: 292,
         credits: "Credits",
@@ -176,7 +192,7 @@ defmodule Brando.Factory do
   end
 
   def image_type_factory do
-    %Brando.Type.Image{
+    %Brando.Images.Image{
       credits: nil,
       path: "images/default/sample.png",
       sizes: %{

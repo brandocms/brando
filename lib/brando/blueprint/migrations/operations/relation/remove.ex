@@ -16,6 +16,14 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Remove do
   end
 
   def down(%{
+        relation: %{type: :image, name: name}
+      }) do
+    """
+    add #{inspect(name)}, :jsonb
+    """
+  end
+
+  def down(%{
         relation: %{type: :embeds_many, name: name, opts: %{module: _}}
       }) do
     """
@@ -40,6 +48,14 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Remove do
       }) do
     """
     remove #{inspect(name)}_id
+    """
+  end
+
+  def up(%{
+        relation: %{type: :image, name: name}
+      }) do
+    """
+    remove #{inspect(name)}
     """
   end
 

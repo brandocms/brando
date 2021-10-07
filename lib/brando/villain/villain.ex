@@ -1,46 +1,21 @@
 # credo:disable-for-this-file
 defmodule Brando.Villain do
-  @moduledoc """
-  Interface to Villain HTML editor.
-
-  ### Available variables when rendering
-
-    - `{{ entry.<key> }}`
-    Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
-    want the `meta_description` we can do `{{ entry.meta_description }}
-
-    - `{{ links.<key> }}`
-    Gets `<key>` from list of links in the Identity configuration.
-
-    - `{{ globals.<category_key>.<key> }}`
-    Gets `<key>` from `<category_key>` in list of globals in the Identity configuration.
-
-    - `{{ forloop.index }}`
-    Only available inside for loops or modules with `multi` set to true. Returns the current index
-    of the for loop, starting at `1`
-
-    - `{{ forloop.index0 }}`
-    Only available inside for loops or modules with `multi` set to true. Returns the current index
-    of the for loop, starting at `0`
-
-    - `{{ forloop.count }}`
-    Only available inside for loops or modules with `multi` set to true. Returns the total amount
-    of entries in the for loop
-
-  """
   use Brando.Query
 
   import Ecto.Query
 
   alias Brando.Cache
+  alias Brando.Content
   alias Brando.Pages
   alias Brando.Trait
   alias Brando.Utils
-  alias Brando.Villain.Module
+  alias Brando.Content.Module
+  alias Brando.Blueprint.Villain.Blocks
   alias Ecto.Changeset
   alias Liquex.Context
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parses `json` (in Villain-format).
@@ -52,36 +27,41 @@ defmodule Brando.Villain do
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
 
-  def parse(json, entry, opts) when is_binary(json),
-    do: do_parse(Poison.decode!(json), entry, opts)
-
   def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
 
   defp do_parse(data, entry, opts) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
-    {:ok, modules} = list_modules(@module_cache_ttl)
+
+    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
 
     entry =
       entry
       |> maybe_nil_fields(opts_map)
       |> maybe_put_timestamps()
 
-    context = Context.assign(get_base_context(), "entry", entry)
+    context = Brando.Villain.get_base_context(entry)
 
     opts_map =
       opts_map
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
+      |> Map.put(:palettes, palettes)
 
     html =
       data
-      |> Enum.reduce([], fn data_node, acc ->
-        type_atom = String.to_atom(data_node["type"])
-        data_node_content = data_node["data"]
+      |> Enum.reduce([], fn
+        %{hidden: true}, acc ->
+          acc
 
-        (data_node["hidden"] && ["" | acc]) ||
+        %{marked_as_deleted: true}, acc ->
+          acc
+
+        data_node, acc ->
+          type_atom = String.to_atom(data_node.type)
+          data_node_content = data_node.data
           [apply(parser, type_atom, [data_node_content, opts_map]) | acc]
       end)
       |> Enum.reverse()
@@ -104,49 +84,75 @@ defmodule Brando.Villain do
   defp maybe_nil_fields(entry, %{html_field: html_field}), do: %{entry | html_field => nil}
   defp maybe_nil_fields(entry, _), do: entry
 
-  def get_base_context() do
-    identity = Cache.Identity.get()
-    globals = Cache.Globals.get()
+  def get_base_context do
+    locale = Gettext.get_locale(Brando.gettext())
+
+    do_get_base_context(locale)
+    |> add_to_context("language", locale)
+    |> add_to_context("locale", locale)
+  end
+
+  def get_base_context(%{language: entry_language} = entry) do
+    do_get_base_context(to_string(entry_language))
+    |> add_to_context("language", to_string(entry_language))
+    |> add_to_context("locale", to_string(entry_language))
+    |> add_to_context("entry", entry)
+  end
+
+  def get_base_context(entry) do
+    locale = Gettext.get_locale(Brando.gettext())
+
+    do_get_base_context(locale)
+    |> add_to_context("language", locale)
+    |> add_to_context("locale", locale)
+    |> add_to_context("entry", entry)
+  end
+
+  defp do_get_base_context(language) do
+    identity = Cache.Identity.get(language)
+    globals = Cache.Globals.get(language)
     navigation = Cache.Navigation.get()
 
     %{}
     |> create_context()
     |> add_to_context("identity", identity)
-    |> add_to_context("configs", identity.configs)
-    |> add_to_context("links", identity.links)
+    |> add_to_context("configs", identity)
+    |> add_to_context("links", identity)
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)
-    |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
   end
 
   def create_context(vars) do
     Context.new(
       vars,
-      filter_module: Brando.Villain.Filters,
-      render_module: Brando.Villain.LiquexRenderer
+      filter_module: Brando.Villain.Filters
     )
   end
 
-  def add_to_context(context, "configs" = key, value) do
-    configs = Enum.map(value, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+  def add_to_context(context, "configs" = key, %{configs: configs}) do
+    configs = Enum.map(configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
     Context.assign(context, key, configs)
   end
 
-  def add_to_context(context, "links" = key, value) do
-    links = Enum.map(value, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+  def add_to_context(context, "configs" = key, _) do
+    Context.assign(context, key, %{})
+  end
+
+  def add_to_context(context, "links" = key, %{links: links}) do
+    links = Enum.map(links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
     Context.assign(context, key, links)
   end
 
-  def add_to_context(context, "globals" = key, global_categories) do
+  def add_to_context(context, "links" = key, _) do
+    Context.assign(context, key, %{})
+  end
+
+  def add_to_context(context, "globals" = key, global_sets) do
     parsed_globals =
-      Enum.map(global_categories, fn {g_key, g_category} ->
+      Enum.map(global_sets, fn {g_key, g_category} ->
         cat_globs =
           Enum.map(g_category, fn
-            {key, %{type: "text", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "html", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "color", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "boolean", data: %{"value" => value}}} -> {key, value}
-            {key, %{type: "datetime", data: %{"value" => value}}} -> {key, value}
+            {key, %{value: value}} -> {key, value}
           end)
           |> Enum.into(%{})
 
@@ -162,9 +168,13 @@ defmodule Brando.Villain do
   end
 
   def parse_and_render(html, context) do
-    {:ok, parsed_doc} = Liquex.parse(html, Brando.Villain.LiquexParser)
-    {result, _} = Liquex.Render.render([], parsed_doc, context)
-    Enum.join(result)
+    with {:ok, parsed_doc} <- Liquex.parse(html, Brando.Villain.LiquexParser),
+         {result, _} <- Liquex.Render.render([], parsed_doc, context) do
+      Enum.join(result)
+    else
+      {:error, "expected end of string", _} ->
+        ">>> Error parsing liquex template <<<"
+    end
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
@@ -237,8 +247,9 @@ defmodule Brando.Villain do
   def rerender_villains_for(schema) do
     ids =
       Brando.repo().all(
-        from s in schema,
+        from(s in schema,
           select: s.id
+        )
       )
 
     Enum.map(schema.__villain_fields__(), fn
@@ -276,8 +287,9 @@ defmodule Brando.Villain do
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     query =
-      from s in schema,
+      from(s in schema,
         where: s.id == ^id
+      )
 
     record = Brando.repo().one(query)
     parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
@@ -309,24 +321,34 @@ defmodule Brando.Villain do
   @spec list_villains :: [module()]
   def list_villains do
     blueprint_impls = Trait.Villain.list_implementations()
-    trait_implementations = Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
+    Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
+  end
 
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+  def get_block_by_type(block_type) do
+    default_blocks = Blocks.list_blocks()
+    Keyword.get(default_blocks, block_type)
+  end
 
-    modules = app_modules |> Enum.uniq()
+  def update_palette_in_fields(palette_id) do
+    villains = list_villains()
 
-    legacy_villains =
-      modules
-      |> Enum.filter(&(&1 not in blueprint_impls))
-      |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
-      |> Enum.map(& &1.__villain_fields__())
-      |> Enum.map(fn
-        {_, [{:villain, _, _}]} = legacy -> legacy
-        _ -> nil
-      end)
-      |> Enum.reject(&(&1 == nil))
+    result =
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn
+          data_field, acc ->
+            html_field = get_html_field(schema, data_field)
 
-    trait_implementations ++ legacy_villains
+            case list_ids_with_palette(schema, data_field.name, palette_id) do
+              [] ->
+                acc
+
+              ids ->
+                [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+            end
+        end)
+      end
+
+    {:ok, result}
   end
 
   @doc """
@@ -344,8 +366,14 @@ defmodule Brando.Villain do
 
           data_field, acc ->
             html_field = get_html_field(schema, data_field)
-            ids = list_ids_with_module(schema, data_field.name, module_id)
-            [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+
+            case list_ids_with_module(schema, data_field.name, module_id) do
+              [] ->
+                acc
+
+              ids ->
+                [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+            end
         end)
       end
 
@@ -365,16 +393,33 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  List ids of `schema` records that has a container block with
+  `palette_id` in `data_field`.
+  """
+  def list_ids_with_palette(schema, data_field, palette_id) do
+    t = [
+      %{type: "container", data: %{palette_id: palette_id}}
+    ]
+
+    Brando.repo().all(
+      from(s in schema,
+        select: s.id,
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+      )
+    )
+  end
+
+  @doc """
   List ids of `schema` records that has `module_id` in `data_field`
   Also check inside containers and datasources
   """
   def list_ids_with_module(schema, data_field, module_id) do
     t = [
-      %{type: "module", data: %{id: module_id}}
+      %{type: "module", data: %{module_id: module_id}}
     ]
 
     contained_t = [
-      %{type: "container", data: %{blocks: [%{type: "module", data: %{id: module_id}}]}}
+      %{type: "container", data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}}
     ]
 
     datasourced_t = [
@@ -389,100 +434,15 @@ defmodule Brando.Villain do
     ]
 
     Brando.repo().all(
-      from s in schema,
+      from(s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t),
         or_where:
           fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
+      )
     )
-  end
-
-  @doc """
-  Duplicate module
-  """
-  def duplicate_module(module_id, user) do
-    module_id = (is_binary(module_id) && String.to_integer(module_id)) || module_id
-    {:ok, module} = get_module(%{matches: %{id: module_id}})
-
-    module =
-      module
-      |> Map.merge(%{name: "#{module.name} copy", class: "#{module.class} copy"})
-      |> Map.delete([:id])
-      |> Map.from_struct()
-
-    create_module(module, user)
-  end
-
-  mutation :create, Module
-
-  mutation :update, Module do
-    fn entry ->
-      update_module_in_fields(entry.id)
-
-      {:ok, entry}
-    end
-  end
-
-  mutation :delete, Module
-
-  @doc """
-  Find module with `id` in `modules`
-  """
-  def find_module(modules, id) do
-    modules
-    |> Enum.find(&(&1.id == id))
-    |> case do
-      nil -> {:error, {:module, :not_found, id}}
-      mod -> {:ok, mod}
-    end
-  end
-
-  query :list, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
-
-  filters Module do
-    fn
-      {:name, name}, query ->
-        from q in query, where: ilike(q.name, ^"%#{name}%")
-
-      {:namespace, namespace}, query ->
-        query =
-          from t in query,
-            where: is_nil(t.deleted_at),
-            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-
-        namespace =
-          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
-
-        case namespace do
-          "all" ->
-            query
-
-          namespace_list when is_list(namespace_list) ->
-            from t in query, where: t.namespace in ^namespace_list
-
-          _ ->
-            from t in query, where: t.namespace == ^namespace
-        end
-    end
-  end
-
-  query :single, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
-
-  matches Module do
-    fn
-      {:id, id}, query ->
-        from t in query, where: t.id == ^id
-
-      {:name, name}, query ->
-        from t in query,
-          where: t.name == ^name
-
-      {:namespace, namespace}, query ->
-        from t in query,
-          where: t.namespace == ^namespace
-    end
   end
 
   @doc """
@@ -495,12 +455,13 @@ defmodule Brando.Villain do
         ) :: [any]
   def search_villains_for_text(schema, data_field, search_terms) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from s in schema, select: s.id
+    org_query = from(s in schema, select: s.id)
 
     built_query =
       Enum.reduce(search_terms, org_query, fn search_term, query ->
-        from q in query,
+        from(q in query,
           or_where: ilike(type(field(q, ^data_field), :string), ^"%#{search_term}%")
+        )
       end)
 
     Brando.repo().all(built_query)
@@ -515,11 +476,11 @@ defmodule Brando.Villain do
           search_terms :: {atom, binary} | [{atom, binary}]
         ) :: [any]
   def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
-    org_query = from s in schema, select: %{"id" => s.id}
+    org_query = from(s in schema, select: %{"id" => s.id})
 
     built_query =
       Enum.reduce(List.wrap(search_terms), org_query, fn {search_name, search_term}, query ->
-        from q in query,
+        from(q in query,
           select_merge: %{
             ^to_string(search_name) =>
               fragment(
@@ -528,6 +489,7 @@ defmodule Brando.Villain do
                 ^search_term
               )
           }
+        )
       end)
 
     if with_data,
@@ -540,12 +502,13 @@ defmodule Brando.Villain do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
 
     org_query =
-      from s in "pages_modules",
+      from(s in Module,
         select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
+      )
 
     built_query =
       Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
-        from q in query,
+        from(q in query,
           select_merge: %{
             ^to_string(search_name) =>
               fragment(
@@ -554,6 +517,7 @@ defmodule Brando.Villain do
                 ^search_term
               )
           }
+        )
       end)
 
     Brando.repo().all(built_query)
@@ -599,5 +563,263 @@ defmodule Brando.Villain do
       [] -> nil
       ids -> for id <- ids, do: update_module_in_fields(id)
     end
+  end
+
+  @doc """
+  Scan recursively through `blocks` looking for `uid` and replace with `new_block`
+  """
+  def replace_block(blocks, uid, new_block) do
+    Enum.reduce(blocks, [], fn
+      %{uid: ^uid}, acc ->
+        [new_block | acc]
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            replace_block(refs, uid, new_block)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            replace_block(blocks, uid, new_block)
+          )
+          | acc
+        ]
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid}} = ref, acc ->
+        [%{ref | data: new_block} | acc]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Scan recursively through `blocks` looking for `uid` and remove
+  """
+  def delete_block(blocks, uid) do
+    Enum.reduce(blocks, [], fn
+      %{uid: ^uid}, acc ->
+        acc
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            delete_block(refs, uid)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            delete_block(blocks, uid)
+          )
+          | acc
+        ]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
+  """
+  def merge_block(blocks, uid, merge_data) do
+    Enum.reduce(blocks || [], [], fn
+      %{uid: ^uid} = block, acc ->
+        [Utils.deep_merge(block, merge_data) | acc]
+
+      %{type: "module", data: %{refs: refs}} = module, acc ->
+        [
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            merge_block(refs, uid, merge_data)
+          )
+          | acc
+        ]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            merge_block(blocks, uid, merge_data)
+          )
+          | acc
+        ]
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} = ref, acc ->
+        [%{ref | data: Utils.deep_merge(block, merge_data)} | acc]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Recursively search a list of blocks for block matching `uid`
+  """
+  @spec find_block(list(), binary()) :: map
+  def find_block(_, nil), do: nil
+  def find_block(nil, _), do: nil
+
+  def find_block(blocks, uid) do
+    Enum.reduce_while(blocks, nil, fn
+      %{uid: ^uid} = block, _ ->
+        {:halt, block}
+
+      %{type: "container", data: %{blocks: blocks}}, _ ->
+        {:cont, find_block(blocks, uid)}
+
+      %{type: "module", data: %{refs: refs}}, _ ->
+        {:cont, find_block(refs, uid)}
+
+      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
+        {:halt, block}
+    end)
+  end
+
+  @doc """
+  Search for block in changeset
+  """
+  def get_block_in_changeset(changeset, data_field, block_uid) do
+    blocks = Changeset.get_field(changeset, data_field)
+    find_block(blocks, block_uid)
+  end
+
+  @doc """
+  Switch out a block by uid in changeset
+  """
+  def replace_block_in_changeset(changeset, data_field, block_uid, new_block) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.replace_block(blocks, block_uid, new_block)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def update_block_in_changeset(changeset, data_field, block_uid, merge_data) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def delete_block_in_changeset(changeset, data_field, block_uid) do
+    blocks = Changeset.get_field(changeset, data_field)
+    updated_blocks = Brando.Villain.delete_block(blocks, block_uid)
+    Changeset.put_change(changeset, data_field, updated_blocks)
+  end
+
+  def add_uid_to_refs(refs) do
+    {_, refs_with_generated_uids} =
+      get_and_update_in(
+        refs,
+        [Access.all(), Access.key(:data), Access.key(:uid)],
+        &{&1, Brando.Utils.generate_uid()}
+      )
+
+    refs_with_generated_uids
+  end
+
+  def reject_blocks_marked_as_deleted(schema, changeset) do
+    Enum.reduce(schema.__villain_fields__(), changeset, fn vf, mutated_changeset ->
+      case Changeset.get_field(mutated_changeset, vf.name) do
+        nil ->
+          mutated_changeset
+
+        data when is_list(data) ->
+          Changeset.put_change(
+            mutated_changeset,
+            vf.name,
+            find_and_reject_deleted(data)
+          )
+      end
+    end)
+  end
+
+  defp find_and_reject_deleted(nil) do
+    []
+  end
+
+  defp find_and_reject_deleted(blocks) when is_list(blocks) do
+    Enum.reduce(blocks, [], fn
+      %{marked_as_deleted: true}, acc ->
+        acc
+
+      %{type: "module", data: %{refs: refs, entries: entries}} = module, acc ->
+        # module can have entries and refs!
+
+        processed_refs_module =
+          put_in(
+            module,
+            [
+              Access.key(:data),
+              Access.key(:refs)
+            ],
+            find_and_reject_deleted(refs || [])
+          )
+
+        processed_entries_and_refs_module =
+          put_in(
+            processed_refs_module,
+            [
+              Access.key(:data),
+              Access.key(:entries)
+            ],
+            find_and_reject_deleted(entries || [])
+          )
+
+        [processed_entries_and_refs_module | acc]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            find_and_reject_deleted(blocks)
+          )
+          | acc
+        ]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
   end
 end

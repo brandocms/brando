@@ -4,7 +4,8 @@ defmodule Brando.Pages.Property do
     domain: "Pages",
     schema: "Property",
     singular: "property",
-    plural: "properties"
+    plural: "properties",
+    gettext_module: Brando.Gettext
 
   alias Brando.Pages.Page
 

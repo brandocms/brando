@@ -6,12 +6,12 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
       add :title, :text
       add :status, :integer
       add :slug, :text
-      add :cover, :jsonb
       add :data, :jsonb
       add :deleted_at, :utc_datetime
       add :sequence, :integer
       timestamps()
       add :language, :text
+      add :cover, :jsonb
       add :properties, :jsonb
       add :creator_id, references(:users, on_delete: :nothing)
     end

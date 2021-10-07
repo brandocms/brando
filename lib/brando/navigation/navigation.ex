@@ -34,7 +34,7 @@ defmodule Brando.Navigation do
       {% endfor %}
 
   """
-  use Brando.Web, :context
+  use BrandoAdmin, :context
   use Brando.Query
 
   alias Brando.Cache
@@ -49,98 +49,52 @@ defmodule Brando.Navigation do
   @type menu :: Brando.Navigation.Menu.t()
   @type user :: Brando.Users.User.t() | :system
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def query(Item = query, _), do: order_by(query, [t], asc: t.sequence)
-  def query(queryable, _), do: queryable
-
   query :list, Menu, do: fn query -> from(q in query) end
 
   filters Menu do
-    fn {:title, title}, query ->
-      from q in query, where: ilike(q.title, ^"%#{title}%")
+    fn
+      {:title, title}, query ->
+        from q in query, where: ilike(q.title, ^"%#{title}%")
+
+      {:language, language}, query ->
+        from q in query, where: q.language == ^language
     end
   end
 
-  @doc """
-  Create new menu
-  """
-  @spec create_menu(params, user) :: any
-  def create_menu(params, user) do
-    %Menu{}
-    |> Menu.changeset(params, user)
-    |> Brando.repo().insert
-    |> Cache.Navigation.update()
-    |> update_villains_referencing_navigation()
-  end
+  query :single, Menu, do: fn query -> from(q in query) end
 
-  @doc """
-  Update menu
-  """
-  def update_menu(menu_id, params, user) do
-    menu_id = (is_binary(menu_id) && String.to_integer(menu_id)) || menu_id
-    {:ok, menu} = get_menu(menu_id)
-
-    menu
-    |> Menu.changeset(params, user)
-    |> Brando.repo().update
-    |> Cache.Navigation.update()
-    |> update_villains_referencing_navigation()
-  end
-
-  @doc """
-  Delete menu
-  """
-  def delete_menu(menu_id) do
-    menu_id =
-      if is_binary(menu_id) do
-        String.to_integer(menu_id)
-      else
-        menu_id
-      end
-
-    {:ok, menu} = get_menu(menu_id)
-    Brando.repo().delete!(menu)
-    update_villains_referencing_navigation({:ok, menu})
-  end
-
-  @doc """
-  Duplicate menu
-  """
-  def duplicate_menu(menu_id) do
-    menu_id = (is_binary(menu_id) && String.to_integer(menu_id)) || menu_id
-    {:ok, menu} = get_menu(menu_id)
-
-    menu =
-      menu
-      |> Map.merge(%{key: "#{menu.key}_kopi", title: "#{menu.title} (kopi)"})
-      |> Map.delete([:id, :children, :parent])
-      |> ensure_nested_map()
-
-    create_menu(menu, %Brando.Users.User{id: menu.creator_id})
-  end
-
-  def get_menu(id) do
-    query =
-      from t in Menu,
-        where: t.id == ^id
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:menu, :not_found}}
-      menu -> {:ok, menu}
+  matches Menu do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
     end
   end
+
+  mutation :create, Menu do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  mutation :update, Menu do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  mutation :delete, Menu do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  mutation :duplicate, {Menu, change_fields: [:key, :title]}
 
   @doc """
   Get menu.
@@ -190,14 +144,4 @@ defmodule Brando.Navigation do
 
     {:ok, menu}
   end
-
-  defp do_sample(_key, value), do: ensure_nested_map(value)
-  defp ensure_nested_map(list) when is_list(list), do: Enum.map(list, &ensure_nested_map/1)
-
-  defp ensure_nested_map(%{__struct__: _} = struct) do
-    map = Map.from_struct(struct)
-    :maps.map(&do_sample/2, map)
-  end
-
-  defp ensure_nested_map(data), do: data
 end

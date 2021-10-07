@@ -14,6 +14,7 @@ config :brando,
   otp_app: :<%= application_name %>,
   app_module: <%= application_module %>,
   web_module: <%= application_module %>Web,
+  admin_module: <%= application_module %>Admin,
 
   # Languages follow ISO 639-1
   # https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
@@ -55,31 +56,35 @@ config :brando, Brando.Images,
   processor_module: Brando.Images.Processor.Sharp,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium",
     upload_path: Path.join(["images", "site", "default"]),
+    default_size: :xlarge,
     random_filename: true,
     size_limit: 10_240_000,
     sizes: %{
-      "large" => %{"quality" => 85, "size" => "1400"},
-      "medium" => %{"quality" => 85, "size" => "1000"},
-      "micro" => %{"crop" => false, "quality" => 25, "size" => "25"},
-      "small" => %{"quality" => 85, "size" => "700"},
-      "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
-      "xlarge" => %{"quality" => 85, "size" => "1900"}
+      "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+      "thumb" => %{"size" => "150x150>", "quality" => 75, "crop" => true},
+      "small" => %{"size" => "700", "quality" => 75},
+      "medium" => %{"size" => "1100", "quality" => 75},
+      "large" => %{"size" => "1700", "quality" => 75},
+      "xlarge" => %{"size" => "2100", "quality" => 75}
     },
+    srcset: %{
+      default: [
+        {"small", "700w"},
+        {"medium", "1100w"},
+        {"large", "1700w"},
+        {"xlarge", "2100w"}
+      ]
+    }
   },
-  default_srcset: [
-    {"small", "700w"},
-    {"medium", "1000w"},
-    {"large", "1400w"},
-    {"xlarge", "1900w"}
-  ]
+  default_srcset: %{
+    default: [
+      {"small", "700w"},
+      {"medium", "1100w"},
+      {"large", "1700w"},
+      {"xlarge", "2100w"}
+    ]
+  }
 
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
-
-# Configure Guardian for auth.
-config :<%= application_name %>, <%= application_module %>Web.Guardian,
-  issuer: "<%= application_module %>",
-  ttl: {30, :days},
-  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>"

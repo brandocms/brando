@@ -4,7 +4,8 @@ defmodule Brando.Images.Operations.Sizing do
   """
   import Brando.Gettext
   alias Brando.Images
-  alias Brando.Progress
+  alias Brando.Images.Focal
+  alias BrandoAdmin.Progress
 
   @doc """
   Get processor module from config and call process function
@@ -117,7 +118,7 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_values()
           |> delegate_processor()
 
-        progress_percent = operation_index / total_operations * 100
+        progress_percent = floor(operation_index / total_operations * 100)
         set_progress(conversion_parameters, progress_percent, filename, user)
 
         result
@@ -152,6 +153,10 @@ defmodule Brando.Images.Operations.Sizing do
   @doc """
   Convert and add focal point to conversion parameters
   """
+  def add_focal_point(conversion_parameters, nil) do
+    Map.put(conversion_parameters, :focal_point, %Focal{})
+  end
+
   def add_focal_point(conversion_parameters, focal) do
     focal =
       focal
@@ -453,16 +458,16 @@ defmodule Brando.Images.Operations.Sizing do
       ) do
     progress_string =
       gettext(
-        "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}",
-        filename: filename,
+        "Creating image size: <strong>%{size_key}</strong>/%{format}",
         size_key: size_key,
         format: format
       )
 
-    Progress.update_progress(user, progress_string,
+    Progress.update(user, progress_string, %{
       key: to_string(id),
-      percent: progress
-    )
+      percent: progress,
+      filename: filename
+    })
 
     conversion_parameters
   end

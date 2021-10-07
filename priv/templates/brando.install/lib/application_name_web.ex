@@ -54,14 +54,6 @@ defmodule <%= application_module %>Web do
     end
   end
 
-  def absinthe do
-    quote do
-      # Provides us with a DSL for defining GraphQL Types
-      use Absinthe.Schema.Notation
-      import Absinthe.Resolution.Helpers
-    end
-  end
-
   def view do
     quote do
       use Phoenix.View,
@@ -80,6 +72,7 @@ defmodule <%= application_module %>Web do
       use Phoenix.Router
       import Plug.Conn
       import Phoenix.Controller
+      import Phoenix.LiveView.Router
     end
   end
 
@@ -99,10 +92,11 @@ defmodule <%= application_module %>Web do
     quote do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
+      import Phoenix.LiveView.Helpers
 
       import Brando.HTML
       import Brando.Utils
-      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_prop: 2]
+      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_var: 2]
 
       import <%= application_module %>Web.ErrorHelpers
       import <%= application_module %>Web.Gettext

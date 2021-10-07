@@ -8,6 +8,9 @@ defmodule Brando.SoftDelete.QueryTest do
   test "list_soft_delete_schemas" do
     assert Enum.sort(Query.list_soft_delete_schemas()) == [
              Brando.BlueprintTest.Project,
+             Brando.Content.Module,
+             Brando.Content.Palette,
+             Brando.Content.Template,
              Brando.Image,
              Brando.ImageCategory,
              Brando.ImageSeries,
@@ -16,14 +19,16 @@ defmodule Brando.SoftDelete.QueryTest do
              Brando.MigrationTest.Project,
              Brando.Pages.Fragment,
              Brando.Pages.Page,
-             Brando.Users.User,
-             Brando.Villain.Module
+             Brando.Users.User
            ]
   end
 
   test "count_soft_deletions" do
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Module, 0},
+             {Brando.Content.Palette, 0},
+             {Brando.Content.Template, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},
@@ -32,8 +37,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 0},
              {Brando.Pages.Page, 0},
-             {Brando.Users.User, 0},
-             {Brando.Villain.Module, 0}
+             {Brando.Users.User, 0}
            ]
 
     Factory.insert(:page,
@@ -56,6 +60,9 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Module, 0},
+             {Brando.Content.Palette, 0},
+             {Brando.Content.Template, 0},
              {Brando.Image, 1},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},
@@ -64,8 +71,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 1},
-             {Brando.Users.User, 2},
-             {Brando.Villain.Module, 0}
+             {Brando.Users.User, 2}
            ]
 
     deleted_users = Query.list_soft_deleted_entries(Brando.Users.User)
@@ -78,6 +84,9 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Module, 0},
+             {Brando.Content.Palette, 0},
+             {Brando.Content.Template, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},
@@ -86,8 +95,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 0},
-             {Brando.Users.User, 0},
-             {Brando.Villain.Module, 0}
+             {Brando.Users.User, 0}
            ]
   end
 end

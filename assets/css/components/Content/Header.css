@@ -1,0 +1,24 @@
+#content-header {
+  @space margin-top sm;
+  @space padding-bottom xs;
+  @space margin-bottom sm;
+  flex-direction: column;
+  border-bottom: 1px solid theme(colors.dark);
+
+  .content {
+    @row;
+    align-items: flex-end;
+
+    .main {
+      @column 8/16;
+    }
+
+    .actions {
+      @column 8/16;
+      @fontsize lg;
+      font-weight: 400;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}

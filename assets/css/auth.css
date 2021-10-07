@@ -1,0 +1,106 @@
+@import './fonts.css';
+@import './components/Button.css';
+@import './components/Form/Input/CustomCheckbox.css';
+@import './components/Form/FieldBase.css';
+@import './components/Form/Input/Text.css';
+@europa base;
+
+#admin {
+  display: flex;
+}
+
+html {
+  line-height: 1.35;
+  height: 100%;
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-kerning: normal;
+}
+
+body {
+  color: theme(colors.dark);
+  background-color: theme(colors.dark);
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
+.spin {
+  animation: spin 2s linear infinite;
+}
+
+.login {
+  @container;
+  height: 100vh;
+  position: relative;
+  background-color: theme(colors.peachLighter);
+
+  .brando-versioning {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    opacity: 0;
+    bottom: 5px;
+    left: 5px;
+
+    svg {
+      height: 18px;
+    }
+
+    div {
+      @fontsize 2xs;
+
+      @space margin-left 10px;
+      font-family: theme(typography.families.mono);
+    }
+  }
+
+  .login-container {
+    align-items: center;
+    display: flex;
+  }
+
+  .login-box {
+    @column 10/16;
+
+    @column-offset 4/16;
+    max-width: 920px !important;
+    background-color: theme(colors.peach);
+    box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02), 0 6.7px 5.3px rgba(0, 0, 0, 0.028), 0 12.5px 10px rgba(0, 0, 0, 0.035), 0 22.3px 17.9px rgba(0, 0, 0, 0.042), 0 41.8px 33.4px rgba(0, 0, 0, 0.05), 0 100px 80px rgba(0, 0, 0, 0.07);
+    display: flex;
+
+    .figure-wrapper {
+      @column 5/10;
+      padding: 75px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      figure {
+        width: 100%;
+      }
+    }
+
+    .login-form {
+      @column 5:1/10;
+      background-color: #ffffff;
+      padding: 48px;
+    }
+  }
+
+  .title {
+    @space margin-bottom sm;
+    font-family: theme(typography.families.mono);
+    font-size: 20px;
+  }
+
+  .small {
+    font-size: 14px;
+  }
+}

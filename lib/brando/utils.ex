@@ -104,12 +104,18 @@ defmodule Brando.Utils do
   @doc """
   Tries to access `keys` as a path to `map`
   """
-  @spec try_path(map :: map, keys :: [atom] | nil) :: any | nil
+  @spec try_path(data :: map | list, keys :: [atom] | nil) :: any | nil
   def try_path(_, nil), do: nil
 
-  def try_path(map, keys) do
+  def try_path(map, keys) when is_map(map) do
     Enum.reduce(keys, map, fn key, acc ->
       if acc, do: Map.get(acc, key)
+    end)
+  end
+
+  def try_path(kw, keys) when is_list(kw) do
+    Enum.reduce(keys, kw, fn key, acc ->
+      if acc, do: Keyword.get(acc, key)
     end)
   end
 
@@ -144,6 +150,46 @@ defmodule Brando.Utils do
       |> String.downcase()
 
     rnd_basename_1 <> rnd_basename_2
+  end
+
+  @doc """
+  Pull multiple paths out of a data tree into a map.
+  """
+  @spec deep_select(Access.t(), map()) :: map
+  def deep_select(map, paths) do
+    Map.new(paths, fn {key, path} ->
+      {key, get_in(map, Enum.map(List.wrap(path), &Access.key/1))}
+    end)
+  end
+
+  def access_key(key) do
+    fn
+      :get, data, next ->
+        next.(Keyword.get(data, key, []))
+
+      :get_and_update, data, next ->
+        value = Keyword.get(data, key, [])
+
+        case next.(value) do
+          {get, update} -> {get, Keyword.put(data, key, update)}
+          :pop -> {value, Keyword.delete(data, key)}
+        end
+    end
+  end
+
+  def access_map(key) do
+    fn
+      :get, data, next ->
+        next.(Map.get(data, key, %{}))
+
+      :get_and_update, data, next ->
+        value = Map.get(data, key, %{})
+
+        case next.(value) do
+          {get, update} -> {get, Map.put(data, key, update)}
+          :pop -> {value, Map.delete(data, key)}
+        end
+    end
   end
 
   @doc """
@@ -281,22 +327,31 @@ defmodule Brando.Utils do
     |> map_from_struct()
   end
 
+  def map_from_struct(schema) when is_struct(schema) do
+    schema
+    |> Map.from_struct()
+    |> map_from_struct()
+  end
+
   def map_from_struct(map) when is_map(map) do
     map
     |> Enum.reduce(%{}, fn {key, value}, acc ->
-      value =
+      processed_value =
         case value do
           %_{__meta__: %{__struct__: _}} ->
             map_from_struct(value)
 
-          value when is_list(value) ->
-            value |> Enum.map(&map_from_struct/1)
+          s when is_struct(s) ->
+            map_from_struct(s)
+
+          list when is_list(list) ->
+            Enum.map(list, &map_from_struct/1)
 
           _ ->
             value
         end
 
-      Map.put_new(acc, key, value)
+      Map.put_new(acc, key, processed_value)
     end)
   end
 
@@ -451,8 +506,8 @@ defmodule Brando.Utils do
   Get title assign from `conn`
   """
   @spec get_page_title(conn) :: binary
-  def get_page_title(%{assigns: %{page_title: title}}) do
-    organization = Cache.get(:identity)
+  def get_page_title(%{assigns: %{page_title: title, language: language}}) do
+    organization = Cache.Identity.get(language)
 
     if organization do
       %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
@@ -462,8 +517,8 @@ defmodule Brando.Utils do
     end
   end
 
-  def get_page_title(_) do
-    organization = Cache.get(:identity)
+  def get_page_title(%{assigns: %{language: language}}) do
+    organization = Cache.Identity.get(language)
 
     if organization do
       %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization
@@ -500,9 +555,9 @@ defmodule Brando.Utils do
   def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
 
   @doc """
-  Return the current user set in session.
+  Return the current user
   """
-  defdelegate current_user(conn), to: Guardian.Plug, as: :current_resource
+  def current_user(conn), do: Map.get(conn.assigns, :current_user)
 
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
@@ -593,14 +648,18 @@ defmodule Brando.Utils do
   """
   def img_url(image_field, size, opts \\ [])
 
-  def img_url(nil, size, opts) do
+  def img_url(nil, _size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
+
+    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
+      "" <> add_cache_string(opts)
   end
 
-  def img_url("", size, opts) do
+  def img_url("", _size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
+
+    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
+      "" <> add_cache_string(opts)
   end
 
   def img_url(image_field, :original, opts) do
@@ -750,6 +809,13 @@ defmodule Brando.Utils do
     end
   end
 
+  def generate_uid do
+    Base62.encode(:erlang.system_time(:nanosecond)) <>
+      (:crypto.strong_rand_bytes(8)
+       |> :binary.decode_unsigned()
+       |> Base62.encode())
+  end
+
   @doc """
   Generates a secure cookie based on `:crypto.strong_rand_bytes/1`.
   """
@@ -848,14 +914,6 @@ defmodule Brando.Utils do
 
   def coerce_field(nil, _), do: nil
 
-  # special case for Image type
-  def coerce_field(value, Brando.Type.Image) do
-    case Brando.Type.Image.cast(value) do
-      {:ok, {_, value}} -> value
-      {:ok, value} -> value
-    end
-  end
-
   def coerce_field(value, meta) when is_atom(meta) do
     if {:cast, 1} in meta.__info__(:functions) do
       value
@@ -871,5 +929,26 @@ defmodule Brando.Utils do
 
   def coerce_field(value, _) do
     value
+  end
+
+  def deep_merge(left, right) do
+    Map.merge(left, right, &deep_resolve/3)
+  end
+
+  # Key exists in both maps, and both values are maps as well.
+  # These can be merged recursively.
+  defp deep_resolve(_key, left = %{}, right = %{}) do
+    deep_merge(left, right)
+  end
+
+  # Key exists in both maps, but at least one of the values is
+  # NOT a map. We fall back to standard merge behavior, preferring
+  # the value on the right.
+  defp deep_resolve(_key, _left, right) do
+    right
+  end
+
+  def iv(%{source: %{data: data}}, field) do
+    Map.get(data, field)
   end
 end

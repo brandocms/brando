@@ -11,12 +11,15 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Add do
   end
 
   def up(%{attribute: %{name: :updated_at}}), do: ""
+  def up(%{attribute: %{opts: %{virtual: true}}}), do: ""
 
   def up(%{attribute: attr}) do
     """
     add #{inspect(attr.name)}, #{inspect(migration_type(attr.type))}
     """
   end
+
+  def down(%{attribute: %{opts: %{virtual: true}}}), do: ""
 
   def down(%{attribute: attr}) do
     """

@@ -44,7 +44,7 @@ defmodule Brando.Revisions.RevisionsTest do
 
     assert p3.title == "Title no. 3"
 
-    Revisions.set_entry_to_revision(Page, p1.id, 1)
+    Revisions.set_entry_to_revision(Page, p1.id, 1, user)
     {:ok, p4} = Pages.get_page(%{matches: %{id: p3.id}})
     assert p4.title == "Title no. 2"
   end

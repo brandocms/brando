@@ -38,6 +38,11 @@ defmodule Brando do
   def endpoint, do: web_module(Endpoint)
 
   @doc """
+  Gets the parent app's live preview module
+  """
+  def live_preview, do: web_module(LivePreview)
+
+  @doc """
   Gets the parent app's repo
   """
   def repo, do: app_module(Repo)
@@ -51,11 +56,13 @@ defmodule Brando do
   Gets the parent app's gettext module
   """
   def gettext, do: web_module(Gettext)
+  def gettext_admin, do: admin_module(Gettext)
 
   @doc """
   Gets the parent app's helpers
   """
   def helpers, do: web_module(Router.Helpers)
+  def routes, do: web_module(Router.Helpers)
 
   @doc """
   Gets the parent app's authorization module
@@ -96,6 +103,11 @@ defmodule Brando do
   Concat the configured application module with `module`
   """
   def app_module(module), do: Module.concat(config(:app_module), module)
+
+  @doc """
+  Concat the configured application module with `module`
+  """
+  def admin_module(module), do: Module.concat(config(:admin_module), module)
 
   @doc """
   Concat the configured web module with `module`

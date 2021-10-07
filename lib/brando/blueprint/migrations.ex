@@ -2,6 +2,7 @@ defmodule Brando.Blueprint.Migrations do
   alias Brando.Blueprint.Snapshot
 
   alias Brando.Blueprint.Migrations.Operations
+  alias Brando.Blueprint.Asset
   alias Brando.Blueprint.Attribute
   alias Brando.Blueprint.Relation
 
@@ -24,6 +25,8 @@ defmodule Brando.Blueprint.Migrations do
           [],
           [],
           [],
+          [],
+          [],
           []
         },
         _module,
@@ -36,6 +39,8 @@ defmodule Brando.Blueprint.Migrations do
         {
           attributes_to_add,
           attributes_to_remove,
+          assets_to_add,
+          assets_to_remove,
           relations_to_add,
           relations_to_remove
         },
@@ -46,6 +51,8 @@ defmodule Brando.Blueprint.Migrations do
       build_operations(
         attributes_to_add,
         attributes_to_remove,
+        assets_to_add,
+        assets_to_remove,
         relations_to_add,
         relations_to_remove,
         module,
@@ -135,7 +142,6 @@ defmodule Brando.Blueprint.Migrations do
       end
       """
     end
-
   end
 
   defp wrap_in_operation_type({up, down}, {up_indexes, down_indexes}, :alter, module, sequence) do
@@ -170,8 +176,9 @@ defmodule Brando.Blueprint.Migrations do
 
   def diff_against(current_snapshot, nil) do
     attributes_to_add = current_snapshot.attributes
+    assets_to_add = current_snapshot.assets
     relations_to_add = current_snapshot.relations
-    {attributes_to_add, [], relations_to_add, []}
+    {attributes_to_add, [], assets_to_add, [], relations_to_add, []}
   end
 
   def diff_against(current_snapshot, previous_snapshot) do
@@ -185,6 +192,16 @@ defmodule Brando.Blueprint.Migrations do
         Enum.find(current_snapshot.attributes, &(&1.name == attribute.name))
       end)
 
+    assets_to_add =
+      Enum.reject(current_snapshot.assets, fn asset ->
+        Enum.find(Map.get(previous_snapshot, :assets, []), &(&1.name == asset.name))
+      end)
+
+    assets_to_remove =
+      Enum.reject(Map.get(previous_snapshot, :assets, []), fn asset ->
+        Enum.find(current_snapshot.assets, &(&1.name == asset.name))
+      end)
+
     relations_to_add =
       Enum.reject(current_snapshot.relations, fn relation ->
         Enum.find(previous_snapshot.relations, &(&1.name == relation.name))
@@ -195,12 +212,21 @@ defmodule Brando.Blueprint.Migrations do
         Enum.find(current_snapshot.relations, &(&1.name == relation.name))
       end)
 
-    {attributes_to_add, attributes_to_remove, relations_to_add, relations_to_remove}
+    {
+      attributes_to_add,
+      attributes_to_remove,
+      assets_to_add,
+      assets_to_remove,
+      relations_to_add,
+      relations_to_remove
+    }
   end
 
   def build_operations(
         attributes_to_add,
         attributes_to_remove,
+        assets_to_add,
+        assets_to_remove,
         relations_to_add,
         relations_to_remove,
         module,
@@ -208,10 +234,10 @@ defmodule Brando.Blueprint.Migrations do
       ) do
     # are we creating a table or altering?
     operation_type = operation_type(module, opts)
-    additive_actions = attributes_to_add ++ relations_to_add
+    additive_actions = attributes_to_add ++ assets_to_add ++ relations_to_add
     additive_operations = Enum.map(additive_actions, &build_operation(:add, &1, module))
 
-    reductive_actions = attributes_to_remove ++ relations_to_remove
+    reductive_actions = attributes_to_remove ++ assets_to_remove ++ relations_to_remove
     reductive_operations = Enum.map(reductive_actions, &build_operation(:remove, &1, module))
 
     operations = additive_operations ++ reductive_operations
@@ -308,6 +334,16 @@ defmodule Brando.Blueprint.Migrations do
     }
   end
 
+  defp build_operation(:add, %Asset{} = asset, module) do
+    ecto_data = Map.get(module.__changeset__, asset.name)
+
+    %Operations.Asset.Add{
+      asset: asset,
+      module: module,
+      opts: ecto_data
+    }
+  end
+
   defp build_operation(:remove, %Attribute{} = attr, module) do
     %Operations.Attribute.Remove{
       attribute: attr,
@@ -320,6 +356,16 @@ defmodule Brando.Blueprint.Migrations do
 
     %Operations.Relation.Remove{
       relation: rel,
+      module: module,
+      opts: ecto_data
+    }
+  end
+
+  defp build_operation(:remove, %Asset{} = asset, module) do
+    ecto_data = Map.get(module.__changeset__, asset.name)
+
+    %Operations.Asset.Remove{
+      asset: asset,
       module: module,
       opts: ecto_data
     }

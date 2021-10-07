@@ -1,0 +1,13 @@
+.text-block {
+  .tiptap {
+    padding-top: 10px;
+  }
+
+  &.lead,
+  &.lede {
+    .ProseMirror p {
+      @fontsize lg;
+    }
+  }
+}
+

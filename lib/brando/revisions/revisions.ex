@@ -266,29 +266,23 @@ defmodule Brando.Revisions do
 
   ## Example
 
-      set_entry_to_revision(Project, project_id, wanted_revision_id)
+      set_entry_to_revision(Project, project_id, wanted_revision_id, user)
 
   """
-  def set_entry_to_revision(entry_schema, entry_id, revision_number) do
+  def set_entry_to_revision(entry_schema, entry_id, revision_number, user) do
     {:ok, {revision, {_, new_entry}}} = get_revision(entry_schema, entry_id, revision_number)
     {:ok, {_, {_, base_entry}}} = get_active_revision(entry_schema, entry_id)
-    do_set_entry_to_revision(base_entry, new_entry, revision)
-  end
 
-  defp do_set_entry_to_revision(
-         %{__struct__: entry_type} = entry,
-         decoded_entry,
-         revision
-       ) do
-    # recursively convert structs to maps
-    entry
-    |> entry_type.changeset(Utils.map_from_struct(decoded_entry))
+    new_params = Utils.map_from_struct(new_entry)
+
+    base_entry
+    |> entry_schema.changeset(new_params, user, skip_villain: true)
     |> Query.update()
     |> case do
       {:ok, new_entry} ->
         activate_revision(revision)
         deactivate_all_revisions_except(revision)
-        Datasource.update_datasource(entry_type, new_entry)
+        Datasource.update_datasource(entry_schema, new_entry)
         Cache.Query.evict({:ok, new_entry})
 
       err ->

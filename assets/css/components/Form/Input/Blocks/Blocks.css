@@ -1,0 +1,159 @@
+.blocks-wrapper {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+
+  .modules {
+    @space margin-top 15px;
+  }
+
+  [data-block-type="container"] & {
+    padding: 0;
+  }
+
+  > [data-block-uid] {
+    &.is-sorting {
+      opacity: 0.5;
+
+      .block-plus {
+        opacity: 0;
+      }
+    }
+  }
+}
+
+[data-block-type="container"] .blocks-wrapper [data-block-index="0"] .block-plus:first-of-type {
+  margin-top: 0;
+}
+
+section.alert.danger {
+  background-color: yellow;
+  margin: 15px 0;
+  padding: 15px;
+  font-size: 14px;
+}
+
+.blocks-empty-instructions {
+  text-align: center;
+  @space margin-y 25px;
+}
+
+.blocks-templates {
+  width: 28vw;
+  margin: 0 auto;
+  margin-top: 2vw;
+
+  button {
+    border: 1px solid;
+    width: 100%;
+    padding: 1vw;
+    font-weight: 500;
+
+    small {
+      font-weight: 400;
+    }
+
+    &:hover {
+      @color bg peach;
+    }
+
+    + button {
+      margin-top: -1px;
+    }
+  }
+}
+
+.namespace-button {
+  @color bg peachDarker;
+
+  &:hover {
+    @color bg peachDarkest;
+  }
+
+  .info .name {
+    text-transform: uppercase;
+  }
+}
+
+.builtin-button {
+  @fontsize button;
+  border: 1px solid #666;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+
+  &:hover {
+    @color bg peach;
+  }
+
+  svg {
+    width: 20px;
+    height: auto;
+    margin-right: 12px;
+    margin-top: -4px;
+  }
+}
+  
+.namespace-modules + .namespace-button {
+  margin-top: -1px;
+}
+
+.namespace-modules + .module-button {
+  margin-top: -1px;
+}
+
+.module-button, .namespace-button {
+  @fontsize button;
+  border: 1px solid #666;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  &:hover {
+    @color bg peach;
+  }
+
+  + .module-button {
+    margin-top: -1px;
+  }
+
+  + .namespace-button {
+    margin-top: -1px;
+  }
+
+  + .namespace-modules {
+    margin-top: -1px;
+  }
+
+  figure {
+    min-width: 115px;
+    svg {
+      width: 115px;
+      height: auto;
+    }
+  }
+
+  .info {
+    @space margin-left 15px;
+    text-align: left;
+
+    .name {
+      font-weight: 500;
+    }
+
+    .instructions {
+      @space padding-top 3px;
+      @fontsize sm;
+    }
+  }
+}
+
+.namespace-modules {
+  display: none;
+
+  &.active {
+    display: block;
+  }
+}

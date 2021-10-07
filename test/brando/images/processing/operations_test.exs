@@ -2,7 +2,7 @@ defmodule Brando.OperationsTest do
   use ExUnit.Case
   import Brando.Images.Operations
 
-  @image_struct %Brando.Type.Image{
+  @image_struct %Brando.Images.Image{
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -19,7 +19,7 @@ defmodule Brando.OperationsTest do
     width: 2600
   }
 
-  @image_struct_png %Brando.Type.Image{
+  @image_struct_png %Brando.Images.Image{
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -36,7 +36,7 @@ defmodule Brando.OperationsTest do
     width: 2600
   }
 
-  @image_struct_gif %Brando.Type.Image{
+  @image_struct_gif %Brando.Images.Image{
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -116,7 +116,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -147,7 +147,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -178,7 +178,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -209,7 +209,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -240,7 +240,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -271,7 +271,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -302,7 +302,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -333,7 +333,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -364,7 +364,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -395,7 +395,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -426,7 +426,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -457,7 +457,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.jpeg",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -501,7 +501,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -532,7 +532,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -563,7 +563,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -594,7 +594,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -625,7 +625,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -656,7 +656,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -687,7 +687,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -718,7 +718,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -749,7 +749,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -780,7 +780,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -811,7 +811,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -842,7 +842,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.png",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
                  credits: nil,
@@ -886,7 +886,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -914,7 +914,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -942,7 +942,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -970,7 +970,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -998,7 +998,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -1026,7 +1026,7 @@ defmodule Brando.OperationsTest do
              %Brando.Images.Operation{
                filename: "image.gif",
                id: "test_id",
-               image_struct: %Brando.Type.Image{
+               image_struct: %Brando.Images.Image{
                  credits: nil,
                  focal: %{"x" => 50, "y" => 50},
                  height: 2600,
@@ -1058,7 +1058,7 @@ defmodule Brando.OperationsTest do
     op = %Brando.Images.Operation{
       filename: "image.gif",
       id: "test_id",
-      image_struct: %Brando.Type.Image{
+      image_struct: %Brando.Images.Image{
         credits: nil,
         focal: %{"x" => 50, "y" => 50},
         height: 2600,
@@ -1088,7 +1088,7 @@ defmodule Brando.OperationsTest do
     op = %Brando.Images.Operation{
       filename: "image.gif",
       id: "test_id",
-      image_struct: %Brando.Type.Image{
+      image_struct: %Brando.Images.Image{
         credits: nil,
         focal: %{"x" => 50, "y" => 50},
         height: 2600,

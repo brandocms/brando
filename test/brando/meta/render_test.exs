@@ -8,7 +8,7 @@ defmodule Brando.MetaRenderTest do
     description: "Our description"
   }
 
-  @img %Brando.Type.Image{
+  @img %{
     alt: nil,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
@@ -66,7 +66,13 @@ defmodule Brando.MetaRenderTest do
   end
 
   test "rendered meta" do
-    mock_conn = Brando.Plug.HTML.put_meta(%Plug.Conn{}, Brando.MetaRenderTest.Page, @mock_data)
+    mock_conn =
+      Brando.Plug.HTML.put_meta(
+        %Plug.Conn{assigns: %{language: "en"}},
+        Brando.MetaRenderTest.Page,
+        @mock_data
+      )
+
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==
@@ -81,16 +87,22 @@ defmodule Brando.MetaRenderTest do
              "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     # change identity values
-    Brando.Sites.update_identity(%{links: [], metas: []})
-    Brando.Sites.update_seo(%{fallback_meta_image: @img})
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+    Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
+
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==
              "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
-    Brando.Sites.update_identity(%{links: @links, metas: @metas})
-    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+    Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
+
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
   end
 
   test "meta_tag" do

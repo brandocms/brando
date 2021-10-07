@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "creator trait" do
     test "exposes relationship" do
-      assert Trait.Creator.trait_relations(nil, nil) == [
+      assert Trait.Creator.trait_relations(nil, nil, nil) == [
                %Relation{
                  name: :creator,
                  opts: %{module: User, required: true},
@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "status trait" do
     test "exposes attribute" do
-      assert Trait.Status.trait_attributes(nil, nil) == [
+      assert Trait.Status.all_trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :status,
                  opts: %{required: true},
@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Trait.Sequenced.trait_attributes(nil, nil) == [
+      assert Trait.Sequenced.all_trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :sequence,
                  opts: %{default: 0},
@@ -44,6 +44,18 @@ defmodule Brando.Blueprint.TraitTest do
   end
 
   describe "villain trait" do
+    test "exposes attributes" do
+      attrs = [
+        %Brando.Blueprint.Attribute{name: :data, type: :villain},
+        %Brando.Blueprint.Attribute{name: :bio_data, type: :villain}
+      ]
+
+      assert Trait.Villain.all_trait_attributes(attrs, nil, nil) == [
+               %Brando.Blueprint.Attribute{name: :html, opts: %{}, type: :text},
+               %Brando.Blueprint.Attribute{name: :bio_html, opts: %{}, type: :text}
+             ]
+    end
+
     test "adds _html field" do
       assert :html in Brando.TraitTest.Project.__schema__(:fields)
       assert :bio_html in Brando.TraitTest.Project.__schema__(:fields)
@@ -76,8 +88,8 @@ defmodule Brando.Blueprint.TraitTest do
       assert mutated_cs.valid?
       assert mutated_cs.changes.creator_id == 1
       assert mutated_cs.changes.title == "my title!"
-      assert mutated_cs.changes.html == "Some glorious text"
-      assert mutated_cs.changes.bio_html == "Some glorious text"
+      assert mutated_cs.changes.html == "<div class=\"paragraph\">Some glorious text</div>"
+      assert mutated_cs.changes.bio_html == "<div class=\"paragraph\">Some glorious text</div>"
     end
   end
 
@@ -85,14 +97,14 @@ defmodule Brando.Blueprint.TraitTest do
     test "adds language field" do
       assert :language in Brando.TraitTest.Project.__schema__(:fields)
 
-      assert Brando.TraitTest.Project.__changeset__()[:language] ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{en: "en", no: "no"},
-                  on_load: %{"en" => :en, "no" => :no},
-                  values: [:no, :en],
-                  type: :string
-                }}
+      {:parameterized, Ecto.Enum,
+       %{
+         on_cast: %{"en" => :en, "no" => :no},
+         on_load: %{"en" => :en, "no" => :no},
+         on_dump: %{en: "en", no: "no"},
+         type: :string,
+         mappings: [no: "no", en: "en"]
+       }}
     end
   end
 
@@ -100,6 +112,9 @@ defmodule Brando.Blueprint.TraitTest do
     test "list" do
       assert Enum.sort(Trait.list_implementations(Brando.Trait.SoftDelete)) == [
                Brando.BlueprintTest.Project,
+               Brando.Content.Module,
+               Brando.Content.Palette,
+               Brando.Content.Template,
                Brando.Image,
                Brando.ImageCategory,
                Brando.ImageSeries,
@@ -108,8 +123,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.MigrationTest.Project,
                Brando.Pages.Fragment,
                Brando.Pages.Page,
-               Brando.Users.User,
-               Brando.Villain.Module
+               Brando.Users.User
              ]
     end
   end

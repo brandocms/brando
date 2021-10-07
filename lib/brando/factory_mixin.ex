@@ -15,7 +15,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.ImageSeries
       alias Brando.Pages.Page
       alias Brando.Pages.Fragment
-      alias Brando.Villain.Module
+      alias Brando.Content.Module
       alias Brando.Type.ImageConfig
       alias Brando.Users.User
 
@@ -46,7 +46,7 @@ defmodule Brando.FactoryMixin do
           title: "Page Title",
           html: nil,
           data: nil,
-          properties: [],
+          vars: [],
           status: :published,
           creator: build(:user),
           parent_id: nil
@@ -71,7 +71,6 @@ defmodule Brando.FactoryMixin do
             "<article data-v=\"text center\" data-moonwalk-section>\n  <div class=\"inner\" data-moonwalk>\n    <div class=\"text\">\n      %{H2}\n    </div>\n  </div>\n</article>",
           deleted_at: nil,
           help_text: "Help Text",
-          multi: false,
           name: "Heading",
           namespace: "general",
           refs: [
@@ -89,8 +88,8 @@ defmodule Brando.FactoryMixin do
               "name" => "H2"
             }
           ],
-          vars: %{},
-          wrapper: nil
+          vars: [],
+          wrapper: false
         }
       end
 
@@ -115,7 +114,7 @@ defmodule Brando.FactoryMixin do
       end
 
       def image_type_factory do
-        %Brando.Type.Image{
+        %Brando.Images.Image{
           credits: nil,
           path: "images/default/sample.png",
           sizes: %{

@@ -12,7 +12,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:email, :text)
       add(:password, :text)
       add(:avatar, :jsonb)
-      add(:role, :integer)
+      add(:role, :string)
       add(:config, :map)
       add(:active, :boolean, default: true)
       add(:language, :text, default: "no")
@@ -22,6 +22,17 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create(index(:users, [:email], unique: true))
+
+    create table(:users_tokens) do
+      add :user_id, references(:users, on_delete: :delete_all), null: false
+      add :token, :binary, null: false
+      add :context, :string, null: false
+      add :sent_to, :string
+      timestamps(updated_at: false)
+    end
+
+    create index(:users_tokens, [:user_id])
+    create unique_index(:users_tokens, [:context, :token])
 
     create table(:posts) do
       add(:language, :text)
@@ -98,6 +109,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:title, :text)
       add(:data, :jsonb)
       add(:html, :text)
+      add(:vars, :jsonb)
       add(:status, :integer)
       add(:is_homepage, :boolean)
       add(:parent_id, references(:pages), default: nil)
@@ -116,14 +128,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(unique_index(:pages, [:uri, :language]))
     create(index(:pages, [:parent_id]))
     create(index(:pages, [:status]))
-
-    create table(:pages_properties) do
-      add :key, :string
-      add :label, :text
-      add :type, :string
-      add :data, :jsonb
-      add :page_id, references(:pages, on_delete: :delete_all)
-    end
 
     create table(:pages_fragments) do
       add(:key, :text)
@@ -144,7 +148,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:key]))
     create(index(:pages_fragments, [:parent_key]))
 
-    create table(:pages_modules) do
+    create table(:content_modules) do
       add :name, :string
       add :namespace, :string
       add :help_text, :text
@@ -154,13 +158,42 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :vars, :jsonb
       add :svg, :string
       add :multi, :boolean
-      add :wrapper, :string
+      add :wrapper, :boolean
+      add :entry_template, :jsonb
       sequenced()
       timestamps()
       soft_delete()
     end
 
-    create index(:pages_modules, [:namespace])
+    create index(:content_modules, [:namespace])
+
+    create table(:content_palettes) do
+      add :name, :text
+      add :key, :text
+      add :namespace, :text
+      add :sequence, :integer
+      add :global, :boolean, default: false
+      add :instructions, :text
+      add :colors, :jsonb
+      add :deleted_at, :utc_datetime
+      add :creator_id, references(:users, on_delete: :nilify_all)
+
+      timestamps()
+    end
+
+
+    create table(:content_templates) do
+      add :name, :text
+      add :namespace, :text
+      add :sequence, :integer
+      add :instructions, :text
+      add :deleted_at, :utc_datetime
+      add :creator_id, references(:users, on_delete: :nilify_all)
+      add :data, :jsonb
+      add :html, :text
+
+      timestamps()
+    end
 
     create table(:projects) do
       add :title, :string
@@ -207,7 +240,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:persons, [:language])
 
-    create table(:sites_identity) do
+    create table(:sites_identities) do
       add :name, :string
       add :alternate_name, :string
       add :email, :string
@@ -226,35 +259,34 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :logo, :jsonb
       add :url, :string
 
-      add :metas, :map
-      add :links, :map
-      add :configs, :map
+      add :language, :string
+
+      add :metas, :jsonb
+      add :links, :jsonb
+      add :configs, :jsonb
       add :type, :string, default: "organization"
 
       timestamps()
     end
 
-    create table(:sites_seo) do
+    create table(:sites_seos) do
       add :fallback_meta_description, :text
       add :fallback_meta_title, :text
       add :fallback_meta_image, :jsonb
       add :base_url, :text
+      add :language, :string
       add :robots, :text
       add :redirects, :map
       timestamps()
     end
 
-    create table(:sites_global_categories) do
+    create table(:sites_global_sets) do
       add :key, :string
       add :label, :text
-    end
-
-    create table(:sites_globals) do
-      add :key, :string
-      add :label, :text
-      add :type, :string
-      add :data, :jsonb
-      add :global_category_id, references(:sites_global_categories, on_delete: :delete_all)
+      add :language, :text
+      add :globals, :jsonb
+      add :creator_id, references(:users)
+      timestamps()
     end
 
     create table(:navigation_menus) do
@@ -320,7 +352,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     drop(index(:pages_fragments, [:language]))
     drop(index(:pages_fragments, [:key]))
 
-    drop table(:sites_global_categories)
+    drop table(:sites_global_sets)
     drop table(:sites_globals)
   end
 end

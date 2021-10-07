@@ -1,0 +1,14 @@
+<h1>Forgot your password?</h1>
+
+<%= form_for :user, Brando.helpers().admin_user_reset_password_path(@conn, :create), fn f -> %>
+  <%= label f, :email %>
+  <%= email_input f, :email, required: true %>
+
+  <div>
+    <%= submit "Send instructions to reset password" %>
+  </div>
+<% end %>
+
+<p>
+  <%= link "Log in", to: Brando.helpers().admin_user_session_path(@conn, :new) %>
+</p>

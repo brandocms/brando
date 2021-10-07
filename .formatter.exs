@@ -61,13 +61,41 @@ locals_without_parens = [
   json_ld_field: 4,
   table: 1,
   primary_key: 1,
-  data_layer: 1
+  data_layer: 1,
+  assets: 1,
+  asset: 2,
+  asset: 3,
+  input: 1,
+  input: 2,
+  input: 3,
+  inputs_for: 2,
+  fieldset: 1,
+  fieldset: 2,
+  redirect_on_save: 1,
+  form_query: 1,
+  subform: 3,
+  subform_many: 3,
+  field: 1,
+  field: 2,
+  field: 3,
+  template: 1,
+  template: 2,
+  listing_query: 1,
+  filters: 1,
+  actions: 1,
+  selection_actions: 1,
+  child_listing: 1,
+  menu_item: 1,
+  menu_item: 2,
+  menu_subitem: 1,
+  menu_subitem: 2
 ]
 
 [
   locals_without_parens: locals_without_parens,
   export: [locals_without_parens: locals_without_parens],
-  import_deps: [:absinthe, :ecto, :ecto_sql, :phoenix, :plug, :phoenix_html],
+  import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html, :surface],
   inputs: ["*.{ex,exs}", "priv/*/seeds.exs", "{config,lib,test}/**/*.{ex,exs}"],
+  surface_inputs: ["{lib,test}/**/*.{ex,exs,sface}"],
   subdirectories: ["priv/*/migrations"]
 ]

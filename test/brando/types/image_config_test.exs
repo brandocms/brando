@@ -32,48 +32,25 @@ defmodule Brando.Types.ImageConfigTest do
     "upload_path" => "images/result2"
   }
 
-  test "cast" do
-    assert ImageConfig.cast(
-             ~s({"upload_path":"images/default","sizes":{"xlarge":{"size":"900","quality":100},"thumb":{"size":"150x150","quality":100,"crop":true},"small":{"size":"300","quality":100},"micro":{"size":"25x25","quality":100,"crop":true},"medium":{"size":"500","quality":100},"large":{"size":"700","quality":100}},"size_limit":10240000,"random_filename":true,"default_size":"medium","allowed_mimetypes":["image/jpeg","image/png"]})
-           ) ==
-             {:ok,
-              %Brando.Type.ImageConfig{
-                allowed_mimetypes: ["image/jpeg", "image/png"],
-                default_size: "medium",
-                random_filename: true,
-                size_limit: 10_240_000,
-                sizes: %{
-                  "large" => %{
-                    "quality" => 100,
-                    "size" => "700"
-                  },
-                  "medium" => %{
-                    "quality" => 100,
-                    "size" => "500"
-                  },
-                  "micro" => %{
-                    "crop" => true,
-                    "quality" => 100,
-                    "size" => "25x25"
-                  },
-                  "small" => %{
-                    "quality" => 100,
-                    "size" => "300"
-                  },
-                  "thumb" => %{
-                    "crop" => true,
-                    "quality" => 100,
-                    "size" => "150x150"
-                  },
-                  "xlarge" => %{
-                    "quality" => 100,
-                    "size" => "900"
-                  }
-                },
-                upload_path: "images/default"
-              }}
+  @casted_map %Brando.Type.ImageConfig{
+    allowed_mimetypes: ["image/jpeg", "image/png"],
+    default_size: "medium",
+    random_filename: false,
+    size_limit: 10_240_000,
+    sizes: %{
+      "large" => %{"quality" => 100, "size" => "700"},
+      "medium" => %{"quality" => 100, "size" => "500"},
+      "small" => %{"quality" => 100, "size" => "300"},
+      "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
+      "xlarge" => %{"quality" => 100, "size" => "900"}
+    },
+    srcset: nil,
+    target_format: nil,
+    upload_path: "images/result2"
+  }
 
-    assert ImageConfig.cast(@struct) == {:ok, @struct}
+  test "cast" do
+    assert ImageConfig.cast(@map) == {:ok, @casted_map}
   end
 
   test "blank?" do

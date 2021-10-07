@@ -7,31 +7,25 @@ defmodule Brando.Query.Mutations do
   alias Brando.Publisher
   alias Brando.Query
   alias Brando.Revisions
-  alias Brando.Schema
   alias Brando.Trait
   alias Brando.Utils
 
-  def create(module, params, user, callback_block, custom_changeset) do
+  def create(module, params, user, preloads, callback_block, custom_changeset) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
 
     with changeset <- changeset_fun.(struct(module), params, user),
          changeset <- Publisher.maybe_override_status(changeset),
          {:ok, entry} <- Query.insert(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      #! TODO: Remove when moving to Blueprints
-      revisioned? =
-        if Brando.Blueprint.blueprint?(module) do
-          module.__trait__(Trait.Revisioned)
-        else
-          {:__revisioned__, 0} in module.__info__(:functions)
-        end
+      revisioned? = module.__trait__(Trait.Revisioned)
 
       if revisioned? do
         Revisions.create_revision(entry, user)
       end
 
-      case Schema.identifier_for(entry) do
+      case Brando.Blueprint.Identifier.identifier_for(entry) do
         nil -> nil
         identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
       end
@@ -42,7 +36,45 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def update(context, module, name, id, params, user, preloads, callback_block, custom_changeset) do
+  def create_with_changeset(module, changeset, user, preloads, callback_block) do
+    with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :insert),
+         {:ok, entry} <- Query.insert(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
+         {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      revisioned? = module.__trait__(Trait.Revisioned)
+
+      if revisioned? do
+        Revisions.create_revision(entry, user)
+      end
+
+      case Brando.Blueprint.Identifier.identifier_for(entry) do
+        nil -> nil
+        identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+      end
+
+      callback_block.(entry)
+    else
+      err -> err
+    end
+  end
+
+  defp maybe_preload(entry, nil), do: {:ok, entry}
+  defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.repo().preload(preloads)}
+
+  def update(
+        context,
+        module,
+        name,
+        id,
+        params,
+        user,
+        preloads,
+        callback_block,
+        custom_changeset,
+        show_notification
+      ) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
 
     get_opts =
@@ -55,23 +87,49 @@ defmodule Brando.Query.Mutations do
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          changeset <- changeset_fun.(entry, params, user),
          changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
-        #! TODO: Remove when moving to Blueprints
-        revisioned? =
-          if Brando.Blueprint.blueprint?(module) do
-            module.__trait__(Trait.Revisioned)
-          else
-            {:__revisioned__, 0} in module.__info__(:functions)
-          end
+        revisioned? = module.__trait__(Trait.Revisioned)
 
         if revisioned? do
           Revisions.create_revision(entry, user)
         end
 
-        case Schema.identifier_for(entry) do
+        if show_notification do
+          case Brando.Blueprint.Identifier.identifier_for(entry) do
+            nil -> nil
+            identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+          end
+        end
+
+        callback_block.(entry)
+      else
+        {:ok, entry}
+      end
+    else
+      err ->
+        err
+    end
+  end
+
+  def update_with_changeset(module, changeset, user, preloads, callback_block) do
+    with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :update),
+         {:ok, entry} <- Query.update(changeset),
+         {:ok, entry} <- maybe_preload(entry, preloads),
+         {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      if has_changes(changeset) do
+        revisioned? = module.__trait__(Trait.Revisioned)
+
+        if revisioned? do
+          Revisions.create_revision(entry, user)
+        end
+
+        case Brando.Blueprint.Identifier.identifier_for(entry) do
           nil -> nil
           identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
         end
@@ -126,16 +184,19 @@ defmodule Brando.Query.Mutations do
 
   defp maybe_delete_fields(entry, _), do: entry
 
-  def delete(context, module, name, id, user, callback_block) do
-    {:ok, entry} = apply(context, :"get_#{name}", [id])
+  defp set_action(changeset, action), do: %{changeset | action: action}
 
-    #! TODO: Remove when moving to Blueprints
-    soft_deletable? =
-      if Brando.Blueprint.blueprint?(module) do
-        module.__trait__(Trait.SoftDelete)
+  def delete(context, module, name, id, user, preloads, callback_block) do
+    get_opts =
+      if preloads do
+        %{matches: %{id: id}, preload: preloads}
       else
-        {:__soft_delete__, 0} in module.__info__(:functions)
+        %{matches: %{id: id}}
       end
+
+    {:ok, entry} = apply(context, :"get_#{name}", [get_opts])
+
+    soft_deletable? = module.__trait__(Trait.SoftDelete)
 
     {:ok, entry} =
       if soft_deletable? do
@@ -153,7 +214,7 @@ defmodule Brando.Query.Mutations do
 
     Datasource.update_datasource(module, entry)
 
-    case Schema.identifier_for(entry) do
+    case Brando.Blueprint.Identifier.identifier_for(entry) do
       nil -> nil
       identifier -> Notifications.push_mutation(gettext("deleted"), identifier, user)
     end

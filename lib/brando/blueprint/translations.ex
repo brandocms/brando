@@ -56,7 +56,7 @@ defmodule Brando.Blueprint.Translations do
   defmacro instructions(value), do: t_field(:instructions, value)
 
   def t_field(type, value) do
-    # type is an atom -> :label | :placeholder : instructions
+    # type is an atom -> :label | :placeholder | instructions
     # value is a gettext call, for instance -> gettext("Instructions")
     quote location: :keep do
       translate_full_path =

@@ -1,0 +1,78 @@
+%circular-checkbox {
+  position: relative;
+
+  &.disabled {
+    opacity: 0.5;
+  }
+
+  label {
+    display: block;
+    padding: 0 0 0 var(--padding-size);
+    user-select: none;
+  }
+
+  input[type=checkbox] {
+    height: var(--checkbox-size);
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    width: var(--checkbox-size);
+  }
+
+  input[type=checkbox] + label::before {
+    border: 1px solid;
+    content: "";
+    height: var(--checkbox-size);
+    border-radius: var(--checkbox-size);
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: var(--checkbox-size);
+  }
+
+  input[type=checkbox] + label::after {
+    content: "";
+    margin-top: -2.5px;
+    margin-left: -2.5px;
+    left: calc(var(--checkbox-size) / 4);
+    top: calc(var(--checkbox-size) / 4);
+    width: var(--checkmark-width);
+    height: var(--checkmark-width);
+    border-radius: var(--checkmark-width);
+    background-color: theme(colors.blue);
+    position: absolute;
+    justify-self: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  input[type=checkbox]:checked + label::after {
+    opacity: 1;
+  }
+
+  /*focus styles—commented out for the tutorial, but you’ll need to add them for proper use
+  .wrapper input:focus + label::before {
+      box-shadow: 0 0 0 3px #ffbf47;
+    outline: 3px solid transparent;
+  }*/
+}
+
+.check-wrapper {
+  --checkbox-size: 22px;
+  --checkmark-width: 16px;
+  --padding-size: 35px;
+  @extend %circular-checkbox;
+  margin-bottom: 0.5vw;
+  &.small {
+    --checkbox-size: 18px;
+    --checkmark-width: 14px;
+    --padding-size: 30px;
+  }
+
+  label {
+    &.small {
+      font-size: 14px;
+    }
+  }
+}

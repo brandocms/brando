@@ -4,14 +4,24 @@ defmodule Brando.Blueprint.Relations do
 
   ## Many to many
 
-  If you want to pass just ids of your many_to_many relation use `cast: :collection`
+  If you want to pass just ids of your many_to_many relation use `cast: true`
   """
   import Ecto.Changeset
   import Brando.M2M
   import Brando.Blueprint.Utils
   alias Brando.Blueprint.Relation
 
-  def build_relation(name, type, opts \\ []) do
+  def build_relation(name, type, opts \\ [])
+
+  def build_relation(name, :image, opts) do
+    %Relation{
+      name: name,
+      type: :embeds_one,
+      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
+    }
+  end
+
+  def build_relation(name, type, opts) do
     %Relation{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
@@ -21,6 +31,7 @@ defmodule Brando.Blueprint.Relations do
 
   defp relations(_caller, block) do
     quote location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :relations)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
       unquote(block)
     end
@@ -44,6 +55,7 @@ defmodule Brando.Blueprint.Relations do
   end
 
   def run_cast_relations(changeset, relations, user) do
+    # if we have images or video, add these here, since we should cast_embed them
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
   end
 
@@ -90,11 +102,14 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## many_to_many
   def run_cast_relation(
-        %{type: :many_to_many, name: name, opts: %{cast: :collection, module: module}},
+        %{type: :many_to_many, name: name, opts: %{cast: true, module: module}},
         changeset,
         _user
       ) do
-    cast_collection(changeset, name, Brando.repo(), module)
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_assoc(changeset, name, [])
+      _ -> cast_collection(changeset, name, Brando.repo(), module)
+    end
   end
 
   ##
@@ -104,7 +119,13 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
+    required = Map.get(opts, :required, false)
+    opts = Map.put(opts, :required, required)
+
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_assoc(changeset, name, [])
+      _ -> cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
+    end
   end
 
   ##
@@ -114,7 +135,11 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+    # A hack to remove an embeds_one, specifically an image
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, nil)
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+    end
   end
 
   ##
@@ -124,16 +149,26 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, [])
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    end
+  end
+
+  ##
+  ## embeds_many
+  def run_cast_relation(
+        %{type: :entries, name: name, opts: opts},
+        changeset,
+        _user
+      ) do
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, [])
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    end
   end
 
   ##
   ## catch all for non casted relations
-  def run_cast_relation(
-        _,
-        changeset,
-        _user
-      ) do
-    changeset
-  end
+  def run_cast_relation(_, changeset, _user), do: changeset
 end

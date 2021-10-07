@@ -1,6 +1,6 @@
 defmodule Brando.OEmbed do
   @providers %{
-    "youtube" => "http://www.youtube.com/oembed?format=json&url=",
+    "youtube" => "https://www.youtube.com/oembed?format=json&url=",
     "vimeo" => "https://vimeo.com/api/oembed.json?url="
   }
 
@@ -12,7 +12,7 @@ defmodule Brando.OEmbed do
   def fetch(url) do
     with {:ok, %HTTPoison.Response{body: body}} <-
            HTTPoison.get(url, [], follow_redirect: true, ssl: [{:versions, [:"tlsv1.2"]}]),
-         {:ok, struct} <- Poison.decode(body) do
+         {:ok, struct} <- Jason.decode(body) do
       {:ok, struct}
     else
       _ -> {:error, "oEmbed url not found"}

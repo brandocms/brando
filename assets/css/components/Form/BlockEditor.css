@@ -1,0 +1,135 @@
+.entry-template {
+  @space margin-top 50px;
+  
+  > h2 {
+    @space margin-top 25px;
+    @space margin-bottom 10px;
+  }
+
+  > p {
+    max-width: 40ch;
+  }
+
+  > .block-editor {
+    @space margin-top 35px;
+  }
+
+}
+
+.block-editor {
+  @row 2;
+
+  .code {
+    @column 10/16;
+  }
+
+  .properties {
+    @column 6/16;
+    
+    .field-wrapper {
+      @space margin-bottom 1;
+    }
+
+    .button-group {
+      width: 100%;
+      button {
+        width: 100%;
+        @space margin-top 0;
+
+        + button {
+          margin-top: -1px;
+        }
+      }
+    }
+
+    .inner {
+      @space padding-x 0.5rem;
+
+      input.text, label, textarea {
+        font-size: 15px;
+      }
+
+      .refs {
+        .col-var {
+          @color bg peach;
+          padding: 1vw;
+          border-radius: 10px;
+          margin-bottom: 15px;
+          font-family: 'Mono';
+
+          .col-var-toggle {
+            display: flex;
+            justify-content: space-between;
+
+            svg {
+              circle {
+                fill: theme(colors.dark);
+              }
+            }
+          }
+
+          .col-var-form {          
+            @space margin-top 15px;
+            &.hidden {
+              display: none;
+            }
+          }
+        }
+
+        
+      }
+
+      .refs, .vars {
+        @space margin-top 20px;
+        
+        .button-group {
+          @space margin-top 20px;
+        }
+
+        > h2 {
+          font-size: 16px;
+          display: flex;
+          width: 100%;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #00000011;
+          padding-bottom: 10px;
+          padding-top: 5px;
+
+          > div {
+            display: flex;
+            align-items: center;
+
+            span {
+              margin-left: 10px;
+            }
+          }
+        }
+
+        ul {
+          margin: 0;
+          padding: 0;
+          @space padding-top 10px;
+
+          li {
+            @space padding-y 8px;
+            @space padding-x 8px;
+            
+            user-select: none;
+            pointer-events: all;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            list-style-type: none;
+
+            &:nth-of-type(even) {
+              background-color: #efefef;
+            }
+          }
+        }
+      }
+    }
+  }
+}

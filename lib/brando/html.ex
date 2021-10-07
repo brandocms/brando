@@ -55,6 +55,15 @@ defmodule Brando.HTML do
     )
   end
 
+  def render_palettes_css do
+    """
+    <style>
+    #{Brando.Cache.Palettes.get()}
+    </style>
+    """
+    |> raw
+  end
+
   @doc """
   Replace $csrftoken in `html` with .. csrf token!
 

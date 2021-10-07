@@ -2,12 +2,11 @@ defmodule Brando.Pages do
   @moduledoc """
   Context for pages
   """
-  use Brando.Web, :context
+  use BrandoAdmin, :context
   use Brando.Query
 
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
-  alias Brando.Pages.Property
   alias Brando.Users.User
   alias Brando.Villain
   alias Ecto.Changeset
@@ -28,33 +27,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &dataloader_query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def dataloader_query(Fragment = query, _) do
-    query
-    |> where([f], is_nil(f.deleted_at))
-    |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
-  end
-
-  def dataloader_query(Page = query, _) do
-    where(query, [f], is_nil(f.deleted_at))
-  end
-
-  def dataloader_query(queryable, _) do
-    queryable
-  end
-
   query :list, Page do
     fn
       query ->
@@ -65,13 +37,17 @@ defmodule Brando.Pages do
 
   filters Page do
     fn
+      {:language, language}, query -> from q in query, where: q.language == ^language
+      {:uri, uri}, query -> from q in query, where: ilike(q.uri, ^"%#{uri}%")
       {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
       {:parents, true}, query -> from q in query, where: is_nil(q.parent_id)
     end
   end
 
   query :single, Page,
-    do: fn query -> from q in query, where: is_nil(q.deleted_at), preload: [:properties] end
+    do: fn query ->
+      from q in query, where: is_nil(q.deleted_at), preload: [:parent]
+    end
 
   matches Page do
     fn
@@ -152,10 +128,7 @@ defmodule Brando.Pages do
     view_module = Brando.web_module(PageView)
     {_, _, templates} = view_module.__templates__
 
-    main_templates =
-      templates
-      |> Enum.filter(&(not String.starts_with?(&1, "_")))
-      |> Enum.map(&%{name: Path.rootname(&1), value: &1})
+    main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
 
     {:ok, main_templates}
   end
@@ -317,37 +290,37 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get a property from Page.
+  Get a var from Page.
 
-  Returns the rendered value of the property.
+  Returns the rendered value of the var.
   """
-  @spec get_prop(page, binary) :: any
-  def get_prop(%Page{properties: []}, _), do: nil
+  @spec get_var(page, binary) :: any
+  def get_var(%Page{vars: []}, _), do: nil
 
-  def get_prop(%Page{properties: properties}, property) do
-    case Enum.find(properties, &(&1.key == property)) do
+  def get_var(%Page{vars: vars}, var_key) do
+    case Enum.find(vars, &(&1.key == var_key)) do
       nil -> nil
-      prop -> render_prop(prop)
+      var -> render_var(var)
     end
   end
 
   @doc """
-  Checks if page has property
+  Checks if page has var
   """
-  @spec has_prop?(page, binary) :: boolean
-  def has_prop?(%Page{properties: []}, _), do: nil
+  @spec has_var?(page, binary) :: boolean
+  def has_var?(%Page{vars: []}, _), do: nil
 
-  def has_prop?(%Page{properties: properties}, property) do
-    case Enum.find(properties, &(&1.key == property)) do
+  def has_var?(%Page{vars: vars}, var) do
+    case Enum.find(vars, &(&1.key == var)) do
       nil -> false
       _ -> true
     end
   end
 
-  def render_prop(%Property{type: "text", data: data}), do: Map.get(data, "value", "")
-  def render_prop(%Property{type: "boolean", data: data}), do: Map.get(data, "value", false)
-  def render_prop(%Property{type: "html", data: data}), do: Map.get(data, "value", "")
-  def render_prop(%Property{type: "color", data: data}), do: Map.get(data, "value", "")
+  def render_var(%{type: "text", value: value}), do: value
+  def render_var(%{type: "boolean", value: value}), do: value || false
+  def render_var(%{type: "html", value: value}), do: value
+  def render_var(%{type: "color", value: value}), do: value
 
   @doc """
   Check all fields for references to `fragment`.

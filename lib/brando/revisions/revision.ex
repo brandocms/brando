@@ -4,7 +4,8 @@ defmodule Brando.Revisions.Revision do
     domain: "Revisions",
     schema: "Revision",
     singular: "revision",
-    plural: "revisions"
+    plural: "revisions",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

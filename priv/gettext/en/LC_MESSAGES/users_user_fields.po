@@ -12,11 +12,31 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/users/user.ex:95 lib/brando/users/user.ex:96
+#: lib/brando/users/user.ex:102 lib/brando/users/user.ex:103
 msgid "Email"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:90 lib/brando/users/user.ex:91
+#: lib/brando/users/user.ex:97 lib/brando/users/user.ex:98
 msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:112 lib/brando/users/user.ex:113
+msgid "Language"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:107 lib/brando/users/user.ex:108
+msgid "Password"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:121
+msgid "Profile picture"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:117
+msgid "Role"
 msgstr ""

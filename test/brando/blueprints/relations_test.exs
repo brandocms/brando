@@ -34,7 +34,7 @@ defmodule Brando.Blueprint.RelationsTest do
 
       relation :related_projects, :many_to_many,
         module: __MODULE__,
-        cast: :collection,
+        cast: true,
         join_through: "projects_related",
         join_keys: [project_id: :id, related_project_id: :id],
         on_delete: :delete_all,
@@ -104,7 +104,7 @@ defmodule Brando.Blueprint.RelationsTest do
                 cardinality: :one,
                 field: :property,
                 on_cast: nil,
-                on_replace: :raise,
+                on_replace: :update,
                 ordered: true,
                 owner: Brando.Blueprint.RelationsTest.P1,
                 related: Brando.Blueprint.RelationsTest.P1.Property,

@@ -12,8 +12,9 @@ defmodule Brando.Sites.RedirectsTest do
   }
 
   test "redirects" do
-    assert Redirects.test_redirect(@test_path) == {:error, {:redirects, :no_match}}
-    Sites.update_seo(@seo_params, :system)
-    assert Redirects.test_redirect(@test_path) == {:ok, {:redirect, {"/new/projects", "302"}}}
+    assert Redirects.test_redirect(@test_path, "en") == {:error, {:redirects, :no_match}}
+    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
+    Sites.update_seo(seo, @seo_params, :system)
+    assert Redirects.test_redirect(@test_path, "en") == {:ok, {:redirect, {"/new/projects", 302}}}
   end
 end

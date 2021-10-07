@@ -2,28 +2,14 @@ defmodule Brando.Users do
   @moduledoc """
   Context for Users.
   """
-  use Brando.Web, :context
+  use BrandoAdmin, :context
   use Brando.Query
   alias Brando.Users.User
+  alias Brando.Users.UserToken
   alias Brando.Utils
   import Ecto.Query
 
   @type user :: User.t()
-
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &dataloader_query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def dataloader_query(queryable, _), do: queryable
 
   query :list, User do
     fn q -> from t in q, where: is_nil(t.deleted_at) end
@@ -32,6 +18,8 @@ defmodule Brando.Users do
   filters User do
     fn
       {:active, active}, q -> from t in q, where: t.active == ^active
+      {:name, name}, q -> from t in q, where: ilike(t.name, ^"%#{name}%")
+      {:email, email}, q -> from t in q, where: ilike(t.email, ^"%#{email}%")
     end
   end
 
@@ -43,6 +31,7 @@ defmodule Brando.Users do
     fn
       {:id, id}, q -> from t in q, where: t.id == ^id
       {:email, email}, q -> from t in q, where: t.email == ^email
+      {:password, password}, q -> from t in q, where: t.password == ^password
       {:active, active}, q -> from t in q, where: t.active == ^active
       {field, value}, q -> from t in q, where: field(t, ^field) == ^value
     end
@@ -75,5 +64,42 @@ defmodule Brando.Users do
   def can_login?(user) do
     {:ok, role} = Brando.Type.Role.dump(user.role)
     (role > 0 && true) || false
+  end
+
+  @doc """
+  Generates a session token.
+  """
+  def generate_user_session_token(user) do
+    {token, user_token} = UserToken.build_session_token(user)
+    Brando.repo().insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_session_token(token) do
+    {:ok, query} = UserToken.verify_session_token_query(token)
+    Brando.repo().one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_session_token(token) do
+    Brando.repo().delete_all(UserToken.token_and_context_query(token, "session"))
+    :ok
+  end
+
+  def build_token(id) do
+    Phoenix.Token.sign(Brando.endpoint(), "user_token", id)
+  end
+
+  def verify_token(token) do
+    Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86400)
+  end
+
+  def reset_user_password(_user, _attrs) do
+    raise "TODO"
   end
 end

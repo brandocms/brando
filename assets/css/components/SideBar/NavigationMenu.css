@@ -1,0 +1,42 @@
+.fullscreen-toggle {
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  cursor: pointer;
+  z-index: 9;
+}
+
+#navigation {
+  @space padding-bottom 50px;
+  @space width 370px desktop_lg/desktop_xl;
+  @space width 330px ipad_portrait/ipad_landscape/desktop_md;
+  @space width 330px $mobile;
+
+  @space padding-x sm;
+  position: fixed;
+  background-color: #fdf8f7;
+
+  flex-shrink: 0;
+  flex-grow: 0;
+  overflow-y: auto;
+  height: 100vh;
+
+  #navigation-content {
+    @space padding-bottom md;
+    @space padding-top sm;
+  }
+
+  nav {
+    position: relative;
+
+    .nav-circle {
+      position: absolute;
+      background-image: url("data:image/svg+xml, %3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='12' cy='12' r='11.5' stroke='%230047FF'/%3E%3C/svg%3E%0A");
+      width: 24px;
+      height: 24px;
+      opacity: 0;
+      margin-top: 6px;
+      margin-left: -37px;
+    }
+  }
+}

@@ -3,7 +3,6 @@ defmodule Brando.DatasourcesTest do
   use Brando.ConnCase
 
   alias Brando.Factory
-  alias Brando.Villain
 
   @dummy_module %{
     code: """
@@ -13,23 +12,23 @@ defmodule Brando.DatasourcesTest do
     help_text: "Help text",
     refs: [
       %{
-        "name" => "p",
-        "data" => %{
-          "type" => "text",
-          "data" => %{
-            "text" => "<p>Hello world</p>"
+        name: "p",
+        data: %{
+          type: "text",
+          data: %{
+            text: "<p>Hello world</p>"
           }
         }
       },
       %{
-        "name" => "ds",
-        "data" => %{
-          "type" => "datasource",
-          "data" => %{
-            "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-            "type" => "list",
-            "query" => "all_of_them",
-            "code" => """
+        name: "ds",
+        data: %{
+          type: "datasource",
+          data: %{
+            module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+            type: "list",
+            query: "all_of_them",
+            code: """
             {% for entry in entries %}
             <li>{{ entry.name }}</li>
             {% endfor %}
@@ -44,18 +43,18 @@ defmodule Brando.DatasourcesTest do
 
   @data_root_level_datasource [
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     },
     %{
-      "type" => "datasource",
-      "data" => %{
-        "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-        "type" => "list",
-        "query" => "all_of_them",
-        "code" => """
+      type: "datasource",
+      data: %{
+        module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+        type: "list",
+        query: "all_of_them",
+        code: """
         {% for entry in entries %}
         <li>{{ entry.name }}</li>
         {% endfor %}
@@ -63,67 +62,24 @@ defmodule Brando.DatasourcesTest do
       }
     },
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     }
   ]
 
   @data_no_datasource [
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     },
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
-      }
-    }
-  ]
-
-  @data_contained_datasource [
-    %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
-      }
-    },
-    %{
-      "type" => "container",
-      "data" => %{
-        "class" => "test",
-        "wrapper" => "",
-        "blocks" => [
-          %{
-            "type" => "text",
-            "data" => %{
-              "text" => "<p>Hello world</p>"
-            }
-          },
-          %{
-            "type" => "datasource",
-            "data" => %{
-              "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-              "type" => "list",
-              "query" => "all_of_them",
-              "code" => """
-              {% for entry in entries %}
-              <li>{{ entry.name }}</li>
-              {% endfor %}
-              """
-            }
-          }
-        ]
-      }
-    },
-    %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     }
   ]
@@ -160,9 +116,27 @@ defmodule Brando.DatasourcesTest do
         end,
         fn _, ids ->
           all = [
-            %{id: 1, name: "The actual entry"},
-            %{id: 2, name: "The actual entry 2"},
-            %{id: 3, name: "The actual entry 3"}
+            %Brando.Pages.Page{
+              id: 1,
+              status: :draft,
+              uri: "test1",
+              language: "en",
+              title: "The actual entry"
+            },
+            %Brando.Pages.Page{
+              id: 2,
+              status: :published,
+              uri: "test2",
+              language: "en",
+              title: "The actual entry 2"
+            },
+            %Brando.Pages.Page{
+              id: 3,
+              status: :published,
+              uri: "test3",
+              language: "en",
+              title: "The actual entry 3"
+            }
           ]
 
           {:ok, Enum.filter(all, &(&1.id in ids)) |> Enum.reverse()}
@@ -211,8 +185,24 @@ defmodule Brando.DatasourcesTest do
     get_result =
       {:ok,
        [
-         %{id: 3, name: "The actual entry 3"},
-         %{id: 1, name: "The actual entry"}
+         %Brando.Content.Identifier{
+           id: 3,
+           status: :published,
+           title: "The actual entry 3 [en]",
+           absolute_url: "/test3",
+           cover: nil,
+           schema: Brando.Pages.Page,
+           type: "Page"
+         },
+         %Brando.Content.Identifier{
+           id: 1,
+           status: :draft,
+           title: "The actual entry [en]",
+           absolute_url: "/test1",
+           cover: nil,
+           schema: Brando.Pages.Page,
+           type: "Page"
+         }
        ]}
 
     assert Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1]) == get_result
@@ -221,12 +211,12 @@ defmodule Brando.DatasourcesTest do
   test "update_datasource" do
     data = [
       %{
-        "type" => "datasource",
-        "data" => %{
-          "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-          "type" => "list",
-          "query" => "all_of_them",
-          "code" => """
+        type: "datasource",
+        data: %{
+          module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+          type: "list",
+          query: "all_of_them",
+          code: """
           {% for entry in entries %}
           <li>{{ entry.name }}</li>
           {% endfor %}
@@ -253,38 +243,38 @@ defmodule Brando.DatasourcesTest do
     data_field = :data
 
     user = Factory.insert(:random_user)
-    {:ok, module} = Villain.create_module(@dummy_module, user)
+    {:ok, module} = Brando.Content.create_module(@dummy_module, user)
 
     data_refed_datasource = [
       %{
-        "type" => "text",
-        "data" => %{
-          "text" => "<p>Hello world</p>"
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
         }
       },
       %{
-        "type" => "module",
-        "data" => %{
-          "id" => module.id,
-          "refs" => [
+        type: "module",
+        data: %{
+          module_id: module.id,
+          refs: [
             %{
-              "name" => "p",
-              "data" => %{
-                "type" => "text",
-                "data" => %{
-                  "text" => "<p>Hello world</p>"
+              name: "p",
+              data: %{
+                type: "text",
+                data: %{
+                  text: "<p>Hello world</p>"
                 }
               }
             },
             %{
-              "name" => "ds",
-              "data" => %{
-                "type" => "datasource",
-                "data" => %{
-                  "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-                  "type" => "list",
-                  "query" => "all_of_them",
-                  "code" => """
+              name: "ds",
+              data: %{
+                type: "datasource",
+                data: %{
+                  module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+                  type: "list",
+                  query: "all_of_them",
+                  code: """
                   {% for entry in entries %}
                   <li>{{ entry.name }}</li>
                   {% endfor %}
@@ -296,9 +286,65 @@ defmodule Brando.DatasourcesTest do
         }
       },
       %{
-        "type" => "text",
-        "data" => %{
-          "text" => "<p>Hello world</p>"
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
+        }
+      }
+    ]
+
+    palette_params = %{
+      name: "green",
+      key: "green",
+      namespace: "general",
+      instructions: "help",
+      colors: [
+        %{name: "Background color", key: "color_bg", hex_value: "#000000"},
+        %{name: "Foreground color", key: "color_fg", hex_value: "#FFFFFF"},
+        %{name: "Accent color", key: "color_accent", hex_value: "#FF00FF"}
+      ]
+    }
+
+    {:ok, palette} = Brando.Content.create_palette(palette_params, user)
+
+    data_contained_datasource = [
+      %{
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
+        }
+      },
+      %{
+        type: "container",
+        data: %{
+          palette_id: palette.id,
+          blocks: [
+            %{
+              type: "text",
+              data: %{
+                text: "<p>Hello world</p>"
+              }
+            },
+            %{
+              type: "datasource",
+              data: %{
+                module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+                type: "list",
+                query: "all_of_them",
+                code: """
+                {% for entry in entries %}
+                <li>{{ entry.name }}</li>
+                {% endfor %}
+                """
+              }
+            }
+          ]
+        }
+      },
+      %{
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
         }
       }
     ]
@@ -310,7 +356,7 @@ defmodule Brando.DatasourcesTest do
     page_params = Factory.params_for(:page, data: data_refed_datasource)
     {:ok, page_with_refed_datasource} = Brando.Pages.create_page(page_params, user)
 
-    page_params = Factory.params_for(:page, data: @data_contained_datasource)
+    page_params = Factory.params_for(:page, data: data_contained_datasource)
     {:ok, page_with_contained_datasource} = Brando.Pages.create_page(page_params, user)
 
     page_params = Factory.params_for(:page, data: @data_no_datasource)

@@ -1,0 +1,57 @@
+.module-block {
+  .important-vars {
+    @color bg peach;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+
+    .field-wrapper {
+      @space margin-bottom 1;
+    }
+
+    .tiptap-wrapper {
+      @color bg white;
+    }
+
+    input.text, textarea.text {
+      @color bg white;
+      @color fg dark;
+      @fontsize sm;
+
+      &::placeholder {
+        @fontsize sm;
+      }
+    }
+  }
+
+  .modal-content {
+    .var, .ref {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      align-items: center;
+
+      .key {
+        @font mono;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.module-entries {
+  padding: 1rem;
+  background-color: gold;
+  margin-bottom: 1rem;
+
+  .add-module-entry {
+    @font mono;
+    @fontsize 16px;
+
+    width: 100%;
+    border: none;
+    background-color: white;
+    border-radius: 35px;
+    padding: 1rem;
+  }
+}

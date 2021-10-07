@@ -6,10 +6,10 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       remove :title
       remove :status
       remove :slug
-      remove :cover
-      remove :meta_image
       remove :meta_description
       remove :meta_title
+      remove :cover
+      remove :meta_image
       remove :properties
       remove :more_properties
       remove :creator_id
@@ -23,10 +23,10 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       add :title, :text
       add :status, :integer
       add :slug, :text
-      add :cover, :jsonb
-      add :meta_image, :jsonb
       add :meta_description, :text
       add :meta_title, :text
+      add :cover, :jsonb
+      add :meta_image, :jsonb
       add :properties, :jsonb
       add :more_properties, :jsonb
       add :creator_id, references(:users)

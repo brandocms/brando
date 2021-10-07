@@ -1,4 +1,8 @@
 defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
+  @moduledoc """
+  Blueprint for <%= schema %>
+  """
+
   use Brando.Blueprint,
     application: "<%= app_module %>",
     domain: "<%= domain %>",
@@ -6,7 +10,7 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
     singular: "<%= Recase.to_snake(schema) %>",
     plural: "<%= Recase.to_snake(schema) %>s"
 
-  import Brando.Gettext
+  # import <%= app_module %>Admin.Gettext
 
   # trait Brando.Trait.Creator
   # trait Brando.Trait.Meta
@@ -26,5 +30,12 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   end
 
   relations do
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("<%= Recase.to_snake(schema) %>")
+      translate :plural, t("<%= Recase.to_snake(schema) %>s")
+    end
   end
 end

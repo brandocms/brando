@@ -4,9 +4,9 @@ defmodule Brando.Images.Processing do
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.Images
+  alias Brando.Images.Focal
   alias Brando.Images.Operations
-  alias Brando.Progress
-  alias Brando.Type
+  alias BrandoAdmin.Progress
   alias Brando.Upload
   alias Brando.Users.User
   alias Ecto.Changeset
@@ -15,20 +15,17 @@ defmodule Brando.Images.Processing do
   @type id :: binary | integer
   @type image_schema :: Image.t()
   @type image_series_schema :: ImageSeries.t()
-  @type image_type_struct :: Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
   @type upload :: Upload.t()
   @type user :: User.t()
 
-  @default_focal %{x: 50, y: 50}
+  @default_focal %Focal{x: 50, y: 50}
 
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_type_struct(upload, user, extra_params :: any) ::
-          {:error, {:create_image_type_struct, any}} | {:ok, image_type_struct}
   def create_image_type_struct(
-        %Upload{plug: %{uploaded_file: file}, cfg: cfg},
+        %Upload{upload_entry: %{uploaded_file: file}, cfg: cfg},
         user,
         extra_params \\ %{}
       ) do
@@ -44,7 +41,7 @@ defmodule Brando.Images.Processing do
         dominant_color = Images.Operations.Info.get_dominant_color(new_path)
 
         {:ok,
-         %Type.Image{
+         %Images.Image{
            path: new_path,
            width: width,
            height: height,
@@ -55,7 +52,7 @@ defmodule Brando.Images.Processing do
          }}
 
       {:error, _} ->
-        Progress.hide_progress(user)
+        Progress.hide(user)
         {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
     end
   end
@@ -147,13 +144,7 @@ defmodule Brando.Images.Processing do
   def recreate_sizes_for_image_field(schema, field_name, user) do
     rows = Brando.repo().all(schema)
 
-    #! TODO Remove when moving to blueprints
-    {:ok, cfg} =
-      if {:__blueprint__, 0} in schema.__info__(:functions) do
-        {:ok, schema.__attribute_opts__(field_name)}
-      else
-        schema.get_image_cfg(field_name)
-      end
+    %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     operations =
       Enum.flat_map(rows, fn row ->
@@ -167,7 +158,7 @@ defmodule Brando.Images.Processing do
               img_field,
               cfg,
               row.id,
-              user.id
+              user
             )
 
           operations
@@ -176,7 +167,7 @@ defmodule Brando.Images.Processing do
         end
       end)
 
-    {:ok, operation_results} = Operations.perform(operations, user.id)
+    {:ok, operation_results} = Operations.perform(operations, user)
 
     for result <- operation_results do
       rows
@@ -205,13 +196,7 @@ defmodule Brando.Images.Processing do
 
     schema = changeset.data.__struct__
 
-    #! TODO Remove when moving to blueprints
-    {:ok, cfg} =
-      if {:__blueprint__, 0} in schema.__info__(:functions) do
-        {:ok, schema.__attribute_opts__(field_name)}
-      else
-        schema.get_image_cfg(field_name)
-      end
+    %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     with {:ok, operations} <- Operations.create(image_struct, cfg, nil, user),
          {:ok, results} <- Operations.perform(operations, user) do
@@ -220,7 +205,7 @@ defmodule Brando.Images.Processing do
         |> List.first()
         |> Map.get(:image_struct)
 
-      updated_changeset = Changeset.put_change(changeset, field_name, updated_image_struct)
+      updated_changeset = Changeset.put_embed(changeset, field_name, updated_image_struct)
 
       {:ok, updated_changeset}
     else

@@ -1,27 +1,46 @@
 defmodule Brando.Villain.Tags.Picture do
   @moduledoc """
+  {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.regular', prefix: 'media' } %}
   """
+  @behaviour Liquex.Tag
+
   import NimbleParsec
-  alias Liquex.Parser.Base
+  alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
   alias Liquex.Parser.Object
 
-  # {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.regular', prefix: 'media' } %}
-
-  def picture_tag(combinator \\ empty()) do
-    combinator
-    |> ignore(Tag.open_tag())
+  @impl true
+  def parse() do
+    ignore(Tag.open_tag())
     |> ignore(string("picture"))
     |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Literal.argument(), :source)
+    |> unwrap_and_tag(Argument.argument(), :source)
     |> ignore(Literal.whitespace())
     |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())
-    |> tag(:picture_tag)
   end
 
-  def braced_args(combinator \\ empty()) do
+  @impl true
+  def render([source: source, args: args], context) do
+    evaled_source = Liquex.Argument.eval(source, context)
+
+    evaled_args =
+      args
+      |> Enum.map(fn arg ->
+        {key, val} = Liquex.Argument.eval(arg, context)
+        {String.to_existing_atom(key), val}
+      end)
+
+    html =
+      evaled_source
+      |> Brando.HTML.Images.picture_tag(evaled_args)
+      |> Phoenix.HTML.safe_to_string()
+
+    {[html], context}
+  end
+
+  defp braced_args(combinator \\ empty()) do
     combinator
     |> ignore(string("{ "))
     |> repeat(
@@ -29,11 +48,5 @@ defmodule Brando.Villain.Tags.Picture do
       |> Object.arguments()
     )
     |> ignore(string(" }"))
-  end
-
-  def element(combinator \\ empty()) do
-    # Add the `custom_tag/1` parsing function to the supported element tag list
-    combinator
-    |> choice([picture_tag(), Base.base_element()])
   end
 end

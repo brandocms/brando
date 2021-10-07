@@ -4,7 +4,8 @@ defmodule Brando.Sites.Preview do
     domain: "Sites",
     schema: "Preview",
     singular: "preview",
-    plural: "previews"
+    plural: "previews",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

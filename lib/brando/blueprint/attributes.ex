@@ -34,6 +34,9 @@ defmodule Brando.Blueprint.Attributes do
 
   @valid_attributes [
     {:array, :map},
+    {:array, :id},
+    {:array, :integer},
+    {:array, :string},
     :array,
     :boolean,
     :date,
@@ -43,8 +46,7 @@ defmodule Brando.Blueprint.Attributes do
     :decimal,
     :file,
     :float,
-    :gallery,
-    :image,
+    :id,
     :integer,
     :language,
     :map,
@@ -55,11 +57,11 @@ defmodule Brando.Blueprint.Attributes do
     :time,
     :timestamp,
     :uuid,
-    :video,
     :villain
   ]
   def validate_attr!(type) when type in @valid_attributes, do: true
   def validate_attr!({:__aliases__, _, _}), do: true
+  def validate_attr!({:array, {:__aliases__, _, _}}), do: true
 
   def validate_attr!(type),
     do: raise("Unknown type `#{inspect(type)}` given in blueprint")
@@ -92,30 +94,6 @@ defmodule Brando.Blueprint.Attributes do
     }
   end
 
-  def build_attr(name, :file, opts) do
-    %Attribute{
-      name: name,
-      type: :file,
-      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.FileConfig)
-    }
-  end
-
-  def build_attr(name, :image, :db) do
-    %Attribute{
-      name: name,
-      type: :image,
-      opts: %{db: true, required: true}
-    }
-  end
-
-  def build_attr(name, :image, opts) do
-    %Attribute{
-      name: name,
-      type: :image,
-      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.ImageConfig)
-    }
-  end
-
   def build_attr(name, type, opts) do
     %Attribute{
       name: name,
@@ -130,6 +108,7 @@ defmodule Brando.Blueprint.Attributes do
 
   defp attributes(_caller, block) do
     quote generated: true, location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :attributes)
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       unquote(block)
     end
@@ -152,4 +131,10 @@ defmodule Brando.Blueprint.Attributes do
       Module.put_attribute(__MODULE__, :attrs, attr)
     end
   end
+
+  def maybe_add_marked_as_deleted_attribute(true) do
+    [build_attr(:marked_as_deleted, :boolean, default: false, virtual: true)]
+  end
+
+  def maybe_add_marked_as_deleted_attribute(_), do: []
 end

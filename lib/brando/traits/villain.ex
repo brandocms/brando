@@ -10,7 +10,8 @@ defmodule Brando.Trait.Villain do
   @type changeset :: Changeset.t()
   @type config :: list()
 
-  def trait_attributes(attributes, _relations) do
+  @impl true
+  def trait_attributes(attributes, _assets, _relations) do
     attributes
     |> Enum.filter(&(&1.type == :villain))
     |> Enum.map(fn
@@ -26,6 +27,7 @@ defmodule Brando.Trait.Villain do
     end)
   end
 
+  @impl true
   def validate(module, _config) do
     if module.__villain_fields__ == [] do
       raise ConfigError,
@@ -42,12 +44,28 @@ defmodule Brando.Trait.Villain do
   end
 
   @doc """
-  Add creator to changeset
+  Generate HTML
   """
-  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(module, _config, %{valid?: true} = changeset, _user) do
-    Enum.reduce(module.__villain_fields__(), changeset, fn vf, mutated_changeset ->
-      Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+  @impl true
+  def changeset_mutator(module, _config, changeset, _user, skip_villain: true) do
+    cast_poly(changeset, module.__villain_fields__())
+  end
+
+  def changeset_mutator(module, _config, changeset, _user, _opts) do
+    case cast_poly(changeset, module.__villain_fields__()) do
+      %{valid?: true} = casted_changeset ->
+        Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+          Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+        end)
+
+      casted_changeset ->
+        casted_changeset
+    end
+  end
+
+  defp cast_poly(changeset, villain_fields) do
+    Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
+      PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
     end)
   end
 end

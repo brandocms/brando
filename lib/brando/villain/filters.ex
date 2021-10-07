@@ -1,5 +1,6 @@
 defmodule Brando.Villain.Filters do
   use Liquex.Filter
+  alias Brando.Utils
 
   @doc """
   Converts `value` timestamp into another date `format`.
@@ -34,28 +35,11 @@ defmodule Brando.Villain.Filters do
 
   # {{ entry.inserted_at | date:"%A","nb_NO" }}
   def date(%DateTime{} = value, format, locale, _) do
-    value
-    |> DateTime.shift_zone!(Brando.timezone())
-    |> Calendar.strftime(format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Utils.Datetime.format_datetime(value, format, locale)
   end
 
   def date(value, format, locale, _) do
-    value
-    |> Calendar.strftime(format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Utils.Datetime.format_datetime(value, format, locale)
   end
 
   def humanize(value, _) do
@@ -70,7 +54,7 @@ defmodule Brando.Villain.Filters do
   It is prefered to use |size:"thumb" instead of this, but keeping these for backwards
   compatibility
   """
-  def large(%Brando.Type.Image{} = img, _) do
+  def large(%Brando.Images.Image{} = img, _) do
     img
     |> Brando.HTML.picture_tag(key: :large, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -82,7 +66,7 @@ defmodule Brando.Villain.Filters do
     |> Phoenix.HTML.safe_to_string()
   end
 
-  def xlarge(%Brando.Type.Image{} = img, _) do
+  def xlarge(%Brando.Images.Image{} = img, _) do
     img
     |> Brando.HTML.picture_tag(key: :xlarge, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -97,7 +81,7 @@ defmodule Brando.Villain.Filters do
   @doc """
   Get sized version of image
   """
-  def size(%Brando.Type.Image{} = img, size, _) do
+  def size(%Brando.Images.Image{} = img, size, _) do
     img
     |> Brando.HTML.picture_tag(key: size, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -114,7 +98,8 @@ defmodule Brando.Villain.Filters do
 
   {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
   """
-  def srcset(%Brando.Type.Image{} = img, srcset, _) do
+  def srcset(%struct_type{} = img, srcset, _)
+      when struct_type in [Brando.Images.Image] do
     img
     |> Brando.HTML.picture_tag(
       placeholder: :svg,
@@ -144,25 +129,11 @@ defmodule Brando.Villain.Filters do
   """
   def publish_date(%{publish_at: publish_at}, format, locale, _)
       when not is_nil(publish_at) do
-    Calendar.strftime(publish_at, format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Utils.Datetime.format_datetime(publish_at, format, locale)
   end
 
   def publish_date(%{inserted_at: inserted_at}, format, locale, _) do
-    Calendar.strftime(inserted_at, format,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
-    )
+    Utils.Datetime.format_datetime(inserted_at, format, locale)
   end
 
   @doc """
@@ -172,10 +143,18 @@ defmodule Brando.Villain.Filters do
     schema.__absolute_url__(entry)
   end
 
+  def schema(%{__struct__: schema}, _) do
+    to_string(schema)
+  end
+
+  def schema(_, _) do
+    nil
+  end
+
   @doc """
   Get src of image
   """
-  def src(%Brando.Type.Image{} = img, size, _) do
+  def src(%Brando.Images.Image{} = img, size, _) do
     Brando.Utils.img_url(img, size, prefix: Brando.Utils.media_url())
   end
 
@@ -191,23 +170,11 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Lexer.Filter.markdown("this is a **string**", %{}) |> String.trim("\\n")
       "<p>this is a <strong>string</strong></p>"
   """
-  def markdown(%Brando.Sites.Global{data: %{"value" => str}}, opts), do: markdown(str, opts)
+  def markdown(%{value: str}, opts), do: markdown(str, opts)
 
   def markdown(str, _) when is_binary(str) do
     str
     |> Brando.HTML.render_markdown()
     |> Phoenix.HTML.safe_to_string()
-  end
-
-  def get_month_name(month, locale) do
-    Gettext.with_locale(locale, fn ->
-      Gettext.dgettext(Brando.Gettext, "months", "month_#{month}")
-    end)
-  end
-
-  def get_day_name(day, locale) do
-    Gettext.with_locale(locale, fn ->
-      Gettext.dgettext(Brando.Gettext, "days", "day_#{day}")
-    end)
   end
 end

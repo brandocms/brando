@@ -5,9 +5,9 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
     alter table(:projects) do
       add :summary, :text
       add :unique_hash, :text
-      add :meta_image, :jsonb
       add :meta_description, :text
       add :meta_title, :text
+      add :meta_image, :jsonb
       add :more_properties, :jsonb
       remove :deleted_at
     end
@@ -19,9 +19,9 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
     alter table(:projects) do
       remove :summary
       remove :unique_hash
-      remove :meta_image
       remove :meta_description
       remove :meta_title
+      remove :meta_image
       remove :more_properties
       add :deleted_at, :utc_datetime
     end

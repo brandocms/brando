@@ -1,1 +1,1 @@
-module.exports = require('brandojs/europa.config.js')
+module.exports = require('../../../../brando/assets/europa.config.js')

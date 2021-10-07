@@ -1,23 +1,17 @@
-import Vue from 'vue'
-import VueBrando from 'brandojs'
+import { Events } from '@brandocms/jupiter'
+import { buildApplication, brandoHooks, initializeLiveSocket } from '@brandocms/brandojs'
 
-import Admin from 'brandojs/src/Admin'
-import router from 'brandojs/src/router'
-import routes from './routes'
-import menuSections from './menus'
-import i18n from 'brandojs/src/i18n'
-import app from './config'
+// Build Brando application
+const app = buildApplication()
 
-import './styles/blocks.pcss'
+// Add your custom hooks here
+const hooks = {}
 
-Vue.use(VueBrando, { app, menuSections })
+app.registerCallback(Events.APPLICATION_READY, () => initializeLiveSocket({...hooks, ...brandoHooks(app)}))
 
-new Vue({
-  router,
-  i18n,
-  data: { ready: false },
-  created() {
-    routes.forEach(r => this.$router.addRoute(r))
-  },
-  render: h => h(Admin)
-}).$mount('#app')
+// trigger ready state
+if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
+  app.initialize()
+} else {
+  document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
+}

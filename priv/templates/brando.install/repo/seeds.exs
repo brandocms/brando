@@ -95,48 +95,46 @@ user = <%= application_module %>.Repo.insert!(user)
 }
 |> <%= application_module %>.Repo.insert!()
 
-example_module =
-  %Brando.Villain.Module{
-    class: "example",
-    code:
-      "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
-    help_text: "Used for the introduction page",
-    multi: false,
-    name: "Example module",
-    namespace: "general",
-    refs: [
-      %{
-        "data" => %{
-          "data" => %{
-            "class" => nil,
-            "id" => nil,
-            "level" => 1,
-            "text" => "Heading"
-          },
-          "type" => "header"
+example_module = %Brando.Content.Module{
+  class: "example",
+  code:
+    "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
+  help_text: "Used for the introduction page",
+  multi: false,
+  name: "Example module",
+  namespace: "general",
+  refs: [
+    %Brando.Content.Module.Ref{
+      data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
+        data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
+          class: nil,
+          id: nil,
+          level: 1,
+          text: "Heading"
         },
-        "description" => "",
-        "name" => "h1"
+        type: "header"
       },
-      %{
-        "data" => %{
-          "data" => %{
-            "extensions" => [],
-            "text" => "Text",
-            "type" => "paragraph"
-          },
-          "type" => "text"
+      description: "",
+      name: "h1"
+    },
+    %Brando.Content.Module.Ref{
+      data: %Brando.Blueprint.Villain.Blocks.TextBlock{
+        data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+          extensions: [],
+          text: "Text",
+          type: "paragraph"
         },
-        "description" => "",
-        "name" => "p"
-      }
-    ],
-    sequence: 0,
-    svg: nil,
-    vars: %{},
-    wrapper: nil
-  }
-  |> <%= application_module %>.Repo.insert!()
+        type: "text"
+      },
+      description: "",
+      name: "p"
+    }
+  ],
+  sequence: 0,
+  svg: nil,
+  vars: [],
+  wrapper: nil
+}
 
 post_category = %Brando.ImageCategory{
   creator_id: user.id,
@@ -172,44 +170,43 @@ page = %Brando.Pages.Page{
   creator_id: user.id,
   css_classes: nil,
   data: [
-    %{
-      "data" => %{
-        "deleted_at" => nil,
-        "id" => example_module.id,
-        "multi" => false,
-        "refs" => [
-          %{
-            "data" => %{
-              "data" => %{
-                "class" => nil,
-                "id" => nil,
-                "level" => 1,
-                "text" => "Welcome to Brando!"
+    %Brando.Blueprint.Villain.Blocks.ModuleBlock{
+      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+        module_id: example_module.id,
+        multi: false,
+        refs: [
+          %Brando.Content.Module.Ref{
+            data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
+              data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
+                class: nil,
+                id: nil,
+                level: 1,
+                text: "Welcome to Brando!"
               },
-              "type" => "header"
+              type: "header"
             },
-            "description" => "",
-            "name" => "h1"
+            description: "",
+            name: "h1"
           },
-          %{
-            "data" => %{
-              "data" => %{
-                "extensions" => [],
-                "text" =>
+          %Brando.Content.Module.Ref{
+            data: %Brando.Blueprint.Villain.Blocks.TextBlock{
+              data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+                extensions: [],
+                text:
                   "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>",
-                "type" => "paragraph"
+                type: "paragraph"
               },
-              "type" => "text"
+              type: "text"
             },
-            "description" => "",
-            "name" => "p"
+            description: "",
+            name: "p"
           }
         ],
-        "sequence" => 0,
-        "vars" => %{}
+        sequence: 0,
+        vars: []
       },
-      "type" => "module",
-      "uid" => "KMDHFWOUSTVCR"
+      type: "module",
+      uid: "KMDHFWOUSTVCR"
     }
   ],
   deleted_at: nil,
@@ -236,9 +233,12 @@ footer_fragment = %Brando.Pages.Fragment{
   language: :en,
   html: "<p>(c) BrandoCMS — all rights reserved</p>",
   data: [
-    %{
-      "data" => %{"text" => "(c) BrandoCMS — all rights reserved", "type" => "paragraph"},
-      "type" => "text"
+    %Brando.Blueprint.Villain.Blocks.TextBlock{
+      data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+        text: "(c) BrandoCMS — all rights reserved",
+        type: "paragraph"
+      },
+      type: "text"
     }
   ],
   page_id: p1.id,

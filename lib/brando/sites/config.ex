@@ -4,7 +4,8 @@ defmodule Brando.ConfigEntry do
     domain: "Sites",
     schema: "Config",
     singular: "config",
-    plural: "configs"
+    plural: "configs",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   identifier "{{ entry.key }}"

@@ -1,6 +1,0 @@
-#import "./<%= String.upcase(singular) %>_FRAGMENT.graphql"
-query <%= Recase.to_pascal(vue_singular) %>($matches: <%= Recase.to_pascal(vue_singular) %>Matches, $status: String, $revision: ID) {
-  <%= vue_singular %>(matches: $matches, status: $status, revision: $revision) {
-    ...<%= vue_singular %>
-  }
-}

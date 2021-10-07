@@ -1,4 +1,5 @@
 # Logger.configure(level: :debug)
+:erlang.system_flag(:backtrace_depth, 30)
 
 # Clear tmp dir
 File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
@@ -37,6 +38,10 @@ defmodule BrandoIntegrationWeb.Gettext do
   use Gettext, otp_app: :brando, priv: "priv/gettext/frontend"
 end
 
+defmodule BrandoIntegrationAdmin.Gettext do
+  use Gettext, otp_app: :brando, priv: "priv/gettext/backend"
+end
+
 defmodule Brando.Villain.ParserTest.Parser do
   use Brando.Villain.Parser
 end
@@ -71,7 +76,7 @@ end
 defmodule BrandoIntegration.Authorization do
   use Brando.Authorization
 
-  types [{"User", Brando.Users.User}]
+  types([{"User", Brando.Users.User}])
 
   # Rules for :superuser
   rules :superuser do
@@ -86,7 +91,6 @@ defmodule BrandoIntegration.AdminSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "admin", BrandoIntegration.AdminChannel
   channel "user:*", Brando.UserChannel
   channel "live_preview:*", Brando.LivePreviewChannel
 
@@ -115,29 +119,6 @@ defmodule BrandoIntegration.AdminSocket do
   # Returning `nil` makes this socket anonymous.
   @impl true
   def id(_socket), do: nil
-end
-
-defmodule BrandoIntegration.AdminChannel do
-  @moduledoc """
-  Administration control channel
-  """
-
-  use Phoenix.Channel
-  use Brando.Mixin.Channels.AdminChannelMixin
-
-  # ++imports
-  use Brando.Sequence.Channel
-  # __imports
-
-  # ++macros
-  # __macros
-
-  # ++functions
-  # __functions
-
-  # def handle_in("domain:action", %{"params" => params}, socket) do
-  #   {:reply, {:ok, %{code: 200, params: params}}, socket}
-  # end
 end
 
 defmodule BrandoIntegration.Processor.Commands do
@@ -196,27 +177,9 @@ defmodule BrandoIntegration.TestCase do
   end
 end
 
-defmodule BrandoIntegration.Guardian do
-  def encode_and_sign(user) do
-    {:ok, "user:#{user.id}", %{}}
-  end
-
-  def decode_and_verify(jwt) do
-    {:ok, jwt}
-  end
-
-  def resource_from_claims("user:" <> id) do
-    Brando.Users.get_user(id)
-  end
-
-  def revoke(token) do
-    token
-  end
-end
-
 defmodule BrandoIntegration.ModuleWithDatasource do
   use Brando.Datasource
-  use Brando.Web, :schema
+  use BrandoAdmin, :schema
 
   schema "zapp" do
     field :title, :string
@@ -248,4 +211,4 @@ Brando.Cache.Globals.set()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
-Brando.presence().start_link
+# Brando.presence().start

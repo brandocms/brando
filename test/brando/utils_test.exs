@@ -179,9 +179,9 @@ defmodule Brando.UtilsTest do
              "Wrong size key for img_url function."
 
     assert img_url(img, :thumb) == "images/thumb/file.jpg"
-    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
-    assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
-    assert img_url("", :thumb, default: "default.jpg") == "thumb/default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg") == "default.jpg"
+    assert img_url("", :thumb, default: "default.jpg") == "default.jpg"
 
     assert img_url(img, :thumb, default: "default.jpg", prefix: "prefix") ==
              "prefix/images/thumb/file.jpg"
@@ -231,8 +231,10 @@ defmodule Brando.UtilsTest do
   end
 
   test "get_page_title" do
-    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "Firma | Test"
-    assert get_page_title(%{}) == "Firma | Velkommen!"
+    assert get_page_title(%{assigns: %{language: "en", page_title: "Test"}}) ==
+             "CompanyName | Test"
+
+    assert get_page_title(%{assigns: %{language: "en"}}) == "CompanyName | Welcome!"
   end
 
   test "host_and_media_url" do

@@ -17,7 +17,7 @@ defmodule <%= application_module %>.Authorization do
     {"ImageCategory", Brando.ImageCategory},
     {"Page", Brando.Pages.Page},
     {"Fragment", Brando.Pages.Fragment},
-    {"Module", Brando.Villain.Module},
+    {"Module", Brando.Content.Module},
     {"User", Brando.Users.User}
   ]
 
@@ -39,7 +39,7 @@ defmodule <%= application_module %>.Authorization do
     cannot :manage, "SEO"
     cannot :manage, "Globals"
     cannot :manage, %Brando.Sites.Identity{}
-    cannot :manage, %Brando.Villain.Module{}
+    cannot :manage, %Brando.Content.Module{}
     cannot :manage, %Brando.Users.User{}
     cannot :view, "MenuItem", when: %{to: %{name: "navigation"}}
     cannot :view, "MenuItem", when: %{to: %{name: "config-seo"}}

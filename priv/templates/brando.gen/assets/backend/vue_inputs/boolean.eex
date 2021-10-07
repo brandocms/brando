@@ -1,5 +1,0 @@
-        <KInputToggle
-          v-model="<%= vue_singular %>.<%= k %>"
-          name="<%= vue_singular %>[<%= k %>]"
-          :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
-          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.helpText')" />

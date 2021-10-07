@@ -11,7 +11,9 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   @root_path Path.expand(".")
 
   setup_all do
-    templates_path = Path.join([@project_path, "deps", "brando", "lib", "web", "templates"])
+    templates_path =
+      Path.join([@project_path, "deps", "brando", "lib", "brando_admin", "templates"])
+
     root_path = File.cwd!()
 
     # Clean up
@@ -23,9 +25,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     # Create path for templates
     File.mkdir_p(templates_path)
 
-    # Copy templates into `deps/ashes/templates`
-    # to mimic a real Phoenix application
-    File.cp_r!(Path.join([root_path, "lib", "web", "templates"]), templates_path)
+    File.cp_r!(Path.join([root_path, "lib", "brando_admin", "templates"]), templates_path)
 
     # Move into the project directory to run the generator
     File.cd!(@project_path)

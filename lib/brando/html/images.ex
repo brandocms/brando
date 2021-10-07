@@ -54,7 +54,8 @@ defmodule Brando.HTML.Images do
   @spec picture_tag(map, keyword()) :: {:safe, [...]}
   def picture_tag(image_struct, opts \\ [])
 
-  def picture_tag(%Brando.Type.Image{} = image_struct, opts) do
+  def picture_tag(%struct_type{} = image_struct, opts)
+      when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
       img: [],
       picture: [],
@@ -131,7 +132,7 @@ defmodule Brando.HTML.Images do
         opts
       end
 
-    image_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
+    image_struct = Utils.stringy_struct(Brando.Images.Image, img_map)
     picture_tag(image_struct, opts)
   end
 
@@ -604,23 +605,21 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    #! TODO Remove this when we move to Blueprints completely
-    {:ok, cfg} =
-      if {:get_image_cfg, 1} in mod.__info__(:functions) do
-        apply(mod, :get_image_cfg, [field])
-      else
-        {:ok, apply(mod, :__attribute_opts__, [field])}
-      end
+    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
 
-    #! END
-
-    if !cfg.srcset do
+    if !Map.get(cfg, :srcset) do
       raise ArgumentError,
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end
 
+    list =
+      case cfg.srcset do
+        %{default: list} -> list
+        list when is_list(list) -> list
+      end
+
     srcset_values =
-      for {k, v} <- cfg.srcset do
+      for {k, v} <- list do
         path =
           Utils.img_url(
             image_field,
@@ -649,19 +648,21 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    #! TODO Remove this when we move to Blueprints completely
-    {:ok, cfg} =
-      if {:get_image_cfg, 1} in mod.__info__(:functions) do
-        apply(mod, :get_image_cfg, [field])
-      else
-        {:ok, apply(mod, :__attribute_opts__, [field])}
-      end
+    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
 
-    #! END
+    require Logger
+    Logger.error(inspect(cfg, pretty: true))
+    Logger.error(inspect(cfg.srcset, pretty: true))
 
     if !cfg.srcset do
       raise ArgumentError,
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
+    end
+
+    if !Map.get(cfg.srcset, key) do
+      raise ArgumentError,
+        message:
+          "no `#{inspect(key)}` key set in #{inspect(mod)}'s #{inspect(field)} srcset config"
     end
 
     # check if it is cropped
@@ -702,6 +703,31 @@ defmodule Brando.HTML.Images do
       end
 
     {false, Enum.join(srcset_values, ", ")}
+  end
+
+  # a keyed srcset map, without a key. try to get default
+  def get_srcset(image_field, %{default: srcset}, opts, placeholder) do
+    srcset_values =
+      for {k, v} <- srcset do
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
+        "#{path} #{v}"
+      end
+
+    {false, Enum.join(srcset_values, ", ")}
+  end
+
+  def get_srcset(_, srcset, _, _) when is_map(srcset) do
+    raise """
+    Trying to get srcset from a keyed srcset with no key given and no `default` key in srcset
+
+    #{inspect(srcset, pretty: true)}
+    """
   end
 
   def get_srcset(image_field, srcset, opts, placeholder) do

@@ -1,0 +1,59 @@
+.globals-live {
+  @row 2;
+
+  .categories {
+    @column 5/16;
+
+    h2 {
+      font-size: 12px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    button {
+      @fontsize sm;
+      width: 100%;
+      border: 1px solid theme(colors.dark);
+      padding: 15px;
+
+      &.selected {
+        @color bg dark;
+        @color fg peach;
+      }
+
+      + button {
+        margin-top: -1px;
+      }
+
+      &:first-of-type {
+        border-top-left-radius: 25px;
+        border-top-right-radius: 25px;
+      }
+
+      &:last-of-type {
+        border-bottom-left-radius: 25px;
+        border-bottom-right-radius: 25px;
+      }
+    }
+  }
+
+  .content {
+    @column 11/16;
+
+    h3 {
+      font-size: 22px;
+    }
+
+    .vars {
+      @space margin-top 25px;
+      max-width: 650px;
+
+      .var h2 {
+        font-size: 20px;
+        border-bottom: 2px solid;
+        display: inline-block;
+        margin-bottom: 25px;
+      }
+    }
+  }
+}

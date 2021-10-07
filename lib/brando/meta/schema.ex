@@ -35,7 +35,7 @@ defmodule Brando.Meta.Schema do
     quote do
       Ecto.Schema.field(:meta_title, :string)
       Ecto.Schema.field(:meta_description, :string)
-      Ecto.Schema.field(:meta_image, Brando.Type.Image)
+      Ecto.Schema.embeds_one(:meta_image, Brando.Images.Image, on_replace: :delete)
     end
   end
 

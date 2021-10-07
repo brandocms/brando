@@ -4,18 +4,15 @@ defmodule Brando.Upload do
 
   There are two distinct paths of travel within Brando for file uploading.
 
-    1) `ImageField` and `FileField`.
-        Called from the schema's changeset -> validate_upload
+    1) LiveView uploads for image fields within the Blueprint
 
-    2) `Brando.Image` / `Brando.Portfolio.Image`.
-       Manually initiated from the controller by invoking `check_for_uploads` which is retrieved
-       through `use Brando.Images.Upload`.
+    2) Villain content block uploads
 
   This module contains helper functions for both paths.
   """
-  defstruct plug: nil,
+  defstruct upload_entry: nil,
             cfg: nil,
-            extra_info: nil
+            meta: nil
 
   @type t :: %__MODULE__{}
   @type img_config :: Brando.Type.ImageConfig.t()
@@ -25,26 +22,74 @@ defmodule Brando.Upload do
   import Brando.Gettext
   import Brando.Utils
 
+  alias Brando.Images
+  alias Brando.Images.Focal
+  alias Brando.Images.Image
+  alias Brando.Type.ImageConfig
+  alias Brando.Type.FileConfig
+
   @doc """
   Initiate the upload handling.
-  Checks `plug` for filename, checks mimetype,
-  creates upload path and copies files
+
+  Create an upload struct and preprocess the filename, check mimetype etc
+  and copy the uploaded file to intended target destination
+
+  Finally returns an image struct
   """
-  @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) ::
-          {:ok, t()}
-          | {:error, :empty_filename}
-          | {:error, :content_type, binary, any}
-          | {:error, :mkdir, binary}
-          | {:error, :cp, {binary, binary, binary}}
-  def process_upload(plug, cfg_struct) do
-    with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
+  def handle_upload(meta, upload_entry, cfg) do
+    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
-      {:ok, upload}
+      handle_upload_type(upload)
     end
+  end
+
+  def process_upload(image_struct, cfg, user) do
+    with {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
+         {:ok, results} <- Images.Operations.perform(operations, user) do
+      {:ok,
+       results
+       |> List.first()
+       |> Map.get(:image_struct)}
+    end
+  end
+
+  @doc """
+  Handle upload by type.
+
+  Image or file
+  """
+  def handle_upload_type(%{cfg: %ImageConfig{}} = upload) do
+    media_path = upload.meta.media_path
+
+    media_path
+    |> Images.Utils.media_path()
+    |> Fastimage.size()
+    |> case do
+      {:ok, %{width: width, height: height}} ->
+        dominant_color = Images.Operations.Info.get_dominant_color(media_path)
+
+        {:ok,
+         %Image{
+           path: media_path,
+           width: width,
+           height: height,
+           dominant_color: dominant_color,
+           focal: %Focal{x: 50, y: 50},
+           sizes: %{}
+         }}
+
+      {:error, _} ->
+        # Progress.hide(user)
+        {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
+    end
+  end
+
+  def handle_upload_type(%{cfg: %FileConfig{}} = _upload) do
+    {:ok, nil}
   end
 
   @doc """
@@ -92,36 +137,45 @@ defmodule Brando.Upload do
     {:error, message}
   end
 
-  defp create_upload_struct(plug, cfg_struct) do
-    {:ok, %__MODULE__{plug: plug, cfg: cfg_struct}}
+  def error_to_string(:too_large), do: gettext("File is too large")
+  def error_to_string(:too_many_files), do: gettext("You have selected too many files")
+  def error_to_string(:not_accepted), do: gettext("You have selected an unacceptable file type")
+
+  defp create_upload_struct(meta, upload_entry, cfg_struct) do
+    {:ok, %__MODULE__{meta: meta, upload_entry: upload_entry, cfg: cfg_struct}}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
+  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: ""}}) do
     {:error, :empty_filename}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: filename}, cfg: cfg} = upload) do
+  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
     upload =
       case Map.get(cfg, :random_filename, false) do
-        true -> put_in(upload.plug.filename, random_filename(filename))
-        _ -> put_in(upload.plug.filename, slugify_filename(filename))
+        true ->
+          new_meta = Map.merge(upload.meta, %{filename: random_filename(filename)})
+          put_in(upload.meta, new_meta)
+
+        _ ->
+          new_meta = Map.merge(upload.meta, %{filename: slugify_filename(filename)})
+          put_in(upload.meta, new_meta)
       end
 
     {:ok, upload}
   end
 
-  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
+  defp ensure_correct_ext(%__MODULE__{meta: %{filename: ""}}) do
     {:error, :empty_filename}
   end
 
   # make sure jpeg's extension are jpg to avoid headaches w/sharp-cli
-  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
-    upload = put_in(upload.plug.filename, ensure_correct_extension(filename))
+  defp ensure_correct_ext(%__MODULE__{meta: %{filename: filename}} = upload) do
+    upload = put_in(upload.meta.filename, ensure_correct_extension(filename))
 
     {:ok, upload}
   end
 
-  defp check_mimetype(%__MODULE__{plug: %{content_type: content_type}, cfg: cfg} = upload) do
+  defp check_mimetype(%__MODULE__{upload_entry: %{client_type: content_type}, cfg: cfg} = upload) do
     if content_type in Map.get(cfg, :allowed_mimetypes) do
       {:ok, upload}
     else
@@ -138,7 +192,7 @@ defmodule Brando.Upload do
 
     case File.mkdir_p(upload_path) do
       :ok ->
-        {:ok, put_in(upload.plug, Map.put(upload.plug, :upload_path, upload_path))}
+        {:ok, put_in(upload.meta, Map.put(upload.meta, :upload_path, upload_path))}
 
       {:error, reason} ->
         {:error, :mkdir, reason}
@@ -146,7 +200,10 @@ defmodule Brando.Upload do
   end
 
   defp copy_uploaded_file(
-         %__MODULE__{cfg: cfg, plug: %{filename: fname, path: src, upload_path: ul_path}} = upload
+         %__MODULE__{
+           meta: %{filename: fname, path: src, upload_path: ul_path},
+           cfg: %{upload_path: media_target_path} = cfg
+         } = upload
        ) do
     joined_dest = Path.join(ul_path, fname)
 
@@ -159,7 +216,14 @@ defmodule Brando.Upload do
 
     case File.cp(src, dest, fn _, _ -> cfg.overwrite end) do
       :ok ->
-        {:ok, put_in(upload.plug, Map.put(upload.plug, :uploaded_file, dest))}
+        {:ok,
+         put_in(
+           upload.meta,
+           Map.merge(upload.meta, %{
+             uploaded_file: dest,
+             media_path: Path.join(media_target_path, Path.basename(dest))
+           })
+         )}
 
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}

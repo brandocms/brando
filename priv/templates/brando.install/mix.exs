@@ -10,7 +10,7 @@ defmodule <%= application_module %>.MixProject do
       version: @version,
       elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       test_paths: test_paths(Mix.env()),
       aliases: aliases(),
@@ -48,16 +48,23 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "~> 1.5"},
+      {:phoenix, "~> 1.6.0-rc.0", override: true},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
       {:phoenix_ecto, "~> 4.1"},
-      {:phoenix_html, "~> 2.12"},
+      {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_dashboard, "~> 0.2"},
-      {:ecto_sql, "~> 3.4"},
-      {:telemetry_metrics, "~> 0.4"},
-      {:telemetry_poller, "~> 0.4"},
+      {:phoenix_live_dashboard, "~> 0.5"},
+      {:ecto_sql, "~> 3.6"},
+      {:telemetry, "~> 1.0", override: true},
+      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_poller, "~> 1.0"},
+      # {:exsync, "~> 0.2", only: :dev},
+
+      # live view
+      {:phoenix_live_view, "~> 0.16"},
+      {:surface, "~> 0.5"},
+      {:floki, ">= 0.27.0", only: :test},
 
       # general deps
       {:postgrex, "~> 0.15"},
@@ -65,9 +72,6 @@ defmodule <%= application_module %>.MixProject do
       {:swoosh, "~> 1.0"},
       {:timex, "~> 3.0"},
       {:jason, "~> 1.0"},
-      {:absinthe, "~> 1.6"},
-      {:absinthe_plug, "~> 1.5"},
-      {:dataloader, "~> 1.0"},
       {:ex_machina, "~> 2.3"},
 
       # release management and production tools

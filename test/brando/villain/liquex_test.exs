@@ -6,16 +6,19 @@ defmodule Brando.Villain.LiquexTest do
   test "if statement" do
     Brando.Cache.Globals.set()
 
-    global_category_params = %{
+    global_set_params = %{
       "label" => "System",
       "key" => "system",
+      "language" => "en",
       "globals" => [
-        %{type: "text", label: "Text", key: "text", data: %{"value" => "My text"}},
-        %{type: "boolean", label: "Text", key: "boolean", data: %{"value" => false}}
+        %{type: "text", label: "Text", key: "text", value: "My text"},
+        %{type: "boolean", label: "Text", key: "boolean", value: false}
       ]
     }
 
-    {:ok, _gc1} = Brando.Globals.create_global_category(global_category_params)
+    usr = Factory.insert(:random_user)
+
+    {:ok, _gc1} = Brando.Sites.create_global_set(global_set_params, usr)
 
     context = Brando.Villain.get_base_context()
 
@@ -55,11 +58,8 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
-              [
-                function: "project_path",
-                action: "index"
-              ]}
+             {{:custom_tag, Brando.Villain.Tags.Route},
+              [function: "project_path", action: "index"]}
            ]
 
     # render it
@@ -76,16 +76,16 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
+             {{:custom_tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
-                args: [{:field, [key: "entry", key: "uri"]}]
+                args: [field: [key: "entry", key: "uri"]]
               ]}
            ]
 
     entry = %{uri: "the-uri"}
-    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
+    context = Brando.Villain.get_base_context(entry)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri"
 
@@ -99,16 +99,16 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {:route_tag,
+             {{:custom_tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
-                args: [{:field, [key: "entry", key: "uri"]}, {:field, [key: "entry", key: "id"]}]
+                args: [field: [key: "entry", key: "uri"], field: [key: "entry", key: "id"]]
               ]}
            ]
 
     entry = %{uri: "the-uri", id: 500}
-    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
+    context = Brando.Villain.get_base_context(entry)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri/500"
   end
@@ -122,7 +122,10 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [{:picture_tag, [source: {:field, [key: "entry", key: "cover"]}]}]
+    assert parsed_tpl == [
+             {{:custom_tag, Brando.Villain.Tags.Picture},
+              [source: {:field, [key: "entry", key: "cover"]}]}
+           ]
 
     tpl =
       """
@@ -133,22 +136,24 @@ defmodule Brando.Villain.LiquexTest do
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
     assert parsed_tpl == [
-             picture_tag: [
-               {:source, {:field, [key: "entry", key: "avatar"]}},
-               {:args,
-                [
-                  keyword: ["size", {:literal, "auto"}],
-                  keyword: ["lazyload", {:literal, true}],
-                  keyword: ["srcset", {:literal, "Brando.Users.User:avatar"}]
-                ]}
-             ]
+             {
+               {:custom_tag, Brando.Villain.Tags.Picture},
+               [
+                 source: {:field, [key: "entry", key: "avatar"]},
+                 args: [
+                   keyword: ["size", {:literal, "auto"}],
+                   keyword: ["lazyload", {:literal, true}],
+                   keyword: ["srcset", {:literal, "Brando.Users.User:avatar"}]
+                 ]
+               ]
+             }
            ]
 
     user = Factory.insert(:random_user)
-    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", user)
+    context = Brando.Villain.get_base_context(user)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
 
     assert Enum.join(result) ==
-             "<picture data-orientation=\"landscape\" data-ll-srcset><source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img data-src=\"images/avatars/small/27i97a.jpeg\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" height=\"200\" width=\"300\" data-ll-placeholder data-ll-srcset-image><noscript><img src=\"images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img data-ll-placeholder data-ll-srcset-image data-src=\"images/avatars/small/27i97a.jpeg\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" height=\"200\" width=\"300\"><noscript><img src=\"images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 end

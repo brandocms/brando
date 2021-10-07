@@ -4,7 +4,8 @@ defmodule Brando.Meta do
     domain: "Sites",
     schema: "Meta",
     singular: "meta",
-    plural: "metas"
+    plural: "metas",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   identifier "{{ entry.key }}"

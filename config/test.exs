@@ -4,6 +4,7 @@ use Mix.Config
 # you can enable the server option below.
 config :brando, BrandoIntegrationWeb.Endpoint,
   http: [port: 80],
+  debug_errors: true,
   server: false,
   secret_key_base: "verysecret",
   pubsub_server: BrandoIntegration.PubSub
@@ -36,6 +37,7 @@ config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
 config :brando, :app_module, BrandoIntegration
 config :brando, :web_module, BrandoIntegrationWeb
+config :brando, :admin_module, BrandoIntegrationAdmin
 config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
 config :brando, :log_dir, Path.expand("./tmp/logs")
@@ -43,8 +45,8 @@ config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
-config :brando, :default_language, "no"
-config :brando, :default_admin_language, "no"
+config :brando, :default_language, "en"
+config :brando, :default_admin_language, "en"
 
 config :brando, Oban,
   crontab: false,
@@ -69,5 +71,6 @@ config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 
 config :bcrypt_elixir, log_rounds: 1
 
+config :phoenix, :stacktrace_depth, 30
 # Print only warnings and errors during test
 config :logger, level: :warn

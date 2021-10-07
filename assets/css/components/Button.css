@@ -1,0 +1,241 @@
+a.primary {
+  padding-top: 17px;
+  display: inline-block;
+  font-weight: 400;
+}
+
+button.primary {
+  padding-top: 6px;
+}
+
+button.primary, a.primary {
+  font-size: 18px;
+  color: theme(colors.peach);
+  border: 1px solid theme(colors.blue);
+  background-color: theme(colors.blue);
+  border-radius: 30px;
+  height: 60px;
+  padding-bottom: 6px;
+  padding-left: 25px;
+  padding-right: 25px;
+  min-width: 205px;
+  text-align: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  &[disabled], &:disabled {
+    background-color: #333;
+    border: none;
+  }
+
+  &.dark {
+    background-color: theme(colors.dark);
+    border: 1px solid theme(colors.dark);
+    color: theme(colors.peach);
+
+    &:hover {
+      background-color: black;
+      color: theme(colors.peach);
+    }
+  }
+
+  &.loading {
+    background-color: theme(colors.gray);
+    border: 1px solid theme(colors.gray);
+
+    svg {
+      margin: 0 auto;
+      margin-top: -4px;
+      height: 49px;
+    }
+  }
+
+  &:hover {
+    background-color: theme(colors.dark);
+    border-color: theme(colors.dark);
+  }
+
+  &.small {
+    @extend %btnSmall;
+  }
+
+  .processing {
+    display: flex;
+
+    svg {
+      @space margin-right 10px;
+      path {
+        &:nth-of-type(2) {
+          fill: white;
+        }
+      }
+    }
+  }
+}
+
+a.secondary {
+  padding-top: 14px;
+  display: inline-block;
+}
+
+button.secondary {
+  padding-top: 6px;
+}
+
+%btnSmall {
+  @fontsize sm;
+  padding: 10px 15px;
+  min-width: auto;
+}
+
+a.danger, button.danger {
+  @fontsize button;
+
+  white-space: nowrap;
+  border: none;
+  background-color: #be1010;
+  padding: 15px 25px;
+  color: white;
+  border-radius: 34px;
+
+  min-width: 205px;
+  text-align: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  &.small {
+    @extend %btnSmall;
+  }
+
+  &:first-of-type {
+    @space margin-top 15px;
+  }
+
+  &.fullWidth {
+    min-width: auto;
+  }
+
+  &.narrow {
+    min-width: auto;
+    padding: 15px 18px 16px;
+  }
+
+  &.disabled {
+    color: #aaa;
+  }
+
+  &.fw {
+    width: 100%;
+  }
+
+  &:hover {
+    background-color: theme(colors.dark);
+  }
+}
+
+a.secondary, button.secondary {
+  @fontsize button;
+
+  white-space: nowrap;
+  color: theme(colors.dark);
+  border: 1px solid theme(colors.dark) !important;
+  background-color: transparent;
+  padding: 15px 25px 16px;
+  min-width: 205px;
+  text-align: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  &:first-of-type {
+    @space margin-top 15px;
+  }
+
+  &.small {
+    @extend %btnSmall;
+  }
+
+  &.fullWidth {
+    min-width: auto;
+  }
+
+  &.narrow {
+    min-width: auto;
+    padding: 15px 18px 16px;
+  }
+
+  &.disabled {
+    color: #aaa;
+  }
+
+  &.fw {
+    width: 100%;
+  }
+
+  &:hover {
+    background-color: theme(colors.peach);
+  }
+}
+
+.secondary + .secondary {
+  border-left: none;
+}
+
+button.tiny, a.tiny {
+  @font mono;
+  border-radius: 5px;
+  border: 1px solid theme(colors.dark);
+  color: theme(colors.dark);
+  font-size: 11px;
+  display: inline-block;
+  text-transform: uppercase;
+  padding: 4px 7px 4px;
+  margin-top: -2px;
+  transition: background-color 0.35s ease, color 0.35s ease;
+
+  &.right {
+    margin-left: auto;
+  }
+
+  &.static {
+    position: static;
+  }
+
+  &:hover {
+    background-color: theme(colors.dark);
+    color: theme(colors.peach);
+    path {
+      &:nth-of-type(2) {
+        fill: theme(colors.peach);
+      }
+    }
+  }
+}
+
+.submit-button {
+  @space margin-top 30px;
+}
+
+.add-entry-button {
+  border: 1px solid theme(colors.dark);
+  font-size: 17px;
+  padding: 12px 20px 12px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  margin-top: 15px;
+  transition: background-color 250ms ease, color 250ms ease;
+
+  svg {
+    margin-right: 10px;
+
+    path:nth-of-type(2) {
+      transition: fill 250ms ease;
+      fill: theme(colors.dark);
+    }
+  }
+
+  &:hover {
+    @color bg dark;
+    @color fg peach;
+    svg path:nth-of-type(2) {
+      fill: theme(colors.peach);
+    }
+  }
+}
