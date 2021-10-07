@@ -208,9 +208,13 @@ defmodule Brando.Upload do
     joined_dest = Path.join(ul_path, fname)
 
     dest =
-      (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
+      if cfg.overwrite do
+        joined_dest
+      else
+        (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
+      end
 
-    case File.cp(src, dest, fn _, _ -> false end) do
+    case File.cp(src, dest, fn _, _ -> cfg.overwrite end) do
       :ok ->
         {:ok,
          put_in(

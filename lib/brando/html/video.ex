@@ -73,6 +73,9 @@ defmodule Brando.HTML.Video do
         #{get_play_button(play_button)}
         #{get_video_cover(cover, width, height, opacity)}
         <video
+          #{width && "width=\"#{width}\""}
+          #{height && "height=\"#{height}\""}
+          alt=""
           tabindex="0"
           role="presentation"
           preload="#{(preload && preload) || "none"}"
@@ -86,6 +89,9 @@ defmodule Brando.HTML.Video do
           #{(preload && "") || "src=\"#{src}\""}></video>
         <noscript>
           <video
+            #{width && "width=\"#{width}\""}
+            #{height && "height=\"#{height}\""}
+            alt=""
             tabindex="0"
             role="presentation"
             preload="metadata"

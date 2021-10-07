@@ -19,6 +19,7 @@ defmodule Brando.Type.ImageConfig do
           sizes: %{optional(binary) => map},
           srcset: %{optional(binary) => map} | nil,
           target_format: atom | nil,
+          overwrite: boolean,
           upload_path: binary
         }
 
@@ -30,6 +31,7 @@ defmodule Brando.Type.ImageConfig do
             sizes: %{},
             srcset: nil,
             target_format: nil,
+            overwrite: false,
             upload_path: Path.join("images", "default")
 
   import Brando.Utils, only: [stringy_struct: 2]

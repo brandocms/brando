@@ -72,6 +72,15 @@ defmodule Brando.HTML do
   def replace_csrf_token(html) when is_binary(html),
     do: String.replace(html, "$csrftoken", Plug.CSRFProtection.get_csrf_token())
 
+  def replace_timestamp(html) when is_binary(html) do
+    timestamp =
+      DateTime.utc_now()
+      |> DateTime.to_unix()
+      |> to_string()
+
+    String.replace(html, "$timestamp", timestamp)
+  end
+
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
@@ -365,7 +374,6 @@ defmodule Brando.HTML do
       [
         content_tag(:script, polyfill, type: "module"),
         content_tag(:script, "",
-          defer: true,
           src: modern_route,
           type: "module",
           crossorigin: cdn?

@@ -301,6 +301,7 @@ defmodule Brando.Pages.Page do
       html
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
+      |> Brando.HTML.replace_timestamp()
     end
 
     def to_iodata(_) do
