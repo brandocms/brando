@@ -20,7 +20,7 @@ defmodule Brando.Blueprint.Upload do
     do_validate_upload(changeset, {:file, field_name}, user, cfg)
   end
 
-  # TODO: Clean up this -- check focal if image, maybe upload to CDN etc
+  # TODO: Clean this up -- check focal if image, maybe upload to CDN etc
   defp do_validate_upload(changeset, {_, field_name}, _user, _cfg) do
     case Utils.field_has_changed(changeset, field_name) do
       :unchanged ->
