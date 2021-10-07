@@ -7,7 +7,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@brandocms/brandojs": "file:../../../../brando",
+    "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",
     "@brandocms/jupiter": "^3.42.0"
   },
   "devDependencies": {

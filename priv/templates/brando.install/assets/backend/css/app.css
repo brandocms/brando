@@ -1,1 +1,116 @@
-/* custom styles for admin here */
+.blocks-wrapper {
+  [data-moonwalk],
+  [data-moonwalk-section],
+  [data-moonwalk-run] {
+    opacity: 1 !important;
+    transform: none;
+  }
+}
+
+
+[b-tpl="image | image"] {
+  .inner {
+    @row 2;
+
+    > figure {
+      @column 6/12;
+    }
+  }
+}
+
+[b-tpl="contact info"] {
+  .inner {
+    > .header .header-block textarea {
+      text-align: center;
+    }
+
+    > article {
+      @row 2;
+
+      > section {
+        @column 6/12;
+      }
+    }
+  }
+}
+
+[b-tpl="hiring"] {
+  .inner {
+    > .header .header-block textarea {
+      text-align: center;
+    }
+    
+    > article {
+      @row 2;
+
+      > section {
+        @column 6/12;
+      }
+    }
+  }
+}
+
+[b-tpl="project skip"] {
+  .inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    > a {
+      display: none;
+    }
+
+    > figure {
+      max-width: 500px;
+    }
+  }
+}
+
+[b-tpl="quote"] {
+  .inner { display: none }
+}
+
+[b-tpl="lede"] {
+  .inner {
+    .text-block.lede .ProseMirror p {
+      @fontsize 3vw;
+    }
+  }
+}
+
+[b-tpl="footer"] {
+  .header {
+    .text-block.lede .ProseMirror p {
+      text-align: center;
+      @fontsize 4vw;
+    }
+  }
+
+  .info {
+    @row 3;
+    > section {
+      @column 1/3;
+    }
+  }
+
+  .credits {
+    @row 3;
+    > section {
+      @column 1/3;
+    }
+  }
+}
+
+[b-tpl="image | text"], [b-tpl="text | image"], [b-tpl="image | text / image"], [b-tpl="text / image | image / text"] {
+  .inner {
+    @row 2;
+
+    > figure {
+      @column 6/12;
+    }
+
+    > article {
+      @column 6/12;
+    }
+  }
+}
