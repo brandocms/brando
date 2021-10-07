@@ -98,7 +98,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "render_meta" do
-    mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
+    mock_conn = %Plug.Conn{assigns: %{language: "en"}, private: %{plug_session: %{}}}
 
     html =
       mock_conn

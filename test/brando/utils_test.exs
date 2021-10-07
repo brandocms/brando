@@ -231,8 +231,10 @@ defmodule Brando.UtilsTest do
   end
 
   test "get_page_title" do
-    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "Firma | Test"
-    assert get_page_title(%{}) == "Firma | Velkommen!"
+    assert get_page_title(%{assigns: %{language: "en", page_title: "Test"}}) ==
+             "CompanyName | Test"
+
+    assert get_page_title(%{assigns: %{language: "en"}}) == "CompanyName | Welcome!"
   end
 
   test "host_and_media_url" do

@@ -66,7 +66,13 @@ defmodule Brando.MetaRenderTest do
   end
 
   test "rendered meta" do
-    mock_conn = Brando.Plug.HTML.put_meta(%Plug.Conn{}, Brando.MetaRenderTest.Page, @mock_data)
+    mock_conn =
+      Brando.Plug.HTML.put_meta(
+        %Plug.Conn{assigns: %{language: "en"}},
+        Brando.MetaRenderTest.Page,
+        @mock_data
+      )
+
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==
@@ -81,7 +87,7 @@ defmodule Brando.MetaRenderTest do
              "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     # change identity values
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
 
     {:ok, seo} = Brando.Sites.get_seo()
@@ -92,7 +98,7 @@ defmodule Brando.MetaRenderTest do
     assert safe_to_string(rendered_meta) ==
              "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
 
     {:ok, seo} = Brando.Sites.get_seo()

@@ -159,7 +159,7 @@ defmodule Brando.PagesTest do
 
   test "fetch_fragment non existing" do
     assert Pages.fetch_fragment("non_existing") |> Phoenix.HTML.safe_to_string() ==
-             "<div class=\"page-fragment-missing\">\n             <strong>Missing page fragment</strong> <br />\n             key..: non_existing<br />\n             lang.: no\n           </div>"
+             "<div class=\"page-fragment-missing\">\n             <strong>Missing page fragment</strong> <br />\n             key..: non_existing<br />\n             lang.: en\n           </div>"
   end
 
   test "fetch_fragment" do

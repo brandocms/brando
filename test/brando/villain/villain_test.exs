@@ -538,9 +538,9 @@ defmodule Brando.VillainTest do
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
     assert pf1.html ==
-             "<div class=\"paragraph\">So identity.name says: 'Organisasjonens navn'.</div>"
+             "<div class=\"paragraph\">So identity.name says: 'Organization name'.</div>"
 
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{name: "Eddie Hazel Inc"}, user)
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
@@ -557,7 +557,7 @@ defmodule Brando.VillainTest do
     assert pf1.html ==
              "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com/test'.</div>"
 
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
 
     Brando.Sites.update_identity(
       identity,
@@ -570,7 +570,7 @@ defmodule Brando.VillainTest do
     assert pf2.html ==
              "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com'.</div>"
 
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
 
     Brando.Sites.update_identity(
       identity,
@@ -592,7 +592,7 @@ defmodule Brando.VillainTest do
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     assert pf1.html == "<div class=\"paragraph\">So configs.key1.value says: 'value1'.</div>"
 
-    {:ok, identity} = Brando.Sites.get_identity()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
 
     Brando.Sites.update_identity(
       identity,

@@ -23,37 +23,25 @@ defmodule Brando.Sites do
   #
   # Identity
 
+  query :list, Identity, do: fn query -> from(q in query) end
+
+  filters Identity do
+    fn
+      {:language, language}, query ->
+        from(q in query, where: q.language == ^language)
+    end
+  end
+
   query :single, Identity, do: fn q -> q end
 
   matches Identity do
     fn
       {:id, id}, query ->
         from t in query, where: t.id == ^id
+
+      {:language, language}, query ->
+        from t in query, where: t.language == ^language
     end
-  end
-
-  @doc """
-  Get identity
-  """
-  @spec get_identity() ::
-          {:ok, identity} | {:error, {:identity, :not_found}}
-  def get_identity do
-    case Identity |> first() |> Brando.repo().one do
-      nil ->
-        {:error, {:identity, :not_found}}
-
-      identity ->
-        languages =
-          Enum.map(Brando.config(:languages), fn [value: id, text: name] ->
-            %{id: id, name: name}
-          end)
-
-        {:ok, Map.put(identity, :languages, languages)}
-    end
-  end
-
-  def get_identity(key) when is_binary(key) do
-    Cache.Identity.get(key)
   end
 
   @doc """
@@ -72,23 +60,26 @@ defmodule Brando.Sites do
     end
   end
 
+  mutation :duplicate, {Identity, change_fields: [:name]}
+
   @doc """
   Create default identity
   """
   def create_default_identity do
     %Identity{
-      name: "Organisasjonens navn",
-      alternate_name: "Kortversjon av navnet",
+      name: "Organization name",
+      alternate_name: "Short form",
       email: "mail@domain.tld",
       phone: "+47 00 00 00 00",
       address: "Testveien 1",
       zipcode: "0000",
       city: "Oslo",
       country: "NO",
-      title_prefix: "Firma | ",
-      title: "Velkommen!",
+      title_prefix: "CompanyName | ",
+      title: "Welcome!",
       title_postfix: "",
-      logo: nil
+      logo: nil,
+      language: :en
     }
     |> Brando.repo().insert!
   end

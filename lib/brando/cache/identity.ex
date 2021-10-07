@@ -11,28 +11,43 @@ defmodule Brando.Cache.Identity do
   @doc """
   Get Identity from cache
   """
-  @spec get(binary) :: any
-  def get, do: Cache.get(:identity)
-  def get(key), do: Map.get(get(), key)
+  @spec get(binary()) :: map()
+  def get(language), do: Map.get(Cache.get(:identity), language, %{})
 
   @doc """
   Set initial identity cache. Called on startup
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    {:ok, identity} = Sites.get_identity()
-    Cachex.put(:cache, :identity, identity)
+    {:ok, identities} = Sites.list_identities()
+    identity_map = process_identities(identities)
+    Cachex.put(:cache, :identity, identity_map)
   end
 
   @doc """
-  Update identity cache
+  Update identitys cache
   """
-  @spec update({:ok, identity} | {:error, changeset}) ::
-          {:ok, identity} | {:error, changeset}
-  def update({:ok, updated_identity}) do
-    Cachex.update(:cache, :identity, updated_identity)
-    {:ok, updated_identity}
+  @spec update({:ok, any()} | {:error, changeset}) ::
+          {:ok, map()} | {:error, changeset}
+  def update({:ok, identity}) do
+    {:ok, identities} = Sites.list_identities()
+    identity_map = process_identities(identities)
+    Cachex.update(:cache, :identity, identity_map)
+    {:ok, identity}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
+
+  defp process_identities(identities) do
+    Enum.reduce(identities, %{}, fn
+      %{language: language} = identity, acc ->
+        put_in(
+          acc,
+          [
+            Brando.Utils.access_map(to_string(language))
+          ],
+          identity
+        )
+    end)
+  end
 end

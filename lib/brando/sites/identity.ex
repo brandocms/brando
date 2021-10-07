@@ -10,8 +10,8 @@ defmodule Brando.Sites.Identity do
   import Brando.Gettext
 
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
-  table "sites_identity"
   identifier "{{ entry.name }}"
 
   @logo_cfg [

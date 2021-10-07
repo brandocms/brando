@@ -109,15 +109,15 @@ defmodule Brando.Villain do
   end
 
   defp do_get_base_context(language) do
-    identity = Cache.Identity.get()
+    identity = Cache.Identity.get(language)
     globals = Cache.Globals.get(language)
     navigation = Cache.Navigation.get()
 
     %{}
     |> create_context()
     |> add_to_context("identity", identity)
-    |> add_to_context("configs", identity.configs)
-    |> add_to_context("links", identity.links)
+    |> add_to_context("configs", identity)
+    |> add_to_context("links", identity)
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)
   end
@@ -129,14 +129,22 @@ defmodule Brando.Villain do
     )
   end
 
-  def add_to_context(context, "configs" = key, value) do
-    configs = Enum.map(value, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+  def add_to_context(context, "configs" = key, %{configs: configs}) do
+    configs = Enum.map(configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
     Context.assign(context, key, configs)
   end
 
-  def add_to_context(context, "links" = key, value) do
-    links = Enum.map(value, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+  def add_to_context(context, "configs" = key, _) do
+    Context.assign(context, key, %{})
+  end
+
+  def add_to_context(context, "links" = key, %{links: links}) do
+    links = Enum.map(links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
     Context.assign(context, key, links)
+  end
+
+  def add_to_context(context, "links" = key, _) do
+    Context.assign(context, key, %{})
   end
 
   def add_to_context(context, "globals" = key, global_sets) do

@@ -240,7 +240,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:persons, [:language])
 
-    create table(:sites_identity) do
+    create table(:sites_identities) do
       add :name, :string
       add :alternate_name, :string
       add :email, :string
@@ -258,6 +258,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :image, :jsonb
       add :logo, :jsonb
       add :url, :string
+
+      add :language, :string
 
       add :metas, :jsonb
       add :links, :jsonb

@@ -506,8 +506,8 @@ defmodule Brando.Utils do
   Get title assign from `conn`
   """
   @spec get_page_title(conn) :: binary
-  def get_page_title(%{assigns: %{page_title: title}}) do
-    organization = Cache.get(:identity)
+  def get_page_title(%{assigns: %{page_title: title, language: language}}) do
+    organization = Cache.Identity.get(language)
 
     if organization do
       %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
@@ -517,8 +517,8 @@ defmodule Brando.Utils do
     end
   end
 
-  def get_page_title(_) do
-    organization = Cache.get(:identity)
+  def get_page_title(%{assigns: %{language: language}}) do
+    organization = Cache.Identity.get(language)
 
     if organization do
       %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization

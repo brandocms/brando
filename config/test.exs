@@ -45,8 +45,8 @@ config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
-config :brando, :default_language, "no"
-config :brando, :default_admin_language, "no"
+config :brando, :default_language, "en"
+config :brando, :default_admin_language, "en"
 
 config :brando, Oban,
   crontab: false,

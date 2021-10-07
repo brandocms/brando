@@ -4,13 +4,12 @@ defmodule BrandoAdmin.Sites.IdentityLive do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
 
-  def mount(_params, assigns, socket) do
-    {:ok, identity} = Sites.get_identity()
-
+  def mount(_params, %{"user_token" => token} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:entry_id, identity.id)}
+     |> assign_current_user(token)
+     |> assign_entry_id()}
   end
 
   def render(assigns) do
@@ -26,5 +25,28 @@ defmodule BrandoAdmin.Sites.IdentityLive do
       schema={@schema}
     />
     """
+  end
+
+  defp assign_current_user(socket, token) do
+    assign_new(socket, :current_user, fn ->
+      Brando.Users.get_user_by_session_token(token)
+    end)
+  end
+
+  defp assign_entry_id(
+         %{
+           assigns: %{current_user: %{config: %{content_language: content_language}}}
+         } = socket
+       ) do
+    case Sites.get_identity(%{matches: %{language: content_language}}) do
+      {:ok, identity} ->
+        assign(socket, :entry_id, identity.id)
+
+      {:error, _} ->
+        {:ok, english_identity} = Sites.get_identity(%{matches: %{language: "en"}})
+        {:ok, identity} = Sites.duplicate_identity(english_identity.id, :system)
+        {:ok, identity} = Sites.update_identity(identity, %{language: content_language}, :system)
+        assign(socket, :entry_id, identity.id)
+    end
   end
 end

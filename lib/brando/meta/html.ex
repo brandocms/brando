@@ -45,32 +45,38 @@ defmodule Brando.Meta.HTML do
     |> maybe_put_meta_image(seo.fallback_meta_image)
     |> get_meta()
     |> Enum.map(&safe_to_string(meta_tag(&1)))
-    |> maybe_add_see_also()
-    |> maybe_add_custom_meta()
+    |> maybe_add_see_also(conn)
+    |> maybe_add_custom_meta(conn)
     |> raw()
   end
 
-  defp maybe_add_see_also(meta_tags) do
-    case Cache.get(:identity, :links) do
-      [] ->
+  defp maybe_add_see_also(meta_tags, %{assigns: %{language: language}}) do
+    case Cache.Identity.get(language) do
+      %{links: []} ->
         meta_tags
 
-      links ->
+      %{links: links} ->
         Enum.reduce(links, meta_tags, fn link, acc ->
           [safe_to_string(meta_tag("og:see_also", link.url)) | acc]
         end)
+
+      _ ->
+        meta_tags
     end
   end
 
-  defp maybe_add_custom_meta(meta_tags) do
-    case Cache.get(:identity, :metas) do
-      [] ->
+  defp maybe_add_custom_meta(meta_tags, %{assigns: %{language: language}}) do
+    case Cache.Identity.get(language) do
+      %{metas: []} ->
         meta_tags
 
-      metas ->
+      %{metas: metas} ->
         Enum.reduce(metas, meta_tags, fn meta, acc ->
           [safe_to_string(meta_tag(meta.key, meta.value)) | acc]
         end)
+
+      _ ->
+        meta_tags
     end
   end
 
