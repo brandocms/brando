@@ -17,8 +17,14 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
     language_long =
       case Enum.find(Brando.config(:languages), &(&1[:value] == language_short)) do
-        nil -> "Error"
-        lang -> lang[:text]
+        nil ->
+          # uh oh, the language isn't one of the configured languages. Set to first
+          first_lang = Brando.config(:languages) |> List.first()
+          send(self(), {:set_content_language, first_lang[:value]})
+          first_lang[:text]
+
+        lang ->
+          lang[:text]
       end
 
     {:ok,
