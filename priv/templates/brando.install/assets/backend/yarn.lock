@@ -49,16 +49,6 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.0":
-  version "3.42.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.0.tgz#a17cc485b6f7cc4cc0a3cd4ab1157db43bc1acc8"
-  integrity sha512-kDccZYFpRmJgzcnoSDoRArg1yribfplxC2HUJ/KCjtBV/CBFLr3qDb2TGlVUUSIpLO/W92BVHgP9fcNkAmhFug==
-  dependencies:
-    "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^3.1.5"
-    gsap "3.6.1"
-    lodash.defaultsdeep "^4.6.1"
-
 "@brandocms/jupiter@^3.42.1":
   version "3.42.1"
   resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.1.tgz#b04e7dff4f7720fff70b403ba4d73e020f6d629b"
