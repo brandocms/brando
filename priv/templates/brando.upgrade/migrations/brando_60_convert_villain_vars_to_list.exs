@@ -3,7 +3,8 @@ defmodule Brando.Repo.Migrations.ConvertVillainVarsToList do
   import Ecto.Query
 
   def up do
-    for {schema, attrs} <- Brando.Villain.list_villains,
+    villain_schemas = Enum.reject(Brando.Villain.list_villains(), &(elem(&1, 0) == Brando.Content.Template))
+    for {schema, attrs} <- villain_schemas,
       %{name: data_field} <- attrs do
       query =
         from m in schema.__schema__(:source),

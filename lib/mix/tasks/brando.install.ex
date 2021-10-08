@@ -146,10 +146,6 @@ defmodule Mix.Tasks.Brando.Install do
     # Helpers for frontend
     {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},
 
-    # Channel + socket
-    {:eex, "lib/application_name_web/channels/admin_socket.ex",
-     "lib/application_name_web/channels/admin_socket.ex"},
-
     # Endpoint
     {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
 
@@ -193,6 +189,12 @@ defmodule Mix.Tasks.Brando.Install do
     # Backend resources
     {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
     {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
+    {:copy, "assets/backend/public/fonts/Bold.woff2", "assets/backend/public/fonts/Bold.woff2"},
+    {:copy, "assets/backend/public/fonts/Regular.woff2",
+     "assets/backend/public/fonts/Regular.woff2"},
+    {:copy, "assets/backend/public/fonts/Medium.woff2",
+     "assets/backend/public/fonts/Medium.woff2"},
+    {:copy, "assets/backend/public/fonts/Light.woff2", "assets/backend/public/fonts/Light.woff2"},
     {:copy, "assets/backend/public/images/admin/avatar.svg",
      "assets/backend/public/images/admin/avatar.svg"},
 

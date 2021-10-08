@@ -1,4 +1,4 @@
-defmodule <%= application_module %>Web.AdminSocket do
+defmodule BrandoAdmin.AdminSocket do
   @moduledoc """
   Socket specs for System and Stats channels.
   """
@@ -6,6 +6,7 @@ defmodule <%= application_module %>Web.AdminSocket do
 
   ## Channels
   channel "user:*", Brando.UserChannel
+  channel "lobby", Brando.LobbyChannel
   channel "live_preview:*", Brando.LivePreviewChannel
 
   @doc """
@@ -34,7 +35,7 @@ defmodule <%= application_module %>Web.AdminSocket do
   # Would allow you to broadcast a "disconnect" event and terminate
   # all active sockets and channels for a given user:
   #
-  #     <%= application_module %>Web.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
+  #     KoiWeb.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
   #
   # Returning `nil` makes this socket anonymous.
   @impl true

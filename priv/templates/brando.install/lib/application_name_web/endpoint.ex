@@ -10,7 +10,7 @@ defmodule <%= application_module %>Web.Endpoint do
     signing_salt: "<%= signing_salt %>"
   ]
 
-  socket "/admin/socket", <%= application_module %>Web.AdminSocket,
+  socket "/admin/socket", BrandoAdmin.AdminSocket,
     websocket: true,
     longpoll: true
 

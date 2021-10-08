@@ -12,7 +12,7 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
 
     flush()
 
-    villain_schemas = Brando.Villain.list_villains()
+    villain_schemas = Enum.reject(Brando.Villain.list_villains(), &(elem(&1, 0) == Brando.Content.Template))
 
     actions =
       for {schema, fields} <- villain_schemas do
