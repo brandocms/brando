@@ -185,4 +185,9 @@ defmodule Brando.JSONLDSchemaTest do
   test "date" do
     assert Brando.JSONLD.to_date(~D[2020-01-01]) == "2020-01-01"
   end
+
+  test "datetime" do
+    assert Brando.JSONLD.to_datetime(~N[2021-10-08 07:56:00.000000]) ==
+             "2021-10-08T07:56:00.000000Z"
+  end
 end

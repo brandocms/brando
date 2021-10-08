@@ -78,7 +78,6 @@ defmodule Brando.Mixfile do
       {:polymorphic_embed, "~> 1.6"},
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
-      {:timex, "~> 3.0"},
       {:earmark, "1.4.4"},
       {:jason, "~> 1.0"},
       {:flow, "~> 1.0"},

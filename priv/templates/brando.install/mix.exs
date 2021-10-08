@@ -70,7 +70,6 @@ defmodule <%= application_module %>.MixProject do
       {:postgrex, "~> 0.15"},
       {:gettext, "~> 0.11"},
       {:swoosh, "~> 1.0"},
-      {:timex, "~> 3.0"},
       {:jason, "~> 1.0"},
       {:ex_machina, "~> 2.3"},
 

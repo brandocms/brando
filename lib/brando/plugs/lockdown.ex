@@ -22,7 +22,7 @@ defmodule Brando.Plug.Lockdown do
       config :brando,
         lockdown: true,
         lockdown_password: "my_pass",
-        lockdown_until: ~N[2015-01-13 13:00:07]
+        lockdown_until: ~U[2015-01-13 13:00:00Z]
 
   Password is optional. If no password configuration is found, you have to login
   through the backend to see the frontend website.
@@ -74,10 +74,7 @@ defmodule Brando.Plug.Lockdown do
   end
 
   defp check_lockdown_date(conn, lockdown_until) do
-    lockdown_until = Timex.to_datetime(lockdown_until, "Europe/Oslo")
-    time_now = Timex.now("Europe/Oslo")
-
-    if DateTime.compare(lockdown_until, time_now) == :gt do
+    if DateTime.compare(lockdown_until, DateTime.utc_now()) == :gt do
       conn
       |> redirect(to: Brando.helpers().lockdown_path(conn, :index))
       |> halt

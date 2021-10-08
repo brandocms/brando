@@ -39,8 +39,8 @@ defmodule Brando.Migrations.AddSEO do
         fallback_meta_description: identity.description,
         base_url: identity.url,
         robots: robots,
-        inserted_at: Timex.now(),
-        updated_at: Timex.now()
+        inserted_at: DateTime.utc_now(),
+        updated_at: DateTime.utc_now()
       }
 
       Brando.repo().insert_all("sites_seo", [seo])

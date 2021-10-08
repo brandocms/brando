@@ -21,14 +21,10 @@ defmodule Brando.JSONLD do
         [{name, {:string, mutation_function}} | acc]
 
       {name, schema, nil}, _acc ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{
-                name
-              } - #{inspect(schema)}"
+        raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{name} - #{inspect(schema)}"
 
       {name, schema, _}, _acc when is_binary(schema) ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{
-                name
-              } - #{inspect(schema)}"
+        raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{name} - #{inspect(schema)}"
 
       {name, schema, path}, acc when is_list(path) ->
         [{name, {schema, path}} | acc]
@@ -56,14 +52,17 @@ defmodule Brando.JSONLD do
   """
   @spec to_date(date :: any) :: binary
   def to_date(date),
-    do: Timex.format!(Timex.to_date(date), "{ISOdate}")
+    do: Calendar.strftime(date, "%Y-%m-%d")
 
   @doc """
   Convert datetime to ISO friendly string
   """
   @spec to_datetime(datetime :: any) :: binary
-  def to_datetime(datetime),
-    do: Timex.format!(Timex.to_datetime(datetime, "Etc/UTC"), "{ISO:Extended:Z}")
+  def to_datetime(%NaiveDateTime{} = datetime),
+    do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  def to_datetime(%DateTime{} = datetime),
+    do: datetime |> DateTime.to_iso8601()
 
   defp to_slim_map(%_{} = struct) do
     for {k, v} <- Map.from_struct(struct),

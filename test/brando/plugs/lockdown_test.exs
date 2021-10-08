@@ -160,7 +160,7 @@ defmodule Brando.Plug.LockdownTest do
 
   test "lockdown pass with expired target date" do
     Application.put_env(:brando, :lockdown, true)
-    Application.put_env(:brando, :lockdown_until, ~N[2015-01-13 10:00:00])
+    Application.put_env(:brando, :lockdown_until, ~U[2015-01-13 10:00:00Z])
 
     conn =
       :get
@@ -175,7 +175,7 @@ defmodule Brando.Plug.LockdownTest do
 
   test "lockdown pass with future target date" do
     Application.put_env(:brando, :lockdown, true)
-    Application.put_env(:brando, :lockdown_until, ~N[2060-01-13 10:00:00])
+    Application.put_env(:brando, :lockdown_until, ~U[2060-01-13 10:00:00Z])
 
     conn =
       :get

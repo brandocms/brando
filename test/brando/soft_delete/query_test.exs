@@ -40,20 +40,23 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Users.User, 0}
            ]
 
+    sixty_days_in_seconds = -60 * 24 * 3600
+    sixty_days_ago = DateTime.add(DateTime.utc_now(), sixty_days_in_seconds, :second)
+
     Factory.insert(:page,
-      deleted_at: Timex.subtract(DateTime.utc_now(), Timex.Duration.from_days(60))
+      deleted_at: sixty_days_ago
     )
 
     Factory.insert(:image,
-      deleted_at: Timex.subtract(DateTime.utc_now(), Timex.Duration.from_days(60))
+      deleted_at: sixty_days_ago
     )
 
     Factory.insert(:random_user,
-      deleted_at: Timex.subtract(DateTime.utc_now(), Timex.Duration.from_days(60))
+      deleted_at: sixty_days_ago
     )
 
     Factory.insert(:random_user,
-      deleted_at: Timex.subtract(DateTime.utc_now(), Timex.Duration.from_days(60))
+      deleted_at: sixty_days_ago
     )
 
     Factory.insert(:fragment, deleted_at: DateTime.utc_now())

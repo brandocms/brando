@@ -14,23 +14,24 @@ defmodule Brando.Villain.Filters do
       "07/06/2020"
   """
 
-  def date(%Date{} = value, format, _), do: Timex.format!(value, format, :strftime)
+  def date(%Date{} = value, format, _), do: Utils.Datetime.format_datetime(value, format, nil)
 
   def date(%DateTime{} = value, format, _) do
     value
-    |> Timex.Timezone.convert(Brando.timezone())
-    |> Timex.format!(format, :strftime)
+    |> DateTime.shift_zone!(Brando.timezone())
+    |> Utils.Datetime.format_datetime(format, nil)
   end
 
-  def date(%NaiveDateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
+  def date(%NaiveDateTime{} = value, format, _),
+    do: Utils.Datetime.format_datetime(value, format, nil)
 
   def date("now", format, context), do: date(DateTime.utc_now(), format, context)
   def date("today", format, context), do: date(Date.utc_today(), format, context)
 
   def date(value, format, _) when is_binary(value) do
     value
-    |> Timex.parse!("{RFC3339z}")
-    |> Timex.format!(format, :strftime)
+    |> DateTime.from_iso8601()
+    |> Utils.Datetime.format_datetime(format, nil)
   end
 
   # {{ entry.inserted_at | date:"%A","nb_NO" }}
