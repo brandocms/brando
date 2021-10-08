@@ -42,9 +42,13 @@ defmodule Mix.Tasks.Brando.Ssg do
       File.cp_r!(static_path, ssg_path)
     end
 
+    :inets.start()
+
     if Mix.shell().yes?("\nGenerate HTML?") do
       for url <- ssg_urls do
-        HTTPoison.get!(Path.join([@default_host, url]))
+        # we just need to access the url to generate html
+        full_url = Path.join([@default_host, url])
+        :httpc.request(String.to_charlist(full_url))
       end
     end
 
