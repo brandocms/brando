@@ -109,6 +109,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         languages = Brando.config(:languages)
         Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
 
+      :admin_languages ->
+        admin_languages = Brando.config(:admin_languages)
+
+        Enum.map(admin_languages, fn [{:value, val}, {:text, text}] ->
+          %{label: text, value: val}
+        end)
+
       nil ->
         # schema = blueprint.modules.schema
         []

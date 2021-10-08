@@ -176,7 +176,7 @@ defmodule Brando.Users.User do
           input :name, :text
           input :email, :email
           input :password, :password
-          input :language, :radios, options: :languages
+          input :language, :radios, options: :admin_languages
 
           input :role, :radios,
             options: [
