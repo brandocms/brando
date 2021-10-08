@@ -3,6 +3,82 @@
 * Switch your backend gettext module in `gettext.ex` from 
   `YourApp.Backend.Gettext` to `YourAppAdmin.Gettext`
 
+* Say bye to your Vue backend. Pull in the new backend with
+  `$ mv assets/backend assets/backend_old`
+  `$ mix brando.gen.backend`
+
+* Update your `mix.exs` deps. See https://github.com/brandocms/brando/blob/master/mix.exs
+
+* Clean deps and pull in new ones:
+  `$ rm -rf deps _build`
+  `$ mix deps.get` -- might just nuke `mix.lock` first.
+
+* Replace `use Brando.I18n.Helpers` with `import Brando.I18n.Helpers`
+
+* Delete guardian: 
+  `$ rm -rf lib/my_app_web/guardian`
+  `$ rm -rf lib/my_app_web/guardian.ex`
+
+* Delete graphql
+  `$ rm -rf lib/my_app/graphql`
+
+* Pull down a new router from:
+  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web/router.ex
+
+* Pull down a new `application_web.ex` from:
+  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web.ex
+
+* Pull down a new `endpoint.ex` from:
+  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web/endpoint.ex
+
+* Switch out your admin socket in `endpoint.ex`:
+  ```
+  socket "/admin/socket", BrandoAdmin.AdminSocket,
+    websocket: true,
+    longpoll: true
+  ```
+  and delete the admin channel (or the whole dir, if you don't have anything of your own there):
+  `$ rm -rf lib/my_app_web/channels`
+
+* Delete your old session controller:
+  `$ rm lib/my_app_web/controllers/session_controller.ex`
+
+* Generate a new auth file:
+  `$ mix brando.gen.authorization`
+
+* Set your admin module in `config/brando.exs`:
+  `config :brando, admin_module: MyAppAdmin`
+
+* Move all your old schemas and context out of the project
+
+* Generate blueprints:
+  `mix brando.gen.blueprint`
+
+* Migrate to blueprints from your old schemas (ugh)
+
+* Grab new migrations
+  `$ mix brando.upgrade`
+
+* Create your admin menu template in `lib/my_app_admin/menus.ex`:
+```
+defmodule MyAppAdmin.Menus do
+  use BrandoAdmin.Menu
+  import MyAppAdmin.Gettext
+
+  menus do
+    menu_item t("Articles") do
+      menu_subitem MyApp.Articles.Article
+      menu_subitem MyApp.Articles.Category
+    end
+  end
+end
+```
+
+* If you cannot add entries to your legacy multi module, try
+  saving the main entry first. It might just be missing UIDs on
+  the blocks.
+
+
 ## 0.51.0
 
 * If you use legacy schemas/changeset and use `generate_html` with a custom villain name,
