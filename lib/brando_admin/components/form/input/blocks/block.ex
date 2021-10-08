@@ -39,12 +39,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   slot render
 
   def update(assigns, socket) do
+    uid = input_value(assigns.block, :uid) || Brando.Utils.generate_uid()
+    type = input_value(assigns.block, :type) || (assigns.is_entry? && "entry")
+
     {:ok,
      socket
      |> assign(:bg_color, assigns[:bg_color])
      |> assign(:last_block?, last_block?(assigns))
-     |> assign(:uid, input_value(assigns.block, :uid))
-     |> assign(:type, input_value(assigns.block, :type))
+     |> assign(:uid, uid)
+     |> assign(:type, type)
      |> assign(:hidden, input_value(assigns.block, :hidden))
      |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))
      |> assign(assigns)}

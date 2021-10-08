@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
     vars = v(block_data, :vars) || []
 
     socket
-    |> assign(:uid, v(block, :uid))
+    |> assign(:uid, v(block, :uid) || Brando.Utils.generate_uid())
     |> assign(:block_data, block_data)
     |> assign(:module_name, entry_template.name)
     |> assign(:module_class, entry_template.class)
