@@ -396,7 +396,7 @@ defmodule Brando.Utils do
 
   def camel_case_map(map) when is_map(map) do
     for {key, val} <- map, into: %{} do
-      {Inflex.camelize(key, :lower), camel_case_map(val)}
+      {Recase.to_camel(key), camel_case_map(val)}
     end
   end
 

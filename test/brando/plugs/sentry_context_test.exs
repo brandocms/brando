@@ -29,7 +29,7 @@ defmodule Brando.Plug.SentryUserContextTest do
     conn =
       :get
       |> conn("/pass")
-      |> put_private(:guardian_default_resource, nil)
+      |> put_private(:current_user, nil)
       |> Plug.Parsers.call(opts)
       |> SentryUserContext.call(SentryUserContext.init([]))
 
@@ -42,7 +42,7 @@ defmodule Brando.Plug.SentryUserContextTest do
     conn =
       :get
       |> conn("/pass")
-      |> put_private(:guardian_default_resource, u1)
+      |> put_private(:current_user, u1)
       |> Plug.Parsers.call(opts)
       |> SentryUserContext.call(SentryUserContext.init([]))
 

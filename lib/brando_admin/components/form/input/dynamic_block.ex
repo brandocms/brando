@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       |> assign(assigns)
       |> assign_new(:block_id, fn -> v(assigns.block, :uid) end)
       |> assign_new(:block_module, fn ->
-        block_type = (v(assigns.block, :type) |> to_string |> Inflex.camelize()) <> "Block"
+        block_type = (v(assigns.block, :type) |> to_string |> Recase.to_pascal()) <> "Block"
         Module.concat([Blocks, block_type])
       end)
 

@@ -46,10 +46,6 @@ defmodule Brando.Mixfile do
       {:comeonin, "~> 5.0"},
       {:base62, "~> 1.2"},
 
-      # tokens/auth
-      {:guardian, "~> 2.0"},
-      {:guardian_phoenix, "~> 2.0"},
-
       # monitoring
       {:sentry, "~> 8.0"},
 
@@ -88,7 +84,6 @@ defmodule Brando.Mixfile do
       {:flow, "~> 1.0"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
-      {:inflex, "~> 2.0"},
 
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},

@@ -160,13 +160,7 @@ defmodule Brando.Query do
 
   defp query_list(module, block) do
     source = module.__schema__(:source)
-
-    pluralized_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-      |> Inflex.pluralize()
+    pluralized_schema = module.__naming__().plural
 
     quote do
       @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list()}
@@ -221,12 +215,7 @@ defmodule Brando.Query do
   defp query_single(module, block) do
     source = module.__schema__(:source)
 
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-
+    singular_schema = module.__naming__().singular
     singular_schema_atom = String.to_existing_atom(singular_schema)
 
     quote do
@@ -493,22 +482,14 @@ defmodule Brando.Query do
   defp mutation_create(module, callback_block \\ nil)
 
   defp mutation_create({module, opts}, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
+    singular_schema = module.__naming__().singular
 
     callback_block = callback_block || @default_callback
     do_mutation_create(module, singular_schema, callback_block, opts)
   end
 
   defp mutation_create(module, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
+    singular_schema = module.__naming__().singular
 
     callback_block = callback_block || @default_callback
     do_mutation_create(module, singular_schema, callback_block)
@@ -548,26 +529,14 @@ defmodule Brando.Query do
   defp mutation_update(module, callback_block \\ nil)
 
   defp mutation_update({module, opts}, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-
+    singular_schema = module.__naming__().singular
     callback_block = callback_block || @default_callback
-
     do_mutation_update(module, singular_schema, callback_block, opts)
   end
 
   defp mutation_update(module, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-
+    singular_schema = module.__naming__().singular
     callback_block = callback_block || @default_callback
-
     do_mutation_update(module, singular_schema, callback_block)
   end
 
@@ -630,11 +599,7 @@ defmodule Brando.Query do
   defp mutation_duplicate(module), do: do_mutation_duplicate(module, [])
 
   defp do_mutation_duplicate(module, opts) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
+    singular_schema = module.__naming__().singular
 
     quote do
       @spec unquote(:"duplicate_#{singular_schema}")(
@@ -658,24 +623,13 @@ defmodule Brando.Query do
   defp mutation_delete(module, callback_block \\ nil)
 
   defp mutation_delete({module, opts}, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-
+    singular_schema = module.__naming__().singular
     callback_block = callback_block || @default_callback
-
     do_mutation_delete(module, singular_schema, callback_block, opts)
   end
 
   defp mutation_delete(module, callback_block) do
-    singular_schema =
-      module
-      |> Module.split()
-      |> List.last()
-      |> Inflex.underscore()
-
+    singular_schema = module.__naming__().singular
     callback_block = callback_block || @default_callback
 
     do_mutation_delete(module, singular_schema, callback_block)

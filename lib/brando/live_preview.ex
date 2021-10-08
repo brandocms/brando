@@ -279,13 +279,8 @@ defmodule Brando.LivePreview do
 
     if function_exported?(preview_module, :render, 3) do
       schema_module = Module.concat([schema])
-      context = schema.module.__modules__().context
-
-      singular =
-        schema_module
-        |> Module.split()
-        |> List.last()
-        |> Inflex.underscore()
+      context = schema_module.__modules__().context
+      singular = schema_module.__naming__().singular
 
       get_opts =
         if revision do

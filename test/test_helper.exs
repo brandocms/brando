@@ -98,7 +98,7 @@ defmodule BrandoIntegration.AdminSocket do
   Connect socket with token
   """
   @impl true
-  def connect(%{"guardian_token" => _jwt}, socket) do
+  def connect(%{"token" => _jwt}, socket) do
     {:ok, socket}
   end
 

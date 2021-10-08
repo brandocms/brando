@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           module
 
         type ->
-          input_type = type |> to_string |> Inflex.camelize()
+          input_type = type |> to_string |> Recase.to_pascal()
           Module.concat([__MODULE__, input_type])
       end
 
