@@ -114,7 +114,16 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
      |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
-     |> assign_new(:form, fn -> assigns.schema.__form__(form_name) end)
+     |> assign_new(:form, fn ->
+       case assigns.schema.__form__(form_name) do
+         nil ->
+           raise Brando.Exception.BlueprintError,
+             message: "Missing `#{form_name}` form declaration for `#{inspect(assigns.schema)}`"
+
+         form ->
+           form
+       end
+     end)
      |> assign_entry()
      |> assign_addon_statuses()
      |> assign_default_params()
