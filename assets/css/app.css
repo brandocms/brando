@@ -479,7 +479,9 @@ h3 {
   font-weight: 400;
 }
 
-.subform-entry.globals {
+.subform-entry.flex-row {
+  flex-direction: row !important;
+  
   .variable {
     width: 100%;
   }

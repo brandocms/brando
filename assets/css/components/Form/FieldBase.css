@@ -141,10 +141,9 @@
     .subform-entry {
       border-left: 4px solid #dac5d1;
       padding-left: 15px;
-
       display: flex;
+      flex-direction: column;
       align-items: flex-start;
-
       margin-bottom: 15px;
 
       &.inline {

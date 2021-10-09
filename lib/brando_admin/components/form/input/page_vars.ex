@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
             {/if}
             <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
               <div
-                class={"subform-entry"}
+                class="subform-entry flex-row"
                 data-id={index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">

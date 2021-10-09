@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           {/if}
           <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
             <div
-              class={"subform-entry globals"}
+              class="subform-entry flex-row"
               data-id={index}>
               <div class="subform-tools">
                 <button type="button" class="subform-handle">
