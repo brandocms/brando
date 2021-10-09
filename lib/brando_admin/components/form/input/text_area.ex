@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   prop blueprint, :any
   prop input, :any
   prop label, :string
+  prop rows, :string
   prop placeholder, :string
   prop instructions, :string
   prop debounce, :any
@@ -23,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
        placeholder: placeholder,
        class: opts[:class],
        monospace: opts[:monospace] || false,
+       rows: opts[:rows] || 3,
        disabled: assigns[:disabled] || false,
        debounce: assigns[:debounce] || 750
      )}
@@ -42,6 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       {textarea @form, name,
         class: "text",
         placeholder: @placeholder,
+        rows: @rows,
         phx_debounce: @debounce}
     </FieldBase>
     """
@@ -55,7 +58,10 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       instructions={@instructions}
       field={@field}
       form={@form}>
-      {textarea @form, @field, class: "text", phx_debounce: @debounce}
+      {textarea @form, @field,
+        class: "text",
+        rows: @rows,
+        phx_debounce: @debounce}
     </FieldBase>
     """
   end
