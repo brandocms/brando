@@ -931,6 +931,11 @@ h3 {
     text-transform: lowercase;
   }
 
+  &.no-border {
+    border: none;
+    padding-left: 0;
+  }
+
   svg {
     margin-right: 4px;
     margin-top: -1px;
