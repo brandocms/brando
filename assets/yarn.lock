@@ -16,10 +16,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.1":
-  version "3.42.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.1.tgz#b04e7dff4f7720fff70b403ba4d73e020f6d629b"
-  integrity sha512-5gWhatpiPB3FlbFCFyA7QULCgI9bpHAx1sC0uL2U/UHFUUS2vOaj7lNDdmDN/j3GiSRVvc4fGGPwcCEtefPzag==
+"@brandocms/jupiter@^3.42.2":
+  version "3.42.2"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.2.tgz#4691c43e400c05d46b445749ff2e106b05eb1ccd"
+  integrity sha512-QoGjPLMdU6TmQYXZJdz+O/FH2gilcd1olHqHr1l25j3s7jaI05zimSkLYzTh+J8qqLK789mbLOmzxYw/iNda8A==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
@@ -377,10 +377,10 @@
   resolved "https://registry.yarnpkg.com/@shopify/draggable/-/draggable-1.0.0-beta.12.tgz#483c7f691e8918868ec0c95eabcb83e244c2b49d"
   integrity sha512-Un/Dn61sv2er9yjDXLGWMauCOWBb0BMbm0yzmmrD+oUX2/x50yhNJASTsCRdndUCpWlqYfZH8jEfaOgTPsKc/g==
 
-"@sveltejs/vite-plugin-svelte@1.0.0-next.26":
-  version "1.0.0-next.26"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.26.tgz#853744d35fa97b03aab1c939db3d2b6167f649ca"
-  integrity sha512-+Rx3IBa4disskQmr+0/Rh+NYavkM6Vi8BnkTGjKnblawysw4INXkq2WEQBp8luGpUZEkjwczdL9Z9Q2hISvIeA==
+"@sveltejs/vite-plugin-svelte@1.0.0-next.27":
+  version "1.0.0-next.27"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.27.tgz#c4b5c95d2336d1a35126b2592b923f639fbb9636"
+  integrity sha512-hiau09LA/5eGGFTxXtRPIxKmWw8By8t+Vw+uvgKYeUf+4zJLe/Q5yX3Przf2CmW0J6fPi4NWWIeYsLrOd78a2w==
   dependencies:
     "@rollup/pluginutils" "^4.1.1"
     debug "^4.3.2"
@@ -389,10 +389,10 @@
     require-relative "^0.8.7"
     svelte-hmr "^0.14.7"
 
-"@tiptap/core@^2.0.0-beta.119":
-  version "2.0.0-beta.119"
-  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.119.tgz#b9bfb50cd1b6bbec1a6be8a951d55a9a1c13aed5"
-  integrity sha512-8WH9jvXyrE/8yUbeY83WRir/ozcKG/9BdVAvkrS/3DXa7kMhjqq+loNk782cpSnGizbC5sJfa9LrBq8Vau/A7A==
+"@tiptap/core@^2.0.0-beta.120":
+  version "2.0.0-beta.120"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.120.tgz#c98c63870ead17337619ae42e38419d825862fd3"
+  integrity sha512-oEg0IhQHRnCNakEJW9azyGwwaneViQXhMm3Vqf0qHZ5kvpivY/hkci9KFNE25w1Zgl0fZOsxOtRg2THBvSg4Tg==
   dependencies:
     "@types/prosemirror-commands" "^1.0.4"
     "@types/prosemirror-keymap" "^1.0.4"
@@ -541,12 +541,12 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-typography/-/extension-typography-2.0.0-beta.15.tgz#570a97f85c48737ddf0e0c3b292f372ade24ac86"
   integrity sha512-A3g0FOYNkkd/puQ0eEWFauC1z45hp2Lcn9orLSfZqynJ+U1lK4DmTBDf1yKP3Re4hg40UAua58jhfnDK2XtSDw==
 
-"@tiptap/starter-kit@^2.0.0-beta.118":
-  version "2.0.0-beta.118"
-  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.118.tgz#eb568bd5ba41743fddd48de4640774b0341d2948"
-  integrity sha512-QopAaaJdnhKvVOv5312q0MD4LYZcXePIQM6kPL523uAbSrKcUDuQQH66BuENbQ69rnsdL5Yn3Deckutm4YAvjg==
+"@tiptap/starter-kit@^2.0.0-beta.119":
+  version "2.0.0-beta.119"
+  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.119.tgz#061a40f87d55a04adae94f5d9f28ef929d3bef24"
+  integrity sha512-4Z4t5m+wwD0nCWZ21epb6jZjXqMvt5c1w9UadUcLAKcwtLH5sNSSnifh9T2q7otDZETTsIPWEzdMQA4SD+c5LA==
   dependencies:
-    "@tiptap/core" "^2.0.0-beta.119"
+    "@tiptap/core" "^2.0.0-beta.120"
     "@tiptap/extension-blockquote" "^2.0.0-beta.16"
     "@tiptap/extension-bold" "^2.0.0-beta.16"
     "@tiptap/extension-bullet-list" "^2.0.0-beta.16"
@@ -1174,10 +1174,10 @@ path-parse@^1.0.6:
   resolved "https://registry.yarnpkg.com/path-parse/-/path-parse-1.0.7.tgz#fbc114b60ca42b30d9daf5858e4bd68bbedb6735"
   integrity sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==
 
-phoenix@^1.6.0-rc.1:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.6.0.tgz#8aaec3a472930de89abec6fe4fae5ba876388719"
-  integrity sha512-gslo1W8kJMXKux4cOiR+JAGkF5hE80hEZKoHtBEv27GCWVWDu8uh4bTODV0B2PRSO4L8P8SMbufRQRInur8E9Q==
+phoenix@^1.6.2:
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.6.2.tgz#8d1d9f06e51cb893d08059e80488cd0de328e01a"
+  integrity sha512-VjR27NETvrLSj8rI6DlpVAfo7pCYth/9+1OCoTof4LKEbq0141ze/tdxFHHZzVQSok3gqJUo2h/tqbxR3r8eyw==
 
 phoenix_html@^3.0.4:
   version "3.0.4"
