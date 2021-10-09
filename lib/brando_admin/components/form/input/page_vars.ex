@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
                   </button>
                 </div>
 
-                <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:only_important} edit />
+                <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:all} edit />
               </div>
             </PolyInputs>
           </div>
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
         {#else}
           {#unless Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
             <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
-              <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:only_important} />
+              <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:all} />
             </PolyInputs>
           {/unless}
         {/if}
