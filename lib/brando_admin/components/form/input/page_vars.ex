@@ -113,21 +113,9 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    updated_field =
-      changeset
-      |> Ecto.Changeset.get_field(field_name)
-      |> Kernel.++([default])
-
-    updated_changeset =
-      case Enum.find(socket.assigns.blueprint.relations, &(&1.name == field_name)) do
-        %{type: :has_many} ->
-          # assoc
-          Ecto.Changeset.put_assoc(changeset, field_name, updated_field)
-
-        _ ->
-          # embed
-          Ecto.Changeset.put_embed(changeset, field_name, updated_field)
-      end
+    current_entries = Ecto.Changeset.get_field(changeset, field_name) || []
+    updated_field = current_entries ++ List.wrap(default)
+    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_field)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -148,14 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
       |> Ecto.Changeset.get_field(field_name, [])
       |> List.delete_at(String.to_integer(index))
 
-    updated_changeset =
-      case Enum.empty?(updated_entries) do
-        true ->
-          put_in(changeset, [Access.key(:changes), Access.key(field_name)], [])
-
-        false ->
-          Ecto.Changeset.put_embed(changeset, field_name, updated_entries)
-      end
+    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_entries)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
