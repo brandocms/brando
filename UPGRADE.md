@@ -74,6 +74,9 @@ defmodule MyAppAdmin.Menus do
 end
 ```
 
+* Add `layout: false` to your `error_view` config in `config.exs`:
+`render_errors: [view: MyAppWeb.ErrorView, accepts: ~w(html json), layout: false]`
+
 * If you cannot add entries to your legacy multi module, try
   saving the main entry first. It might just be missing UIDs on
   the blocks.
