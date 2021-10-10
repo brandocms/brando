@@ -694,7 +694,7 @@ defmodule Brando.Villain do
   @doc """
   Recursively search a list of blocks for block matching `uid`
   """
-  @spec find_block(list(), binary()) :: map
+  @spec find_block(list(), binary()) :: map | nil
   def find_block(_, nil), do: nil
   def find_block(nil, _), do: nil
 
@@ -711,6 +711,9 @@ defmodule Brando.Villain do
 
       %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
         {:halt, block}
+
+      _, _ ->
+        {:cont, nil}
     end)
   end
 
