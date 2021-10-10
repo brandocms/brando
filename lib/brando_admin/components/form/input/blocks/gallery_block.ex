@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Inputs
+  alias BrandoAdmin.Components.Form.ArrayInputs
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
@@ -38,6 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   data selected_images_paths, :list
   data display, :atom
   data show_only_selected?, :boolean
+  data upload_formats, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -54,11 +56,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     images = input_value(block_data, :images)
     selected_images_paths = Enum.map(images, & &1.path)
 
+    upload_formats =
+      case v(block_data, :formats) do
+        nil -> ""
+        formats -> Enum.join(formats, ",")
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:images, images)
+     |> assign(:upload_formats, upload_formats)
      |> assign(:display, v(block_data, :display))
      |> assign(:selected_images_paths, selected_images_paths)
      |> assign(:has_images?, !Enum.empty?(images))
@@ -106,7 +115,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           {hidden_input image, :cdn}
           {hidden_input image, :dominant_color}
           {hidden_input image, :height}
-          {hidden_input image, :webp}
           {hidden_input image, :width}
           {hidden_input image, :path}
 
@@ -124,6 +132,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </MapInputs>
+
+          <ArrayInputs
+            :let={value: array_value, name: array_name}
+            form={image}
+            for={:formats}>
+            <input type="hidden" name={array_name} value={array_value} />
+          </ArrayInputs>
         {/for}
 
         {#if @has_images?}
@@ -274,6 +289,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               %{label: "Micro", value: :micro},
               %{label: "None", value: :none}
             ]} />
+
+          <ArrayInputs
+            :let={value: array_value, name: array_name}
+            form={@block_data}
+            for={:formats}>
+            <input type="hidden" name={array_name} value={array_value} />
+          </ArrayInputs>
+
+          <input type="hidden" data-upload-formats={@upload_formats} />
         </:config>
       </Block>
     </div>

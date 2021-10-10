@@ -5,6 +5,7 @@ defmodule Brando.Types.ImageConfigTest do
   @result2 %Brando.Type.ImageConfig{
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium",
+    formats: [:original],
     random_filename: false,
     size_limit: 10_240_000,
     sizes: %{
@@ -20,6 +21,7 @@ defmodule Brando.Types.ImageConfigTest do
   @map %{
     "allowed_mimetypes" => ["image/jpeg", "image/png"],
     "default_size" => "medium",
+    "formats" => ["original"],
     "random_filename" => false,
     "size_limit" => 10_240_000,
     "sizes" => %{
@@ -35,6 +37,7 @@ defmodule Brando.Types.ImageConfigTest do
   @casted_map %Brando.Type.ImageConfig{
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium",
+    formats: [:original],
     random_filename: false,
     size_limit: 10_240_000,
     sizes: %{
@@ -45,7 +48,6 @@ defmodule Brando.Types.ImageConfigTest do
       "xlarge" => %{"quality" => 100, "size" => "900"}
     },
     srcset: nil,
-    target_format: nil,
     upload_path: "images/result2"
   }
 

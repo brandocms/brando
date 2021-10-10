@@ -81,6 +81,9 @@ end
   saving the main entry first. It might just be missing UIDs on
   the blocks.
 
+* Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`, you should also
+  add `webp` to your formats list.
+
 
 ## 0.51.0
 

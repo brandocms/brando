@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   alias BrandoAdmin.Components.Form.FieldBase
   # alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.MapInputs
+  alias BrandoAdmin.Components.Form.ArrayInputs
   alias BrandoAdmin.Components.Form.Inputs
   alias Brando.Images
   alias Brando.Utils
@@ -231,7 +232,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         {hidden_input sf, :dominant_color}
                         {hidden_input sf, :height}
                         {hidden_input sf, :path}
-                        {hidden_input sf, :webp}
                         {hidden_input sf, :width}
                         {hidden_input sf, :marked_as_deleted}
 
@@ -249,6 +249,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                           for={:sizes}>
                           <input type="hidden" name={"#{name}"} value={"#{value}"} />
                         </MapInputs>
+
+                        <ArrayInputs
+                          :let={value: array_value, name: array_name}
+                          form={sf}
+                          for={:formats}>
+                          <input type="hidden" name={array_name} value={array_value} />
+                        </ArrayInputs>
 
                         <div class="file-input-wrapper">
                           <span class="label">

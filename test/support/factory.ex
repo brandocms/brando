@@ -170,6 +170,7 @@ defmodule Brando.Factory do
         height: 292,
         credits: "Credits",
         path: "image/1.jpg",
+        formats: [:jpg],
         sizes: %{
           "large" => "image/large/1.jpg",
           "medium" => "image/medium/1.jpg",

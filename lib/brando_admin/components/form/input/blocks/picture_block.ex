@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Inputs
+  alias BrandoAdmin.Components.Form.ArrayInputs
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
@@ -32,6 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   data block_data, :form
   data images, :list
   data image, :any
+  data upload_formats, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -49,11 +51,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> inputs_for(:data)
       |> List.first()
 
+    upload_formats =
+      case v(block_data, :formats) do
+        nil -> ""
+        formats -> Enum.join(formats, ",")
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:image, v(assigns.block, :data))
+     |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:uid, v(assigns.block, :uid))}
   end
@@ -181,7 +190,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           {hidden_input @block_data, :credits}
           {hidden_input @block_data, :dominant_color}
           {hidden_input @block_data, :height}
-          {hidden_input @block_data, :webp}
           {hidden_input @block_data, :width}
 
           {#if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes))}
@@ -204,6 +212,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </MapInputs>
+
+          <ArrayInputs
+            :let={value: array_value, name: array_name}
+            form={@block_data}
+            for={:formats}>
+            <input type="hidden" name={array_name} value={array_value} />
+          </ArrayInputs>
+
+          <input type="hidden" data-upload-formats={@upload_formats} />
         </:config>
       </Block>
     </div>

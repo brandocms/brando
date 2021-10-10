@@ -7,6 +7,8 @@ defmodule Brando.Images.Operations.Sizing do
   alias Brando.Images.Focal
   alias BrandoAdmin.Progress
 
+  @supported_formats [:jpg, :png, :gif, :webp, :avif]
+
   @doc """
   Get processor module from config and call process function
   """
@@ -472,6 +474,8 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
-  defp maybe_change_format(type) when type in [:jpg, :png, :gif, :webp], do: Atom.to_string(type)
+  defp maybe_change_format(type) when type in @supported_formats,
+    do: Atom.to_string(type)
+
   defp maybe_change_format(_), do: "jpg"
 end

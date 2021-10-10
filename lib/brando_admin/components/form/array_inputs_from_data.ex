@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.Form.ArrayInputsFromData do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:checked_values, checked_values)}
+     |> assign(:checked_values, Enum.map(checked_values, &to_string(&1)))}
   end
 
   def render(assigns) do

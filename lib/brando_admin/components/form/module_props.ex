@@ -247,7 +247,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Text form={block_data} field={:link} />
                               <Input.Text form={block_data} field={:picture_class} />
                               <Input.Text form={block_data} field={:img_class} />
-                              <Input.Toggle form={block_data} field={:webp} />
                               <Input.Select
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
                                 form={block_data}
@@ -259,6 +258,24 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   %{label: "None", value: :none}
                                 ]}
                               />
+                              <ArrayInputsFromData
+                                :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
+                                form={block_data}
+                                for={:formats}
+                                options={[
+                                  %{label: "Original", value: "original"},
+                                  %{label: "jpg", value: "jpg"},
+                                  %{label: "png", value: "png"},
+                                  %{label: "webp", value: "webp"},
+                                  %{label: "avif", value: "avif"},
+                                ]}>
+                                <div class="field-wrapper compact">
+                                  <div class="check-wrapper small">
+                                    <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+                                    <label class="control-label small" for={array_id}>{array_label}</label>
+                                  </div>
+                                </div>
+                              </ArrayInputsFromData>
                             {/for}
 
                           {#match "gallery"}
@@ -291,6 +308,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   %{label: "None", value: "none"}
                                 ]}
                               />
+
+                              <ArrayInputsFromData
+                                :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
+                                form={block_data}
+                                for={:formats}
+                                options={[
+                                  %{label: "Original", value: "original"},
+                                  %{label: "jpg", value: "jpg"},
+                                  %{label: "png", value: "png"},
+                                  %{label: "webp", value: "webp"},
+                                  %{label: "avif", value: "avif"},
+                                ]}>
+                                <div class="field-wrapper compact">
+                                  <div class="check-wrapper small">
+                                    <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+                                    <label class="control-label small" for={array_id}>{array_label}</label>
+                                  </div>
+                                </div>
+                              </ArrayInputsFromData>
                             {/for}
 
                           {#match "video"}
@@ -341,7 +377,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 {#for tpl_data <- inputs_for(block_data, :template_picture)}
                                   <Input.Text form={tpl_data} field={:picture_class} />
                                   <Input.Text form={tpl_data} field={:img_class} />
-                                  <Input.Toggle form={tpl_data} field={:webp} />
                                   <Input.Select
                                     id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
                                     form={tpl_data}
@@ -353,6 +388,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       %{label: "None", value: :none}
                                     ]}
                                   />
+
+                                  <ArrayInputsFromData
+                                    :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
+                                    form={tpl_data}
+                                    for={:formats}
+                                    options={[
+                                      %{label: "Original", value: "original"},
+                                      %{label: "jpg", value: "jpg"},
+                                      %{label: "png", value: "png"},
+                                      %{label: "webp", value: "webp"},
+                                      %{label: "avif", value: "avif"},
+                                    ]}>
+                                    <div class="field-wrapper compact">
+                                      <div class="check-wrapper small">
+                                        <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+                                        <label class="control-label small" for={array_id}>{array_label}</label>
+                                      </div>
+                                    </div>
+                                  </ArrayInputsFromData>
                                 {/for}
                               {/if}
 
@@ -397,6 +451,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       %{label: "None", value: "none"}
                                     ]}
                                   />
+
+                                  <ArrayInputsFromData
+                                    :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
+                                    form={tpl_data}
+                                    for={:formats}
+                                    options={[
+                                      %{label: "Original", value: "original"},
+                                      %{label: "jpg", value: "jpg"},
+                                      %{label: "png", value: "png"},
+                                      %{label: "webp", value: "webp"},
+                                      %{label: "avif", value: "avif"},
+                                    ]}>
+                                    <div class="field-wrapper compact">
+                                      <div class="check-wrapper small">
+                                        <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+                                        <label class="control-label small" for={array_id}>{array_label}</label>
+                                      </div>
+                                    </div>
+                                  </ArrayInputsFromData>
                                 {/for}
                               {/if}
 

@@ -201,13 +201,13 @@ defmodule Brando.Villain do
         thumb: image_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
         dominant_color: image_struct.dominant_color,
+        formats: image_struct.formats,
         alt: image_struct.alt,
         title: image_struct.title,
         credits: image_struct.credits,
         inserted_at: image_record.inserted_at,
         width: image_struct.width,
-        height: image_struct.height,
-        webp: image_struct.webp
+        height: image_struct.height
       }
     end)
   end

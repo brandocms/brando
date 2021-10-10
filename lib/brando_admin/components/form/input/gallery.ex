@@ -185,7 +185,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     {hidden_input sf, :dominant_color}
                     {hidden_input sf, :height}
                     {hidden_input sf, :path}
-                    {hidden_input sf, :webp}
                     {hidden_input sf, :width}
                     {hidden_input sf, :marked_as_deleted}
 

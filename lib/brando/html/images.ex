@@ -135,41 +135,51 @@ defmodule Brando.HTML.Images do
     picture_tag(image_struct, opts)
   end
 
-  defp build_source_tags(%{webp: true}, attrs) do
+  defp build_source_tags(%{formats: nil}, attrs) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
     if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
       ""
     else
-      [tag(:source, webp_attrs(attrs.source)), tag(:source, attrs.source)]
+      [tag(:source, attrs.source)]
     end
   end
 
-  defp build_source_tags(_, attrs) do
+  defp build_source_tags(%{formats: formats}, attrs) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
     if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
       ""
     else
-      tag(:source, attrs.source)
+      sizes_format = List.first(formats)
+
+      Enum.map(formats, fn
+        format when format == sizes_format ->
+          tag(:source, attrs.source)
+
+        format ->
+          tag(:source, replace_attrs(attrs.source, format))
+      end)
+      |> Enum.reverse()
     end
   end
 
-  defp webp_attrs(source_attrs) do
+  defp replace_attrs(source_attrs, format) do
     Enum.map(source_attrs, fn
-      {:data_srcset, v} -> {:data_srcset, suffix_srcs(v, ".webp")}
-      {:srcset, v} -> {:srcset, suffix_srcs(v, ".webp")}
-      {:type, _} -> {:type, "image/webp"}
+      {:data_srcset, v} -> {:data_srcset, suffix_srcs(v, ".#{format}")}
+      {:srcset, v} -> {:srcset, suffix_srcs(v, ".#{format}")}
+      {:type, _} -> {:type, "image/#{format}"}
       {k, v} -> {k, v}
     end)
   end
 
   defp suffix_srcs(false, _), do: false
-  defp suffix_srcs(srcs, suffix), do: String.replace(srcs, [".jpg", ".jpeg", ".png"], suffix)
+
+  defp suffix_srcs(srcs, suffix),
+    do: String.replace(srcs, [".jpg", ".jpeg", ".png", ".avif", ".gif"], suffix)
 
   defp add_alt(attrs, image_struct) do
     alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))
-
     put_in(attrs, [:img, :alt], alt)
   end
 

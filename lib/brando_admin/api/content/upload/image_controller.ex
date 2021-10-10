@@ -5,12 +5,25 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
   use BrandoAdmin, :controller
   alias Brando.Images.Uploads.Schema
 
-  def create(conn, %{"uid" => uid, "slug" => series_slug} = params) do
+  def create(conn, %{"uid" => uid, "slug" => series_slug, "formats" => formats} = params) do
     user = Brando.Utils.current_user(conn)
+
+    upload_formats =
+      case formats do
+        "" ->
+          [:original]
+
+        formats ->
+          formats
+          |> String.split(",")
+          |> Enum.map(&String.to_existing_atom/1)
+      end
 
     case Brando.Images.get_series_by_slug(series_slug) do
       {:ok, series} ->
         cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
+        # insert the formats we have in the block
+        cfg = Map.put(cfg, :formats, upload_formats)
         params = Map.put(params, "image_series_id", series.id)
 
         payload =

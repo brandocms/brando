@@ -15,7 +15,8 @@ defmodule Brando.Images.Operations do
   @type user :: Brando.Users.User.t() | :system
 
   @doc """
-  Creates an %Operation{} for each size key in `cfg`s `:sizes`
+  Creates an %Operation{} for each size key in `cfg`s `:sizes` and for each
+  format in `cfg`s `:formats`
 
   ## Example
 
@@ -31,56 +32,45 @@ defmodule Brando.Images.Operations do
   def create(%{path: path} = image_struct, cfg, id, user) do
     id = id || Utils.random_string(:os.timestamp())
     {_, filename} = Utils.split_path(path)
-    type = cfg.target_format || Images.Utils.image_type(path)
 
-    total_operations =
-      Map.get(cfg, :sizes)
-      |> Map.keys()
-      |> Enum.count()
+    sizes = Map.get(cfg, :sizes)
+    formats = Map.get(cfg, :formats)
 
-    total_operations =
-      if type in [:jpg, :png] do
-        total_operations * 2
-      else
-        total_operations
-      end
+    total_operations = Enum.count(Map.keys(sizes)) * Enum.count(formats)
+    original_type = Images.Utils.image_type(path)
+    processed_formats = Enum.map(formats, &((&1 == :original && original_type) || &1))
 
-    {operations, _} =
-      Enum.reduce(Map.get(cfg, :sizes), {[], 0}, fn {size_key, size_cfg}, {ops, idx} ->
-        sized_image_dir = Images.Utils.get_sized_dir(path, size_key)
-        sized_image_path = Images.Utils.get_sized_path(path, size_key, type)
+    operations =
+      Enum.map(formats, fn format ->
+        image_type = (format == :original && original_type) || format
 
-        operation = %Images.Operation{
-          id: id,
-          type: type,
-          user: user,
-          filename: filename,
-          image_struct: image_struct,
-          size_cfg: size_cfg,
-          size_key: size_key,
-          sized_image_dir: sized_image_dir,
-          sized_image_path: sized_image_path,
-          total_operations: total_operations,
-          operation_index: idx + 1
-        }
+        {format_operations, _} =
+          Enum.reduce(sizes, {[], 0}, fn {size_key, size_cfg}, {ops, idx} ->
+            sized_image_dir = Images.Utils.get_sized_dir(path, size_key)
+            sized_image_path = Images.Utils.get_sized_path(path, size_key, image_type)
 
-        if type in [:jpg, :png] do
-          sized_webp_image_path = Images.Utils.get_sized_path(path, size_key, :webp)
+            operation = %Images.Operation{
+              id: id,
+              type: image_type,
+              user: user,
+              filename: filename,
+              processed_formats: processed_formats,
+              image_struct: image_struct,
+              size_cfg: size_cfg,
+              size_key: size_key,
+              sized_image_dir: sized_image_dir,
+              sized_image_path: sized_image_path,
+              total_operations: total_operations,
+              operation_index: idx + 1
+            }
 
-          webp_operation = %{
-            operation
-            | type: :webp,
-              sized_image_path: sized_webp_image_path,
-              operation_index: idx + 2
-          }
+            {ops ++ [operation], idx + 1}
+          end)
 
-          {ops ++ [operation, webp_operation], idx + 2}
-        else
-          {ops ++ [operation], idx + 1}
-        end
+        format_operations
       end)
 
-    {:ok, (is_list(operations) && List.flatten(operations)) || operations}
+    {:ok, List.flatten(operations)}
   end
 
   @doc """
@@ -103,7 +93,9 @@ defmodule Brando.Images.Operations do
         Map.update(map, operation.id, [operation], &[operation | &1])
       end)
       |> Flow.departition(&Map.new/0, &Map.merge(&1, &2, fn _, la, lb -> la ++ lb end), & &1)
-      |> Enum.map(fn result -> compile_transform_results(result, operations) end)
+      |> Enum.map(fn result ->
+        compile_transform_results(result, operations)
+      end)
       |> List.flatten()
 
     end_msec = :os.system_time(:millisecond)
@@ -124,7 +116,7 @@ defmodule Brando.Images.Operations do
       image_struct = %{
         operation.image_struct
         | sizes: transforms_to_sizes(transforms),
-          webp: operation.type in [:jpg, :png]
+          formats: operation.processed_formats
       }
 
       %Images.OperationResult{

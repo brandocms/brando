@@ -118,13 +118,13 @@ defmodule Brando.VillainTest do
                    "thumb" => "/media/image/thumb/1.jpg",
                    "xlarge" => "/media/image/xlarge/1.jpg"
                  },
+                 formats: [:jpg],
                  src: "/media/image/1.jpg",
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
                  width: 300,
                  dominant_color: nil,
-                 alt: nil,
-                 webp: false
+                 alt: nil
                }
              ]
   end

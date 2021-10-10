@@ -5,7 +5,6 @@ defmodule Brando.Type.ImageConfig do
   ### Options
 
     * random_filename - use filename given at upload, or create a random filename
-    * target_format - if set, forces conversion to this format. Master image is kept in its original format.
 
   """
 
@@ -18,7 +17,7 @@ defmodule Brando.Type.ImageConfig do
           size_limit: non_neg_integer,
           sizes: %{optional(binary) => map},
           srcset: %{optional(binary) => map} | nil,
-          target_format: atom | nil,
+          formats: [atom],
           overwrite: boolean,
           upload_path: binary
         }
@@ -30,11 +29,9 @@ defmodule Brando.Type.ImageConfig do
             size_limit: 10_240_000,
             sizes: %{},
             srcset: nil,
-            target_format: nil,
+            formats: [:original],
             overwrite: false,
             upload_path: Path.join("images", "default")
-
-  import Brando.Utils, only: [stringy_struct: 2]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -44,7 +41,12 @@ defmodule Brando.Type.ImageConfig do
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(val) when is_map(val), do: {:ok, Brando.Utils.map_to_struct(val, __MODULE__)}
+  def cast(val) when is_map(val) do
+    struct = Brando.Utils.map_to_struct(val, __MODULE__)
+    formats = Enum.map(struct.formats, &ensure_atom/1)
+
+    {:ok, Map.put(struct, :formats, formats)}
+  end
 
   @doc """
   Integers are never considered blank
@@ -55,8 +57,7 @@ defmodule Brando.Type.ImageConfig do
   Load from database. We receive it as a map since Postgrex does the conversion.
   """
   def load(val) when is_map(val) do
-    string_struct = stringy_struct(Brando.Type.ImageConfig, val)
-    {:ok, string_struct}
+    cast(val)
   end
 
   @doc """
@@ -64,4 +65,7 @@ defmodule Brando.Type.ImageConfig do
   other options as well.
   """
   def dump(val) when is_map(val), do: {:ok, val}
+
+  defp ensure_atom(atom) when is_atom(atom), do: atom
+  defp ensure_atom(binary) when is_binary(binary), do: String.to_existing_atom(binary)
 end

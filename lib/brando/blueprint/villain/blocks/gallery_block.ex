@@ -30,6 +30,8 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
       attribute :type, :enum,
         values: [:gallery, :slider, :slideshow],
         default: :gallery
+
+      attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif]
     end
 
     relations do

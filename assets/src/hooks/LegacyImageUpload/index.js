@@ -14,6 +14,14 @@ export default (app) => ({
     this.strings.uploading = this.el.dataset.textUploading
     this.status = IDLE
     this.uid = this.el.dataset.blockUid
+
+    const $formatsEl = Dom.find(this.el, '[data-upload-formats]')
+    if ($formatsEl) {
+      this.formats = $formatsEl.getAttribute('data-upload-formats')
+    } else {
+      this.formats = ''
+    }
+    
     this.csrfToken = Dom.find('meta[name="csrf-token"]').content
     this.pluses = Dom.all(this.el, '.upload-canvas .plus')
 
@@ -113,6 +121,7 @@ export default (app) => ({
       formData.append('name', f.name)
       formData.append('slug', 'post')
       formData.append('uid', this.uid)
+      formData.append('formats', this.formats)
 
       try {
         this.status = UPLOADING

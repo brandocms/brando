@@ -611,7 +611,10 @@ defmodule BrandoAdmin.Components.Form do
       image_struct =
         if entry && is_map(Map.get(entry, key)) do
           # keep the :alt, :title and :credits field and set a default focal point
-          Map.merge(image_struct, Map.take(Map.get(entry, key), [:alt, :title, :credits]))
+          Map.merge(
+            image_struct,
+            Map.take(Map.get(entry, key), [:alt, :title, :credits])
+          )
         else
           image_struct
         end

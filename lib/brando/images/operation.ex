@@ -9,6 +9,7 @@ defmodule Brando.Images.Operation do
             user: nil,
             total_operations: nil,
             operation_index: nil,
+            processed_formats: nil,
             image_struct: %Images.Image{},
             filename: nil,
             type: nil,

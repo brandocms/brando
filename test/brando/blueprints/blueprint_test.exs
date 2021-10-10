@@ -97,7 +97,6 @@ defmodule Brando.Blueprint.BlueprintTest do
                      "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
                    },
                    srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
-                   target_format: nil,
                    upload_path: "images/avatars"
                  }
                },
@@ -123,8 +122,7 @@ defmodule Brando.Blueprint.BlueprintTest do
                "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
              },
              srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
-             upload_path: "images/avatars",
-             target_format: nil
+             upload_path: "images/avatars"
            }
   end
 
