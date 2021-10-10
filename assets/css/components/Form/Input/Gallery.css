@@ -247,7 +247,7 @@
           transition: background-color 250ms ease, color 250ms ease;
 
           &:hover {
-            color: var(--brando-color-dark);
+            background-color: var(--brando-color-dark);
             color: var(--brando-color-peach);
           }
         }

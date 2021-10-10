@@ -61,7 +61,7 @@
   }
 
   &.iziToast-theme-mutations {
-    color: var(--brando-color-dark);
+    background-color: var(--brando-color-dark);
     border-radius: 15px;
     padding: 0;
     min-height: 0;
@@ -108,7 +108,7 @@
     }
 
     &.iziToast-color-green {
-      color: var(--brando-color-dark);
+      background-color: var(--brando-color-dark);
 
       > .iziToast-body .iziToast-message {
         color: var(--brando-color-peach);

@@ -65,7 +65,7 @@
   border-bottom-right-radius: 0;
 
   &.selected {
-    color: var(--brando-color-dark);
+    background-color: var(--brando-color-dark);
     color: var(--brando-color-peach);
     border: 1px solid transparent;
   }

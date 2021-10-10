@@ -1,6 +1,6 @@
 .selected-rows {
   @container;
-  color: var(--brando-color-dark);
+  background-color: var(--brando-color-dark);
   color: var(--brando-color-peach);
   display: flex;
   align-items: center;

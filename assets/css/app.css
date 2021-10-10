@@ -94,7 +94,7 @@ code {
 
   .tooltip-inner {
     color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
+    background-color: var(--brando-color-dark);
     border-radius: 12px;
     padding: 5px 7px 5px;
   }
@@ -649,7 +649,7 @@ h3 {
 }
 
 .tippy-box {
-  color: var(--brando-color-dark);
+  background-color: var(--brando-color-dark);
   color: var(--brando-color-peach);
   font-size: 12px;
 }

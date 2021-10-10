@@ -267,7 +267,7 @@
       }
 
       &.active {
-        color: var(--brando-color-dark);
+        background-color: var(--brando-color-dark);
         color: var(--brando-color-peach);
         svg {
           path:nth-of-type(2) {
@@ -276,7 +276,7 @@
         }
 
         &:hover {
-          color: var(--brando-color-dark);
+          background-color: var(--brando-color-dark);
           color: var(--brando-color-peach);
           svg {
             path:nth-of-type(2) {

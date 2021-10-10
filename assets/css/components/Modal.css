@@ -117,7 +117,7 @@
     background-color: #fafafa;
 
     &:hover {
-      color: var(--brando-color-dark);
+      background-color: var(--brando-color-dark);
       color: var(--brando-color-peach);
     }
   }

@@ -33,7 +33,7 @@
       transition: background-color 200ms ease;
 
       &.active {
-        color: var(--brando-color-dark);
+        background-color: var(--brando-color-dark);
         color: var(--brando-color-peach);
 
         &:hover {
@@ -192,7 +192,7 @@
 
     .selected {
       @container;
-      color: var(--brando-color-dark);
+      background-color: var(--brando-color-dark);
       color: var(--brando-color-peach);
       display: flex;
       align-items: center;

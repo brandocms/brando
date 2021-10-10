@@ -17,7 +17,7 @@
       padding: 15px;
 
       &.selected {
-        color: var(--brando-color-dark);
+        background-color: var(--brando-color-dark);
         color: var(--brando-color-peach);
       }
 
