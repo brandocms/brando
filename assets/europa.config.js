@@ -140,13 +140,13 @@ module.exports = {
 
         form: {
           help: {
-            iphone: '13px',
-            mobile: '13px',
-            ipad_portrait: '13px',
-            ipad_landscape: '13px',
-            desktop_md: '13px',
-            desktop_lg: '13px',
-            desktop_xl: '14px'
+            iphone: '9px',
+            mobile: '9px',
+            ipad_portrait: '11px',
+            ipad_landscape: '11px',
+            desktop_md: '11px',
+            desktop_lg: '11px',
+            desktop_xl: '12px'
           },
           
           label: {
@@ -265,13 +265,34 @@ module.exports = {
         },
 
         base: {
-          iphone: '16px',
-          mobile: '16px',
-          ipad_portrait: '20px',
-          ipad_landscape: '1.3888888888888888vw',
-          desktop_md: '1.3888888888888888vw',
-          desktop_lg: '1.3888888888888888vw',
-          desktop_xl: '23px'
+          iphone: {
+            'font-size': '16px',
+            'line-height': '1.6vw'
+          },
+          mobile: {
+            'font-size': '16px',
+            'line-height': '1.6vw'
+          },
+          ipad_portrait: {
+            'font-size': '20px',
+            'line-height': '1.6vw'
+          },
+          ipad_landscape: {
+            'font-size': '1.3888888888888888vw',
+            'line-height': '1.6vw'
+          },
+          desktop_md: {
+            'font-size': '1.3888888888888888vw',
+            'line-height': '1.6vw'
+          },
+          desktop_lg: {
+            'font-size': '1.3888888888888888vw',
+            'line-height': '1.6vw'
+          },
+          desktop_xl: {
+            'font-size': '23px',
+            'line-height': '29px'
+          }
         },
 
         badge: {
@@ -295,16 +316,16 @@ module.exports = {
             'font-size': '24px'
           },
           ipad_landscape: {
-            'font-size': '24px'
+            'font-size': '30px'
           },
           desktop_md: {
-            'font-size': '24px'
+            'font-size': '30px'
           },
           desktop_lg: {
-            'font-size': '24px'
+            'font-size': '30px'
           },
           desktop_xl: {
-            'font-size': '24px'
+            'font-size': '30px'
           }
         },
 

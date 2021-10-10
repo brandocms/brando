@@ -10,7 +10,7 @@
 
     dt {
       @fontsize nav.mainItem;
-      color: theme(colors.dark);
+      color: var(--brando-color-dark); 
       cursor: pointer;
       user-select: none;
       font-weight: 400;
@@ -63,7 +63,7 @@
       opacity: 0;
       display: none;
       margin-left: 30px;
-      color: theme(colors.dark);
+      color: var(--brando-color-dark); 
 
       ul {
         li {

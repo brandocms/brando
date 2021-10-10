@@ -126,11 +126,11 @@
 }
 
 .block {
-  background-color: theme(colors.villain.blockBackground);
+  background-color: var(--brando-color-white);
   padding: 45px 15px 15px;
   min-height: 105px;
   position: relative;
-  border: 1px solid theme(colors.villain.blockBorder);
+  border: 1px solid var(--brando-color-gray-light);
   transition: border 500ms ease, background-color 1500ms ease;
 
   &.ref_block {
@@ -360,7 +360,7 @@
       @space margin-x 8px;
       display: block;
       font-weight: bold;
-      /* border: 1px solid theme(colors.dark);
+      /* border: 1px solid var(--brando-color-dark);
       border-radius: 10px;
       padding: 2px 6px 1px; */
     }
@@ -398,8 +398,8 @@
       border: 1px solid transparent;
 
       &:hover {
-        @color bg white;
-        border: 1px solid theme(colors.dark);
+        background-color: var(--brando-color-white);
+        border: 1px solid var(--brando-color-dark);
         border-radius: 7px;
       }
 

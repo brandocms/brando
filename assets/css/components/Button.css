@@ -12,7 +12,7 @@ button.primary, a.primary {
   font-size: 18px;
   color: theme(colors.peach);
   border: 1px solid theme(colors.blue);
-  background-color: theme(colors.blue);
+  background-color: var(--brando-color-blue);
   border-radius: 30px;
   height: 60px;
   padding-bottom: 6px;
@@ -28,8 +28,8 @@ button.primary, a.primary {
   }
 
   &.dark {
-    background-color: theme(colors.dark);
-    border: 1px solid theme(colors.dark);
+    background-color: var(--brando-color-dark); 
+    border: 1px solid var(--brando-color-dark);
     color: theme(colors.peach);
 
     &:hover {
@@ -50,8 +50,8 @@ button.primary, a.primary {
   }
 
   &:hover {
-    background-color: theme(colors.dark);
-    border-color: theme(colors.dark);
+    background-color: var(--brando-color-dark); 
+    border-color: var(--brando-color-dark); 
   }
 
   &.small {
@@ -127,7 +127,7 @@ a.danger, button.danger {
   }
 
   &:hover {
-    background-color: theme(colors.dark);
+    background-color: var(--brando-color-dark); 
   }
 }
 
@@ -135,8 +135,8 @@ a.secondary, button.secondary {
   @fontsize button;
 
   white-space: nowrap;
-  color: theme(colors.dark);
-  border: 1px solid theme(colors.dark) !important;
+  color: var(--brando-color-dark); 
+  border: 1px solid var(--brando-color-dark) !important;
   background-color: transparent;
   padding: 15px 25px 16px;
   min-width: 205px;
@@ -169,7 +169,7 @@ a.secondary, button.secondary {
   }
 
   &:hover {
-    background-color: theme(colors.peach);
+    background-color: var(--brando-color-peach);
   }
 }
 
@@ -180,8 +180,8 @@ a.secondary, button.secondary {
 button.tiny, a.tiny {
   @font mono;
   border-radius: 5px;
-  border: 1px solid theme(colors.dark);
-  color: theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-color-dark); 
   font-size: 11px;
   display: inline-block;
   text-transform: uppercase;
@@ -198,11 +198,11 @@ button.tiny, a.tiny {
   }
 
   &:hover {
-    background-color: theme(colors.dark);
+    background-color: var(--brando-color-dark); 
     color: theme(colors.peach);
     path {
       &:nth-of-type(2) {
-        fill: theme(colors.peach);
+        fill: var(--brando-color-peach);
       }
     }
   }
@@ -213,7 +213,7 @@ button.tiny, a.tiny {
 }
 
 .add-entry-button {
-  border: 1px solid theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
   font-size: 17px;
   padding: 12px 20px 12px;
   border-radius: 25px;
@@ -227,15 +227,15 @@ button.tiny, a.tiny {
 
     path:nth-of-type(2) {
       transition: fill 250ms ease;
-      fill: theme(colors.dark);
+      fill: var(--brando-color-dark);
     }
   }
 
   &:hover {
-    @color bg dark;
-    @color fg peach;
+    color: var(--brando-color-dark);
+    color: var(--brando-color-peach);
     svg path:nth-of-type(2) {
-      fill: theme(colors.peach);
+      fill: var(--brando-color-peach);
     }
   }
 }

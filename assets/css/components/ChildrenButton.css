@@ -14,8 +14,8 @@
 
   button, a {
     @fontsize xs/1;
-    color: theme(colors.dark);
-    border: 1px solid theme(colors.dark);
+    color: var(--brando-color-dark); 
+    border: 1px solid var(--brando-color-dark);
     background-color: transparent;
     width: 100%;
     aspect-ratio: 1;
@@ -27,14 +27,14 @@
     max-width: 44px;
 
     &.active {
-      background-color: theme(colors.dark);
-      border-color: theme(colors.dark);
+      background-color: var(--brando-color-dark); 
+      border-color: var(--brando-color-dark); 
       color: theme(colors.peach);
     }
 
     &:hover {
-      background-color: theme(colors.dark);
-      border-color: theme(colors.dark);
+      background-color: var(--brando-color-dark); 
+      border-color: var(--brando-color-dark); 
       color: theme(colors.peach);
     }
   }

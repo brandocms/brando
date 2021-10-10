@@ -74,7 +74,7 @@
 }
 
 code {
-  @color bg peach;
+  background-color: var(--brando-color-peach);
   font-size: 90%;
   padding: 2px;
 }
@@ -93,8 +93,8 @@ code {
   z-index: 10000;
 
   .tooltip-inner {
-    @color fg peach;
-    @color bg dark;
+    color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
     border-radius: 12px;
     padding: 5px 7px 5px;
   }
@@ -105,7 +105,7 @@ code {
     border-style: solid;
     position: absolute;
     margin: 5px;
-    border-color: theme(colors.dark);
+    border-color: var(--brando-color-dark); 
     z-index: 1;
   }
 
@@ -232,7 +232,7 @@ code {
     display: inline-block;
     width: 30px;
     height: 30px;
-    border: 1px solid theme(colors.dark);
+    border: 1px solid var(--brando-color-dark);
     border-radius: 50%;
 
     &:after {
@@ -350,8 +350,39 @@ html {
 
 body {
   @fontsize base;
-  @color fg dark;
-  @color bg peach;
+
+  --brando-color-background: theme(colors.peach);
+  --brando-color-content-background: theme(colors.white);
+  --brando-color-white: theme(colors.white);
+  --brando-color-gray: theme(colors.gray);
+  --brando-color-gray-light: theme(colors.grayLight);
+  --brando-color-black: theme(colors.black);
+  --brando-color-foreground: theme(colors.dark);
+  --brando-color-shaded: #fdf8f7;
+  --brando-color-dark: theme(colors.dark);
+  --brando-color-peach: theme(colors.peach);
+  --brando-color-peach-darker: theme(colors.peachDarker);
+  --brando-color-input: theme(colors.input);
+  --brando-color-blue: theme(colors.blue);
+
+  background-color: var(--brando-color-background);
+  color: var(--brando-color-foreground);
+
+  &.dark-mode {
+    --brando-color-background: theme(colors.dark);
+    --brando-color-content-background: theme(colors.black);
+    --brando-color-foreground: theme(colors.white);
+    --brando-color-white: theme(colors.black);
+    --brando-color-gray: theme(colors.gray);
+    --brando-color-gray-light: theme(colors.grayLight);
+    --brando-color-black: theme(colors.white);
+    --brando-color-shaded: #031122;
+    --brando-color-dark: theme(colors.peach);
+    --brando-color-peach: theme(colors.dark);
+    --brando-color-peach-darker: #072850;
+    --brando-color-input: theme(colors.dark);
+    --brando-color-blue: theme(colors.blue);
+  }
 }
 
 .main-content .circle-dropdown.wrapper {
@@ -369,7 +400,7 @@ body {
 
 .toggle-menu {
   @fontsize xs/1;
-  border: 1px solid theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
   width: 50px;
   height: 50px;
   position: fixed;
@@ -385,8 +416,8 @@ body {
   transform-origin: center;
 
   &:hover {
-    background-color: theme(colors.dark);
-    color: theme(colors.peach);
+    background-color: var(--brando-color-dark); 
+    color: var(--brando-color-peach); 
   }
 }
 
@@ -491,7 +522,7 @@ h3 {
   border-radius: 15px;
   padding: 1vw;
   margin-top: 1vw;
-  @color bg peachDarker;
+  background-color: var(--brando-color-peach-darker);
 
   &.hidden {
     display: none;
@@ -504,7 +535,7 @@ h3 {
   @space padding-x 1vw;
 
   &:hover {
-    @color bg peachDarker;
+    background-color: var(--brando-color-peach-darker);
     cursor: pointer;
   }
 
@@ -532,8 +563,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: theme(colors.dark);
-  border: 1px solid theme(colors.dark);
+  color: var(--brando-color-dark); 
+  border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 60px;
   padding-bottom: 8px;
@@ -542,7 +573,7 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: theme(colors.peach);
+    background-color: var(--brando-color-peach);
   }
 }
 
@@ -551,8 +582,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: theme(colors.dark);
-  border: 1px solid theme(colors.dark);
+  color: var(--brando-color-dark); 
+  border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 40px;
   padding-bottom: 5px;
@@ -560,7 +591,7 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: theme(colors.peach);
+    background-color: var(--brando-color-peach);
   }
 }
 
@@ -569,8 +600,8 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: theme(colors.dark);
-  border: 1px solid theme(colors.dark);
+  color: var(--brando-color-dark); 
+  border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 60px;
   padding-bottom: 5px;
@@ -582,14 +613,14 @@ h3 {
   }
 
   &:hover {
-    background-color: theme(colors.peach);
+    background-color: var(--brando-color-peach);
   }
 }
 
 .btn-outline-primary {
   padding-top: 5px;
-  color: theme(colors.dark);
-  border: 1px solid theme(colors.dark);
+  color: var(--brando-color-dark); 
+  border: 1px solid var(--brando-color-dark);
   background-color: #ffffff;
   height: 60px;
   border-radius: 30px;
@@ -599,27 +630,27 @@ h3 {
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
-    background-color: theme(colors.dark);
-    border-color: theme(colors.dark);
+    background-color: var(--brando-color-dark); 
+    border-color: var(--brando-color-dark); 
     color: theme(colors.peach);
   }
 
   &.inverted {
-    @color fg peach;
+    color: var(--brando-color-peach);
     @color bg transparent;
-    border: 1px solid theme(colors.peach);
+    border: 1px solid var(--brando-color-peach);
 
     &:hover {
-      @color fg dark;
-      @color bg peach;
+      color: var(--brando-color-dark);
+      background-color: var(--brando-color-peach);
       border-color: theme(colors.peach);
     }
   }
 }
 
 .tippy-box {
-  @color bg dark;
-  @color fg peach;
+  color: var(--brando-color-dark);
+  color: var(--brando-color-peach);
   font-size: 12px;
 }
 
@@ -866,7 +897,7 @@ h3 {
   height: 40px;
   border-radius: 20px;
   line-height: 1;
-  border: 1px solid theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
   font-family: theme(typography.families.mono);
   font-size: 14px;
   text-transform: uppercase;
@@ -889,7 +920,7 @@ h3 {
   }
 
   span {
-    color: theme(colors.dark);
+    color: var(--brando-color-dark); 
   }
 }
 
@@ -913,7 +944,7 @@ h3 {
   text-transform: uppercase;
   padding: 5px 8px 4px;
   line-height: 1;
-  border: 1px solid theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
   border-radius: 15px;
   user-select: none;
 

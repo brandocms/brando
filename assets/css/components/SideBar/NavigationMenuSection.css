@@ -17,7 +17,7 @@
       }
 
       .line {
-        @color bg dark;
+        background-color: var(--brando-color-dark);
         height: 1px;
         width: 100%;
         left: 0;

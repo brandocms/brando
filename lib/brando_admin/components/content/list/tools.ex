@@ -98,8 +98,6 @@ defmodule BrandoAdmin.Components.Content.List.Tools do
             </div>
           {/for}
         </div>
-
-        <!-- TODO! ordering here? -->
       </div>
 
       {#if @list_opts[:filter]}

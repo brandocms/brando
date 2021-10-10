@@ -1,6 +1,6 @@
 .module-block {
   .important-vars {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 10px;
@@ -10,18 +10,28 @@
     }
 
     .tiptap-wrapper {
-      @color bg white;
+      background-color: var(--brando-color-white);
     }
 
     input.text, textarea.text {
-      @color bg white;
-      @color fg dark;
+      background-color: var(--brando-color-white);
+      color: var(--brando-color-dark);
       @fontsize sm;
 
       &::placeholder {
         @fontsize sm;
       }
     }
+  }
+
+  .rendered-variable {
+    background-color: yellow;
+    padding: 0.5em 1em;
+    width: fit-content;
+    border-radius: 50px;
+    display: inline-block;
+    margin-top: 5px;
+    margin-bottom: 5px;
   }
 
   .modal-content {
@@ -50,8 +60,14 @@
 
     width: 100%;
     border: none;
-    background-color: white;
+    background-color: var(--brando-color-white);
     border-radius: 35px;
     padding: 1rem;
+    transition: background-color 350ms ease, color 350ms ease;
+
+    &.phx-click-loading {
+      color: var(--brando-color-dark);
+      color: var(--brando-color-peach);
+    }
   }
 }

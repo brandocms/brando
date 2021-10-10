@@ -2,7 +2,8 @@ main {
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--brando-color-content-background);
+  color: var(--brando-color-foreground);
   display: flex;
   flex-direction: column;
   margin-left: var(--main-margin-left);
@@ -51,7 +52,7 @@ main {
     .bar {
       margin-top: 5px;
       height: 2px;
-      background-color: theme(colors.peach);
+      background-color: var(--brando-color-peach);
       transition: width 0.75s ease;
     }
   }

@@ -274,9 +274,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp build_list_opts(listing, schema, content_language) do
     %{paginate: true, limit: 25}
     |> maybe_merge_listing_query(listing)
-    |> IO.inspect()
     |> maybe_merge_content_language(schema, content_language)
-    |> IO.inspect()
     |> maybe_preload_creator(schema)
     |> maybe_order_by_sequence(schema)
   end

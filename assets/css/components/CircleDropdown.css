@@ -5,26 +5,26 @@
     &.open {
       svg {
         .main-circle {
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
 
           &.inverted {
-            fill: theme(colors.peach);
+            fill: var(--brando-color-peach);
           }
         }
         line {
           transition: stroke 0.3s ease;
-          stroke: theme(colors.peach);
+          stroke: var(--brando-color-peach);
 
           &.inverted {
-            fill: theme(colors.dark);
+            fill: var(--brando-color-dark);
           }
         }
         circle {
           transition: fill 0.3s ease;
-          fill: theme(colors.peach);
+          fill: var(--brando-color-peach);
 
           &.inverted {
-            fill: theme(colors.dark);
+            fill: var(--brando-color-dark);
           }
         }
       }
@@ -35,25 +35,25 @@
 
       line {
         transition: stroke 0.3s ease;
-        stroke: theme(colors.dark);
+        stroke: var(--brando-color-dark);
 
         &.inverted {
-          stroke: theme(colors.peach);
+          stroke: var(--brando-color-peach);
         }
       }
 
       circle {
         transition: fill 0.3s ease;
-        fill: theme(colors.dark);
+        fill: var(--brando-color-dark);
       }
 
       .main-circle {
         transition: fill 0.3s ease;
-        stroke: theme(colors.transparent);
+        stroke: var(--brando-color-transparent);
         fill: transparent;
 
         &.inverted {
-          stroke: theme(colors.peach);
+          stroke: var(--brando-color-peach);
         }
       }
     }
@@ -62,15 +62,15 @@
       svg {
         line {
           transition: stroke 0.3s ease;
-          stroke: theme(colors.peach);
+          stroke: var(--brando-color-peach);
         }
         circle {
           transition: fill 0.3s ease;
-          fill: theme(colors.peach);
+          fill: var(--brando-color-peach);
         }
         .main-circle {
           transition: fill 0.3s ease;
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
         }
       }
     }
@@ -79,11 +79,11 @@
   .dropdown-content {
     display: none;
     opacity: 0;
-    background-color: theme(colors.peach);
-    color: theme(colors.dark);
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark); 
     position: absolute;
     width: 250px;
-    border: 1px solid theme(colors.dark);
+    border: 1px solid var(--brando-color-dark);
     z-index: 2;
 
     li {
@@ -99,7 +99,7 @@
         text-transform: uppercase;
 
         &:hover {
-          background-color: theme(colors.dark);
+          background-color: var(--brando-color-dark); 
           color: theme(colors.peach);
         }
       }

@@ -13,12 +13,12 @@
     button {
       @fontsize sm;
       width: 100%;
-      border: 1px solid theme(colors.dark);
+      border: 1px solid var(--brando-color-dark);
       padding: 15px;
 
       &.selected {
-        @color bg dark;
-        @color fg peach;
+        color: var(--brando-color-dark);
+        color: var(--brando-color-peach);
       }
 
       + button {

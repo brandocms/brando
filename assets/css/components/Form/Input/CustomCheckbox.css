@@ -40,7 +40,7 @@
     width: var(--checkmark-width);
     height: var(--checkmark-width);
     border-radius: var(--checkmark-width);
-    background-color: theme(colors.blue);
+    background-color: var(--brando-color-blue);
     position: absolute;
     justify-self: center;
     opacity: 0;

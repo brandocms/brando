@@ -1,11 +1,11 @@
 .shaded {
-  background-color: #fdf8f7;
+  background-color: var(--brando-color-shaded);
   padding: 15px;
   border-radius: 20px;
   margin-bottom: 30px;
 
   input.text, textarea.text {
-    @color bg white;
+    background-color: var(--brando-color-white);
   }
 }
 
@@ -27,9 +27,9 @@
     }
 
     &:hover {
-      @color bg dark;
+      color: var(--brando-color-dark);
       svg path.s {
-        fill: theme(colors.peach);
+        fill: var(--brando-color-peach);
       }
     }
   }
@@ -41,9 +41,9 @@
     border-radius: 50%;
 
     &:hover {
-      @color bg dark;
+      color: var(--brando-color-dark);
       svg path.s {
-        fill: theme(colors.peach);
+        fill: var(--brando-color-peach);
       }
     }
 
@@ -81,7 +81,8 @@
 
 .field-wrapper {
   width: 100%;
-  margin-bottom: 1.3vw;
+  margin-bottom: 1.8vw;
+  position: relative;
 
   &.compact {
     margin-bottom: 0.5vw !important;
@@ -104,7 +105,7 @@
   }
 
   &.subform {
-    background-color: #fdf8f7;
+    background-color: var(--brando-color-shaded);
     padding: 15px;
     border-radius: 20px;
 
@@ -234,17 +235,18 @@
   .meta {
     display: flex;
     justify-content: space-between;
-    margin-top: 6px;
+    margin-top: 3px;
     position: absolute;
+    right: 0;
 
     .help-text {
       @fontsize form.help;
-      margin-left: 15px;
+      text-align: right;
     }
 
     .extra {
       font-size: 12px;
-      border: 1px solid theme(colors.dark);
+      border: 1px solid var(--brando-color-dark);
       border-radius: 16px;
       padding: 3px 5px 2px;
     }

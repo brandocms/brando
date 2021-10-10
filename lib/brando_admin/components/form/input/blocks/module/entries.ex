@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
         />
       {/for}
 
-      <button class="add-module-entry" type="button" :on-click="add_entry">
+      <button class="add-module-entry" type="button" :on-click="add_entry" phx-page-loading>
         Add new entry [{@entry_template.name}]
       </button>
     </div>

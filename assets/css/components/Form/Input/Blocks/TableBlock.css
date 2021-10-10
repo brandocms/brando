@@ -1,7 +1,7 @@
 .table-block {
   .empty {
-    @color bg peach;
-    @color fg dark;
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -26,7 +26,7 @@
         path:nth-of-type(2), .plus, circle {
           user-select: none;
           pointer-events: none;
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
         }
       }
     }
@@ -46,7 +46,7 @@
   }
 
   .table-instructions {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
     padding: 1vw;
     margin-bottom: 2vw;
     font-size: 1.2vw;
@@ -60,7 +60,7 @@
     display: flex;
 
     &:nth-of-type(even) {
-      @color bg peach;
+      background-color: var(--brando-color-peach);
       border-radius: 12px;
 
       .field-wrapper {

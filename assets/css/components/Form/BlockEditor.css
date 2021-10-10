@@ -51,7 +51,7 @@
 
       .refs {
         .col-var {
-          @color bg peach;
+          background-color: var(--brando-color-peach);
           padding: 1vw;
           border-radius: 10px;
           margin-bottom: 15px;
@@ -63,7 +63,7 @@
 
             svg {
               circle {
-                fill: theme(colors.dark);
+                fill: var(--brando-color-dark);
               }
             }
           }

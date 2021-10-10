@@ -50,13 +50,13 @@
       @fontsize 15px;
       border-radius: 18px 0 0 18px;
       padding: 10px 25px 10px;
-      border: 1px solid theme(colors.dark) !important;
-      color: theme(colors.dark);
+      border: 1px solid var(--brando-color-dark) !important;
+      color: var(--brando-color-dark); 
       background-color: transparent;
       transition: background-color 0.25s ease, border-color 0.25s ease;
 
       &:hover {
-          background-color: theme(colors.peach);
+          background-color: var(--brando-color-peach);
       }
 
       span.label {
@@ -133,7 +133,7 @@
 
 
     .img-placeholder {
-      @color bg input;
+      background-color: var(--brando-color-input);
       border-radius: 50%;
       width: 100px;
       height: 100px;
@@ -168,7 +168,7 @@
     .placeholder-wrapper {
       border-radius: 50%;
       margin-bottom: 15px;
-      @color bg input;
+      background-color: var(--brando-color-input);
 
       .svg-wrapper {
         padding: 75px;
@@ -247,7 +247,8 @@
           transition: background-color 250ms ease, color 250ms ease;
 
           &:hover {
-            @color bg peach;
+            color: var(--brando-color-dark);
+            color: var(--brando-color-peach);
           }
         }
       }
@@ -357,10 +358,10 @@
       left: 0;
 
       &::-webkit-progress-bar {
-        @color bg peach;
+        background-color: var(--brando-color-peach);
       }
       &::-webkit-progress-value {
-        @color bg peachDarker;
+        background-color: var(--brando-color-peach-darker);
         height: 100%;
       }
     }

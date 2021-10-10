@@ -1,6 +1,6 @@
 .blocks-wrapper {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 0.7rem;
+  background-color: var(--brando-color-peach);
 
   .modules {
     @space margin-top 15px;
@@ -8,6 +8,7 @@
 
   [data-block-type="container"] & {
     padding: 0;
+    background-color: transparent;
   }
 
   > [data-block-uid] {
@@ -53,7 +54,7 @@ section.alert.danger {
     }
 
     &:hover {
-      @color bg peach;
+      background-color: var(--brando-color-peach);
     }
 
     + button {
@@ -63,7 +64,7 @@ section.alert.danger {
 }
 
 .namespace-button {
-  @color bg peachDarker;
+  background-color: var(--brando-color-peach-darker);
 
   &:hover {
     @color bg peachDarkest;
@@ -84,7 +85,7 @@ section.alert.danger {
   width: 100%;
 
   &:hover {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
   }
 
   svg {
@@ -112,7 +113,7 @@ section.alert.danger {
   width: 100%;
 
   &:hover {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
   }
 
   + .module-button {

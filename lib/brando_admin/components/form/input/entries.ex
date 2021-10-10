@@ -90,7 +90,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def assign_available_schemas(socket, wanted_schemas) do
     assign_new(socket, :available_schemas, fn ->
       Brando.Blueprint.Identifier.get_entry_types(wanted_schemas)
-      |> IO.inspect()
     end)
   end
 

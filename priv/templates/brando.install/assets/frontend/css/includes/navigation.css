@@ -28,7 +28,7 @@ header[data-nav] {
     }
 
     .mobile-bg {
-      @color bg dark;
+      color: var(--brando-color-dark);
       z-index: 3;
       position: fixed;
       top: 0;
@@ -85,7 +85,7 @@ header[data-nav] {
         }
 
         .hamburger {
-          @color fg dark;
+          color: var(--brando-color-dark);
           @space width 22px $mobile;
           @space height 17px $mobile;
           font-size: 17px;
@@ -193,7 +193,7 @@ header[data-nav] {
             }
 
             @responsive <=ipad_landscape {
-              @color fg dark;
+              color: var(--brando-color-dark);
               display: inline-block;
               border-bottom: 1px solid transparent;
               font-weight: normal;

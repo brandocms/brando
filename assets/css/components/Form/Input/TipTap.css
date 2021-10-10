@@ -3,7 +3,7 @@
 
   .brando-input & {
     /* when inside a fieldwrapper(?) */
-    @color bg input;
+    background-color: var(--brando-color-input);
     .ProseMirror {
       padding: 12px;
     }
@@ -164,7 +164,7 @@
     padding-bottom: 14px;
     padding-left: 23px;
     padding-right: 23px;
-    border: 1px solid theme(colors.dark) !important;
+    border: 1px solid var(--brando-color-dark) !important;
     line-height: 1;
     font-size: 18px;
   }

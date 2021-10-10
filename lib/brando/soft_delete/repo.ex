@@ -43,13 +43,8 @@ defmodule Brando.SoftDelete.Repo do
       def maybe_obfuscate(%Ecto.Changeset{data: data} = changeset) do
         module = changeset.data.__struct__
 
-        #! TODO: Remove when moving to blueprints
         obfuscated_fields =
-          if Brando.Blueprint.blueprint?(module) do
-            Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
-          else
-            module.__soft_delete__(:obfuscated_fields) || []
-          end
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
 
         obfuscated_fields
         |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
@@ -65,13 +60,8 @@ defmodule Brando.SoftDelete.Repo do
       def maybe_obfuscate(%{} = struct) do
         module = struct.__struct__
 
-        #! TODO: Remove when moving to blueprints
         obfuscated_fields =
-          if Brando.Blueprint.blueprint?(module) do
-            Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
-          else
-            module.__soft_delete__(:obfuscated_fields) || []
-          end
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
 
         changeset = Ecto.Changeset.change(struct)
 
@@ -104,13 +94,8 @@ defmodule Brando.SoftDelete.Repo do
       def soft_delete(%Ecto.Changeset{data: data} = changeset) do
         module = changeset.data.__struct__
 
-        #! TODO: Remove when moving to blueprints
         obfuscated_fields =
-          if Brando.Blueprint.blueprint?(module) do
-            Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
-          else
-            module.__soft_delete__(:obfuscated_fields) || []
-          end
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
 
         obfuscated_fields
         |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
@@ -128,13 +113,8 @@ defmodule Brando.SoftDelete.Repo do
       def soft_delete(%{} = struct) do
         module = struct.__struct__
 
-        #! TODO: Remove when moving to blueprints
         obfuscated_fields =
-          if Brando.Blueprint.blueprint?(module) do
-            Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
-          else
-            module.__soft_delete__(:obfuscated_fields) || []
-          end
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
 
         changeset = Ecto.Changeset.change(struct)
 

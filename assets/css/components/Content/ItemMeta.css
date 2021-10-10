@@ -43,7 +43,7 @@
       text-transform: uppercase;
 
       span {
-        @color fg dark;
+        color: var(--brando-color-dark);
         opacity: 1;
       }
 
@@ -58,15 +58,15 @@
 .identifier {
   @fontsize 16px;
   background-color: #ffffff;
-  border: 1px solid theme(colors.dark);
+  border: 1px solid var(--brando-color-dark);
   padding: 7px 15px 7px 7px;
   border-radius: 50px;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 
   &.selected {
-    @color bg dark;
-    @color fg peach;
+    color: var(--brando-color-dark);
+    color: var(--brando-color-peach);
     border: 1px solid transparent;
   }
 
@@ -78,7 +78,7 @@
   }
 
   .remove button {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
     border: none;
     font-size: 28px;
     width: 35px;

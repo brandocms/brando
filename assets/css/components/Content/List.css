@@ -1,7 +1,7 @@
 .content-list { 
   .empty-list {
     @space padding-y 7vw;
-    @color bg peach;
+    background-color: var(--brando-color-peach);
     border-radius: 33px;
 
     display: flex;
@@ -27,22 +27,22 @@
     button {
       width: 30px;
       height: 30px;
-      border: 1px solid theme(colors.dark);
+      border: 1px solid var(--brando-color-dark);
       border-radius: 50%;
       font-size: 13px;
       transition: background-color 200ms ease;
 
       &.active {
-        @color bg dark;
-        @color fg peach;
+        color: var(--brando-color-dark);
+        color: var(--brando-color-peach);
 
         &:hover {
-          @color bg dark;
+          color: var(--brando-color-dark);
         }
       }
 
       &:hover {
-        @color bg peach;
+        background-color: var(--brando-color-peach);
       }
 
       & + button {
@@ -69,7 +69,7 @@
     min-height: 3.5vw;
 
     > .statuses {
-      @color bg input;
+      background-color: var(--brando-color-input);
       display: flex;
       height: 100%;
       margin-right: 5px;
@@ -134,7 +134,7 @@
       height: 100%;
       display: flex;
       align-items: center;
-      background-color: theme(colors.input);
+      background-color: var(--brando-color-input);
       border-left: 5px solid #ffffff;
       transition: background-color 250ms ease;
     }
@@ -149,7 +149,7 @@
     }
 
     .filter {
-      @color bg input;
+      background-color: var(--brando-color-input);
       height: clamp(2.8vw, 3.3vw, 45px);
       display: flex;
       align-items: center;
@@ -192,8 +192,8 @@
 
     .selected {
       @container;
-      @color bg dark;
-      @color fg peach;
+      color: var(--brando-color-dark);
+      color: var(--brando-color-peach);
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -210,10 +210,10 @@
       .circle {
         margin-left: 15px;
         margin-right: 15px;
-        border: 1px solid theme(colors.peach);
+        border: 1px solid var(--brando-color-peach);
 
         span {
-          @color fg peach;
+          color: var(--brando-color-peach);
         }
       }
 
@@ -263,7 +263,7 @@
 
     svg {
       circle {
-        fill: theme(colors.dark);
+        fill: var(--brando-color-dark);
       }
 
       &:hover {
@@ -277,7 +277,7 @@
   a {
     border-bottom: none;
     position: relative;
-    color: theme(colors.dark);
+    color: var(--brando-color-dark); 
   }
 
   .list-header {
@@ -320,9 +320,10 @@
 
     .entry-link {
       font-weight: 500;
+      line-height: 1.6vw;
       border-bottom: none;
       position: relative;
-      color: theme(colors.dark);
+      color: var(--brando-color-dark); 
       text-decoration: none;
       text-decoration-color: transparent;
       transition: text-decoration-color 1s ease;
@@ -336,7 +337,7 @@
         content: '»';
         opacity: 0.4;
         right: 0;
-        color: theme(colors.dark);
+        color: var(--brando-color-dark); 
         transform: translate(0, 1px);
         transition: transform 250ms ease, opacity 250ms ease, color 250ms ease;
         display: inline-block;
@@ -345,7 +346,7 @@
       }
 
       &:hover {
-        text-decoration-color: theme(colors.blue);
+        text-decoration-color: var(--brando-color-blue);
 
         &:after {
           opacity: 1;
@@ -389,7 +390,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        @color bg input;
+        background-color: var(--brando-color-input);
         border-radius: 50%;
         
         &:before {
@@ -410,17 +411,17 @@
 
         &:hover {
           cursor: pointer;
-          border: 1px solid theme(colors.dark);
+          border: 1px solid var(--brando-color-dark);
         }
 
         .dropdown-content {
           display: none;
           opacity: 0;
-          background-color: theme(colors.peach);
-          color: theme(colors.dark);
+          background-color: var(--brando-color-peach);
+          color: var(--brando-color-dark); 
           position: absolute;
           width: 175px;
-          border: 1px solid theme(colors.dark);
+          border: 1px solid var(--brando-color-dark);
           z-index: 2;
 
           li {
@@ -437,7 +438,7 @@
               text-transform: uppercase;
 
               &:hover {
-                background-color: theme(colors.dark);
+                background-color: var(--brando-color-dark); 
                 color: theme(colors.peach);
               }
             }

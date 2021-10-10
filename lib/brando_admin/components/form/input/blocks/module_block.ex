@@ -180,6 +180,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 {#else}
                   {"{{ content }}"}
                 {/if}
+
+              {#match {:variable, var_name, variable_value}}
+                <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
+                  {variable_value}
+                </div>
+
               {#match _}
                 {raw split}
             {/case}
@@ -365,16 +371,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
-      ~r/%{(\w+)}|{{ (\w+) }}/
+      ~r/%{(\w+)}|{{ ([\w.]+) }}/
       |> Regex.split(module_code, include_captures: true)
       |> Enum.map(fn chunk ->
-        case Regex.run(~r/%{(?<ref>\w+)}|{{ (?<content>content) }}/, chunk, capture: :all_names) do
+        case Regex.run(~r/%{(?<ref>\w+)}|{{ (?<content>[\w.]+) }}/, chunk, capture: :all_names) do
           nil -> chunk
-          [content, ""] -> {:content, content}
+          ["content", ""] -> {:content, "content"}
+          [variable, ""] -> {:variable, variable, render_variable(variable, socket.assigns)}
           ["", ref] -> {:ref, ref}
         end
       end)
 
     assign(socket, :splits, splits)
+  end
+
+  defp render_variable("entry." <> var_path_string, assigns) do
+    var_path =
+      var_path_string
+      |> String.split(".")
+      |> Enum.map(&String.to_existing_atom/1)
+
+    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
+
+    # TODO: Find a way to preload any changed associations here? otherwise, if we for instance have
+    # an `entry.category_id` that changes, entry.category will still show the old relation.
+    # if we Brando.repo().preload(entry, [:category], force: true) it will be correct.
+    # However, it isn't very efficient to force a preload on every render_variable call!
+
+    # We could track all relations from the schema blueprint, store their ids and check, but .. ugh.
+    # If we assign the entry as rendered_entry every time, we at least won't have to preload
+    # on every render
+
+    # entry = Brando.repo().preload(entry, [:category], force: true)
+
+    require Logger
+    Logger.error("==> render_variable")
+
+    Brando.Utils.try_path(entry, var_path)
   end
 end

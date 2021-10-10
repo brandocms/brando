@@ -1,7 +1,7 @@
 .map-block {
   .empty {
-    @color bg peach;
-    @color fg dark;
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -26,7 +26,7 @@
         path:nth-of-type(2), .plus, circle {
           user-select: none;
           pointer-events: none;
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
         }
       }
     }

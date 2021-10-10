@@ -14,7 +14,7 @@
 
   @space padding-x sm;
   position: fixed;
-  background-color: #fdf8f7;
+  background-color: var(--brando-color-shaded);
 
   flex-shrink: 0;
   flex-grow: 0;

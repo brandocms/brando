@@ -12,6 +12,14 @@
 }
 
 .input-image {
+  .image-modal-content-info {
+    .file-input-wrapper {
+      span.label {
+        width: 100%;
+      }
+    }
+  }
+
   .file-input-wrapper {
     position: relative;
     width: 100%;
@@ -25,8 +33,8 @@
       width: fit-content;
       cursor: pointer;    
       white-space: nowrap;
-      color: theme(colors.dark);
-      border: 1px solid theme(colors.dark) !important;
+      color: var(--brando-color-dark); 
+      border: 1px solid var(--brando-color-dark) !important;
       background-color: transparent;
       padding: 15px 25px 16px;
       min-width: 205px;
@@ -41,7 +49,7 @@
 
     &:hover {
       .label {
-        background-color: theme(colors.peach);
+        background-color: var(--brando-color-peach);
       }
     }
 
@@ -76,7 +84,7 @@
     .placeholder-wrapper {
       border-radius: 50%;
       margin-bottom: 15px;
-      @color bg input;
+      background-color: var(--brando-color-input);
 
       .svg-wrapper {
         padding: 75px;
@@ -134,7 +142,7 @@
       }
 
       .img-placeholder {
-        @color bg input;
+        background-color: var(--brando-color-input);
         border-radius: 50%;
         width: 100px;
         height: 100px;
@@ -170,7 +178,8 @@
           transition: background-color 250ms ease, color 250ms ease;
 
           &:hover {
-            @color bg peach;
+            color: var(--brando-color-dark);
+            color: var(--brando-color-peach);
           }
         }
       }
@@ -224,7 +233,7 @@
   }
 
   .upload-status {
-    @color bg peach;
+    background-color: var(--brando-color-peach);
     margin-bottom: 10px;
     padding: 7px;
     border-radius: 15px;

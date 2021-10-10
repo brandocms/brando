@@ -7,8 +7,9 @@ defmodule Brando.Sites.Redirects do
   def test_redirect(test_path, language) do
     test_url = "/" <> Enum.join(test_path, "/")
     seo = Brando.Cache.SEO.get(language)
+    redirects = seo.redirects || []
 
-    Enum.reduce_while(seo.redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
+    Enum.reduce_while(redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
       case match_redirect(test_url, redirect.from, redirect.to) do
         {:error, _} ->
           {:cont, {:error, {:redirects, :no_match}}}

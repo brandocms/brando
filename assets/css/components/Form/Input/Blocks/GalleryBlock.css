@@ -12,7 +12,7 @@
     
     .preview {
       @column 4/12;
-      @color bg peach;
+      background-color: var(--brando-color-peach);
       padding: 10px;
       display: flex;
       flex-direction: column;
@@ -45,7 +45,7 @@
     .preview {
       @row 3;
       @space margin-bottom 1vw;
-      @color bg peach;
+      background-color: var(--brando-color-peach);
       padding: 10px;
 
       figure {
@@ -68,8 +68,8 @@
   }
 
   .empty {
-    @color bg peach;
-    @color fg dark;
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -94,7 +94,7 @@
         path:nth-of-type(2), .plus, circle {
           user-select: none;
           pointer-events: none;
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
         }
       }
     }
@@ -150,8 +150,8 @@
     }
 
     .img-placeholder {
-      @color bg peach;
-      @color fg dark;
+      background-color: var(--brando-color-peach);
+      color: var(--brando-color-dark);
       padding: 2vw;
 
       .instructions {
@@ -170,7 +170,7 @@
         path:nth-of-type(2), .plus, circle {
           user-select: none;
           pointer-events: none;
-          fill: theme(colors.dark);
+          fill: var(--brando-color-dark);
         }
       }
     }

@@ -24,8 +24,6 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   end
 
   def handle_event("create_module", _, %{assigns: %{current_user: user}} = socket) do
-    # TODO: allow getting `code` from config here!
-    # it's nice to be able to specify your own starting point
     params = %{
       name: "New module",
       class: "module new",

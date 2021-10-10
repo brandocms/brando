@@ -1,7 +1,7 @@
 .selected-rows {
   @container;
-  @color bg dark;
-  @color fg peach;
+  color: var(--brando-color-dark);
+  color: var(--brando-color-peach);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -32,10 +32,10 @@
   .circle {
     margin-left: 15px;
     margin-right: 15px;
-    border: 1px solid theme(colors.peach);
+    border: 1px solid var(--brando-color-peach);
 
     span {
-      @color fg peach;
+      color: var(--brando-color-peach);
     }
   }
 

@@ -27,13 +27,13 @@
   padding-left: 15px;
   padding-right: 15px;
   width: 100%;
-  background-color: theme(colors.input);
+  background-color: var(--brando-color-input);
   border: 0;
 }
 
 .flatpickr-day.selected {
-  background-color: theme(colors.blue);
-  border-color: theme(colors.blue);
+  background-color: var(--brando-color-blue);
+  border-color: var(--brando-color-blue);
 }
 
 .datetime-wrapper {
@@ -44,13 +44,13 @@
     position: absolute;
     top: 7px;
     right: 15px;
-    border: 1px solid theme(colors.dark);
+    border: 1px solid var(--brando-color-dark);
     padding: 8px 12px 10px;
     transition: all 0.25s ease;
 
     &:hover {
-      background-color: theme(colors.dark);
-      color: theme(colors.input);
+      background-color: var(--brando-color-dark); 
+      color: var(--brando-color-input);
     }
   }
 

@@ -1,5 +1,5 @@
 .content-language-selector {
-  @color bg peachDarker;
+  background-color: var(--brando-color-peach-darker);
   @space width 370px desktop_lg/desktop_xl;
   @space width 330px ipad_portrait/ipad_landscape/desktop_md;
   @space width 330px $mobile;
@@ -69,8 +69,8 @@
       transition: color 250ms ease, background-color 250ms ease;
 
       &:hover {
-        @color bg dark;
-        @color fg peach;
+        color: var(--brando-color-dark);
+        color: var(--brando-color-peach);
       }
     }
   }

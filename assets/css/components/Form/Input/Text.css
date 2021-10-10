@@ -1,6 +1,6 @@
 input.text {
   @fontsize input;
-  @color bg input;
+  background-color: var(--brando-color-input);
   padding-top: 12px;
   padding-bottom: 12px;
   padding-left: 15px;
@@ -18,7 +18,7 @@ input.text {
 
   &.invert {
     @color fg input;
-    @color bg dark;
+    color: var(--brando-color-dark);
   }
 }
 
@@ -29,7 +29,7 @@ textarea.text {
   padding-left: 15px;
   padding-right: 15px;
   width: 100%;
-  background-color: theme(colors.input);
+  background-color: var(--brando-color-input);
   border: 0;
 
   &.monospace {
