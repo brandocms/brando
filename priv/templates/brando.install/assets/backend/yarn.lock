@@ -49,10 +49,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.1":
-  version "3.42.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.1.tgz#b04e7dff4f7720fff70b403ba4d73e020f6d629b"
-  integrity sha512-5gWhatpiPB3FlbFCFyA7QULCgI9bpHAx1sC0uL2U/UHFUUS2vOaj7lNDdmDN/j3GiSRVvc4fGGPwcCEtefPzag==
+"@brandocms/jupiter@^3.42.1", "@brandocms/jupiter@^3.42.2":
+  version "3.42.2"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.2.tgz#4691c43e400c05d46b445749ff2e106b05eb1ccd"
+  integrity sha512-QoGjPLMdU6TmQYXZJdz+O/FH2gilcd1olHqHr1l25j3s7jaI05zimSkLYzTh+J8qqLK789mbLOmzxYw/iNda8A==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
@@ -1222,8 +1222,9 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
