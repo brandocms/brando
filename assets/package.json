@@ -14,13 +14,13 @@
     "@codemirror/lang-markdown": "^0.19.1",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
-    "@tiptap/core": "^2.0.0-beta.120",
+    "@tiptap/core": "^2.0.0-beta.122",
     "@tiptap/extension-character-count": "^2.0.0-beta.13",
     "@tiptap/extension-focus": "^2.0.0-beta.27",
     "@tiptap/extension-link": "^2.0.0-beta.21",
     "@tiptap/extension-subscript": "^2.0.0-beta.4",
     "@tiptap/extension-typography": "^2.0.0-beta.15",
-    "@tiptap/starter-kit": "^2.0.0-beta.119",
+    "@tiptap/starter-kit": "^2.0.0-beta.123",
     "autosize": "^5.0.1",
     "flatpickr": "^4.6.9",
     "gsap": "^3.8.0",
@@ -44,6 +44,6 @@
     "autoprefixer": "^10.3.7",
     "svelte": "^3.43.1",
     "svelte-preprocess": "^4.9.8",
-    "vite": "^2.6.5"
+    "vite": "^2.6.7"
   }
 }
