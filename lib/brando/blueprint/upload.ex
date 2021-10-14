@@ -97,11 +97,11 @@ defmodule Brando.Blueprint.Upload do
   end
 
   @doc """
-  Find image and file attributes and validate upload
+  Find assets and validate upload
   """
-  def run_upload_validations(changeset, module, attributes, user, image_db_config) do
-    attributes
-    |> Enum.filter(&(&1.type in [:image, :file]))
+  def run_upload_validations(changeset, module, assets, user, image_db_config) do
+    assets
+    |> Enum.filter(&(&1.type in [:image, :file, :gallery]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
       case module.__asset_opts__(name) do
         %{cfg: %{db: true}} ->

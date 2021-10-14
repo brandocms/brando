@@ -800,7 +800,7 @@ defmodule Brando.Blueprint do
       |> Constraints.run_fk_constraints(module, all_relations)
       |> Upload.run_upload_validations(
         module,
-        all_attributes,
+        all_assets,
         user,
         Keyword.get(opts, :image_db_config)
       )

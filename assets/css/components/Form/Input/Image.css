@@ -183,40 +183,40 @@
           }
         }
       }
-    }
+    }    
+  }
+}
 
-    .focus-point {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+.focus-point {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 1;
+  z-index: 1;
+  cursor: pointer;
+
+  * {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  &-pin {
+    opacity: 0;
+    z-index: 12;
+    position: absolute;
+    padding: 15px;
+    border-radius: 15px;
+    background: rgba(255, 0, 0, .6);
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, .5);
+    border: 1px solid #fff;
+    transform: translate(-50%, -50%);
+    transition: 0s opacity ease;
+
+    &.visible {
+      transition: 1s opacity ease;
       opacity: 1;
-      z-index: 1;
-      cursor: pointer;
-
-      * {
-        pointer-events: none;
-        user-select: none;
-      }
-
-      &-pin {
-        opacity: 0;
-        z-index: 12;
-        position: absolute;
-        padding: 15px;
-        border-radius: 15px;
-        background: rgba(255, 0, 0, .6);
-        box-shadow: inset 0 0 3px rgba(0, 0, 0, .5);
-        border: 1px solid #fff;
-        transform: translate(-50%, -50%);
-        transition: 0s opacity ease;
-
-        &.visible {
-          transition: 1s opacity ease;
-          opacity: 1;
-        }
-      }
     }
   }
 }
@@ -258,6 +258,10 @@
   .image-modal-content-preview {
     width: 50%;
     padding-right: 8px;
+
+    figure {
+      position: relative;
+    }
 
     svg {
       path:nth-of-type(2) {

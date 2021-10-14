@@ -2,6 +2,7 @@ defmodule Brando.Trait.Meta do
   use Brando.Trait
 
   @meta_image_cfg [
+    formats: [:jpg],
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "xlarge",
     upload_path: Path.join(["images", "meta"]),

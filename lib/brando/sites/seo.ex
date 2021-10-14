@@ -8,6 +8,7 @@ defmodule Brando.Sites.SEO do
     gettext_module: Brando.Gettext
 
   @image_cfg [
+    formats: [:jpg],
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "xlarge",
     upload_path: Path.join(["images", "sites", "identity", "image"]),

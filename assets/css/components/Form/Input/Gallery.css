@@ -381,6 +381,10 @@
     width: 50%;
     padding-right: 8px;
 
+    figure {
+      position: relative;
+    }
+
     svg {
       path:nth-of-type(2) {
         fill: #ccc;

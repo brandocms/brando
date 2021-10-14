@@ -6,7 +6,7 @@ const calc = (c, mw, w) => {
 
 export default (app) => ({
   mounted() {
-    console.log('==> Image FocalPoint mounted')
+    console.log('==> Image FocalPoint mounted!!!')
     const field = this.el.dataset.field
     this.movePoint(this.el, this.el.dataset.x, this.el.dataset.y)
 
@@ -17,7 +17,7 @@ export default (app) => ({
       this.el.dataset.x = x
       this.el.dataset.y = y
       this.movePoint(this.el, x, y)
-      this.pushEvent('update_focal_point', { x, y, field })
+      this.pushEventTo(this.el, 'update_focal_point', { x, y, field })
     })
   },
 

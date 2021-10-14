@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
-  # alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
+  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.ArrayInputs
   alias BrandoAdmin.Components.Form.Inputs
@@ -151,24 +151,23 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         <figure>
                           {live_img_preview entry}
                         </figure>
-                        {!--
-                        <button phx-click="cancel-upload" phx-value-ref={"#{entry.ref}"} aria-label="cancel">&times;</button>
-                        --}
                         <p
                           :for={err <- upload_errors(@upload_field, entry)}
                           class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
                       </article>
                     </div>
-                    {!--
-                    <FocalPoint
-                      field_name={@field_name}
-                      focal={@focal} />
-                    --}
                     {#if @image && @image.path && Enum.empty?(@upload_field.entries)}
-                      <img
-                        width={"#{@image.width}"}
-                        height={"#{@image.height}"}
-                        src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
+                      <figure>
+                        <FocalPoint
+                          id={"#{"#{@blueprint.naming.id}-#{@field_name}-focal"}"}
+                          form={@form}
+                          field_name={@field_name}
+                          focal={@focal} />
+                        <img
+                          width={"#{@image.width}"}
+                          height={"#{@image.height}"}
+                          src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
+                      </figure>
                     {/if}
                     {#if !@image && Enum.empty?(@upload_field.entries)}
                       <div class="img-placeholder">
@@ -235,6 +234,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         {hidden_input sf, :width}
                         {hidden_input sf, :marked_as_deleted}
 
+                        {!--
                         <Inputs
                           form={sf}
                           for={:focal}
@@ -242,6 +242,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                           {hidden_input focal_form, :x}
                           {hidden_input focal_form, :y}
                         </Inputs>
+                        --}
 
                         <MapInputs
                           :let={value: value, name: name}

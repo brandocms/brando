@@ -8,6 +8,7 @@ defmodule Brando.Users.User do
   @type user :: Brando.Users.User.t() | :system
 
   @avatar_cfg [
+    formats: [:jpg],
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium",
     upload_path: Path.join("images", "avatars"),
