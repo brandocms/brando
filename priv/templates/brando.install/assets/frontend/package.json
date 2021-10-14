@@ -14,7 +14,7 @@
     "postcss": "^8.3.9",
     "postcss-import": "^14.0.0",
     "postcss-preset-env": "^6.4.0",
-    "postcss-reporter": "^7.0.3",
+    "postcss-reporter": "^7.0.4",
     "stylelint": "^13.12.0",
     "vite": "^2.6.7"
   },
