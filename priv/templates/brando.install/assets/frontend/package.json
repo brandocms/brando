@@ -8,7 +8,7 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.6.3",
+    "@brandocms/europacss": "^0.6.4",
     "@vitejs/plugin-legacy": "^1.6.2",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.3.9",
