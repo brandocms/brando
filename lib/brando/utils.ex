@@ -937,7 +937,7 @@ defmodule Brando.Utils do
 
   # Key exists in both maps, and both values are maps as well.
   # These can be merged recursively.
-  defp deep_resolve(_key, left = %{}, right = %{}) do
+  defp deep_resolve(_key, %{} = left, %{} = right) do
     deep_merge(left, right)
   end
 

@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Menu do
   end
 
   def translate_menu(%{name: msgid, items: items} = menu)
-      when is_nil(items) or length(items) == 0 do
+      when is_nil(items) or items == [] do
     %{menu | name: translate_msgid(msgid)}
   end
 

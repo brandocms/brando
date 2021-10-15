@@ -11,7 +11,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Utils
 
   def create(module, params, user, preloads, callback_block, custom_changeset) do
-    changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
+    changeset_fun = custom_changeset || (&module.changeset/3)
 
     with changeset <- changeset_fun.(struct(module), params, user),
          changeset <- Publisher.maybe_override_status(changeset),
@@ -75,7 +75,7 @@ defmodule Brando.Query.Mutations do
         custom_changeset,
         show_notification
       ) do
-    changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
+    changeset_fun = custom_changeset || (&module.changeset/3)
 
     get_opts =
       if preloads do

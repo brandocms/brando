@@ -1,4 +1,4 @@
-defmodule Brando.Exception.NoMatchingQueryMatchClause do
+defmodule Brando.Exception.QueryMatchClauseError do
   @moduledoc """
   Defines an exception for missing `matches` clause.
   """

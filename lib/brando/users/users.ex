@@ -96,7 +96,7 @@ defmodule Brando.Users do
   end
 
   def verify_token(token) do
-    Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86400)
+    Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86_400)
   end
 
   def reset_user_password(_user, _attrs) do

@@ -322,9 +322,9 @@ defmodule Brando.Datasource do
     if is_datasource(datasource_module) do
       villains = Villain.list_villains()
 
-      for {schema, fields} <- villains do
+      Enum.each(villains, fn {schema, fields} ->
         Enum.map(fields, &parse_fields(datasource_module, &1, schema))
-      end
+      end)
     end
 
     {:ok, entry}

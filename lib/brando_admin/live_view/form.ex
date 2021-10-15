@@ -116,7 +116,7 @@ defmodule BrandoAdmin.LiveView.Form do
       {:save, changeset, form}, %{assigns: %{current_user: user}} = socket ->
         # if redirect_on_save is set in form, use this
         redirect_fn =
-          (form.redirect_on_save && form.redirect_on_save) ||
+          form.redirect_on_save ||
             fn socket, _entry ->
               generated_list_view = schema.__modules__().admin_list_view
               Brando.routes().admin_live_path(socket, generated_list_view)

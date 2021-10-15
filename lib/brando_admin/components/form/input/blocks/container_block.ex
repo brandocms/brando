@@ -47,26 +47,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def assign_palette_options(%{assigns: %{available_palettes: available_palettes}} = socket) do
-    assign_new(socket, :palette_options, fn ->
-      Enum.map(available_palettes, fn palette ->
-        colors =
-          Enum.map(Enum.reverse(palette.colors), fn color ->
-            """
-            <span
-              class="circle tiny"
-              style="background-color:#{color.hex_value}"></span>
-            """
-          end)
+    assign_new(socket, :palette_options, fn -> prepare_palettes(available_palettes) end)
+  end
 
-        label = """
-        <div class="circle-stack mr-1">
-          #{colors}
-        </div>
-        - #{palette.name}
-        """
+  def prepare_palettes(available_palettes) do
+    Enum.map(available_palettes, fn palette ->
+      colors =
+        Enum.map(Enum.reverse(palette.colors), fn color ->
+          """
+          <span
+            class="circle tiny"
+            style="background-color:#{color.hex_value}"></span>
+          """
+        end)
 
-        %{label: label, value: palette.id}
-      end)
+      label = """
+      <div class="circle-stack mr-1">
+        #{colors}
+      </div>
+      - #{palette.name}
+      """
+
+      %{label: label, value: palette.id}
     end)
   end
 

@@ -9,6 +9,7 @@ defmodule Brando.HTML do
 
   alias Brando.Utils
 
+  use Phoenix.Component
   import Phoenix.HTML
   import Phoenix.HTML.Tag
 
@@ -223,50 +224,41 @@ defmodule Brando.HTML do
 
   Checks conn.private for various settings
   """
-  def body_tag(conn, opts \\ []) do
-    attrs = []
-    id = Keyword.get(opts, :id, nil)
+  def body_tag(%{conn: conn, id: id} = assigns) do
     data_script = conn.private[:brando_section_name]
     classes = conn.private[:brando_css_classes]
+    data_vsn = Application.spec(Brando.otp_app(), :vsn)
+    show_breakpoint_debug? = Application.get_env(Brando.otp_app(), :show_breakpoint_debug)
 
-    # remove id from opts and pass rest as attrs
-    rest_attrs = Keyword.drop(opts, [:id])
-
-    attrs = attrs ++ [class: (classes && "#{classes} unloaded") || "unloaded"]
-    attrs = (id && attrs ++ [id: id]) || attrs
-    attrs = (data_script && attrs ++ [data_script: data_script]) || attrs
-    attrs = attrs ++ [data_vsn: Application.spec(Brando.otp_app(), :vsn)]
-    attrs = attrs ++ rest_attrs
-
-    if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do
-      [
-        tag(:body, attrs),
-        breakpoint_debug_tag(),
-        grid_debug_tag()
-      ]
-    else
-      tag(:body, attrs)
-    end
+    ~H"""
+    <body id={id} class={[classes, "unloaded"]} data_script={data_script} data_vsn={data_vsn}>
+      <%= if show_breakpoint_debug? do %>
+        <.breakpoint_debug_tag />
+        <.grid_debug_tag />
+      <% end %>
+      <%= render_block(@inner_block) %>
+    </body>
+    """
   end
 
-  def breakpoint_debug_tag do
-    breakpoint = content_tag(:div, "", class: "breakpoint")
+  def breakpoint_debug_tag(assigns) do
+    agency_brand = Application.get_env(:brando, :agency_brand)
 
-    branding =
-      case(Application.get_env(:brando, :agency_brand)) do
-        nil -> ""
-        svg -> content_tag(:div, raw(svg), class: "brand")
-      end
-
-    user_agent = content_tag(:div, "", class: "user-agent")
-
-    content_tag(:i, [branding, breakpoint, user_agent], class: "dbg-breakpoints")
+    ~H"""
+    <i class="dbg-breakpoints">
+      <%= if agency_brand do %><div class="brand"><%= raw(agency_brand) %></div><% end %>
+      <div class="breakpoint"></div>
+      <div class="user-agent"></div>
+    </i>
+    """
   end
 
-  def grid_debug_tag do
-    content_tag :div, class: "dbg-grid" do
-      Enum.map(1..24, fn _ -> content_tag(:b, "") end)
-    end
+  def grid_debug_tag(assigns) do
+    ~H"""
+    <div class="dbg-grid">
+      <%= for _ <- 1..24 do %><b></b><% end %>
+    </div>
+    """
   end
 
   @doc """

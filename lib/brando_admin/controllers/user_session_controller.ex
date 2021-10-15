@@ -11,9 +11,10 @@ defmodule BrandoAdmin.UserSessionController do
   end
 
   def create(conn, %{"user" => %{"email" => email, "password" => _password} = user_params}) do
-    with {:ok, user} <- Users.get_user(%{matches: %{email: email, active: true}}) do
-      UserAuth.log_in_user(conn, user, user_params)
-    else
+    case Users.get_user(%{matches: %{email: email, active: true}}) do
+      {:ok, user} ->
+        UserAuth.log_in_user(conn, user, user_params)
+
       _ ->
         conn
         |> put_root_layout(:auth)

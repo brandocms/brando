@@ -84,6 +84,9 @@ end
 * Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`, you should also
   add `webp` to your formats list.
 
+* Switch your frontend `app.html.eex` to `app.html.heex`. Change your `<%= body_tag %>` call to 
+  a heex component call: `<.body_tag conn={@conn} id="top"> ... <./body_tag>`
+
 
 ## 0.51.0
 

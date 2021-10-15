@@ -21,7 +21,7 @@
     <%%= include_assets() %>
     <%%= render_json_ld(@conn) %>
   </head>
-  <%%= body_tag @conn, id: "top" %>
+  <.body_tag conn={@conn} id="top">
     <%%= cookie_law(
       @conn,
       "This webpage is using cookies for analytics (Not really, just an example).<br>Click OK to accept",
@@ -41,5 +41,5 @@
 
     <%%= include_legacy_assets() %>
     <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
-  </body>
+  </.body>
 </html>

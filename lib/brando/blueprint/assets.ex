@@ -12,7 +12,7 @@ defmodule Brando.Blueprint.Assets do
     %Asset{
       name: name,
       type: :image,
-      opts: %{module: Brando.Images.Image, opts: %{db: true}}
+      opts: %{module: Brando.Images.Image, opts: %{cfg: :db}}
     }
   end
 
