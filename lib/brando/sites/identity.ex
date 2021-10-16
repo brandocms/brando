@@ -57,6 +57,7 @@ defmodule Brando.Sites.Identity do
 
   forms do
     form do
+      form_query &__MODULE__.query_with_preloads/1
       redirect_on_save &__MODULE__.redirect/2
 
       tab "Content" do
@@ -212,5 +213,9 @@ defmodule Brando.Sites.Identity do
 
   def redirect(socket, _entry) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.IdentityLive)
+  end
+
+  def query_with_preloads(id) do
+    %{matches: %{id: id}, preload: [:logo]}
   end
 end

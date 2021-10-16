@@ -80,7 +80,10 @@ defmodule Brando.Users do
   """
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
-    Brando.repo().one(query)
+
+    query
+    |> Brando.repo().one()
+    |> Brando.repo().preload(:avatar)
   end
 
   @doc """

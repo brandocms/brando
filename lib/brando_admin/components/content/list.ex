@@ -276,7 +276,9 @@ defmodule BrandoAdmin.Components.Content.List do
     |> maybe_merge_listing_query(listing)
     |> maybe_merge_content_language(schema, content_language)
     |> maybe_preload_creator(schema)
+    |> preload_assets(schema)
     |> maybe_order_by_sequence(schema)
+    |> IO.inspect()
   end
 
   defp maybe_merge_listing_query(query_params, listing) do
@@ -345,15 +347,30 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp maybe_preload_creator(list_opts, schema) do
     if schema.has_trait(Creator) do
-      add_preload(list_opts, :creator)
+      add_preload(list_opts, creator: :avatar)
     else
       list_opts
     end
   end
 
+  defp preload_assets(list_opts, schema) do
+    preloads =
+      schema.__assets__()
+      |> Enum.filter(&(&1.type == :image))
+      |> Enum.map(& &1.name)
+
+    add_preloads(list_opts, preloads)
+  end
+
   defp add_preload(list_opts, preload) do
     Map.update(list_opts, :preload, [preload], fn preloads ->
       if preload in preloads, do: preloads, else: preloads ++ [preload]
+    end)
+  end
+
+  defp add_preloads(list_opts, preloads) do
+    Map.update(list_opts, :preload, preloads, fn existing_preloads ->
+      Enum.uniq(existing_preloads ++ preloads)
     end)
   end
 

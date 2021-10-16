@@ -150,10 +150,41 @@
       &.inline {
         display: flex;
         flex-wrap: nowrap;
+        flex-direction: row;
         width: 100%;
         margin-bottom: 15px;
         padding-left: 0;
         border-left: none;
+
+        .label-wrapper {
+          height: 0;
+          overflow: hidden;
+        }
+
+        .help-text {
+          display: none;
+        }
+
+        .subform-tools {
+          justify-content: flex-start;
+        }
+
+        &:first-of-type {
+          .label-wrapper {
+            @space margin-bottom 1vw;
+            height: auto;
+            overflow: visible;
+            border-bottom: 1px solid gainsboro;
+          }
+
+          .help-text {
+            display: block;
+          }
+
+          .subform-tools {
+            padding-top: 35px;
+          }
+        }
 
         .brando-input {
           flex-grow: 1;

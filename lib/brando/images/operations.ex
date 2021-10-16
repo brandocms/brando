@@ -37,8 +37,8 @@ defmodule Brando.Images.Operations do
     formats = Map.get(cfg, :formats)
 
     total_operations = Enum.count(Map.keys(sizes)) * Enum.count(formats)
+    processed_formats = Images.get_processed_formats(path, formats)
     original_type = Images.Utils.image_type(path)
-    processed_formats = Enum.map(formats, &((&1 == :original && original_type) || &1))
 
     operations =
       Enum.map(formats, fn format ->

@@ -2,7 +2,6 @@ defmodule Brando.Images.Processing do
   require Logger
 
   alias Brando.Image
-  alias Brando.ImageSeries
   alias Brando.Images
   alias Brando.Images.Focal
   alias Brando.Images.Operations
@@ -14,8 +13,6 @@ defmodule Brando.Images.Processing do
   @type changeset :: Changeset.t()
   @type id :: binary | integer
   @type image_schema :: Image.t()
-  @type image_series_schema :: ImageSeries.t()
-  @type image_kind :: :image | :image_series | :image_field
   @type upload :: Upload.t()
   @type user :: User.t()
 
@@ -80,54 +77,6 @@ defmodule Brando.Images.Processing do
         """)
 
         err
-    end
-  end
-
-  @spec recreate_sizes_for_category(id, user) :: [{:ok, image_schema} | {:error, changeset}]
-  def recreate_sizes_for_category(category_id, user) do
-    {:ok, category} =
-      Images.get_image_category(%{matches: [id: category_id], preload: [:image_series]})
-
-    for is <- category.image_series do
-      recreate_sizes_for_series(is.id, user)
-    end
-  end
-
-  @spec recreate_sizes_for_series(id, user) :: [{:ok, image_schema} | {:error, changeset}]
-  def recreate_sizes_for_series(series_id, user) do
-    opts = %{matches: [id: series_id], preload: [:images]}
-    {:ok, image_series} = Images.get_image_series(opts)
-
-    # check if the paths have changed. if so, reload series
-    {:ok, image_series} =
-      case Images.Utils.check_image_paths(Image, image_series, user) do
-        :changed -> Images.get_image_series(opts)
-        :unchanged -> {:ok, image_series}
-      end
-
-    images = image_series.images
-
-    # build operations
-    operations =
-      images
-      |> Enum.filter(&(&1.deleted_at == nil))
-      |> Enum.flat_map(fn img_schema ->
-        {:ok, operations} =
-          Operations.create(
-            img_schema.image,
-            image_series.cfg,
-            img_schema.id,
-            user
-          )
-
-        operations
-      end)
-
-    {:ok, operation_results} = Operations.perform(operations, user)
-
-    for result <- operation_results do
-      img_schema = Enum.find(images, &(&1.id == result.id))
-      Images.update_image(img_schema, %{image: result.image_struct}, user)
     end
   end
 

@@ -15,8 +15,7 @@ defmodule Brando.LobbyChannel do
   Join lobby channel
   """
   def join("lobby", _params, socket) do
-    list_opts = %{select: [:id, :avatar, :name], cache: {:ttl, :infinite}}
-
+    list_opts = %{select: [:id, :name], cache: {:ttl, :infinite}, preload: [{:avatar, :join}]}
     {:ok, users} = Brando.Users.list_users(list_opts)
 
     users =

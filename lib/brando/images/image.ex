@@ -12,9 +12,6 @@ defmodule Brando.Images.Image do
 
   alias Brando.Images.Focal
 
-  data_layer :embedded
-  @primary_key false
-
   attributes do
     attribute :title, :text
     attribute :credits, :text
@@ -26,6 +23,7 @@ defmodule Brando.Images.Image do
     attribute :sizes, :map
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
+    attribute :config_target, :text
   end
 
   relations do
@@ -44,6 +42,7 @@ defmodule Brando.Images.Image do
              :width,
              :height,
              :cdn,
-             :dominant_color
+             :dominant_color,
+             :config_target
            ]}
 end

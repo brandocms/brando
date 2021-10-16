@@ -139,6 +139,10 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
+      listing_query %{
+        order: [{:asc, :name}]
+      }
+
       field :avatar, :image, columns: 2
 
       filters([

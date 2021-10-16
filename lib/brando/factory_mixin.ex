@@ -11,8 +11,6 @@ defmodule Brando.FactoryMixin do
   """
   defmacro __using__(_) do
     quote do
-      alias Brando.ImageCategory
-      alias Brando.ImageSeries
       alias Brando.Pages.Page
       alias Brando.Pages.Fragment
       alias Brando.Content.Module
@@ -90,26 +88,6 @@ defmodule Brando.FactoryMixin do
           ],
           vars: [],
           wrapper: false
-        }
-      end
-
-      def image_series_factory do
-        %ImageSeries{
-          name: "Series name",
-          slug: "series-name",
-          cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category/test-series"},
-          sequence: 0,
-          image_category: build(:image_category),
-          creator: build(:user)
-        }
-      end
-
-      def image_category_factory do
-        %ImageCategory{
-          cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category"},
-          name: "Test Category",
-          slug: "test-category",
-          creator: build(:user)
         }
       end
 

@@ -21,57 +21,48 @@ defmodule Brando.Blueprint.Upload do
   end
 
   # TODO: Clean this up -- check focal if image, maybe upload to CDN etc
-  defp do_validate_upload(changeset, {_, field_name}, _user, _cfg) do
-    case Utils.field_has_changed(changeset, field_name) do
-      :unchanged ->
-        changeset
-
-      {:ok, _} ->
-        changeset
-
-        # {:ok, {:update, update_params}} ->
-        #   with {:ok, _} <- Utils.changeset_has_no_errors(changeset),
-        #        {:ok, image_data} <- get_image_data(changeset, field_name),
-        #        {:ok, changeset} <-
-        #          maybe_update_focal(update_params, image_data, changeset, field_name, user) do
-        #     changeset
-        #   else
-        #     :has_errors ->
-        #       changeset
-        #   end
-
-        # {:ok, {:upload, upload_params}} ->
-        #   with {:ok, _} <- Utils.changeset_has_no_errors(changeset),
-        #        {:ok, cfg} <- get_image_cfg(cfg, field_name, changeset),
-        #        {:ok, {:handled, name, field}} <-
-        #          Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
-        #     if CDN.enabled?(), do: CDN.upload_file(changeset, name, field)
-        #     put_change(changeset, name, field)
-        #   else
-        #     :has_errors ->
-        #       changeset
-
-        #     {:ok, {:unhandled, _name, _field}} ->
-        #       changeset
-
-        #     {:error, {:image_series, :not_found}} ->
-        #       add_error(changeset, :image_series, "Image series not found!")
-
-        #     {:error, {name, {:error, error_msg}}} ->
-        #       add_error(changeset, name, error_msg)
-        #   end
+  defp do_validate_upload(changeset, {_, field_name}, user, _cfg) do
+    with {:ok, field_changes} <- Utils.field_has_changed(changeset, field_name),
+         {:ok, _} <- Utils.changeset_has_no_errors(changeset),
+         {:ok, :focal_changed} <- check_focal(field_changes) do
+      require Logger
+      Logger.error("==> FOCAL CHANGED.")
+      Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+      changeset
+    else
+      _ -> changeset
     end
   end
 
-  defp maybe_update_focal(%{focal: _focal} = params, image_data, changeset, field_name, user) do
-    changeset = put_change(changeset, field_name, Map.merge(image_data, params))
-    Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+  defp check_focal(%{changes: %{path: _}} = changeset) do
+    require Logger
+    Logger.error(inspect(changeset, pretty: true))
+    {:ok, :new_upload}
   end
 
-  defp maybe_update_focal(params, image_data, changeset, field_name, _) do
-    changeset = put_change(changeset, field_name, Map.merge(image_data, params))
-    {:ok, changeset}
-  end
+  defp check_focal(%{changes: %{focal: _}}), do: {:ok, :focal_changed}
+  defp check_focal(_), do: {:ok, :focal_unchanged}
+
+  # {:ok, {:upload, upload_params}} ->
+  #   with {:ok, _} <- Utils.changeset_has_no_errors(changeset),
+  #        {:ok, cfg} <- get_image_cfg(cfg, field_name, changeset),
+  #        {:ok, {:handled, name, field}} <-
+  #          Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
+  #     if CDN.enabled?(), do: CDN.upload_file(changeset, name, field)
+  #     put_change(changeset, name, field)
+  #   else
+  #     :has_errors ->
+  #       changeset
+
+  #     {:ok, {:unhandled, _name, _field}} ->
+  #       changeset
+
+  #     {:error, {:image_series, :not_found}} ->
+  #       add_error(changeset, :image_series, "Image series not found!")
+
+  #     {:error, {name, {:error, error_msg}}} ->
+  #       add_error(changeset, name, error_msg)
+  #   end
 
   defp get_image_cfg(%{db: true}, _, changeset) do
     image_series_id = get_field(changeset, :image_series_id)
@@ -86,16 +77,6 @@ defmodule Brando.Blueprint.Upload do
     {:ok, Brando.Utils.map_to_struct(cfg, Type.ImageConfig)}
   end
 
-  defp get_image_data(changeset, field_name) do
-    case Map.get(changeset.data, field_name, nil) do
-      nil ->
-        raise "Wanted to update image field, but no data was found!"
-
-      image_data ->
-        {:ok, image_data}
-    end
-  end
-
   @doc """
   Find assets and validate upload
   """
@@ -104,7 +85,7 @@ defmodule Brando.Blueprint.Upload do
     |> Enum.filter(&(&1.type in [:image, :file, :gallery]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
       case module.__asset_opts__(name) do
-        %{cfg: %{db: true}} ->
+        %{opts: %{cfg: :db}} ->
           validate_upload(mutated_changeset, {type, name}, user, image_db_config)
 
         %{cfg: field_cfg} ->

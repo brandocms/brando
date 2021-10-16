@@ -190,8 +190,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                     {#if @image && @image.path && Enum.empty?(@upload_field.entries)}
                       <div class="info">
                         Path: {@image.path}<br>
-                        Dimensions: {@image.width}&times;{@image.height}<br>
-                        {@image.marked_as_deleted}
+                        Dimensions: {@image.width}&times;{@image.height}
                       </div>
                     {/if}
                   </div>
@@ -232,7 +231,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         {hidden_input sf, :height}
                         {hidden_input sf, :path}
                         {hidden_input sf, :width}
-                        {hidden_input sf, :marked_as_deleted}
 
                         {!--
                         <Inputs
@@ -316,7 +314,5 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     )
 
     {:noreply, socket}
-    #  |> assign(:image, %{socket.assigns.image | marked_as_deleted: true})
-    #  |> push_event("b:validate", %{})}
   end
 end

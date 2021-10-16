@@ -425,6 +425,9 @@ defmodule Brando.Query do
       {key, {mod, pre}}, query ->
         from(t in query, preload: [{^key, ^from(p in mod, order_by: ^pre)}])
 
+      {preload, :join}, query ->
+        from(t in query, left_join: c in assoc(t, ^preload), preload: [{^preload, c}])
+
       {key, preload_query}, query ->
         from(t in query, preload: [{^key, ^preload_query}])
 

@@ -149,6 +149,7 @@ defmodule BrandoAdmin.Components.Form do
   defp assign_entry(
          %{
            assigns: %{
+             schema: schema,
              entry_id: entry_id,
              singular: singular,
              context: context,
@@ -156,8 +157,22 @@ defmodule BrandoAdmin.Components.Form do
            }
          } = socket
        ) do
-    query_params = form.query.(entry_id)
+    query_params =
+      entry_id
+      |> form.query.()
+      |> add_preloads(schema)
+
     assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
+  end
+
+  defp add_preloads(%{preload: preloads} = query_params, schema) do
+    image_preloads = schema.__assets__ |> Enum.filter(&(&1.type == :image)) |> Enum.map(& &1.name)
+    Map.put(query_params, :preload, image_preloads ++ preloads)
+  end
+
+  defp add_preloads(query_params, schema) do
+    image_preloads = schema.__assets__ |> Enum.filter(&(&1.type == :image)) |> Enum.map(& &1.name)
+    Map.put(query_params, :preload, image_preloads)
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema}} = socket) do

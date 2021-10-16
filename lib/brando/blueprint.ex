@@ -295,11 +295,10 @@ defmodule Brando.Blueprint do
     quote do
       Enum.map(unquote(assets), fn
         %Asset{type: :image, name: name} ->
-          # images are embedded
-          Ecto.Schema.embeds_one(
+          Ecto.Schema.belongs_to(
             name,
             Brando.Images.Image,
-            on_replace: :delete
+            on_replace: :update
           )
 
         %Asset{type: :video, name: name} ->

@@ -13,8 +13,6 @@ defmodule <%= application_module %>.Authorization do
   types [
     {"Identity", Brando.Sites.Identity},
     {"Image", Brando.Image},
-    {"ImageSeries", Brando.ImageSeries},
-    {"ImageCategory", Brando.ImageCategory},
     {"Page", Brando.Pages.Page},
     {"Fragment", Brando.Pages.Fragment},
     {"Module", Brando.Content.Module},

@@ -144,14 +144,19 @@ defmodule Brando.Blueprint.Assets do
   end
 
   ##
+  ## image is belongs_to Image
+  def run_cast_asset(%{type: :image, name: _name, opts: _opts}, changeset, _user) do
+    changeset
+  end
+
+  ##
   ## embeds_one
   def run_cast_asset(
         %{type: type, name: name, opts: opts},
         changeset,
         _user
       )
-      when type in [:image, :file, :video] do
-    # A hack to remove an embeds_one, specifically an image
+      when type in [:file, :video] do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do

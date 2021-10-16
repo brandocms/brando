@@ -6,8 +6,6 @@ defmodule Brando.Factory do
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
   alias Brando.Image
-  alias Brando.ImageCategory
-  alias Brando.ImageSeries
   alias Brando.Users.User
   alias Brando.Content
   alias Brando.Content.Module
@@ -150,20 +148,8 @@ defmodule Brando.Factory do
     }
   end
 
-  def image_series_factory do
-    %ImageSeries{
-      name: "Series name",
-      slug: "series-name",
-      cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category/test-series"},
-      sequence: 0,
-      image_category: build(:image_category),
-      creator: build(:random_user)
-    }
-  end
-
   def image_factory do
     %Image{
-      image_series_id: nil,
       creator_id: nil,
       image: %Brando.Images.Image{
         width: 300,
@@ -180,15 +166,6 @@ defmodule Brando.Factory do
         },
         title: "Title one"
       }
-    }
-  end
-
-  def image_category_factory do
-    %ImageCategory{
-      cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category"},
-      name: "Test Category",
-      slug: "test-category",
-      creator: build(:random_user)
     }
   end
 
