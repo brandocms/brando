@@ -1,6 +1,6 @@
 defmodule Brando.Meta.Schema do
   @deprecated "Move to blueprints"
-  #! TODO: Delete when moving to Blueprints
+  #! TODO: Delete and move logic to Blueprints
   @moduledoc """
   Macro for mapping META fields to schema.
   ## Example
@@ -25,17 +25,6 @@ defmodule Brando.Meta.Schema do
         only: [meta_fields: 0, meta_schema: 1, fallback: 2, encode_locale: 1]
 
       Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
-    end
-  end
-
-  @doc """
-  Adds Meta fields to schema
-  """
-  defmacro meta_fields do
-    quote do
-      Ecto.Schema.field(:meta_title, :string)
-      Ecto.Schema.field(:meta_description, :string)
-      Ecto.Schema.embeds_one(:meta_image, Brando.Images.Image, on_replace: :delete)
     end
   end
 

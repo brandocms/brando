@@ -47,11 +47,17 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign_new(:upload_field, fn ->
        assigns.uploads[field]
      end)
+     |> assign_new(:relation_field, fn ->
+       String.to_existing_atom("#{field}_id")
+     end)
      |> assign(:focal, focal)}
   end
 
   def update(%{input: input} = assigns, socket) do
-    image = get_field(assigns.form.source, input.name)
+    relation_field = String.to_existing_atom("#{input.name}_id")
+    image_id = get_field(assigns.form.source, relation_field)
+
+    {:ok, image} = Images.get_image(image_id)
 
     focal =
       if is_map(image) && image.path,
@@ -69,6 +75,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(:class, assigns.input.opts[:class])
      |> assign_new(:upload_field, fn ->
        assigns.uploads[assigns.input.name]
+     end)
+     |> assign_new(:relation_field, fn ->
+       String.to_existing_atom("#{assigns.input.name}_id")
      end)
      |> assign(:focal, focal)}
   end
@@ -197,6 +206,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
                   <div class="image-modal-content-info">
                     {#if @image}
+                      {text_input @form, @relation_field}
                       <Inputs
                         :let={form: sf}
                         form={@form}
@@ -225,22 +235,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                             {text_input sf, :credits, class: "text", phx_debounce: 750}
                           </div>
                         </div>
-
-                        {hidden_input sf, :cdn}
-                        {hidden_input sf, :dominant_color}
-                        {hidden_input sf, :height}
-                        {hidden_input sf, :path}
-                        {hidden_input sf, :width}
-
-                        {!--
-                        <Inputs
-                          form={sf}
-                          for={:focal}
-                          :let={form: focal_form}>
-                          {hidden_input focal_form, :x}
-                          {hidden_input focal_form, :y}
-                        </Inputs>
-                        --}
 
                         <MapInputs
                           :let={value: value, name: name}

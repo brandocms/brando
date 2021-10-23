@@ -10,7 +10,6 @@ defmodule Brando.Images do
 
   import Ecto.Query
 
-  alias Ecto.Changeset
   alias Brando.Images.Image
   alias Brando.Images
   alias Brando.Users.User
@@ -26,6 +25,18 @@ defmodule Brando.Images do
     fn
       {:id, id}, query ->
         from t in query, where: t.id == ^id
+    end
+  end
+
+  query :list, Image, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+
+  filters Image do
+    fn
+      {:config_target, {schema, field}}, query ->
+        target_string = "image:#{inspect(schema)}:#{field}"
+        require Logger
+        Logger.error(inspect(target_string, pretty: true))
+        from t in query, where: t.config_target == ^target_string
     end
   end
 
@@ -87,18 +98,25 @@ defmodule Brando.Images do
   end
 
   def get_config_for(%{config_target: config_target}) do
-    case String.split(config_target, ":") do
-      ["image", schema, field_name] ->
-        schema_module = Module.concat([schema])
+    config =
+      case String.split(config_target, ":") do
+        ["image", schema, field_name] ->
+          schema_module = Module.concat([schema])
 
-        field_name
-        |> String.to_atom()
-        |> schema_module.__asset_opts__()
-        |> Map.get(:cfg)
+          field_name
+          |> String.to_atom()
+          |> schema_module.__asset_opts__()
+          |> Map.get(:cfg)
 
-      ["default"] ->
-        Brando.config(Brando.Images)[:default_config]
-    end
+        ["default"] ->
+          Brando.config(Brando.Images)[:default_config]
+      end
+
+    {:ok, config}
+  end
+
+  def get_config_for(config_target) when is_binary(config_target) do
+    get_config_for(%{config_target: config_target})
   end
 
   def get_processed_formats(path, formats) do

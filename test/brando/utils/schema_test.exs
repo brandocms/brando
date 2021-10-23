@@ -24,44 +24,46 @@ defmodule Brando.Utils.SchemaTest do
   test "avoid_field_collision" do
     u1 = Factory.insert(:random_user)
 
-    _ = Factory.insert(:image_category, name: "test", slug: "test")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-1")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-2")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-3")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-4")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-5")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-6")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-7")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-8")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-9")
+    prm = [title: "test", status: :published, template: "default.html", language: "en"]
 
-    {:ok, c0} = Brando.Images.create_category(%{name: "test", slug: "test"}, u1)
+    _ = Factory.insert(:page, prm ++ [uri: "test"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-1"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-2"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-3"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-4"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-5"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-6"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-7"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-8"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-9"])
 
-    assert c0.slug == "test-10"
+    {:ok, c0} = Brando.Pages.create_page((prm ++ [uri: "test"]) |> Enum.into(%{}), u1)
 
-    _ = Factory.insert(:image_category, name: "test", slug: "test-11")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-12")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-13")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-14")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-15")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-16")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-17")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-18")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-19")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-20")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-21")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-22")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-23")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-24")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-25")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-26")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-27")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-28")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-29")
-    _ = Factory.insert(:image_category, name: "test", slug: "test-30")
+    assert c0.uri == "test-10"
 
-    {:error, changeset} = Brando.Images.create_category(%{name: "test", slug: "test"}, u1)
+    _ = Factory.insert(:page, prm ++ [uri: "test-11"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-12"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-13"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-14"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-15"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-16"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-17"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-18"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-19"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-20"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-21"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-22"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-23"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-24"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-25"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-26"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-27"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-28"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-29"])
+    _ = Factory.insert(:page, prm ++ [uri: "test-30"])
 
-    assert changeset.errors == [slug: {"Klarte ikke finne en ledig verdi for feltet", []}]
+    {:error, changeset} = Brando.Pages.create_page((prm ++ [uri: "test"]) |> Enum.into(%{}), u1)
+
+    assert changeset.errors == [uri: {"Could not find available field value", []}]
   end
 end

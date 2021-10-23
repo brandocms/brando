@@ -91,22 +91,6 @@ defmodule Brando.FactoryMixin do
         }
       end
 
-      def image_type_factory do
-        %Brando.Images.Image{
-          credits: nil,
-          path: "images/default/sample.png",
-          sizes: %{
-            "large" => "images/default/large/sample.png",
-            "medium" => "images/default/medium/sample.png",
-            "micro" => "images/default/micro/sample.png",
-            "small" => "images/default/small/sample.png",
-            "thumb" => "images/default/thumb/sample.png",
-            "xlarge" => "images/default/xlarge/sample.png"
-          },
-          title: nil
-        }
-      end
-
       def image_cfg_factory do
         %Brando.Type.ImageConfig{
           allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

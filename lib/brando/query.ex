@@ -397,6 +397,20 @@ defmodule Brando.Query do
     end)
   end
 
+  def with_order(query, order_string) when is_binary(order_string) do
+    order_list =
+      order_string
+      |> String.split(",")
+      |> Enum.map(fn e ->
+        String.trim(e)
+        |> String.split(" ")
+        |> Enum.map(&String.to_atom/1)
+        |> List.to_tuple()
+      end)
+
+    with_order(query, order_list)
+  end
+
   def with_order(query, order), do: with_order(query, [order])
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
   def with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)

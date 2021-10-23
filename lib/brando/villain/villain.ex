@@ -188,26 +188,24 @@ defmodule Brando.Villain do
   Map out images
   """
   def map_images(images) do
-    Enum.map(images, fn image_record ->
-      image_struct = image_record.image
-
+    Enum.map(images, fn image ->
       sizes =
-        image_struct.sizes
+        image.sizes
         |> Enum.map(&{elem(&1, 0), Utils.media_url(elem(&1, 1))})
         |> Enum.into(%{})
 
       %{
-        src: Utils.media_url(image_struct.path),
-        thumb: image_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
+        src: Utils.media_url(image.path),
+        thumb: image |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
-        dominant_color: image_struct.dominant_color,
-        formats: image_struct.formats,
-        alt: image_struct.alt,
-        title: image_struct.title,
-        credits: image_struct.credits,
-        inserted_at: image_record.inserted_at,
-        width: image_struct.width,
-        height: image_struct.height
+        dominant_color: image.dominant_color,
+        formats: image.formats,
+        alt: image.alt,
+        title: image.title,
+        credits: image.credits,
+        inserted_at: image.inserted_at,
+        width: image.width,
+        height: image.height
       }
     end)
   end

@@ -8,7 +8,7 @@ defmodule Brando.Images.Operations do
   alias BrandoAdmin.Progress
   alias Brando.Utils
 
-  @type image_type_struct :: Brando.Images.Image.t()
+  @type image :: Brando.Images.Image.t()
   @type image_config :: Brando.Type.ImageConfig.t()
   @type operation :: Brando.Images.Operation.t()
   @type operation_result :: Brando.Images.OperationResult.t()
@@ -20,11 +20,11 @@ defmodule Brando.Images.Operations do
 
   ## Example
 
-      {:ok, operations} = create(image_struct, img_cfg, id, user)
+      {:ok, operations} = create(image, image_config, id, user)
 
   """
   @spec create(
-          image_type_struct :: image_type_struct,
+          image :: image,
           cfg :: image_config,
           id :: integer | nil,
           user :: user
@@ -86,17 +86,11 @@ defmodule Brando.Images.Operations do
 
     operation_results =
       operations
-      |> Flow.from_enumerable()
-      |> Flow.partition(stages: 1)
-      |> Flow.map(&resize_image/1)
-      |> Flow.reduce(fn -> %{} end, fn operation, map ->
-        Map.update(map, operation.id, [operation], &[operation | &1])
-      end)
-      |> Flow.departition(&Map.new/0, &Map.merge(&1, &2, fn _, la, lb -> la ++ lb end), & &1)
-      |> Enum.map(fn result ->
-        compile_transform_results(result, operations)
-      end)
-      |> List.flatten()
+      |> Enum.map(&resize_image/1)
+      |> compile_transform_results(operations)
+
+    require Logger
+    Logger.error(inspect(operation_results, pretty: true))
 
     end_msec = :os.system_time(:millisecond)
     seconds_lapsed = (end_msec - start_msec) * 0.001
@@ -108,22 +102,18 @@ defmodule Brando.Images.Operations do
     {:ok, operation_results}
   end
 
-  # assemble all `%TransformResult{}`s for each id
   defp compile_transform_results(transform_results, operations) do
-    for {key, transforms} <- transform_results do
-      operation = get_operation_by_key(key, operations)
+    processed_formats =
+      operations
+      |> List.first()
+      |> Map.get(:processed_formats)
 
-      image_struct = %{
-        operation.image_struct
-        | sizes: transforms_to_sizes(transforms),
-          formats: operation.processed_formats
-      }
+    sizes = transforms_to_sizes(transform_results)
 
-      %Images.OperationResult{
-        id: key,
-        image_struct: image_struct
-      }
-    end
+    %Images.OperationResult{
+      sizes: sizes,
+      formats: processed_formats
+    }
   end
 
   # convert a list of transforms to a map of sizes

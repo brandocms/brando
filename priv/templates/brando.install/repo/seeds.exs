@@ -136,36 +136,6 @@ example_module = %Brando.Content.Module{
   wrapper: nil
 }
 
-post_category = %Brando.ImageCategory{
-  creator_id: user.id,
-  name: "post",
-  slug: "post",
-  cfg: post_cfg
-}
-
-post_category = <%= application_module %>.Repo.insert!(post_category)
-
-ss_category = %Brando.ImageCategory{
-  cfg: ss_cfg,
-  creator_id: user.id,
-  name: "Slideshows",
-  slug: "slideshows"
-}
-
-<%= application_module %>.Repo.insert!(ss_category)
-
-post_series = %Brando.ImageSeries{
-  creator_id: user.id,
-  credits: nil,
-  cfg: post_cfg,
-  image_category_id: post_category.id,
-  name: "post",
-  sequence: 0,
-  slug: "post"
-}
-
-<%= application_module %>.Repo.insert!(post_series)
-
 page = %Brando.Pages.Page{
   creator_id: user.id,
   css_classes: nil,

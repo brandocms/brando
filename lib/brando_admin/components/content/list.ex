@@ -339,9 +339,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp add_order_by(list_opts, order_bys) when is_list(order_bys) do
     Map.update(list_opts, :order, order_bys, fn existing_ordering ->
-      if order_bys in existing_ordering,
-        do: existing_ordering,
-        else: existing_ordering ++ order_bys
+      Enum.uniq(existing_ordering ++ order_bys)
     end)
   end
 

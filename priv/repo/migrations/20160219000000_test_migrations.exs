@@ -4,14 +4,31 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   use Brando.Tag, :migration
 
   import Brando.SoftDelete.Migration
-  import Brando.Meta.Migration
 
   def up do
+    create table(:images) do
+      add :title, :text
+      add :credits, :text
+      add :alt, :text
+      add :formats, {:array, :string}
+      add :path, :text
+      add :width, :integer
+      add :height, :integer
+      add :sizes, :map
+      add :cdn, :boolean, default: false
+      add :dominant_color, :text
+      add :focal, :jsonb
+      add :config_target, :text, default: "default"
+      soft_delete()
+      sequenced()
+      timestamps()
+    end
+
     create table(:users) do
       add(:name, :text)
       add(:email, :text)
       add(:password, :text)
-      add(:avatar, :jsonb)
+      add(:avatar_id, references(:images))
       add(:role, :string)
       add(:config, :map)
       add(:active, :boolean, default: true)
@@ -22,6 +39,10 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create(index(:users, [:email], unique: true))
+
+    alter table(:images) do
+      add :creator_id, references(:users)
+    end
 
     create table(:users_tokens) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
@@ -58,66 +79,23 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(index(:posts, [:status]))
     create(index(:posts, [:tags]))
 
-    create table(:images_categories) do
-      add(:name, :text)
-      add(:slug, :text)
-      add(:cfg, :json)
-      add(:creator_id, references(:users))
-      soft_delete()
-      timestamps()
-    end
-
-    create(index(:images_categories, [:slug]))
-
-    create table(:images_series) do
-      add(:name, :text)
-      add(:slug, :text)
-      add(:credits, :text)
-      add(:cfg, :json)
-      add(:creator_id, references(:users))
-      add(:image_category_id, references(:images_categories))
-      soft_delete()
-      sequenced()
-      timestamps()
-    end
-
-    create table(:images) do
-      add(:image, :jsonb)
-      add(:creator_id, references(:users))
-      add(:image_series_id, references(:images_series))
-      soft_delete()
-      sequenced()
-      timestamps()
-    end
-
-    create table(:instagramimages) do
-      add(:instagram_id, :text)
-      add(:type, :text)
-      add(:caption, :text)
-      add(:link, :text)
-      add(:username, :text)
-      add(:url_original, :text)
-      add(:url_thumbnail, :text)
-      add(:image, :text)
-      add(:created_time, :text)
-      add(:status, :integer, default: 1)
-    end
-
     create table(:pages) do
-      add(:uri, :text)
-      add(:language, :text)
-      add(:title, :text)
-      add(:data, :jsonb)
-      add(:html, :text)
-      add(:vars, :jsonb)
-      add(:status, :integer)
-      add(:is_homepage, :boolean)
-      add(:parent_id, references(:pages), default: nil)
-      add(:creator_id, references(:users))
-      add(:css_classes, :text)
-      add(:template, :text)
-      meta_fields()
-      add(:publish_at, :utc_datetime)
+      add :uri, :text
+      add :language, :text
+      add :title, :text
+      add :data, :jsonb
+      add :html, :text
+      add :vars, :jsonb
+      add :status, :integer
+      add :is_homepage, :boolean
+      add :parent_id, references(:pages), default: nil
+      add :creator_id, references(:users)
+      add :css_classes, :text
+      add :template, :text
+      add :publish_at, :utc_datetime
+      add :meta_title, :text
+      add :meta_description, :text
+      add :meta_image_id, references(:images)
       sequenced()
       soft_delete()
       timestamps()
@@ -204,7 +182,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :html, :text
       add :bio_data, :jsonb
       add :bio_html, :text
-      add :cover, :jsonb
+      add :cover_id, references(:images)
       add :properties, :map
       add :creator_id, references(:users, on_delete: :nilify_all)
       sequenced()
@@ -256,7 +234,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :title, :text
       add :title_postfix, :string
       add :image, :jsonb
-      add :logo, :jsonb
+      add :logo_id, references(:images)
       add :url, :string
 
       add :language, :string
@@ -272,7 +250,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create table(:sites_seos) do
       add :fallback_meta_description, :text
       add :fallback_meta_title, :text
-      add :fallback_meta_image, :jsonb
+      add :fallback_meta_image_id, references(:images)
       add :base_url, :text
       add :language, :string
       add :robots, :text
@@ -329,28 +307,20 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   end
 
   def down do
-    drop(table(:users))
-    drop(index(:users, [:email], unique: true))
+    drop table(:users)
+    drop index(:users, [:email], unique: true)
 
-    drop(table(:posts))
-    drop(index(:posts, [:language]))
-    drop(index(:posts, [:slug]))
-    drop(index(:posts, [:key]))
-    drop(index(:posts, [:status]))
+    drop table(:posts)
+    drop index(:posts, [:language])
+    drop index(:posts, [:slug])
+    drop index(:posts, [:key])
+    drop index(:posts, [:status])
 
-    drop(table(:images_categories))
-    drop(index(:images_categories, [:slug]))
+    drop table(:images)
 
-    drop(table(:images_series))
-    drop(index(:images_series, [:slug]))
-
-    drop(table(:images))
-
-    drop(table(:instagramimages))
-
-    drop(table(:pages_fragments))
-    drop(index(:pages_fragments, [:language]))
-    drop(index(:pages_fragments, [:key]))
+    drop table(:pages_fragments)
+    drop index(:pages_fragments, [:language])
+    drop index(:pages_fragments, [:key])
 
     drop table(:sites_global_sets)
     drop table(:sites_globals)

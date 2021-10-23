@@ -33,11 +33,9 @@ defmodule Brando.VillainTest do
 
   setup do
     user = Factory.insert(:random_user)
-    category = Factory.insert(:image_category, creator: user)
-    series = Factory.insert(:image_series, creator: user, image_category: category)
-    image = Factory.insert(:image, creator: user, image_series: series)
+    image = Factory.insert(:image, creator: user)
 
-    {:ok, %{user: user, category: category, series: series, image: image}}
+    {:ok, %{user: user, image: image}}
   end
 
   @data %{

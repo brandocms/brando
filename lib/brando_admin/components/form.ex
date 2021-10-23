@@ -73,15 +73,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
-        %{updated_image: %{path: _} = updated_image, key: key},
-        %{assigns: %{changeset: changeset}} = socket
+        %{updated_image: %{path: _, id: updated_id} = updated_image, key: key},
+        %{assigns: %{changeset: changeset, entry: entry}} = socket
       ) do
-    updated_changeset = Ecto.Changeset.put_change(changeset, key, updated_image)
+    relation_id = String.to_existing_atom("#{key}_id")
+    updated_changeset = Ecto.Changeset.put_change(changeset, relation_id, updated_id)
 
     {:ok,
      socket
      |> assign(:changeset, updated_changeset)
      |> assign(:processing, false)
+     |> assign(:entry, Brando.repo().preload(entry, key, force: true))
      |> push_event("b:validate", %{})}
   end
 
@@ -229,6 +231,8 @@ defmodule BrandoAdmin.Components.Form do
       class="brando-form b-rendered"
       data-moonwalk-run="brandoForm"
       phx-hook="Brando.Form">
+
+      {inspect @entry.avatar, pretty: true}
 
       {!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? --}
       <div class="form-tabs">
@@ -600,43 +604,41 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     if upload_entry.done? do
+      relation_key = String.to_existing_atom("#{key}_id")
       %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "image:#{inspect(schema)}:#{key}"
 
-      {:ok, image_struct} =
+      {:ok, image} =
         consume_uploaded_entry(
           socket,
           upload_entry,
           fn meta ->
-            Brando.Upload.handle_upload(meta, upload_entry, cfg)
+            Brando.Upload.handle_upload(
+              Map.put(meta, :config_target, config_target),
+              upload_entry,
+              cfg,
+              current_user
+            )
           end
         )
 
-      pid = self()
+      # Brando.Images.Processing.queue_processing(image, current_user)
 
-      Task.start_link(fn ->
-        {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
-
-        send_update(pid, __MODULE__,
-          id: form_id,
-          key: key,
-          updated_image: image_struct
-        )
-      end)
-
-      image_struct =
+      updated_image =
         if entry && is_map(Map.get(entry, key)) do
           # keep the :alt, :title and :credits field and set a default focal point
           Map.merge(
-            image_struct,
+            image,
             Map.take(Map.get(entry, key), [:alt, :title, :credits])
           )
         else
-          image_struct
+          image
         end
 
       {:noreply,
        socket
-       |> update_changeset(key, image_struct)
+       |> update_changeset(relation_key, updated_image.id)
+       #  |> update_changeset(key, updated_image)
        |> assign(:processing, true)}
     else
       {:noreply, socket}
@@ -674,8 +676,14 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :changeset, new_changeset)
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value) do
+  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value)
+      when is_map(value) do
     new_changeset = put_change(changeset, key, Map.from_struct(value))
+    assign(socket, :changeset, new_changeset)
+  end
+
+  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value) do
+    new_changeset = put_change(changeset, key, value)
     assign(socket, :changeset, new_changeset)
   end
 end

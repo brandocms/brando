@@ -16,20 +16,37 @@ config :brando, BrandoIntegration.Repo,
   pool_overflow: 0
 
 config :brando, Brando.Images,
-  commands_module: BrandoIntegration.Processor.Commands,
+  processor_module: Brando.Images.Processor.Sharp,
   default_config: %{
-    allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: "medium",
+    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+    upload_path: Path.join(["images", "site", "default"]),
+    default_size: :xlarge,
+    random_filename: true,
     size_limit: 10_240_000,
-    upload_path: Path.join("images", "default"),
     sizes: %{
-      "small" => %{"size" => "300", "quality" => 70},
-      "medium" => %{"size" => "500", "quality" => 70},
-      "large" => %{"size" => "700", "quality" => 70},
-      "xlarge" => %{"size" => "900", "quality" => 70},
-      "thumb" => %{"size" => "150x150", "quality" => 70, "crop" => true},
-      "micro" => %{"size" => "25x25", "quality" => 70, "crop" => true}
+      "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+      "thumb" => %{"size" => "150x150>", "quality" => 75, "crop" => true},
+      "small" => %{"size" => "700", "quality" => 75},
+      "medium" => %{"size" => "1100", "quality" => 75},
+      "large" => %{"size" => "1700", "quality" => 75},
+      "xlarge" => %{"size" => "2100", "quality" => 75}
+    },
+    srcset: %{
+      default: [
+        {"small", "700w"},
+        {"medium", "1100w"},
+        {"large", "1700w"},
+        {"xlarge", "2100w"}
+      ]
     }
+  },
+  default_srcset: %{
+    default: [
+      {"small", "700w"},
+      {"medium", "1100w"},
+      {"large", "1700w"},
+      {"xlarge", "2100w"}
+    ]
   }
 
 config :brando, :env, :test

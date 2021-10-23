@@ -124,7 +124,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -158,7 +157,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -192,7 +190,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -226,7 +223,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -260,7 +256,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -294,7 +289,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.jpeg",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
@@ -341,7 +335,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
@@ -375,7 +368,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
@@ -409,7 +401,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
@@ -443,7 +434,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
@@ -477,7 +467,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
@@ -511,7 +500,6 @@ defmodule Brando.OperationsTest do
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
-                 marked_as_deleted: false,
                  path: "images/exhibitions/cover/image.png",
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",

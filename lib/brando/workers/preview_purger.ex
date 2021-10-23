@@ -9,11 +9,7 @@ defmodule Brando.Worker.PreviewPurger do
   alias Brando.Sites
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{
-          "id" => id
-        }
-      }) do
+  def perform(%Oban.Job{args: %{"id" => id}}) do
     Sites.delete_preview(id)
   end
 

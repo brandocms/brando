@@ -18,7 +18,8 @@ defmodule Brando.Images.ProcessingTest do
   }
 
   @meta %{
-    path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"
+    path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png",
+    config_target: "image:Brando.Users.User:cover"
   }
 
   @upload_entry %Phoenix.LiveView.UploadEntry{
@@ -38,7 +39,8 @@ defmodule Brando.Images.ProcessingTest do
   }
 
   test "create_image_type_struct" do
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
+    u0 = Factory.insert(:random_user)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
 
     assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
     assert image_struct.path =~ "images/avatars/sample"
@@ -48,8 +50,8 @@ defmodule Brando.Images.ProcessingTest do
   end
 
   test "recreate_sizes_for_image_field" do
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
-
+    u0 = Factory.insert(:random_user)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
     u1 = Factory.insert(:random_user, avatar: image_struct)
 
     [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
@@ -57,7 +59,8 @@ defmodule Brando.Images.ProcessingTest do
   end
 
   test "recreate_sizes_for_image_field_record" do
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
+    u0 = Factory.insert(:random_user)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
 
     u1 = Factory.insert(:random_user, avatar: image_struct)
     changeset = Ecto.Changeset.change(u1)

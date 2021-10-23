@@ -10,6 +10,7 @@ defmodule Brando.Factory do
   alias Brando.Content
   alias Brando.Content.Module
   alias Brando.Content.Palette
+  alias Brando.Images.Image
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -151,37 +152,20 @@ defmodule Brando.Factory do
   def image_factory do
     %Image{
       creator_id: nil,
-      image: %Brando.Images.Image{
-        width: 300,
-        height: 292,
-        credits: "Credits",
-        path: "image/1.jpg",
-        formats: [:jpg],
-        sizes: %{
-          "large" => "image/large/1.jpg",
-          "medium" => "image/medium/1.jpg",
-          "small" => "image/small/1.jpg",
-          "thumb" => "image/thumb/1.jpg",
-          "xlarge" => "image/xlarge/1.jpg"
-        },
-        title: "Title one"
-      }
-    }
-  end
-
-  def image_type_factory do
-    %Brando.Images.Image{
-      credits: nil,
-      path: "images/default/sample.png",
+      width: 300,
+      height: 292,
+      credits: "Credits",
+      path: "image/1.jpg",
+      formats: [:jpg],
       sizes: %{
-        "large" => "images/default/large/sample.png",
-        "medium" => "images/default/medium/sample.png",
-        "micro" => "images/default/micro/sample.png",
-        "small" => "images/default/small/sample.png",
-        "thumb" => "images/default/thumb/sample.png",
-        "xlarge" => "images/default/xlarge/sample.png"
+        "large" => "image/large/1.jpg",
+        "medium" => "image/medium/1.jpg",
+        "small" => "image/small/1.jpg",
+        "thumb" => "image/thumb/1.jpg",
+        "xlarge" => "image/xlarge/1.jpg"
       },
-      title: nil
+      title: "Title one",
+      config_target: "default"
     }
   end
 

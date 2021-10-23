@@ -6,7 +6,6 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
     alter table(:images) do
       add :config_target, :text, default: "default"
       remove :image_series_id
-      remove :sequence
     end
 
     drop constraint(:images_series, "imageseries_image_category_id_fkey")

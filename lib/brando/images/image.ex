@@ -12,6 +12,11 @@ defmodule Brando.Images.Image do
 
   alias Brando.Images.Focal
 
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.SoftDelete
+
   attributes do
     attribute :title, :text
     attribute :credits, :text

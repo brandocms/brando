@@ -19,7 +19,7 @@ defmodule Brando.Cache.SEO do
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    {:ok, seos} = Sites.list_seos()
+    {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
     Cachex.put(:cache, :seo, seo_map)
   end

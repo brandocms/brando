@@ -23,7 +23,7 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
     images = Brando.repo().all(query)
 
     for image <- images do
-      cfg = Brando.Images.get_config_for(image)
+      {:ok, cfg} = Brando.Images.get_config_for(image)
 
       processed_formats =
         if image.image["formats"] do

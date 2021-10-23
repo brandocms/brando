@@ -92,6 +92,9 @@ defmodule Brando.JSONLDRenderTest do
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     {:ok, updated_seo} = Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
+    {:ok, seo} =
+      Brando.Sites.get_seo(%{matches: %{language: "en"}, preload: [:fallback_meta_image]})
+
     rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {identity, updated_seo})
 
     assert rendered_json_ld ==

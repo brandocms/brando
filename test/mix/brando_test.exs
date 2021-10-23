@@ -14,7 +14,7 @@ defmodule Mix.BrandoTest do
     modules = Mix.Brando.modules()
 
     if modules != [] do
-      assert Brando.Image in Mix.Brando.modules()
+      assert Brando.Images.Image in Mix.Brando.modules()
     end
   end
 end

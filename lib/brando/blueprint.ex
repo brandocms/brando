@@ -377,6 +377,12 @@ defmodule Brando.Blueprint do
     |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
   end
 
+  def get_castable_asset_fields(rels) do
+    rels
+    |> Enum.filter(&(&1.type == :image))
+    |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
+  end
+
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
   def run_translations(module, translations, ctx \\ nil) do
@@ -522,6 +528,11 @@ defmodule Brando.Blueprint do
       @castable_relations Brando.Blueprint.get_castable_relation_fields(@all_relations)
       def __castable_rels__ do
         @castable_relations
+      end
+
+      @castable_assets Brando.Blueprint.get_castable_asset_fields(@all_assets)
+      def __castable_assets__ do
+        @castable_assets
       end
 
       def __table_name__ do
@@ -721,6 +732,7 @@ defmodule Brando.Blueprint do
           @all_relations,
           @all_assets,
           @castable_relations,
+          @castable_assets,
           @all_required_attrs,
           @all_optional_attrs,
           opts
@@ -766,6 +778,7 @@ defmodule Brando.Blueprint do
         all_relations,
         all_assets,
         castable_relations,
+        castable_assets,
         all_required_attrs,
         all_optional_attrs,
         opts
@@ -776,7 +789,7 @@ defmodule Brando.Blueprint do
       Trait.split_traits_by_changeset_phase(all_traits)
 
     fields_to_cast =
-      (all_required_attrs ++ all_optional_attrs ++ castable_relations)
+      (all_required_attrs ++ all_optional_attrs ++ castable_relations ++ castable_assets)
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
 

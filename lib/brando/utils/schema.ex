@@ -116,7 +116,7 @@ defmodule Brando.Utils.Schema do
             Changeset.add_error(
               new_changeset,
               field,
-              "Klarte ikke finne en ledig verdi for feltet"
+              "Could not find available field value"
             )
         end
       else

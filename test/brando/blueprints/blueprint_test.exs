@@ -154,7 +154,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              :sequence,
              :inserted_at,
              :updated_at,
-             :cover,
+             :cover_id,
              :properties,
              :creator_id
            ]

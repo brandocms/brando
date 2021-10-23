@@ -36,24 +36,22 @@ defmodule Brando.Upload do
 
   Finally returns an image struct
   """
-  def handle_upload(meta, upload_entry, cfg) do
+  def handle_upload(meta, upload_entry, cfg, user) do
     with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
-      handle_upload_type(upload)
+      handle_upload_type(upload, user)
     end
   end
 
-  def process_upload(image_struct, cfg, user) do
-    with {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
-         {:ok, results} <- Images.Operations.perform(operations, user) do
-      {:ok,
-       results
-       |> List.first()
-       |> Map.get(:image_struct)}
+  def process_upload(image, cfg, user) do
+    with {:ok, operations} <- Images.Operations.create(image, cfg, nil, user),
+         {:ok, [%{sizes: processed_sizes, formats: processed_formats}]} <-
+           Images.Operations.perform(operations, user) do
+      Images.update_image(image, %{sizes: processed_sizes, formats: processed_formats}, user)
     end
   end
 
@@ -62,7 +60,7 @@ defmodule Brando.Upload do
 
   Image or file
   """
-  def handle_upload_type(%{cfg: %ImageConfig{}} = upload) do
+  def handle_upload_type(%{cfg: cfg, meta: meta} = upload, user) do
     media_path = upload.meta.media_path
 
     media_path
@@ -72,23 +70,24 @@ defmodule Brando.Upload do
       {:ok, %{width: width, height: height}} ->
         dominant_color = Images.Operations.Info.get_dominant_color(media_path)
 
-        {:ok,
-         %Image{
-           path: media_path,
-           width: width,
-           height: height,
-           dominant_color: dominant_color,
-           focal: %Focal{x: 50, y: 50},
-           sizes: %{}
-         }}
+        image_params = %{
+          config_target: meta.config_target,
+          path: media_path,
+          width: width,
+          height: height,
+          dominant_color: dominant_color,
+          focal: %{x: 50, y: 50},
+          sizes: %{}
+        }
+
+        Images.create_image(image_params, user)
 
       {:error, _} ->
-        # Progress.hide(user)
         {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
     end
   end
 
-  def handle_upload_type(%{cfg: %FileConfig{}} = _upload) do
+  def handle_upload_type(%{cfg: %FileConfig{}} = _upload, user) do
     {:ok, nil}
   end
 

@@ -8,7 +8,6 @@ defmodule Brando.Images.Utils do
 
   alias Brando.Image
   import Brando.Utils
-  import Ecto.Query, only: [from: 2]
 
   @doc """
   Goes through `image`, which is a schema with an image_field

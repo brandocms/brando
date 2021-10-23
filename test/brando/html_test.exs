@@ -375,7 +375,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "get_srcset" do
-    img_field = Factory.build(:image_type)
+    img_field = Factory.build(:image)
     img_cfg = Factory.build(:image_cfg)
 
     assert_raise ArgumentError, fn ->

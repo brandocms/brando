@@ -68,9 +68,9 @@ defmodule Brando.SoftDelete.Query do
   """
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
 
-  defp clean_up_schema(Brando.Image) do
+  defp clean_up_schema(Brando.Images.Image) do
     query =
-      from t in Brando.Image,
+      from t in Brando.Images.Image,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
     for image <- Brando.repo().all(query),
