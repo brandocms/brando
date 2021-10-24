@@ -19,7 +19,7 @@ defmodule Brando.Worker.ImageProcessor do
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, user} <- Users.get_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
-         {:ok, operations} <- Images.Operations.create(image, config, nil, user),
+         {:ok, operations} <- Images.Operations.create(image, config, user),
          {:ok, %{sizes: processed_sizes, formats: processed_formats}} <-
            Images.Operations.perform(operations, user) do
       # {:ok, updated_image} =

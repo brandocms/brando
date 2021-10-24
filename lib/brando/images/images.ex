@@ -34,8 +34,6 @@ defmodule Brando.Images do
     fn
       {:config_target, {schema, field}}, query ->
         target_string = "image:#{inspect(schema)}:#{field}"
-        require Logger
-        Logger.error(inspect(target_string, pretty: true))
         from t in query, where: t.config_target == ^target_string
     end
   end
@@ -122,5 +120,13 @@ defmodule Brando.Images do
   def get_processed_formats(path, formats) do
     original_type = Images.Utils.image_type(path)
     Enum.map(formats, &((&1 == :original && original_type) || &1))
+  end
+
+  def list_generated_sizes(image) do
+    {:ok, %{formats: formats, sizes: sizes}} = get_config_for(image)
+
+    require Logger
+    Logger.error(inspect(formats, pretty: true))
+    Logger.error(inspect(sizes, pretty: true))
   end
 end

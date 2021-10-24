@@ -88,7 +88,8 @@ defmodule Brando.Factory do
           "medium" => "images/avatars/medium/27i97a.jpeg",
           "large" => "images/avatars/large/27i97a.jpeg",
           "mobile" => "images/avatars/mobile/27i97a.jpeg"
-        }
+        },
+        config_target: "image:Brando.Users.User:avatar"
       },
       role: :superuser,
       language: "en"

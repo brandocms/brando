@@ -813,8 +813,7 @@ defmodule Brando.Blueprint do
       |> Upload.run_upload_validations(
         module,
         all_assets,
-        user,
-        Keyword.get(opts, :image_db_config)
+        user
       )
       |> Trait.run_changeset_mutators(
         module,

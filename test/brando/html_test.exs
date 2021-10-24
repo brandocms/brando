@@ -391,16 +391,10 @@ defmodule Brando.HTMLTest do
     img_cfg = Factory.build(:image_cfg, srcset: srcset)
 
     assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
-             {false,
-              "images/default/small/sample.png 300w, images/default/medium/sample.png 500w, images/default/large/sample.png 700w"}
-
-    assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :micro) ==
-             {false,
-              "images/default/micro/sample.png 300w, images/default/micro/sample.png 500w, images/default/micro/sample.png 700w"}
+             {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
 
     assert Brando.HTML.Images.get_srcset(img_field, srcset, [], :svg) ==
-             {false,
-              "images/default/small/sample.png 300w, images/default/medium/sample.png 500w, images/default/large/sample.png 700w"}
+             {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
   end
 
   test "include_css" do

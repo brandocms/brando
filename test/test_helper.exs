@@ -209,6 +209,12 @@ Brando.Cache.Identity.set()
 Brando.Cache.SEO.set()
 Brando.Cache.Globals.set()
 
+fixture_src = Path.expand(".", __DIR__) <> "/fixtures/sample.jpg"
+media_path = Brando.config(:media_path)
+
+File.mkdir_p!(Path.join([media_path, "images", "avatars"]))
+File.cp!(fixture_src, Path.join([media_path, "images", "avatars", "27i97a.jpeg"]))
+
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
 # Brando.presence().start

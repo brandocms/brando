@@ -27,7 +27,7 @@ defmodule Brando.Blueprint.Upload do
          {:ok, :focal_changed} <- check_focal(field_changes) do
       require Logger
       Logger.error("==> FOCAL CHANGED.")
-      Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+      # Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
       changeset
     else
       _ -> changeset
@@ -64,11 +64,6 @@ defmodule Brando.Blueprint.Upload do
   #       add_error(changeset, name, error_msg)
   #   end
 
-  defp get_image_cfg(%{db: true}, _, changeset) do
-    image_series_id = get_field(changeset, :image_series_id)
-    Images.get_series_config(image_series_id)
-  end
-
   defp get_image_cfg(%Type.ImageConfig{} = cfg, _, _) do
     {:ok, cfg}
   end
@@ -80,17 +75,12 @@ defmodule Brando.Blueprint.Upload do
   @doc """
   Find assets and validate upload
   """
-  def run_upload_validations(changeset, module, assets, user, image_db_config) do
+  def run_upload_validations(changeset, module, assets, user) do
     assets
     |> Enum.filter(&(&1.type in [:image, :file, :gallery]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
-      case module.__asset_opts__(name) do
-        %{opts: %{cfg: :db}} ->
-          validate_upload(mutated_changeset, {type, name}, user, image_db_config)
-
-        %{cfg: field_cfg} ->
-          validate_upload(mutated_changeset, {type, name}, user, field_cfg)
-      end
+      %{cfg: field_cfg} = module.__asset_opts__(name)
+      validate_upload(mutated_changeset, {type, name}, user, field_cfg)
     end)
   end
 end

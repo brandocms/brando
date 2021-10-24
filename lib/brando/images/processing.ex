@@ -2,8 +2,8 @@ defmodule Brando.Images.Processing do
   require Logger
 
   alias BrandoAdmin.Progress
-  alias Brando.Image
   alias Brando.Images
+  alias Brando.Images.Image
   alias Brando.Images.Focal
   alias Brando.Images.Operations
   alias Brando.Upload
@@ -15,7 +15,7 @@ defmodule Brando.Images.Processing do
 
   @type changeset :: Changeset.t()
   @type id :: binary | integer
-  @type image_schema :: Image.t()
+  @type image :: Image.t()
   @type upload :: Upload.t()
   @type user :: User.t()
 
@@ -42,53 +42,17 @@ defmodule Brando.Images.Processing do
   end
 
   @doc """
-  Create an image struct from upload, cfg and extra info
+  Recreate all transforms for a single image
   """
-  def create_image_type_struct(
-        %Upload{upload_entry: %{uploaded_file: file}, cfg: cfg},
-        user,
-        extra_params \\ %{}
-      ) do
-    {_, filename} = Brando.Utils.split_path(file)
-    upload_path = Map.get(cfg, :upload_path)
-    new_path = Path.join([upload_path, filename])
+  @spec recreate_sizes_for_image(image, user) :: {:ok, image} | {:error, changeset}
+  def recreate_sizes_for_image(%{id: image_id} = image, user) do
+    {:ok, image_config} = Images.get_config_for(image)
+    Images.Utils.delete_sized_images(image)
 
-    new_path
-    |> Images.Utils.media_path()
-    |> Fastimage.size()
-    |> case do
-      {:ok, %{width: width, height: height}} ->
-        dominant_color = Images.Operations.Info.get_dominant_color(new_path)
-
-        {:ok,
-         %Images.Image{
-           path: new_path,
-           width: width,
-           height: height,
-           dominant_color: dominant_color,
-           alt: Map.get(extra_params, :alt),
-           title: Map.get(extra_params, :title),
-           focal: Map.get(extra_params, :focal, @default_focal)
-         }}
-
-      {:error, _} ->
-        Progress.hide(user)
-        {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
-    end
-  end
-
-  @doc """
-  Deletes all image's sizes and recreates them.
-  """
-  @spec recreate_sizes_for_image(image_schema, user) :: {:ok, image_schema} | {:error, changeset}
-  def recreate_sizes_for_image(img_schema, user) do
-    {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
-    Images.Utils.delete_sized_images(img_schema.image)
-
-    with {:ok, operations} <- Operations.create(img_schema, img_cfg, img_schema.id, user),
-         {:ok, [result]} <- Operations.perform(operations, user) do
-      img_schema
-      |> Image.changeset(%{image: result.image_struct})
+    with {:ok, ops} <- Operations.create(image, image_config, user),
+         {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
+      image
+      |> Image.changeset(%{sizes: result.sizes, formats: result.formats})
       |> Brando.repo().update
     else
       err ->
@@ -106,89 +70,42 @@ defmodule Brando.Images.Processing do
   @doc """
   Recreates sizes for an image field.
 
-  This applies to ALL records with matching schema/field
+  This applies to ALL records with matching schema/field, for instance if we want to recreate
+  all transforms for the `avatar` field of our `User` schema:
+
+      iex(1)> recreate_sizes_for_image_field(User, :avatar, current_user)
+
+    This will recreate all transforms for all users
   """
-  @spec recreate_sizes_for_image_field(
-          schema :: any,
-          field_name :: atom | binary,
-          user
-        ) :: [any()]
+  @spec recreate_sizes_for_image_field(module, atom, user) :: {:ok, [id]}
   def recreate_sizes_for_image_field(schema, field_name, user) do
-    {:ok, rows} = Brando.Images.list_images(%{filter: %{config_target: {schema, field_name}}})
+    {:ok, images} = Brando.Images.list_images(%{filter: %{config_target: {schema, field_name}}})
     %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     operations =
-      Enum.flat_map(rows, fn row ->
-        img_field = Map.get(row, field_name)
+      Enum.flat_map(images, fn image ->
+        Images.Utils.delete_sized_images(image)
 
-        if img_field do
-          Images.Utils.delete_sized_images(img_field)
+        {:ok, operations} =
+          Operations.create(
+            image,
+            cfg,
+            user
+          )
 
-          {:ok, operations} =
-            Operations.create(
-              img_field,
-              cfg,
-              row.id,
-              user
-            )
-
-          operations
-        else
-          []
-        end
+        operations
       end)
 
     {:ok, operation_results} = Operations.perform(operations, user)
 
-    for result <- operation_results do
-      rows
-      |> Enum.find(&(&1.id == result.id))
-      |> Changeset.change(Map.put(%{}, field_name, result.image_struct))
-      |> Brando.repo().update
-    end
-  end
+    updated_images =
+      for {image_id, result} <- operation_results do
+        images
+        |> Enum.find(&(&1.id == image_id))
+        |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
+        |> Brando.repo().update!
+      end
 
-  @doc """
-  Recreate sizes for image field record.
-  Usually used when changing focal point
-
-  ## Example:
-
-      recreate_sizes_for_image_field_record(changeset, :cover, user)
-  """
-  @spec recreate_sizes_for_image_field_record(
-          changeset :: changeset,
-          field_name :: atom,
-          user
-        ) :: {:ok, changeset} | {:error, changeset}
-  def recreate_sizes_for_image_field_record(changeset, field_name, user) do
-    image_struct = Changeset.get_field(changeset, field_name)
-    Images.Utils.delete_sized_images(image_struct)
-
-    schema = changeset.data.__struct__
-
-    %{cfg: cfg} = schema.__asset_opts__(field_name)
-
-    with {:ok, operations} <- Operations.create(image_struct, cfg, nil, user),
-         {:ok, result} <- Operations.perform(operations, user) do
-      updated_image_struct =
-        image_struct
-        |> Map.put(:sizes, result.sizes)
-        |> Map.put(:formats, result.formats)
-
-      updated_changeset = Changeset.put_assoc(changeset, field_name, updated_image_struct)
-
-      {:ok, updated_changeset}
-    else
-      err ->
-        Logger.error("""
-
-        ==> recreate_sizes_for(:image_field_record, ...) failed"
-        #{inspect(err)}
-
-        """)
-
-        err
-    end
+    {:ok, Enum.map(updated_images, & &1.id)}
   end
 end

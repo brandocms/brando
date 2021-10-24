@@ -20,17 +20,15 @@ defmodule Brando.Images.Operations do
 
   ## Example
 
-      {:ok, operations} = create(image, image_config, id, user)
+      {:ok, operations} = create(image, image_config, user)
 
   """
   @spec create(
           image :: image,
           cfg :: image_config,
-          id :: integer | nil,
           user :: user
         ) :: {:ok, [operation]}
-  def create(%{path: path} = image_struct, cfg, id, user) do
-    id = id || Utils.random_string(:os.timestamp())
+  def create(%{path: path, id: id} = image_struct, cfg, user) do
     {_, filename} = Utils.split_path(path)
 
     sizes = Map.get(cfg, :sizes)
@@ -50,7 +48,7 @@ defmodule Brando.Images.Operations do
             sized_image_path = Images.Utils.get_sized_path(path, size_key, image_type)
 
             operation = %Images.Operation{
-              id: id,
+              image_id: id,
               type: image_type,
               user: user,
               filename: filename,
@@ -76,7 +74,11 @@ defmodule Brando.Images.Operations do
   @doc """
   Perform list of image operations as Flow
   """
-  @spec perform([operation], user) :: {:ok, [operation_result]}
+  @spec perform([operation], user) :: {:ok, map}
+  def perform([], _) do
+    {:ok, %{}}
+  end
+
   def perform(operations, user) do
     Progress.show(user)
 
@@ -89,9 +91,6 @@ defmodule Brando.Images.Operations do
       |> Enum.map(&resize_image/1)
       |> compile_transform_results(operations)
 
-    require Logger
-    Logger.error(inspect(operation_results, pretty: true))
-
     end_msec = :os.system_time(:millisecond)
     seconds_lapsed = (end_msec - start_msec) * 0.001
 
@@ -102,19 +101,29 @@ defmodule Brando.Images.Operations do
     {:ok, operation_results}
   end
 
+  # assemble all `%TransformResult{}`s for each id
   defp compile_transform_results(transform_results, operations) do
-    processed_formats =
-      operations
-      |> List.first()
-      |> Map.get(:processed_formats)
+    transform_results
+    |> Enum.reduce(%{}, fn result, map ->
+      Map.update(map, result.image_id, [result], &[result | &1])
+    end)
+    |> Enum.reduce(%{}, fn {image_id, transforms}, map ->
+      operation = get_operation_by_image_id(image_id, operations)
 
-    sizes = transforms_to_sizes(transform_results)
+      result = %Images.OperationResult{
+        image_id: image_id,
+        sizes: transforms_to_sizes(transforms),
+        formats: operation.processed_formats
+      }
 
-    %Images.OperationResult{
-      sizes: sizes,
-      formats: processed_formats
-    }
+      # TODO: Might as well update DB here directly?
+
+      Map.put(map, result.image_id, result)
+    end)
   end
+
+  defp get_operation_by_image_id(image_id, operations),
+    do: Enum.find(operations, &(&1.image_id == image_id))
 
   # convert a list of transforms to a map of sizes
   defp transforms_to_sizes(transforms) do
@@ -123,10 +132,20 @@ defmodule Brando.Images.Operations do
     |> Enum.into(%{})
   end
 
-  defp get_operation_by_key(key, operations), do: Enum.find(operations, &(&1.id == key))
-
   defp resize_image(%Images.Operation{} = operation) do
-    {:ok, transform_result} = Images.Operations.Sizing.create_image_size(operation)
-    transform_result
+    case Images.Operations.Sizing.create_image_size(operation) do
+      {:ok, transform_result} ->
+        transform_result
+
+      {:error, err} ->
+        raise Brando.Exception.ImageProcessingError,
+          message: """
+
+
+          Failed creating image size
+
+          #{inspect(err, pretty: true)}
+          """
+    end
   end
 end

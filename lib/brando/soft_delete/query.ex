@@ -68,63 +68,10 @@ defmodule Brando.SoftDelete.Query do
   """
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
 
-  defp clean_up_schema(Brando.Images.Image) do
-    query =
-      from t in Brando.Images.Image,
-        where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
-
-    for image <- Brando.repo().all(query),
-        do: Images.Utils.delete_original_and_sized_images(image, :image)
-
-    Brando.repo().delete_all(query)
-  end
-
   defp clean_up_schema(schema) do
-    # check if the schema has image fields
-    image_fields =
-      if {:__image_fields__, 0} in schema.__info__(:functions) do
-        Enum.map(schema.__image_fields__(), & &1.name)
-      else
-        nil
-      end
-
-    # check if the schema has galleries
-    galleries =
-      if {:__gallery_fields__, 0} in schema.__info__(:functions) do
-        Enum.map(schema.__gallery_fields__(), & &1.name)
-      else
-        nil
-      end
-
     query =
       from t in schema,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
-
-    rows = Brando.repo().all(query)
-
-    if image_fields do
-      for row <- rows,
-          image_field <- image_fields do
-        Images.Utils.delete_original_and_sized_images(row, image_field)
-      end
-    end
-
-    if galleries do
-      # Though the image_series is already marked for deletion,
-      # we need to clear out its files
-      for row <- rows,
-          gallery_field <- galleries do
-        field =
-          gallery_field
-          |> to_string
-          |> Kernel.<>("_id")
-          |> String.to_atom()
-
-        series_id = Map.get(row, field)
-
-        Images.Utils.clear_media_for(:image_series, series_id)
-      end
-    end
 
     Brando.repo().delete_all(query)
   end

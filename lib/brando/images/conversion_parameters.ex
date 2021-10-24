@@ -3,7 +3,7 @@ defmodule Brando.Images.ConversionParameters do
   Store data we need for doing image resizing and cropping
   """
 
-  defstruct id: nil,
+  defstruct image_id: nil,
             image: nil,
             size_key: nil,
             size_cfg: nil,

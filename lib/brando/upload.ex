@@ -47,11 +47,10 @@ defmodule Brando.Upload do
     end
   end
 
-  def process_upload(image, cfg, user) do
-    with {:ok, operations} <- Images.Operations.create(image, cfg, nil, user),
-         {:ok, [%{sizes: processed_sizes, formats: processed_formats}]} <-
-           Images.Operations.perform(operations, user) do
-      Images.update_image(image, %{sizes: processed_sizes, formats: processed_formats}, user)
+  def process_upload(%{id: image_id} = image, cfg, user) do
+    with {:ok, ops} <- Images.Operations.create(image, cfg, user),
+         {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
+      Images.update_image(image, %{sizes: result.sizes, formats: result.formats}, user)
     end
   end
 
@@ -83,7 +82,7 @@ defmodule Brando.Upload do
         Images.create_image(image_params, user)
 
       {:error, _} ->
-        {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
+        {:error, {:handle_upload_type, "Fastimage.size() failed."}}
     end
   end
 
@@ -107,18 +106,6 @@ defmodule Brando.Upload do
   def handle_upload_error(err) do
     message =
       case err do
-        {:error, {:create_image_type_struct, _}} ->
-          gettext("Failed creating image type struct")
-
-        {:error, :empty_filename} ->
-          gettext("Empty filename given. Make sure you have a valid filename.")
-
-        {:error, :content_type, content_type, allowed_content_types} ->
-          gettext("File type not allowed: %{type}. Must be one of: %{allowed}",
-            type: content_type,
-            allowed: inspect(allowed_content_types)
-          )
-
         {:error, {:create_image_sizes, reason}} ->
           gettext("Error while creating image sizes") <> " -> #{inspect(reason)}"
 

@@ -30,7 +30,7 @@ defmodule Brando.Cache.SEO do
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, seo}) do
-    {:ok, seos} = Sites.list_seos()
+    {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
     Cachex.update(:cache, :seo, seo_map)
     {:ok, seo}

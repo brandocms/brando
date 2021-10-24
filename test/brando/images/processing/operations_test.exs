@@ -3,6 +3,7 @@ defmodule Brando.OperationsTest do
   import Brando.Images.Operations
 
   @image_struct %Brando.Images.Image{
+    id: 1,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -20,6 +21,7 @@ defmodule Brando.OperationsTest do
   }
 
   @image_struct_png %Brando.Images.Image{
+    id: 2,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -37,6 +39,7 @@ defmodule Brando.OperationsTest do
   }
 
   @image_struct_gif %Brando.Images.Image{
+    id: 3,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
     height: 2600,
@@ -108,23 +111,28 @@ defmodule Brando.OperationsTest do
       create(
         @image_struct,
         @img_config,
-        "test_id",
         :system
       )
 
     assert operations == [
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -134,6 +142,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 1,
@@ -148,16 +157,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -167,6 +182,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 2,
@@ -181,16 +197,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -200,11 +222,12 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 3,
                processed_formats: [:jpg],
-               size_cfg: %{"quality" => 30, "size" => "25x25>", "crop" => true},
+               size_cfg: %{"crop" => true, "quality" => 30, "size" => "25x25>"},
                size_key: "micro",
                sized_image_dir: "images/exhibitions/cover/micro",
                sized_image_path: "images/exhibitions/cover/micro/image.jpg",
@@ -214,16 +237,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -233,6 +262,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 4,
@@ -247,16 +277,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -266,6 +302,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 5,
@@ -280,16 +317,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
-               id: "test_id",
+               image_id: 1,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 1,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -299,6 +342,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 6,
@@ -319,23 +363,28 @@ defmodule Brando.OperationsTest do
       create(
         @image_struct_png,
         @img_config_png,
-        "test_id",
         :system
       )
 
     assert operations == [
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -345,6 +394,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 1,
@@ -359,16 +409,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -378,6 +434,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 2,
@@ -392,16 +449,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -411,6 +474,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 3,
@@ -425,16 +489,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -444,6 +514,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 4,
@@ -458,16 +529,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -477,6 +554,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 5,
@@ -491,16 +569,22 @@ defmodule Brando.OperationsTest do
              },
              %Brando.Images.Operation{
                filename: "image.png",
-               id: "test_id",
+               image_id: 2,
                image_struct: %Brando.Images.Image{
                  alt: nil,
                  cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
                  dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
                  formats: nil,
                  height: 2600,
+                 id: 2,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -510,6 +594,7 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
                operation_index: 6,
@@ -530,19 +615,28 @@ defmodule Brando.OperationsTest do
       create(
         @image_struct_gif,
         @img_config_gif,
-        "test_id",
         :system
       )
 
     assert operations == [
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -552,26 +646,37 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"quality" => 90, "size" => "1700"},
-               size_key: "large",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/large",
-               sized_image_path: "images/exhibitions/cover/large/image.gif",
                operation_index: 1,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"quality" => 90, "size" => "1700"},
+               size_key: "large",
+               sized_image_dir: "images/exhibitions/cover/large",
+               sized_image_path: "images/exhibitions/cover/large/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -581,26 +686,37 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"quality" => 90, "size" => "1100"},
-               size_key: "medium",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/medium",
-               sized_image_path: "images/exhibitions/cover/medium/image.gif",
                operation_index: 2,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"quality" => 90, "size" => "1100"},
+               size_key: "medium",
+               sized_image_dir: "images/exhibitions/cover/medium",
+               sized_image_path: "images/exhibitions/cover/medium/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -610,26 +726,37 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"crop" => true, "quality" => 30, "size" => "25x25>"},
-               size_key: "micro",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/micro",
-               sized_image_path: "images/exhibitions/cover/micro/image.gif",
                operation_index: 3,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"crop" => true, "quality" => 30, "size" => "25x25>"},
+               size_key: "micro",
+               sized_image_dir: "images/exhibitions/cover/micro",
+               sized_image_path: "images/exhibitions/cover/micro/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -639,26 +766,37 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"quality" => 90, "size" => "700"},
-               size_key: "small",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/small",
-               sized_image_path: "images/exhibitions/cover/small/image.gif",
                operation_index: 4,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"quality" => 90, "size" => "700"},
+               size_key: "small",
+               sized_image_dir: "images/exhibitions/cover/small",
+               sized_image_path: "images/exhibitions/cover/small/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -668,26 +806,37 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"crop" => true, "quality" => 90, "size" => "150x150>"},
-               size_key: "thumb",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/thumb",
-               sized_image_path: "images/exhibitions/cover/thumb/image.gif",
                operation_index: 5,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"crop" => true, "quality" => 90, "size" => "150x150>"},
+               size_key: "thumb",
+               sized_image_dir: "images/exhibitions/cover/thumb",
+               sized_image_path: "images/exhibitions/cover/thumb/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
-               id: "test_id",
+               image_id: 3,
                image_struct: %Brando.Images.Image{
+                 alt: nil,
+                 cdn: false,
+                 config_target: nil,
+                 creator_id: nil,
                  credits: nil,
+                 deleted_at: nil,
+                 dominant_color: nil,
                  focal: %{"x" => 50, "y" => 50},
+                 formats: nil,
                  height: 2600,
+                 id: 3,
+                 inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
+                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -697,17 +846,18 @@ defmodule Brando.OperationsTest do
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
                  title: nil,
+                 updated_at: nil,
                  width: 2600
                },
-               size_cfg: %{"quality" => 90, "size" => "2100"},
-               size_key: "xlarge",
-               type: :gif,
-               user: :system,
-               sized_image_dir: "images/exhibitions/cover/xlarge",
-               sized_image_path: "images/exhibitions/cover/xlarge/image.gif",
                operation_index: 6,
                processed_formats: [:gif],
-               total_operations: 6
+               size_cfg: %{"quality" => 90, "size" => "2100"},
+               size_key: "xlarge",
+               sized_image_dir: "images/exhibitions/cover/xlarge",
+               sized_image_path: "images/exhibitions/cover/xlarge/image.gif",
+               total_operations: 6,
+               type: :gif,
+               user: :system
              }
            ]
   end
@@ -715,7 +865,7 @@ defmodule Brando.OperationsTest do
   test "create_image_size gif" do
     op = %Brando.Images.Operation{
       filename: "image.gif",
-      id: "test_id",
+      image_id: 1,
       image_struct: %Brando.Images.Image{
         credits: nil,
         focal: %{"x" => 50, "y" => 50},
@@ -745,7 +895,7 @@ defmodule Brando.OperationsTest do
   test "create_image_size cropped gif" do
     op = %Brando.Images.Operation{
       filename: "image.gif",
-      id: "test_id",
+      image_id: 1,
       image_struct: %Brando.Images.Image{
         credits: nil,
         focal: %{"x" => 50, "y" => 50},

@@ -2,6 +2,7 @@ defmodule Brando.MetaRenderTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
   import Phoenix.HTML
+  alias Brando.Factory
 
   @mock_data %{
     title: "Our title",
@@ -87,11 +88,13 @@ defmodule Brando.MetaRenderTest do
              "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     # change identity values
+    u0 = Factory.insert(:random_user)
+    {:ok, meta_img} = Brando.Images.create_image(@img, u0)
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: meta_img.id}, :system)
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
@@ -102,7 +105,7 @@ defmodule Brando.MetaRenderTest do
     Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
   end
 
   test "meta_tag" do

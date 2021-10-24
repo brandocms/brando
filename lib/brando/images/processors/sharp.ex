@@ -18,7 +18,7 @@ defmodule Brando.Images.Processor.Sharp do
   Process image conversion
   """
   def process_image(%Images.ConversionParameters{
-        id: id,
+        image_id: image_id,
         size_key: size_key,
         crop: false,
         quality: quality,
@@ -104,7 +104,7 @@ defmodule Brando.Images.Processor.Sharp do
 
     {:ok,
      %Images.TransformResult{
-       id: id,
+       image_id: image_id,
        size_key: size_key,
        image_path: image_dest_rel_path,
        format: format,
@@ -113,7 +113,7 @@ defmodule Brando.Images.Processor.Sharp do
   end
 
   def process_image(%Images.ConversionParameters{
-        id: id,
+        image_id: image_id,
         size_key: size_key,
         crop: true,
         quality: quality,
@@ -207,7 +207,7 @@ defmodule Brando.Images.Processor.Sharp do
 
     {:ok,
      %Images.TransformResult{
-       id: id,
+       image_id: image_id,
        size_key: size_key,
        image_path: image_dest_rel_path,
        cmd_params: Enum.join(params, " "),

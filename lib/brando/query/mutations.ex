@@ -187,15 +187,9 @@ defmodule Brando.Query.Mutations do
   defp set_action(changeset, action), do: %{changeset | action: action}
 
   def delete(context, module, name, id, user, preloads, callback_block) do
-    get_opts =
-      if preloads do
-        %{matches: %{id: id}, preload: preloads}
-      else
-        %{matches: %{id: id}}
-      end
+    get_opts = (preloads && %{matches: %{id: id}, preload: preloads}) || %{matches: %{id: id}}
 
     {:ok, entry} = apply(context, :"get_#{name}", [get_opts])
-
     soft_deletable? = module.__trait__(Trait.SoftDelete)
 
     {:ok, entry} =
@@ -204,13 +198,6 @@ defmodule Brando.Query.Mutations do
       else
         Query.delete(entry)
       end
-
-    if {:__gallery_fields__, 0} in module.__info__(:functions) do
-      for f <- apply(module, :__gallery_fields__, []) do
-        image_series_id = String.to_existing_atom("#{to_string(f)}_id")
-        Images.delete_series(Map.get(entry, image_series_id))
-      end
-    end
 
     Datasource.update_datasource(module, entry)
 

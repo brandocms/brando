@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "~> 1.6.0-rc.0", override: true},
+      {:phoenix, "~> 1.6.0", override: true},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
       {:phoenix_ecto, "~> 4.1"},

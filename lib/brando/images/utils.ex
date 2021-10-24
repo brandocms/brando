@@ -10,22 +10,17 @@ defmodule Brando.Images.Utils do
   import Brando.Utils
 
   @doc """
-  Goes through `image`, which is a schema with an image_field
-  then passing to `delete_media/2` for removal
+  Goes through `image` then passes to `delete_media/2` for removal
 
   ## Example:
 
-      delete_original_and_sized_images(record, :cover)
+      delete_original_and_sized_images(image)
 
   """
-  @spec delete_original_and_sized_images(schema :: term, key :: atom) :: {:ok, Image.t()}
-  def delete_original_and_sized_images(image, key) do
-    img = Map.get(image, key)
-
-    if img do
-      delete_sized_images(img)
-      delete_media(Map.get(img, :path))
-    end
+  @spec delete_original_and_sized_images(Image.t()) :: {:ok, Image.t()}
+  def delete_original_and_sized_images(image) do
+    delete_sized_images(image)
+    delete_media(Map.get(image, :path))
 
     {:ok, image}
   end
@@ -33,12 +28,10 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete sizes associated with `image`, but keep original.
   """
-  @spec delete_sized_images(image_struct :: image_struct) :: any
+  @spec delete_sized_images(Image.t()) :: any
   def delete_sized_images(nil), do: nil
 
-  def delete_sized_images(image) do
-    sizes = Map.get(image, :sizes)
-
+  def delete_sized_images(%{formats: formats, sizes: sizes} = image) do
     for {_size, file} <- sizes do
       delete_media(file)
     end
@@ -46,6 +39,7 @@ defmodule Brando.Images.Utils do
 
   @doc """
   Deletes `file` after joining it with `media_path`
+  # TODO: Check for `cdn` key and handle
   """
   @spec delete_media(file_name :: binary) :: any
   def delete_media(nil), do: nil

@@ -5,7 +5,7 @@ defmodule Brando.Images.Operation do
   alias Brando.Images
   alias Brando.Type
 
-  defstruct id: nil,
+  defstruct image_id: nil,
             user: nil,
             total_operations: nil,
             operation_index: nil,

@@ -22,7 +22,7 @@ defmodule Brando.Images.Operations.Sizing do
   Create a sized version of image
   """
   def create_image_size(%Images.Operation{
-        id: id,
+        image_id: image_id,
         type: :gif,
         image_struct: %{path: image_src, width: width, height: height},
         sized_image_path: image_dest,
@@ -59,7 +59,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     {:ok,
      %Images.TransformResult{
-       id: id,
+       image_id: image_id,
        size_key: size_key,
        image_path: image_dest,
        cmd_params: Enum.join(params, " ")
@@ -68,7 +68,7 @@ defmodule Brando.Images.Operations.Sizing do
 
   def create_image_size(%Images.Operation{
         type: type,
-        id: id,
+        image_id: image_id,
         total_operations: total_operations,
         operation_index: operation_index,
         image_struct: %{
@@ -94,7 +94,7 @@ defmodule Brando.Images.Operations.Sizing do
     {width, height} = ensure_dims(width, height, image_src_path)
 
     conversion_parameters = %Images.ConversionParameters{
-      id: id,
+      image_id: image_id,
       size_key: size_key,
       image_src_path: image_src_path,
       image_dest_path: image_dest_path,
@@ -453,7 +453,7 @@ defmodule Brando.Images.Operations.Sizing do
   Set progress for user
   """
   def set_progress(
-        %{size_key: size_key, id: id, format: format} = conversion_parameters,
+        %{size_key: size_key, image_id: image_id, format: format} = conversion_parameters,
         progress,
         filename,
         user
@@ -466,7 +466,7 @@ defmodule Brando.Images.Operations.Sizing do
       )
 
     Progress.update(user, progress_string, %{
-      key: to_string(id),
+      key: to_string(image_id),
       percent: progress,
       filename: filename
     })

@@ -3,7 +3,6 @@ defmodule Brando.Images.SharpTest do
   use Brando.ConnCase
 
   alias Brando.Factory
-  alias Brando.Images.Processing
   alias Brando.Images.Processor.Sharp
 
   @cfg %Brando.Type.ImageConfig{
@@ -19,6 +18,7 @@ defmodule Brando.Images.SharpTest do
   }
 
   @meta %{
+    config_target: "image:Brando.Users.User:avatar",
     path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"
   }
 
@@ -43,43 +43,14 @@ defmodule Brando.Images.SharpTest do
     new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
     Application.put_env(:brando, Brando.Images, new_cfg)
 
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
+    u0 = Factory.insert(:random_user)
+    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
 
     assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
     assert image_struct.height == 576
     assert image_struct.width == 608
     assert image_struct.path =~ "images/avatars/"
 
-    Application.put_env(:brando, Brando.Images, prev_cfg)
-  end
-
-  test "recreate_sizes_for_image_field" do
-    prev_cfg = Brando.config(Brando.Images)
-    new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
-    Application.put_env(:brando, Brando.Images, new_cfg)
-
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
-
-    u1 = Factory.insert(:random_user, avatar: image_struct)
-
-    [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
-    assert result.id == u1.id
-    Application.put_env(:brando, Brando.Images, prev_cfg)
-  end
-
-  test "recreate_sizes_for_image_field_record" do
-    prev_cfg = Brando.config(Brando.Images)
-    new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
-    Application.put_env(:brando, Brando.Images, new_cfg)
-
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg)
-
-    u1 = Factory.insert(:random_user, avatar: image_struct)
-    changeset = Ecto.Changeset.change(u1)
-
-    {:ok, changeset} = Processing.recreate_sizes_for_image_field_record(changeset, :avatar, u1)
-    assert changeset.valid?
-    assert Map.has_key?(changeset.changes, :avatar)
     Application.put_env(:brando, Brando.Images, prev_cfg)
   end
 

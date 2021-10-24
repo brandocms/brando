@@ -1,5 +1,5 @@
 defmodule Brando.Images.ProcessingTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   alias Brando.Factory
@@ -19,7 +19,7 @@ defmodule Brando.Images.ProcessingTest do
 
   @meta %{
     path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png",
-    config_target: "image:Brando.Users.User:cover"
+    config_target: "image:Brando.Users.User:avatar"
   }
 
   @upload_entry %Phoenix.LiveView.UploadEntry{
@@ -38,35 +38,13 @@ defmodule Brando.Images.ProcessingTest do
     valid?: true
   }
 
-  test "create_image_type_struct" do
-    u0 = Factory.insert(:random_user)
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
-
-    assert image_struct.focal == %Brando.Images.Focal{x: 50, y: 50}
-    assert image_struct.path =~ "images/avatars/sample"
-
-    assert image_struct.height == 576
-    assert image_struct.width == 608
-  end
-
   test "recreate_sizes_for_image_field" do
-    u0 = Factory.insert(:random_user)
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
-    u1 = Factory.insert(:random_user, avatar: image_struct)
+    u1 = Factory.insert(:random_user)
 
-    [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
-    assert result.id == u1.id
-  end
+    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u1)
+    {:ok, updated_ids} = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
 
-  test "recreate_sizes_for_image_field_record" do
-    u0 = Factory.insert(:random_user)
-    {:ok, image_struct} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u0)
-
-    u1 = Factory.insert(:random_user, avatar: image_struct)
-    changeset = Ecto.Changeset.change(u1)
-
-    {:ok, changeset} = Processing.recreate_sizes_for_image_field_record(changeset, :avatar, u1)
-    assert changeset.valid?
-    assert Map.has_key?(changeset.changes, :avatar)
+    assert uploaded_image.id in updated_ids
+    assert Enum.count(updated_ids) == 2
   end
 end

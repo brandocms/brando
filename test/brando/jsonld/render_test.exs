@@ -2,6 +2,8 @@ defmodule Brando.JSONLDRenderTest do
   use ExUnit.Case
   use Brando.ConnCase, async: false
 
+  alias Brando.Factory
+
   @mock_data %{
     __meta__: %{
       current_url: "http://localhost"
@@ -25,7 +27,8 @@ defmodule Brando.JSONLDRenderTest do
       "xlarge" => "images/sites/identity/image/xlarge/20ri181teifg.jpg"
     },
     title: nil,
-    width: 1900
+    width: 1900,
+    config_target: "image:Brando.Sites.SEO:fallback_meta_image"
   }
 
   @links [
@@ -40,11 +43,13 @@ defmodule Brando.JSONLDRenderTest do
   ]
 
   test "render json ld" do
-    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+    u0 = Factory.insert(:random_user)
+    {:ok, fallback_meta_image} = Brando.Images.create_image(@img, u0)
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}, preload: [:logo]})
     Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: fallback_meta_image.id}, :system)
 
     mock_conn =
       %Plug.Conn{}
@@ -82,20 +87,29 @@ defmodule Brando.JSONLDRenderTest do
            ]
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
   end
 
   test "render json ld :corporation" do
+    u0 = Factory.insert(:random_user)
+
+    {:ok, fallback_meta_image} =
+      Brando.Images.create_image(Map.put(@img, :creator_id, u0.id), :system)
+
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
-    {:ok, identity} = Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
+    Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
+
+    {:ok, updated_identity} =
+      Brando.Sites.get_identity(%{matches: %{language: "en"}, preload: [:logo]})
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    {:ok, updated_seo} = Brando.Sites.update_seo(seo, %{fallback_meta_image: @img}, :system)
 
-    {:ok, seo} =
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: fallback_meta_image.id}, :system)
+
+    {:ok, updated_seo} =
       Brando.Sites.get_seo(%{matches: %{language: "en"}, preload: [:fallback_meta_image]})
 
-    rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {identity, updated_seo})
+    rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {updated_identity, updated_seo})
 
     assert rendered_json_ld ==
              {:safe,
@@ -112,12 +126,17 @@ defmodule Brando.JSONLDRenderTest do
               ]}
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
+    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
   end
 
   test "render json ld :breadcrumbs" do
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image: nil}, :system)
+
+    Brando.Sites.update_seo(
+      seo,
+      %{fallback_meta_image_id: nil},
+      :system
+    )
 
     breadcrumbs = [
       {"Home", "/"},
@@ -130,37 +149,35 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(:breadcrumbs, breadcrumbs)
 
-    rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
+    rendered_json_ld =
+      mock_conn
+      |> Brando.HTML.render_json_ld()
 
     assert rendered_json_ld == [
-             {
-               :safe,
-               [
-                 60,
-                 "script",
-                 [32, "type", 61, 34, "application/ld+json", 34],
-                 62,
-                 "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"item\":\"/\",\"name\":\"Home\",\"position\":1},{\"@type\":\"ListItem\",\"item\":\"/about\",\"name\":\"About\",\"position\":2},{\"@type\":\"ListItem\",\"item\":\"/about/contact\",\"name\":\"Contact\",\"position\":3}]}",
-                 60,
-                 47,
-                 "script",
-                 62
-               ]
-             },
-             {
-               :safe,
-               [
-                 60,
-                 "script",
-                 [32, "type", 61, 34, "application/ld+json", 34],
-                 62,
-                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
-                 60,
-                 47,
-                 "script",
-                 62
-               ]
-             },
+             {:safe,
+              [
+                60,
+                "script",
+                [32, "type", 61, 34, "application/ld+json", 34],
+                62,
+                "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"item\":\"/\",\"name\":\"Home\",\"position\":1},{\"@type\":\"ListItem\",\"item\":\"/about\",\"name\":\"About\",\"position\":2},{\"@type\":\"ListItem\",\"item\":\"/about/contact\",\"name\":\"Contact\",\"position\":3}]}",
+                60,
+                47,
+                "script",
+                62
+              ]},
+             {:safe,
+              [
+                60,
+                "script",
+                [32, "type", 61, 34, "application/ld+json", 34],
+                62,
+                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
+                60,
+                47,
+                "script",
+                62
+              ]},
              []
            ]
   end
