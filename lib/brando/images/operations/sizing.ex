@@ -13,7 +13,6 @@ defmodule Brando.Images.Operations.Sizing do
   Get processor module from config and call process function
   """
   def delegate_processor(conversion_parameters) do
-    # grab processor module
     module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Sharp
     apply(module, :process_image, [conversion_parameters])
   end
@@ -126,7 +125,15 @@ defmodule Brando.Images.Operations.Sizing do
         result
 
       {:error, {:image, :not_found}} ->
-        {:error, {:create_image_size, {:file_not_found, conversion_parameters.image_src_path}}}
+        raise Brando.Exception.ImageProcessingError,
+          message: """
+
+
+          File not found when trying to create image transform:
+
+              #{conversion_parameters.image_src_path}
+
+          """
     end
   end
 
@@ -175,7 +182,11 @@ defmodule Brando.Images.Operations.Sizing do
         %{original_width: width, original_height: height} = conversion_parameters,
         size_cfg
       ) do
-    Map.put(conversion_parameters, :size_cfg, get_size_cfg_orientation(size_cfg, height, width))
+    Map.put(
+      conversion_parameters,
+      :size_cfg,
+      get_size_cfg_orientation(size_cfg, height, width)
+    )
   end
 
   @doc """

@@ -232,8 +232,6 @@ defmodule BrandoAdmin.Components.Form do
       data-moonwalk-run="brandoForm"
       phx-hook="Brando.Form">
 
-      {inspect @entry.avatar, pretty: true}
-
       {!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? --}
       <div class="form-tabs">
         <div class="form-tab-customs">

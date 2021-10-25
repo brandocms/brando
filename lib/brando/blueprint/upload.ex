@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.Upload do
   end
 
   # TODO: Clean this up -- check focal if image, maybe upload to CDN etc
-  defp do_validate_upload(changeset, {_, field_name}, user, _cfg) do
+  defp do_validate_upload(changeset, {_, field_name}, _user, _cfg) do
     with {:ok, field_changes} <- Utils.field_has_changed(changeset, field_name),
          {:ok, _} <- Utils.changeset_has_no_errors(changeset),
          {:ok, :focal_changed} <- check_focal(field_changes) do
@@ -64,9 +64,9 @@ defmodule Brando.Blueprint.Upload do
   #       add_error(changeset, name, error_msg)
   #   end
 
-  defp get_image_cfg(%Type.ImageConfig{} = cfg, _, _) do
-    {:ok, cfg}
-  end
+  # defp get_image_cfg(%Type.ImageConfig{} = cfg, _, _) do
+  #   {:ok, cfg}
+  # end
 
   defp get_image_cfg(cfg, _, _) do
     {:ok, Brando.Utils.map_to_struct(cfg, Type.ImageConfig)}
