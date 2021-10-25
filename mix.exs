@@ -80,7 +80,6 @@ defmodule Brando.Mixfile do
       {:gettext, "~> 0.11"},
       {:earmark, "1.4.4"},
       {:jason, "~> 1.0"},
-      {:flow, "~> 1.0"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
 
