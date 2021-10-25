@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use Phoenix.HTML
 
   import Brando.Gettext
+
   alias Brando.Blueprint.Villain.Blocks.PictureBlock
   alias Brando.Utils
   alias Brando.Villain
@@ -359,9 +360,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("show_image_picker", _, %{assigns: %{uid: uid}} = socket) do
     modal_id = "#{uid}-image-picker"
-    {:ok, image_series} = Brando.Images.get_series_by_slug("post", "post")
+    {:ok, images} = Brando.Images.list_images()
     Modal.show(modal_id)
 
-    {:noreply, assign(socket, :images, image_series.images)}
+    {:noreply, assign(socket, :images, images)}
   end
 end
