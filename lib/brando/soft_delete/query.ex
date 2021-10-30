@@ -2,8 +2,6 @@ defmodule Brando.SoftDelete.Query do
   @moduledoc """
   Query tools for Soft deletion
   """
-
-  alias Brando.Images
   alias Brando.Trait
   import Ecto.Query
 

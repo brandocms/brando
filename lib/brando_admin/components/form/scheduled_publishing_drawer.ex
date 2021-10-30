@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </div>
         <div class="drawer-form">
           <div class="brando-input">
-            <Input.Datetime blueprint={@blueprint} field={:publish_at} form={@form} />
+            <Input.Datetime field={:publish_at} form={@form} />
           </div>
         </div>
       </div>

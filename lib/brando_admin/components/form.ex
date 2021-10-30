@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
-        %{updated_image: %{path: _, id: updated_id} = updated_image, key: key},
+        %{updated_image: %{path: _, id: updated_id}, key: key},
         %{assigns: %{changeset: changeset, entry: entry}} = socket
       ) do
     relation_id = String.to_existing_atom("#{key}_id")

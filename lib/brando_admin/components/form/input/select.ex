@@ -22,6 +22,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   data debounce, :integer
   data compact, :boolean
 
+  data show_filter, :boolean
+  data resetable, :boolean
   data open, :boolean
   data narrow, :boolean
   data selected_option, :any

@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
   use Surface.LiveComponent
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Subform
 

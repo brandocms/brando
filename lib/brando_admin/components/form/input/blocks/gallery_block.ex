@@ -477,9 +477,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def handle_event("show_image_picker", _, %{assigns: %{uid: uid}} = socket) do
     modal_id = "#{uid}-image-picker"
-    {:ok, image_series} = Brando.Images.get_series_by_slug("post", "post")
+    {:ok, images} = Brando.Images.list_images()
     Modal.show(modal_id)
 
-    {:noreply, assign(socket, :available_images, image_series.images)}
+    {:noreply, assign(socket, :available_images, images)}
   end
 end

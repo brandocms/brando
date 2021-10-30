@@ -30,17 +30,16 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </div>
         <div class="drawer-form">
           <div class="brando-input">
-            <Input.Text blueprint={@blueprint} field={:meta_title} form={@form} />
+            <Input.Text field={:meta_title} form={@form} />
           </div>
 
           <div class="brando-input">
-            <Input.Textarea blueprint={@blueprint} field={:meta_description} form={@form} />
+            <Input.Textarea field={:meta_description} form={@form} />
           </div>
 
           <div class="brando-input">
             <Input.Image
               id={"#{@form.id}-meta-image"}
-              blueprint={@blueprint}
               field={:meta_image}
               uploads={@uploads}
               form={@form} />

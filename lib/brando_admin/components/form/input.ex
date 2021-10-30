@@ -21,9 +21,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def update(assigns, socket) do
-    require Logger
-    Logger.error("==> opts = #{inspect(assigns.opts)}")
-
     {:ok,
      socket
      |> assign(assigns)

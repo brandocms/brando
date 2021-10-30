@@ -172,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </div>
             <div class="panel">
               <Input.RichText form={@block_data} field={:title} />
-              <Input.Text form={@block_data} field={:alt} debounce={750} />
+              <Input.Text form={@block_data} field={:alt} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" :on-click="show_image_picker">

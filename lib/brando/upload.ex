@@ -23,9 +23,6 @@ defmodule Brando.Upload do
   import Brando.Utils
 
   alias Brando.Images
-  alias Brando.Images.Focal
-  alias Brando.Images.Image
-  alias Brando.Type.ImageConfig
   alias Brando.Type.FileConfig
 
   @doc """
@@ -59,7 +56,7 @@ defmodule Brando.Upload do
 
   Image or file
   """
-  def handle_upload_type(%{cfg: cfg, meta: meta} = upload, user) do
+  def handle_upload_type(%{meta: meta} = upload, user) do
     media_path = upload.meta.media_path
 
     media_path
@@ -86,7 +83,7 @@ defmodule Brando.Upload do
     end
   end
 
-  def handle_upload_type(%{cfg: %FileConfig{}} = _upload, user) do
+  def handle_upload_type(%{cfg: %FileConfig{}} = _upload, _user) do
     {:ok, nil}
   end
 
