@@ -380,6 +380,7 @@ defmodule Brando.Villain.Parser do
 
         title = if title == "", do: nil, else: title
         credits = if credits == "", do: nil, else: credits
+        srcset = if srcset == "", do: nil, else: srcset
 
         {link_open, link_close} =
           if link != "" do
