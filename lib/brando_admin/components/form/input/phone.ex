@@ -1,20 +1,50 @@
 defmodule BrandoAdmin.Components.Form.Input.Phone do
   use Surface.Component
-  # use Phoenix.LiveComponent
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
   prop form, :form
-  prop blueprint, :any
+  prop field, :atom
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
-  def render(%{input: %{name: name, opts: opts}} = assigns) do
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
+
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       class: assigns.opts[:class],
+       monospace: assigns.opts[:monospace] || false,
+       disabled: assigns.opts[:disabled] || false,
+       debounce: assigns.opts[:debounce] || 750,
+       compact: assigns.opts[:compact]
+     )}
+  end
+
+  def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
       form={@form}
-      class={opts[:class]}
-      field={name}>
-      {telephone_input @form, name, class: "text"}
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
+      {telephone_input @form, @field,
+        placeholder: @placeholder,
+        disabled: @disabled,
+        phx_debounce: @debounce,
+        class: "text#{@monospace && " monospace" || ""}"}
     </FieldBase>
     """
   end

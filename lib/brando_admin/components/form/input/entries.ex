@@ -10,33 +10,30 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   alias BrandoAdmin.Components.Identifier
 
   prop form, :form
-  prop field, :any
-  prop blueprint, :any
-  prop input, :any
+  prop field, :atom
   prop label, :string
-  prop value, :any
-  prop placeholder, :string
   prop instructions, :string
-  prop class, :string
-  prop disabled, :boolean
-  prop debounce, :integer
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
+  prop value, :any
 
   data available_schemas, :list
   data identifiers, :list
   data selected_identifiers, :list
+  data class, :string
+  data compact, :boolean
 
   def mount(socket) do
     {:ok, assign(socket, identifiers: [])}
   end
 
-  def update(%{blueprint: blueprint, input: %{name: name, opts: opts}} = assigns, socket) do
-    translations = get_in(blueprint.translations, [:fields, name]) || []
-    placeholder = Keyword.get(translations, :placeholder, assigns[:placeholder])
+  def update(assigns, socket) do
     value = assigns[:value]
 
     selected_identifiers =
       assigns.form
-      |> input_value(name)
+      |> input_value(assigns.field)
       |> Enum.map(fn
         %Brando.Content.Identifier{} = identifier ->
           identifier
@@ -49,13 +46,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       end)
       |> Enum.reject(&(&1 == nil))
 
-    selected_identifiers_forms = inputs_for(assigns.form, name)
-    wanted_schemas = Keyword.get(opts, :for)
+    selected_identifiers_forms = inputs_for(assigns.form, assigns.field)
+    wanted_schemas = Keyword.get(assigns.opts, :for)
 
     if !wanted_schemas do
       raise Brando.Exception.BlueprintError,
         message: """
-        Missing `for` option for `:entries` field `#{inspect(name)}`
+        Missing `for` option for `:entries` field `#{inspect(assigns.field)}`
 
             input :related_entries, :entries, for: [
               {MyApp.Projects.Project, %{preload: [:category]}},
@@ -72,18 +69,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign(:selected_identifiers_forms, selected_identifiers_forms)
      |> assign_available_schemas(wanted_schemas)
      |> assign_selected_schema()
-     |> assign(
-       placeholder: placeholder,
-       value: value
-     )}
-  end
-
-  def update(assigns, socket) do
-    value = assigns[:value]
-
-    {:ok,
-     socket
-     |> assign(assigns)
      |> assign(value: value)}
   end
 
@@ -102,12 +87,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     assign_new(socket, :selected_schema, fn -> nil end)
   end
 
-  def render(%{blueprint: _, input: %{name: name, opts: _opts}} = assigns) do
+  def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
-      field={name}
-      form={@form}>
+      form={@form}
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
       {#if Enum.empty?(@selected_identifiers)}
         <div class="empty-list">
           {gettext("No selected entries")}
@@ -116,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <Inputs
         form={@form}
-        for={name}
+        for={@field}
         :let={form: identifier_form}>
         {hidden_input identifier_form, :id}
         {hidden_input identifier_form, :schema}
@@ -135,12 +123,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         />
       {/for}
 
-      <button type="button" class="add-entry-button" :on-click="show_modal" phx-value-id={"#{@form.id}-#{name}-select-entries"}>
+      <button type="button" class="add-entry-button" :on-click="show_modal" phx-value-id={"#{@form.id}-#{@field}-select-entries"}>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
         {gettext("Select entries")}
       </button>
 
-      <Modal title="Select entries" id={"#{@form.id}-#{name}-select-entries"} narrow>
+      <Modal title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
         <h2 class="titlecase">{gettext("Select content type")}</h2>
         <div class="button-group-vertical">
         {#for {label, schema, _} <- @available_schemas}
@@ -165,24 +153,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     """
   end
 
-  def render(assigns) do
-    ~F"""
-    <FieldBase
-      label={@label}
-      placeholder={@placeholder}
-      instructions={@instructions}
-      field={@field}
-      form={@form}>
-    </FieldBase>
-    """
-  end
-
   def handle_event(
         "select_identifier",
         %{"param" => idx},
         %{
           assigns: %{
-            input: %{name: field_name},
+            field: field_name,
             form: %{source: changeset},
             identifiers: identifiers,
             selected_identifiers: selected_identifiers
@@ -215,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{"param" => idx},
         %{
           assigns: %{
-            input: %{name: field_name},
+            field: field_name,
             form: %{source: changeset},
             selected_identifiers: selected_identifiers
           }

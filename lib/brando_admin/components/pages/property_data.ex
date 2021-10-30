@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Pages.PropertyData do
   alias BrandoAdmin.Components.Form.Input
 
   prop form, :any
-  prop opts, :any
+  prop opts, :list, default: []
 
   def update(assigns, socket) do
     from_field = Keyword.fetch!(assigns.opts, :from)

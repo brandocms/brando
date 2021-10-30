@@ -54,6 +54,22 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Capitalize and replace dashes and underscores with spaces
+
+  ## Example
+
+        iex(1)> humanize("field_base")
+        "Field base"
+
+  """
+  @spec humanize(binary) :: binary
+  def humanize(value) do
+    value
+    |> String.replace(["-", "_"], " ")
+    |> String.capitalize()
+  end
+
+  @doc """
   Generates a random basename for `filename`.
   Keeps the original extension.
   """

@@ -1,14 +1,13 @@
 defmodule BrandoAdmin.Components.Form.Fieldset do
-  use Surface.LiveComponent
+  use Surface.Component
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Subform
+  alias BrandoAdmin.Components.Form.Fieldset
 
   prop current_user, :any
   prop fieldset, :any
   prop form, :any
-  prop blueprint, :any
+  prop translations, :any
   prop uploads, :any
 
   def render(assigns) do
@@ -20,35 +19,12 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
       shaded: @fieldset.shaded
     }>
       {#for input <- @fieldset.fields}
-        {#if input.__struct__ == Brando.Blueprint.Form.Subform}
-          {#if input.component}
-            {live_component(@socket, input.component,
-              id: "#{@form.id}-#{input.field}-custom-component",
-              form: @form,
-              subform: input,
-              blueprint: @blueprint,
-              uploads: @uploads,
-              current_user: @current_user,
-              opts: []
-            )}
-          {#else}
-            <Subform
-              id={"#{@form.id}-subform-#{input.field}"}
-              blueprint={@blueprint}
-              form={@form}
-              uploads={@uploads}
-              subform={input}
-              current_user={@current_user} />
-          {/if}
-        {#else}
-          <Input
-            id={"#{@form.id}-#{input.name}"}
-            input={input}
-            form={@form}
-            blueprint={@blueprint}
-            uploads={@uploads}
-            current_user={@current_user} />
-        {/if}
+        <Fieldset.Field
+          form={@form}
+          translations={@translations}
+          input={input}
+          uploads={@uploads}
+          current_user={@current_user} />
       {/for}
     </fieldset>
     """

@@ -8,14 +8,20 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   alias Surface.Components.Form
 
-  prop blueprint, :any
   prop form, :form
-  prop field, :any
+  prop field, :atom
   prop label, :string
+  prop placeholder, :string
   prop instructions, :string
-  prop class, :string
-  prop options, :any
-  prop current_user, :any
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
+
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
 
   data open, :boolean
   data selected_options, :list
@@ -30,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   data narrow, :boolean
   data creating, :boolean
   data resetable, :boolean
+  data form_translations, :any
 
   slot default
 
@@ -43,14 +50,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:filter_string, "")}
   end
 
-  def update(%{input: %{opts: opts}, blueprint: _blueprint} = assigns, socket) do
-    show_filter = Keyword.get(opts, :filter, true)
-    narrow = Keyword.get(opts, :narrow)
-    resetable = Keyword.get(opts, :resetable)
+  def update(assigns, socket) do
+    show_filter = Keyword.get(assigns.opts, :filter, true)
+    narrow = Keyword.get(assigns.opts, :narrow)
+    resetable = Keyword.get(assigns.opts, :resetable)
 
-    changeset_fun = Keyword.get(opts, :changeset_fun)
-    default = Keyword.get(opts, :default)
-    entry_form = Keyword.get(opts, :form)
+    changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
+    default = Keyword.get(assigns.opts, :default)
+    entry_form = Keyword.get(assigns.opts, :form)
 
     {:ok,
      socket
@@ -95,11 +102,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  def assign_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
+  def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
     assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
   end
 
-  def update_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
+  def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
     assign(socket, :input_options, get_input_options(form, opts))
   end
 
@@ -117,7 +124,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         end)
 
       nil ->
-        # schema = blueprint.modules.schema
         []
 
       options_fun when is_function(options_fun) ->
@@ -149,7 +155,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
-    assign(socket, :select_form, target_module.__form__(form_name))
+    select_form = target_module.__form__(form_name)
+    form_translations = target_module.__translations__()
+
+    socket
+    |> assign(:select_form, select_form)
+    |> assign(:form_translations, form_translations)
   end
 
   def maybe_assign_select_form(socket) do
@@ -174,19 +185,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     |> assign(:module, module)
   end
 
-  def render(%{input: %{name: name, opts: opts}, blueprint: _blueprint} = assigns) do
+  def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
       form={@form}
-      class={opts[:class]}
-      field={name}>
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
 
       {#if Enum.empty?(@selected_labels)}
-        {hidden_input @form, name, id: "#{@form.name}-#{name}-empty", name: "#{@form.name}[#{name}]", value: ""}
+        {hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: ""}
       {#else}
         {#for opt <- @selected_options}
-          {hidden_input @form, name, id: "#{@form.name}-#{name}-#{opt}", name: "#{@form.name}[#{name}][]", value: opt}
+          {hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt}
         {/for}
       {/if}
 
@@ -243,7 +256,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             {/if}
           </:header>
           {#if @show_filter && !Enum.empty?(@input_options) && !@creating}
-            <div class="select-filter" id={"#{@form.id}-#{name}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+            <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
               <div class="field-wrapper">
                 <div class="label-wrapper">
                   <label for="select-modal-search" class="control-label">
@@ -260,7 +273,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <div class="select-modal-wrapper">
             {#if !@creating}
               <div class="select-modal">
-                <div id={"#{@form.name}-#{name}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
+                <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                   <h2 class="titlecase">Available options</h2>
                   {#if Enum.empty?(@input_options)}
                     No options found
@@ -317,15 +330,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   for={@select_changeset}
                   change="validate_new_entry"
                   :let={form: entry_form}>
-                  {#for {tab, _tab_idx} <- Enum.with_index(@select_form.tabs)}
+                  {#for tab <- @select_form.tabs}
                     <div
                       class={"form-tab", active: true}
                       data-tab-name={tab.name}>
                       <div class="row">
-                        {#for {fieldset, fs_idx} <- Enum.with_index(tab.fields)}
+                        {#for fieldset <- tab.fields}
                           <Fieldset
-                            id={"#{entry_form.id}-fieldset-#{tab.name}-#{fs_idx}"}
-                            blueprint={@blueprint}
+                            translations={@form_translations}
                             form={entry_form}
                             uploads={[]}
                             fieldset={fieldset} />

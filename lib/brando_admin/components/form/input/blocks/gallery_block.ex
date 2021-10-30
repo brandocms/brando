@@ -258,8 +258,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 </figure>
                 <div>
                   <Input.RichText form={image} field={:title} />
-                  <Input.Text form={image} field={:credits} debounce={750} />
-                  <Input.Text form={image} field={:alt} debounce={750} />
+                  <Input.Text form={image} field={:credits} opts={debounce: 750} />
+                  <Input.Text form={image} field={:alt} opts={debounce: 750} />
                 </div>
               </div>
             {/for}
@@ -272,18 +272,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             form={@block_data}
             field={:display}
             label={gettext("Display")}
-            options={[
+            opts={options: [
               %{label: "Grid", value: :grid},
               %{label: "List", value: :list},
             ]} />
-          <Input.Text form={@block_data} field={:class} debounce={750} />
-          <Input.Text form={@block_data} field={:series_slug} debounce={750} />
+          <Input.Text form={@block_data} field={:class} opts={debounce: 750} />
+          <Input.Text form={@block_data} field={:series_slug} opts={debounce: 750} />
           <Input.Toggle form={@block_data} field={:lightbox} />
 
           <Input.Radios
             form={@block_data}
             field={:placeholder}
-            options={[
+            opts={options: [
               %{label: "SVG", value: :svg},
               %{label: "Dominant Color", value: :dominant_color},
               %{label: "Micro", value: :micro},

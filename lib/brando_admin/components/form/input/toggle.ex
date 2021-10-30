@@ -5,70 +5,49 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
   alias BrandoAdmin.Components.Form.Label
 
   prop form, :form
-  prop field, :any
-  prop blueprint, :any
-  prop input, :any
-  prop name, :any
+  prop field, :atom
   prop label, :string
   prop placeholder, :string
   prop instructions, :string
-  prop class, :any
-  prop small, :boolean
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
-  data field_name, :any
-  data classes, :string
-  data text, :string
-  data small?, :boolean
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
 
   slot default
-
-  def update(%{input: %{name: name, opts: opts}} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(:classes, opts[:class])
-     |> assign(:small?, Keyword.get(opts, :small, false))
-     |> assign(:field_name, name)
-     |> assign(assigns)}
-  end
 
   def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign(
+       class: assigns.opts[:class],
+       monospace: assigns.opts[:monospace] || false,
+       disabled: assigns.opts[:disabled] || false,
+       debounce: assigns.opts[:debounce] || 750,
+       compact: assigns.opts[:compact]
+     )}
   end
 
-  def render(%{blueprint: nil} = assigns) do
+  def render(assigns) do
     ~F"""
     <FieldBase
-      label={@label}
-      placeholder={@placeholder}
-      instructions={@instructions}
+      form={@form}
       field={@field}
-      form={@form}>
-      <Label form={@form} field={@field} class={"switch", small: @small}>
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
+      <Label form={@form} field={@field} class={"switch", small: @compact}>
         {#if slot_assigned?(:default)}
           <#slot />
         {#else}
           {checkbox @form, @field}
-        {/if}
-        <div class="slider round"></div>
-      </Label>
-    </FieldBase>
-    """
-  end
-
-  def render(%{blueprint: _} = assigns) do
-    ~F"""
-    <FieldBase
-      blueprint={@blueprint}
-      field={@field_name}
-      class={@classes}
-      form={@form}>
-      <Label form={@form} field={@field_name} class={"switch", small: @small?}>
-        {#if slot_assigned?(:default)}
-          <#slot />
-        {#else}
-          {checkbox @form, @field_name}
         {/if}
         <div class="slider round"></div>
       </Label>

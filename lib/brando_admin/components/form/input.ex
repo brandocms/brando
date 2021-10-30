@@ -4,9 +4,13 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   prop current_user, :any
   prop form, :any
-  prop input, :any
-  prop blueprint, :any
+  prop field, :any
+  prop label, :any
+  prop placeholder, :any
+  prop instructions, :any
+  prop opts, :list, default: []
   prop uploads, :any
+  prop type, :any
 
   data component_module, :any
   data component_opts, :any
@@ -17,28 +21,28 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def update(assigns, socket) do
-    component_module =
-      case assigns.input.type do
-        {:component, module} ->
-          module
-
-        type ->
-          input_type = type |> to_string |> Recase.to_pascal()
-          Module.concat([__MODULE__, input_type])
-      end
-
-    component_id =
-      Enum.join(
-        [assigns.form.id, assigns.input.name],
-        "-"
-      )
+    require Logger
+    Logger.error("==> opts = #{inspect(assigns.opts)}")
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:component_id, component_id)
-     |> assign(:component_module, component_module)
-     |> assign(:component_opts, assigns.input.opts)}
+     |> assign_new(:component_id, fn ->
+       Enum.join(
+         [assigns.form.id, assigns.field],
+         "-"
+       )
+     end)
+     |> assign_new(:component_module, fn ->
+       case assigns.type do
+         {:component, module} ->
+           module
+
+         type ->
+           input_type = type |> to_string |> Recase.to_pascal()
+           Module.concat([__MODULE__, input_type])
+       end
+     end)}
   end
 
   def render(assigns) do
@@ -47,10 +51,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       {live_component(@socket, @component_module,
         id: @component_id,
         form: @form,
-        input: @input,
-        blueprint: @blueprint,
+        field: @field,
+        label: @label,
+        placeholder: @placeholder,
+        instructions: @instructions,
         uploads: @uploads,
-        opts: @component_opts,
+        opts: @opts,
         current_user: @current_user
       )}
     </div>

@@ -1,16 +1,9 @@
 defmodule BrandoAdmin.Components.Form.Label do
   use Surface.Component
 
-  @doc "The form identifier"
   prop form, :form
-
-  @doc "The field name"
   prop field, :any
-
-  @doc "The CSS class for the underlying tag"
   prop class, :css_class
-
-  @doc "Options list"
   prop opts, :keyword, default: []
 
   @doc """

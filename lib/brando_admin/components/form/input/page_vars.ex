@@ -10,10 +10,15 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
   alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop subform, :any
-  prop form, :any
-  prop blueprint, :any
-  prop uploads, :any
+  prop form, :form
+  prop subform, :form
+  prop field, :atom
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
   data advanced, :boolean
 
@@ -25,10 +30,11 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
     ~F"""
     <fieldset>
       <FieldBase
-        blueprint={@blueprint}
+        form={@form}
         field={@subform.field}
-        class={subform: true}
-        form={@form}>
+        label={@label}
+        instructions={@instructions}
+        class={subform: true}>
         <:header>
           <div class="switch-description">Advanced</div>
           <div class="brando-input">
