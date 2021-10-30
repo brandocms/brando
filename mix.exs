@@ -37,8 +37,7 @@ defmodule Brando.Mixfile do
       # liveview
       {:phoenix_live_view, "~> 0.16"},
       {:phoenix_html, "~> 3.0"},
-      {:surface, "~> 0.5"},
-      {:surface_formatter, "~> 0.5.4"},
+      {:surface, "~> 0.6.0"},
       {:floki, ">= 0.27.0", only: :test},
 
       # hashing/passwords
