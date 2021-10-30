@@ -21,20 +21,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
 
   def v(form, field), do: input_value(form, field)
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_ref()}
-  end
-
-  def assign_ref(%{assigns: %{module_refs: refs, module_ref_name: ref}} = socket) do
+  def assign_ref(%{module_refs: refs, module_ref_name: ref} = assigns) do
     # TODO: assign_new this stuff? do we need to process them every time?
     case Enum.find(refs, &(elem(&1, 0).data.name == ref)) do
       {ref_form, ref_index} ->
         ref_block = inputs_for_block(ref_form, :data) |> List.first()
 
-        socket
+        assigns
         |> assign(:block_count, Enum.count(refs))
         |> assign(:ref_index, ref_index)
         |> assign(:ref_form, ref_form)
@@ -44,7 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
         |> assign(:ref_name, ref)
 
       nil ->
-        socket
+        assigns
         |> assign(:block_count, Enum.count(refs))
         |> assign(:ref_index, 0)
         |> assign(:ref_form, nil)
@@ -56,6 +49,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   end
 
   def render(assigns) do
+    assigns = assign_ref(assigns)
+
     ~F"""
     {#if @ref}
       <section b-ref={@ref.name}>

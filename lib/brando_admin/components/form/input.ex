@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input do
   use Surface.LiveComponent
   use Phoenix.HTML
+  alias Surface.Components.Dynamic.Component
 
   prop current_user, :any
   prop form, :any
@@ -42,20 +43,38 @@ defmodule BrandoAdmin.Components.Form.Input do
      end)}
   end
 
+  defp is_live?(module) do
+    {:__live__, 0} in module.__info__(:functions)
+  end
+
   def render(assigns) do
     ~F"""
     <div class="brando-input">
-      {live_component(@socket, @component_module,
-        id: @component_id,
-        form: @form,
-        field: @field,
-        label: @label,
-        placeholder: @placeholder,
-        instructions: @instructions,
-        uploads: @uploads,
-        opts: @opts,
-        current_user: @current_user
-      )}
+      {#if is_live?(@component_module)}
+        {live_component(@component_module,
+          id: @component_id,
+          form: @form,
+          field: @field,
+          label: @label,
+          placeholder: @placeholder,
+          instructions: @instructions,
+          uploads: @uploads,
+          opts: @opts,
+          current_user: @current_user
+        )}
+      {#else}
+        <Component
+          module={@component_module}
+          function={:render}
+          form={@form}
+          field={@field}
+          label={@label}
+          placeholder={@placeholder}
+          instructions={@instructions}
+          uploads={@uploads}
+          opts={@opts}
+          current_user={@current_user} />
+      {/if}
     </div>
     """
   end

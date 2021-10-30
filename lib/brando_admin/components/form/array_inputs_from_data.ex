@@ -22,16 +22,10 @@ defmodule BrandoAdmin.Components.Form.ArrayInputsFromData do
   data checked_values, :list
   slot default, args: [:id, :name, :key, :value, :label, :checked]
 
-  def update(assigns, socket) do
-    checked_values = input_value(assigns.form, assigns.for) || []
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:checked_values, Enum.map(checked_values, &to_string(&1)))}
-  end
-
   def render(assigns) do
+    checked_values = input_value(assigns.form, assigns.for) || []
+    assigns = assign(assigns, :checked_values, Enum.map(checked_values, &to_string(&1)))
+
     ~F"""
     {#for {option, idx} <- Enum.with_index(@options)}
       <#slot :args={

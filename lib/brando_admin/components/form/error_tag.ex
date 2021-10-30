@@ -73,17 +73,13 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
   prop feedback_for, :string
   data translate_fn, :fun
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:translate_fn, fn ->
-       {mod, fun} = assigns.translator
-       &apply(mod, fun, [&1])
-     end)}
-  end
-
   def render(assigns) do
+    assigns =
+      assign_new(assigns, :translate_fn, fn ->
+        {mod, fun} = assigns.translator
+        &apply(mod, fun, [&1])
+      end)
+
     ~F"""
     <span
       id={"#{@form.id}-#{@field}-error"}

@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   data instructions, :string
   data placeholder, :string
 
-  def update(assigns, socket) do
+  def render(assigns) do
     translations =
       case assigns.input.__struct__ do
         Brando.Blueprint.Form.Subform ->
@@ -34,19 +34,16 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         val -> raw(val)
       end
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:label, label)
-     |> assign(:instructions, instructions)
-     |> assign(:placeholder, placeholder)}
-  end
+    assigns =
+      assigns
+      |> assign(:label, label)
+      |> assign(:instructions, instructions)
+      |> assign(:placeholder, placeholder)
 
-  def render(assigns) do
     ~F"""
     {#if @input.__struct__ == Brando.Blueprint.Form.Subform}
       {#if @input.component}
-        {live_component(@socket, @input.component,
+        {live_component(@input.component,
           id: "#{@form.id}-#{@input.field}-custom-component",
           form: @form,
           label: @label,

@@ -22,26 +22,23 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
 
   slot default
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:class, fn -> assigns.opts[:class] end)
-     |> assign_new(:statuses, fn ->
-       [
-         %{value: "draft", label: gettext("Draft")},
-         %{value: "pending", label: gettext("Pending")},
-         %{value: "published", label: gettext("Published")},
-         %{value: "disabled", label: gettext("Deactivated")}
-       ]
-     end)
-     |> assign(
-       class: assigns.opts[:class],
-       compact: assigns.opts[:compact]
-     )}
-  end
-
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> assigns.opts[:class] end)
+      |> assign_new(:statuses, fn ->
+        [
+          %{value: "draft", label: gettext("Draft")},
+          %{value: "pending", label: gettext("Pending")},
+          %{value: "published", label: gettext("Published")},
+          %{value: "disabled", label: gettext("Deactivated")}
+        ]
+      end)
+      |> assign(
+        class: assigns.opts[:class],
+        compact: assigns.opts[:compact]
+      )
+
     ~F"""
     <FieldBase
       form={@form}

@@ -20,23 +20,20 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
 
   data initial_props, :map
 
-  def update(%{form: form, field: field} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       compact: assigns.opts[:compact],
-       debounce: assigns.opts[:debounce] || 750
-     )
-     |> assign_new(:initial_props, fn ->
-       Jason.encode!(%{content: v(form, field)})
-     end)}
-  end
-
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        class: assigns.opts[:class],
+        compact: assigns.opts[:compact],
+        debounce: assigns.opts[:debounce] || 750
+      )
+      |> assign_new(:initial_props, fn ->
+        Jason.encode!(%{content: v(assigns.form, assigns.field)})
+      end)
+
     ~F"""
     <FieldBase
       form={@form}

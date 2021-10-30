@@ -9,12 +9,6 @@ defmodule BrandoAdmin.Components.Identifier do
   prop remove, :event
   prop selected_identifiers, :list, default: []
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)}
-  end
-
   def render(%{identifier: identifier} = assigns) when not is_nil(identifier) do
     ~F"""
     <article

@@ -5,14 +5,9 @@ defmodule BrandoAdmin.Components.CircleDropdown do
   prop id, :string, required: true
   slot default, required: true
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:id, "circle_dropdown_#{assigns.id}")}
-  end
-
   def render(assigns) do
+    assigns = assign(assigns, :id, "circle_dropdown_#{assigns.id}")
+
     ~F"""
     <div
       id={@id}

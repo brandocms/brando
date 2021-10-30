@@ -17,23 +17,21 @@ defmodule BrandoAdmin.Components.Content.List.Tools do
   data filters, :list
   data has_status?, :boolean
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(:active_filter, assigns.active_filter)
-     |> assign(:list_opts, assigns.list_opts)
-     |> assign(:has_status?, assigns.schema.has_trait(Brando.Trait.Status))
-     |> assign_new(:schema, fn -> assigns.schema end)
-     |> assign_new(:listing, fn -> assigns.listing end)
-     |> assign_new(:update_filter, fn -> assigns.update_filter end)
-     |> assign_new(:delete_filter, fn -> assigns.delete_filter end)
-     |> assign_new(:update_status, fn -> assigns.update_status end)
-     |> assign_new(:next_filter_key, fn -> assigns.next_filter_key end)
-     |> assign_new(:statuses, fn -> get_statuses(assigns.schema) end)
-     |> assign_new(:filters, fn -> assigns.listing.filters end)}
-  end
-
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(:active_filter, assigns.active_filter)
+      |> assign(:list_opts, assigns.list_opts)
+      |> assign(:has_status?, assigns.schema.has_trait(Brando.Trait.Status))
+      |> assign_new(:schema, fn -> assigns.schema end)
+      |> assign_new(:listing, fn -> assigns.listing end)
+      |> assign_new(:update_filter, fn -> assigns.update_filter end)
+      |> assign_new(:delete_filter, fn -> assigns.delete_filter end)
+      |> assign_new(:update_status, fn -> assigns.update_status end)
+      |> assign_new(:next_filter_key, fn -> assigns.next_filter_key end)
+      |> assign_new(:statuses, fn -> get_statuses(assigns.schema) end)
+      |> assign_new(:filters, fn -> assigns.listing.filters end)
+
     ~F"""
     <div class="list-tools-wrapper">
       <div class="list-tools">

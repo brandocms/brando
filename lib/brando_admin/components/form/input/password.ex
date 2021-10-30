@@ -18,20 +18,16 @@ defmodule BrandoAdmin.Components.Form.Input.Password do
   data debounce, :integer
   data compact, :boolean
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact]
-     )}
-  end
-
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        class: assigns.opts[:class],
+        monospace: assigns.opts[:monospace] || false,
+        disabled: assigns.opts[:disabled] || false,
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact]
+      )
+
     ~F"""
     <FieldBase
       form={@form}

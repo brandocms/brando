@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImagePreview do
   data image, :any
   data thumb_url, :string
 
-  def update(assigns, socket) do
+  def render(assigns) do
     image = assigns.form.source
     sizes = get_field(image, :sizes)
     cdn = get_field(image, :cdn)
@@ -21,13 +21,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImagePreview do
         do: nil,
         else: Utils.img_url(constructed_image, :thumb, prefix: Utils.media_url())
 
-    {:ok,
-     socket
-     |> assign(:image, assigns.form.source.changes)
-     |> assign(:thumb_url, thumb_url)}
-  end
+    assigns =
+      assigns
+      |> assign(:image, assigns.form.source.changes)
+      |> assign(:thumb_url, thumb_url)
 
-  def render(assigns) do
     ~F"""
     {#if @thumb_url}
       <img

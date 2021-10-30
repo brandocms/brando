@@ -6,11 +6,9 @@ defmodule BrandoAdmin.Components.Content.List.Row.Status do
   prop soft_delete?, :boolean, required: true
   data json_statuses, :string
 
-  def mount(socket) do
-    {:ok, assign(socket, :json_statuses, json_statuses())}
-  end
-
   def render(assigns) do
+    assigns = assign_new(assigns, :json_statuses, fn -> json_statuses() end)
+
     ~F"""
     {#if @soft_delete? and @entry.deleted_at}
       <div class="status">

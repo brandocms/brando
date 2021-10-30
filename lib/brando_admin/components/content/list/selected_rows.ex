@@ -9,15 +9,12 @@ defmodule BrandoAdmin.Components.Content.List.SelectedRows do
   data encoded_selected_rows, :string
   data selected_rows_count, :integer
 
-  def update(%{selected_rows: selected_rows} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:encoded_selected_rows, Jason.encode!(selected_rows))
-     |> assign(:selected_rows_count, Enum.count(selected_rows))}
-  end
+  def render(%{selected_rows: selected_rows} = assigns) do
+    assigns =
+      assigns
+      |> assign(:encoded_selected_rows, Jason.encode!(selected_rows))
+      |> assign(:selected_rows_count, Enum.count(selected_rows))
 
-  def render(assigns) do
     ~F"""
     <div class={"selected-rows", hidden: Enum.empty?(@selected_rows)}">
       <div class="clear-selection">

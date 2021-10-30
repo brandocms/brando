@@ -13,39 +13,27 @@ defmodule BrandoAdmin.Components.Content.List.Row.ChildRow do
   data soft_delete?, :boolean
   data listing, :map
 
-  def mount(socket) do
-    {:ok,
-     assign(socket,
-       sortable?: false,
-       status?: false,
-       creator?: false,
-       soft_delete?: false
-     )}
-  end
+  def render(%{schema: schema, entry: entry, child_listing: child_listing} = assigns) do
+    assigns =
+      assigns
+      |> assign(schema: schema, entry: entry)
+      |> assign(:sortable?, entry.__struct__.has_trait(Brando.Trait.Sequenced))
+      |> assign(:creator?, entry.__struct__.has_trait(Brando.Trait.Creator))
+      |> assign(:status?, entry.__struct__.has_trait(Brando.Trait.Status))
+      |> assign(:soft_delete?, entry.__struct__.has_trait(Brando.Trait.SoftDelete))
+      |> assign_new(:listing, fn ->
+        entry_schema = entry.__struct__
 
-  def update(%{schema: schema, entry: entry, child_listing: child_listing}, socket) do
-    {:ok,
-     socket
-     |> assign(schema: schema, entry: entry)
-     |> assign(:sortable?, entry.__struct__.has_trait(Brando.Trait.Sequenced))
-     |> assign(:creator?, entry.__struct__.has_trait(Brando.Trait.Creator))
-     |> assign(:status?, entry.__struct__.has_trait(Brando.Trait.Status))
-     |> assign(:soft_delete?, entry.__struct__.has_trait(Brando.Trait.SoftDelete))
-     |> assign_new(:listing, fn ->
-       entry_schema = entry.__struct__
+        listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
+        listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
 
-       listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
-       listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
+        if !listing do
+          raise "No listing `#{inspect(listing_for_schema)}` found for `#{inspect(entry_schema)}`"
+        end
 
-       if !listing do
-         raise "No listing `#{inspect(listing_for_schema)}` found for `#{inspect(entry_schema)}`"
-       end
+        listing
+      end)
 
-       listing
-     end)}
-  end
-
-  def render(assigns) do
     ~F"""
     <div class="child-content">
       {#if @status?}
