@@ -283,11 +283,11 @@ module.exports = {
           },
           desktop_md: {
             'font-size': '1.3888888888888888vw',
-            'line-height': '1.6vw'
+            'line-height': '2vw'
           },
           desktop_lg: {
             'font-size': '1.3888888888888888vw',
-            'line-height': '1.6vw'
+            'line-height': '2vw'
           },
           desktop_xl: {
             'font-size': '23px',
