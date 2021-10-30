@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             show_modal="show_modal"
           />
         </div>
-        {#if input_value(form, :wrapper)}
+        {#if input_value(form, :wrapper) in [true, "true"]}
           <Inputs form={form} for={:entry_template} :let={form: entry, index: _idx}>
             <div class="entry-template">
               <hr>
