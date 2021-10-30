@@ -42,6 +42,7 @@ defmodule Brando.Images.ProcessingTest do
     u1 = Factory.insert(:random_user)
 
     {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u1)
+
     {:ok, updated_ids} = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
 
     assert uploaded_image.id in updated_ids
