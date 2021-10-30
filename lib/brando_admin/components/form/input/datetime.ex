@@ -20,22 +20,6 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
   data debounce, :integer
   data compact, :boolean
 
-  def update(assigns, socket) do
-    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       value: value,
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact]
-     )}
-  end
-
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
       default_fn when is_function(default_fn, 0) ->
@@ -47,6 +31,16 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
   end
 
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
+        class: assigns.opts[:class],
+        monospace: assigns.opts[:monospace] || false,
+        disabled: assigns.opts[:disabled] || false,
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact]
+      )
+
     ~F"""
     <FieldBase
       form={@form}

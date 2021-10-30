@@ -21,16 +21,10 @@ defmodule BrandoAdmin.Components.Form.ArrayInputs do
   data input_value, :any
   slot default, args: [:name, :key, :value]
 
-  def update(assigns, socket) do
-    value = input_value(assigns.form, assigns.for)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:input_value, value)}
-  end
-
   def render(assigns) do
+    value = input_value(assigns.form, assigns.for)
+    assigns = assign(assigns, :input_value, value)
+
     ~F"""
     {#if @input_value}
       {#for {mv, idx} <- Enum.with_index(@input_value)}

@@ -13,14 +13,12 @@ defmodule BrandoAdmin.Components.Form.Label do
 
   data input_id, :string
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:input_id, Phoenix.HTML.Form.input_id(assigns.form, assigns.field))}
-  end
-
   def render(assigns) do
+    assigns =
+      assign_new(assigns, :input_id, fn ->
+        Phoenix.HTML.Form.input_id(assigns.form, assigns.field)
+      end)
+
     ~F"""
     <label class={@class} for={@input_id}>
       <#slot />

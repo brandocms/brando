@@ -4,11 +4,9 @@ defmodule BrandoAdmin.Components.CircleFlag do
   prop language, :string, required: true
   data uid, :string
 
-  def mount(socket) do
-    {:ok, assign(socket, :uid, Brando.Utils.generate_uid())}
-  end
-
   def render(assigns) do
+    assigns = assign_new(assigns, :uid, fn -> Brando.Utils.generate_uid() end)
+
     ~F"""
     <div class="circle circle-flag">
       {@language}

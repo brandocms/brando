@@ -19,21 +19,17 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
   data compact, :boolean
   data slug_for, :boolean
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact],
-       slug_for: assigns.opts[:for]
-     )}
-  end
-
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        class: assigns.opts[:class],
+        monospace: assigns.opts[:monospace] || false,
+        disabled: assigns.opts[:disabled] || false,
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact],
+        slug_for: assigns.opts[:for]
+      )
+
     ~F"""
     <FieldBase
       form={@form}

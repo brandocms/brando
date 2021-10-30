@@ -1,5 +1,4 @@
 defmodule BrandoAdmin.Components.Form.Input.PageVars do
-  # use Surface.Component
   use Surface.LiveComponent
   use Phoenix.HTML
 

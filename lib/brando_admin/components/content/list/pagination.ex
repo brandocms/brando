@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Components.Content.List.Pagination do
   data showing_start, :integer
   data showing_end, :integer
 
-  def update(
+  def render(
         %{
           pagination_meta: %{
             page_size: page_size,
@@ -22,20 +22,17 @@ defmodule BrandoAdmin.Components.Content.List.Pagination do
             total_pages: total_pages
           },
           change_page: change_page
-        },
-        socket
+        } = assigns
       ) do
-    {:ok,
-     socket
-     |> assign(:change_page, change_page)
-     |> assign(:current_page, current_page)
-     |> assign(:total_entries, total_entries)
-     |> assign(:total_pages, total_pages)
-     |> assign(:showing_start, page_size * current_page - page_size + 1)
-     |> assign(:showing_end, min(page_size * current_page, total_entries))}
-  end
+    assigns =
+      assigns
+      |> assign(:change_page, change_page)
+      |> assign(:current_page, current_page)
+      |> assign(:total_entries, total_entries)
+      |> assign(:total_pages, total_pages)
+      |> assign(:showing_start, page_size * current_page - page_size + 1)
+      |> assign(:showing_end, min(page_size * current_page, total_entries))
 
-  def render(assigns) do
     ~F"""
     <div class="pagination">
       <div class="pagination-entries">

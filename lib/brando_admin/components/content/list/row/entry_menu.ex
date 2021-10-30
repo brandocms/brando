@@ -7,22 +7,12 @@ defmodule BrandoAdmin.Components.Content.List.Row.EntryMenu do
   data language, :any
   data no_actions, :boolean
 
-  def update(assigns, socket) do
-    language = Map.get(assigns.entry, :language)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:language, language)
-     |> assign(:no_actions, Enum.empty?(assigns.listing.actions))}
-  end
-
-  def render(%{no_actions: true} = assigns) do
-    ~F"""
-    """
-  end
-
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(:language, Map.get(assigns.entry, :language))
+      |> assign(:no_actions, Enum.empty?(assigns.listing.actions))
+
     ~F"""
     <div
       id={"entry_dropdown_#{@entry.id}"}

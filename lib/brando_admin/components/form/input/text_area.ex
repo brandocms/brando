@@ -21,21 +21,17 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
 
   slot default
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact],
-       rows: assigns.opts[:rows] || 3
-     )}
-  end
-
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        class: assigns.opts[:class],
+        monospace: assigns.opts[:monospace] || false,
+        disabled: assigns.opts[:disabled] || false,
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact],
+        rows: assigns.opts[:rows] || 3
+      )
+
     ~F"""
     <FieldBase
       form={@form}

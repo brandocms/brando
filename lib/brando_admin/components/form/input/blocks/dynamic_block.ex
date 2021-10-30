@@ -24,17 +24,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
 
   def v(form, field), do: input_value(form, field)
 
-  def update(assigns, socket) do
-    socket =
-      socket
-      |> assign(assigns)
+  def render(assigns) do
+    assigns =
+      assigns
       |> assign_new(:block_id, fn -> v(assigns.block, :uid) end)
       |> assign_new(:block_module, fn ->
         block_type = (v(assigns.block, :type) |> to_string |> Recase.to_pascal()) <> "Block"
         Module.concat([Blocks, block_type])
       end)
 
-    socket =
+    assigns =
       if is_nil(input_value(assigns.block, :uid)) do
         random_id = Brando.Utils.random_string(13) |> String.upcase()
 
@@ -45,19 +44,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
             random_id
           )
 
-        socket
+        assigns
         |> assign(:random_id, random_id)
         |> assign(:block, block)
       else
-        socket
+        assigns
       end
 
-    {:ok, socket}
-  end
-
-  def render(assigns) do
     ~F"""
-    {live_component(@socket, @block_module,
+    {live_component(@block_module,
       id: @block_id || @random_id,
       block: @block,
       is_ref?: @is_ref?,

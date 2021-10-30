@@ -17,22 +17,15 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   slot meta
   slot header
 
-  def mount(socket) do
-    {:ok, socket |> assign(:failed, false)}
-  end
-
-  def update(assigns, socket) do
+  def render(assigns) do
     failed = assigns.form && has_error(assigns.form, assigns.field)
     label = assigns.label || assigns.field |> to_string |> Brando.Utils.humanize()
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:failed, failed)
-     |> assign(:label, label)}
-  end
+    assigns =
+      assigns
+      |> assign(:failed, failed)
+      |> assign(:label, label)
 
-  def render(assigns) do
     ~F"""
     <div
       class={"field-wrapper", @class}

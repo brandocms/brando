@@ -7,20 +7,17 @@ defmodule BrandoAdmin.Components.Content.List.Row.Creator do
 
   data avatar, :string
 
-  def update(%{entry: %{creator: %{avatar: avatar}}} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       :avatar,
-       Brando.Utils.img_url(avatar, :thumb,
-         prefix: "/media",
-         default: "/images/admin/avatar.svg"
-       )
-     )}
-  end
+  def render(%{entry: %{creator: %{avatar: avatar}}} = assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :avatar,
+        Brando.Utils.img_url(avatar, :thumb,
+          prefix: "/media",
+          default: "/images/admin/avatar.svg"
+        )
+      )
 
-  def render(assigns) do
     ~F"""
     <div class="col-4">
       <article class="item-meta">

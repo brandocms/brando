@@ -24,19 +24,15 @@ defmodule BrandoAdmin.Components.Form.MapValueInputs do
 
   slot default, args: [:name, :key, :value, :subform]
 
-  def update(assigns, socket) do
+  def render(assigns) do
     subform = Utils.form_for_map_value(assigns.form, assigns.for)
-
     value = subform.data
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:input_value, value)
-     |> assign(:subform, subform)}
-  end
+    assigns =
+      assigns
+      |> assign(:input_value, value)
+      |> assign(:subform, subform)
 
-  def render(assigns) do
     ~F"""
     {#if @input_value}
       {#for {mk, mv} <- @input_value}

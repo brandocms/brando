@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
   data input_options, :list
   data compact, :boolean
 
-  def update(assigns, socket) do
+  def render(assigns) do
     input_options =
       case Keyword.get(assigns.opts, :options) do
         :languages ->
@@ -40,17 +40,14 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
           options
       end
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:input_options, input_options)
-     |> assign(
-       class: assigns.opts[:class],
-       compact: assigns.opts[:compact]
-     )}
-  end
+    assigns =
+      assigns
+      |> assign(:input_options, input_options)
+      |> assign(
+        class: assigns.opts[:class],
+        compact: assigns.opts[:compact]
+      )
 
-  def render(assigns) do
     ~F"""
     <FieldBase
       form={@form}

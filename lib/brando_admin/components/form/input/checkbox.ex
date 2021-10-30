@@ -19,21 +19,17 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
   data compact, :boolean
   data text, :string
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact],
-       text: assigns.opts[:text]
-     )}
-  end
-
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        class: assigns.opts[:class],
+        monospace: assigns.opts[:monospace] || false,
+        disabled: assigns.opts[:disabled] || false,
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact],
+        text: assigns.opts[:text]
+      )
+
     ~F"""
     <FieldBase
       form={@form}
