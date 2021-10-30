@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
               form={block_data}
               field={:level}
               label="Level"
-              options={[
+              opts={options: [
                 %{label: "H1", value: 1},
                 %{label: "H2", value: 2},
                 %{label: "H3", value: 3},

@@ -14,50 +14,32 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   alias Brando.Utils
 
   prop form, :form
-  prop blueprint, :any
-  prop uploads, :any
   prop field, :atom
-  prop input, :any
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
+
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
 
   data show_edit_meta, :boolean, default: false
   data focal, :any
   data image, :any
-  data class, :any
   data file_name, :any
-  data field_name, :any
   data upload_field, :any
+  data relation_field, :atom
 
-  def update(%{field: field} = assigns, socket) do
-    image = get_field(assigns.form.source, field)
-
-    focal =
-      if is_map(image) && image.path,
-        do: Map.get(image, :focal, %Images.Focal{}),
-        else: nil
-
-    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:image, image)
-     |> assign(:file_name, file_name)
-     |> assign(:field_name, field)
-     |> assign(:class, "small")
-     |> assign_new(:upload_field, fn ->
-       assigns.uploads[field]
-     end)
-     |> assign_new(:relation_field, fn ->
-       String.to_existing_atom("#{field}_id")
-     end)
-     |> assign(:focal, focal)}
-  end
-
-  def update(%{input: input} = assigns, socket) do
-    relation_field = String.to_existing_atom("#{input.name}_id")
+  def update(assigns, socket) do
+    relation_field = String.to_existing_atom("#{assigns.field}_id")
     image_id = get_field(assigns.form.source, relation_field)
 
-    {:ok, image} = Images.get_image(image_id)
+    {:ok, image} = (image_id && Images.get_image(image_id)) || {:ok, nil}
 
     focal =
       if is_map(image) && image.path,
@@ -71,13 +53,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(assigns)
      |> assign(:image, image)
      |> assign(:file_name, file_name)
-     |> assign(:field_name, assigns.input.name)
-     |> assign(:class, assigns.input.opts[:class])
+     |> assign(:class, assigns.opts[:class])
      |> assign_new(:upload_field, fn ->
-       assigns.uploads[assigns.input.name]
+       assigns.uploads[assigns.field]
      end)
      |> assign_new(:relation_field, fn ->
-       String.to_existing_atom("#{assigns.input.name}_id")
+       String.to_existing_atom("#{assigns.field}_id")
      end)
      |> assign(:focal, focal)}
   end
@@ -85,10 +66,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
-      field={@field_name}
-      class={@class}
-      form={@form}>
+      form={@form}
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}>
       <div>
         <div class="input-image">
           <div class="image-wrapper-compact">
@@ -115,10 +97,10 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                   class="btn-small"
                   type="button"
                   :on-click="show_meta_edit_modal"
-                  phx-value-id={"edit-image-#{@form.id}-#{@field_name}-modal"}>Edit image</button>
+                  phx-value-id={"edit-image-#{@form.id}-#{@field}-modal"}>Edit image</button>
               </div>
             {#else}
-              <input type="hidden" name={"#{@form.name}[#{@field_name}]"} value="" />
+              <input type="hidden" name={"#{@form.name}[#{@field}]"} value="" />
 
               <div class="img-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
@@ -129,14 +111,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                   class="btn-small"
                   type="button"
                   :on-click="show_meta_edit_modal"
-                  phx-value-id={"edit-image-#{@form.id}-#{@field_name}-modal"}>Add image</button>
+                  phx-value-id={"edit-image-#{@form.id}-#{@field}-modal"}>Add image</button>
               </div>
             {/if}
           </div>
           <div class="image-meta">
-            <Modal title="Edit image" center_header={true} id={"edit-image-#{@form.id}-#{@field_name}-modal"}>
+            <Modal title="Edit image" center_header={true} id={"edit-image-#{@form.id}-#{@field}-modal"}>
               <div
-                id={"#{"#{@blueprint.naming.id}-#{@field_name}-dropzone"}"}
+                id={"#{@form.id}-#{@field}-dropzone"}"}
                 class={"image-modal-content", ac: !@image}
                 phx-hook="Brando.DragDrop">
                 <div
@@ -168,9 +150,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                     {#if @image && @image.path && Enum.empty?(@upload_field.entries)}
                       <figure>
                         <FocalPoint
-                          id={"#{"#{@blueprint.naming.id}-#{@field_name}-focal"}"}
+                          id={"#{@form.id}-#{@field}-focal"}
                           form={@form}
-                          field_name={@field_name}
+                          field_name={@field}
                           focal={@focal} />
                         <img
                           width={"#{@image.width}"}
@@ -210,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                       <Inputs
                         :let={form: sf}
                         form={@form}
-                        for={@field_name}>
+                        for={@field}>
                         <div class="field-wrapper">
                           <div class="label-wrapper">
                             <label class="control-label"><span>Caption/Title</span></label>
@@ -254,7 +236,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                           <span class="label">
                             Pick a file
                           </span>
-                          {live_file_input Map.get(@uploads, @field_name)}
+                          {live_file_input Map.get(@uploads, @field)}
                         </div>
                         <button
                           class="secondary fw"
@@ -270,7 +252,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                         <span class="label">
                           Pick a file
                         </span>
-                        {live_file_input Map.get(@uploads, @field_name)}
+                        {live_file_input Map.get(@uploads, @field)}
                       </div>
                     {/if}
                   </div>
@@ -290,7 +272,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def handle_event("reset_field", _, socket) do
-    field_name = socket.assigns.field_name
+    field = socket.assigns.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -298,7 +280,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     updated_changeset =
       Ecto.Changeset.put_embed(
         changeset,
-        field_name,
+        field,
         nil
       )
 

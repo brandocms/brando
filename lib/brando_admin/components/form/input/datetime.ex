@@ -1,35 +1,39 @@
 defmodule BrandoAdmin.Components.Form.Input.Datetime do
   use Surface.Component
-  # use Phoenix.LiveComponent
   use Phoenix.HTML
+  import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
 
   prop form, :form
-  prop field, :any
-  prop blueprint, :any
-  prop input, :any
+  prop field, :atom
   prop label, :string
-  prop value, :any
-  prop class, :css_class
   prop placeholder, :string
   prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
-  def update(%{form: form, input: %{name: name, opts: opts}} = assigns, socket) do
-    value = input_value(form, name) || get_default(opts)
+  data value, :any
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
+
+  def update(assigns, socket) do
+    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(value: value)}
-  end
-
-  def update(%{form: form, field: field} = assigns, socket) do
-    value = input_value(form, field)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(value: value)}
+     |> assign(
+       value: value,
+       class: assigns.opts[:class],
+       monospace: assigns.opts[:monospace] || false,
+       disabled: assigns.opts[:disabled] || false,
+       debounce: assigns.opts[:debounce] || 750,
+       compact: assigns.opts[:compact]
+     )}
   end
 
   defp get_default(opts) do
@@ -42,38 +46,15 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
     end
   end
 
-  def render(%{blueprint: _, input: %{name: name, opts: opts}} = assigns) do
-    ~F"""
-    <FieldBase
-      blueprint={@blueprint}
-      field={name}
-      class={opts[:class]}
-      form={@form}>
-      <div
-        id={"#{@form.id}-#{name}-datetimepicker"}
-        class="datetime-wrapper"
-        phx-hook="Brando.DateTimePicker">
-          <div phx-update="ignore">
-            <button
-              type="button"
-              class="clear-datetime">
-              Clear
-            </button>
-            {hidden_input @form, name, value: @value, class: "flatpickr"}
-            <div class="timezone">&mdash; Your timezone is: <span>Unknown</span></div>
-          </div>
-      </div>
-    </FieldBase>
-    """
-  end
-
   def render(assigns) do
     ~F"""
     <FieldBase
-      label={@label}
+      form={@form}
       field={@field}
+      label={@label}
+      instructions={@instructions}
       class={@class}
-      form={@form}>
+      compact={@compact}>
       <div
         id={"#{@form.id}-#{@field}-datetimepicker"}
         class="datetime-wrapper"
@@ -82,10 +63,10 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
             <button
               type="button"
               class="clear-datetime">
-              Clear
+              {gettext "Clear"}
             </button>
             {hidden_input @form, @field, value: @value, class: "flatpickr"}
-            <div class="timezone">&mdash; Your timezone is: <span>Unknown</span></div>
+            <div class="timezone">&mdash; {gettext "Your timezone is"}: <span>Unknown</span></div>
           </div>
       </div>
     </FieldBase>

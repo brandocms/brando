@@ -1,10 +1,8 @@
 defmodule Brando.Images.Processing do
   require Logger
 
-  alias BrandoAdmin.Progress
   alias Brando.Images
   alias Brando.Images.Image
-  alias Brando.Images.Focal
   alias Brando.Images.Operations
   alias Brando.Upload
   alias Brando.Users.User
@@ -18,8 +16,6 @@ defmodule Brando.Images.Processing do
   @type image :: Image.t()
   @type upload :: Upload.t()
   @type user :: User.t()
-
-  @default_focal %Focal{x: 50, y: 50}
 
   @doc """
   Queue an image for processing

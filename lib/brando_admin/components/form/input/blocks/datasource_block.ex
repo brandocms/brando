@@ -132,14 +132,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         <:description>{v(@block, :data).description}</:description>
         <:config>
           <Input.Text form={@block_data} field={:description} />
-          <Input.Radios form={@block_data} field={:module} options={@available_sources} />
-          <Input.Radios form={@block_data} field={:type} options={[
+          <Input.Radios form={@block_data} field={:module} opts={options: @available_sources} />
+          <Input.Radios form={@block_data} field={:type} opts={options: [
             %{label: "List", value: :list},
             %{label: "Single", value: :single},
             %{label: "Selection", value: :selection},
           ]} />
-          <Input.Radios form={@block_data} field={:query} options={@available_queries} />
-          <Input.Select id={"#{@block_data.id}-modules"} form={@block_data} field={:module_id} options={@modules} />
+          <Input.Radios form={@block_data} field={:query} opts={options: @available_queries} />
+          <Input.Select id={"#{@block_data.id}-modules"} form={@block_data} field={:module_id} opts={options: @modules} />
           <Input.Text form={@block_data} field={:arg} />
           <Input.Text form={@block_data} field={:limit} />
 

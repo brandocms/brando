@@ -4,14 +4,12 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   import Phoenix.HTML.Form, only: [input_id: 2]
   alias BrandoAdmin.Components.Form.ErrorTag
 
-  prop compact, :boolean, default: false
   prop form, :form
   prop field, :any, required: true
-  prop class, :string
-  prop blueprint, :any
   prop label, :string
-  prop placeholder, :string
   prop instructions, :string
+  prop class, :string
+  prop compact, :boolean, default: false
 
   data failed, :boolean
 
@@ -24,31 +22,14 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   end
 
   def update(assigns, socket) do
-    translations =
-      (assigns.blueprint && get_in(assigns.blueprint.translations, [:fields, assigns.field])) ||
-        []
-
-    label =
-      Keyword.get(
-        translations,
-        :label,
-        assigns.label || Phoenix.Naming.humanize(assigns.field)
-      )
-
-    instructions =
-      case Keyword.get(translations, :instructions, assigns.instructions) do
-        nil -> nil
-        val -> raw(val)
-      end
-
     failed = assigns.form && has_error(assigns.form, assigns.field)
+    label = assigns.label || assigns.field |> to_string |> Brando.Utils.humanize()
 
     {:ok,
      socket
-     |> assign(Map.delete(assigns, :blueprint))
-     |> assign(:label, label)
-     |> assign(:instructions, instructions)
-     |> assign(:failed, failed)}
+     |> assign(assigns)
+     |> assign(:failed, failed)
+     |> assign(:label, label)}
   end
 
   def render(assigns) do

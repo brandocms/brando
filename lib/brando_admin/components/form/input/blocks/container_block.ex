@@ -152,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               id={"#{@block_data.id}-palette-select"}
               form={@block_data}
               field={:palette_id}
-              options={@palette_options}
+              opts={options: @palette_options}
             />
           {/if}
         </:config>
@@ -161,7 +161,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
-            options={@palette_options}
+            opts={options: @palette_options}
           />
         {/if}
 

@@ -2,7 +2,6 @@ defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
   alias Brando.Sites.GlobalSet
-  alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
   alias Brando.Image
@@ -11,17 +10,6 @@ defmodule Brando.Factory do
   alias Brando.Content.Module
   alias Brando.Content.Palette
   alias Brando.Images.Image
-
-  @sizes %{
-    "micro" => %{"size" => "25", "quality" => 1},
-    "mobile" => %{"size" => "300", "quality" => 1},
-    "small" => %{"size" => "300", "quality" => 1},
-    "medium" => %{
-      "portrait" => %{"size" => "300", "quality" => 1},
-      "landscape" => %{"size" => "250", "quality" => 1}
-    },
-    "thumb" => %{"size" => "150x150", "quality" => 1, "crop" => true}
-  }
 
   @encrypted_password Bcrypt.hash_pwd_salt("admin")
 

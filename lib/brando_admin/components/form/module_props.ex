@@ -251,7 +251,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
                                 form={block_data}
                                 field={:placeholder}
-                                options={[
+                                opts={options: [
                                   %{label: "SVG", value: :svg},
                                   %{label: "Dominant Color", value: :dominant_color},
                                   %{label: "Micro", value: :micro},
@@ -283,7 +283,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Radios
                                 form={block_data}
                                 field={:type}
-                                options={[
+                                opts={options: [
                                   %{label: "Gallery", value: :gallery},
                                   %{label: "Slider", value: :slider},
                                   %{label: "Slideshow", value: :slideshow},
@@ -291,7 +291,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Radios
                                 form={block_data}
                                 field={:display}
-                                options={[
+                                opts={options: [
                                   %{label: "Grid", value: :grid},
                                   %{label: "List", value: :list},
                                 ]} />
@@ -301,7 +301,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Radios
                                 form={block_data}
                                 field={:placeholder}
-                                options={[
+                                opts={options: [
                                   %{label: "Dominant color", value: "dominant_color"},
                                   %{label: "SVG", value: "svg"},
                                   %{label: "Micro", value: "micro"},
@@ -335,7 +335,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Radios
                                 form={block_data}
                                 field={:source}
-                                options={[
+                                opts={options: [
                                   %{label: "YouTube", value: "youtube"},
                                   %{label: "Vimeo", value: "vimeo"},
                                   %{label: "File", value: "file"}
@@ -381,7 +381,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
                                     form={tpl_data}
                                     field={:placeholder}
-                                    options={[
+                                    opts={options: [
                                       %{label: "SVG", value: :svg},
                                       %{label: "Dominant Color", value: :dominant_color},
                                       %{label: "Micro", value: :micro},
@@ -426,7 +426,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.Radios
                                     form={tpl_data}
                                     field={:type}
-                                    options={[
+                                    opts={options: [
                                       %{label: "Gallery", value: :gallery},
                                       %{label: "Slider", value: :slider},
                                       %{label: "Slideshow", value: :slideshow},
@@ -434,7 +434,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.Radios
                                     form={tpl_data}
                                     field={:display}
-                                    options={[
+                                    opts={options: [
                                       %{label: "Grid", value: :grid},
                                       %{label: "List", value: :list},
                                     ]} />
@@ -444,7 +444,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.Radios
                                     form={tpl_data}
                                     field={:placeholder}
-                                    options={[
+                                    opts={options: [
                                       %{label: "Dominant color", value: "dominant_color"},
                                       %{label: "SVG", value: "svg"},
                                       %{label: "Micro", value: "micro"},
@@ -666,7 +666,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   <Input.Radios
                     form={var}
                     field={:type}
-                    options={[
+                    opts={options: [
                       %{label: "Boolean", value: "boolean"},
                       %{label: "Text", value: "text"},
                       %{label: "String", value: "string"},

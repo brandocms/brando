@@ -4,63 +4,51 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   alias BrandoAdmin.Components.Form.FieldBase
 
   prop form, :form
-  prop field, :any
-  prop blueprint, :any
-  prop input, :any
+  prop field, :atom
   prop label, :string
-  prop rows, :string
   prop placeholder, :string
   prop instructions, :string
-  prop debounce, :any
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
-  def update(%{blueprint: blueprint, input: %{name: name, opts: opts}} = assigns, socket) do
-    translations = get_in(blueprint.translations, [:fields, name]) || []
-    placeholder = Keyword.get(translations, :placeholder, assigns[:placeholder])
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
+  data rows, :integer
 
+  slot default
+
+  def update(assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
      |> assign(
-       placeholder: placeholder,
-       class: opts[:class],
-       monospace: opts[:monospace] || false,
-       rows: opts[:rows] || 3,
-       disabled: assigns[:disabled] || false,
-       debounce: assigns[:debounce] || 750
+       class: assigns.opts[:class],
+       monospace: assigns.opts[:monospace] || false,
+       disabled: assigns.opts[:disabled] || false,
+       debounce: assigns.opts[:debounce] || 750,
+       compact: assigns.opts[:compact],
+       rows: assigns.opts[:rows] || 3
      )}
-  end
-
-  def update(assigns, socket) do
-    {:ok, socket |> assign(assigns) |> assign(:debounce, assigns[:debounce])}
-  end
-
-  def render(%{blueprint: _, input: %{name: name, opts: opts}} = assigns) do
-    ~F"""
-    <FieldBase
-      blueprint={@blueprint}
-      field={name}
-      class={opts[:class]}
-      form={@form}>
-      {textarea @form, name,
-        class: "text",
-        placeholder: @placeholder,
-        rows: @rows,
-        phx_debounce: @debounce}
-    </FieldBase>
-    """
   end
 
   def render(assigns) do
     ~F"""
     <FieldBase
-      label={@label}
-      placeholder={@placeholder}
-      instructions={@instructions}
+      form={@form}
       field={@field}
-      form={@form}>
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
       {textarea @form, @field,
         class: "text",
+        placeholder: @placeholder,
         rows: @rows,
+        disabled: @disabled,
         phx_debounce: @debounce}
     </FieldBase>
     """

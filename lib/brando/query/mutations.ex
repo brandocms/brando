@@ -2,7 +2,6 @@ defmodule Brando.Query.Mutations do
   import Brando.Gettext
 
   alias Brando.Datasource
-  alias Brando.Images
   alias Brando.Notifications
   alias Brando.Publisher
   alias Brando.Query

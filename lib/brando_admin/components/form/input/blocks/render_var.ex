@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 <Input.Text form={@var} field={:label} />
                 <Input.Text form={@var} field={:instructions} />
                 <Input.Text form={@var} field={:placeholder} />
-                <Input.Radios form={@var} field={:type} options={[
+                <Input.Radios form={@var} field={:type} opts={options: [
                   %{label: "Boolean", value: "boolean"},
                   %{label: "Color", value: "color"},
                   %{label: "Datetime", value: "datetime"},
@@ -116,16 +116,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <div class="brando-input">
                 {#case @type}
                   {#match "string"}
-                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
+                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} opts={debounce: 750} />
 
                   {#match "text"}
-                    <Input.Textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
+                    <Input.Textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} opts={debounce: 750} />
 
                   {#match "boolean"}
                     <Input.Toggle form={@var} field={:value} label={@label} instructions={@instructions} />
 
                   {#match "color"}
-                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} debounce={750} />
+                    <Input.Text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} opts={debounce: 750} />
 
                   {#match "datetime"}
                     <Input.Datetime form={@var} field={:value} label={@label} instructions={@instructions} />

@@ -4,19 +4,29 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop blueprint, :any
   prop form, :form
-  prop field, :any
+  prop field, :atom
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
   data statuses, :list
   data class, :string
-  data name, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
 
-  def update(%{input: %{name: name, opts: opts}} = assigns, socket) do
+  slot default
+
+  def update(assigns, socket) do
     {:ok,
      socket
-     |> assign_new(:class, fn -> opts[:class] end)
-     |> assign_new(:name, fn -> name end)
+     |> assign(assigns)
+     |> assign_new(:class, fn -> assigns.opts[:class] end)
      |> assign_new(:statuses, fn ->
        [
          %{value: "draft", label: gettext("Draft")},
@@ -25,22 +35,27 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
          %{value: "disabled", label: gettext("Deactivated")}
        ]
      end)
-     |> assign(assigns)}
+     |> assign(
+       class: assigns.opts[:class],
+       compact: assigns.opts[:compact]
+     )}
   end
 
   def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
       form={@form}
+      field={@field}
+      label={@label}
+      instructions={@instructions}
       class={@class}
-      field={@name}>
+      compact={@compact}>
       <div class="radios-wrapper status">
         <div
           :for={status <- @statuses}
           class="form-check">
           <label class="form-check-label">
-            {radio_button @form, @name, status.value, class: "form-check-input"}
+            {radio_button @form, @field, status.value, class: "form-check-input"}
             <span class={"label-text", status.value}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"

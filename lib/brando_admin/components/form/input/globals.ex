@@ -1,5 +1,4 @@
 defmodule BrandoAdmin.Components.Form.Input.Globals do
-  # use Surface.Component
   use Surface.LiveComponent
   use Phoenix.HTML
 
@@ -10,10 +9,15 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
 
-  prop subform, :any
-  prop form, :any
-  prop blueprint, :any
-  prop uploads, :any
+  prop form, :form
+  prop subform, :form
+  prop field, :atom
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
   def mount(socket) do
     {:ok, socket}
@@ -23,10 +27,11 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
     ~F"""
     <fieldset>
       <FieldBase
-        blueprint={@blueprint}
+        form={@form}
         field={@subform.field}
-        class={subform: true}
-        form={@form}>
+        label={@label}
+        instructions={@instructions}
+        class={subform: true}>
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
           phx-hook="Brando.SubFormSortable">

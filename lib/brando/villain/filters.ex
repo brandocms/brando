@@ -44,9 +44,7 @@ defmodule Brando.Villain.Filters do
   end
 
   def humanize(value, _) do
-    value
-    |> String.replace(["-", "_"], " ")
-    |> String.capitalize()
+    Brando.Utils.humanize(value)
   end
 
   @doc """

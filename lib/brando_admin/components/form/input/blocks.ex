@@ -12,8 +12,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   alias BrandoAdmin.Components.Form.Input.Blocks
 
   prop form, :form
-  prop blueprint, :any
-  prop uploads, :any
+  prop field, :atom
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
 
   data blocks, :list
   data block_forms, :list
@@ -25,16 +30,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok, assign(socket, insert_index: 0)}
   end
 
-  def update(%{form: form, input: %{name: name, opts: opts}} = assigns, socket) do
+  def update(assigns, socket) do
     # TODO: when using input_value here, we sometimes end up with the whole block field as a params map %{"0" => ...}
-    blocks = Utils.iv(assigns.form, name) || []
-    block_forms = inputs_for_blocks(form, name) || []
+    blocks = Utils.iv(assigns.form, assigns.field) || []
+    block_forms = inputs_for_blocks(assigns.form, assigns.field) || []
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign_new(:templates, fn ->
-       if template_namespace = opts[:template_namespace] do
+       if template_namespace = assigns.opts[:template_namespace] do
          {:ok, templates} = Content.list_templates(%{filter: %{namespace: template_namespace}})
          templates
        else
@@ -43,18 +48,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
      end)
      |> assign(:blocks, blocks)
      |> assign(:block_forms, block_forms)
-     |> assign(:data_field, name)}
+     |> assign(:data_field, assigns.field)}
   end
 
-  def render(%{input: %{name: name}} = assigns) do
+  def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
       form={@form}
-      field={name}>
-
+      field={@field}
+      label={@label}
+      instructions={@instructions}>
       <Blocks.BlockRenderer
-        id={"#{@form.id}-#{name}-blocks"}
+        id={"#{@form.id}-#{@field}-blocks"}
         base_form={@form}
         blocks={@blocks}
         block_forms={@block_forms}
@@ -67,7 +72,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         insert_datasource="insert_datasource"
         show_module_picker="show_module_picker"
         duplicate_block="duplicate_block" />
-
     </FieldBase>
     """
   end

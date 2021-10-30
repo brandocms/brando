@@ -1,10 +1,9 @@
 defmodule BrandoAdmin.Components.Form.Subform do
-  # use Surface.Component
   use Surface.LiveComponent
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.FieldBase
+  alias BrandoAdmin.Components.Form.Subform
 
   import Brando.Gettext
 
@@ -13,24 +12,31 @@ defmodule BrandoAdmin.Components.Form.Subform do
   prop blueprint, :any
   prop uploads, :any
   prop current_user, :map
+  prop label, :string
+  prop instructions, :string
+  prop placeholder, :string
 
   def render(assigns) do
     ~F"""
     <fieldset>
       {#if @subform.cardinality == :one}
         <FieldBase
-          blueprint={@blueprint}
+          form={@form}
           field={@subform.field}
-          class={subform: true}
-          form={@form}>
+          label={@label}
+          instructions={@instructions}
+          class={subform: true}>
           {#for sub_form <- inputs_for(@form, @subform.field)}
             <div class="subform-entry">
               {#for input <- @subform.sub_fields}
-                <Input
-                  id={"#{@form.id}-#{sub_form.id}-input-one-#{input.name}"}
+                <Subform.Field
+                  cardinality={:one}
+                  form={@form}
+                  sub_form={sub_form}
+                  label={@label}
+                  instructions={@instructions}
+                  placeholder={@placeholder}
                   input={input}
-                  form={sub_form}
-                  blueprint={@blueprint}
                   uploads={@uploads}
                   current_user={@current_user} />
               {/for}
@@ -39,10 +45,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
         </FieldBase>
       {#else}
         <FieldBase
-          blueprint={@blueprint}
+          form={@form}
           field={@subform.field}
-          class={subform: true}
-          form={@form}>
+          label={@label}
+          instructions={@instructions}
+          class={subform: true}>
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
@@ -68,12 +75,16 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   </button>
                 </div>
                 {#for input <- @subform.sub_fields}
-                  <Input
-                    id={"#{@id}-#{sub_form.id}-input-#{input.name}"}
+                  <Subform.Field
+                    cardinality={:many}
+                    form={@form}
+                    sub_form={sub_form}
+                    label={@label}
+                    instructions={@instructions}
+                    placeholder={@placeholder}
                     input={input}
-                    form={sub_form}
-                    blueprint={@blueprint}
-                    uploads={@uploads} />
+                    uploads={@uploads}
+                    current_user={@current_user} />
                 {/for}
               </div>
             {/for}

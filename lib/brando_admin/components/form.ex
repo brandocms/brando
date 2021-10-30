@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
-        %{updated_image: %{path: _, id: updated_id} = updated_image, key: key},
+        %{updated_image: %{path: _, id: updated_id}, key: key},
         %{assigns: %{changeset: changeset, entry: entry}} = socket
       ) do
     relation_id = String.to_existing_atom("#{key}_id")
@@ -326,15 +326,14 @@ defmodule BrandoAdmin.Components.Form do
             close="close_scheduled_publishing_drawer" />
         {/if}
 
-        {#for {tab, _tab_idx} <- Enum.with_index(@form.tabs)}
+        {#for tab <- @form.tabs}
           <div
             class={"form-tab", active: @active_tab == tab.name}
             data-tab-name={tab.name}>
             <div class="row">
-              {#for {fieldset, fs_idx} <- Enum.with_index(tab.fields)}
+              {#for fieldset <- tab.fields}
                 <Fieldset
-                  id={"#{f.id}-fieldset-#{tab.name}-#{fs_idx}"}
-                  blueprint={@blueprint}
+                  translations={@blueprint.translations}
                   form={f}
                   uploads={@uploads}
                   fieldset={fieldset}
@@ -556,13 +555,19 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     if upload_entry.done? do
       %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "image:#{inspect(schema)}:#{key}"
 
       {:ok, image_struct} =
         consume_uploaded_entry(
           socket,
           upload_entry,
           fn meta ->
-            Brando.Upload.handle_upload(meta, upload_entry, cfg)
+            Brando.Upload.handle_upload(
+              Map.put(meta, :config_target, config_target),
+              upload_entry,
+              cfg,
+              current_user
+            )
           end
         )
 
@@ -597,7 +602,7 @@ defmodule BrandoAdmin.Components.Form do
             schema: schema,
             entry: entry,
             current_user: current_user,
-            id: form_id
+            id: _form_id
           }
         } = socket
       ) do

@@ -16,7 +16,7 @@ config :brando, BrandoIntegration.Repo,
   pool_overflow: 0
 
 config :brando, Brando.Images,
-  processor_module: Brando.Images.Processor.Sharp,
+  processor_module: Brando.Images.Processor.Dummy,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     upload_path: Path.join(["images", "site", "default"]),

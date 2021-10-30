@@ -11,10 +11,19 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form.MapInputs
 
   prop form, :form
-  prop blueprint, :any
-  prop uploads, :any
   prop field, :atom
-  prop input, :any
+  prop label, :string
+  prop placeholder, :string
+  prop instructions, :string
+  prop opts, :list, default: []
+  prop current_user, :map
+  prop uploads, :map
+
+  data class, :string
+  data monospace, :boolean
+  data disabled, :boolean
+  data debounce, :integer
+  data compact, :boolean
 
   data gallery, :any
   data preview_layout, :atom
@@ -28,25 +37,34 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:preview_layout, Keyword.get(assigns.input.opts, :layout, :grid))
+     |> assign(
+       class: assigns.opts[:class],
+       monospace: assigns.opts[:monospace] || false,
+       disabled: assigns.opts[:disabled] || false,
+       debounce: assigns.opts[:debounce] || 750,
+       compact: assigns.opts[:compact],
+       preview_layout: assigns.opts[:layoud] || :grid
+     )
      |> assign_value()}
   end
 
-  defp assign_value(%{assigns: %{form: form, input: input}} = socket) do
-    gallery = get_field(form.source, input.name)
+  defp assign_value(%{assigns: %{form: form, field: field}} = socket) do
+    gallery = get_field(form.source, field)
     assign(socket, :gallery, gallery)
   end
 
-  def render(%{blueprint: _, input: %{name: name}} = assigns) do
+  def render(assigns) do
     ~F"""
     <FieldBase
-      blueprint={@blueprint}
-      field={name}
-      class={"shaded"}
-      form={@form}>
+      form={@form}
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}>
 
       <div
-        id={"#{"#{@blueprint.naming.id}-#{name}-gallery-dropzone"}"}
+        id={"#{@form.id}-#{@field}-gallery-dropzone"}"}
         class="input-gallery">
 
         <div class="button-group">
@@ -54,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <span class="label">
               Upload
             </span>
-            {live_file_input Map.get(@uploads, name)}
+            {live_file_input Map.get(@uploads, @field)}
           </div>
           <button
             type="button"
@@ -72,21 +90,21 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         </div>
         <div
           class="drop-target"
-          phx-drop-target={"#{@uploads[name].ref}"}>
+          phx-drop-target={"#{@uploads[@field].ref}"}>
           <div class="drop-indicator">
             <div>Drop here to upload</div>
           </div>
         </div>
 
-        {#if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[name].entries)}
+        {#if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries)}
           <div class="gallery-empty">
             No images in image gallery.
           </div>
         {/if}
 
-        {#if !Enum.empty?(@uploads[name].entries)}
+        {#if !Enum.empty?(@uploads[@field].entries)}
           <div class="input-gallery-previews">
-            {#for entry <- @uploads[name].entries}
+            {#for entry <- @uploads[@field].entries}
               {#if entry.progress}
                 <article class="upload-entry" data-upload-uuid={entry.uuid}>
                   <progress value={entry.progress} max="100"></progress>
@@ -105,7 +123,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   </div>
 
                   <p
-                    :for={err <- upload_errors(@uploads[name], entry)}
+                    :for={err <- upload_errors(@uploads[@field], entry)}
                     class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
                 </article>
               {/if}
@@ -115,17 +133,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
         {#if !Enum.empty?(@gallery)}
           <div
-            id={"sortable-#{@form.id}-#{name}-images"}
+            id={"sortable-#{@form.id}-#{@field}-images"}
             class={"image-previews", @preview_layout}
             phx-hook="Brando.Sortable"
             data-target={@myself}
-            data-sortable-id={"sortable-#{@form.id}-#{name}-images"}
+            data-sortable-id={"sortable-#{@form.id}-#{@field}-images"}
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".image-preview">
             <Inputs
               :let={form: sf, index: idx}
               form={@form}
-              for={name}>
+              for={@field}>
               <div
                 class={
                   "image-preview",
@@ -154,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   <Modal
                     title="Edit image"
                     center_header={true}
-                    id={"edit-image-#{@form.id}-#{name}-modal-#{idx}"}>
+                    id={"edit-image-#{@form.id}-#{@field}-modal-#{idx}"}>
                     <div class="field-wrapper">
                       <div class="label-wrapper">
                         <label class="control-label"><span>Caption/Title</span></label>

@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
               form={block_data}
               field={:type}
               label="Type"
-              options={[
+              opts={options: [
                 %{label: "Paragraph", value: "paragraph"},
                 %{label: "Lede", value: "lede"},
               ]} />
