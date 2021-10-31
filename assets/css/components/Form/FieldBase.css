@@ -227,6 +227,7 @@
 
     label {
       @fontsize form.label;
+      line-height: 1.3;
       font-weight: 500;
       position: relative;
 

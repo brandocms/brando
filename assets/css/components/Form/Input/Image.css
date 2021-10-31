@@ -164,7 +164,7 @@
         justify-content: center;
 
         .title {
-          @fontsize 13px;
+          @fontsize 13px/13px;
           @space margin-top 5px;
         }
 

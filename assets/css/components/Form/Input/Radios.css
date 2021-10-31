@@ -62,7 +62,9 @@
     }
 
     .label-text {
-      font-size: 19px;
+      @font mono;
+      font-size: 15px;
+      line-height: 1.8;
       border: 1px solid;
       padding: 2px 14px;
       padding-top: 5px;
