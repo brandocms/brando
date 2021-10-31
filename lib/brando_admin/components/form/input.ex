@@ -1,21 +1,21 @@
 defmodule BrandoAdmin.Components.Form.Input do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   alias Surface.Components.Dynamic.Component
 
-  prop current_user, :any
-  prop form, :any
-  prop field, :any
-  prop label, :any
-  prop placeholder, :any
-  prop instructions, :any
-  prop opts, :list, default: []
-  prop uploads, :any
-  prop type, :any
+  # prop current_user, :any
+  # prop form, :any
+  # prop field, :any
+  # prop label, :any
+  # prop placeholder, :any
+  # prop instructions, :any
+  # prop opts, :list, default: []
+  # prop uploads, :any
+  # prop type, :any
 
-  data component_module, :any
-  data component_opts, :any
-  data component_id, :string
+  # data component_module, :any
+  # data component_opts, :any
+  # data component_id, :string
 
   def mount(socket) do
     {:ok, socket}
@@ -48,9 +48,9 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div class="brando-input">
-      {#if is_live?(@component_module)}
+      <%= if is_live?(@component_module) do %>
         {live_component(@component_module,
           id: @component_id,
           form: @form,
@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           opts: @opts,
           current_user: @current_user
         )}
-      {#else}
+      <% else %>
         <Component
           module={@component_module}
           function={:render}
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           uploads={@uploads}
           opts={@opts}
           current_user={@current_user} />
-      {/if}
+      <% end %>
     </div>
     """
   end

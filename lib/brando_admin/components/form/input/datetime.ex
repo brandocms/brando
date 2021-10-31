@@ -1,24 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Datetime do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data value, :any
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data value, :any
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
@@ -41,8 +41,8 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
         compact: assigns.opts[:compact]
       )
 
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -57,13 +57,13 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
             <button
               type="button"
               class="clear-datetime">
-              {gettext "Clear"}
+              <%= gettext "Clear" %>
             </button>
-            {hidden_input @form, @field, value: @value, class: "flatpickr"}
-            <div class="timezone">&mdash; {gettext "Your timezone is"}: <span>Unknown</span></div>
+            <%= hidden_input @form, @field, value: @value, class: "flatpickr" %>
+            <div class="timezone">&mdash; <%= gettext "Your timezone is" %>: <span>Unknown</span></div>
           </div>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

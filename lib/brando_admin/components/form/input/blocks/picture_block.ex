@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -15,26 +15,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
-  prop uploads, :any
-  prop base_form, :any
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop data_field, :atom
-  prop is_ref?, :boolean, default: false
-  prop ref_name, :string
-  prop ref_description, :string
-  prop belongs_to, :string
+  # prop uploads, :any
+  # prop base_form, :any
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop data_field, :atom
+  # prop is_ref?, :boolean, default: false
+  # prop ref_name, :string
+  # prop ref_description, :string
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data extracted_path, :string
-  data uid, :string
-  data block_data, :form
-  data images, :list
-  data image, :any
-  data upload_formats, :string
+  # data extracted_path, :string
+  # data uid, :string
+  # data block_data, :form
+  # data images, :list
+  # data image, :any
+  # data upload_formats, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="picture-block"
@@ -89,14 +89,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {#if @ref_description}
+          <%= if @ref_description do %>
             {@ref_description}
-          {#else}
+          <% else %>
             {@extracted_path}
-          {/if}
+          <% end %>
         </:description>
         <input class="file-input" type="file" />
-        {#if @extracted_path}
+        <%= if @extracted_path do %>
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
             <figcaption :on-click="show_config">
@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
             </figcaption>
           </div>
-        {/if}
+        <% end %>
 
         <div class={"empty upload-canvas", hidden: @extracted_path}>
           <figure>
@@ -130,18 +130,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           center_header={true}
           id={"#{@uid}-image-picker"}>
           <div class="image-picker-images">
-            {#for image <- @images}
+            <%= for image <- @images do %>
               <div class="image-picker-image" :on-click="select_image" phx-value-id={image.id}>
                 <img src={"/media/#{image.image.sizes["thumb"]}"} />
               </div>
-            {/for}
+            <% end %>
           </div>
         </Modal>
 
         <:config>
           <div class="panels">
             <div class="panel">
-              {#if @extracted_path}
+              <%= if @extracted_path do %>
                 <img
                   width={"#{@image.width}"}
                   height={"#{@image.height}"}
@@ -151,8 +151,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   Path: {@image.path}<br>
                   Dimensions: {@image.width}&times;{@image.height}<br>
                 </div>
-              {/if}
-              {#if !@extracted_path}
+              <% end %>
+              <%= if !@extracted_path do %>
                 <div class="img-placeholder empty upload-canvas">
                   <div class="placeholder-wrapper">
                     <div class="svg-wrapper">
@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
                   </div>
                 </div>
-              {/if}
+              <% end %>
             </div>
             <div class="panel">
               <Input.RichText form={@block_data} field={:title} />
@@ -193,11 +193,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           {hidden_input @block_data, :height}
           {hidden_input @block_data, :width}
 
-          {#if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes))}
+          <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
             {hidden_input @block_data, :path, value: @extracted_path}
-            {#else}
+            <% else %>
             {hidden_input @block_data, :path}
-          {/if}
+          <% end %>
 
           <Inputs
             form={@block_data}

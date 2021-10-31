@@ -1,23 +1,23 @@
 defmodule BrandoAdmin.Components.Form.Input.Radios do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data input_options, :list
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data input_options, :list
+  # data compact, :boolean
 
   def render(assigns) do
     input_options =
@@ -48,7 +48,7 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
         compact: assigns.opts[:compact]
       )
 
-    ~F"""
+    ~H"""
     <FieldBase
       form={@form}
       field={@field}

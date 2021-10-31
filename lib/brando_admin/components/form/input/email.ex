@@ -1,22 +1,22 @@
 defmodule BrandoAdmin.Components.Form.Input.Email do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
   def render(assigns) do
     assigns =
@@ -28,8 +28,8 @@ defmodule BrandoAdmin.Components.Form.Input.Email do
         compact: assigns.opts[:compact]
       )
 
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Form.Input.Email do
         disabled: @disabled,
         phx_debounce: @debounce,
         class: "text#{@monospace && " monospace" || ""}"}
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Globals do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -9,22 +9,22 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
 
-  prop form, :form
-  prop subform, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop subform, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
   def mount(socket) do
     {:ok, socket}
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <fieldset>
       <FieldBase
         form={@form}
@@ -35,10 +35,10 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
           phx-hook="Brando.SubFormSortable">
-          {#if Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
+          <%= if Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
             <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
             <div class="subform-empty">&rarr; No associated entries</div>
-          {/if}
+          <% end %>
           <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
             <div
               class="subform-entry flex-row"

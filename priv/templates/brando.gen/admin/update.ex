@@ -5,7 +5,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
   import <%= web_module %>.Gettext
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <Content.Header
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Update <%= singular %>")} />

@@ -1,23 +1,23 @@
 defmodule BrandoAdmin.Components.Form.Input.Checkbox do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
-  data text, :string
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
+  # data text, :string
 
   def render(assigns) do
     assigns =
@@ -30,8 +30,8 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
         text: assigns.opts[:text]
       )
 
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -40,10 +40,10 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
       compact={@compact}>
       <div
         class={"check-wrapper", small: @compact}>
-        {checkbox @form, @field}
-        {label @form, @field, @text, class: "control-label#{if @compact, do: " small", else: ""}"}
+        <%= checkbox @form, @field %>
+        <%= label @form, @field, @text, class: "control-label#{if @compact, do: " small", else: ""}" %>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

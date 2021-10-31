@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   @moduledoc """
   The base block
   """
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -11,32 +11,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Label
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop is_entry?, :boolean, default: false
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop is_entry?, :boolean, default: false
   @doc "A slight hint of background color for the block. Often used with Containers/sections"
-  prop bg_color, :string
-  prop belongs_to, :string
-  prop wide_config, :boolean, default: false
+  # prop bg_color, :string
+  # prop belongs_to, :string
+  # prop wide_config, :boolean, default: false
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data last_block?, :boolean, default: false
-  data uid, :string
-  data type, :string
-  data hidden, :boolean
-  data marked_as_deleted, :boolean
+  # data last_block?, :boolean, default: false
+  # data uid, :string
+  # data type, :string
+  # data hidden, :boolean
+  # data marked_as_deleted, :boolean
 
-  slot default, required: true
-  slot config
-  slot config_footer
-  slot description
-  slot instructions
-  slot render
+  # slot default, required: true
+  # slot config
+  # slot config_footer
+  # slot description
+  # slot instructions
+  # slot render
 
   def update(assigns, socket) do
     uid = input_value(assigns.block, :uid) || Brando.Utils.generate_uid()
@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       data-block-uid={@uid}
       class={
@@ -98,12 +98,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         <div class="block-content" id={"#{@uid}-block-content"}>
           <#slot />
         </div>
-        {#if slot_assigned?(:render)}
+        <%= if slot_assigned?(:render) do %>
           <div class="block-render">
             <div class="block-render-preview">Preview &darr;</div>
             <#slot name="render" />
           </div>
-        {/if}
+        <% end %>
         <div class="block-actions" id={"#{@uid}-block-actions"}>
           <div
             :if={!@is_ref?}
@@ -132,11 +132,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             class="block-action config"
             phx-value-id={"#{@uid}_config"}
             :on-click="show_config_modal">
-            {#if @type == "module"}
+            <%= if @type == "module" do %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8.595 12.812a3.51 3.51 0 0 1 0-1.623l-.992-.573 1-1.732.992.573A3.496 3.496 0 0 1 11 8.645V7.5h2v1.145c.532.158 1.012.44 1.405.812l.992-.573 1 1.732-.992.573a3.51 3.51 0 0 1 0 1.622l.992.573-1 1.732-.992-.573a3.496 3.496 0 0 1-1.405.812V16.5h-2v-1.145a3.496 3.496 0 0 1-1.405-.812l-.992.573-1-1.732.992-.572zM12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM15 4H5v16h14V8h-4V4zM3 2.992C3 2.444 3.447 2 3.999 2H16l5 5v13.993A1 1 0 0 1 20.007 22H3.993A1 1 0 0 1 3 21.008V2.992z"/></svg>
-            {#else}
+            <% else %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8.686 4l2.607-2.607a1 1 0 0 1 1.414 0L15.314 4H19a1 1 0 0 1 1 1v3.686l2.607 2.607a1 1 0 0 1 0 1.414L20 15.314V19a1 1 0 0 1-1 1h-3.686l-2.607 2.607a1 1 0 0 1-1.414 0L8.686 20H5a1 1 0 0 1-1-1v-3.686l-2.607-2.607a1 1 0 0 1 0-1.414L4 8.686V5a1 1 0 0 1 1-1h3.686zM6 6v3.515L3.515 12 6 14.485V18h3.515L12 20.485 14.485 18H18v-3.515L20.485 12 18 9.515V6h-3.515L12 3.515 9.515 6H6zm6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
-            {/if}
+            <% end %>
           </button>
 
           <Label
@@ -149,12 +149,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </Label>
         </div>
       </div>
-      {#if @last_block?}
+      <%= if @last_block? do %>
         <Blocks.Plus
           :if={!@is_ref? and !@is_entry?}
           index={@index + 1}
           click={@insert_block} />
-      {/if}
+      <% end %>
     </div>
     """
   end

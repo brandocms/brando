@@ -1,14 +1,14 @@
 defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.Form.Input
 
-  prop form, :form, required: true
-  prop blueprint, :any, required: true
-  prop status, :atom, default: :closed
-  prop close, :event
+  # prop form, :form, required: true
+  # prop blueprint, :any, required: true
+  # prop status, :atom, default: :closed
+  # prop close, :event
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div class={"drawer", "scheduled-publishing-drawer", open: @status == :open}>
       <div class="inner">
         <div class="drawer-header">

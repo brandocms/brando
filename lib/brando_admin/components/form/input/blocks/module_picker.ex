@@ -1,18 +1,18 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Modal
   alias Brando.Content
 
-  prop insert_block, :event, required: true
-  prop insert_section, :event, required: true
-  prop insert_datasource, :event, required: true
-  prop insert_index, :integer, required: true
-  prop hide_sections, :boolean, default: false
+  # prop insert_block, :event, required: true
+  # prop insert_section, :event, required: true
+  # prop insert_datasource, :event, required: true
+  # prop insert_index, :integer, required: true
+  # prop hide_sections, :boolean, default: false
 
-  data modules_by_namespace, :list
-  data active_namespace, :string
+  # data modules_by_namespace, :list
+  # data active_namespace, :string
 
   def mount(socket) do
     {:ok, assign(socket, active_namespace: nil)}
@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div>
       <Modal title="Add content block" id={@id} medium>
         <div class="button-group-horizontal">
@@ -58,8 +58,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
         <div
           class="modules"
           id={"#{@id}-modules"}>
-          {#for {namespace, modules} <- @modules_by_namespace}
-            {#unless namespace == "general"}
+          <%= for {namespace, modules} <- @modules_by_namespace do %>
+            <%= unless namespace == "general" do %>
               <button type="button" class="namespace-button" :on-click="toggle_namespace" phx-value-id={namespace}>
                 <figure>
                   &rarr;
@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                 </div>
               </button>
               <div class={"namespace-modules", active: @active_namespace == namespace}>
-                {#for module <- modules}
+                <%= for module <- modules do %>
                   <button
                     type="button"
                     class="module-button"
@@ -84,13 +84,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                       <div class="instructions">{module.help_text}</div>
                     </div>
                   </button>
-                {/for}
+                <% end %>
               </div>
-            {/unless}
-          {/for}
-          {#for {namespace, modules} <- @modules_by_namespace}
-            {#if namespace == "general"}
-              {#for module <- modules}
+            <% end %>
+          <% end %>
+          <%= for {namespace, modules} <- @modules_by_namespace do %>
+            <%= if namespace == "general" do %>
+              <%= for module <- modules do %>
                 <button
                   type="button"
                   class="module-button"
@@ -105,9 +105,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                     <div class="instructions">{module.help_text}</div>
                   </div>
                 </button>
-              {/for}
-            {/if}
-          {/for}
+              <% end %>
+            <% end %>
+          <% end %>
         </div>
       </Modal>
     </div>

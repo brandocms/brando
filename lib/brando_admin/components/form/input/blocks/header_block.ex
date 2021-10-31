@@ -1,24 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Radios
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{v(@block, :uid)}-wrapper"}
       data-block-index={@index}
@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
         duplicate_block={@duplicate_block}>
         <:description>(H{v(@block, :data).level})</:description>
         <:config>
-          {#for block_data <- inputs_for(@block, :data)}
+          <%= for block_data <- inputs_for(@block, :data) do %>
             <Radios
               form={block_data}
               field={:level}
@@ -48,9 +48,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
                 %{label: "H5", value: 5},
                 %{label: "H6", value: 6},
               ]} />
-          {/for}
+          <% end %>
         </:config>
-        {#for block_data <- inputs_for(@block, :data)}
+        <%= for block_data <- inputs_for(@block, :data) do %>
           <div class="header-block">
             {textarea block_data, :text,
               id: "#{v(@block, :uid)}-textarea",
@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
             {hidden_input block_data, :class}
             {hidden_input block_data, :placeholder}
           </div>
-        {/for}
+        <% end %>
       </Block>
     </div>
     """

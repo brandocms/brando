@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -7,22 +7,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
-  prop block, :form
-  prop base_form, :form
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_description, :string
-  prop belongs_to, :string
-  prop data_field, :atom
+  # prop block, :form
+  # prop base_form, :form
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_description, :string
+  # prop belongs_to, :string
+  # prop data_field, :atom
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data text_type, :string
-  data initial_props, :map
-  data block_data, :map
+  # data uid, :string
+  # data text_type, :string
+  # data initial_props, :map
+  # data block_data, :map
 
   def v(form, field), do: input_value(form, field)
 
@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       class="comment-block"
       id={"#{@uid}-wrapper"}
@@ -60,9 +60,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
           <Input.Textarea form={@block_data} field={:text} />
         </:config>
         <div>
-          {#if v(@block_data, :text)}
+          <%= if v(@block_data, :text) do %>
             {v(@block_data, :text) |> raw}
-          {/if}
+          <% end %>
         </div>
       </Block>
     </div>

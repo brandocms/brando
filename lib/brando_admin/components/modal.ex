@@ -1,21 +1,21 @@
 defmodule BrandoAdmin.Components.Modal do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
 
-  prop title, :string, required: true
-  prop ok, :event
-  prop close, :event, default: "close_modal"
-  prop center_header, :boolean, default: false
-  prop narrow, :boolean, default: false
-  prop medium, :boolean, default: false
-  prop wide, :boolean, default: false
-  prop remember_scroll_position, :boolean, default: false
+  # prop title, :string, required: true
+  # prop ok, :event
+  # prop close, :event, default: "close_modal"
+  # prop center_header, :boolean, default: false
+  # prop narrow, :boolean, default: false
+  # prop medium, :boolean, default: false
+  # prop wide, :boolean, default: false
+  # prop remember_scroll_position, :boolean, default: false
 
-  data action, :atom
-  data show, :boolean, default: false
+  # data action, :atom
+  # data show, :boolean, default: false
 
-  slot default
-  slot header
-  slot footer
+  # slot default
+  # slot header
+  # slot footer
 
   def update(%{id: id} = assigns, socket) do
     socket = assign(socket, assigns)
@@ -41,10 +41,10 @@ defmodule BrandoAdmin.Components.Modal do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={@id}
-      class={"modal", narrow: @narrow, medium: @medium, wide: @wide}
+      class={[modal: true, narrow: @narrow, medium: @medium, wide: @wide]}
       phx-key="Escape"
       data-b-modal={@show && "show" || "hide"}
       phx-hook="Brando.Modal"
@@ -53,9 +53,9 @@ defmodule BrandoAdmin.Components.Modal do
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <header class={"modal-header", centered: @center_header}>
-            <h2>{@title}</h2>
+            <h2><%= @title %></h2>
             <div class="header-wrap">
-              <#slot name="header" />
+              <%= render_slot @header %>
               <button
                 type="button"
                 class="modal-close"
@@ -65,17 +65,16 @@ defmodule BrandoAdmin.Components.Modal do
             </div>
           </header>
           <section id={"#{@id}-body"} class="modal-body" phx-hook={@remember_scroll_position && "Brando.RememberScrollPosition"}>
-            <#slot />
+            <%= render_slot @inner_block %>
           </section>
-          {#if slot_assigned?(:footer)}
+          <%= if @footer do %>
             <footer class="modal-footer">
-              <#slot name="footer">
-                {#if @ok}
-                  <button class="primary" type="button" :on-click={@ok} phx-value-id={@id}>Ok</button>
-                {/if}
-              </#slot>
+              <%= render_slot @footer %>
+              <%= if @ok do %>
+                <button class="primary" type="button" :on-click={@ok} phx-value-id={@id}>Ok</button>
+              <% end %>
             </footer>
-          {/if}
+          <% end %>
         </div>
       </div>
     </div>

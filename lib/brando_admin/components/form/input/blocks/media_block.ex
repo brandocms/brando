@@ -1,28 +1,28 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
-  prop block, :form
-  prop base_form, :form
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_description, :string
-  prop belongs_to, :string
-  prop data_field, :atom
+  # prop block, :form
+  # prop base_form, :form
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_description, :string
+  # prop belongs_to, :string
+  # prop data_field, :atom
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data text_type, :string
-  data initial_props, :map
-  data block_data, :map
-  data available_blocks, :list
+  # data uid, :string
+  # data text_type, :string
+  # data initial_props, :map
+  # data block_data, :map
+  # data available_blocks, :list
 
   def v(form, field), do: input_value(form, field)
 
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
@@ -54,9 +54,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {#if @ref_description}
+          <%= if @ref_description do %>
             {@ref_description}
-          {/if}
+          <% end %>
         </:description>
         <div class="media-block">
           <div class="empty">
@@ -67,18 +67,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
               Select media type:
             </div>
             <div class="buttons">
-              {#if "picture" in @available_blocks}
+              <%= if "picture" in @available_blocks do %>
                 <button type="button" class="tiny" :on-click="select_block" phx-value-block="picture">{gettext("Picture")}</button>
-              {/if}
-              {#if "video" in @available_blocks}
+              <% end %>
+              <%= if "video" in @available_blocks do %>
                 <button type="button" class="tiny" :on-click="select_block" phx-value-block="video">{gettext("Video")}</button>
-              {/if}
-              {#if "gallery" in @available_blocks}
+              <% end %>
+              <%= if "gallery" in @available_blocks do %>
                 <button type="button" class="tiny" :on-click="select_block" phx-value-block="gallery">{gettext("Gallery")}</button>
-              {/if}
-              {#if "svg" in @available_blocks}
+              <% end %>
+              <%= if "svg" in @available_blocks do %>
                 <button type="button" class="tiny" :on-click="select_block" phx-value-block="svg">SVG</button>
-              {/if}
+              <% end %>
             </div>
           </div>
         </div>

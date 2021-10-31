@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Ecto.Changeset
@@ -11,20 +11,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data blocks, :list
-  data block_forms, :list
-  data insert_index, :integer
-  data data_field, :atom
-  data templates, :any
+  # data blocks, :list
+  # data block_forms, :list
+  # data insert_index, :integer
+  # data data_field, :atom
+  # data templates, :any
 
   def mount(socket) do
     {:ok, assign(socket, insert_index: 0)}
@@ -52,13 +52,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def render(assigns) do
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}>
-      <Blocks.BlockRenderer
+      <Blocks.BlockRenderer.live_component
         id={"#{@form.id}-#{@field}-blocks"}
         base_form={@form}
         blocks={@blocks}
@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         insert_datasource="insert_datasource"
         show_module_picker="show_module_picker"
         duplicate_block="duplicate_block" />
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.ModuleProps do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -10,28 +10,28 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Modal
 
-  prop form, :form, required: true
-  prop key, :string, default: "default"
-  prop entry_form, :boolean, default: false
+  # prop form, :form, required: true
+  # prop key, :string, default: "default"
+  # prop entry_form, :boolean, default: false
 
-  prop show_modal, :event, required: true
-  prop create_ref, :event, required: true
-  prop delete_ref, :event, required: true
-  prop create_var, :event, required: true
-  prop delete_var, :event, required: true
+  # prop show_modal, :event, required: true
+  # prop create_ref, :event, required: true
+  # prop delete_ref, :event, required: true
+  # prop create_var, :event, required: true
+  # prop delete_var, :event, required: true
 
-  prop add_table_template, :event, required: true
-  prop add_table_row, :event, required: true
-  prop add_table_col, :event, required: true
+  # prop add_table_template, :event, required: true
+  # prop add_table_row, :event, required: true
+  # prop add_table_col, :event, required: true
 
-  data open_col_vars, :list
+  # data open_col_vars, :list
 
   def mount(socket) do
     {:ok, assign(socket, open_col_vars: [])}
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div class="properties shaded">
       <div class="inner">
         <Input.Text form={@form} field={:name} />
@@ -188,7 +188,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <ul>
             <Inputs form={@form} for={:refs} :let={form: ref, index: idx}>
               <li class="padded">
-                {#for ref_data <- inputs_for_block(ref, :data)}
+                <%= for ref_data <- inputs_for_block(ref, :data) do %>
                   <div>
                     <span class="text-mono">{input_value(ref_data, :type)}</span>
                     <span class="text-mono">- %&lcub;{input_value(ref, :name)}&rcub;</span>
@@ -206,40 +206,40 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z" /><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z" /></svg>
                     </button>
                   </div>
-                {/for}
+                <% end %>
 
                 <Modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"} wide>
                   <div class="panels">
-                    {#for ref_data <- inputs_for_block(ref, :data)}
+                    <%= for ref_data <- inputs_for_block(ref, :data) do %>
                       {hidden_input(ref_data, :type, value: input_value(ref_data, :type))}
                       <div class="panel">
                         <h2>Block template</h2>
-                        {#case input_value(ref_data, :type)}
-                          {#match "header"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                        <%= case input_value(ref_data, :type) do %>
+                          <% "header" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Text form={block_data} field={:level} />
                               <Input.Text form={block_data} field={:text} />
-                            {/for}
+                            <% end %>
 
-                          {#match "svg"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "svg" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Text form={block_data} field={:class} />
                               <Input.Code
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-svg-code"}
                                 form={block_data}
                                 field={:code}
                               />
-                            {/for}
+                            <% end %>
 
-                          {#match "text"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "text" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Text form={block_data} field={:text} />
                               <Input.Text form={block_data} field={:type} />
                               <Input.Text form={block_data} field={:extensions} />
-                            {/for}
+                            <% end %>
 
-                          {#match "picture"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "picture" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               {hidden_input(block_data, :cdn)}
                               <Input.Text form={block_data} field={:title} />
                               <Input.Text form={block_data} field={:alt} />
@@ -276,10 +276,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   </div>
                                 </div>
                               </ArrayInputsFromData>
-                            {/for}
+                            <% end %>
 
-                          {#match "gallery"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "gallery" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Radios
                                 form={block_data}
                                 field={:type}
@@ -327,10 +327,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   </div>
                                 </div>
                               </ArrayInputsFromData>
-                            {/for}
+                            <% end %>
 
-                          {#match "video"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "video" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Text form={block_data} field={:url} />
                               <Input.Radios
                                 form={block_data}
@@ -350,10 +350,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Toggle form={block_data} field={:autoplay} />
                               <Input.Toggle form={block_data} field={:preload} />
                               <Input.Toggle form={block_data} field={:play_button} />
-                            {/for}
+                            <% end %>
 
-                          {#match "media"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "media" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <ArrayInputsFromData
                                 :let={id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}
                                 form={block_data}
@@ -372,9 +372,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 </div>
                               </ArrayInputsFromData>
 
-                              {#if "picture" in input_value(block_data, :available_blocks)}
+                              <%= if "picture" in input_value(block_data, :available_blocks) do %>
                                 <h2>Picture block template</h2>
-                                {#for tpl_data <- inputs_for(block_data, :template_picture)}
+                                <%= for tpl_data <- inputs_for(block_data, :template_picture) do %>
                                   <Input.Text form={tpl_data} field={:picture_class} />
                                   <Input.Text form={tpl_data} field={:img_class} />
                                   <Input.Select
@@ -407,22 +407,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       </div>
                                     </div>
                                   </ArrayInputsFromData>
-                                {/for}
-                              {/if}
+                                <% end %>
+                              <% end %>
 
-                              {#if "video" in input_value(block_data, :available_blocks)}
+                              <%= if "video" in input_value(block_data, :available_blocks) do %>
                                 <h2>Video block template</h2>
-                                {#for tpl_data <- inputs_for(block_data, :template_video)}
+                                <%= for tpl_data <- inputs_for(block_data, :template_video) do %>
                                   <Input.Number form={tpl_data} field={:opacity} />
                                   <Input.Toggle form={tpl_data} field={:autoplay} />
                                   <Input.Toggle form={tpl_data} field={:preload} />
                                   <Input.Toggle form={tpl_data} field={:play_button} />
-                                {/for}
-                              {/if}
+                                <% end %>
+                              <% end %>
 
-                              {#if "gallery" in input_value(block_data, :available_blocks)}
+                              <%= if "gallery" in input_value(block_data, :available_blocks) do %>
                                 <h2>Gallery block template</h2>
-                                {#for tpl_data <- inputs_for(block_data, :template_gallery)}
+                                <%= for tpl_data <- inputs_for(block_data, :template_gallery) do %>
                                   <Input.Radios
                                     form={tpl_data}
                                     field={:type}
@@ -470,27 +470,27 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       </div>
                                     </div>
                                   </ArrayInputsFromData>
-                                {/for}
-                              {/if}
+                                <% end %>
+                              <% end %>
 
-                              {#if "svg" in input_value(block_data, :available_blocks)}
+                              <%= if "svg" in input_value(block_data, :available_blocks) do %>
                                 <h2>SVG block template</h2>
-                                {#for tpl_data <- inputs_for(block_data, :template_svg)}
+                                <%= for tpl_data <- inputs_for(block_data, :template_svg) do %>
                                   <Input.Text form={tpl_data} field={:class} />
-                                {/for}
-                              {/if}
+                                <% end %>
+                              <% end %>
 
-                            {/for}
+                            <% end %>
 
-                          {#match "table"}
-                            {#for block_data <- inputs_for_block(ref_data, :data)}
+                          <% "table" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.Text form={block_data} field={:key} />
                               <Input.Textarea form={block_data} field={:instructions} />
 
-                              {#for tpl_row <- inputs_for(block_data, :template_row)}
-                                {#if !input_value(tpl_row, :cols)}
+                              <%= for tpl_row <- inputs_for(block_data, :template_row) do %>
+                                <%= if !input_value(tpl_row, :cols) do %>
                                   <button type="button" :on-click={@add_table_template} phx-value-id={input_value(ref, :name)}>Create table row template</button>
-                                {#else}
+                                <% else %>
                                   <div
                                     id={"#{@form.id}-refs-#{@key}-table-cols"}
                                     class="col-vars"
@@ -521,29 +521,29 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                           <Input.Text form={var} field={:label} />
                                           <Input.Text form={var} field={:instructions} />
                                           <Input.Text form={var} field={:placeholder} />
-                                          {#case input_value(var, :type)}
-                                            {#match "text"}
+                                          <%= case input_value(var, :type) do %>
+                                            <% "text" -> %>
                                               <Input.Text form={var} field={:value} />
-                                            {#match "string"}
+                                            <% "string" -> %>
                                               <Input.Text form={var} field={:value} />
-                                            {#match "boolean"}
+                                            <% "boolean" -> %>
                                               <Input.Toggle form={var} field={:value} />
-                                            {#match "datetime"}
+                                            <% "datetime" -> %>
                                               <Input.Datetime form={var} field={:value} />
-                                            {#match "html"}
+                                            <% "html" -> %>
                                               <Input.RichText form={var} field={:value} />
-                                            {#match "color"}
+                                            <% "color" -> %>
                                               {!-- #TODO: Input.Color --}
                                               <Input.Text form={var} field={:value} />
-                                            {#match _}
+                                            <% _ -> %>
                                               <Input.Text form={var} field={:value} />
-                                          {/case}
+                                          <% end %>
                                         </div>
                                       </div>
                                     </PolyInputs>
                                   </div>
 
-                                  {#for type <- ["string", "text", "html", "boolean", "datetime", "color"]}
+                                  <%= for type <- ["string", "text", "html", "boolean", "datetime", "color"] do %>
                                     <button
                                       type="button"
                                       class="tiny"
@@ -552,14 +552,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       phx-value-type={type}>
                                       {type}
                                     </button>
-                                  {/for}
-                                {/if}
-                              {/for}
-                            {/for}
+                                  <% end %>
+                                <% end %>
+                              <% end %>
+                            <% end %>
 
-                          {#match type}
+                          <% type -> %>
                             No matching block {type} found
-                        {/case}
+                        <% end %>
                       </div>
 
                       <div class="panel">
@@ -569,7 +569,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                         <Input.Text form={ref} field={:description} />
                         {hidden_input(ref_data, :uid, value: input_value(ref_data, :uid) || Brando.Utils.generate_uid())}
                       </div>
-                    {/for}
+                    <% end %>
                   </div>
                 </Modal>
               </li>
@@ -675,23 +675,23 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       %{label: "Datetime", value: "datetime"}
                     ]}
                   />
-                  {#case input_value(var, :type)}
-                    {#match "text"}
+                  <%= case input_value(var, :type) do %>
+                    <% "text" -> %>
                       <Input.Text form={var} field={:value} />
-                    {#match "string"}
+                    <% "string" -> %>
                       <Input.Text form={var} field={:value} />
-                    {#match "boolean"}
+                    <% "boolean" -> %>
                       <Input.Toggle form={var} field={:value} />
-                    {#match "datetime"}
+                    <% "datetime" -> %>
                       <Input.Datetime form={var} field={:value} />
-                    {#match "html"}
+                    <% "html" -> %>
                       <Input.RichText form={var} field={:value} />
-                    {#match "color"}
+                    <% "color" -> %>
                       {!-- #TODO: Input.Color --}
                       <Input.Text form={var} field={:value} />
-                    {#match _}
+                    <% _ -> %>
                       <Input.Text form={var} field={:value} />
-                  {/case}
+                  <% end %>
                 </Modal>
                 <span class="text-mono">{input_value(var, :type)} - &lcub;&lcub; {input_value(var, :key)} &rcub;&rcub;</span>
                 <div class="actions">

@@ -253,7 +253,7 @@ defmodule Brando.Pages.Page do
         end
 
         fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.PageVars}
+          inputs_for :vars, {:component, BrandoAdmin.Components.Pages.PageVars}
         end
       end
     end

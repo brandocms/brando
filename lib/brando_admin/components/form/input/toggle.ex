@@ -1,25 +1,25 @@
 defmodule BrandoAdmin.Components.Form.Input.Toggle do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Label
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  slot default
+  # slot default
 
   def render(assigns) do
     assigns =
@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
         compact: assigns.opts[:compact]
       )
 
-    ~F"""
+    ~H"""
     <FieldBase
       form={@form}
       field={@field}
@@ -40,11 +40,11 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
       class={@class}
       compact={@compact}>
       <Label form={@form} field={@field} class={"switch", small: @compact}>
-        {#if slot_assigned?(:default)}
+        <%= if slot_assigned?(:default) do %>
           <#slot />
-        {#else}
+        <% else %>
           {checkbox @form, @field}
-        {/if}
+        <% end %>
         <div class="slider round"></div>
       </Label>
     </FieldBase>

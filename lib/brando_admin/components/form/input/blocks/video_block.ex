@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -8,19 +8,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Modal
 
-  prop base_form, :any
-  prop data_field, :atom
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop is_ref?, :boolean, default: false
-  prop belongs_to, :string
+  # prop base_form, :any
+  # prop data_field, :atom
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop is_ref?, :boolean, default: false
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data block_data, :any
-  data uid, :string
+  # data block_data, :any
+  # data uid, :string
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="video-block"
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         wide_config>
         <:description>{v(@block_data, :url)}</:description>
         <:config>
-          {#if v(@block_data, :remote_id)}
+          <%= if v(@block_data, :remote_id) do %>
             <div class="panels">
               <div class="panel">
                 <img src={v(@block_data, :thumbnail_url)} />
@@ -76,11 +76,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
                 <Input.Text form={@block_data} field={:title} />
                 <Input.Text form={@block_data} field={:poster} />
-                {#if v(@block_data, :cover) in ["false", "svg"]}
+                <%= if v(@block_data, :cover) in ["false", "svg"] do %>
                   {hidden_input(@block_data, :cover)}
-                {#else}
+                <% else %>
                   <Input.Text form={@block_data} field={:cover} />
-                {/if}
+                <% end %>
 
                 {hidden_input(@block_data, :opacity)}
                 {hidden_input(@block_data, :play_button)}
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <Input.Toggle form={@block_data} field={:preload} />
               </div>
             </div>
-          {#else}
+          <% else %>
             {hidden_input @block_data, :url}
             {hidden_input @block_data, :source}
             {hidden_input(@block_data, :width)}
@@ -111,30 +111,30 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 {gettext("Get video info")}
               </button>
             </div>
-          {/if}
+          <% end %>
         </:config>
-        {#if v(@block_data, :remote_id)}
-          {#case v(@block_data, :source)}
-            {#match :vimeo}
+        <%= if v(@block_data, :remote_id) do %>
+          <%= case v(@block_data, :source) do %>
+            <% :vimeo -> %>
               <div class="video-content">
                 <iframe
                   src={"https://player.vimeo.com/video/#{v(@block_data, :remote_id)}?title=0&byline=0"}
                   width="580" height="320" frameborder="0"></iframe>
               </div>
 
-            {#match :youtube}
+            <% :youtube -> %>
               <div class="video-content">
                 <iframe
                   src={"https://www.youtube.com/embed/#{v(@block_data, :remote_id)}"}
                   width="580" height="320" frameborder="0"></iframe>
               </div>
 
-            {#match :file}
+            <% :file -> %>
               <video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src={v(@block_data, :remote_id)}>
                 <source src={v(@block_data, :remote_id)} type="video/mp4">
               </video>
-          {/case}
-        {#else}
+          <% end %>
+        <% else %>
           <div class="empty">
             <figure>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0H24V24H0z"/><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z"/></svg>
@@ -143,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <button type="button" class="tiny" :on-click="show_config">Configure video block</button>
             </div>
           </div>
-        {/if}
+        <% end %>
 
       </Block>
     </div>

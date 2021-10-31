@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Ecto.Changeset
@@ -10,24 +10,24 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.MapInputs
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  data gallery, :any
-  data preview_layout, :atom
-  data selected_images, :list
+  # data gallery, :any
+  # data preview_layout, :atom
+  # data selected_images, :list
 
   def mount(socket) do
     {:ok, assign(socket, :selected_images, [])}
@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <FieldBase
       form={@form}
       field={@field}
@@ -96,16 +96,16 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           </div>
         </div>
 
-        {#if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries)}
+        <%= if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries) do %>
           <div class="gallery-empty">
             No images in image gallery.
           </div>
-        {/if}
+        <% end %>
 
-        {#if !Enum.empty?(@uploads[@field].entries)}
+        <%= if !Enum.empty?(@uploads[@field].entries) do %>
           <div class="input-gallery-previews">
-            {#for entry <- @uploads[@field].entries}
-              {#if entry.progress}
+            <%= for entry <- @uploads[@field].entries do %>
+              <%= if entry.progress do %>
                 <article class="upload-entry" data-upload-uuid={entry.uuid}>
                   <progress value={entry.progress} max="100"></progress>
                   <div class="file-info">
@@ -126,12 +126,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     :for={err <- upload_errors(@uploads[@field], entry)}
                     class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
                 </article>
-              {/if}
-            {/for}
+              <% end %>
+            <% end %>
           </div>
-        {/if}
+        <% end %>
 
-        {#if !Enum.empty?(@gallery)}
+        <%= if !Enum.empty?(@gallery) do %>
           <div
             id={"sortable-#{@form.id}-#{@field}-images"}
             class={"image-previews", @preview_layout}
@@ -155,8 +155,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 :on-click="select_row"
                 phx-value-id={idx}
                 phx-page-loading>
-                {#case @preview_layout}
-                  {#match :grid}
+                <%= case @preview_layout do %>
+                  <% :grid -> %>
                     <div class="overlay">
                       <button
                         type="button"
@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     <ImagePreview
                       layout={:grid}
                       form={sf} />
-                {/case}
+                <% end %>
 
                 <div class="image-meta">
                   <Modal
@@ -225,7 +225,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               </div>
             </Inputs>
           </div>
-        {/if}
+        <% end %>
       </div>
     </FieldBase>
     """

@@ -1,26 +1,26 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input.Blocks
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_name, :string
-  prop ref_description, :string
-  prop id, :any
-  prop uploads, :any
-  prop data_field, :atom
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_name, :string
+  # prop ref_description, :string
+  # prop id, :any
+  # prop uploads, :any
+  # prop data_field, :atom
+  # prop belongs_to, :string
 
-  prop insert_block, :event
-  prop duplicate_block, :event
+  # prop insert_block, :event
+  # prop duplicate_block, :event
 
-  data block_id, :module
-  data block_module, :module
-  data random_id, :string
+  # data block_id, :module
+  # data block_module, :module
+  # data random_id, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
         assigns
       end
 
-    ~F"""
+    ~H"""
     {live_component(@block_module,
       id: @block_id || @random_id,
       block: @block,

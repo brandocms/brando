@@ -1,24 +1,16 @@
 defmodule BrandoAdmin.Components.ContentLanguageSwitch do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.Modal
-
-  data language_short, :string
-  data language_long, :string
-
-  data languages, :list
-  data show_language_picker, :boolean
 
   def mount(socket) do
     {:ok, assign(socket, :show_language_picker, false)}
   end
 
   def update(%{current_user: %{config: %{content_language: content_language}}} = assigns, socket) do
-    language_short = content_language
-
     language_long =
-      case Enum.find(Brando.config(:languages), &(&1[:value] == language_short)) do
+      case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
         nil ->
-          # uh oh, the language isn't one of the configured languages. Set to first
+          # The language isn't one of the configured languages. Set to first
           first_lang = Brando.config(:languages) |> List.first()
           send(self(), {:set_content_language, first_lang[:value]})
           first_lang[:text]
@@ -31,39 +23,38 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
      socket
      |> assign(assigns)
      |> assign(:content_language, content_language)
-     |> assign(:language_short, language_short)
      |> assign(:language_long, language_long)
      |> assign(:languages, Brando.config(:languages))}
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div class="content-language-selector" :on-click="show_language_picker">
       <div class="inner">
         <h2>Current content language</h2>
         <div class="selected-language">
           <div class="circle">
-            {@language_short}
+            <%= @content_language %>
           </div>
-          <span>{@language_long}</span>
+          <span><%= @language_long %>}</span>
         </div>
 
-        {#if @show_language_picker}
+        <%= if @show_language_picker do %>
           <div class="instructions">
             Choose the content language you wish to edit entries in
           </div>
           <div class="languages">
-            {#for language <- @languages}
+            <%= for language <- @languages do %>
               <button
                 type="button"
                 :on-click="select_language"
                 phx-value-id={language[:value]}
                 phx-page-loading>
-                {language[:text]}
+                <%= language[:text] %>
               </button>
-            {/for}
+            <% end %>
           </div>
-        {/if}
+        <% end %>
       </div>
     </div>
     """

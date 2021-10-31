@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.ImageModal do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Modal
@@ -8,11 +8,11 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
 
   import Brando.Gettext
 
-  prop edit_image_id, :any
-  prop edit_image_field, :list
+  # prop edit_image_id, :any
+  # prop edit_image_field, :list
 
   # def render(assigns) do
-  #   ~F"""
+  #   ~H"""
   #   <div class="image-modal">
   #     <Modal title="Edit image" center_header={true} id={"edit-image-#{@form.id}-#{@field}-modal"}>
   #       <div
@@ -32,11 +32,11 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #               <article
   #                 :for={entry <- @upload_field.entries}
   #                 class="upload-entry">
-  #                 {#if entry.progress && !entry.done?}
+  #                 <%= if entry.progress && !entry.done? do %>
   #                   <div class="upload-status">
   #                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm0 15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm10-5a1 1 0 0 1-1 1h-3a1 1 0 0 1 0-2h3a1 1 0 0 1 1 1zM7 12a1 1 0 0 1-1 1H3a1 1 0 0 1 0-2h3a1 1 0 0 1 1 1zm12.071 7.071a1 1 0 0 1-1.414 0l-2.121-2.121a1 1 0 0 1 1.414-1.414l2.121 2.12a1 1 0 0 1 0 1.415zM8.464 8.464a1 1 0 0 1-1.414 0L4.93 6.344a1 1 0 0 1 1.414-1.415L8.464 7.05a1 1 0 0 1 0 1.414zM4.93 19.071a1 1 0 0 1 0-1.414l2.121-2.121a1 1 0 1 1 1.414 1.414l-2.12 2.121a1 1 0 0 1-1.415 0zM15.536 8.464a1 1 0 0 1 0-1.414l2.12-2.121a1 1 0 0 1 1.415 1.414L16.95 8.464a1 1 0 0 1-1.414 0z"/></svg> Uploading image...
   #                   </div>
-  #                 {/if}
+  #                 <% end %>
   #                 <figure>
   #                   {live_img_preview entry}
   #                 </figure>
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #                   class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
   #               </article>
   #             </div>
-  #             {#if @image && @image.path && Enum.empty?(@upload_field.entries)}
+  #             <%= if @image && @image.path && Enum.empty?(@upload_field.entries) do %>
   #               <figure>
   #                 <FocalPoint
   #                   id={"#{@form.id}-#{@field}-focal"}
@@ -57,8 +57,8 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #                   height={"#{@image.height}"}
   #                   src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
   #               </figure>
-  #             {/if}
-  #             {#if !@image && Enum.empty?(@upload_field.entries)}
+  #             <% end %>
+  #             <%= if !@image && Enum.empty?(@upload_field.entries) do %>
   #               <div class="img-placeholder">
   #                 <div class="placeholder-wrapper">
   #                   <div class="svg-wrapper">
@@ -75,17 +75,17 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #                 <p>If your image is larger than the limit, try compressing the file with an online service like <a href="https://squoosh.app/" target="_blank" rel="noopener nofollow">squoosh.app</a> or a mac desktop app like <a href="https://imageoptim.com/mac/" target="_blank" rel="noopener nofollow">ImageOptim</a></p>
   #               </div>
   #               --}
-  #             {/if}
-  #             {#if @image && @image.path && Enum.empty?(@upload_field.entries)}
+  #             <% end %>
+  #             <%= if @image && @image.path && Enum.empty?(@upload_field.entries) do %>
   #               <div class="info">
   #                 Path: {@image.path}<br>
   #                 Dimensions: {@image.width}&times;{@image.height}
   #               </div>
-  #             {/if}
+  #             <% end %>
   #           </div>
 
   #           <div class="image-modal-content-info">
-  #             {#if @image}
+  #             <%= if @image do %>
   #               {text_input @form, @relation_field}
   #               <Inputs
   #                 :let={form: sf}
@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #                   type="button"
   #                   :on-click="reset_field">Reset field</button>
   #               </Inputs>
-  #             {#else}
+  #             <% else %>
 
   #               <div class="drop-instructions">
   #                 &larr; Drop image to upload or
@@ -152,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
   #                 </span>
   #                 {live_file_input Map.get(@uploads, @field)}
   #               </div>
-  #             {/if}
+  #             <% end %>
   #           </div>
   #         </div>
   #       </div>

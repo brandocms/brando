@@ -1,42 +1,31 @@
-defmodule BrandoAdmin.Components.DropdownButton do
-  use Surface.Component
+defmodule BrandoAdmin.Components.Button do
+  use Phoenix.Component
 
-  prop confirm, :string
-  prop event, :event
-  prop value, :any
-  prop loading, :boolean
-
-  slot default
-
-  def render(assigns) do
-    ~F"""
+  def dropdown(assigns) do
+    ~H"""
       <li>
-        {#if @confirm}
-          <Context get={dropdown_id: id}>
-            <button
-              type="button"
-              id={"#{id}-dropdown-button-#{@event.name}"}
-              phx-hook="Brando.ConfirmClick"
-              phx-confirm-click-message={@confirm}
-              phx-confirm-click={@event.name}
-              phx-target={@event.target.cid}
-              value={@value}
-              phx-page-loading={@loading}>
-              <#slot />
-            </button>
-          </Context>
-        {#else}
-          <Context get={dropdown_id: id}>
-            <button
-              type="button"
-              id={"#{id}-dropdown-button-#{@event.name}"}
-              :on-click={@event}
-              value={@value}
-              phx-page-loading={@loading}>
-              <#slot />
-            </button>
-          </Context>
-        {/if}
+        <%= if @confirm do %>
+          <button
+            type="button"
+            id={"dropdown-button-#{@event.name}"}
+            phx-hook="Brando.ConfirmClick"
+            phx-confirm-click-message={@confirm}
+            phx-confirm-click={@event.name}
+            phx-target={@event.target.cid}
+            value={@value}
+            phx-page-loading={@loading}>
+            <%= render_slot @inner_block %>
+          </button>
+        <% else %>
+          <button
+            type="button"
+            id={"dropdown-button-#{@event.name}"}
+            phx-click={@event}
+            value={@value}
+            phx-page-loading={@loading}>
+            <%= render_slot @inner_block %>
+          </button>
+        <% end %>
       </li>
     """
   end

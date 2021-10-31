@@ -1,15 +1,10 @@
-defmodule BrandoAdmin.Components.CircleFlag do
-  use Surface.Component
+defmodule BrandoAdmin.Components.Badge do
+  use Phoenix.Component
 
-  prop language, :string, required: true
-  data uid, :string
-
-  def render(assigns) do
-    assigns = assign_new(assigns, :uid, fn -> Brando.Utils.generate_uid() end)
-
-    ~F"""
+  def language(assigns) do
+    ~H"""
     <div class="circle circle-flag">
-      {@language}
+      <%= @language %>
     </div>
     """
   end

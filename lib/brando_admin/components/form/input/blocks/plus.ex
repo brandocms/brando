@@ -1,11 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Plus do
-  use Surface.Component
+  use Phoenix.Component
 
-  prop index, :integer
-  prop click, :event
+  # prop index, :integer
+  # prop click, :event
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <button
       class="block-plus"
       type="button"

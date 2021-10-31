@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -8,27 +8,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   alias BrandoAdmin.Components.Modal
   alias Brando.Content
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop uploads, :any
-  prop data_field, :atom
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop uploads, :any
+  # prop data_field, :atom
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data blocks, :list
-  data block_forms, :list
-  data block_data, :form
-  data block_count, :integer
-  data insert_index, :integer
+  # data uid, :string
+  # data blocks, :list
+  # data block_forms, :list
+  # data block_data, :form
+  # data block_count, :integer
+  # data insert_index, :integer
 
-  data selected_palette, :map
-  data available_palettes, :list
-  data palette_options, :list
-  data first_color, :string
+  # data selected_palette, :map
+  # data available_palettes, :list
+  # data palette_options, :list
+  # data first_color, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="container-block"
@@ -131,22 +131,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         duplicate_block={@duplicate_block}
         bg_color={@selected_palette && "#{@first_color.hex_value}22"}>
         <:description>
-          {#if @selected_palette}
+          <%= if @selected_palette do %>
             {@selected_palette.name}
             <div class="circle-stack">
-              {#for color <- Enum.reverse(@selected_palette.colors)}
+              <%= for color <- Enum.reverse(@selected_palette.colors) do %>
                 <span
                   class="circle tiny"
                   style={"background-color:#{color.hex_value}"}
                   data-popover={"#{color.name}"}></span>
-              {/for}
+              <% end %>
             </div>
-          {#else}
+          <% else %>
             No palette selected
-          {/if}
+          <% end %>
         </:description>
         <:config>
-          {#if @selected_palette}
+          <%= if @selected_palette do %>
             <div class="instructions mb-1">Select a new palette:</div>
             <Input.Select
               id={"#{@block_data.id}-palette-select"}
@@ -154,16 +154,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               field={:palette_id}
               opts={options: @palette_options}
             />
-          {/if}
+          <% end %>
         </:config>
-        {#if !@selected_palette}
+        <%= if !@selected_palette do %>
           <Input.Select
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
             opts={options: @palette_options}
           />
-        {/if}
+        <% end %>
 
         <Blocks.BlockRenderer
           id={"#{@block.id}-container-blocks"}

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Subform do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.FieldBase
@@ -7,28 +7,28 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   import Brando.Gettext
 
-  prop subform, :any
-  prop form, :any
-  prop blueprint, :any
-  prop uploads, :any
-  prop current_user, :map
-  prop label, :string
-  prop instructions, :string
-  prop placeholder, :string
+  # prop subform, :any
+  # prop form, :any
+  # prop blueprint, :any
+  # prop uploads, :any
+  # prop current_user, :map
+  # prop label, :string
+  # prop instructions, :string
+  # prop placeholder, :string
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <fieldset>
-      {#if @subform.cardinality == :one}
+      <%= if @subform.cardinality == :one do %>
         <FieldBase
           form={@form}
           field={@subform.field}
           label={@label}
           instructions={@instructions}
           class={subform: true}>
-          {#for sub_form <- inputs_for(@form, @subform.field)}
+          <%= for sub_form <- inputs_for(@form, @subform.field) do %>
             <div class="subform-entry">
-              {#for input <- @subform.sub_fields}
+              <%= for input <- @subform.sub_fields do %>
                 <Subform.Field
                   cardinality={:one}
                   form={@form}
@@ -39,11 +39,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   input={input}
                   uploads={@uploads}
                   current_user={@current_user} />
-              {/for}
+              <% end %>
             </div>
-          {/for}
+          <% end %>
         </FieldBase>
-      {#else}
+      <% else %>
         <FieldBase
           form={@form}
           field={@subform.field}
@@ -53,11 +53,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
-            {#if Enum.empty?(inputs_for(@form, @subform.field))}
+            <%= if Enum.empty?(inputs_for(@form, @subform.field)) do %>
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
               <div class="subform-empty">&rarr; No associated entries</div>
-            {/if}
-            {#for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field))}
+            <% end %>
+            <%= for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field)) do %>
               <div
                 class={"subform-entry", inline: @subform.style == :inline}
                 data-id={index}>
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path class="s" d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z" fill="rgba(5,39,82,1)"/></svg>
                   </button>
                 </div>
-                {#for input <- @subform.sub_fields}
+                <%= for input <- @subform.sub_fields do %>
                   <Subform.Field
                     cardinality={:many}
                     form={@form}
@@ -85,9 +85,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     input={input}
                     uploads={@uploads}
                     current_user={@current_user} />
-                {/for}
+                <% end %>
               </div>
-            {/for}
+            <% end %>
           </div>
           <button
             id={"#{@form.id}-#{@subform.field}-add-entry"}
@@ -99,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             {gettext("Add entry")}
           </button>
         </FieldBase>
-      {/if}
+      <% end %>
     </fieldset>
     """
   end

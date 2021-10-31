@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -7,19 +7,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Modal
 
-  prop base_form, :any
-  prop data_field, :atom
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop is_ref?, :boolean, default: false
-  prop belongs_to, :string
+  # prop base_form, :any
+  # prop data_field, :atom
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop is_ref?, :boolean, default: false
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data block_data, :any
-  data uid, :string
+  # data block_data, :any
+  # data uid, :string
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="map-block"
@@ -67,9 +67,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </button>
           </div>
         </:config>
-        {#if v(@block_data, :embed_url)}
-          {#case v(@block_data, :source)}
-            {#match :gmaps}
+        <%= if v(@block_data, :embed_url) do %>
+          <%= case v(@block_data, :source) do %>
+            <% :gmaps -> %>
               <div class="map-content">
                 <iframe
                   src={v(@block_data, :embed_url)}}
@@ -79,8 +79,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                   style="border:0"
                   allowfullscreen></iframe>
               </div>
-          {/case}
-        {#else}
+          <% end %>
+        <% else %>
           <div class="empty">
             <figure>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 20.9l4.95-4.95a7 7 0 1 0-9.9 0L12 20.9zm0 2.828l-6.364-6.364a9 9 0 1 1 12.728 0L12 23.728zM12 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg>
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
               <button type="button" class="tiny" :on-click="show_config">{gettext "Configure map block"}</button>
             </div>
           </div>
-        {/if}
+        <% end %>
       </Block>
     </div>
     """

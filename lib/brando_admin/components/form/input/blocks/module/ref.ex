@@ -1,23 +1,23 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  prop module_refs, :list, required: true
-  prop module_ref_name, :string, required: true
-  prop base_form, :any
-  prop uploads, :any
-  prop data_field, :atom
+  # prop module_refs, :list, required: true
+  # prop module_ref_name, :string, required: true
+  # prop base_form, :any
+  # prop uploads, :any
+  # prop data_field, :atom
 
-  data module_name, :string
-  data ref_index, :any
-  data ref, :any
-  data ref_uid, :string
-  data ref_name, :string
-  data ref_block, :any
-  data ref_form, :form
-  data block_count, :integer
+  # data module_name, :string
+  # data ref_index, :any
+  # data ref, :any
+  # data ref_uid, :string
+  # data ref_name, :string
+  # data ref_block, :any
+  # data ref_form, :form
+  # data block_count, :integer
 
   def v(form, field), do: input_value(form, field)
 
@@ -51,8 +51,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   def render(assigns) do
     assigns = assign_ref(assigns)
 
-    ~F"""
-    {#if @ref}
+    ~H"""
+    <%= if @ref do %>
       <section b-ref={@ref.name}>
         <Blocks.DynamicBlock
           id={@ref_uid}
@@ -68,16 +68,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
         {hidden_input @ref_form, :description}
         {hidden_input @ref_form, :name}
       </section>
-    {#else}
+    <% else %>
       <section class="alert danger">
         Ref <code>{@ref_name}</code> is missing!<br><br>
         If the module has been changed, this block might be out of sync!<br><br>
         Available refs are:<br><br>
-        {#for available_ref <- @module_refs}
+        <%= for available_ref <- @module_refs do %>
           &rarr; {inspect available_ref}
-        {/for}
+        <% end %>
       </section>
-    {/if}
+    <% end %>
     """
   end
 end

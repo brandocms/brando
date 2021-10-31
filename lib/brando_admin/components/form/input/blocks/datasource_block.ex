@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Identifier
@@ -8,22 +8,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   import Brando.Gettext
 
-  prop base_form, :any
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop is_ref?, :boolean, default: false
-  prop belongs_to, :string
+  # prop base_form, :any
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop is_ref?, :boolean, default: false
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data block_data, :map
-  data modules, :list
-  data available_sources, :list
-  data available_queries, :list
-  data available_entries, :list
-  data selected_entries, :list
+  # data block_data, :map
+  # data modules, :list
+  # data available_sources, :list
+  # data available_queries, :list
+  # data available_entries, :list
+  # data selected_entries, :list
 
   alias Brando.Datasource
 
@@ -114,7 +114,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{v(@block, :uid)}-wrapper"}
       data-block-index={@index}
@@ -159,7 +159,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                 </small>
               </p>
 
-              {#if v(@block_data, :type) == :selection}
+              <%= if v(@block_data, :type) == :selection do %>
                 <ArrayInputs
                   :let={value: array_value, name: array_name}
                   form={@block_data}
@@ -168,9 +168,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                 </ArrayInputs>
 
                 <div class="selected-entries">
-                  {#for identifier <- @selected_entries}
+                  <%= for identifier <- @selected_entries do %>
                     <Identifier identifier={identifier} />
-                  {/for}
+                  <% end %>
                 </div>
 
                 <button
@@ -179,7 +179,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                   :on-click="select_entries">
                   Select entries
                 </button>
-              {/if}
+              <% end %>
             </div>
           </div>
         </div>

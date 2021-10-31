@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Select do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.FieldBase
@@ -7,35 +7,35 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   alias BrandoAdmin.Components.Modal
   alias Surface.Components.Form
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  data show_filter, :boolean
-  data resetable, :boolean
-  data open, :boolean
-  data narrow, :boolean
-  data selected_option, :any
-  data input_options, :list
-  data select_label, :string
-  data select_form, :form
-  data select_changeset, :any
-  data filter_string, :string
-  data modal_id, :string
-  data form_translations, :any
+  # data show_filter, :boolean
+  # data resetable, :boolean
+  # data open, :boolean
+  # data narrow, :boolean
+  # data selected_option, :any
+  # data input_options, :list
+  # data select_label, :string
+  # data select_form, :form
+  # data select_changeset, :any
+  # data filter_string, :string
+  # data modal_id, :string
+  # data form_translations, :any
 
-  slot default
+  # slot default
 
   import Brando.Gettext
 
@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <FieldBase
       form={@form}
       field={@field}
@@ -182,15 +182,15 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       <div class="multiselect">
         <div>
           <span class="select-label">
-            {#if slot_assigned?(:default)}
+            <%= if slot_assigned?(:default) do %>
               <#slot />
-            {#else}
-              {#if @selected_option}
+            <% else %>
+              <%= if @selected_option do %>
                 {@select_label |> raw}
-              {#else}
+              <% else %>
                 No selection
-              {/if}
-            {/if}
+              <% end %>
+            <% end %>
           </span>
         </div>
         <button
@@ -198,15 +198,15 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           class="button-edit"
           :on-click="toggle"
           phx-value-id={@modal_id}>
-          {#if @open}
+          <%= if @open do %>
             Close
-          {#else}
+          <% else %>
             Select
-          {/if}
+          <% end %>
         </button>
         <Modal title="Select option" id={@modal_id} narrow={@narrow}>
           <div class="select-modal">
-            {#if @show_filter && !Enum.empty?(@input_options)}
+            <%= if @show_filter && !Enum.empty?(@input_options) do %>
               <div
                 id={"#{@form.id}-#{@field}-select-modal-filter"}
                 class="select-filter"
@@ -222,14 +222,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   </div>
                 </div>
               </div>
-            {/if}
+            <% end %>
 
             <div class="options">
               <h2 class="titlecase">Available options</h2>
-              {#if Enum.empty?(@input_options)}
+              <%= if Enum.empty?(@input_options) do %>
                 {gettext("No options found")}
-              {/if}
-              {#for opt <- @input_options}
+              <% end %>
+              <%= for opt <- @input_options do %>
                 <button
                   type="button"
                   class={"options-option", "option-selected": opt.value == @selected_option}
@@ -238,10 +238,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   :on-click="select_option">
                   {opt.label |> raw}
                 </button>
-              {/for}
+              <% end %>
             </div>
 
-            {#if @select_form}
+            <%= if @select_form do %>
               <Form
                 for={@select_changeset}
                 change="validate_new_entry"
@@ -252,30 +252,30 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 {inspect @select_changeset, pretty: true}
                 </pre></code>
                 <br>
-                {#for tab <- @select_form.tabs}
+                <%= for tab <- @select_form.tabs do %>
                   <div
                     class={"form-tab", active: true}
                     data-tab-name={tab.name}>
                     <div class="row">
-                      {#for fieldset <- tab.fields}
+                      <%= for fieldset <- tab.fields do %>
                         <Fieldset
                           translations={@form_translations}
                           form={entry_form}
                           uploads={[]}
                           fieldset={fieldset} />
-                      {/for}
+                      <% end %>
                     </div>
                   </div>
-                {/for}
+                <% end %>
                 <button
                   :on-click="save_new_entry"
                   type="button" class="primary">
                   {gettext("Save")}
                 </button>
               </Form>
-            {/if}
+            <% end %>
 
-            {#if @resetable}
+            <%= if @resetable do %>
               <div class="reset">
                 <button
                   type="button"
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   {gettext("Reset value")}
                 </button>
               </div>
-            {/if}
+            <% end %>
           </div>
         </Modal>
       </div>

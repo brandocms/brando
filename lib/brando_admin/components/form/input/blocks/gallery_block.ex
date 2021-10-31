@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -15,31 +15,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
-  prop uploads, :any
-  prop base_form, :any
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop data_field, :atom
-  prop is_ref?, :boolean, default: false
-  prop ref_name, :string
-  prop ref_description, :string
-  prop belongs_to, :string
+  # prop uploads, :any
+  # prop base_form, :any
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop data_field, :atom
+  # prop is_ref?, :boolean, default: false
+  # prop ref_name, :string
+  # prop ref_description, :string
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data extracted_path, :string
-  data uid, :string
-  data block_data, :form
-  data available_images, :list
-  data images, :list
-  data has_images?, :boolean
-  data image, :any
-  data selected_images_paths, :list
-  data display, :atom
-  data show_only_selected?, :boolean
-  data upload_formats, :string
+  # data extracted_path, :string
+  # data uid, :string
+  # data block_data, :form
+  # data available_images, :list
+  # data images, :list
+  # data has_images?, :boolean
+  # data image, :any
+  # data selected_images_paths, :list
+  # data display, :atom
+  # data show_only_selected?, :boolean
+  # data upload_formats, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="gallery-block"
@@ -97,9 +97,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           {input_value(@block_data, :type)}
-          {#if @ref_description}
+          <%= if @ref_description do %>
             — {@ref_description}
-          {/if}
+          <% end %>
         </:description>
 
         <div phx-update="ignore">
@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             multiple>
         </div>
 
-        {#for image <- inputs_for(@block_data, :images)}
+        <%= for image <- inputs_for(@block_data, :images) do %>
           {hidden_input image, :placeholder}
           {hidden_input image, :cdn}
           {hidden_input image, :dominant_color}
@@ -139,9 +139,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             for={:formats}>
             <input type="hidden" name={array_name} value={array_value} />
           </ArrayInputs>
-        {/for}
+        <% end %>
 
-        {#if @has_images?}
+        <%= if @has_images? do %>
           <span phx-update="ignore">
             <button type="button" class="tiny file-upload" id={"#{@uid}-up-btn"}>Upload images</button>
           </span>
@@ -155,8 +155,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-id={"sortable-#{@block_data.id}-images"}
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".preview">
-            {#if @display == :grid}
-              {#for {img, idx} <- Enum.with_index(@images)}
+            <%= if @display == :grid do %>
+              <%= for {img, idx} <- Enum.with_index(@images) do %>
                 <div
                   class={
                     "preview",
@@ -176,9 +176,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     </div>
                   </figcaption>
                 </div>
-              {/for}
-            {#else}
-              {#for img <- @images}
+              <% end %>
+            <% else %>
+              <%= for img <- @images do %>
                 <div class="preview">
                   <figure>
                     <img src={"/media/#{img.path}"} />
@@ -198,10 +198,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     </div>
                   </figcaption>
                 </div>
-              {/for}
-            {/if}
+              <% end %>
+            <% end %>
           </div>
-        {#else}
+        <% else %>
           <div class={"empty upload-canvas", hidden: @has_images?}>
             <figure>
               <svg class="icon-add-gallery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             </div>
           </div>
 
-        {/if}
+        <% end %>
 
         <Modal
           title="Pick images"
@@ -223,15 +223,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           id={"#{@uid}-image-picker"}>
           <div class="buttons">
             <button type="button" class="tiny" :on-click="toggle_only_selected">
-              {#if @show_only_selected?}
+              <%= if @show_only_selected? do %>
                 {gettext("Show all available and selected")}
-              {#else}
+              <% else %>
                 {gettext("Show only selected")}
-              {/if}
+              <% end %>
             </button>
           </div>
           <div class="image-picker-images">
-            {#for image <- @available_images}
+            <%= for image <- @available_images do %>
               <div
                 class={
                   "image-picker-image",
@@ -243,7 +243,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 phx-value-selected={image.image.path in @selected_images_paths && "true" || "false"}>
                 <img src={"/media/#{image.image.sizes["thumb"]}"} />
               </div>
-            {/for}
+            <% end %>
           </div>
         </Modal>
 
@@ -251,7 +251,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           title="Edit captions"
           id={"#{@uid}_captions"}>
           <div class="caption-editor">
-            {#for image <- inputs_for(@block_data, :images)}
+            <%= for image <- inputs_for(@block_data, :images) do %>
               <div class="caption-row">
                 <figure>
                   <img src={"/media/#{input_value(image, :path)}"} />
@@ -262,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <Input.Text form={image} field={:alt} opts={debounce: 750} />
                 </div>
               </div>
-            {/for}
+            <% end %>
           </div>
         </Modal>
 

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -8,19 +8,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
-  prop base_form, :any
-  prop data_field, :atom
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop is_ref?, :boolean, default: false
-  prop belongs_to, :string
+  # prop base_form, :any
+  # prop data_field, :atom
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop is_ref?, :boolean, default: false
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data block_data, :any
-  data uid, :string
+  # data block_data, :any
+  # data uid, :string
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="table-block"
@@ -60,12 +60,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         </:config>
         {hidden_input @block_data, :key}
         {hidden_input @block_data, :instructions}
-        {#if input_value(@block_data, :instructions)}
+        <%= if input_value(@block_data, :instructions) do %>
           <div class="table-instructions">
             {input_value(@block_data, :instructions)}
           </div>
-        {/if}
-        {#if Enum.empty?(v(@block_data, :rows))}
+        <% end %>
+        <%= if Enum.empty?(v(@block_data, :rows)) do %>
           <div class="empty">
             <figure>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14 10h-4v4h4v-4zm2 0v4h3v-4h-3zm-2 9v-3h-4v3h4zm2 0h3v-3h-3v3zM14 5h-4v3h4V5zm2 0v3h3V5h-3zm-8 5H5v4h3v-4zm0 9v-3H5v3h3zM8 5H5v3h3V5zM4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
               <button type="button" class="tiny" :on-click="add_row">Add row</button>
             </div>
           </div>
-        {#else}
+        <% else %>
           <div
             id={"sortable-#{@uid}-rows"}
             class="table-rows"
@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
             data-sortable-id={"sortable-#{@uid}-rows"}
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".table-row">
-            {#for {row, index} <- Enum.with_index(inputs_for(@block_data, :rows))}
+            <%= for {row, index} <- Enum.with_index(inputs_for(@block_data, :rows)) do %>
               <div class="table-row draggable" data-id={index}">
                 <div class="subform-tools">
                   <button type="button" class="sort-handle">
@@ -103,13 +103,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   <RenderVar id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
                 </PolyInputs>
               </div>
-            {/for}
+            <% end %>
           </div>
           <button type="button" class="tiny add-row" :on-click="add_row">{gettext "Add row"}</button>
-        {/if}
+        <% end %>
 
         {!-- template row --}
-        {#for tpl_row <- inputs_for(@block_data, :template_row)}
+        <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
           <PolyInputs form={tpl_row} for={:cols} :let={form: var}>
             {hidden_input var, :key}
             {hidden_input var, :type}
@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
             {hidden_input var, :placeholder}
             {hidden_input var, :value}
           </PolyInputs>
-        {/for}
+        <% end %>
         {!-- end template --}
       </Block>
     </div>

@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Components.Form.Input.PageVars do
-  use Surface.LiveComponent
+defmodule BrandoAdmin.Components.Pages.PageVars do
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -9,24 +9,24 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
   alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop subform, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop subform, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data advanced, :boolean
+  # data advanced, :boolean
 
   def mount(socket) do
     {:ok, assign(socket, :advanced, false)}
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <fieldset>
       <FieldBase
         form={@form}
@@ -49,14 +49,14 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
           </div>
         </:header>
 
-        {#if @advanced}
+        <%= if @advanced do %>
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
-            {#if Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
+            <%= if Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
               <div class="subform-empty">&rarr; No associated entries</div>
-            {/if}
+            <% end %>
             <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
               <div
                 class="subform-entry flex-row"
@@ -87,13 +87,13 @@ defmodule BrandoAdmin.Components.Form.Input.PageVars do
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
             {gettext("Add entry")}
           </button>
-        {#else}
-          {#unless Enum.empty?(inputs_for_poly(@form, @subform.field, []))}
+        <% else %>
+          <%= unless Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
             <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
               <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:all} />
             </PolyInputs>
-          {/unless}
-        {/if}
+          <% end %>
+        <% end %>
       </FieldBase>
     </fieldset>
     """

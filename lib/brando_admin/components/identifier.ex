@@ -1,16 +1,22 @@
 defmodule BrandoAdmin.Components.Identifier do
-  use Surface.Component
+  use Phoenix.Component
   use Phoenix.HTML
 
-  prop identifier, :map
-  prop identifier_form, :form
-  prop param, :any
-  prop select, :event
-  prop remove, :event
-  prop selected_identifiers, :list, default: []
+  # prop identifier, :map
+  # prop identifier_form, :form
+  # prop param, :any
+  # prop select, :event
+  # prop remove, :event
+  # prop selected_identifiers, :list, default: []
+
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)}
+  end
 
   def render(%{identifier: identifier} = assigns) when not is_nil(identifier) do
-    ~F"""
+    ~H"""
     <article
       class={"identifier", selected: @identifier in @selected_identifiers}
       :on-click={@select}
@@ -24,24 +30,24 @@ defmodule BrandoAdmin.Components.Identifier do
       <section class="content">
         <div class="info">
           <div class="name">
-            {@identifier.title}
+            <%= @identifier.title %>
           </div>
           <div class="meta-info">
-            {@identifier.type}
+            <%= @identifier.type %>
           </div>
         </div>
       </section>
-      {#if @remove}
+      <%= if @remove do %>
         <div class="remove">
           <button type="button" :on-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
-      {/if}
+      <% end %>
     </article>
     """
   end
 
   def render(%{identifier_form: identifier_form} = assigns) when not is_nil(identifier_form) do
-    ~F"""
+    ~H"""
     <article
       class={"identifier", selected: @identifier_form in @selected_identifiers}
       :on-click={@select}
@@ -55,18 +61,18 @@ defmodule BrandoAdmin.Components.Identifier do
       <section class="content">
         <div class="info">
           <div class="name">
-            {input_value(@identifier_form, :title)}
+            <%= input_value(@identifier_form, :title) %>
           </div>
           <div class="meta-info">
-            {input_value(@identifier_form, :type)}
+            <%= input_value(@identifier_form, :type) %>
           </div>
         </div>
       </section>
-      {#if @remove}
+      <%= if @remove do %>
         <div class="remove">
           <button type="button" :on-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
-      {/if}
+      <% end %>
     </article>
     """
   end

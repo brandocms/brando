@@ -1,11 +1,6 @@
 defmodule BrandoAdmin.Components.ChildrenButton do
-  use Surface.LiveComponent
-
-  prop entry, :any, required: true
-  prop fields, :list, required: true
-
-  data count, :integer
-  data active, :boolean
+  # TODO: Can this be a function component with its event handled in the row instead?
+  use BrandoAdmin, :live_component
 
   def mount(socket) do
     {:ok, assign(socket, :active, false)}
@@ -27,19 +22,15 @@ defmodule BrandoAdmin.Components.ChildrenButton do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div class="children-button">
       <button
         :on-click="toggle"
         type="button"
         data-testid="children-button"
-        class={active: @active}
+        class={[active: @active]}
         phx-page-loading>
-        {#if @active}
-          Close
-        {#else}
-          + {@count}
-        {/if}
+        <%= @active && "Close" || "+ #{@count}" %>
       </button>
     </div>
     """

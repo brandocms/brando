@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.FieldBase
@@ -8,37 +8,37 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   alias Surface.Components.Form
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  data open, :boolean
-  data selected_options, :list
-  data input_options, :list
-  data select_form, :form
-  data select_changeset, :any
-  data selected_labels, :list
-  data filter_string, :string
-  data modal_id, :string
-  data singular, :string
-  data show_filter, :boolean
-  data narrow, :boolean
-  data creating, :boolean
-  data resetable, :boolean
-  data form_translations, :any
+  # data open, :boolean
+  # data selected_options, :list
+  # data input_options, :list
+  # data select_form, :form
+  # data select_changeset, :any
+  # data selected_labels, :list
+  # data filter_string, :string
+  # data modal_id, :string
+  # data singular, :string
+  # data show_filter, :boolean
+  # data narrow, :boolean
+  # data creating, :boolean
+  # data resetable, :boolean
+  # data form_translations, :any
 
-  slot default
+  # slot default
 
   # import Brando.Gettext
 
@@ -186,7 +186,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <FieldBase
       form={@form}
       field={@field}
@@ -195,17 +195,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       class={@class}
       compact={@compact}>
 
-      {#if Enum.empty?(@selected_labels)}
+      <%= if Enum.empty?(@selected_labels) do %>
         {hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: ""}
-      {#else}
-        {#for opt <- @selected_options}
+      <% else %>
+        <%= for opt <- @selected_options do %>
           {hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt}
-        {/for}
-      {/if}
+        <% end %>
+      <% end %>
 
-      {#if !Enum.empty?(@selected_labels)}
+      <%= if !Enum.empty?(@selected_labels) do %>
         <div class="selected-labels">
-          {#for lbl <- @selected_labels}
+          <%= for lbl <- @selected_labels do %>
             <div class="selected-label">
               <svg
                 class="circle-filled"
@@ -220,22 +220,22 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               </svg>
               <div class="selected-label-text">{lbl}</div>
             </div>
-          {/for}
+          <% end %>
         </div>
-      {/if}
+      <% end %>
 
       <div class="multiselect">
         <div>
           <span>
-            {#if slot_assigned?(:default)}
+            <%= if slot_assigned?(:default) do %>
               <#slot />
-            {#else}
-              {#if @selected_options}
+            <% else %>
+              <%= if @selected_options do %>
                 {@label |> raw}
-              {#else}
+              <% else %>
                 No selection
-              {/if}
-            {/if}
+              <% end %>
+            <% end %>
           </span>
         </div>
         <button
@@ -243,19 +243,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           class="button-edit"
           :on-click="toggle"
           phx-value-id={@modal_id}>
-          {#if @open}
+          <%= if @open do %>
             Close
-          {#else}
+          <% else %>
             Select
-          {/if}
+          <% end %>
         </button>
         <Modal title="Select options" id={@modal_id} narrow={@narrow}>
           <:header>
-            {#if @select_form && !@creating}
+            <%= if @select_form && !@creating do %>
               <button class="header-button" type="button" :on-click="show_form">Create {@singular}</button>
-            {/if}
+            <% end %>
           </:header>
-          {#if @show_filter && !Enum.empty?(@input_options) && !@creating}
+          <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
             <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
               <div class="field-wrapper">
                 <div class="label-wrapper">
@@ -268,17 +268,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 </div>
               </div>
             </div>
-          {/if}
+          <% end %>
 
           <div class="select-modal-wrapper">
-            {#if !@creating}
+            <%= if !@creating do %>
               <div class="select-modal">
                 <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                   <h2 class="titlecase">Available options</h2>
-                  {#if Enum.empty?(@input_options)}
+                  <%= if Enum.empty?(@input_options) do %>
                     No options found
-                  {/if}
-                  {#for opt <- @input_options}
+                  <% end %>
+                  <%= for opt <- @input_options do %>
                     <button
                       type="button"
                       class={"options-option", "option-selected": opt.value in @selected_options}
@@ -287,10 +287,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       :on-click="select_option">
                       {opt.label |> raw}
                     </button>
-                  {/for}
+                  <% end %>
                 </div>
 
-                {#if @resetable}
+                <%= if @resetable do %>
                   <div class="reset">
                     <button
                       type="button"
@@ -299,14 +299,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       Reset value
                     </button>
                   </div>
-                {/if}
+                <% end %>
               </div>
               <div class="selected-labels">
                 <h2 class="titlecase">Currently selected</h2>
-                {#if Enum.empty?(@selected_labels)}
+                <%= if Enum.empty?(@selected_labels) do %>
                   None selected
-                {#else}
-                  {#for lbl <- @selected_labels}
+                <% else %>
+                  <%= for lbl <- @selected_labels do %>
                     <div class="selected-label">
                       <svg
                         class="circle-filled"
@@ -321,30 +321,30 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       </svg>
                       <div class="selected-label-text">{lbl}</div>
                     </div>
-                  {/for}
-                {/if}
+                  <% end %>
+                <% end %>
               </div>
-            {#else}
-              {#if @select_form}
+            <% else %>
+              <%= if @select_form do %>
                 <Form
                   for={@select_changeset}
                   change="validate_new_entry"
                   :let={form: entry_form}>
-                  {#for tab <- @select_form.tabs}
+                  <%= for tab <- @select_form.tabs do %>
                     <div
                       class={"form-tab", active: true}
                       data-tab-name={tab.name}>
                       <div class="row">
-                        {#for fieldset <- tab.fields}
+                        <%= for fieldset <- tab.fields do %>
                           <Fieldset
                             translations={@form_translations}
                             form={entry_form}
                             uploads={[]}
                             fieldset={fieldset} />
-                        {/for}
+                        <% end %>
                       </div>
                     </div>
-                  {/for}
+                  <% end %>
                   <button
                     :on-click="save_new_entry"
                     type="button" class="primary">
@@ -356,8 +356,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     Cancel
                   </button>
                 </Form>
-              {/if}
-            {/if}
+              <% end %>
+            <% end %>
           </div>
         </Modal>
       </div>
