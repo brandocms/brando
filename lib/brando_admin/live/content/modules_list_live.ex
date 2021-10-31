@@ -2,18 +2,19 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
   import Brando.Gettext
   alias BrandoAdmin.Components.Content
+  alias Phoenix.LiveView.JS
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("Content Modules")}
       subtitle={gettext("Overview")}>
-      <button class="primary" :on-click="create_module">
+      <button class="primary" phx-click={JS.push("create_module", target: @myself)}>
         Create new module
       </button>
-    </Content.Header>
+    </Content.header>
 
-    <Content.List
+    <Content.List.live_component
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}

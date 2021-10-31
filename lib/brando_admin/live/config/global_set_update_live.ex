@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Sites.GlobalSetUpdateLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Edit global set")} />
+    ~H"""
+    <Content.header title={gettext("Edit global set")} />
 
-    <Form
+    <Form.live_component
       id="global_set_form"
       entry_id={@entry_id}
       current_user={@current_user}

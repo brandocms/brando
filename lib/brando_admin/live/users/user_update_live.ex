@@ -4,12 +4,12 @@ defmodule BrandoAdmin.Users.UserUpdateLive do
   alias BrandoAdmin.Components.Form
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title="Users"
       subtitle="Update user" />
 
-    <Form
+    <Form.live_component
       id="user_form"
       entry_id={@entry_id}
       current_user={@current_user}

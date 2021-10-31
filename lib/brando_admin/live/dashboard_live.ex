@@ -3,9 +3,9 @@ defmodule BrandoAdmin.DashboardLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <h2>
-      {gettext("Hello")}, {@current_user.name}!
+      <%= gettext("Hello") %> <%= @current_user.name %>!
     </h2>
     """
   end

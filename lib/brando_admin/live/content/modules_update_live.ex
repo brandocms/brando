@@ -1,30 +1,25 @@
 defmodule BrandoAdmin.Content.ModuleUpdateLive do
-  use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
+  use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
   use Phoenix.HTML
 
   import Brando.Gettext
   import Ecto.Changeset
-  import Phoenix.LiveView.Helpers
 
   alias Brando.Villain
   alias Brando.Content.Module.Ref
   alias Brando.Blueprint.Villain.Blocks
 
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Inputs
   alias BrandoAdmin.Components.Form.ModuleProps
-  alias BrandoAdmin.Components.Form.Submit
   alias BrandoAdmin.Components.Modal
-
-  alias Surface.Components.Form
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
     if connected?(socket) do
       {:ok,
        socket
-       |> Surface.init()
        |> assign(:socket_connected, true)
        |> assign_entry(entry_id)
        |> assign_current_user(token)
@@ -33,28 +28,27 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     else
       {:ok,
        socket
-       |> Surface.init()
        |> assign(:socket_connected, false)}
     end
   end
 
   def render(%{socket_connected: false} = assigns) do
-    ~F"""
+    ~H"""
     """
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
+    ~H"""
+    <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
     <div id="module-form-el">
-      <Form for={@changeset} :let={form: form} change="validate" submit="save">
+      <.form for={@changeset} let={form} change="validate" submit="save">
         <div class="block-editor">
           <div class="code">
-            <Input.Code id={"#{form.id}-code"} form={form} field={:code} />
+            <Input.Code.live_component id={"#{form.id}-code"} form={form} field={:code} />
           </div>
 
-          <ModuleProps
+          <ModuleProps.live_component
             id="module-props"
             form={form}
             create_ref="create_ref"
@@ -67,8 +61,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             show_modal="show_modal"
           />
         </div>
-        {#if input_value(form, :wrapper) in [true, "true"]}
-          <Inputs form={form} for={:entry_template} :let={form: entry, index: _idx}>
+        <%= if input_value(form, :wrapper) do %>
+          <Form.inputs form={form} for={:entry_template} let={[form: entry]}>
             <div class="entry-template">
               <hr>
               <h2>Entry template</h2>
@@ -78,12 +72,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
               <div class="block-editor">
                 <div class="code">
-                  <Input.Code id={"#{entry.id}-entry-code"} form={entry} field={:code} />
+                  <Input.Code.live_component id={"#{entry.id}-entry-code"} form={entry} field={:code} />
                 </div>
 
                 {hidden_input entry, :id, value: 2107}
 
-                <ModuleProps
+                <ModuleProps.live_component
                   id={"entry-module-props-#{entry.id}"}
                   form={entry}
                   entry_form
@@ -95,17 +89,17 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                 />
               </div>
             </div>
-          </Inputs>
-        {/if}
+          </Form.inputs>
+        <% end %>
 
         <div class="button-group">
-          <Submit
+          <Form.submit_button
             processing={false}
             form_id={"module-form"}
             label={gettext("Save (⌘S)")}
             class="primary submit-button" />
         </div>
-      </Form>
+      </.form>
     </div>
     """
   end
@@ -133,16 +127,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_ref =
       put_in(ref, [Access.key(:data), Access.key(:data), Access.key(:template_row)], new_row)
 
-    require Logger
-    Logger.error(inspect(ref, pretty: true))
-    Logger.error(inspect(updated_ref, pretty: true))
-
     updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
-
     updated_changeset = put_change(changeset, :refs, updated_refs)
-
-    require Logger
-    Logger.error("==> add_table_row #{inspect(updated_changeset, pretty: true)}")
 
     {:noreply, assign(socket, :changeset, updated_changeset)}
   end

@@ -6,16 +6,14 @@ defmodule BrandoAdmin.Pages.PageListLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("Pages & sections")}
       subtitle={gettext("Overview")}>
-      <LivePatch to="/admin/pages/create" class="primary">
-        Create new
-      </LivePatch>
-    </Content.Header>
+      <%= live_patch "Create new", to: "/admin/pages/create", class: "primary" %>
+    </Content.header>
 
-    <Content.List
+    <Content.List.live_component
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}

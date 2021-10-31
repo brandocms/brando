@@ -13,12 +13,12 @@ defmodule BrandoAdmin.Sites.IdentityLive do
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title="Identity"
       subtitle="Update identity" />
 
-    <Form
+    <Form.live_component
       id="identity_form"
       entry_id={@entry_id}
       current_user={@current_user}

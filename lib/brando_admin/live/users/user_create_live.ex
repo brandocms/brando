@@ -4,12 +4,12 @@ defmodule BrandoAdmin.Users.UserCreateLive do
   alias BrandoAdmin.Components.Form
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title="Users"
       subtitle="Create user" />
 
-    <Form
+    <Form.live_component
       id="user_form"
       current_user={@current_user}
       schema={@schema}

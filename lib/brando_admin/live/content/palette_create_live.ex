@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Content.PaletteCreateLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Create palette")} />
+    ~H"""
+    <Content.header title={gettext("Create palette")} />
 
-    <Form
+    <Form.live_component
       id="palette_form"
       current_user={@current_user}
       schema={@schema}

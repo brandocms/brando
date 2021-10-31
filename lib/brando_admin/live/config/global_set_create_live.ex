@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Sites.GlobalSetCreateLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Create global set")} />
+    ~H"""
+    <Content.header title={gettext("Create global set")} />
 
-    <Form
+    <Form.live_component
       id="global_set_form"
       current_user={@current_user}
       schema={@schema}

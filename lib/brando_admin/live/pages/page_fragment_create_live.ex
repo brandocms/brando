@@ -12,11 +12,11 @@ defmodule BrandoAdmin.Pages.PageFragmentCreateLive do
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("Create fragment")} />
 
-    <Form
+    <Form.live_component
       id="fragment_form"
       current_user={@current_user}
       schema={@schema}

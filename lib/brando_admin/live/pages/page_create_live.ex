@@ -19,10 +19,10 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Create page")} />
+    ~H"""
+    <Content.header title={gettext("Create page")} />
 
-    <Form
+    <Form.live_component
       id="page_form"
       current_user={@current_user}
       schema={@schema}

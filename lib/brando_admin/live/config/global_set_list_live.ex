@@ -6,16 +6,14 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("Global sets")}
       subtitle={gettext("Overview")}>
-      <LivePatch to="/admin/config/global_sets/create" class="primary">
-        Create new set
-      </LivePatch>
-    </Content.Header>
+      <%= live_patch "Create new set", to: "/admin/config/global_sets/create", class: "primary" %>
+    </Content.header>
 
-    <Content.List
+    <Content.List.live_component
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}
