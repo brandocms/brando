@@ -12,17 +12,8 @@ defmodule BrandoAdmin do
   mostly focused on imports, uses and aliases.
   """
 
-  def view do
+  defp view_helpers do
     quote do
-      use Phoenix.View, root: "lib/brando_admin/templates"
-
-      # Import convenience functions from controllers
-      import Phoenix.Controller, only: [get_flash: 2]
-      import Phoenix.LiveView.Helpers
-      import Surface
-
-      import Plug.Conn, only: [get_session: 2]
-
       import Brando.Utils,
         only: [media_url: 0, media_url: 1, current_user: 1, app_name: 0, img_url: 3]
 
@@ -30,8 +21,22 @@ defmodule BrandoAdmin do
       use Phoenix.HTML
       use Brando.HTML
 
+      # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
+      import Phoenix.LiveView.Helpers
+      import Plug.Conn, only: [get_session: 2]
+
+      # Import basic rendering functionality (render, render_layout, etc)
+      import Phoenix.View
+
       import Brando.Gettext
       import BrandoAdmin.ErrorHelpers
+    end
+  end
+
+  def view do
+    quote do
+      use Phoenix.View, root: "lib/brando_admin/templates"
+      unquote(view_helpers())
     end
   end
 
@@ -56,19 +61,20 @@ defmodule BrandoAdmin do
     end
   end
 
-  def schema do
-    repo = Brando.repo()
-
+  def live_view do
     quote do
-      use Ecto.Schema
+      use Phoenix.LiveView,
+        layout: {BrandoAdmin.LayoutView, "live.html"}
 
-      import Ecto
-      import Ecto.Changeset
-      import Ecto.Query, only: [from: 1, from: 2]
-      import Brando.Utils.Schema
+      unquote(view_helpers())
+    end
+  end
 
-      # Alias the data repository as a convenience
-      alias unquote(repo)
+  def live_component do
+    quote do
+      use Phoenix.LiveComponent
+
+      unquote(view_helpers())
     end
   end
 
