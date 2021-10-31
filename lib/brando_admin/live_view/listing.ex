@@ -15,7 +15,7 @@ defmodule BrandoAdmin.LiveView.Listing do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
-      use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
+      use BrandoAdmin, :live_view
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
 

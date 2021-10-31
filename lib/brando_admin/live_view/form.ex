@@ -15,9 +15,7 @@ defmodule BrandoAdmin.LiveView.Form do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
-      use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-      use Phoenix.HTML
-      import Phoenix.LiveView.Helpers
+      use BrandoAdmin, :live_view
 
       on_mount({__MODULE__, :hooks})
 
@@ -46,7 +44,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
       socket =
         socket
-        |> Surface.init()
         |> assign(:socket_connected, true)
         |> assign_action(:update)
         |> assign_schema(schema)
@@ -71,7 +68,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
       socket =
         socket
-        |> Surface.init()
         |> assign(:socket_connected, true)
         |> assign_action(:create)
         |> assign_schema(schema)
