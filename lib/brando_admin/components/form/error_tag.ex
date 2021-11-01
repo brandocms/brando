@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
   def render(assigns) do
     assigns =
       assign_new(assigns, :translate_fn, fn ->
-        {mod, fun} = assigns.translator
+        {mod, fun} = assigns[:translator] || {Brando.web_module(ErrorHelpers), :translate_error}
         &apply(mod, fun, [&1])
       end)
 

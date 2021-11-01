@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Modal title="Add content block" id={@id} medium>
+      <.live_component module={Modal} title="Add content block" id={@id} medium>
         <div class="button-group-horizontal">
           <button
             :if={!@hide_sections}
@@ -65,10 +65,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                   &rarr;
                 </figure>
                 <div class="info">
-                  <div class="name">{namespace}</div>
+                  <div class="name"><%= namespace %></div>
                 </div>
               </button>
-              <div class={"namespace-modules", active: @active_namespace == namespace}>
+              <div class={[
+                "namespace-modules": true,
+                active: @active_namespace == namespace]}>
                 <%= for module <- modules do %>
                   <button
                     type="button"
@@ -77,11 +79,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                     phx-value-index={@insert_index}
                     phx-value-module-id={module.id}>
                     <figure>
-                      {module.svg |> raw}
+                      <%= module.svg |> raw %>
                     </figure>
                     <div class="info">
-                      <div class="name">{module.name}</div>
-                      <div class="instructions">{module.help_text}</div>
+                      <div class="name"><%= module.name %></div>
+                      <div class="instructions"><%= module.help_text %></div>
                     </div>
                   </button>
                 <% end %>
@@ -98,18 +100,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                   phx-value-index={@insert_index}
                   phx-value-module-id={module.id}>
                   <figure>
-                    {module.svg |> raw}
+                    <%= module.svg |> raw %>
                   </figure>
                   <div class="info">
-                    <div class="name">{module.name}</div>
-                    <div class="instructions">{module.help_text}</div>
+                    <div class="name"><%= module.name %></div>
+                    <div class="instructions"><%= module.help_text %></div>
                   </div>
                 </button>
               <% end %>
             <% end %>
           <% end %>
         </div>
-      </Modal>
+      </.live_component>
     </div>
     """
   end

@@ -36,11 +36,11 @@ defmodule BrandoAdmin.Components.Form.Input.Email do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {email_input @form, @field,
+      <%= email_input @form, @field,
         placeholder: @placeholder,
         disabled: @disabled,
         phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}"}
+        class: "text#{@monospace && " monospace" || ""}" %>
     </FieldBase.render>
     """
   end

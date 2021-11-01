@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.TemplateCreateLive do
     ~H"""
     <Content.header title={gettext("Create template")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="template_form"
       current_user={@current_user}
       schema={@schema}

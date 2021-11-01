@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
     ~H"""
     <%= if @ref do %>
       <section b-ref={@ref.name}>
-        <Blocks.DynamicBlock
+        <Blocks.DynamicBlock.render
           id={@ref_uid}
           is_ref?={true}
           data_field={@data_field}
@@ -65,16 +65,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block={@ref_block}
           base_form={@base_form}
           uploads={@uploads} />
-        {hidden_input @ref_form, :description}
-        {hidden_input @ref_form, :name}
+        <%= hidden_input @ref_form, :description %>
+        <%= hidden_input @ref_form, :name %>
       </section>
     <% else %>
       <section class="alert danger">
-        Ref <code>{@ref_name}</code> is missing!<br><br>
+        Ref <code><%= @ref_name %></code> is missing!<br><br>
         If the module has been changed, this block might be out of sync!<br><br>
         Available refs are:<br><br>
         <%= for available_ref <- @module_refs do %>
-          &rarr; {inspect available_ref}
+          &rarr; <%= inspect available_ref %>
         <% end %>
       </section>
     <% end %>

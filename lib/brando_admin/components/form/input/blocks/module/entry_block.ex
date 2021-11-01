@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -81,10 +81,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         is_entry?={true}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>{@module_name}</:description>
+        <:description><%= @module_name %></:description>
         <:config>
           <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-            <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+            <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
           <% end %>
 
           <button type="button" class="secondary" :on-click="reinit_vars">
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               <% end %>
             </div>
           <% end %>
@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <%= for split <- @splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <Module.Ref
+                <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
@@ -116,14 +116,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                   base_form={@base_form} />
 
               <% _ -> %>
-                {raw split}
+                <%= raw split %>
             <% end %>
           <% end %>
-          {hidden_input @block_data, :module_id}
-          {hidden_input @block_data, :sequence}
-          {hidden_input @block_data, :multi}
+          <%= hidden_input @block_data, :module_id %>
+          <%= hidden_input @block_data, :sequence %>
+          <%= hidden_input @block_data, :multi %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

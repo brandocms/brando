@@ -29,19 +29,19 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
       )
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {text_input @form, @field,
+      <%= text_input @form, @field,
         placeholder: @placeholder,
         disabled: @disabled,
         phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}"}
-    </FieldBase>
+        class: "text#{@monospace && " monospace" || ""}" %>
+    </FieldBase.render>
     """
   end
 end

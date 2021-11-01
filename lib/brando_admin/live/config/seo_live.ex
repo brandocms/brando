@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
       title="SEO"
       subtitle="Update SEO" />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="seo_form"
       entry_id={@entry_id}
       current_user={@current_user}

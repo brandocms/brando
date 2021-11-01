@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -113,19 +113,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>{@module_name}</:description>
+        <:description><%= @module_name %></:description>
         <:config>
           <div class="panels">
             <div class="panel">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-                <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
               <% end %>
             </div>
             <div class="panel">
               <h2 class="titlecase">Vars</h2>
               <%= for var <- v(@block_data, :vars) || [] do %>
                 <div class="var">
-                  <div class="key">{var.key}</div>
+                  <div class="key"><%= var.key %></div>
                   <button type="button" class="tiny" :on-click="reset_var" phx-value-id={var.key}>{gettext "Reset"}</button>
                 </div>
               <% end %>
@@ -133,7 +133,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <h2 class="titlecase">Refs</h2>
               <%= for ref <- v(@block_data, :refs) || [] do %>
                 <div class="ref">
-                  <div class="key">{ref.name}</div>
+                  <div class="key"><%= ref.name %></div>
                   <button type="button" class="tiny" :on-click="reset_ref" phx-value-id={ref.name}>{gettext "Reset"}</button>
                 </div>
               <% end %>
@@ -153,14 +153,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               <% end %>
             </div>
           <% end %>
           <%= for split <- @splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <Module.Ref
+                <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
@@ -169,7 +169,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
               <% {:content, _} -> %>
                 <%= if @module_multi do %>
-                  <Module.Entries
+                  <.live_component
+                    module={Module.Entries}
                     id={"#{@uid}-entries"}
                     uid={@uid}
                     entry_template={@entry_template}
@@ -178,23 +179,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                     base_form={@base_form}
                   />
                 <% else %>
-                  {"{{ content }}"}
+                  <%= "{{ content }}" %>
                 <% end %>
 
               <% {:variable, var_name, variable_value} -> %>
                 <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
-                  {variable_value}
+                  <%= variable_value %>
                 </div>
 
               <% _ -> %>
-                {raw split}
+                <%= raw split %>
             <% end %>
           <% end %>
-          {hidden_input @block_data, :module_id}
-          {hidden_input @block_data, :sequence}
-          {hidden_input @block_data, :multi}
+          <%= hidden_input @block_data, :module_id %>
+          <%= hidden_input @block_data, :sequence %>
+          <%= hidden_input @block_data, :multi %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form.MetaDrawer do
   use BrandoAdmin, :live_component
+  import Brando.HTML, only: [render_classes: 1]
   alias BrandoAdmin.Components.Form.Input
 
   # prop form, :form, required: true
@@ -10,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={"drawer", "meta-drawer", open: @status == :open}>
+    <div class={render_classes(["drawer", "meta-drawer", open: @status == :open])}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
@@ -30,15 +31,15 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </div>
         <div class="drawer-form">
           <div class="brando-input">
-            <Input.Text field={:meta_title} form={@form} />
+            <Input.Text.render field={:meta_title} form={@form} />
           </div>
 
           <div class="brando-input">
-            <Input.Textarea field={:meta_description} form={@form} />
+            <Input.Textarea.render field={:meta_description} form={@form} />
           </div>
 
           <div class="brando-input">
-            <Input.Image
+            <Input.Image.render
               id={"#{@form.id}-meta-image"}
               field={:meta_image}
               uploads={@uploads}

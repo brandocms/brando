@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.PaletteCreateLive do
     ~H"""
     <Content.header title={gettext("Create palette")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="palette_form"
       current_user={@current_user}
       schema={@schema}

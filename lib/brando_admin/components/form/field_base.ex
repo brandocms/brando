@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   use Phoenix.Component
   use Phoenix.HTML
   import Phoenix.HTML.Form, only: [input_id: 2]
+  import Brando.HTML, only: [render_classes: 1]
   alias BrandoAdmin.Components.Form.ErrorTag
 
   # prop form, :form
@@ -23,17 +24,20 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
 
     assigns =
       assigns
+      |> assign_new(:header, fn -> nil end)
+      |> assign_new(:meta, fn -> nil end)
+      |> assign_new(:class, fn -> nil end)
       |> assign(:failed, failed)
       |> assign(:label, label)
 
     ~H"""
     <div
-      class={["field-wrapper", @class]}
+      class={render_classes(["field-wrapper", @class])}
       id={"#{@form.id}-#{@field}-field-wrapper"}>
       <div :if={@field} class="label-wrapper">
         <label
           for={input_id(@form, @field)}
-          class={["control-label", failed: @failed]}>
+          class={render_classes(["control-label", failed: @failed])}>
           <span><%= @label %></span>
         </label>
         <%= if @form do %>

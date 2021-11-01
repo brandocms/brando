@@ -2,8 +2,8 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
 
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.PolyInputs
   alias BrandoAdmin.Components.Form.FieldBase
 
   import Brando.Gettext
@@ -26,12 +26,12 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <FieldBase
+      <FieldBase.render
         form={@form}
         field={@subform.field}
         label={@label}
         instructions={@instructions}
-        class={subform: true}>
+        class={[subform: true]}>
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
           phx-hook="Brando.SubFormSortable">
@@ -39,7 +39,10 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
             <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
             <div class="subform-empty">&rarr; No associated entries</div>
           <% end %>
-          <PolyInputs form={@form} for={@subform.field} :let={form: var, index: index}>
+          <Form.poly_inputs
+            form={@form}
+            for={@subform.field}
+            let={%{form: var, index: index}}>
             <div
               class="subform-entry flex-row"
               data-id={index}>
@@ -56,9 +59,13 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                 </button>
               </div>
 
-              <RenderVar id={"#{@form.id}-#{@subform.field}-render-var-#{index}"} var={var} render={:all} edit />
+              <.live_component module={RenderVar}
+                id={"#{@form.id}-#{@subform.field}-render-var-#{index}"}
+                var={var}
+                render={:all}
+                edit />
             </div>
-          </PolyInputs>
+          </Form.poly_inputs>
         </div>
         <button
           id={"#{@form.id}-#{@subform.field}-add-entry"}
@@ -67,9 +74,9 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           :on-click="add_subentry"
           phx-page-loading>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
-          {gettext("Add entry")}
+          <%= gettext("Add entry") %>
         </button>
-      </FieldBase>
+      </FieldBase.render>
     </fieldset>
     """
   end

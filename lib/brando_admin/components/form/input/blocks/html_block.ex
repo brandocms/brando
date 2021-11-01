@@ -38,7 +38,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HtmlBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+      module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -50,13 +51,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HtmlBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
-            {@ref_description}
+            <%= @ref_description %>
           <% end %>
         </:description>
         <div class="html-block">
-          <Input.Code id={"#{@uid}-html-text"} form={@block_data} field={:text} />
+          <Input.Code.render id={"#{@uid}-html-text"} form={@block_data} field={:text} />
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

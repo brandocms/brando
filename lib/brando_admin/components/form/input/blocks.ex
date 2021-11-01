@@ -53,26 +53,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   def render(assigns) do
     ~H"""
-    <FieldBase.render
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}>
-      <Blocks.BlockRenderer.live_component
-        id={"#{@form.id}-#{@field}-blocks"}
-        base_form={@form}
-        blocks={@blocks}
-        block_forms={@block_forms}
-        uploads={@uploads}
-        templates={@templates}
-        data_field={@data_field}
-        insert_index={@insert_index}
-        insert_block="insert_block"
-        insert_section="insert_section"
-        insert_datasource="insert_datasource"
-        show_module_picker="show_module_picker"
-        duplicate_block="duplicate_block" />
-    </FieldBase.render>
+    <div>
+      <FieldBase.render
+        form={@form}
+        field={@field}
+        label={@label}
+        instructions={@instructions}>
+        <.live_component
+          module={Blocks.BlockRenderer}
+          id={"#{@form.id}-#{@field}-blocks"}
+          base_form={@form}
+          blocks={@blocks}
+          block_forms={@block_forms}
+          uploads={@uploads}
+          templates={@templates}
+          data_field={@data_field}
+          insert_index={@insert_index}
+          insert_block="insert_block"
+          insert_section="insert_section"
+          insert_datasource="insert_datasource"
+          show_module_picker="show_module_picker"
+          duplicate_block="duplicate_block" />
+      </FieldBase.render>
+    </div>
     """
   end
 

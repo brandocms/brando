@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Pages.PageFragmentCreateLive do
     <Content.header
       title={gettext("Create fragment")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="fragment_form"
       current_user={@current_user}
       schema={@schema}

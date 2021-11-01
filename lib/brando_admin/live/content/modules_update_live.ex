@@ -45,10 +45,11 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       <.form for={@changeset} let={form} change="validate" submit="save">
         <div class="block-editor">
           <div class="code">
-            <Input.Code.live_component id={"#{form.id}-code"} form={form} field={:code} />
+            <.live_component module={Input.Code} id={"#{form.id}-code"} form={form} field={:code} />
           </div>
 
-          <ModuleProps.live_component
+          <.live_component
+            module={ModuleProps}
             id="module-props"
             form={form}
             create_ref="create_ref"
@@ -62,7 +63,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           />
         </div>
         <%= if input_value(form, :wrapper) do %>
-          <Form.inputs form={form} for={:entry_template} let={[form: entry]}>
+          <Form.inputs form={form} for={:entry_template} let={%{form: entry}}>
             <div class="entry-template">
               <hr>
               <h2>Entry template</h2>
@@ -72,12 +73,13 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
               <div class="block-editor">
                 <div class="code">
-                  <Input.Code.live_component id={"#{entry.id}-entry-code"} form={entry} field={:code} />
+                  <.live_component module={Input.Code} id={"#{entry.id}-entry-code"} form={entry} field={:code} />
                 </div>
 
-                {hidden_input entry, :id, value: 2107}
+                <%= hidden_input entry, :id, value: 2107 %>
 
-                <ModuleProps.live_component
+                <.live_component
+                  module={ModuleProps}
                   id={"entry-module-props-#{entry.id}"}
                   form={entry}
                   entry_form

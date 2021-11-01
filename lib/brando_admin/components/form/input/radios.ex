@@ -49,26 +49,28 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
       )
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div
-        :if={Enum.count(@input_options)}
-        class="radios-wrapper">
-        <div
-          :for={opt <- @input_options}
-          class="form-check">
-          <label class="form-check-label">
-            {radio_button @form, @field, opt.value, class: "form-check-input"}
-            <span class="label-text">{opt.label}</span>
-          </label>
+      <%= if Enum.count(@input_options) do %>
+        <div class="radios-wrapper">
+          <%= for opt <- @input_options do %>
+            <div class="form-check">
+              <label class="form-check-label">
+                <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
+                <span class="label-text">
+                  <%= opt.label %>
+                </span>
+              </label>
+            </div>
+          <% end %>
         </div>
-      </div>
-    </FieldBase>
+      <% end %>
+    </FieldBase.render>
     """
   end
 end

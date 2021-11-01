@@ -43,19 +43,18 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
     ~H"""
     <%= if @input.__struct__ == Brando.Blueprint.Form.Subform do %>
       <%= if @input.component do %>
-        <%= live_component(@input.component,
-          id: "#{@form.id}-#{@input.field}-custom-component",
-          form: @form,
-          label: @label,
-          instructions: @instructions,
-          placeholder: @placeholder,
-          subform: @input,
-          uploads: @uploads,
-          current_user: @current_user,
-          opts: []
-        ) %>
-      <%= else %>
-        <Subform.live_component
+        <.live_component module={@input.component}
+          id={"#{@form.id}-#{@input.field}-custom-component"}
+          form={@form}
+          label={@label}
+          instructions={@instructions}
+          placeholder={@placeholder}
+          subform={@input}
+          uploads={@uploads}
+          current_user={@current_user}
+          opts={[]} />
+      <% else %>
+        <.live_component module={Subform}
           id={"#{@form.id}-subform-#{@input.field}"}
           form={@form}
           uploads={@uploads}
@@ -65,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           placeholder={@placeholder}
           current_user={@current_user} />
       <% end %>
-    <%= else %>
+    <% else %>
       <Input.render
         id={"#{@form.id}-#{@input.name}"}
         form={@form}

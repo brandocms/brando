@@ -40,7 +40,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -52,16 +53,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
-            {@ref_description}
+            <%= @ref_description %>
           <% end %>
         </:description>
         <:config>
-          <Input.Code id={"#{@uid}-svg-code"} form={@block_data} field={:code} />
-          <Input.Text form={@block_data} field={:class} />
+          <Input.Code.render id={"#{@uid}-svg-code"} form={@block_data} field={:code} />
+          <Input.Text.render form={@block_data} field={:class} />
         </:config>
         <div class="svg-block" phx-hook="Brando.SVGDrop" id={"#{@uid}-svg-drop"} data-target={@myself}>
           <%= if v(@block_data, :code) do %>
-            {v(@block_data, :code) |> raw}
+            <%= v(@block_data, :code) |> raw %>
           <% else %>
             <div class="empty">
               <figure>
@@ -73,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
             </div>
           <% end %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

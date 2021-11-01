@@ -29,19 +29,19 @@ defmodule BrandoAdmin.Components.Form.Input.Password do
       )
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {password_input @form, @field,
+      <%= password_input @form, @field,
         placeholder: @placeholder,
         disabled: @disabled,
         phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}"}
-    </FieldBase>
+        class: "text#{@monospace && " monospace" || ""}" %>
+    </FieldBase.render>
     """
   end
 end

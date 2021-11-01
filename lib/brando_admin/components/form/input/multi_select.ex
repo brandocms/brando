@@ -6,8 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
 
-  alias Surface.Components.Form
-
   # prop form, :form
   # prop field, :atom
   # prop label, :string
@@ -187,19 +185,18 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def render(assigns) do
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-
       <%= if Enum.empty?(@selected_labels) do %>
-        {hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: ""}
+        <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: "" %>
       <% else %>
         <%= for opt <- @selected_options do %>
-          {hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt}
+          <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt %>
         <% end %>
       <% end %>
 
@@ -218,7 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   cy="6"
                   cx="6" />
               </svg>
-              <div class="selected-label-text">{lbl}</div>
+              <div class="selected-label-text"><%= lbl %></div>
             </div>
           <% end %>
         </div>
@@ -227,11 +224,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       <div class="multiselect">
         <div>
           <span>
-            <%= if slot_assigned?(:default) do %>
-              <#slot />
+            <%= if @inner_block do %>
+              <%= render_slot @inner_block %>
             <% else %>
               <%= if @selected_options do %>
-                {@label |> raw}
+                <%= @label |> raw %>
               <% else %>
                 No selection
               <% end %>
@@ -249,7 +246,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             Select
           <% end %>
         </button>
-        <Modal title="Select options" id={@modal_id} narrow={@narrow}>
+        <.live_component module={Modal} title="Select options" id={@modal_id} narrow={@narrow}>
           <:header>
             <%= if @select_form && !@creating do %>
               <button class="header-button" type="button" :on-click="show_form">Create {@singular}</button>
@@ -281,11 +278,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   <%= for opt <- @input_options do %>
                     <button
                       type="button"
-                      class={"options-option", "option-selected": opt.value in @selected_options}
+                      class={[
+                        "options-option": true,
+                        "option-selected": opt.value in @selected_options
+                      ]}
                       data-label={opt.label}
                       value={opt.value}
                       :on-click="select_option">
-                      {opt.label |> raw}
+                      <%= opt.label |> raw %>
                     </button>
                   <% end %>
                 </div>
@@ -319,24 +319,24 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                           cy="6"
                           cx="6" />
                       </svg>
-                      <div class="selected-label-text">{lbl}</div>
+                      <div class="selected-label-text"><%= lbl %></div>
                     </div>
                   <% end %>
                 <% end %>
               </div>
             <% else %>
               <%= if @select_form do %>
-                <Form
+                <.form
                   for={@select_changeset}
                   change="validate_new_entry"
-                  :let={form: entry_form}>
+                  let={entry_form}>
                   <%= for tab <- @select_form.tabs do %>
                     <div
-                      class={"form-tab", active: true}
+                      class={["form-tab": true, active: true]}
                       data-tab-name={tab.name}>
                       <div class="row">
                         <%= for fieldset <- tab.fields do %>
-                          <Fieldset
+                          <Fieldset.render
                             translations={@form_translations}
                             form={entry_form}
                             uploads={[]}
@@ -355,13 +355,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     type="button" class="secondary">
                     Cancel
                   </button>
-                </Form>
+                </.form>
               <% end %>
             <% end %>
           </div>
-        </Modal>
+        </.live_component>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 

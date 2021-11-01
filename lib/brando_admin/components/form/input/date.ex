@@ -59,9 +59,9 @@ defmodule BrandoAdmin.Components.Form.Input.Date do
             <button
               type="button"
               class="clear-datetime">
-              {gettext "Clear"}
+              <%= gettext "Clear" %>
             </button>
-            {hidden_input @form, @field, value: @value, class: "flatpickr"}
+            <%= hidden_input @form, @field, value: @value, class: "flatpickr" %>
           </div>
       </div>
     </FieldBase.render>

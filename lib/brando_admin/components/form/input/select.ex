@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
-  alias Surface.Components.Form
 
   # prop form, :form
   # prop field, :atom
@@ -75,6 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(:entry_form, entry_form)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
+     |> assign_new(:inner_block, fn -> nil end)
      |> assign_new(:modal_id, fn ->
        "select-#{assigns.form.id}-#{assigns.field}-modal"
      end)}
@@ -169,126 +169,128 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def render(assigns) do
     ~H"""
-    <FieldBase
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}>
+    <div>
+      <FieldBase.render
+        form={@form}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
 
-      {hidden_input @form, @field, value: @selected_option}
+        <%= hidden_input @form, @field, value: @selected_option %>
 
-      <div class="multiselect">
-        <div>
-          <span class="select-label">
-            <%= if slot_assigned?(:default) do %>
-              <#slot />
-            <% else %>
-              <%= if @selected_option do %>
-                {@select_label |> raw}
+        <div class="multiselect">
+          <div>
+            <span class="select-label">
+              <%= if @inner_block do %>
+                <%= render_slot @inner_block %>
               <% else %>
-                No selection
+                <%= if @selected_option do %>
+                  <%= @select_label |> raw %>
+                <% else %>
+                  No selection
+                <% end %>
               <% end %>
+            </span>
+          </div>
+          <button
+            type="button"
+            class="button-edit"
+            :on-click="toggle"
+            phx-value-id={@modal_id}>
+            <%= if @open do %>
+              Close
+            <% else %>
+              Select
             <% end %>
-          </span>
-        </div>
-        <button
-          type="button"
-          class="button-edit"
-          :on-click="toggle"
-          phx-value-id={@modal_id}>
-          <%= if @open do %>
-            Close
-          <% else %>
-            Select
-          <% end %>
-        </button>
-        <Modal title="Select option" id={@modal_id} narrow={@narrow}>
-          <div class="select-modal">
-            <%= if @show_filter && !Enum.empty?(@input_options) do %>
-              <div
-                id={"#{@form.id}-#{@field}-select-modal-filter"}
-                class="select-filter"
-                phx-hook="Brando.SelectFilter">
-                <div class="field-wrapper">
-                  <div class="label-wrapper">
-                    <label for="select-modal-search" class="control-label">
-                      <span>{gettext("Filter options")}</span>
-                    </label>
-                  </div>
-                  <div class="field-base">
-                    <input class="text" name="select-modal-search" type="text" value={@filter_string}>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-
-            <div class="options">
-              <h2 class="titlecase">Available options</h2>
-              <%= if Enum.empty?(@input_options) do %>
-                {gettext("No options found")}
-              <% end %>
-              <%= for opt <- @input_options do %>
-                <button
-                  type="button"
-                  class={"options-option", "option-selected": opt.value == @selected_option}
-                  data-label={opt.label}
-                  value={opt.value}
-                  :on-click="select_option">
-                  {opt.label |> raw}
-                </button>
-              <% end %>
-            </div>
-
-            <%= if @select_form do %>
-              <Form
-                for={@select_changeset}
-                change="validate_new_entry"
-                :let={form: entry_form}>
-                {gettext("Create entry")}
-
-                <code style="font-family: monospace; font-size: 11px"><pre>
-                {inspect @select_changeset, pretty: true}
-                </pre></code>
-                <br>
-                <%= for tab <- @select_form.tabs do %>
-                  <div
-                    class={"form-tab", active: true}
-                    data-tab-name={tab.name}>
-                    <div class="row">
-                      <%= for fieldset <- tab.fields do %>
-                        <Fieldset
-                          translations={@form_translations}
-                          form={entry_form}
-                          uploads={[]}
-                          fieldset={fieldset} />
-                      <% end %>
+          </button>
+          <.live_component module={Modal} title="Select option" id={@modal_id} narrow={@narrow}>
+            <div class="select-modal">
+              <%= if @show_filter && !Enum.empty?(@input_options) do %>
+                <div
+                  id={"#{@form.id}-#{@field}-select-modal-filter"}
+                  class="select-filter"
+                  phx-hook="Brando.SelectFilter">
+                  <div class="field-wrapper">
+                    <div class="label-wrapper">
+                      <label for="select-modal-search" class="control-label">
+                        <span><%= gettext("Filter options") %></span>
+                      </label>
+                    </div>
+                    <div class="field-base">
+                      <input class="text" name="select-modal-search" type="text" value={@filter_string}>
                     </div>
                   </div>
-                <% end %>
-                <button
-                  :on-click="save_new_entry"
-                  type="button" class="primary">
-                  {gettext("Save")}
-                </button>
-              </Form>
-            <% end %>
+                </div>
+              <% end %>
 
-            <%= if @resetable do %>
-              <div class="reset">
-                <button
-                  type="button"
-                  class="secondary"
-                  :on-click="reset">
-                  {gettext("Reset value")}
-                </button>
+              <div class="options">
+                <h2 class="titlecase">Available options</h2>
+                <%= if Enum.empty?(@input_options) do %>
+                  <%= gettext("No options found") %>
+                <% end %>
+                <%= for opt <- @input_options do %>
+                  <button
+                    type="button"
+                    class={["options-option": true, "option-selected": opt.value == @selected_option]}
+                    data-label={opt.label}
+                    value={opt.value}
+                    :on-click="select_option">
+                    <%= opt.label |> raw %>
+                  </button>
+                <% end %>
               </div>
-            <% end %>
-          </div>
-        </Modal>
-      </div>
-    </FieldBase>
+
+              <%= if @select_form do %>
+                <.form
+                  for={@select_changeset}
+                  change="validate_new_entry"
+                  let={entry_form}>
+                  <%= gettext("Create entry") %>
+
+                  <code style="font-family: monospace; font-size: 11px"><pre>
+                  <%= inspect @select_changeset, pretty: true %>
+                  </pre></code>
+                  <br>
+                  <%= for tab <- @select_form.tabs do %>
+                    <div
+                      class={"form-tab active"}
+                      data-tab-name={tab.name}>
+                      <div class="row">
+                        <%= for fieldset <- tab.fields do %>
+                          <Fieldset.render
+                            translations={@form_translations}
+                            form={entry_form}
+                            uploads={[]}
+                            fieldset={fieldset} />
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                  <button
+                    :on-click="save_new_entry"
+                    type="button" class="primary">
+                    <%= gettext("Save") %>
+                  </button>
+                </.form>
+              <% end %>
+
+              <%= if @resetable do %>
+                <div class="reset">
+                  <button
+                    type="button"
+                    class="secondary"
+                    :on-click="reset">
+                    <%= gettext("Reset value") %>
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </.live_component>
+        </div>
+      </FieldBase.render>
+    </div>
     """
   end
 

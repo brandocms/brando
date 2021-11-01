@@ -19,7 +19,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
       on_mount({__MODULE__, :hooks})
 
-      def hooks(params, assigns, socket) do
+      def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema))
       end
 

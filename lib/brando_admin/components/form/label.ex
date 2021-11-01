@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Label do
   use Phoenix.Component
+  import Brando.HTML, only: [render_classes: 1]
 
   # prop form, :form
   # prop field, :any
@@ -21,8 +22,8 @@ defmodule BrandoAdmin.Components.Form.Label do
       end)
 
     ~H"""
-    <label class={@class} for={@input_id}>
-      <#slot />
+    <label class={render_classes(@class)} for={@input_id}>
+      <%= render_slot @inner_block %>
     </label>
     """
   end

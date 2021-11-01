@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.CircleDropdown
-  alias BrandoAdmin.Components.DropdownButton
+  alias BrandoAdmin.Components.Button
 
   # prop form, :form, required: true
   # prop current_user, :any, required: true
@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={"drawer", "revisions-drawer", open: @status == :open}>
+    <div class={[drawer: true, "revisions-drawer": true, open: @status == :open]}>
       <%= if @status == :open do %>
         <div class="inner">
           <div class="drawer-header">
@@ -130,12 +130,12 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             <table class="revisions-table">
               <%= for revision <- @revisions do %>
                 <tr
-                  class={"revisions-line", active: @active_revision == revision.revision}
+                  class={["revisions-line": true, active: @active_revision == revision.revision]}
                   :on-click="select_revision"
                   phx-value-revision={revision.revision}
                   phx-page-loading>
                   <td class="fit">
-                    #{revision.revision}
+                    #<%= revision.revision %>
                   </td>
                   <td class="fit">
                     <%= if revision.active do %>
@@ -148,44 +148,44 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <% end %>
                   </td>
                   <td class="date fit">
-                    {Calendar.strftime(revision.inserted_at, "%d/%m/%y")}, {Calendar.strftime(revision.inserted_at, "%H:%M")}
+                    <%= Calendar.strftime(revision.inserted_at, "%d/%m/%y") %>, <%= Calendar.strftime(revision.inserted_at, "%H:%M") %>
                   </td>
                   <td class="user">{revision.creator.name}</td>
                   <td class="activate fit">
-                    <CircleDropdown
+                    <CircleDropdown.render
                       id={"revision-dropdown-#{revision.revision}"}>
-                      <DropdownButton
+                      <Button.dropdown
                         confirm="Are you sure you want to activate this version?"
                         event="activate_revision"
                         value={revision.revision}>
                         Activate revision
-                      </DropdownButton>
+                      </Button.dropdown>
                       <%= if revision.protected do %>
-                        <DropdownButton
+                        <Button.dropdown
                           event="unprotect_revision"
                           value={revision.revision}
                           loading>
                           Unprotect version
-                        </DropdownButton>
+                        </Button.dropdown>
                       <% else %>
-                        <DropdownButton
+                        <Button.dropdown
                           event="protect_revision"
                           value={revision.revision}
                           loading>
                           Protect version
-                        </DropdownButton>
+                        </Button.dropdown>
                       <% end %>
                       <%= if !revision.protected && !revision.active do %>
-                        <DropdownButton
+                        <Button.dropdown
                           confirm="Are you sure you want to delete this?"
                           event="delete_revision"
                           value={revision.revision}
                           loading>
                           Delete version
-                        </DropdownButton>
+                        </Button.dropdown>
                       <% end %>
-                    </CircleDropdown>
-                    {!--
+                    </CircleDropdown.render>
+                    <!--
                     <CircleDropdown>
                       <li v-if="!revision.active">
                         <button
@@ -241,7 +241,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         </KModal>
                       </li>
                     </CircleDropdown>
-                    --}
+                    -->
                   </td>
                 </tr>
                 <%= if revision.description do %>
@@ -250,7 +250,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     :class="{ active: $parent.activeRevision.revision === revision.revision }"
                     class="revisions-line">
                     <td colspan="3"></td>
-                    <td colspan="3" class="revision-description">&uarr; {revision.description}</td>
+                    <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
                   </tr>
                 <% end %>
               <% end %>

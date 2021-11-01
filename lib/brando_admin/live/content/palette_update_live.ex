@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.PaletteUpdateLive do
     ~H"""
     <Content.header title={gettext("Edit palette")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="palette_form"
       entry_id={@entry_id}
       current_user={@current_user}

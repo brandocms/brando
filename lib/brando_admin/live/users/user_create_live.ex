@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Users.UserCreateLive do
       title="Users"
       subtitle="Create user" />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="user_form"
       current_user={@current_user}
       schema={@schema}

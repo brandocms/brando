@@ -52,21 +52,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       end
 
     ~H"""
-    {live_component(@block_module,
-      id: @block_id || @random_id,
-      block: @block,
-      is_ref?: @is_ref?,
-      base_form: @base_form,
-      data_field: @data_field,
-      index: @index,
-      belongs_to: @belongs_to,
-      ref_name: @ref_name,
-      ref_description: @ref_description,
-      block_count: @block_count,
-      insert_block: @insert_block,
-      duplicate_block: @duplicate_block,
-      uploads: @uploads
-    )}
+    <.live_component
+      module={@block_module}
+      id={@block_id || @random_id}
+      block={@block}
+      is_ref?={@is_ref?}
+      base_form={@base_form}
+      data_field={@data_field}
+      index={@index}
+      belongs_to={@belongs_to}
+      ref_name={@ref_name}
+      ref_description={@ref_description}
+      block_count={@block_count}
+      insert_block={@insert_block}
+      duplicate_block={@duplicate_block}
+      uploads={@uploads} />
     """
   end
 end

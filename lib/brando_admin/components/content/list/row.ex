@@ -1,9 +1,10 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
   use BrandoAdmin, :live_component
   import Brando.Utils.Datetime
+  import Brando.Gettext
 
   alias Brando.Trait
-  alias BrandoAdmin.Components.Content.List.Row
+  alias BrandoAdmin.Components.Badge
 
   # prop entry, :any
   # prop selected_rows, :list
@@ -137,7 +138,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <% :children_button -> %>
           <div
             class={[{@class, true}, "col-#{@columns}": @columns, "offset-#{@offset}": @offset]}>
-            <ChildrenButton.live_component
+            <.live_component module={ChildrenButton}
               id={"#{@entry.id}-children-button"}
               fields={@field.name}
               entry={@entry} />
@@ -155,6 +156,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
+
     assigns =
       assigns
       |> assign(:language, language)
@@ -219,8 +221,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def status(assigns) do
-    assigns =
-      assign_new(assigns, :json_statuses, fn -> json_statuses() end)
+    assigns = assign_new(assigns, :json_statuses, fn -> json_statuses() end)
 
     ~H"""
     <%= cond do %>

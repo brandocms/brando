@@ -39,7 +39,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -51,25 +52,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
-            {@ref_description}
+            <%= @ref_description %>
           <% else %>
-            {@text_type}
+            <%= @text_type %>
           <% end %>
         </:description>
         <:config>
           <%= for block_data <- inputs_for(@block, :data) do %>
-            <Radios
+            <Radios.render
               form={block_data}
               field={:type}
               label="Type"
-              opts={options: [
+              opts={[options: [
                 %{label: "Paragraph", value: "paragraph"},
                 %{label: "Lede", value: "lede"},
-              ]} />
+              ]]} />
           <% end %>
         </:config>
         <%= for block_data <- inputs_for(@block, :data) do %>
-          <div class={"text-block", @text_type}>
+          <div class={["text-block", @text_type]}>
             <div class="tiptap-wrapper" id={"#{@uid}-rich-text-wrapper"}>
               <div
                 id={"#{@uid}-rich-text"}
@@ -88,11 +89,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 </div>
               </div>
             </div>
-            {hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750}
-            {hidden_input block_data, :extensions}
+            <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750 %>
+            <%= hidden_input block_data, :extensions %>
           </div>
         <% end %>
-      </Block>
+      </.live_component>
     </div>
     """
   end

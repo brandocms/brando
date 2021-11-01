@@ -33,20 +33,20 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
       )
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {textarea @form, @field,
+      <%= textarea @form, @field,
         class: "text",
         placeholder: @placeholder,
         rows: @rows,
         disabled: @disabled,
-        phx_debounce: @debounce}
-    </FieldBase>
+        phx_debounce: @debounce %>
+    </FieldBase.render>
     """
   end
 end

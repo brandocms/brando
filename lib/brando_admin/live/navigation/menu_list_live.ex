@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Navigation.Menu
   import Brando.Gettext
   alias BrandoAdmin.Components.Content
-  alias Surface.Components.LivePatch
 
   def render(assigns) do
     ~H"""
@@ -12,7 +11,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
       <%= live_patch "Create new", to: "/admin/navigation/menu/create", class: "primary" %>
     </Content.header>
 
-    <Content.List.live_component
+    <.live_component module={Content.List}
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}

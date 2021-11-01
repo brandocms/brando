@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Sites.IdentityLive do
       title="Identity"
       subtitle="Update identity" />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="identity_form"
       entry_id={@entry_id}
       current_user={@current_user}

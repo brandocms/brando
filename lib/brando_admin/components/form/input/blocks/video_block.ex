@@ -44,7 +44,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       class="video-block"
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -55,60 +56,60 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
         wide_config>
-        <:description>{v(@block_data, :url)}</:description>
+        <:description><%= v(@block_data, :url) %></:description>
         <:config>
           <%= if v(@block_data, :remote_id) do %>
             <div class="panels">
               <div class="panel">
                 <img src={v(@block_data, :thumbnail_url)} />
                 <div class="information">
-                  <strong>Title:</strong> {v(@block_data, :title)}<br>
-                  <strong>Dimensions:</strong> {v(@block_data, :width)}&times;{v(@block_data, :height)}
+                  <strong>Title:</strong> <%= v(@block_data, :title) %><br>
+                  <strong>Dimensions:</strong> <%= v(@block_data, :width) %>&times;<%= v(@block_data, :height) %>
                 </div>
               </div>
               <div class="panel">
-                {hidden_input @block_data, :url}
-                {hidden_input @block_data, :source}
-                {hidden_input(@block_data, :width)}
-                {hidden_input(@block_data, :height)}
-                {hidden_input(@block_data, :remote_id)}
-                {hidden_input(@block_data, :thumbnail_url)}
+                <%= hidden_input @block_data, :url %>
+                <%= hidden_input @block_data, :source %>
+                <%= hidden_input(@block_data, :width) %>
+                <%= hidden_input(@block_data, :height) %>
+                <%= hidden_input(@block_data, :remote_id) %>
+                <%= hidden_input(@block_data, :thumbnail_url) %>
 
-                <Input.Text form={@block_data} field={:title} />
-                <Input.Text form={@block_data} field={:poster} />
+                <Input.Text.render form={@block_data} field={:title} />
+                <Input.Text.render form={@block_data} field={:poster} />
                 <%= if v(@block_data, :cover) in ["false", "svg"] do %>
-                  {hidden_input(@block_data, :cover)}
+                  <%= hidden_input(@block_data, :cover) %>
                 <% else %>
-                  <Input.Text form={@block_data} field={:cover} />
+                  <Input.Text.render form={@block_data} field={:cover} />
                 <% end %>
 
-                {hidden_input(@block_data, :opacity)}
-                {hidden_input(@block_data, :play_button)}
+                <%= hidden_input(@block_data, :opacity) %>
+                <%= hidden_input(@block_data, :play_button) %>
 
-                <Input.Toggle form={@block_data} field={:autoplay} />
-                <Input.Toggle form={@block_data} field={:preload} />
+                <Input.Toggle.render form={@block_data} field={:autoplay} />
+                <Input.Toggle.render form={@block_data} field={:preload} />
               </div>
             </div>
           <% else %>
-            {hidden_input @block_data, :url}
-            {hidden_input @block_data, :source}
-            {hidden_input(@block_data, :width)}
-            {hidden_input(@block_data, :height)}
-            {hidden_input(@block_data, :remote_id)}
-            {hidden_input(@block_data, :thumbnail_url)}
-            {hidden_input(@block_data, :title)}
-            {hidden_input(@block_data, :poster)}
-            {hidden_input(@block_data, :cover)}
-            {hidden_input(@block_data, :opacity)}
-            {hidden_input(@block_data, :autoplay)}
-            {hidden_input(@block_data, :preload)}
-            {hidden_input(@block_data, :play_button)}
+            <%= hidden_input @block_data, :url %>
+            <%= hidden_input @block_data, :source %>
+            <%= hidden_input(@block_data, :width) %>
+            <%= hidden_input(@block_data, :height) %>
+            <%= hidden_input(@block_data, :remote_id) %>
+            <%= hidden_input(@block_data, :thumbnail_url) %>
+            <%= hidden_input(@block_data, :title) %>
+            <%= hidden_input(@block_data, :poster) %>
+            <%= hidden_input(@block_data, :cover) %>
+            <%= hidden_input(@block_data, :opacity) %>
+            <%= hidden_input(@block_data, :autoplay) %>
+            <%= hidden_input(@block_data, :preload) %>
+            <%= hidden_input(@block_data, :play_button) %>
 
             <div id={"#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
-              {gettext("Enter the video's URL:")}
+              <%= gettext("Enter the video's URL:") %>
               <input id={"#{@uid}-url"} type="text" class="text">
               <button id={"#{@uid}-button"} type="button" class="secondary small">
-                {gettext("Get video info")}
+                <%= gettext("Get video info") %>
               </button>
             </div>
           <% end %>
@@ -144,8 +145,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             </div>
           </div>
         <% end %>
-
-      </Block>
+      </.live_component>
     </div>
     """
   end

@@ -105,7 +105,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <Form.inputs
         form={@form}
         for={@field}
-        :let={form: identifier_form}>
+        let={%{form: identifier_form}}>
         <%= hidden_input identifier_form, :id %>
         <%= hidden_input identifier_form, :schema %>
         <%= hidden_input identifier_form, :status %>
@@ -128,7 +128,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         <%= gettext("Select entries") %>
       </button>
 
-      <Modal title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
+      <.live_component module={Modal} title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
         <h2 class="titlecase"><%= gettext("Select content type") %></h2>
         <div class="button-group-vertical">
         <%= for {label, schema, _} <- @available_schemas do %>
@@ -148,8 +148,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             />
           <% end %>
         <% end %>
-      </Modal>
-    </FieldBase>
+      </.live_component>
+    </FieldBase.render>
     """
   end
 

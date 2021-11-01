@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.TemplateUpdateLive do
     ~H"""
     <Content.header title={gettext("Edit template")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="template_form"
       entry_id={@entry_id}
       current_user={@current_user}

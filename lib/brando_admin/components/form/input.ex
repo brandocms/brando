@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input do
-  use BrandoAdmin, :live_component
+  use Phoenix.Component
   use Phoenix.HTML
-  alias Surface.Components.Dynamic.Component
 
   # prop current_user, :any
   # prop form, :any
@@ -21,51 +20,36 @@ defmodule BrandoAdmin.Components.Form.Input do
     {:ok, socket}
   end
 
-  def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:component_id, fn ->
-       Enum.join(
-         [assigns.form.id, assigns.field],
-         "-"
-       )
-     end)
-     |> assign_new(:component_module, fn ->
-       case assigns.type do
-         {:component, module} ->
-           module
-
-         type ->
-           input_type = type |> to_string |> Recase.to_pascal()
-           Module.concat([__MODULE__, input_type])
-       end
-     end)}
-  end
-
   defp is_live?(module) do
     {:__live__, 0} in module.__info__(:functions)
   end
 
   def render(assigns) do
-    ~H"""
-    <div class="brando-input">
-      <%= if is_live?(@component_module) do %>
-        {live_component(@component_module,
-          id: @component_id,
-          form: @form,
-          field: @field,
-          label: @label,
-          placeholder: @placeholder,
-          instructions: @instructions,
-          uploads: @uploads,
-          opts: @opts,
-          current_user: @current_user
-        )}
-      <% else %>
-        <Component
+    assigns =
+      assigns
+      |> assign_new(:component_id, fn ->
+        Enum.join(
+          [assigns.form.id, assigns.field],
+          "-"
+        )
+      end)
+      |> assign_new(:component_module, fn ->
+        case assigns.type do
+          {:component, module} ->
+            module
+
+          type ->
+            input_type = type |> to_string |> Recase.to_pascal()
+            Module.concat([__MODULE__, input_type])
+        end
+      end)
+
+    if is_live?(assigns.component_module) do
+      ~H"""
+      <div class="brando-input">
+        <.live_component
           module={@component_module}
-          function={:render}
+          id={@component_id}
           form={@form}
           field={@field}
           label={@label}
@@ -74,8 +58,10 @@ defmodule BrandoAdmin.Components.Form.Input do
           uploads={@uploads}
           opts={@opts}
           current_user={@current_user} />
-      <% end %>
-    </div>
-    """
+      </div>
+      """
+    else
+      apply(assigns.component_module, :render, List.wrap(assigns))
+    end
   end
 end

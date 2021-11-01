@@ -179,7 +179,7 @@ end
 
 defmodule BrandoIntegration.ModuleWithDatasource do
   use Brando.Datasource
-  use BrandoAdmin, :schema
+  use Ecto.Schema
 
   schema "zapp" do
     field :title, :string

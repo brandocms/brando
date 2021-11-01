@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Users.UserUpdateLive do
       title="Users"
       subtitle="Update user" />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="user_form"
       entry_id={@entry_id}
       current_user={@current_user}

@@ -8,7 +8,8 @@ defmodule BrandoAdmin.Sites.GlobalSetCreateLive do
     ~H"""
     <Content.header title={gettext("Create global set")} />
 
-    <Form.live_component
+    <.live_component
+      module={Form}
       id="global_set_form"
       current_user={@current_user}
       schema={@schema}

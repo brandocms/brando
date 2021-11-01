@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={"drawer", "scheduled-publishing-drawer", open: @status == :open}>
+    <div class={[drawer: true, "scheduled-publishing-drawer": true, open: @status == :open]}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </div>
         <div class="drawer-form">
           <div class="brando-input">
-            <Input.Datetime field={:publish_at} form={@form} />
+            <Input.Datetime.render field={:publish_at} form={@form} />
           </div>
         </div>
       </div>

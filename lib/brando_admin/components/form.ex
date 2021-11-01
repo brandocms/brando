@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form do
 
   import Brando.Gettext
   import Ecto.Changeset
+  import Phoenix.HTML.Form
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
 
   alias Brando.Villain
 
@@ -10,7 +12,6 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
-  alias BrandoAdmin.Components.Form.Submit
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   def mount(socket) do
@@ -77,7 +78,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(assigns, socket) do
-    form_name = assigns.name
+    form_name = assigns[:name] || :default
 
     {:ok,
      socket
@@ -99,7 +100,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_addon_statuses()
      |> assign_default_params()
      |> extract_tab_names()
-     |> assign_changeset()}
+     |> assign_changeset()
+     |> maybe_assign_uploads()}
   end
 
   defp assign_entry(%{assigns: %{entry_id: nil}} = socket) do
@@ -123,6 +125,16 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema)
 
     assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
+  end
+
+  defp maybe_assign_uploads(socket) do
+    if connected?(socket) && !socket.assigns[:initial_update] do
+      socket
+      |> assign(:initial_update, true)
+      |> allow_uploads()
+    else
+      socket
+    end
   end
 
   defp add_preloads(%{preload: preloads} = query_params, schema) do
@@ -190,12 +202,12 @@ defmodule BrandoAdmin.Components.Form do
       data-moonwalk-run="brandoForm"
       phx-hook="Brando.Form">
 
-      {!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? --}
+      <!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? -->
       <div class="form-tabs">
         <div class="form-tab-customs">
           <%= for tab <- @tabs do %>
             <button
-              type="button" class={[active: @active_tab == tab]}
+              type="button" class={@active_tab == tab && "active"}
               :on-click="select_tab"
               phx-value-name={tab}>
               <%= tab %>
@@ -211,7 +223,7 @@ defmodule BrandoAdmin.Components.Form do
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
               <span class="tab-text">Meta</span>
             </button>
-          <%= end %>
+          <% end %>
           <%= if @has_revisioning? do %>
             <button
               :on-click="open_revisions_drawer"
@@ -256,7 +268,7 @@ defmodule BrandoAdmin.Components.Form do
         change={JS.push("validate", target: @myself)}>
 
         <%= if @has_meta? do %>
-          <MetaDrawer.live_component
+          <.live_component module={MetaDrawer}
             id={"#{@id}-meta-drawer"}
             blueprint={@blueprint}
             form={f}
@@ -265,7 +277,7 @@ defmodule BrandoAdmin.Components.Form do
         <% end %>
 
         <%= if @has_revisioning? do %>
-          <RevisionsDrawer.live_component
+          <.live_component module={RevisionsDrawer}
             id={"#{@id}-revisions-drawer"}
             current_user={@current_user}
             blueprint={@blueprint}
@@ -275,7 +287,7 @@ defmodule BrandoAdmin.Components.Form do
         <% end %>
 
         <%= if @has_scheduled_publishing? do %>
-          <ScheduledPublishingDrawer.live_component
+          <.live_component module={ScheduledPublishingDrawer}
             id={"#{@id}-scheduled-publishing-drawer"}
             blueprint={@blueprint}
             form={f}
@@ -285,15 +297,16 @@ defmodule BrandoAdmin.Components.Form do
 
         <%= for {tab, _tab_idx} <- Enum.with_index(@form.tabs) do %>
           <div
-            class={["form-tab", active: @active_tab == tab.name]}
+            class={"form-tab#{@active_tab == tab.name && " active"}"}
             data-tab-name={tab.name}>
             <div class="row">
               <%= for {fieldset, fs_idx} <- Enum.with_index(tab.fields) do %>
-                <Form.fieldset
+                <Fieldset.render
                   id={"#{f.id}-fieldset-#{tab.name}-#{fs_idx}"}
-                  blueprint={@blueprint}
+                  translations={@blueprint.translations}
                   form={f}
                   fieldset={fieldset}
+                  uploads={@uploads}
                   current_user={@current_user} />
               <% end %>
             </div>
@@ -310,29 +323,29 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  # def allow_uploads(socket) do
-  #   image_fields = socket.assigns.schema.__image_fields__()
-  #   gallery_fields = socket.assigns.schema.__gallery_fields__()
+  def allow_uploads(socket) do
+    image_fields = socket.assigns.schema.__image_fields__()
+    gallery_fields = socket.assigns.schema.__gallery_fields__()
 
-  #   socket_with_image_uploads =
-  #     Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
-  #       allow_upload(updated_socket, img_field.name,
-  #         accept: :any,
-  #         auto_upload: true,
-  #         progress: &__MODULE__.handle_image_progress/3
-  #       )
-  #     end)
+    socket_with_image_uploads =
+      Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
+        allow_upload(updated_socket, img_field.name,
+          accept: :any,
+          auto_upload: true,
+          progress: &__MODULE__.handle_image_progress/3
+        )
+      end)
 
-  #   Enum.reduce(gallery_fields, socket_with_image_uploads, fn gallery_field, updated_socket ->
-  #     allow_upload(updated_socket, gallery_field.name,
-  #       # TODO: Read max_entries from gallery config!
-  #       max_entries: 10,
-  #       accept: :any,
-  #       auto_upload: true,
-  #       progress: &__MODULE__.handle_gallery_progress/3
-  #     )
-  #   end)
-  # end
+    Enum.reduce(gallery_fields, socket_with_image_uploads, fn gallery_field, updated_socket ->
+      allow_upload(updated_socket, gallery_field.name,
+        # TODO: Read max_entries from gallery config!
+        max_entries: 10,
+        accept: :any,
+        auto_upload: true,
+        progress: &__MODULE__.handle_gallery_progress/3
+      )
+    end)
+  end
 
   def handle_event(
         "open_live_preview",
@@ -518,7 +531,7 @@ defmodule BrandoAdmin.Components.Form do
           socket,
           upload_entry,
           fn meta ->
-            Brando.Upload.handle_upload(meta, upload_entry, cfg)
+            Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user)
           end
         )
 
@@ -590,7 +603,7 @@ defmodule BrandoAdmin.Components.Form do
   def inputs(assigns) do
     ~H"""
     <%= for {form, index} <- Enum.with_index(inputs_for(@form, @for, @opts)) do %>
-      <%= render_slot(@inner_block, form: form, index: index) %>
+      <%= render_slot(@inner_block, %{form: form, index: index}) %>
     <% end %>
     """
   end
@@ -606,12 +619,12 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {map_key, map_value} <- @input_value do %>
-      <%= render_slot @inner_block,
+      <%= render_slot @inner_block, %{
         name: "#{@form.name}[#{@for}][#{map_key}]",
         key: map_key,
         value: map_value,
         subform: @subform
-      %>
+      } %>
     <% end %>
     """
   end
@@ -627,12 +640,12 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {map_key, map_value} <- @input_value do %>
-      <%= render_slot @inner_block,
+      <%= render_slot @inner_block, %{
         name: "#{@subform.name}[#{map_key}]",
         key: map_key,
         value: map_value,
         subform: @subform
-      %>
+      } %>
     <% end %>
     """
   end
@@ -643,7 +656,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {f, index} <- Enum.with_index(inputs_for_poly(@form, @for, @opts)) do %>
       <%= render_slot @inner_block, %{
-        form: f
+        form: f,
         index: index
       } %>
     <% end %>
@@ -665,9 +678,8 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-
   def array_inputs_from_data(assigns) do
-    checked_values = input_value(assigns.for) || []
+    checked_values = input_value(assigns.form, assigns.for) || []
     assigns = assign(assigns, :checked_values, Enum.map(checked_values, &to_string(&1)))
 
     ~H"""
@@ -681,47 +693,6 @@ defmodule BrandoAdmin.Components.Form do
         checked: option.value in @checked_values
       } %>
     <% end %>
-    """
-  end
-
-  def fieldset(assigns) do
-    ~H"""
-    <fieldset class={[
-      @fieldset.size,
-      "align-end": @fieldset.align == :end,
-      inline: @fieldset.style == :inline,
-      shaded: @fieldset.shaded
-    ]}>
-      <%= for input <- @fieldset.fields do %>
-        <%= if input.__struct__ == Brando.Blueprint.Form.Subform do %>
-          <%= if input.component do %>
-            <.live_component
-              module={input.component}
-              id={"#{@form.id}-#{input.field}-custom-component"}
-              form={@form}
-              subform={input}
-              blueprint={@blueprint}
-              current_user={@current_user}
-            />
-          <% else %>
-            <.live_component
-              module={Subform}
-              id={"#{@form.id}-subform-#{input.field}"}
-              blueprint={@blueprint}
-              form={@form}
-              subform={input}
-              current_user={@current_user} />
-          <% end %>
-        <% else %>
-          <.input
-            id={"#{@form.id}-#{input.name}"}
-            input={input}
-            form={@form}
-            blueprint={@blueprint}
-            current_user={@current_user} />
-        <% end %>
-      <% end %>
-    </fieldset>
     """
   end
 

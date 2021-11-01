@@ -35,14 +35,14 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
       end)
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {hidden_input @form, @field, class: "tiptap-text", phx_debounce: 750}
+      <%= hidden_input @form, @field, class: "tiptap-text", phx_debounce: 750 %>
       <div class="tiptap-wrapper" id={"#{@form.id}-#{@field}-rich-text-wrapper"}>
         <div
           id={"#{@form.id}-#{@field}-rich-text"}
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
           </div>
         </div>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

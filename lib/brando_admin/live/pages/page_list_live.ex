@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Pages.PageListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Pages.Page
 
   alias BrandoAdmin.Components.Content
-  alias Surface.Components.LivePatch
   import Brando.Gettext
 
   def render(assigns) do
@@ -13,7 +12,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
       <%= live_patch "Create new", to: "/admin/pages/create", class: "primary" %>
     </Content.header>
 
-    <Content.List.live_component
+    <.live_component module={Content.List}
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}

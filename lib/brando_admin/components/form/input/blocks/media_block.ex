@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
-            {@ref_description}
+            <%= @ref_description %>
           <% end %>
         </:description>
         <div class="media-block">
@@ -68,13 +68,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             </div>
             <div class="buttons">
               <%= if "picture" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="picture">{gettext("Picture")}</button>
+                <button type="button" class="tiny" :on-click="select_block" phx-value-block="picture"><%= gettext("Picture") %></button>
               <% end %>
               <%= if "video" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="video">{gettext("Video")}</button>
+                <button type="button" class="tiny" :on-click="select_block" phx-value-block="video"><%= gettext("Video") %></button>
               <% end %>
               <%= if "gallery" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="gallery">{gettext("Gallery")}</button>
+                <button type="button" class="tiny" :on-click="select_block" phx-value-block="gallery"><%= gettext("Gallery") %></button>
               <% end %>
               <%= if "svg" in @available_blocks do %>
                 <button type="button" class="tiny" :on-click="select_block" phx-value-block="svg">SVG</button>
@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             </div>
           </div>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

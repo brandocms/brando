@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Sites.GlobalSetUpdateLive do
     ~H"""
     <Content.header title={gettext("Edit global set")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="global_set_form"
       entry_id={@entry_id}
       current_user={@current_user}

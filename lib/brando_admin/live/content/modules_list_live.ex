@@ -14,7 +14,8 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       </button>
     </Content.header>
 
-    <Content.List.live_component
+    <.live_component
+      module={Content.List}
       id={"content_listing_#{@schema}_default"}
       blueprint={@blueprint}
       current_user={@current_user}

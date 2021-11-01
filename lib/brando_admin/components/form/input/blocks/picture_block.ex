@@ -8,11 +8,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias Brando.Utils
   alias Brando.Villain
 
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Form.Inputs
-  alias BrandoAdmin.Components.Form.ArrayInputs
-  alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
   # prop uploads, :any
@@ -78,7 +76,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -90,9 +89,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
-            {@ref_description}
+            <%= @ref_description %>
           <% else %>
-            {@extracted_path}
+            <%= @extracted_path %>
           <% end %>
         </:description>
         <input class="file-input" type="file" />
@@ -101,16 +100,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             <img src={"/media/#{@extracted_path}"} />
             <figcaption :on-click="show_config">
               <div id={"#{@uid}-figcaption-title"}>
-                <span>{gettext("Caption")}</span> {v(@block_data, :title) |> raw}<br>
+                <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
               </div>
               <div id={"#{@uid}-figcaption-alt"}>
-                <span>{gettext("Alt. text")}</span> {v(@block_data, :alt)}
+                <span><%= gettext("Alt. text") %></span> <%= v(@block_data, :alt) %>
               </div>
             </figcaption>
           </div>
         <% end %>
 
-        <div class={"empty upload-canvas", hidden: @extracted_path}>
+        <div class={[empty: true, "upload-canvas": true, hidden: @extracted_path]}>
           <figure>
             <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
@@ -120,12 +119,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </svg>
           </figure>
           <div class="instructions">
-            <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span><br>
+            <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
             <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
           </div>
         </div>
 
-        <Modal
+        <.live_component module={Modal}
           title="Pick image"
           center_header={true}
           id={"#{@uid}-image-picker"}>
@@ -136,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
             <% end %>
           </div>
-        </Modal>
+        </.live_component>
 
         <:config>
           <div class="panels">
@@ -148,8 +147,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
 
                 <div class="image-info">
-                  Path: {@image.path}<br>
-                  Dimensions: {@image.width}&times;{@image.height}<br>
+                  Path: <%= @image.path %><br>
+                  Dimensions: <%= @image.width %>&times;<%= @image.height %><br>
                 </div>
               <% end %>
               <%= if !@extracted_path do %>
@@ -165,65 +164,65 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     </div>
                   </div>
                   <div class="instructions">
-                    <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
+                    <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
                   </div>
                 </div>
               <% end %>
             </div>
             <div class="panel">
-              <Input.RichText form={@block_data} field={:title} />
-              <Input.Text form={@block_data} field={:alt} />
+              <Input.RichText.render form={@block_data} field={:title} />
+              <Input.Text.render form={@block_data} field={:alt} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" :on-click="show_image_picker">
-                  {gettext("Select image")}
+                  <%= gettext("Select image") %>
                 </button>
 
                 <button type="button" class="danger" :on-click="reset_image">
-                  {gettext("Reset image")}
+                  <%= gettext("Reset image") %>
                 </button>
               </div>
             </div>
           </div>
 
-          {hidden_input @block_data, :placeholder}
-          {hidden_input @block_data, :cdn}
-          {hidden_input @block_data, :credits}
-          {hidden_input @block_data, :dominant_color}
-          {hidden_input @block_data, :height}
-          {hidden_input @block_data, :width}
+          <%= hidden_input @block_data, :placeholder %>
+          <%= hidden_input @block_data, :cdn %>
+          <%= hidden_input @block_data, :credits %>
+          <%= hidden_input @block_data, :dominant_color %>
+          <%= hidden_input @block_data, :height %>
+          <%= hidden_input @block_data, :width %>
 
           <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
-            {hidden_input @block_data, :path, value: @extracted_path}
+            <%= hidden_input @block_data, :path, value: @extracted_path %>
             <% else %>
-            {hidden_input @block_data, :path}
+            <%= hidden_input @block_data, :path %>
           <% end %>
 
-          <Inputs
+          <Form.inputs
             form={@block_data}
             for={:focal}
-            :let={form: focal_form}>
-            {hidden_input focal_form, :x}
-            {hidden_input focal_form, :y}
-          </Inputs>
+            let={%{form: focal_form}}>
+            <%= hidden_input focal_form, :x %>
+            <%= hidden_input focal_form, :y %>
+          </Form.inputs>
 
-          <MapInputs
-            :let={value: value, name: name}
+          <Form.map_inputs
+            let={%{value: value, name: name}}
             form={@block_data}
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
-          </MapInputs>
+          </Form.map_inputs>
 
-          <ArrayInputs
-            :let={value: array_value, name: array_name}
+          <Form.array_inputs
+            let={%{value: array_value, name: array_name}}
             form={@block_data}
             for={:formats}>
             <input type="hidden" name={array_name} value={array_value} />
-          </ArrayInputs>
+          </Form.array_inputs>
 
           <input type="hidden" data-upload-formats={@upload_formats} />
         </:config>
-      </Block>
+      </.live_component>
     </div>
     """
   end

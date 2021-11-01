@@ -31,21 +31,21 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
       )
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      {text_input @form, @field,
+      <%= text_input @form, @field,
         class: "text monospace",
         phx_hook: "Brando.Slug",
         phx_debounce: 750,
         data_slug_for: "#{@form.id}_#{@slug_for}",
         autocorrect: "off",
-        spellcheck: "false"}
-    </FieldBase>
+        spellcheck: "false" %>
+    </FieldBase.render>
     """
   end
 end

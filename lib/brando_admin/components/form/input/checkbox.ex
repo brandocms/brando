@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
       class={@class}
       compact={@compact}>
       <div
-        class={"check-wrapper", small: @compact}>
+        class={["check-wrapper": true, small: @compact]}>
         <%= checkbox @form, @field %>
         <%= label @form, @field, @text, class: "control-label#{if @compact, do: " small", else: ""}" %>
       </div>

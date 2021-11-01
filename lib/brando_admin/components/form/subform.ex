@@ -20,16 +20,16 @@ defmodule BrandoAdmin.Components.Form.Subform do
     ~H"""
     <fieldset>
       <%= if @subform.cardinality == :one do %>
-        <FieldBase
+        <FieldBase.render
           form={@form}
           field={@subform.field}
           label={@label}
           instructions={@instructions}
-          class={subform: true}>
+          class={[subform: true]}>
           <%= for sub_form <- inputs_for(@form, @subform.field) do %>
             <div class="subform-entry">
               <%= for input <- @subform.sub_fields do %>
-                <Subform.Field
+                <Subform.Field.render
                   cardinality={:one}
                   form={@form}
                   sub_form={sub_form}
@@ -42,14 +42,14 @@ defmodule BrandoAdmin.Components.Form.Subform do
               <% end %>
             </div>
           <% end %>
-        </FieldBase>
+        </FieldBase.render>
       <% else %>
-        <FieldBase
+        <FieldBase.render
           form={@form}
           field={@subform.field}
           label={@label}
           instructions={@instructions}
-          class={subform: true}>
+          class={[subform: true]}>
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             <% end %>
             <%= for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field)) do %>
               <div
-                class={"subform-entry", inline: @subform.style == :inline}
+                class={["subform-entry": true, inline: @subform.style == :inline]}
                 data-id={index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   </button>
                 </div>
                 <%= for input <- @subform.sub_fields do %>
-                  <Subform.Field
+                  <Subform.Field.render
                     cardinality={:many}
                     form={@form}
                     sub_form={sub_form}
@@ -96,9 +96,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
             :on-click="add_subentry"
             phx-page-loading>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
-            {gettext("Add entry")}
+            <%= gettext("Add entry") %>
           </button>
-        </FieldBase>
+        </FieldBase.render>
       <% end %>
     </fieldset>
     """

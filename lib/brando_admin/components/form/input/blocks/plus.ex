@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Plus do
       class="block-plus"
       type="button"
       phx-value-index={@index}
-      :on-click={@click}>
+      phx-click={@click}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 300 300">

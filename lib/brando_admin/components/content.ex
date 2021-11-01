@@ -1,7 +1,9 @@
-defmodule BrandoAdmin.Component.Content do
+defmodule BrandoAdmin.Components.Content do
   use Phoenix.Component
 
   def header(assigns) do
+    assigns = assign_new(assigns, :inner_block, fn -> nil end)
+
     ~H"""
     <header id="content-header" data-moonwalk-run="brandoHeader">
       <div class="content">
@@ -14,7 +16,9 @@ defmodule BrandoAdmin.Component.Content do
           </h3>
         </section>
         <section class="actions">
-          <%= render_slot @inner_block %>
+          <%= if @inner_block do %>
+            <%= render_slot @inner_block %>
+          <% end %>
         </section>
       </div>
     </header>

@@ -23,31 +23,33 @@ defmodule BrandoAdmin.Components.Form.Input.Toggle do
 
   def render(assigns) do
     assigns =
-      assign(assigns,
+      assigns
+      |> assign(
         class: assigns.opts[:class],
         monospace: assigns.opts[:monospace] || false,
         disabled: assigns.opts[:disabled] || false,
         debounce: assigns.opts[:debounce] || 750,
         compact: assigns.opts[:compact]
       )
+      |> assign_new(:inner_block, fn -> nil end)
 
     ~H"""
-    <FieldBase
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <Label form={@form} field={@field} class={"switch", small: @compact}>
-        <%= if slot_assigned?(:default) do %>
-          <#slot />
+      <Label.render form={@form} field={@field} class={["switch", small: @compact]}>
+        <%= if @inner_block do %>
+          <%= render_slot @inner_block %>
         <% else %>
-          {checkbox @form, @field}
+          <%= checkbox @form, @field %>
         <% end %>
         <div class="slider round"></div>
-      </Label>
-    </FieldBase>
+      </Label.render>
+    </FieldBase.render>
     """
   end
 end

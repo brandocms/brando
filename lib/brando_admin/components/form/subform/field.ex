@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
 
   def render(assigns) do
     ~H"""
-    <Input
+    <Input.render
       id={"#{@form.id}-#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
       form={@sub_form}
       field={@input.name}

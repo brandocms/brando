@@ -19,11 +19,13 @@ defmodule BrandoAdmin.Components.Form.Input.Code do
   # data compact, :boolean
 
   def render(assigns) do
-    assigns = assign(assigns
-       class: assigns.opts[:class],
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact]
-     )
+    assigns =
+      assign(assigns,
+        class: assigns.opts[:class],
+        debounce: assigns.opts[:debounce] || 750,
+        compact: assigns.opts[:compact]
+      )
+
     ~H"""
     <FieldBase.render
       form={@form}

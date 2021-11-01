@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
     ~H"""
     <Content.header title={gettext("Create page")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="page_form"
       current_user={@current_user}
       schema={@schema}

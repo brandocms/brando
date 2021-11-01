@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Modal do
       <div class="modal-backdrop" />
       <div class="modal-dialog" role="document">
         <div class="modal-content">
-          <header class={"modal-header", centered: @center_header}>
+          <header class={["modal-header": true, centered: @center_header]}>
             <h2><%= @title %></h2>
             <div class="header-wrap">
               <%= render_slot @header %>

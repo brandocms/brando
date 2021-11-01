@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Pages.PageFragmentUpdateLive do
     <Content.header
       title={gettext("Edit fragment")} />
 
-    <Form.live_component
+    <.live_component module={Form}
       id="fragment_form"
       entry_id={@entry_id}
       current_user={@current_user}

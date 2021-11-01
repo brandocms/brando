@@ -43,7 +43,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -54,17 +55,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {gettext("Not shown...")}
+          <%= gettext("Not shown...") %>
         </:description>
         <:config>
-          <Input.Textarea form={@block_data} field={:text} />
+          <Input.Textarea.render form={@block_data} field={:text} />
         </:config>
         <div>
           <%= if v(@block_data, :text) do %>
-            {v(@block_data, :text) |> raw}
+            <%= v(@block_data, :text) |> raw %>
           <% end %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

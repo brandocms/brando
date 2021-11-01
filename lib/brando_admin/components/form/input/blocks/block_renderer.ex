@@ -49,7 +49,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type={@type}>
 
-      <Blocks.ModulePicker
+      <.live_component
+        module={Blocks.ModulePicker}
         id={"#{@id}-module-picker"}
         insert_block={@insert_block}
         insert_section={@insert_section}
@@ -60,26 +61,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       <%= if @block_count == 0 do %>
 
         <div class="blocks-empty-instructions">
-          {gettext "Click the plus to start adding content blocks"}
+          <%= gettext "Click the plus to start adding content blocks" %>
           <%= if @templates do %>
-            <br>{gettext "or get started with a prefab'ed template"}:<br>
+            <br><%= gettext "or get started with a prefab'ed template" %>:<br>
             <div class="blocks-templates">
               <%= for template <- @templates do %>
                 <button type="button" :on-click="use_template" phx-value-id={template.id}>
-                  {template.name}<br>
-                  <small>{template.instructions}</small>
+                  <%= template.name %><br>
+                  <small><%= template.instructions %></small>
                 </button>
               <% end %>
             </div>
           <% end %>
         </div>
-        <Blocks.Plus
-          index={0}
-          click={@show_module_picker} />
+        <Blocks.Plus.render index={0} click={@show_module_picker} />
       <% end %>
 
       <%= for {block_form, index} <- Enum.with_index(@block_forms) do %>
-        <Blocks.DynamicBlock
+        <Blocks.DynamicBlock.render
           uploads={@uploads}
           index={index}
           data_field={@data_field}

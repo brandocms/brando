@@ -21,7 +21,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
       on_mount({__MODULE__, :hooks})
 
-      def hooks(params, assigns, socket) do
+      def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
 

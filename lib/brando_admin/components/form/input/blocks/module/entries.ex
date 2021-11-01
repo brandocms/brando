@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">
       <%= for {entry_form, idx} <- Enum.with_index(@entry_forms) do %>
-        <EntryBlock
+        <.live_component module={EntryBlock}
           id={v(entry_form, :uid)}
           block={entry_form}
           base_form={@base_form}
@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       <% end %>
 
       <button class="add-module-entry" type="button" :on-click="add_entry" phx-page-loading>
-        Add new entry [{@entry_template.name}]
+        Add new entry [<%= @entry_template.name %>]
       </button>
     </div>
     """

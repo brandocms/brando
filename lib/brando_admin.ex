@@ -27,15 +27,16 @@ defmodule BrandoAdmin do
 
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
-
-      import Brando.Gettext
       import BrandoAdmin.ErrorHelpers
+
+      alias Phoenix.LiveView.JS
     end
   end
 
   def view do
     quote do
       use Phoenix.View, root: "lib/brando_admin/templates"
+      import Brando.Gettext
       unquote(view_helpers())
     end
   end

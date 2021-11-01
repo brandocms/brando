@@ -433,7 +433,7 @@ defmodule Brando.HTMLTest do
 
   test "breakpoint_debug_tag" do
     assert render_component(&breakpoint_debug_tag/1, %{}) ==
-             "<i class=\"dbg-breakpoints\">\n  \n  <div class=\"breakpoint\"></div>\n  <div class=\"user-agent\"></div>\n</i>\n"
+             "<i class=\"dbg-breakpoints\">\n  \n  <div class=\"breakpoint\"></div>\n  <div class=\"user-agent\"></div>\n</i>"
   end
 
   test "grid_debug_tag" do

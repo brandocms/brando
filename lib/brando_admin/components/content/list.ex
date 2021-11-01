@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.Content.List do
         "update_status",
         %{"status" => status},
         %{assigns: %{list_opts: list_opts}} = socket
-    ) do
+      ) do
     status_atom = String.to_existing_atom(status)
     new_list_opts = update_status(list_opts, status_atom)
 
@@ -326,15 +326,17 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
-  defp pagination(%{pagination_meta: %{
-              page_size: page_size,
-              current_page: current_page,
-              total_entries: total_entries,
-              total_pages: total_pages
-            },
-            change_page: change_page
-          } = assigns) do
-
+  defp pagination(
+         %{
+           pagination_meta: %{
+             page_size: page_size,
+             current_page: current_page,
+             total_entries: total_entries,
+             total_pages: total_pages
+           },
+           change_page: change_page
+         } = assigns
+       ) do
     assigns =
       assigns
       |> assign(:change_page, change_page)
@@ -472,7 +474,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <% end %>
       <%= for entry <- @entries do %>
         <%= for {_, index} <- Enum.with_index(@default) do %>
-          <%= render_slot(@inner_block, [entry: entry, index: index]) %>
+          <%= render_slot(@inner_block, %{entry: entry, index: index}) %>
         <% end %>
       <% end %>
     </div>
