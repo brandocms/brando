@@ -30,7 +30,7 @@
     "nprogress": "^0.2.0",
     "phoenix": "^1.6.2",
     "phoenix_html": "^3.0.4",
-    "phoenix_live_view": "^0.17.3",
+    "phoenix_live_view": "^0.17.4",
     "slugify": "^1.6.1",
     "sortablejs": "^1.14.0",
     "tippy.js": "^6.3.2",
@@ -42,7 +42,7 @@
     "@brandocms/europacss": "^0.6.3",
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.30",
     "autoprefixer": "^10.3.7",
-    "svelte": "^3.43.1",
+    "svelte": "^3.44.1",
     "svelte-preprocess": "^4.9.8",
     "vite": "^2.6.7"
   }
