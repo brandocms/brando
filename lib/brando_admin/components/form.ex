@@ -83,6 +83,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:entry_id, fn -> nil end)
      |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
      |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
@@ -264,8 +265,8 @@ defmodule BrandoAdmin.Components.Form do
       <.form
         for={@changeset}
         let={f}
-        submit={JS.push("save")}
-        change={JS.push("validate", target: @myself)}>
+        phx-submit={JS.push("save")}
+        phx-change={JS.push("validate", target: @myself)}>
 
         <%= if @has_meta? do %>
           <.live_component module={MetaDrawer}
@@ -273,6 +274,7 @@ defmodule BrandoAdmin.Components.Form do
             blueprint={@blueprint}
             form={f}
             status={@status_meta}
+            uploads={@uploads}
             close="close_meta_drawer" />
         <% end %>
 

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Plus do
-  use Phoenix.Component
+  use BrandoAdmin, :component
 
   # prop index, :integer
   # prop click, :event

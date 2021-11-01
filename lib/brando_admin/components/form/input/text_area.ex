@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Textarea do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
@@ -22,13 +22,10 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
   # slot default
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assign(assigns,
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact],
         rows: assigns.opts[:rows] || 3
       )
 

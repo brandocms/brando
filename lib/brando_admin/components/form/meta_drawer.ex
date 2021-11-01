@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
             Meta properties
           </h2>
           <button
-            :on-click={@close}
+            phx-click={@close}
             type="button"
             class="drawer-close-button">
             Close

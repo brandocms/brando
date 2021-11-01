@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Date do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase

@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
           <div class="circle">
             <%= @content_language %>
           </div>
-          <span><%= @language_long %>}</span>
+          <span><%= @language_long %></span>
         </div>
 
         <%= if @show_language_picker do %>

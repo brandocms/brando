@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Button do
-  use Phoenix.Component
+  use BrandoAdmin, :component
 
   def dropdown(assigns) do
     ~H"""

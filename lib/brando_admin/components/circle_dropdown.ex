@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.CircleDropdown do
-  use Phoenix.Component
+  use BrandoAdmin, :component
 
   def update(assigns, socket) do
     {:ok,

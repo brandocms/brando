@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.FieldBase do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   import Phoenix.HTML.Form, only: [input_id: 2]
   import Brando.HTML, only: [render_classes: 1]

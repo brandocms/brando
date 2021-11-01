@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               Entry revisions
             </h2>
             <button
-              :on-click={@close}
+              phx-click={@close}
               type="button"
               class="drawer-close-button">
               Close

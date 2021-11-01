@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Subform.Field do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input

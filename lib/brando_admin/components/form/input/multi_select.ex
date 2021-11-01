@@ -328,7 +328,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= if @select_form do %>
                 <.form
                   for={@select_changeset}
-                  change="validate_new_entry"
+                  phx-change={JS.push("validate_new_entry", target: @myself)}
                   let={entry_form}>
                   <%= for tab <- @select_form.tabs do %>
                     <div

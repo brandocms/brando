@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Email do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 

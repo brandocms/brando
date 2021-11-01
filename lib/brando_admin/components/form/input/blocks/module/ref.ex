@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils

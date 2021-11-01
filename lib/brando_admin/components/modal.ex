@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Modal do
               <button
                 type="button"
                 class="modal-close"
-                :on-click={@close}>
+                phx-click={@close}>
                 &times;
               </button>
             </div>
@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Modal do
             <footer class="modal-footer">
               <%= render_slot @footer %>
               <%= if @ok do %>
-                <button class="primary" type="button" :on-click={@ok} phx-value-id={@id}>Ok</button>
+                <button class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
               <% end %>
             </footer>
           <% end %>

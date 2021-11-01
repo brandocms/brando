@@ -28,6 +28,7 @@ defmodule BrandoAdmin do
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
       import BrandoAdmin.ErrorHelpers
+      import BrandoAdmin.Utils
 
       alias Phoenix.LiveView.JS
     end
@@ -76,6 +77,14 @@ defmodule BrandoAdmin do
       use Phoenix.LiveComponent
 
       unquote(view_helpers())
+    end
+  end
+
+  def component do
+    quote do
+      use Phoenix.Component
+      import Brando.HTML
+      import BrandoAdmin.Utils
     end
   end
 

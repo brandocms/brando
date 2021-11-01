@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Label do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   import Brando.HTML, only: [render_classes: 1]
 
   # prop form, :form

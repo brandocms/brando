@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
 
   # prop current_user, :any

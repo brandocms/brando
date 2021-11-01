@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Identifier do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
 
   # prop identifier, :map
@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Identifier do
     ~H"""
     <article
       class={[identifier: true, selected: @identifier in @selected_identifiers]}
-      :on-click={@select}
+      phx-click={@select}
       phx-value-param={@param}>
 
       <section class="cover-wrapper">
@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Components.Identifier do
       </section>
       <%= if @remove do %>
         <div class="remove">
-          <button type="button" :on-click={@remove} phx-value-param={@param}>&times;</button>
+          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
       <% end %>
     </article>
@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Components.Identifier do
     ~H"""
     <article
       class={[identifier: true, selected: @identifier_form in @selected_identifiers]}
-      :on-click={@select}
+      phx-click={@select}
       phx-value-param={@param}>
 
       <section class="cover-wrapper">
@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Identifier do
       </section>
       <%= if @remove do %>
         <div class="remove">
-          <button type="button" :on-click={@remove} phx-value-param={@param}>&times;</button>
+          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
       <% end %>
     </article>

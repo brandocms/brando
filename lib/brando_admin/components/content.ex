@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Content do
-  use Phoenix.Component
+  use BrandoAdmin, :component
 
   def header(assigns) do
     assigns = assign_new(assigns, :inner_block, fn -> nil end)

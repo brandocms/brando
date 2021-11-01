@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
     <div id="module-form-el">
-      <.form for={@changeset} let={form} change="validate" submit="save">
+      <.form for={@changeset} let={form} phx-change="validate" phx-submit="save">
         <div class="block-editor">
           <div class="code">
             <.live_component module={Input.Code} id={"#{form.id}-code"} form={form} field={:code} />

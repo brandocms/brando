@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.ErrorTag do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   import Phoenix.HTML.Form, only: [input_id: 2]
 
   def render(assigns) do

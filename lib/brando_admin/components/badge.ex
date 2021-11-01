@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Badge do
-  use Phoenix.Component
+  use BrandoAdmin, :component
 
   def language(assigns) do
     ~H"""

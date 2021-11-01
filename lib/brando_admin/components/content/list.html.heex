@@ -5,16 +5,16 @@
       listing={@listing}
       active_filter={@active_filter}
       list_opts={@list_opts}
-      update_status="update_status"
-      update_filter="update_filter"
-      next_filter_key="next_filter_key"
-      delete_filter="delete_filter" />
+      update_status={JS.push("update_status", target: @myself)}
+      update_filter={JS.push("update_filter", target: @myself)}
+      next_filter_key={JS.push("next_filter_key", target: @myself)}
+      delete_filter={JS.push("delete_filter", target: @myself)} />
 
     <.entries
       target={@myself}
       listing_name={@listing.name}
       entries={@entries.entries}
-      let={%{entry: entry}}>
+      let={entry}>
       <:empty>
         <div class="empty-list">
           <figure>
@@ -23,6 +23,7 @@
           <%= gettext("No matching entries found") %>
         </div>
       </:empty>
+
       <.live_component
         module={Row}
         id={"list-row-#{@singular}-#{entry.id}"}
@@ -34,12 +35,12 @@
         schema={@schema}
         selected_rows={@selected_rows}
         target={@myself}
-        click="select_row" />
+        click={JS.push("select_row", target: @myself)} />
     </.entries>
 
     <.pagination
       pagination_meta={@entries.pagination_meta}
-      change_page="change_page" />
+      change_page={JS.push("change_page", target: @myself)} />
   </article>
 
   <.selected_rows

@@ -245,7 +245,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <%= if @select_form do %>
                 <.form
                   for={@select_changeset}
-                  change="validate_new_entry"
+                  phx-change={JS.push("validate_new_entry", target: @myself)}
                   let={entry_form}>
                   <%= gettext("Create entry") %>
 

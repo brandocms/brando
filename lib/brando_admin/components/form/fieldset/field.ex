@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Fieldset.Field do
-  use Phoenix.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input
@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         instructions={@instructions}
         placeholder={@placeholder}
         uploads={@uploads}
-        opts={@input.opts}
+        opts={@input.opts || []}
         type={@input.type}
         current_user={@current_user} />
     <% end %>

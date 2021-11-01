@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
             Scheduled publishing
           </h2>
           <button
-            :on-click={@close}
+            phx-click={@close}
             type="button"
             class="drawer-close-button">
             Close

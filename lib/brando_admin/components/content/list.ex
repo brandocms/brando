@@ -317,7 +317,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <%= for {name, value} <- @active_filters do %>
         <button
           class="filter"
-          :on-click={@delete}
+          phx-click={@delete}
           phx-value-filter={name}>
           &times; <%= name %>: <%= value %>
         </button>
@@ -356,8 +356,8 @@ defmodule BrandoAdmin.Components.Content.List do
       </div>
       <%= for p <- 0..@total_pages - 1 do %>
         <button
-          class={[active: p + 1 == @current_page]}
-          :on-click={@change_page}
+          class={render_classes([active: p + 1 == @current_page])}
+          phx-click={@change_page}
           phx-value-page={p}>
           <%= p + 1 %>
         </button>
@@ -388,12 +388,12 @@ defmodule BrandoAdmin.Components.Content.List do
           <div class="statuses">
             <%= for status <- @statuses do %>
               <button
-                :on-click={@update_status}
+                phx-click={@update_status}
                 phx-value-status={status}
-                class={[
+                class={render_classes([
                   "status",
                   active_status_class(@list_opts, status)
-                ]}
+                ])}
                 type="button"
                 phx-page-loading>
                 <svg
@@ -415,18 +415,18 @@ defmodule BrandoAdmin.Components.Content.List do
 
         <div class="filters">
           <%= for filter <- @filters do %>
-            <div class={[
+            <div class={render_classes([
               "filter",
               visible: filter[:filter] == @active_filter[:filter]
-            ]}>
+            ])}>
               <button
                 class="filter-key"
-                :on-click={@next_filter_key}>
+                phx-click={@next_filter_key}>
                 <%= filter[:label] %>
               </button>
               <.form
                 for={:filter_form}
-                change={@update_filter}
+                phx-change={@update_filter}
                 onkeydown="return event.key != 'Enter';">
                 <input
                   type="text"
@@ -473,9 +473,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <%= render_slot(@empty) %>
       <% end %>
       <%= for entry <- @entries do %>
-        <%= for {_, index} <- Enum.with_index(@default) do %>
-          <%= render_slot(@inner_block, %{entry: entry, index: index}) %>
-        <% end %>
+        <%= render_slot(@inner_block, entry) %>
       <% end %>
     </div>
     """
@@ -488,7 +486,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:selected_rows_count, Enum.count(assigns.selected_rows))
 
     ~H"""
-    <div class={[{:"selected-rows", true}, {:hidden, Enum.empty?(@selected_rows)}]}>
+    <div class={render_classes(["selected-rows", {:hidden, Enum.empty?(@selected_rows)}])}>
       <div class="clear-selection">
         <button
           phx-click="clear_selection"
