@@ -23,6 +23,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:status_revisions, :closed)
      |> assign(:live_preview_active?, false)
      |> assign(:processing, false)
+     |> assign_new(:uploads, fn -> nil end)
      |> assign(:live_preview_cache_key, nil)}
   end
 
