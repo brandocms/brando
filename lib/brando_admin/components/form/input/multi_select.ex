@@ -238,7 +238,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <button
           type="button"
           class="button-edit"
-          :on-click="toggle"
+          phx-click={JS.push("toggle", target: @myself)}
           phx-value-id={@modal_id}>
           <%= if @open do %>
             Close
@@ -249,7 +249,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <.live_component module={Modal} title="Select options" id={@modal_id} narrow={@narrow}>
           <:header>
             <%= if @select_form && !@creating do %>
-              <button class="header-button" type="button" :on-click="show_form">Create {@singular}</button>
+              <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create {@singular}</button>
             <% end %>
           </:header>
           <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       ])}
                       data-label={opt.label}
                       value={opt.value}
-                      :on-click="select_option">
+                      phx-click={JS.push("select_option", target: @myself)}>
                       <%= opt.label |> raw %>
                     </button>
                   <% end %>
@@ -295,7 +295,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <button
                       type="button"
                       class="secondary"
-                      :on-click="reset">
+                      phx-click={JS.push("reset", target: @myself)}>
                       Reset value
                     </button>
                   </div>
@@ -346,12 +346,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     </div>
                   <% end %>
                   <button
-                    :on-click="save_new_entry"
+                    phx-click={JS.push("save_new_entry", target: @myself)}
                     type="button" class="primary">
                     Save
                   </button>
                   <button
-                    :on-click="hide_form"
+                    phx-click={JS.push("hide_form", target: @myself)}
                     type="button" class="secondary">
                     Cancel
                   </button>

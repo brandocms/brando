@@ -68,16 +68,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             </div>
             <div class="buttons">
               <%= if "picture" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="picture"><%= gettext("Picture") %></button>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="picture"><%= gettext("Picture") %></button>
               <% end %>
               <%= if "video" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="video"><%= gettext("Video") %></button>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="video"><%= gettext("Video") %></button>
               <% end %>
               <%= if "gallery" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="gallery"><%= gettext("Gallery") %></button>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="gallery"><%= gettext("Gallery") %></button>
               <% end %>
               <%= if "svg" in @available_blocks do %>
-                <button type="button" class="tiny" :on-click="select_block" phx-value-block="svg">SVG</button>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="svg">SVG</button>
               <% end %>
             </div>
           </div>

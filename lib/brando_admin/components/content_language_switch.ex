@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
   def render(assigns) do
     ~H"""
-    <div class="content-language-selector" :on-click="show_language_picker">
+    <div class="content-language-selector" phx-click={JS.push("show_language_picker", target: @myself)}>
       <div class="inner">
         <h2>Current content language</h2>
         <div class="selected-language">
@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
             <%= for language <- @languages do %>
               <button
                 type="button"
-                :on-click="select_language"
+                phx-click={JS.push("select_language", target: @myself)}
                 phx-value-id={language[:value]}
                 phx-page-loading>
                 <%= language[:text] %>

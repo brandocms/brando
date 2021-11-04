@@ -98,7 +98,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         <%= if @extracted_path do %>
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
-            <figcaption :on-click="show_config">
+            <figcaption phx-click={JS.push("show_config", target: @myself)}>
               <div id={"#{@uid}-figcaption-title"}>
                 <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
               </div>
@@ -120,7 +120,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </figure>
           <div class="instructions">
             <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
-            <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
+            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself)}>pick an existing image</button>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           id={"#{@uid}-image-picker"}>
           <div class="image-picker-images">
             <%= for image <- @images do %>
-              <div class="image-picker-image" :on-click="select_image" phx-value-id={image.id}>
+              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself)} phx-value-id={image.id}>
                 <img src={"/media/#{image.image.sizes["thumb"]}"} />
               </div>
             <% end %>
@@ -174,11 +174,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.Text.render form={@block_data} field={:alt} />
 
               <div class="button-group-vertical">
-                <button type="button" class="secondary" :on-click="show_image_picker">
+                <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself)}>
                   <%= gettext("Select image") %>
                 </button>
 
-                <button type="button" class="danger" :on-click="reset_image">
+                <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                   <%= gettext("Reset image") %>
                 </button>
               </div>

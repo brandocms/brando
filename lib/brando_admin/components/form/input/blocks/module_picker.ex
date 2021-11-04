@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
           id={"#{@id}-modules"}>
           <%= for {namespace, modules} <- @modules_by_namespace do %>
             <%= unless namespace == "general" do %>
-              <button type="button" class="namespace-button" :on-click="toggle_namespace" phx-value-id={namespace}>
+              <button type="button" class="namespace-button" phx-click={JS.push("toggle_namespace", target: @myself)} phx-value-id={namespace}>
                 <figure>
                   &rarr;
                 </figure>

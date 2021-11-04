@@ -33,9 +33,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   # data relation_field, :atom
 
   def mount(socket) do
-    require Logger
-    Logger.error("MOUNT")
-
     {:ok,
      socket
      |> assign_new(:opts, fn -> [] end)
@@ -45,8 +42,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def update(assigns, socket) do
-    require Logger
-    Logger.error("UPDATE")
     relation_field = String.to_existing_atom("#{assigns.field}_id")
     image_id = get_field(assigns.form.source, relation_field)
 
@@ -75,9 +70,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def render(assigns) do
-    require Logger
-    Logger.error("RENDER")
-
     ~H"""
     <div>
       <FieldBase.render
@@ -111,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                   <button
                     class="btn-small"
                     type="button"
-                    :on-click="show_meta_edit_modal"
+                    phx-click={JS.push("show_meta_edit_modal", target: @myself)}
                     phx-value-id={"edit-image-#{@form.id}-#{@field}-modal"}>Edit image</button>
                 </div>
               <% else %>
@@ -125,7 +117,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                   <button
                     class="btn-small"
                     type="button"
-                    :on-click="show_meta_edit_modal"
+                    phx-click={JS.push("show_meta_edit_modal", target: @myself)}
                     phx-value-id={"edit-image-#{@form.id}-#{@field}-modal"}>Add image</button>
                 </div>
               <% end %>
@@ -259,7 +251,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                           <button
                             class="secondary fw"
                             type="button"
-                            :on-click="reset_field">Reset field</button>
+                            phx-click={JS.push("reset_field", target: @myself)}>Reset field</button>
                         </Form.inputs>
                       <% else %>
 

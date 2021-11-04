@@ -87,11 +87,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
             <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
           <% end %>
 
-          <button type="button" class="secondary" :on-click="reinit_vars">
+          <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
             Reinitialize variables
           </button>
 
-          <button type="button" class="secondary" :on-click="reinit_refs">
+          <button type="button" class="secondary" phx-click={JS.push("reinit_refs", target: @myself)}>
             Reset block refs
           </button>
         </:config>

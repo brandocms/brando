@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               <button
                 type="button"
                 class="secondary"
-                :on-click="store_revision">
+                phx-click={JS.push("store_revision", target: @myself)}>
                 Save version without activating
               </button>
 
@@ -131,7 +131,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               <%= for revision <- @revisions do %>
                 <tr
                   class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}
-                  :on-click="select_revision"
+                  phx-click={JS.push("select_revision", target: @myself)}
                   phx-value-revision={revision.revision}
                   phx-page-loading>
                   <td class="fit">

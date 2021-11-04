@@ -197,7 +197,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           <button
             type="button"
             class="button-edit"
-            :on-click="toggle"
+            phx-click={JS.push("toggle", target: @myself)}
             phx-value-id={@modal_id}>
             <%= if @open do %>
               Close
@@ -239,7 +239,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     ])}
                     data-label={opt.label}
                     value={opt.value}
-                    :on-click="select_option">
+                    phx-click={JS.push("select_option", target: @myself)}>
                     <%= opt.label |> raw %>
                   </button>
                 <% end %>
@@ -272,7 +272,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     </div>
                   <% end %>
                   <button
-                    :on-click="save_new_entry"
+                    phx-click={JS.push("save_new_entry", target: @myself)}
                     type="button" class="primary">
                     <%= gettext("Save") %>
                   </button>
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   <button
                     type="button"
                     class="secondary"
-                    :on-click="reset">
+                    phx-click={JS.push("reset", target: @myself)}>
                     <%= gettext("Reset value") %>
                   </button>
                 </div>

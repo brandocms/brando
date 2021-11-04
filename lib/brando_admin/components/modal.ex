@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Components.Modal do
       |> assign_new(:medium, fn -> false end)
       |> assign_new(:wide, fn -> false end)
       |> assign_new(:remember_scroll_position, fn -> false end)
-      |> assign_new(:close, fn -> "close_modal" end)
+      |> assign_new(:close, fn -> nil end)
       |> assign_new(:ok, fn -> nil end)
 
     {:ok, socket}
@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Modal do
               <button
                 type="button"
                 class="modal-close"
-                phx-click={@close}>
+                phx-click={@close || JS.push("close_modal", target: @myself)}>
                 &times;
               </button>
             </div>

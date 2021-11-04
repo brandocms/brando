@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
             <br><%= gettext "or get started with a prefab'ed template" %>:<br>
             <div class="blocks-templates">
               <%= for template <- @templates do %>
-                <button type="button" :on-click="use_template" phx-value-id={template.id}>
+                <button type="button" phx-click={JS.push("use_template", target: @myself)} phx-value-id={template.id}>
                   <%= template.name %><br>
                   <small><%= template.instructions %></small>
                 </button>

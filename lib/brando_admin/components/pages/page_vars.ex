@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path class="s" d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z" fill="rgba(5,39,82,1)"/></svg>
                   </button>
                   <button
-                    :on-click="remove_subentry"
+                    phx-click={JS.push("remove_subentry", target: @myself)}
                     phx-value-index={index}
                     type="button"
                     class="subform-delete">
@@ -87,7 +87,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
             id={"#{@form.id}-#{@subform.field}-add-entry"}
             type="button"
             class="add-entry-button"
-            :on-click="add_subentry"
+            phx-click={JS.push("add_subentry", target: @myself)}
             phx-page-loading>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
             <%= gettext("Add entry") %>

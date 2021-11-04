@@ -512,7 +512,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       <div class="col-var draggable" data-id={var_idx}>
                                         <div
                                           class="col-var-toggle"
-                                          :on-click="toggle_col_var"
+                                          phx-click={JS.push("toggle_col_var", target: @myself)}
                                           phx-value-id={input_value(var, :key)}>
                                           <%= input_value(var, :type) %> — <%= input_value(var, :label) %>
                                           <div class="sort-handle">

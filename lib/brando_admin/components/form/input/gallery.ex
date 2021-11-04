@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <button
             type="button"
             class="secondary"
-            :on-click="delete_selected"
+            phx-click={JS.push("delete_selected", target: @myself)}
             phx-value-ids={Jason.encode!(@selected_images)}
             disabled={Enum.empty?(@selected_images)}
             phx-page-loading>
@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <button
             type="button"
             class="secondary"
-            :on-click="reset_gallery"
+            phx-click={JS.push("reset_gallery", target: @myself)}
             phx-page-loading>Reset field</button>
         </div>
         <div
@@ -149,7 +149,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   selected: idx in @selected_images
                 ])}
                 data-id={idx}
-                :on-click="select_row"
+                phx-click={JS.push("select_row", target: @myself)}
                 phx-value-id={idx}
                 phx-page-loading>
                 <%= case @preview_layout do %>
@@ -157,7 +157,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     <div class="overlay">
                       <button
                         type="button"
-                        :on-click="edit_image"
+                        phx-click={JS.push("edit_image", target: @myself)}
                         phx-value-id={idx}>Edit</button>
                     </div>
                     <ImagePreview.render

@@ -210,7 +210,7 @@ defmodule BrandoAdmin.Components.Form do
             <button
               type="button"
               class={render_classes([active: @active_tab == tab])}
-              :on-click="select_tab"
+              phx-click={JS.push("select_tab", target: @myself)}
               phx-value-name={tab}>
               <%= tab %>
             </button>
@@ -220,7 +220,7 @@ defmodule BrandoAdmin.Components.Form do
         <div class="form-tab-builtins">
           <%= if @has_meta? do %>
             <button
-              :on-click="open_meta_drawer"
+              phx-click={JS.push("open_meta_drawer", target: @myself)}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
               <span class="tab-text">Meta</span>
@@ -228,7 +228,7 @@ defmodule BrandoAdmin.Components.Form do
           <% end %>
           <%= if @has_revisioning? do %>
             <button
-              :on-click="open_revisions_drawer"
+              phx-click={JS.push("open_revisions_drawer", target: @myself)}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
               <span class="tab-text">Revisions</span>
@@ -236,7 +236,7 @@ defmodule BrandoAdmin.Components.Form do
           <% end %>
           <%= if @has_scheduled_publishing? do %>
             <button
-              :on-click="open_scheduled_publishing_drawer"
+              phx-click={JS.push("open_scheduled_publishing_drawer", target: @myself)}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
               <span class="tab-text">Scheduled publishing</span>
@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form do
           <% end %>
           <%= if @has_live_preview? do %>
             <button
-              :on-click="open_live_preview"
+              phx-click={JS.push("open_live_preview", target: @myself)}
               class={render_classes([active: @live_preview_active?])}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Components.Form do
             </button>
           <% end %>
           <button
-            :on-click="push_submit_event"
+            phx-click={JS.push("push_submit_event", target: @myself)}
             type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
             <span class="tab-text">(⌘S)</span>

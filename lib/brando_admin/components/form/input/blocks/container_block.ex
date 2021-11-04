@@ -178,11 +178,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           uid={@uid}
           hide_sections
           insert_index={@insert_index}
-          insert_block="insert_block"
-          insert_section="insert_section"
-          insert_datasource="insert_datasource"
-          show_module_picker="show_module_picker"
-          duplicate_block="duplicate_block"
+          insert_block={JS.push("insert_block", target: @myself)}
+          insert_section={JS.push("insert_section", target: @myself)}
+          insert_datasource={JS.push("insert_datasource", target: @myself)}
+          show_module_picker={JS.push("show_module_picker", target: @myself)}
+          duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
       </.live_component>
     </div>

@@ -2,9 +2,6 @@ defmodule BrandoAdmin.Utils do
   import Phoenix.LiveView
 
   def prepare_input_component(%{assigns: assigns} = socket) do
-    require Logger
-    Logger.error(inspect(socket, pretty: true))
-
     socket =
       socket
       |> assign_new(:opts, fn -> [] end)

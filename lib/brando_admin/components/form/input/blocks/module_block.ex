@@ -126,7 +126,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <%= for var <- v(@block_data, :vars) || [] do %>
                 <div class="var">
                   <div class="key"><%= var.key %></div>
-                  <button type="button" class="tiny" :on-click="reset_var" phx-value-id={var.key}>{gettext "Reset"}</button>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
                 </div>
               <% end %>
 
@@ -134,17 +134,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <%= for ref <- v(@block_data, :refs) || [] do %>
                 <div class="ref">
                   <div class="key"><%= ref.name %></div>
-                  <button type="button" class="tiny" :on-click="reset_ref" phx-value-id={ref.name}>{gettext "Reset"}</button>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
                 </div>
               <% end %>
             </div>
           </div>
         </:config>
         <:config_footer>
-          <button type="button" class="secondary" :on-click="reset_vars">
+          <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
             Reset all variables
           </button>
-          <button type="button" class="secondary" :on-click="reset_refs">
+          <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
             Reset all block refs
           </button>
         </:config_footer>

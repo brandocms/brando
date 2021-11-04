@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
         />
       <% end %>
 
-      <button class="add-module-entry" type="button" :on-click="add_entry" phx-page-loading>
+      <button class="add-module-entry" type="button" phx-click={JS.push("add_entry", target: @myself)} phx-page-loading>
         Add new entry [<%= @entry_template.name %>]
       </button>
     </div>

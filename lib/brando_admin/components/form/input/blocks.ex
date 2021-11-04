@@ -69,11 +69,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           templates={@templates}
           data_field={@data_field}
           insert_index={@insert_index}
-          insert_block="insert_block"
-          insert_section="insert_section"
-          insert_datasource="insert_datasource"
-          show_module_picker="show_module_picker"
-          duplicate_block="duplicate_block" />
+          insert_block={JS.push("insert_block", target: @myself)}
+          insert_section={JS.push("insert_section", target: @myself)}
+          insert_datasource={JS.push("insert_datasource", target: @myself)}
+          show_module_picker={JS.push("show_module_picker", target: @myself)}
+          duplicate_block={JS.push("duplicate_block", target: @myself)} />
       </FieldBase.render>
     </div>
     """
@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "show_module_picker",
         %{"index" => index_binary},
-        %{assigns: %{form: form, input: %{name: name}}} = socket
+        %{assigns: %{form: form, field: name}} = socket
       ) do
     modal_id = "#{form.id}-#{name}-blocks-module-picker"
     Modal.show(modal_id)
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "insert_section",
         %{"index" => index_binary},
-        %{assigns: %{form: form, input: %{name: name}}} = socket
+        %{assigns: %{form: form, field: name}} = socket
       ) do
     modal_id = "#{form.id}-#{name}-blocks-module-picker"
 
@@ -129,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "insert_datasource",
         %{"index" => index_binary},
-        %{assigns: %{form: form, input: %{name: name}}} = socket
+        %{assigns: %{form: form, field: name}} = socket
       ) do
     modal_id = "#{form.id}-#{name}-blocks-module-picker"
 
@@ -162,7 +162,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "insert_block",
         %{"index" => index_binary, "module-id" => module_id_binary},
-        %{assigns: %{form: form, input: %{name: name}}} = socket
+        %{assigns: %{form: form, field: name}} = socket
       ) do
     modal_id = "#{form.id}-#{name}-blocks-module-picker"
 
@@ -209,7 +209,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "duplicate_block",
         %{"block_uid" => block_uid},
-        %{assigns: %{form: form, input: %{name: data_field}}} = socket
+        %{assigns: %{form: form, field: data_field}} = socket
       ) do
     changeset = form.source
     data = get_field(changeset, data_field)

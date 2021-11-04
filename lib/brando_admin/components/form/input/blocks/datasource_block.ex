@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                 <button
                   class="tiny select-button"
                   type="button"
-                  :on-click="select_entries">
+                  phx-click={JS.push("select_entries", target: @myself)}>
                   Select entries
                 </button>
               <% end %>
