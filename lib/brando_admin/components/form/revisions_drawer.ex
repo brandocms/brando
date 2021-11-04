@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={[drawer: true, "revisions-drawer": true, open: @status == :open]}>
+    <div class={render_classes([drawer: true, "revisions-drawer": true, open: @status == :open])}>
       <%= if @status == :open do %>
         <div class="inner">
           <div class="drawer-header">
@@ -130,7 +130,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             <table class="revisions-table">
               <%= for revision <- @revisions do %>
                 <tr
-                  class={["revisions-line": true, active: @active_revision == revision.revision]}
+                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}
                   :on-click="select_revision"
                   phx-value-revision={revision.revision}
                   phx-page-loading>

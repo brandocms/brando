@@ -25,10 +25,10 @@ defmodule BrandoAdmin.Components.ChildrenButton do
     ~H"""
     <div class="children-button">
       <button
-        :on-click="toggle"
+        phx-click={JS.push("toggle", target: @myself)}
         type="button"
         data-testid="children-button"
-        class={[active: @active]}
+        class={render_classes([active: @active])}
         phx-page-loading>
         <%= @active && "Close" || "+ #{@count}" %>
       </button>

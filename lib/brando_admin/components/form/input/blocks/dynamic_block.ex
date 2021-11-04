@@ -27,6 +27,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   def render(assigns) do
     assigns =
       assigns
+      |> assign_new(:insert_block, fn -> nil end)
+      |> assign_new(:duplicate_block, fn -> nil end)
+      |> assign_new(:belongs_to, fn -> nil end)
+      |> assign_new(:is_ref?, fn -> false end)
+      |> assign_new(:ref_name, fn -> nil end)
+      |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:block_id, fn -> v(assigns.block, :uid) end)
       |> assign_new(:block_module, fn ->
         block_type = (v(assigns.block, :type) |> to_string |> Recase.to_pascal()) <> "Block"

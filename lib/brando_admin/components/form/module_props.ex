@@ -38,15 +38,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <Input.Text.render form={@form} field={:class} />
         <Input.Toggle.render form={@form} field={:wrapper} />
 
-        <div :if={!@entry_form} class="button-group">
-          <button
-            phx-click={@show_modal}
-            phx-value-id={"#{@form.id}-#{@key}-icon"}
-            class="secondary"
-            type="button">
-            Edit icon
-          </button>
-        </div>
+        <%= if !@entry_form do %>
+          <div class="button-group">
+            <button
+              phx-click={@show_modal}
+              phx-value-id={"#{@form.id}-#{@key}-icon"}
+              class="secondary"
+              type="button">
+              Edit icon
+            </button>
+          </div>
+        <% end %>
 
         <.live_component module={Modal} title="Edit icon" id={"#{@form.id}-#{@key}-icon"}>
           <Input.Code.render id={"#{@form.id}-svg"} form={@form} field={:svg} />
@@ -517,10 +519,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="7.5" cy="1.5" r="1.5"></circle><circle cx="13.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="7.5" cy="7.5" r="1.5"></circle><circle cx="13.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle><circle cx="13.5" cy="13.5" r="1.5"></circle></svg>
                                           </div>
                                         </div>
-                                        <div class={[
+                                        <div class={render_classes([
                                           "col-var-form": true,
                                           hidden: input_value(var, :key) not in @open_col_vars
-                                        ]}>
+                                        ])}>
                                           <%= hidden_input var, :key %>
                                           <%= hidden_input var, :type %>
                                           <%= hidden_input var, :important %>

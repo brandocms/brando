@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
         field={@subform.field}
         label={@label}
         instructions={@instructions}
-        class={[subform: true]}>
+        class={"subform"}>
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
           phx-hook="Brando.SubFormSortable">

@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={[drawer: true, "scheduled-publishing-drawer": true, open: @status == :open]}>
+    <div class={render_classes([drawer: true, "scheduled-publishing-drawer": true, open: @status == :open])}>
       <div class="inner">
         <div class="drawer-header">
           <h2>

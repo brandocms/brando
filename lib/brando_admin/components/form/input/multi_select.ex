@@ -278,10 +278,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   <%= for opt <- @input_options do %>
                     <button
                       type="button"
-                      class={[
-                        "options-option": true,
+                      class={render_classes([
+                        "options-option",
                         "option-selected": opt.value in @selected_options
-                      ]}
+                      ])}
                       data-label={opt.label}
                       value={opt.value}
                       :on-click="select_option">
@@ -332,7 +332,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   let={entry_form}>
                   <%= for tab <- @select_form.tabs do %>
                     <div
-                      class={["form-tab": true, active: true]}
+                      class={render_classes(["form-tab", active: true])}
                       data-tab-name={tab.name}>
                       <div class="row">
                         <%= for fieldset <- tab.fields do %>

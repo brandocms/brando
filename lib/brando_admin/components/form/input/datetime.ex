@@ -31,14 +31,12 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
   end
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assign(assigns,
         value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact]
+        class: assigns.opts[:class]
       )
 
     ~H"""

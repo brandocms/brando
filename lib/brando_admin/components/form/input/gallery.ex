@@ -36,14 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact],
-       preview_layout: assigns.opts[:layoud] || :grid
-     )
+     |> prepare_input_component()
+     |> assign(preview_layout: assigns.opts[:layout] || :grid)
      |> assign_value()}
   end
 
@@ -137,7 +131,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         <%= if !Enum.empty?(@gallery) do %>
           <div
             id={"sortable-#{@form.id}-#{@field}-images"}
-            class={["image-previews", @preview_layout]}
+            class={render_classes(["image-previews", @preview_layout])}
             phx-hook="Brando.Sortable"
             data-target={@myself}
             data-sortable-id={"sortable-#{@form.id}-#{@field}-images"}
@@ -148,12 +142,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               form={@form}
               for={@field}>
               <div
-                class={[
-                  "image-preview": true,
-                  "sort-handle": true,
-                  draggable: true,
+                class={render_classes([
+                  "image-preview",
+                  "sort-handle",
+                  "draggable",
                   selected: idx in @selected_images
-                ]}
+                ])}
                 data-id={idx}
                 :on-click="select_row"
                 phx-value-id={idx}

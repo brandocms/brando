@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.Label do
       end)
 
     ~H"""
-    <label class={render_classes(@class)} for={@input_id}>
+    <label class={render_classes(List.wrap(@class))} for={@input_id}>
       <%= render_slot @inner_block %>
     </label>
     """

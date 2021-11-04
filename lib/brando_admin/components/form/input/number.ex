@@ -19,14 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Number do
   # data compact, :boolean
 
   def render(assigns) do
-    assigns =
-      assign(assigns,
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact]
-      )
+    assigns = prepare_input_component(assigns)
 
     ~H"""
     <FieldBase.render

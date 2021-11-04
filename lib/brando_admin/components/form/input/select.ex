@@ -233,7 +233,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <%= for opt <- @input_options do %>
                   <button
                     type="button"
-                    class={["options-option": true, "option-selected": opt.value == @selected_option]}
+                    class={render_classes([
+                      "options-option",
+                      "option-selected": opt.value == @selected_option
+                    ])}
                     data-label={opt.label}
                     value={opt.value}
                     :on-click="select_option">

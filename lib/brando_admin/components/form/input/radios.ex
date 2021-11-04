@@ -40,13 +40,11 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
           options
       end
 
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assigns
       |> assign(:input_options, input_options)
-      |> assign(
-        class: assigns.opts[:class],
-        compact: assigns.opts[:compact]
-      )
 
     ~H"""
     <FieldBase.render

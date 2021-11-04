@@ -20,13 +20,10 @@ defmodule BrandoAdmin.Components.Form.Input.Slug do
   # data slug_for, :boolean
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assign(assigns,
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact],
         slug_for: assigns.opts[:for]
       )
 

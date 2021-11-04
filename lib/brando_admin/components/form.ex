@@ -208,7 +208,8 @@ defmodule BrandoAdmin.Components.Form do
         <div class="form-tab-customs">
           <%= for tab <- @tabs do %>
             <button
-              type="button" class={@active_tab == tab && "active"}
+              type="button"
+              class={render_classes([active: @active_tab == tab])}
               :on-click="select_tab"
               phx-value-name={tab}>
               <%= tab %>
@@ -244,7 +245,7 @@ defmodule BrandoAdmin.Components.Form do
           <%= if @has_live_preview? do %>
             <button
               :on-click="open_live_preview"
-              class={[active: @live_preview_active?]}
+              class={render_classes([active: @live_preview_active?])}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
             </button>
@@ -299,7 +300,7 @@ defmodule BrandoAdmin.Components.Form do
 
         <%= for {tab, _tab_idx} <- Enum.with_index(@form.tabs) do %>
           <div
-            class={"form-tab#{@active_tab == tab.name && " active"}"}
+            class={render_classes(["form-tab", active: @active_tab == tab.name])}
             data-tab-name={tab.name}>
             <div class="row">
               <%= for {fieldset, fs_idx} <- Enum.with_index(tab.fields) do %>

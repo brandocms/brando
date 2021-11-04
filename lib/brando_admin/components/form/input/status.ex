@@ -23,9 +23,10 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
   # slot default
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assigns
-      |> assign_new(:class, fn -> assigns.opts[:class] end)
       |> assign_new(:statuses, fn ->
         [
           %{value: "draft", label: gettext("Draft")},
@@ -34,10 +35,6 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
           %{value: "disabled", label: gettext("Deactivated")}
         ]
       end)
-      |> assign(
-        class: assigns.opts[:class],
-        compact: assigns.opts[:compact]
-      )
 
     ~H"""
     <FieldBase.render
@@ -52,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
           <div class="form-check">
             <label class="form-check-label">
               <%= radio_button @form, @field, status.value, class: "form-check-input" %>
-              <span class={["label-text", status.value]}>
+              <span class={render_classes(["label-text", status.value])}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="12"

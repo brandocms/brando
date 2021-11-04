@@ -109,7 +109,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </div>
         <% end %>
 
-        <div class={[empty: true, "upload-canvas": true, hidden: @extracted_path]}>
+        <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
           <figure>
             <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>

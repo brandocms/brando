@@ -43,36 +43,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
     {:ok,
      socket
+     |> assign(assigns)
+     |> assign_new(:is_ref?, fn -> false end)
+     |> assign_new(:is_entry?, fn -> false end)
+     |> assign_new(:wide_config, fn -> false end)
+     |> assign_new(:config, fn -> nil end)
+     |> assign_new(:config_footer, fn -> nil end)
+     |> assign_new(:description, fn -> nil end)
+     |> assign_new(:instructions, fn -> nil end)
+     |> assign_new(:render, fn -> nil end)
      |> assign(:bg_color, assigns[:bg_color])
      |> assign(:last_block?, last_block?(assigns))
      |> assign(:uid, uid)
      |> assign(:type, type)
      |> assign(:hidden, input_value(assigns.block, :hidden))
-     |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))
-     |> assign(assigns)}
+     |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))}
   end
 
   def render(assigns) do
     ~H"""
     <div
       data-block-uid={@uid}
-      class={[
-        "base-block": true,
+      class={render_classes([
+        "base-block",
         hidden: @hidden,
         deleted: @marked_as_deleted
-      ]}>
-      <Blocks.Plus.render
-        :if={!@is_ref? and !@is_entry?}
-        index={@index}
-        click={@insert_block} />
+      ])}>
+      <%= if !@is_ref? and !@is_entry? do %>
+        <Blocks.Plus.render
+          index={@index}
+          click={@insert_block} />
+      <% end %>
 
       <.live_component module={Modal} title="Configure" id={"#{@uid}_config"} wide={@wide_config}>
-        <%= render_slot @config %>
+        <%= if @config do %>
+          <%= render_slot @config %>
+        <% end %>
         <:footer>
           <button type="button" class="primary" :on-click="hide_config_modal" phx-value-id={"#{@uid}_config"}>
             <%= gettext "Close" %>
           </button>
-          <%= render_slot @config_footer %>
+          <%= if @config_footer do %>
+            <%= render_slot @config_footer %>
+          <% end %>
         </:footer>
       </.live_component>
 
@@ -83,8 +96,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         id={@uid}
         data-block-uid={@uid}
         data-block-type={@type}
-        style={["background-color": @bg_color]}
-        class={[block: true, ref_block: @is_ref?]}
+        style={"background-color: #{@bg_color}"}
+        class={render_classes(["block", ref_block: @is_ref?])}
         phx-hook="Brando.Block">
 
         <div class="block-description" id={"#{@uid}-block-description"}>

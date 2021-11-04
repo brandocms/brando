@@ -36,6 +36,16 @@ defmodule BrandoAdmin.Components.Modal do
           |> push_event("b:modal:hide:#{id}", %{})
       end
       |> assign(:action, nil)
+      |> assign_new(:header, fn -> nil end)
+      |> assign_new(:footer, fn -> nil end)
+      |> assign_new(:show, fn -> false end)
+      |> assign_new(:center_header, fn -> false end)
+      |> assign_new(:narrow, fn -> false end)
+      |> assign_new(:medium, fn -> false end)
+      |> assign_new(:wide, fn -> false end)
+      |> assign_new(:remember_scroll_position, fn -> false end)
+      |> assign_new(:close, fn -> "close_modal" end)
+      |> assign_new(:ok, fn -> nil end)
 
     {:ok, socket}
   end
@@ -44,7 +54,7 @@ defmodule BrandoAdmin.Components.Modal do
     ~H"""
     <div
       id={@id}
-      class={[modal: true, narrow: @narrow, medium: @medium, wide: @wide]}
+      class={render_classes([modal: true, narrow: @narrow, medium: @medium, wide: @wide])}
       phx-key="Escape"
       data-b-modal={@show && "show" || "hide"}
       phx-hook="Brando.Modal"
@@ -52,10 +62,12 @@ defmodule BrandoAdmin.Components.Modal do
       <div class="modal-backdrop" />
       <div class="modal-dialog" role="document">
         <div class="modal-content">
-          <header class={["modal-header": true, centered: @center_header]}>
+          <header class={render_classes(["modal-header": true, centered: @center_header])}>
             <h2><%= @title %></h2>
             <div class="header-wrap">
-              <%= render_slot @header %>
+              <%= if @header do %>
+                <%= render_slot @header %>
+              <% end %>
               <button
                 type="button"
                 class="modal-close"

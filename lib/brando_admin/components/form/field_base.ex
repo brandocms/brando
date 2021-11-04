@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
     <div
       class={render_classes(["field-wrapper", @class])}
       id={"#{@form.id}-#{@field}-field-wrapper"}>
-      <div :if={@field} class="label-wrapper">
+      <div class="label-wrapper">
         <label
           for={input_id(@form, @field)}
           class={render_classes(["control-label", failed: @failed])}>

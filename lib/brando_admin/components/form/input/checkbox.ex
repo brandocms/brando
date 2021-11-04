@@ -20,13 +20,10 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
   # data text, :string
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assign(assigns,
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact],
         text: assigns.opts[:text]
       )
 
@@ -39,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Checkbox do
       class={@class}
       compact={@compact}>
       <div
-        class={["check-wrapper": true, small: @compact]}>
+        class={render_classes(["check-wrapper", small: @compact])}>
         <%= checkbox @form, @field %>
         <%= label @form, @field, @text, class: "control-label#{if @compact, do: " small", else: ""}" %>
       </div>

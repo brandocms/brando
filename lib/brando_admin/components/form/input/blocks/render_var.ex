@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-      <div class={["variable", input_value(@var, :type)]}>
+      <div class={render_classes(["variable", input_value(@var, :type)])}>
         <%= if @should_render? do %>
           <%= if @edit do %>
             <div id={"#{@var.id}-edit"}>
@@ -86,7 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 </div>
               </div>
 
-              <div class={["variable-content": true, hidden: !@visible]}>
+              <div class={render_classes(["variable-content", hidden: !@visible])}>
                 <Input.Toggle.render form={@var} field={:marked_as_deleted} />
                 <Input.Toggle.render form={@var} field={:important} />
                 <Input.Text.render form={@var} field={:key} />

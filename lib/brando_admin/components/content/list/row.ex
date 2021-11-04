@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   alias Brando.Trait
   alias BrandoAdmin.Components.Badge
+  alias BrandoAdmin.Components.ChildrenButton
   alias Brando.Blueprint.Listings.Template
 
   # prop entry, :any

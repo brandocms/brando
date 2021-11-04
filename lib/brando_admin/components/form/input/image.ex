@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Image do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
 
   import Ecto.Changeset
 
@@ -33,7 +32,21 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   # data upload_field, :any
   # data relation_field, :atom
 
+  def mount(socket) do
+    require Logger
+    Logger.error("MOUNT")
+
+    {:ok,
+     socket
+     |> assign_new(:opts, fn -> [] end)
+     |> assign_new(:label, fn -> nil end)
+     |> assign_new(:instructions, fn -> nil end)
+     |> assign_new(:placeholder, fn -> nil end)}
+  end
+
   def update(assigns, socket) do
+    require Logger
+    Logger.error("UPDATE")
     relation_field = String.to_existing_atom("#{assigns.field}_id")
     image_id = get_field(assigns.form.source, relation_field)
 
@@ -49,9 +62,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     {:ok,
      socket
      |> assign(assigns)
+     |> prepare_input_component()
      |> assign(:image, image)
      |> assign(:file_name, file_name)
-     |> assign(:class, assigns.opts[:class])
      |> assign_new(:upload_field, fn ->
        assigns.uploads[assigns.field]
      end)
@@ -62,6 +75,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def render(assigns) do
+    require Logger
+    Logger.error("RENDER")
+
     ~H"""
     <div>
       <FieldBase.render
@@ -118,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
               <.live_component module={Modal} title="Edit image" center_header={true} id={"edit-image-#{@form.id}-#{@field}-modal"}>
                 <div
                   id={"#{@form.id}-#{@field}-dropzone"}
-                  class={["image-modal-content": true, ac: !@image]}
+                  class={render_classes(["image-modal-content", ac: !@image])}
                   phx-hook="Brando.DragDrop">
                   <div
                     class="drop-target"

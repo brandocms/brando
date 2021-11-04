@@ -23,13 +23,10 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assigns
-      |> assign(
-        class: assigns.opts[:class],
-        compact: assigns.opts[:compact],
-        debounce: assigns.opts[:debounce] || 750
-      )
       |> assign_new(:initial_props, fn ->
         Jason.encode!(%{content: v(assigns.form, assigns.field)})
       end)

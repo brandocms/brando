@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           field={@subform.field}
           label={@label}
           instructions={@instructions}
-          class={[subform: true]}>
+          class={"subform"}>
           <%= for sub_form <- inputs_for(@form, @subform.field) do %>
             <div class="subform-entry">
               <%= for input <- @subform.sub_fields do %>
@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           field={@subform.field}
           label={@label}
           instructions={@instructions}
-          class={[subform: true]}>
+          class={"subform"}>
           <div
             id={"#{@form.id}-#{@subform.field}-sortable"}
             phx-hook="Brando.SubFormSortable">
@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             <% end %>
             <%= for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field)) do %>
               <div
-                class={["subform-entry": true, inline: @subform.style == :inline]}
+                class={render_classes(["subform-entry", inline: @subform.style == :inline])}
                 data-id={index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">

@@ -33,15 +33,15 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
         field={@subform.field}
         label={@label}
         instructions={@instructions}
-        class={[subform: true]}>
+        class={"subform"}>
         <:header>
           <div class="switch-description"><%= gettext "Advanced" %></div>
           <div class="brando-input">
             <div>
               <div class="field-base">
                 <label
-                  class={[switch: true, small: true, toggled: @advanced]}
-                  :on-click="toggle_advanced">
+                  class={render_classes(["switch", "small", toggled: @advanced])}
+                  phx-click={JS.push("toggle_advanced", target: @myself)}>
                   <div class="slider round"></div>
                 </label>
               </div>

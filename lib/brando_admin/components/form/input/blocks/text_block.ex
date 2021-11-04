@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
           <% end %>
         </:config>
         <%= for block_data <- inputs_for(@block, :data) do %>
-          <div class={["text-block", @text_type]}>
+          <div class={render_classes(["text-block", @text_type])}>
             <div class="tiptap-wrapper" id={"#{@uid}-rich-text-wrapper"}>
               <div
                 id={"#{@uid}-rich-text"}

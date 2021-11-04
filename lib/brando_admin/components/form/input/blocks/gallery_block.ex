@@ -148,10 +148,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <button type="button" class="tiny" :on-click="show_captions">Edit captions</button>
           <div
             id={"sortable-#{@block_data.id}-images"}
-            class={[
+            class={render_classes([
               "images",
               @display == :grid && "images-grid" || "images-list"
-            ]}
+            ])}
             phx-hook="Brando.Sortable"
             data-target={@myself}
             data-sortable-id={"sortable-#{@block_data.id}-images"}
@@ -160,11 +160,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <%= if @display == :grid do %>
               <%= for {img, idx} <- Enum.with_index(@images) do %>
                 <div
-                  class={[
+                  class={render_classes([
                     "preview",
                     "sort-handle",
                     "draggable"
-                  ]}
+                  ])}
                   data-id={idx}>
                   <img src={"/media/#{img.path}"} />
                   <figcaption :on-click="show_captions">
@@ -204,7 +204,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <% end %>
           </div>
         <% else %>
-          <div class={["upload-canvas": true, empty: true, hidden: @has_images?]}>
+          <div class={render_classes([
+            "upload-canvas",
+            "empty",
+            hidden: @has_images?
+          ])}>
             <figure>
               <svg class="icon-add-gallery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <path fill="none" d="M0 0h24v24H0z"/><path d="M8 1v4H4v14h16V3h1.008c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3H6V1h2zm4 7l4 4h-3v4h-2v-4H8l4-4zm6-7v4h-8V3h6V1h2z"/>
@@ -235,11 +239,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <div class="image-picker-images">
             <%= for image <- @available_images do %>
               <div
-                class={[
-                  "image-picker-image": true,
+                class={render_classes([
+                  "image-picker-image",
                   selected: image.image.path in @selected_images_paths,
                   hidden: @show_only_selected? && image.image.path not in @selected_images_paths
-                ]}
+                ])}
                 :on-click="select_image"
                 phx-value-id={image.id}
                 phx-value-selected={image.image.path in @selected_images_paths && "true" || "false"}>

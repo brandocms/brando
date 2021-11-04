@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Identifier do
   def render(%{identifier: identifier} = assigns) when not is_nil(identifier) do
     ~H"""
     <article
-      class={[identifier: true, selected: @identifier in @selected_identifiers]}
+      class={render_classes([identifier: true, selected: @identifier in @selected_identifiers])}
       phx-click={@select}
       phx-value-param={@param}>
 
@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Identifier do
   def render(%{identifier_form: identifier_form} = assigns) when not is_nil(identifier_form) do
     ~H"""
     <article
-      class={[identifier: true, selected: @identifier_form in @selected_identifiers]}
+      class={render_classes([identifier: true, selected: @identifier_form in @selected_identifiers])}
       phx-click={@select}
       phx-value-param={@param}>
 

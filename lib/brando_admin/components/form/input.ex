@@ -44,6 +44,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         end
       end)
 
+    require Logger
+    Logger.error("====> #{inspect(assigns.component_module)}")
+    Logger.error("live? #{is_live?(assigns.component_module)}")
+
     if is_live?(assigns.component_module) do
       ~H"""
       <div class="brando-input">
@@ -61,7 +65,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       </div>
       """
     else
-      apply(assigns.component_module, :render, List.wrap(assigns))
+      ~H"""
+      <div class="brando-input">
+        <%= apply(assigns.component_module, :render, List.wrap(assigns)) %>
+      </div>
+      """
     end
   end
 end
