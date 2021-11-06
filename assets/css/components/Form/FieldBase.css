@@ -220,9 +220,12 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 4px;
+    position: relative;
 
     > span.field-error {
       font-size: 14px;
+      position: absolute;
+      right: 0;
     }
 
     label {

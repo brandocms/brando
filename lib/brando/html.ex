@@ -448,4 +448,19 @@ defmodule Brando.HTML do
   def absolute_url(%{__struct__: module} = entry) do
     module.__absolute_url__(entry)
   end
+
+  def render_classes(list) do
+    Enum.reduce(list, [], fn
+      {c, cd}, acc ->
+        if cd do
+          acc ++ (c |> to_string() |> List.wrap())
+        else
+          acc
+        end
+
+      c, acc ->
+        acc ++ (c |> to_string() |> List.wrap())
+    end)
+    |> Enum.join(" ")
+  end
 end

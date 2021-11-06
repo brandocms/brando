@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Villain
@@ -7,28 +7,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop block_count, :integer
-  prop uploads, :any
-  prop data_field, :atom
-  prop entry_template, :map
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop block_count, :integer
+  # prop uploads, :any
+  # prop data_field, :atom
+  # prop entry_template, :map
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data splits, :list
-  data block_data, :map
-  data module_name, :string
-  data module_class, :string
-  data module_code, :string
-  data module_multi, :boolean
-  data refs, :list
-  data important_vars, :list
-  data uid, :string
-  data module_not_found, :boolean
+  # data splits, :list
+  # data block_data, :map
+  # data module_name, :string
+  # data module_class, :string
+  # data module_code, :string
+  # data module_multi, :boolean
+  # data refs, :list
+  # data important_vars, :list
+  # data uid, :string
+  # data module_not_found, :boolean
 
   def v(form, field) do
     input_value(form, field)
@@ -65,13 +65,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -81,49 +81,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         is_entry?={true}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>{@module_name}</:description>
+        <:description><%= @module_name %></:description>
         <:config>
-          {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
-            <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
-          {/for}
+          <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
+            <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+          <% end %>
 
-          <button type="button" class="secondary" :on-click="reinit_vars">
+          <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
             Reinitialize variables
           </button>
 
-          <button type="button" class="secondary" :on-click="reinit_refs">
+          <button type="button" class="secondary" phx-click={JS.push("reinit_refs", target: @myself)}>
             Reset block refs
           </button>
         </:config>
 
         <div class="module-block" b-editor-tpl={@module_class}>
-          {#unless Enum.empty?(@important_vars)}
+          <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
-              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
-                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
-              {/for}
+              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+              <% end %>
             </div>
-          {/unless}
+          <% end %>
 
-          {#for split <- @splits}
-            {#case split}
-              {#match {:ref, ref}}
-                <Module.Ref
+          <%= for split <- @splits do %>
+            <%= case split do %>
+              <% {:ref, ref} -> %>
+                <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />
 
-              {#match _}
-                {raw split}
-            {/case}
-          {/for}
-          {hidden_input @block_data, :module_id}
-          {hidden_input @block_data, :sequence}
-          {hidden_input @block_data, :multi}
+              <% _ -> %>
+                <%= raw split %>
+            <% end %>
+          <% end %>
+          <%= hidden_input @block_data, :module_id %>
+          <%= hidden_input @block_data, :sequence %>
+          <%= hidden_input @block_data, :multi %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

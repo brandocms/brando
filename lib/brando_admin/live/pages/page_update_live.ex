@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Pages.PageUpdateLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Edit page")} />
+    ~H"""
+    <Content.header title={gettext("Edit page")} />
 
-    <Form
+    <.live_component module={Form}
       id="page_form"
       entry_id={@entry_id}
       current_user={@current_user}

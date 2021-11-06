@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -8,27 +8,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   alias BrandoAdmin.Components.Modal
   alias Brando.Content
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop uploads, :any
-  prop data_field, :atom
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop uploads, :any
+  # prop data_field, :atom
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data blocks, :list
-  data block_forms, :list
-  data block_data, :form
-  data block_count, :integer
-  data insert_index, :integer
+  # data uid, :string
+  # data blocks, :list
+  # data block_forms, :list
+  # data block_data, :form
+  # data block_count, :integer
+  # data insert_index, :integer
 
-  data selected_palette, :map
-  data available_palettes, :list
-  data palette_options, :list
-  data first_color, :string
+  # data selected_palette, :map
+  # data available_palettes, :list
+  # data palette_options, :list
+  # data first_color, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -113,14 +113,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="container-block"
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Blocks.Block
+      <.live_component
+        module={Blocks.Block}
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -131,41 +132,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         duplicate_block={@duplicate_block}
         bg_color={@selected_palette && "#{@first_color.hex_value}22"}>
         <:description>
-          {#if @selected_palette}
-            {@selected_palette.name}
+          <%= if @selected_palette do %>
+            <%= @selected_palette.name %>
             <div class="circle-stack">
-              {#for color <- Enum.reverse(@selected_palette.colors)}
+              <%= for color <- Enum.reverse(@selected_palette.colors) do %>
                 <span
                   class="circle tiny"
                   style={"background-color:#{color.hex_value}"}
                   data-popover={"#{color.name}"}></span>
-              {/for}
+              <% end %>
             </div>
-          {#else}
+          <% else %>
             No palette selected
-          {/if}
+          <% end %>
         </:description>
         <:config>
-          {#if @selected_palette}
+          <%= if @selected_palette do %>
             <div class="instructions mb-1">Select a new palette:</div>
-            <Input.Select
+            <Input.Select.render
               id={"#{@block_data.id}-palette-select"}
               form={@block_data}
               field={:palette_id}
-              opts={options: @palette_options}
+              opts={[options: @palette_options]}
             />
-          {/if}
+          <% end %>
         </:config>
-        {#if !@selected_palette}
-          <Input.Select
+        <%= if !@selected_palette do %>
+          <Input.Select.render
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
-            opts={options: @palette_options}
+            opts={[options: @palette_options]}
           />
-        {/if}
+        <% end %>
 
-        <Blocks.BlockRenderer
+        <.live_component
+          module={Blocks.BlockRenderer}
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
           blocks={@blocks}
@@ -176,13 +178,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           uid={@uid}
           hide_sections
           insert_index={@insert_index}
-          insert_block="insert_block"
-          insert_section="insert_section"
-          insert_datasource="insert_datasource"
-          show_module_picker="show_module_picker"
-          duplicate_block="duplicate_block"
+          insert_block={JS.push("insert_block", target: @myself)}
+          insert_section={JS.push("insert_section", target: @myself)}
+          insert_datasource={JS.push("insert_datasource", target: @myself)}
+          show_module_picker={JS.push("show_module_picker", target: @myself)}
+          duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
-      </Blocks.Block>
+      </.live_component>
     </div>
     """
   end

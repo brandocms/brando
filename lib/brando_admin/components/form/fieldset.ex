@@ -1,31 +1,32 @@
 defmodule BrandoAdmin.Components.Form.Fieldset do
-  use Surface.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Fieldset
 
-  prop current_user, :any
-  prop fieldset, :any
-  prop form, :any
-  prop translations, :any
-  prop uploads, :any
+  # prop current_user, :any
+  # prop fieldset, :any
+  # prop form, :any
+  # prop translations, :any
+  # prop uploads, :any
 
   def render(assigns) do
-    ~F"""
-    <fieldset class={
+    ~H"""
+    <fieldset class={render_classes([
       @fieldset.size,
       "align-end": @fieldset.align == :end,
       inline: @fieldset.style == :inline,
       shaded: @fieldset.shaded
-    }>
-      {#for input <- @fieldset.fields}
-        <Fieldset.Field
+    ])}>
+      <%= for input <- @fieldset.fields do %>
+        <Fieldset.Field.render
           form={@form}
           translations={@translations}
+          relations={@relations}
           input={input}
           uploads={@uploads}
           current_user={@current_user} />
-      {/for}
+      <% end %>
     </fieldset>
     """
   end

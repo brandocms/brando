@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -8,33 +8,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias Brando.Utils
   alias Brando.Villain
 
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Form.Inputs
-  alias BrandoAdmin.Components.Form.ArrayInputs
-  alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Modal
 
-  prop uploads, :any
-  prop base_form, :any
-  prop block, :any
-  prop block_count, :integer
-  prop index, :any
-  prop data_field, :atom
-  prop is_ref?, :boolean, default: false
-  prop ref_name, :string
-  prop ref_description, :string
-  prop belongs_to, :string
+  # prop uploads, :any
+  # prop base_form, :any
+  # prop block, :any
+  # prop block_count, :integer
+  # prop index, :any
+  # prop data_field, :atom
+  # prop is_ref?, :boolean, default: false
+  # prop ref_name, :string
+  # prop ref_description, :string
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data extracted_path, :string
-  data uid, :string
-  data block_data, :form
-  data images, :list
-  data image, :any
-  data upload_formats, :string
+  # data extracted_path, :string
+  # data uid, :string
+  # data block_data, :form
+  # data images, :list
+  # data image, :any
+  # data upload_formats, :string
 
   def v(form, field), do: input_value(form, field)
 
@@ -69,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="picture-block"
@@ -78,7 +76,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -89,28 +88,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {#if @ref_description}
-            {@ref_description}
-          {#else}
-            {@extracted_path}
-          {/if}
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% else %>
+            <%= @extracted_path %>
+          <% end %>
         </:description>
         <input class="file-input" type="file" />
-        {#if @extracted_path}
+        <%= if @extracted_path do %>
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
-            <figcaption :on-click="show_config">
+            <figcaption phx-click={JS.push("show_config", target: @myself)}>
               <div id={"#{@uid}-figcaption-title"}>
-                <span>{gettext("Caption")}</span> {v(@block_data, :title) |> raw}<br>
+                <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
               </div>
               <div id={"#{@uid}-figcaption-alt"}>
-                <span>{gettext("Alt. text")}</span> {v(@block_data, :alt)}
+                <span><%= gettext("Alt. text") %></span> <%= v(@block_data, :alt) %>
               </div>
             </figcaption>
           </div>
-        {/if}
+        <% end %>
 
-        <div class={"empty upload-canvas", hidden: @extracted_path}>
+        <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
           <figure>
             <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
@@ -120,39 +119,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </svg>
           </figure>
           <div class="instructions">
-            <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span><br>
-            <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
+            <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
+            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself)}>pick an existing image</button>
           </div>
         </div>
 
-        <Modal
+        <.live_component module={Modal}
           title="Pick image"
           center_header={true}
           id={"#{@uid}-image-picker"}>
           <div class="image-picker-images">
-            {#for image <- @images}
-              <div class="image-picker-image" :on-click="select_image" phx-value-id={image.id}>
+            <%= for image <- @images do %>
+              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself)} phx-value-id={image.id}>
                 <img src={"/media/#{image.image.sizes["thumb"]}"} />
               </div>
-            {/for}
+            <% end %>
           </div>
-        </Modal>
+        </.live_component>
 
         <:config>
           <div class="panels">
             <div class="panel">
-              {#if @extracted_path}
+              <%= if @extracted_path do %>
                 <img
                   width={"#{@image.width}"}
                   height={"#{@image.height}"}
                   src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
 
                 <div class="image-info">
-                  Path: {@image.path}<br>
-                  Dimensions: {@image.width}&times;{@image.height}<br>
+                  Path: <%= @image.path %><br>
+                  Dimensions: <%= @image.width %>&times;<%= @image.height %><br>
                 </div>
-              {/if}
-              {#if !@extracted_path}
+              <% end %>
+              <%= if !@extracted_path do %>
                 <div class="img-placeholder empty upload-canvas">
                   <div class="placeholder-wrapper">
                     <div class="svg-wrapper">
@@ -165,65 +164,65 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     </div>
                   </div>
                   <div class="instructions">
-                    <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
+                    <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
                   </div>
                 </div>
-              {/if}
+              <% end %>
             </div>
             <div class="panel">
-              <Input.RichText form={@block_data} field={:title} />
-              <Input.Text form={@block_data} field={:alt} />
+              <Input.RichText.render form={@block_data} field={:title} />
+              <Input.Text.render form={@block_data} field={:alt} />
 
               <div class="button-group-vertical">
-                <button type="button" class="secondary" :on-click="show_image_picker">
-                  {gettext("Select image")}
+                <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself)}>
+                  <%= gettext("Select image") %>
                 </button>
 
-                <button type="button" class="danger" :on-click="reset_image">
-                  {gettext("Reset image")}
+                <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
+                  <%= gettext("Reset image") %>
                 </button>
               </div>
             </div>
           </div>
 
-          {hidden_input @block_data, :placeholder}
-          {hidden_input @block_data, :cdn}
-          {hidden_input @block_data, :credits}
-          {hidden_input @block_data, :dominant_color}
-          {hidden_input @block_data, :height}
-          {hidden_input @block_data, :width}
+          <%= hidden_input @block_data, :placeholder %>
+          <%= hidden_input @block_data, :cdn %>
+          <%= hidden_input @block_data, :credits %>
+          <%= hidden_input @block_data, :dominant_color %>
+          <%= hidden_input @block_data, :height %>
+          <%= hidden_input @block_data, :width %>
 
-          {#if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes))}
-            {hidden_input @block_data, :path, value: @extracted_path}
-            {#else}
-            {hidden_input @block_data, :path}
-          {/if}
+          <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
+            <%= hidden_input @block_data, :path, value: @extracted_path %>
+            <% else %>
+            <%= hidden_input @block_data, :path %>
+          <% end %>
 
-          <Inputs
+          <Form.inputs
             form={@block_data}
             for={:focal}
-            :let={form: focal_form}>
-            {hidden_input focal_form, :x}
-            {hidden_input focal_form, :y}
-          </Inputs>
+            let={%{form: focal_form}}>
+            <%= hidden_input focal_form, :x %>
+            <%= hidden_input focal_form, :y %>
+          </Form.inputs>
 
-          <MapInputs
-            :let={value: value, name: name}
+          <Form.map_inputs
+            let={%{value: value, name: name}}
             form={@block_data}
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
-          </MapInputs>
+          </Form.map_inputs>
 
-          <ArrayInputs
-            :let={value: array_value, name: array_name}
+          <Form.array_inputs
+            let={%{value: array_value, name: array_name}}
             form={@block_data}
             for={:formats}>
             <input type="hidden" name={array_name} value={array_value} />
-          </ArrayInputs>
+          </Form.array_inputs>
 
           <input type="hidden" data-upload-formats={@upload_formats} />
         </:config>
-      </Block>
+      </.live_component>
     </div>
     """
   end

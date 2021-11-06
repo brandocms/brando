@@ -1,24 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
-  prop block, :form
-  prop base_form, :form
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_description, :string
-  prop belongs_to, :string
+  # prop block, :form
+  # prop base_form, :form
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_description, :string
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data text_type, :string
-  data initial_props, :map
-  data block_data, :map
+  # data uid, :string
+  # data text_type, :string
+  # data initial_props, :map
+  # data block_data, :map
 
   def v(form, field), do: input_value(form, field)
 
@@ -33,12 +33,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -49,14 +49,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {#if @ref_description}
-            {@ref_description}
-          {/if}
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% end %>
         </:description>
         <div class="markdown-block">
-          <Input.Code id={"#{@uid}-markdown-text"} form={@block_data} field={:text} />
+          <Input.Code.render id={"#{@uid}-markdown-text"} form={@block_data} field={:text} />
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

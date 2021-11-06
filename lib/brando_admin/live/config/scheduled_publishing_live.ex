@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
-  use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
+  use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
-  use Phoenix.HTML
 
   import Brando.Gettext
   import Brando.Utils.Datetime
@@ -14,7 +13,6 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
     if connected?(socket) do
       {:ok,
        socket
-       |> Surface.init()
        |> assign(:socket_connected, true)
        |> assign_jobs()
        |> assign_current_user(token)
@@ -22,19 +20,18 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
     else
       {:ok,
        socket
-       |> Surface.init()
        |> assign(:socket_connected, false)}
     end
   end
 
   def render(%{socket_connected: false} = assigns) do
-    ~F"""
+    ~H"""
     """
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("Scheduled Publishing")}
       subtitle={gettext("Manage and clear publishing queue")} />
 
@@ -44,7 +41,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
       </p>
 
       <table>
-        {#for job <- @jobs}
+        <%= for job <- @jobs do %>
           <tr>
             <td class="state fit">
               <svg
@@ -60,23 +57,23 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               </svg>
             </td>
             <td>
-              <strong>{job.meta["identifier"]["title"]}</strong><br>
-              <small>{job.meta["identifier"]["type"]}#{job.meta["identifier"]["id"]}</small>
+              <strong><%= job.meta["identifier"]["title"] %></strong><br>
+              <small><%= job.meta["identifier"]["type"] %>#<%= job.meta["identifier"]["id"] %></small>
             </td>
             <td class="fit date">
-              {format_datetime(job.scheduled_at, "%d/%m/%y")} <span>•</span> {format_datetime(job.scheduled_at, "%H:%M")}
+              <%= format_datetime(job.scheduled_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
             </td>
             <td class="fit">
-              <button type="button" class="primary small" :on-click="delete_job">
-                {gettext("Delete job")}
+              <button type="button" class="primary small" phx-click={JS.push("delete_job")}>
+                <%= gettext("Delete job") %>
               </button>
             </td>
           </tr>
-        {/for}
+        <% end %>
       </table>
 
-      <button type="button" class="primary" :on-click="refresh_jobs">
-        {gettext("Refresh job queue")}
+      <button type="button" class="primary" phx-click={JS.push("refresh_jobs")}>
+        <%= gettext("Refresh job queue") %>
       </button>
     </div>
     """

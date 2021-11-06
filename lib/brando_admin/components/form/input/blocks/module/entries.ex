@@ -1,16 +1,16 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  prop block_data, :form, required: true
-  prop base_form, :form, required: true
-  prop data_field, :atom, required: true
-  prop entry_template, :map, required: true
-  prop uid, :string, required: true
+  # prop block_data, :form, required: true
+  # prop base_form, :form, required: true
+  # prop data_field, :atom, required: true
+  # prop entry_template, :map, required: true
+  # prop uid, :string, required: true
 
-  data entry_forms, :list
+  # data entry_forms, :list
 
   def v(form, field), do: input_value(form, field)
 
@@ -22,14 +22,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-module-entries"}
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">
-      {#for {entry_form, idx} <- Enum.with_index(@entry_forms)}
-        <EntryBlock
+      <%= for {entry_form, idx} <- Enum.with_index(@entry_forms) do %>
+        <.live_component module={EntryBlock}
           id={v(entry_form, :uid)}
           block={entry_form}
           base_form={@base_form}
@@ -41,10 +41,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           insert_block=""
           duplicate_block=""
         />
-      {/for}
+      <% end %>
 
-      <button class="add-module-entry" type="button" :on-click="add_entry" phx-page-loading>
-        Add new entry [{@entry_template.name}]
+      <button class="add-module-entry" type="button" phx-click={JS.push("add_entry", target: @myself)} phx-page-loading>
+        Add new entry [<%= @entry_template.name %>]
       </button>
     </div>
     """

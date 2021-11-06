@@ -1,33 +1,32 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Ecto.Changeset
 
   alias BrandoAdmin.Components.Modal
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Gallery.ImagePreview
-  alias BrandoAdmin.Components.Form.Inputs
-  alias BrandoAdmin.Components.Form.MapInputs
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  data gallery, :any
-  data preview_layout, :atom
-  data selected_images, :list
+  # data gallery, :any
+  # data preview_layout, :atom
+  # data selected_images, :list
 
   def mount(socket) do
     {:ok, assign(socket, :selected_images, [])}
@@ -37,14 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact],
-       preview_layout: assigns.opts[:layoud] || :grid
-     )
+     |> prepare_input_component()
+     |> assign(preview_layout: assigns.opts[:layout] || :grid)
      |> assign_value()}
   end
 
@@ -54,8 +47,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def render(assigns) do
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -64,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       compact={@compact}>
 
       <div
-        id={"#{@form.id}-#{@field}-gallery-dropzone"}"}
+        id={"#{@form.id}-#{@field}-gallery-dropzone"}
         class="input-gallery">
 
         <div class="button-group">
@@ -72,104 +65,108 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <span class="label">
               Upload
             </span>
-            {live_file_input Map.get(@uploads, @field)}
+            <%= live_file_input Map.get(@uploads, @field) %>
           </div>
           <button
             type="button"
             class="secondary"
-            :on-click="delete_selected"
+            phx-click={JS.push("delete_selected", target: @myself)}
             phx-value-ids={Jason.encode!(@selected_images)}
             disabled={Enum.empty?(@selected_images)}
-            phx-page-loading>Delete <span>{Enum.count(@selected_images)}</span> selected</button>
+            phx-page-loading>
+            Delete <span><%= Enum.count(@selected_images) %></span> selected
+          </button>
 
           <button
             type="button"
             class="secondary"
-            :on-click="reset_gallery"
+            phx-click={JS.push("reset_gallery", target: @myself)}
             phx-page-loading>Reset field</button>
         </div>
         <div
           class="drop-target"
-          phx-drop-target={"#{@uploads[@field].ref}"}>
+          phx-drop-target={@uploads[@field].ref}>
           <div class="drop-indicator">
             <div>Drop here to upload</div>
           </div>
         </div>
 
-        {#if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries)}
+        <%= if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries) do %>
           <div class="gallery-empty">
             No images in image gallery.
           </div>
-        {/if}
+        <% end %>
 
-        {#if !Enum.empty?(@uploads[@field].entries)}
+        <%= if !Enum.empty?(@uploads[@field].entries) do %>
           <div class="input-gallery-previews">
-            {#for entry <- @uploads[@field].entries}
-              {#if entry.progress}
+            <%= for entry <- @uploads[@field].entries do %>
+              <%= if entry.progress do %>
                 <article class="upload-entry" data-upload-uuid={entry.uuid}>
                   <progress value={entry.progress} max="100"></progress>
                   <div class="file-info">
                     <div class="preview">
-                      {live_img_preview entry}
+                      <%= live_img_preview entry %>
                     </div>
 
                     <div class="file">
-                      {entry.client_name}
-                      <small>{entry.client_type}, {Brando.Utils.human_size(entry.client_size)}</small>
+                      <%= entry.client_name %>
+                      <small><%= entry.client_type %>, <%= Brando.Utils.human_size(entry.client_size) %></small>
                       <div class="progress-percent">
-                        {entry.progress}%
+                        <%= entry.progress %>%
                       </div>
                     </div>
                   </div>
 
-                  <p
-                    :for={err <- upload_errors(@uploads[@field], entry)}
-                    class="alert alert-danger">{Brando.Upload.error_to_string(err)}</p>
+                  <%= for err <- upload_errors(@uploads[@field], entry) do %>
+                    <p class="alert alert-danger">
+                      <%= Brando.Upload.error_to_string(err) %>
+                    </p>
+                  <% end %>
                 </article>
-              {/if}
-            {/for}
+              <% end %>
+            <% end %>
           </div>
-        {/if}
+        <% end %>
 
-        {#if !Enum.empty?(@gallery)}
+        <%= if !Enum.empty?(@gallery) do %>
           <div
             id={"sortable-#{@form.id}-#{@field}-images"}
-            class={"image-previews", @preview_layout}
+            class={render_classes(["image-previews", @preview_layout])}
             phx-hook="Brando.Sortable"
             data-target={@myself}
             data-sortable-id={"sortable-#{@form.id}-#{@field}-images"}
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".image-preview">
-            <Inputs
-              :let={form: sf, index: idx}
+            <Form.inputs
+              let={%{form: sf, index: idx}}
               form={@form}
               for={@field}>
               <div
-                class={
+                class={render_classes([
                   "image-preview",
                   "sort-handle",
                   "draggable",
                   selected: idx in @selected_images
-                }
+                ])}
                 data-id={idx}
-                :on-click="select_row"
+                phx-click={JS.push("select_row", target: @myself)}
                 phx-value-id={idx}
                 phx-page-loading>
-                {#case @preview_layout}
-                  {#match :grid}
+                <%= case @preview_layout do %>
+                  <% :grid -> %>
                     <div class="overlay">
                       <button
                         type="button"
-                        :on-click="edit_image"
+                        phx-click={JS.push("edit_image", target: @myself)}
                         phx-value-id={idx}>Edit</button>
                     </div>
-                    <ImagePreview
+                    <ImagePreview.render
                       layout={:grid}
                       form={sf} />
-                {/case}
+                <% end %>
 
                 <div class="image-meta">
-                  <Modal
+                  <.live_component module={Modal}
                     title="Edit image"
                     center_header={true}
                     id={"edit-image-#{@form.id}-#{@field}-modal-#{idx}"}>
@@ -178,7 +175,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Caption/Title</span></label>
                       </div>
                       <div class="field-base">
-                        {text_input sf, :title, class: "text"}
+                        <%= text_input sf, :title, class: "text" %>
                       </div>
                     </div>
                     <div class="field-wrapper">
@@ -186,7 +183,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Alt text (for accessibility)</span></label>
                       </div>
                       <div class="field-base">
-                        {text_input sf, :alt, class: "text"}
+                        <%= text_input sf, :alt, class: "text" %>
                       </div>
                     </div>
                     <div class="field-wrapper">
@@ -194,40 +191,40 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                         <label class="control-label"><span>Credits</span></label>
                       </div>
                       <div class="field-base">
-                        {text_input sf, :credits, class: "text"}
+                        <%= text_input sf, :credits, class: "text" %>
                       </div>
                     </div>
 
-                    {hidden_input sf, :id}
-                    {hidden_input sf, :cdn}
-                    {hidden_input sf, :dominant_color}
-                    {hidden_input sf, :height}
-                    {hidden_input sf, :path}
-                    {hidden_input sf, :width}
-                    {hidden_input sf, :marked_as_deleted}
+                    <%= hidden_input sf, :id %>
+                    <%= hidden_input sf, :cdn %>
+                    <%= hidden_input sf, :dominant_color %>
+                    <%= hidden_input sf, :height %>
+                    <%= hidden_input sf, :path %>
+                    <%= hidden_input sf, :width %>
+                    <%= hidden_input sf, :marked_as_deleted %>
 
-                    <Inputs
+                    <Form.inputs
                       form={sf}
                       for={:focal}
-                      :let={form: focal_form}>
-                      {hidden_input focal_form, :x}
-                      {hidden_input focal_form, :y}
-                    </Inputs>
+                      let={%{form: focal_form}}>
+                      <%= hidden_input focal_form, :x %>
+                      <%= hidden_input focal_form, :y %>
+                    </Form.inputs>
 
-                    <MapInputs
-                      :let={value: value, name: name}
+                    <Form.map_inputs
+                      let={%{value: value, name: name}}
                       form={sf}
                       for={:sizes}>
                       <input type="hidden" name={"#{name}"} value={"#{value}"} />
-                    </MapInputs>
-                  </Modal>
+                    </Form.map_inputs>
+                  </.live_component>
                 </div>
               </div>
-            </Inputs>
+            </Form.inputs>
           </div>
-        {/if}
+        <% end %>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 

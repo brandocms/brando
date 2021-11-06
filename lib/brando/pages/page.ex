@@ -103,6 +103,7 @@ defmodule Brando.Pages.Page do
     listing do
       listing_query %{
         status: :published,
+        filter: %{parents: true},
         preload: [fragments: [creator: :avatar], children: [creator: :avatar]],
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
@@ -253,7 +254,7 @@ defmodule Brando.Pages.Page do
         end
 
         fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.PageVars}
+          inputs_for :vars, {:component, BrandoAdmin.Components.Pages.PageVars}
         end
       end
     end

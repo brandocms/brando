@@ -15,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         pair:
-          - erlang: 23.1
-            elixir: 1.11.2
+          - erlang: 24.1
+            elixir: 1.12.3
 
     services:
       db:
@@ -33,7 +33,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
 
       - name: Install OTP and Elixir
         uses: actions/setup-elixir@v1.5

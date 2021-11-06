@@ -1,17 +1,19 @@
 defmodule BrandoAdmin.Components.Form.Label do
-  use Surface.Component
+  use BrandoAdmin, :component
+  import Brando.HTML, only: [render_classes: 1]
 
-  prop form, :form
-  prop field, :any
-  prop class, :css_class
-  prop opts, :keyword, default: []
+  # prop form, :form
+  # prop field, :any
+  # prop class, :css_class
+  # prop opts, :keyword, default: []
 
   @doc """
   The text for the label
   """
-  slot default
 
-  data input_id, :string
+  # slot default
+
+  # data input_id, :string
 
   def render(assigns) do
     assigns =
@@ -19,9 +21,9 @@ defmodule BrandoAdmin.Components.Form.Label do
         Phoenix.HTML.Form.input_id(assigns.form, assigns.field)
       end)
 
-    ~F"""
-    <label class={@class} for={@input_id}>
-      <#slot />
+    ~H"""
+    <label class={render_classes(List.wrap(@class))} for={@input_id}>
+      <%= render_slot @inner_block %>
     </label>
     """
   end

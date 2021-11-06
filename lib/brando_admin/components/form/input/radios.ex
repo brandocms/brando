@@ -1,23 +1,23 @@
 defmodule BrandoAdmin.Components.Form.Input.Radios do
-  use Surface.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data input_options, :list
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data input_options, :list
+  # data compact, :boolean
 
   def render(assigns) do
     input_options =
@@ -40,35 +40,35 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
           options
       end
 
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assigns
       |> assign(:input_options, input_options)
-      |> assign(
-        class: assigns.opts[:class],
-        compact: assigns.opts[:compact]
-      )
 
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div
-        :if={Enum.count(@input_options)}
-        class="radios-wrapper">
-        <div
-          :for={opt <- @input_options}
-          class="form-check">
-          <label class="form-check-label">
-            {radio_button @form, @field, opt.value, class: "form-check-input"}
-            <span class="label-text">{opt.label}</span>
-          </label>
+      <%= if Enum.count(@input_options) do %>
+        <div class="radios-wrapper">
+          <%= for opt <- @input_options do %>
+            <div class="form-check">
+              <label class="form-check-label">
+                <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
+                <span class="label-text">
+                  <%= opt.label %>
+                </span>
+              </label>
+            </div>
+          <% end %>
         </div>
-      </div>
-    </FieldBase>
+      <% end %>
+    </FieldBase.render>
     """
   end
 end

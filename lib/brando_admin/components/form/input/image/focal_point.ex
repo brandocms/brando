@@ -1,13 +1,13 @@
 defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
-  prop form, :form
-  prop field_name, :atom
-  prop focal, :any
+  # prop form, :form
+  # prop field_name, :atom
+  # prop focal, :any
 
-  data x, :number
-  data y, :number
+  # data x, :number
+  # data y, :number
 
   def update(%{focal: %{x: x, y: y}} = assigns, socket) do
     socket =
@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@form.id}-#{@field_name}-image-focal-point"}
       class="focus-point"

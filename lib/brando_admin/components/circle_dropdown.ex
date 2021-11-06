@@ -1,14 +1,15 @@
 defmodule BrandoAdmin.Components.CircleDropdown do
-  use Surface.Component
-  alias Surface.Components.Context
+  use BrandoAdmin, :component
 
-  prop id, :string, required: true
-  slot default, required: true
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:id, "circle_dropdown_#{assigns.id}")}
+  end
 
   def render(assigns) do
-    assigns = assign(assigns, :id, "circle_dropdown_#{assigns.id}")
-
-    ~F"""
+    ~H"""
     <div
       id={@id}
       class="circle-dropdown wrapper"
@@ -26,9 +27,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         </svg>
       </button>
       <ul data-testid="circle-dropdown-content" class="dropdown-content">
-        <Context put={dropdown_id: @id}>
-          <#slot />
-        </Context>
+        <%= render_slot @inner_block, @id %>
       </ul>
     </div>
     """

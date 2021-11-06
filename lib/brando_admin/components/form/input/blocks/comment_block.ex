@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -7,22 +7,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
-  prop block, :form
-  prop base_form, :form
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_description, :string
-  prop belongs_to, :string
-  prop data_field, :atom
+  # prop block, :form
+  # prop base_form, :form
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_description, :string
+  # prop belongs_to, :string
+  # prop data_field, :atom
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data text_type, :string
-  data initial_props, :map
-  data block_data, :map
+  # data uid, :string
+  # data text_type, :string
+  # data initial_props, :map
+  # data block_data, :map
 
   def v(form, field), do: input_value(form, field)
 
@@ -37,13 +37,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       class="comment-block"
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -54,17 +55,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {gettext("Not shown...")}
+          <%= gettext("Not shown...") %>
         </:description>
         <:config>
-          <Input.Textarea form={@block_data} field={:text} />
+          <Input.Textarea.render form={@block_data} field={:text} />
         </:config>
         <div>
-          {#if v(@block_data, :text)}
-            {v(@block_data, :text) |> raw}
-          {/if}
+          <%= if v(@block_data, :text) do %>
+            <%= v(@block_data, :text) |> raw %>
+          <% end %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

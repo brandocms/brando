@@ -1,16 +1,16 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Plus do
-  use Surface.Component
+  use BrandoAdmin, :component
 
-  prop index, :integer
-  prop click, :event
+  # prop index, :integer
+  # prop click, :event
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <button
       class="block-plus"
       type="button"
       phx-value-index={@index}
-      :on-click={@click}>
+      phx-click={@click}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 300 300">

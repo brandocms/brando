@@ -1,0 +1,51 @@
+<div class="content-list-wrapper">
+  <article class="content-list" data-moonwalk-run="brandoList">
+    <.tools
+      schema={@schema}
+      listing={@listing}
+      active_filter={@active_filter}
+      list_opts={@list_opts}
+      update_status={JS.push("update_status", target: @myself)}
+      update_filter={JS.push("update_filter", target: @myself)}
+      next_filter_key={JS.push("next_filter_key", target: @myself)}
+      delete_filter={JS.push("delete_filter", target: @myself)} />
+
+    <.entries
+      target={@myself}
+      listing_name={@listing.name}
+      entries={@entries.entries}
+      let={entry}>
+      <:empty>
+        <div class="empty-list">
+          <figure>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+          </figure>
+          <%= gettext("No matching entries found") %>
+        </div>
+      </:empty>
+
+      <.live_component
+        module={Row}
+        id={"list-row-#{@singular}-#{entry.id}"}
+        entry={entry}
+        sortable?={@sortable?}
+        status?={@status?}
+        creator?={@creator?}
+        listing={@listing}
+        schema={@schema}
+        selected_rows={@selected_rows}
+        target={@myself}
+        click={JS.push("select_row", target: @myself)} />
+    </.entries>
+
+    <.pagination
+      pagination_meta={@entries.pagination_meta}
+      change_page={JS.push("change_page", target: @myself)} />
+  </article>
+
+  <.selected_rows
+    selected_rows={@selected_rows}
+    selection_actions={@listing.selection_actions}
+    target={@myself} />
+
+</div>

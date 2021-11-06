@@ -1,22 +1,22 @@
 defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.Form.Input
 
-  prop form, :form, required: true
-  prop blueprint, :any, required: true
-  prop status, :atom, default: :closed
-  prop close, :event
+  # prop form, :form, required: true
+  # prop blueprint, :any, required: true
+  # prop status, :atom, default: :closed
+  # prop close, :event
 
   def render(assigns) do
-    ~F"""
-    <div class={"drawer", "scheduled-publishing-drawer", open: @status == :open}>
+    ~H"""
+    <div class={render_classes([drawer: true, "scheduled-publishing-drawer": true, open: @status == :open])}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
             Scheduled publishing
           </h2>
           <button
-            :on-click={@close}
+            phx-click={@close}
             type="button"
             class="drawer-close-button">
             Close
@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </div>
         <div class="drawer-form">
           <div class="brando-input">
-            <Input.Datetime field={:publish_at} form={@form} />
+            <Input.Datetime.render field={:publish_at} form={@form} />
           </div>
         </div>
       </div>

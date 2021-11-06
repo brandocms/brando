@@ -1,21 +1,22 @@
 defmodule BrandoAdmin.Components.Form.FieldBase do
-  use Surface.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   import Phoenix.HTML.Form, only: [input_id: 2]
+  import Brando.HTML, only: [render_classes: 1]
   alias BrandoAdmin.Components.Form.ErrorTag
 
-  prop form, :form
-  prop field, :any, required: true
-  prop label, :string
-  prop instructions, :string
-  prop class, :string
-  prop compact, :boolean, default: false
+  # prop form, :form
+  # prop field, :any, required: true
+  # prop label, :string
+  # prop instructions, :string
+  # prop class, :string
+  # prop compact, :boolean, default: false
 
-  data failed, :boolean
+  # data failed, :boolean
 
-  slot default
-  slot meta
-  slot header
+  # slot default
+  # slot meta
+  # slot header
 
   def render(assigns) do
     failed = assigns.form && has_error(assigns.form, assigns.field)
@@ -23,48 +24,51 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
 
     assigns =
       assigns
+      |> assign_new(:header, fn -> nil end)
+      |> assign_new(:meta, fn -> nil end)
+      |> assign_new(:class, fn -> nil end)
       |> assign(:failed, failed)
       |> assign(:label, label)
 
-    ~F"""
+    ~H"""
     <div
-      class={"field-wrapper", @class}
+      class={render_classes(["field-wrapper", @class])}
       id={"#{@form.id}-#{@field}-field-wrapper"}>
-      <div :if={@field} class="label-wrapper">
+      <div class="label-wrapper">
         <label
           for={input_id(@form, @field)}
-          class={"control-label", failed: @failed}>
-          <span>{@label}</span>
+          class={render_classes(["control-label", failed: @failed])}>
+          <span><%= @label %></span>
         </label>
-        {#if @form}
-          <ErrorTag
+        <%= if @form do %>
+          <ErrorTag.render
             form={@form}
             field={@field}
           />
-        {/if}
-        {#if slot_assigned?(:header)}
+        <% end %>
+        <%= if @header do %>
           <div class="field-wrapper-header">
-            <#slot name="header"></#slot>
+            <%= render_slot @header %>
           </div>
-        {/if}
+        <% end %>
       </div>
       <div class="field-base" id={"#{@form.id}-#{@field}-field-base"}>
-        <#slot></#slot>
+        <%= render_slot @inner_block %>
       </div>
-      {#if @instructions || slot_assigned?(:meta)}
+      <%= if @instructions || @meta do %>
         <div class="meta">
-          {#if @instructions}
+          <%= if @instructions do %>
             <div class="help-text">
-              ↳ <span>{@instructions}</span>
+              ↳ <span><%= @instructions %></span>
             </div>
-            {#if slot_assigned?(:meta)}
+            <%= if @meta do %>
               <div class="extra">
-                <#slot name="meta"></#slot>
+                <%= render_slot @meta %>
               </div>
-            {/if}
-          {/if}
+            <% end %>
+          <% end %>
         </div>
-      {/if}
+      <% end %>
     </div>
     """
   end

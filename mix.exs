@@ -35,9 +35,8 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.7"},
 
       # liveview
-      {:phoenix_live_view, "~> 0.16"},
+      {:phoenix_live_view, "~> 0.17"},
       {:phoenix_html, "~> 3.0"},
-      {:surface, "~> 0.6.0"},
       {:floki, ">= 0.27.0", only: :test},
 
       # hashing/passwords

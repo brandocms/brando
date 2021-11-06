@@ -15,13 +15,13 @@ defmodule BrandoAdmin.LiveView.Listing do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
-      use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
+      use BrandoAdmin, :live_view
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
 
       on_mount({__MODULE__, :hooks})
 
-      def hooks(params, assigns, socket) do
+      def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
 

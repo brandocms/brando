@@ -1,24 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Datetime do
-  use Surface.Component
+  use BrandoAdmin, :component
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data value, :any
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data value, :any
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
@@ -31,18 +31,16 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
   end
 
   def render(assigns) do
+    assigns = prepare_input_component(assigns)
+
     assigns =
       assign(assigns,
         value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
-        class: assigns.opts[:class],
-        monospace: assigns.opts[:monospace] || false,
-        disabled: assigns.opts[:disabled] || false,
-        debounce: assigns.opts[:debounce] || 750,
-        compact: assigns.opts[:compact]
+        class: assigns.opts[:class]
       )
 
-    ~F"""
-    <FieldBase
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -57,13 +55,13 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
             <button
               type="button"
               class="clear-datetime">
-              {gettext "Clear"}
+              <%= gettext "Clear" %>
             </button>
-            {hidden_input @form, @field, value: @value, class: "flatpickr"}
-            <div class="timezone">&mdash; {gettext "Your timezone is"}: <span>Unknown</span></div>
+            <%= hidden_input @form, @field, value: @value, class: "flatpickr" %>
+            <div class="timezone">&mdash; <%= gettext "Your timezone is" %>: <span>Unknown</span></div>
           </div>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

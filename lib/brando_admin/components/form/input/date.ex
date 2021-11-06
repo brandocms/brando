@@ -1,40 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Date do
-  use Surface.LiveComponent
+  use BrandoAdmin, :component
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data value, :any
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
-
-  def update(assigns, socket) do
-    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       value: value,
-       class: assigns.opts[:class],
-       monospace: assigns.opts[:monospace] || false,
-       disabled: assigns.opts[:disabled] || false,
-       debounce: assigns.opts[:debounce] || 750,
-       compact: assigns.opts[:compact]
-     )}
-  end
+  # data value, :any
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
@@ -47,8 +31,16 @@ defmodule BrandoAdmin.Components.Form.Input.Date do
   end
 
   def render(assigns) do
-    ~F"""
-    <FieldBase
+    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
+    assigns = prepare_input_component(assigns)
+
+    assigns =
+      assign(assigns,
+        value: value
+      )
+
+    ~H"""
+    <FieldBase.render
       form={@form}
       field={@field}
       label={@label}
@@ -63,12 +55,12 @@ defmodule BrandoAdmin.Components.Form.Input.Date do
             <button
               type="button"
               class="clear-datetime">
-              {gettext "Clear"}
+              <%= gettext "Clear" %>
             </button>
-            {hidden_input @form, @field, value: @value, class: "flatpickr"}
+            <%= hidden_input @form, @field, value: @value, class: "flatpickr" %>
           </div>
       </div>
-    </FieldBase>
+    </FieldBase.render>
     """
   end
 end

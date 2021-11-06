@@ -5,10 +5,10 @@ defmodule BrandoAdmin.Content.TemplateCreateLive do
   import Brando.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header title={gettext("Create template")} />
+    ~H"""
+    <Content.header title={gettext("Create template")} />
 
-    <Form
+    <.live_component module={Form}
       id="template_form"
       current_user={@current_user}
       schema={@schema}

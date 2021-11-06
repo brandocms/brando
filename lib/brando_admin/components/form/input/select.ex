@@ -1,41 +1,40 @@
 defmodule BrandoAdmin.Components.Form.Input.Select do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
-  alias Surface.Components.Form
 
-  prop form, :form
-  prop field, :atom
-  prop label, :string
-  prop placeholder, :string
-  prop instructions, :string
-  prop opts, :list, default: []
-  prop current_user, :map
-  prop uploads, :map
+  # prop form, :form
+  # prop field, :atom
+  # prop label, :string
+  # prop placeholder, :string
+  # prop instructions, :string
+  # prop opts, :list, default: []
+  # prop current_user, :map
+  # prop uploads, :map
 
-  data class, :string
-  data monospace, :boolean
-  data disabled, :boolean
-  data debounce, :integer
-  data compact, :boolean
+  # data class, :string
+  # data monospace, :boolean
+  # data disabled, :boolean
+  # data debounce, :integer
+  # data compact, :boolean
 
-  data show_filter, :boolean
-  data resetable, :boolean
-  data open, :boolean
-  data narrow, :boolean
-  data selected_option, :any
-  data input_options, :list
-  data select_label, :string
-  data select_form, :form
-  data select_changeset, :any
-  data filter_string, :string
-  data modal_id, :string
-  data form_translations, :any
+  # data show_filter, :boolean
+  # data resetable, :boolean
+  # data open, :boolean
+  # data narrow, :boolean
+  # data selected_option, :any
+  # data input_options, :list
+  # data select_label, :string
+  # data select_form, :form
+  # data select_changeset, :any
+  # data filter_string, :string
+  # data modal_id, :string
+  # data form_translations, :any
 
-  slot default
+  # slot default
 
   import Brando.Gettext
 
@@ -52,8 +51,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
-    compact = Keyword.get(assigns.opts, :compact)
-    class = Keyword.get(assigns.opts, :class)
 
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
@@ -62,11 +59,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:ok,
      socket
      |> assign(assigns)
+     |> prepare_input_component()
      |> assign(:selected_option, selected_option)
      |> assign_input_options()
      |> assign_label()
-     |> assign(:compact, compact)
-     |> assign(:class, class)
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
@@ -75,6 +71,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(:entry_form, entry_form)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
+     |> assign_new(:inner_block, fn -> nil end)
      |> assign_new(:modal_id, fn ->
        "select-#{assigns.form.id}-#{assigns.field}-modal"
      end)}
@@ -168,127 +165,132 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def render(assigns) do
-    ~F"""
-    <FieldBase
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}>
+    ~H"""
+    <div>
+      <FieldBase.render
+        form={@form}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
 
-      {hidden_input @form, @field, value: @selected_option}
+        <%= hidden_input @form, @field, value: @selected_option %>
 
-      <div class="multiselect">
-        <div>
-          <span class="select-label">
-            {#if slot_assigned?(:default)}
-              <#slot />
-            {#else}
-              {#if @selected_option}
-                {@select_label |> raw}
-              {#else}
-                No selection
-              {/if}
-            {/if}
-          </span>
-        </div>
-        <button
-          type="button"
-          class="button-edit"
-          :on-click="toggle"
-          phx-value-id={@modal_id}>
-          {#if @open}
-            Close
-          {#else}
-            Select
-          {/if}
-        </button>
-        <Modal title="Select option" id={@modal_id} narrow={@narrow}>
-          <div class="select-modal">
-            {#if @show_filter && !Enum.empty?(@input_options)}
-              <div
-                id={"#{@form.id}-#{@field}-select-modal-filter"}
-                class="select-filter"
-                phx-hook="Brando.SelectFilter">
-                <div class="field-wrapper">
-                  <div class="label-wrapper">
-                    <label for="select-modal-search" class="control-label">
-                      <span>{gettext("Filter options")}</span>
-                    </label>
-                  </div>
-                  <div class="field-base">
-                    <input class="text" name="select-modal-search" type="text" value={@filter_string}>
-                  </div>
-                </div>
-              </div>
-            {/if}
-
-            <div class="options">
-              <h2 class="titlecase">Available options</h2>
-              {#if Enum.empty?(@input_options)}
-                {gettext("No options found")}
-              {/if}
-              {#for opt <- @input_options}
-                <button
-                  type="button"
-                  class={"options-option", "option-selected": opt.value == @selected_option}
-                  data-label={opt.label}
-                  value={opt.value}
-                  :on-click="select_option">
-                  {opt.label |> raw}
-                </button>
-              {/for}
-            </div>
-
-            {#if @select_form}
-              <Form
-                for={@select_changeset}
-                change="validate_new_entry"
-                :let={form: entry_form}>
-                {gettext("Create entry")}
-
-                <code style="font-family: monospace; font-size: 11px"><pre>
-                {inspect @select_changeset, pretty: true}
-                </pre></code>
-                <br>
-                {#for tab <- @select_form.tabs}
-                  <div
-                    class={"form-tab", active: true}
-                    data-tab-name={tab.name}>
-                    <div class="row">
-                      {#for fieldset <- tab.fields}
-                        <Fieldset
-                          translations={@form_translations}
-                          form={entry_form}
-                          uploads={[]}
-                          fieldset={fieldset} />
-                      {/for}
+        <div class="multiselect">
+          <div>
+            <span class="select-label">
+              <%= if @inner_block do %>
+                <%= render_slot @inner_block %>
+              <% else %>
+                <%= if @selected_option do %>
+                  <%= @select_label |> raw %>
+                <% else %>
+                  No selection
+                <% end %>
+              <% end %>
+            </span>
+          </div>
+          <button
+            type="button"
+            class="button-edit"
+            phx-click={JS.push("toggle", target: @myself)}
+            phx-value-id={@modal_id}>
+            <%= if @open do %>
+              Close
+            <% else %>
+              Select
+            <% end %>
+          </button>
+          <.live_component module={Modal} title="Select option" id={@modal_id} narrow={@narrow}>
+            <div class="select-modal">
+              <%= if @show_filter && !Enum.empty?(@input_options) do %>
+                <div
+                  id={"#{@form.id}-#{@field}-select-modal-filter"}
+                  class="select-filter"
+                  phx-hook="Brando.SelectFilter">
+                  <div class="field-wrapper">
+                    <div class="label-wrapper">
+                      <label for="select-modal-search" class="control-label">
+                        <span><%= gettext("Filter options") %></span>
+                      </label>
+                    </div>
+                    <div class="field-base">
+                      <input class="text" name="select-modal-search" type="text" value={@filter_string}>
                     </div>
                   </div>
-                {/for}
-                <button
-                  :on-click="save_new_entry"
-                  type="button" class="primary">
-                  {gettext("Save")}
-                </button>
-              </Form>
-            {/if}
+                </div>
+              <% end %>
 
-            {#if @resetable}
-              <div class="reset">
-                <button
-                  type="button"
-                  class="secondary"
-                  :on-click="reset">
-                  {gettext("Reset value")}
-                </button>
+              <div class="options">
+                <h2 class="titlecase">Available options</h2>
+                <%= if Enum.empty?(@input_options) do %>
+                  <%= gettext("No options found") %>
+                <% end %>
+                <%= for opt <- @input_options do %>
+                  <button
+                    type="button"
+                    class={render_classes([
+                      "options-option",
+                      "option-selected": opt.value == @selected_option
+                    ])}
+                    data-label={opt.label}
+                    value={opt.value}
+                    phx-click={JS.push("select_option", target: @myself)}>
+                    <%= opt.label |> raw %>
+                  </button>
+                <% end %>
               </div>
-            {/if}
-          </div>
-        </Modal>
-      </div>
-    </FieldBase>
+
+              <%= if @select_form do %>
+                <.form
+                  for={@select_changeset}
+                  phx-change={JS.push("validate_new_entry", target: @myself)}
+                  let={entry_form}>
+                  <%= gettext("Create entry") %>
+
+                  <code style="font-family: monospace; font-size: 11px"><pre>
+                  <%= inspect @select_changeset, pretty: true %>
+                  </pre></code>
+                  <br>
+                  <%= for tab <- @select_form.tabs do %>
+                    <div
+                      class={"form-tab active"}
+                      data-tab-name={tab.name}>
+                      <div class="row">
+                        <%= for fieldset <- tab.fields do %>
+                          <Fieldset.render
+                            translations={@form_translations}
+                            form={entry_form}
+                            uploads={[]}
+                            fieldset={fieldset} />
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                  <button
+                    phx-click={JS.push("save_new_entry", target: @myself)}
+                    type="button" class="primary">
+                    <%= gettext("Save") %>
+                  </button>
+                </.form>
+              <% end %>
+
+              <%= if @resetable do %>
+                <div class="reset">
+                  <button
+                    type="button"
+                    class="secondary"
+                    phx-click={JS.push("reset", target: @myself)}>
+                    <%= gettext("Reset value") %>
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </.live_component>
+        </div>
+      </FieldBase.render>
+    </div>
     """
   end
 

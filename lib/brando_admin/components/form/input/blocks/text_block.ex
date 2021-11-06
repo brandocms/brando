@@ -1,24 +1,24 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Radios
 
-  prop block, :form
-  prop base_form, :form
-  prop index, :integer
-  prop block_count, :integer
-  prop is_ref?, :boolean, default: false
-  prop ref_description, :string
-  prop belongs_to, :string
+  # prop block, :form
+  # prop base_form, :form
+  # prop index, :integer
+  # prop block_count, :integer
+  # prop is_ref?, :boolean, default: false
+  # prop ref_description, :string
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data uid, :string
-  data text_type, :string
-  data initial_props, :map
+  # data uid, :string
+  # data text_type, :string
+  # data initial_props, :map
 
   def v(form, field), do: input_value(form, field)
 
@@ -34,12 +34,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <.live_component
+        module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -50,26 +51,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>
-          {#if @ref_description}
-            {@ref_description}
-          {#else}
-            {@text_type}
-          {/if}
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% else %>
+            <%= @text_type %>
+          <% end %>
         </:description>
         <:config>
-          {#for block_data <- inputs_for(@block, :data)}
-            <Radios
+          <%= for block_data <- inputs_for(@block, :data) do %>
+            <Radios.render
               form={block_data}
               field={:type}
               label="Type"
-              opts={options: [
+              opts={[options: [
                 %{label: "Paragraph", value: "paragraph"},
                 %{label: "Lede", value: "lede"},
-              ]} />
-          {/for}
+              ]]} />
+          <% end %>
         </:config>
-        {#for block_data <- inputs_for(@block, :data)}
-          <div class={"text-block", @text_type}>
+        <%= for block_data <- inputs_for(@block, :data) do %>
+          <div class={render_classes(["text-block", @text_type])}>
             <div class="tiptap-wrapper" id={"#{@uid}-rich-text-wrapper"}>
               <div
                 id={"#{@uid}-rich-text"}
@@ -88,11 +89,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 </div>
               </div>
             </div>
-            {hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750}
-            {hidden_input block_data, :extensions}
+            <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750 %>
+            <%= hidden_input block_data, :extensions %>
           </div>
-        {/for}
-      </Block>
+        <% end %>
+      </.live_component>
     </div>
     """
   end

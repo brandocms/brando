@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
 
   import Brando.Gettext
@@ -11,28 +11,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
 
-  prop block, :any
-  prop base_form, :any
-  prop index, :any
-  prop block_count, :integer
-  prop uploads, :any
-  prop data_field, :atom
-  prop belongs_to, :string
+  # prop block, :any
+  # prop base_form, :any
+  # prop index, :any
+  # prop block_count, :integer
+  # prop uploads, :any
+  # prop data_field, :atom
+  # prop belongs_to, :string
 
-  prop insert_block, :event, required: true
-  prop duplicate_block, :event, required: true
+  # prop insert_block, :event, required: true
+  # prop duplicate_block, :event, required: true
 
-  data splits, :list
-  data block_data, :map
-  data module_name, :string
-  data module_class, :string
-  data module_code, :string
-  data entry_template, :any
-  data module_multi, :boolean
-  data refs, :list
-  data important_vars, :list
-  data uid, :string
-  data module_not_found, :boolean
+  # data splits, :list
+  # data block_data, :map
+  # data module_name, :string
+  # data module_class, :string
+  # data module_code, :string
+  # data entry_template, :any
+  # data module_multi, :boolean
+  # data refs, :list
+  # data important_vars, :list
+  # data uid, :string
+  # data module_not_found, :boolean
 
   def v(form, field) do
     input_value(form, field)
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def render(%{module_not_found: true} = assigns) do
-    ~F"""
+    ~H"""
     <div class="module-missing">
       Missing module!
     </div>
@@ -97,14 +97,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@uid}-wrapper"}
       class="module-block"
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Block
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -113,63 +113,64 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>{@module_name}</:description>
+        <:description><%= @module_name %></:description>
         <:config>
           <div class="panels">
             <div class="panel">
-              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
-                <RenderVar id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
-              {/for}
+              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+              <% end %>
             </div>
             <div class="panel">
               <h2 class="titlecase">Vars</h2>
-              {#for var <- v(@block_data, :vars) || []}
+              <%= for var <- v(@block_data, :vars) || [] do %>
                 <div class="var">
-                  <div class="key">{var.key}</div>
-                  <button type="button" class="tiny" :on-click="reset_var" phx-value-id={var.key}>{gettext "Reset"}</button>
+                  <div class="key"><%= var.key %></div>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
                 </div>
-              {/for}
+              <% end %>
 
               <h2 class="titlecase">Refs</h2>
-              {#for ref <- v(@block_data, :refs) || []}
+              <%= for ref <- v(@block_data, :refs) || [] do %>
                 <div class="ref">
-                  <div class="key">{ref.name}</div>
-                  <button type="button" class="tiny" :on-click="reset_ref" phx-value-id={ref.name}>{gettext "Reset"}</button>
+                  <div class="key"><%= ref.name %></div>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
                 </div>
-              {/for}
+              <% end %>
             </div>
           </div>
         </:config>
         <:config_footer>
-          <button type="button" class="secondary" :on-click="reset_vars">
+          <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
             Reset all variables
           </button>
-          <button type="button" class="secondary" :on-click="reset_refs">
+          <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
             Reset all block refs
           </button>
         </:config_footer>
 
         <div b-editor-tpl={@module_class}>
-          {#unless Enum.empty?(@important_vars)}
+          <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
-              {#for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars))}
-                <RenderVar id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
-              {/for}
+              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
+                <.live_component module={RenderVar} id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+              <% end %>
             </div>
-          {/unless}
-          {#for split <- @splits}
-            {#case split}
-              {#match {:ref, ref}}
-                <Module.Ref
+          <% end %>
+          <%= for split <- @splits do %>
+            <%= case split do %>
+              <% {:ref, ref} -> %>
+                <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />
 
-              {#match {:content, _}}
-                {#if @module_multi}
-                  <Module.Entries
+              <% {:content, _} -> %>
+                <%= if @module_multi do %>
+                  <.live_component
+                    module={Module.Entries}
                     id={"#{@uid}-entries"}
                     uid={@uid}
                     entry_template={@entry_template}
@@ -177,24 +178,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                     data_field={@data_field}
                     base_form={@base_form}
                   />
-                {#else}
-                  {"{{ content }}"}
-                {/if}
+                <% else %>
+                  <%= "{{ content }}" %>
+                <% end %>
 
-              {#match {:variable, var_name, variable_value}}
+              <% {:variable, var_name, variable_value} -> %>
                 <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
-                  {variable_value}
+                  <%= variable_value %>
                 </div>
 
-              {#match _}
-                {raw split}
-            {/case}
-          {/for}
-          {hidden_input @block_data, :module_id}
-          {hidden_input @block_data, :sequence}
-          {hidden_input @block_data, :multi}
+              <% _ -> %>
+                <%= raw split %>
+            <% end %>
+          <% end %>
+          <%= hidden_input @block_data, :module_id %>
+          <%= hidden_input @block_data, :sequence %>
+          <%= hidden_input @block_data, :multi %>
         </div>
-      </Block>
+      </.live_component>
     </div>
     """
   end

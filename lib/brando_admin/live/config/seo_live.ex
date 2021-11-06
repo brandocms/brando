@@ -13,12 +13,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title="SEO"
       subtitle="Update SEO" />
 
-    <Form
+    <.live_component module={Form}
       id="seo_form"
       entry_id={@entry_id}
       current_user={@current_user}

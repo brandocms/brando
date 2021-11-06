@@ -5,12 +5,13 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
   import <%= web_module %>.Gettext
 
   def render(assigns) do
-    ~F"""
-    <Content.Header
+    ~H"""
+    <Content.header
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Create <%= singular %>")} />
 
-    <Form
+    <.live_component
+      module={Form}
       id="<%= singular %>_form"
       current_user={@current_user}
       schema={@schema}

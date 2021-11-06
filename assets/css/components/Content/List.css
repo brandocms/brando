@@ -30,6 +30,7 @@
       border: 1px solid var(--brando-color-dark);
       border-radius: 50%;
       font-size: 13px;
+      line-height: 1;
       transition: background-color 200ms ease;
 
       &.active {
@@ -166,7 +167,7 @@
       input {
         @fontsize 1.2vw;
         background-color: transparent;
-        padding-top: 15px;
+        padding-top: 11px;
         padding-bottom: 11px;
         padding-right: 15px;
         width: 100%;
@@ -182,11 +183,15 @@
         @font mono 0.8vw;
         cursor: pointer;
         user-select: none;
-        border: 1px solid theme(colors.blue);
-        padding: 2px 5px;
+        border: none;
         margin-top: 1px;
         margin-left: 15px;
         margin-right: 15px;
+
+        span {
+          padding: 2px 5px;
+          border: 1px solid theme(colors.blue);
+        }
       }
     }
 
@@ -489,7 +494,7 @@
     border: 0;
     font-size: clamp(0.6vw, 0.8vw, 14px);
     text-transform: uppercase;
-    padding: 0.2vw 0.7vw 0.2vw 0.5vw;
+    padding: 0vw 1vw 0vw 0.7vw;
     border-radius: 1vw;
     margin-left: 0.2vw;
   }

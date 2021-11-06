@@ -1,29 +1,29 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
-  use Surface.LiveComponent
+  use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input.Blocks
 
-  prop blocks, :list, required: true
-  prop block_forms, :list, required: true
-  prop base_form, :form, required: true
-  prop data_field, :atom, required: true
-  prop insert_index, :integer
-  prop insert_block, :event, required: true
-  prop insert_section, :event, required: true
-  prop insert_datasource, :event, required: true
-  prop duplicate_block, :event, required: true
-  prop show_module_picker, :event, required: true
-  prop uploads, :any
-  prop templates, :any
-  prop type, :string, default: "root"
-  prop uid, :string
+  # prop blocks, :list, required: true
+  # prop block_forms, :list, required: true
+  # prop base_form, :form, required: true
+  # prop data_field, :atom, required: true
+  # prop insert_index, :integer
+  # prop insert_block, :event, required: true
+  # prop insert_section, :event, required: true
+  # prop insert_datasource, :event, required: true
+  # prop duplicate_block, :event, required: true
+  # prop show_module_picker, :event, required: true
+  # prop uploads, :any
+  # prop templates, :any
+  # prop type, :string, default: "root"
+  # prop uid, :string
 
   @doc "If sections should be visible in the module picker"
-  prop hide_sections, :boolean
+  # prop hide_sections, :boolean
 
-  data block_count, :integer
+  # data block_count, :integer
 
   def update(assigns, socket) do
     # TODO: Only count on initial render, then trigger a count from
@@ -38,18 +38,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:type, fn -> "root" end)
+     |> assign_new(:hide_sections, fn -> false end)
      |> assign(block_count: block_count)}
   end
 
   def render(assigns) do
-    ~F"""
+    ~H"""
     <div
       id={"#{@id}-blocks-wrapper"}
       class="blocks-wrapper"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type={@type}>
 
-      <Blocks.ModulePicker
+      <.live_component
+        module={Blocks.ModulePicker}
         id={"#{@id}-module-picker"}
         insert_block={@insert_block}
         insert_section={@insert_section}
@@ -57,29 +60,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         insert_index={@insert_index}
         hide_sections={@hide_sections} />
 
-      {#if @block_count == 0}
+      <%= if @block_count == 0 do %>
 
         <div class="blocks-empty-instructions">
-          {gettext "Click the plus to start adding content blocks"}
-          {#if @templates}
-            <br>{gettext "or get started with a prefab'ed template"}:<br>
+          <%= gettext "Click the plus to start adding content blocks" %>
+          <%= if @templates do %>
+            <br><%= gettext "or get started with a prefab'ed template" %>:<br>
             <div class="blocks-templates">
-              {#for template <- @templates}
-                <button type="button" :on-click="use_template" phx-value-id={template.id}>
-                  {template.name}<br>
-                  <small>{template.instructions}</small>
+              <%= for template <- @templates do %>
+                <button type="button" phx-click={JS.push("use_template", target: @myself)} phx-value-id={template.id}>
+                  <%= template.name %><br>
+                  <small><%= template.instructions %></small>
                 </button>
-              {/for}
+              <% end %>
             </div>
-          {/if}
+          <% end %>
         </div>
-        <Blocks.Plus
-          index={0}
-          click={@show_module_picker} />
-      {/if}
+        <Blocks.Plus.render index={0} click={@show_module_picker} />
+      <% end %>
 
-      {#for {block_form, index} <- Enum.with_index(@block_forms)}
-        <Blocks.DynamicBlock
+      <%= for {block_form, index} <- Enum.with_index(@block_forms) do %>
+        <Blocks.DynamicBlock.render
           uploads={@uploads}
           index={index}
           data_field={@data_field}
@@ -89,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           belongs_to={@type}
           insert_block={@show_module_picker}
           duplicate_block={@duplicate_block} />
-      {/for}
+      <% end %>
     </div>
     """
   end
