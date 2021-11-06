@@ -60,6 +60,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           uploads={@uploads}
           subform={@input}
           label={@label}
+          relations={@relations}
           instructions={@instructions}
           placeholder={@placeholder}
           current_user={@current_user} />

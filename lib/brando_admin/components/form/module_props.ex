@@ -25,7 +25,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   # data open_col_vars, :list
 
   def mount(socket) do
-    {:ok, assign(socket, open_col_vars: [])}
+    {:ok,
+     socket
+     |> assign(open_col_vars: [])
+     |> assign_new(:entry_form, fn -> false end)
+     |> assign_new(:key, fn -> "default" end)}
   end
 
   def render(assigns) do

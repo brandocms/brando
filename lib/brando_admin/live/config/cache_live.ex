@@ -88,7 +88,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
         <% end %>
       </table>
 
-      <button type="button" class="primary" phx-click={JS.push("empty_caches", target: @myself)}>
+      <button type="button" class="primary" phx-click={JS.push("empty_caches")}>
         Empty all caches
       </button>
     </div>

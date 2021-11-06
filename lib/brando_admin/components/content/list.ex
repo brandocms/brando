@@ -422,7 +422,7 @@ defmodule BrandoAdmin.Components.Content.List do
               <button
                 class="filter-key"
                 phx-click={@next_filter_key}>
-                <%= filter[:label] %>
+                <span><%= filter[:label] %></span>
               </button>
               <.form
                 for={:filter_form}

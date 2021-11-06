@@ -88,6 +88,11 @@ defmodule Brando.Blueprint.Identifier do
     nil
   end
 
+  def extract_cover(%{cover: %Ecto.Association.NotLoaded{}} = entry) do
+    entry = Brando.repo().preload(entry, :cover)
+    extract_cover(entry)
+  end
+
   def extract_cover(%{cover: cover}) do
     Utils.img_url(cover, :thumb, prefix: Utils.media_url())
   end

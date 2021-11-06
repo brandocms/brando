@@ -19,7 +19,10 @@ defmodule BrandoAdmin.Components.Form.Input.Password do
   # data compact, :boolean
 
   def render(assigns) do
-    assigns = prepare_input_component(assigns)
+    assigns =
+      assigns
+      |> prepare_input_component()
+      |> assign(:value, input_value(assigns.form, assigns.field))
 
     ~H"""
     <FieldBase.render
@@ -33,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Password do
         placeholder: @placeholder,
         disabled: @disabled,
         phx_debounce: @debounce,
+        value: @value,
         class: "text#{@monospace && " monospace" || ""}" %>
     </FieldBase.render>
     """

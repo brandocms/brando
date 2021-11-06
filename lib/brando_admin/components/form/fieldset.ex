@@ -22,6 +22,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
         <Fieldset.Field.render
           form={@form}
           translations={@translations}
+          relations={@relations}
           input={input}
           uploads={@uploads}
           current_user={@current_user} />

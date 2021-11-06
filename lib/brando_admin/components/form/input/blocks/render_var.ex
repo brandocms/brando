@@ -24,8 +24,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:ok, assign(socket, visible: false)}
   end
 
-  def update(%{var: var, render: render, edit: edit}, socket) do
+  def update(%{var: var} = assigns, socket) do
     important = v(var, :important)
+    render = Map.get(assigns, :render, :all)
+    edit = Map.get(assigns, :edit, false)
 
     should_render? =
       cond do

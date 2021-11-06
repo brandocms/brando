@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       <.form for={@changeset} let={form} phx-change="validate" phx-submit="save">
         <div class="block-editor">
           <div class="code">
-            <.live_component module={Input.Code} id={"#{form.id}-code"} form={form} field={:code} />
+            <Input.Code.render form={form} field={:code} />
           </div>
 
           <.live_component
@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             show_modal="show_modal"
           />
         </div>
-        <%= if input_value(form, :wrapper) do %>
+        <%= if input_value(form, :wrapper) in [true, "true"] do %>
           <Form.inputs form={form} for={:entry_template} let={%{form: entry}}>
             <div class="entry-template">
               <hr>
@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
               <div class="block-editor">
                 <div class="code">
-                  <.live_component module={Input.Code} id={"#{entry.id}-entry-code"} form={entry} field={:code} />
+                  <Input.Code.render form={entry} field={:code} />
                 </div>
 
                 <%= hidden_input entry, :id, value: 2107 %>

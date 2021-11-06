@@ -267,7 +267,7 @@ defmodule BrandoAdmin.Components.Form do
       <.form
         for={@changeset}
         let={f}
-        phx-submit={JS.push("save")}
+        phx-submit={JS.push("save", target: @myself)}
         phx-change={JS.push("validate", target: @myself)}>
 
         <%= if @has_meta? do %>
@@ -277,7 +277,7 @@ defmodule BrandoAdmin.Components.Form do
             form={f}
             status={@status_meta}
             uploads={@uploads}
-            close="close_meta_drawer" />
+            close={JS.push("close_meta_drawer", target: @myself)} />
         <% end %>
 
         <%= if @has_revisioning? do %>
@@ -287,7 +287,7 @@ defmodule BrandoAdmin.Components.Form do
             blueprint={@blueprint}
             form={f}
             status={@status_revisions}
-            close="close_revisions_drawer" />
+            close={JS.push("close_revisions_drawer", target: @myself)} />
         <% end %>
 
         <%= if @has_scheduled_publishing? do %>
@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Components.Form do
             blueprint={@blueprint}
             form={f}
             status={@status_scheduled}
-            close="close_scheduled_publishing_drawer" />
+            close={JS.push("close_scheduled_publishing_drawer", target: @myself)} />
         <% end %>
 
         <%= for {tab, _tab_idx} <- Enum.with_index(@form.tabs) do %>
@@ -308,6 +308,7 @@ defmodule BrandoAdmin.Components.Form do
                 <Fieldset.render
                   id={"#{f.id}-fieldset-#{tab.name}-#{fs_idx}"}
                   translations={@blueprint.translations}
+                  relations={@blueprint.relations}
                   form={f}
                   fieldset={fieldset}
                   uploads={@uploads}
@@ -605,6 +606,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def inputs(assigns) do
+    assigns = assign_new(assigns, :opts, fn -> [] end)
+
     ~H"""
     <%= for {form, index} <- Enum.with_index(inputs_for(@form, @for, @opts)) do %>
       <%= render_slot(@inner_block, %{form: form, index: index}) %>
@@ -655,7 +658,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def poly_inputs(assigns) do
-    assigns = assign(assigns, :input_value, input_value(assigns.form, assigns.for))
+    assigns =
+      assigns
+      |> assign(:input_value, input_value(assigns.form, assigns.for))
+      |> assign_new(:opts, fn -> [] end)
 
     ~H"""
     <%= for {f, index} <- Enum.with_index(inputs_for_poly(@form, @for, @opts)) do %>

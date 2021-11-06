@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <%= format_datetime(job.scheduled_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
             </td>
             <td class="fit">
-              <button type="button" class="primary small" phx-click={JS.push("delete_job", target: @myself)}>
+              <button type="button" class="primary small" phx-click={JS.push("delete_job")}>
                 <%= gettext("Delete job") %>
               </button>
             </td>
@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
         <% end %>
       </table>
 
-      <button type="button" class="primary" phx-click={JS.push("refresh_jobs", target: @myself)}>
+      <button type="button" class="primary" phx-click={JS.push("refresh_jobs")}>
         <%= gettext("Refresh job queue") %>
       </button>
     </div>

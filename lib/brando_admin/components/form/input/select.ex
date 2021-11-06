@@ -51,8 +51,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
-    compact = Keyword.get(assigns.opts, :compact)
-    class = Keyword.get(assigns.opts, :class)
 
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
@@ -61,11 +59,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:ok,
      socket
      |> assign(assigns)
+     |> prepare_input_component()
      |> assign(:selected_option, selected_option)
      |> assign_input_options()
      |> assign_label()
-     |> assign(:compact, compact)
-     |> assign(:class, class)
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)

@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> Kernel.++([default])
 
     updated_changeset =
-      case Enum.find(socket.assigns.blueprint.relations, &(&1.name == field_name)) do
+      case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
         %{type: :has_many} ->
           # assoc
           Ecto.Changeset.put_assoc(changeset, field_name, updated_field)
@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
 
     updated_changeset =
-      case Enum.find(socket.assigns.blueprint.relations, &(&1.name == field_name)) do
+      case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
         %{type: :has_many} ->
           # assoc
           Ecto.Changeset.put_assoc(changeset, field_name, sorted_entries)

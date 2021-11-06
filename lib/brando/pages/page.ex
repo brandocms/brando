@@ -103,6 +103,7 @@ defmodule Brando.Pages.Page do
     listing do
       listing_query %{
         status: :published,
+        filter: %{parents: true},
         preload: [fragments: [creator: :avatar], children: [creator: :avatar]],
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
