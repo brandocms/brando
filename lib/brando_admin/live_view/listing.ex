@@ -58,6 +58,13 @@ defmodule BrandoAdmin.LiveView.Listing do
   defp attach_hooks(socket, schema) do
     socket
     |> attach_hook(:b_listing_events, :handle_event, fn
+      "set_status", %{"id" => id, "status" => status}, socket ->
+        schema = socket.assigns.schema
+        Brando.Trait.Status.update_status(schema, id, status)
+        update_list_entries(schema)
+
+        {:halt, socket}
+
       "edit_entry", %{"id" => id}, socket ->
         update_view = schema.__modules__().admin_update_view
 

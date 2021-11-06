@@ -2,7 +2,6 @@
 import AdminHook from './hooks/Admin'
 import BlockHook from './hooks/Block'
 import CodeEditorHook from './hooks/CodeEditor'
-import CircleDropdownHook from './hooks/CircleDropdown'
 import ConfirmClickHook from './hooks/ConfirmClick'
 import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
@@ -19,7 +18,6 @@ import SortableHook from './hooks/Sortable'
 import SortableBlocksHook from './hooks/SortableBlocks'
 import SubFormSortableHook from './hooks/SubFormSortable'
 import SubmitHook from './hooks/Submit'
-import StatusDropdownHook from './hooks/StatusDropdown'
 import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
 import VideoURLParserHook from './hooks/VideoURLParser'
@@ -29,7 +27,6 @@ export default app => {
   return {
     'Brando.Admin': AdminHook(app),
     'Brando.Block': BlockHook(app),
-    'Brando.CircleDropdown': CircleDropdownHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
@@ -45,7 +42,6 @@ export default app => {
     'Brando.Slug': SlugHook(app),
     'Brando.Sortable': SortableHook(app),
     'Brando.SortableBlocks': SortableBlocksHook(app),
-    'Brando.StatusDropdown': StatusDropdownHook(app),
     'Brando.SubFormSortable': SubFormSortableHook(app),
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),

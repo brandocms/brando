@@ -77,14 +77,13 @@
   }
 
   .dropdown-content {
-    display: none;
-    opacity: 0;
     background-color: var(--brando-color-peach);
     color: var(--brando-color-dark); 
     position: absolute;
     width: 250px;
     border: 1px solid var(--brando-color-dark);
     z-index: 2;
+    top: 50px;
 
     li {
       a, button {
@@ -96,7 +95,6 @@
         float: right;
         width: 100%;
         font-size: 15px;
-        text-transform: uppercase;
 
         &:hover {
           background-color: var(--brando-color-dark); 

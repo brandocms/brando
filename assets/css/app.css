@@ -1,4 +1,5 @@
 @import './fonts.css';
+@import './transitions.css';
 @import './components/Button.css';
 @import './components/ChildrenButton.css';
 @import './components/CircleDropdown.css';

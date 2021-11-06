@@ -3,9 +3,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   import Brando.Utils.Datetime
   import Brando.Gettext
 
-  alias Brando.Trait
   alias BrandoAdmin.Components.Badge
   alias BrandoAdmin.Components.ChildrenButton
+  alias BrandoAdmin.Components.CircleDropdown
+
+  alias Brando.Trait
   alias Brando.Blueprint.Listings.Template
 
   # prop entry, :any
@@ -173,51 +175,35 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns
       |> assign(:language, language)
       |> assign(:no_actions, Enum.empty?(assigns.listing.actions))
+      |> assign(:id, "entry-dropdown-#{assigns.entry.id}")
 
     ~H"""
     <%= unless @no_actions do %>
-      <div
-        id={"entry_dropdown_#{@entry.id}"}
-        class="circle-dropdown wrapper"
-        phx-hook="Brando.CircleDropdown">
-        <button
-          class="circle-dropdown-button"
-          data-testid="circle-dropdown-button"
-          type="button">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle"></circle>
-            <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white"></line>
-            <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white"></line>
-            <line x1="12" y1="19.5" x2="28" y2="19.5" stroke="white"></line>
-            <circle cx="13.5" cy="26.5" r="1.5" fill="white"></circle>
-          </svg>
-        </button>
-        <ul data-testid="circle-dropdown-content" class="dropdown-content">
-          <%= for %{event: event, label: label} = action <- @listing.actions do %>
-            <li>
-              <%= if action[:confirm] do %>
-                <button
-                  id={"action_#{event}_#{@entry.id}"}
-                  phx-hook="Brando.ConfirmClick"
-                  phx-confirm-click-message={action[:confirm]}
-                  phx-confirm-click={event}
-                  phx-value-language={@language}
-                  phx-value-id={@entry.id}>
-                  <%= label %>
-                </button>
-              <% else %>
-                <button
-                  id={"action_#{event}_#{@entry.id}"}
-                  phx-value-id={@entry.id}
-                  phx-value-language={@language}
-                  phx-click={event}>
-                  <%= label %>
-                </button>
-              <% end %>
-            </li>
-          <% end %>
-        </ul>
-      </div>
+      <CircleDropdown.render id={@id}>
+        <%= for %{event: event, label: label} = action <- @listing.actions do %>
+          <li>
+            <%= if action[:confirm] do %>
+              <button
+                id={"action_#{event}_#{@entry.id}"}
+                phx-hook="Brando.ConfirmClick"
+                phx-confirm-click-message={action[:confirm]}
+                phx-confirm-click={event}
+                phx-value-language={@language}
+                phx-value-id={@entry.id}>
+                <%= label %>
+              </button>
+            <% else %>
+              <button
+                id={"action_#{event}_#{@entry.id}"}
+                phx-value-id={@entry.id}
+                phx-value-language={@language}
+                phx-click={event}>
+                <%= label %>
+              </button>
+            <% end %>
+          </li>
+        <% end %>
+      </CircleDropdown.render>
     <% end %>
     """
   end
@@ -233,54 +219,68 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def status(assigns) do
-    assigns = assign_new(assigns, :json_statuses, fn -> json_statuses() end)
+    publish_at = Map.get(assigns.entry, :publish_at, nil)
+    assigns = assign(assigns, :publish_at, publish_at)
 
     ~H"""
-    <%= cond do %>
-      <% @soft_delete? and @entry.deleted_at -> %>
-        <div class="status">
-          <div center="true">
-            <svg data-testid="status-deleted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15"><circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle></svg>
-          </div>
+    <%= if @soft_delete? and @entry.deleted_at do %>
+      <div class="status">
+        <div center="true">
+          <svg data-testid="status-deleted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15"><circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle></svg>
         </div>
-      <% @entry.status == :pending and @entry.publish_at -> %>
-        <div class="status">
-          <div
-            id={"entry_status_#{@entry.id}"}
-            data-statuses={@json_statuses}
-            phx-hook="Brando.StatusDropdown"
-            phx-value-id={@entry.id}>
-            <svg
-              data-testid="status-pending"
-              width="15"
-              height="15"
-              viewBox="0 0 15 15"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <circle class="pending" cx="7.5" cy="7.5" r="7.5" />
-              <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="white" />
-              <line x1="3.5" y1="7.5" x2="8" y2="7.5" stroke="white" />
-            </svg>
-          </div>
+      </div>
+    <% else %>
+      <div class="status">
+        <div phx-click={toggle_dropdown("#status-dropdown-#{@entry.id}")}>
+          <.status_circle status={@entry.status} publish_at={@publish_at} />
+          <.status_dropdown id={@entry.id} />
         </div>
-      <% true -> %>
-        <div class="status">
-          <div
-            id={"entry_status_#{@entry.id}"}
-            data-statuses={json_statuses()}
-            phx-hook="Brando.StatusDropdown"
-            phx-value-id={@entry.id}>
-            <svg
-              data-testid={"status-#{@entry.status}"}
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 15 15">
-              <circle r="7.5" cy="7.5" cx="7.5" class={@entry.status} />
-            </svg>
-          </div>
-        </div>
+      </div>
     <% end %>
+    """
+  end
+
+  def status_dropdown(assigns) do
+    assigns = assign(assigns, :statuses, statuses())
+
+    ~H"""
+    <div class="status-dropdown hidden" id={"status-dropdown-#{@id}"}>
+      <%= for status <- @statuses do %>
+        <button type="button" phx-click={JS.push("set_status", value: %{id: @id, status: status})}>
+          <.status_circle status={status} /> <%= render_status_label(status) %>
+        </button>
+      <% end %>
+    </div>
+    """
+  end
+
+  def status_circle(%{status: "pending", publish_at: publish_at} = assigns)
+      when not is_nil(publish_at) do
+    ~H"""
+    <svg
+      data-testid="status-pending"
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg">
+      <circle class="pending" cx="7.5" cy="7.5" r="7.5" />
+      <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="white" />
+      <line x1="3.5" y1="7.5" x2="8" y2="7.5" stroke="white" />
+    </svg>
+    """
+  end
+
+  def status_circle(%{status: status} = assigns) do
+    ~H"""
+    <svg
+      data-testid={"status-#{@status}"}
+      xmlns="http://www.w3.org/2000/svg"
+      width="15"
+      height="15"
+      viewBox="0 0 15 15">
+      <circle r="7.5" cy="7.5" cx="7.5" class={@status} />
+    </svg>
     """
   end
 
@@ -371,10 +371,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  defp json_statuses() do
+  defp statuses() do
     [:published, :disabled, :draft, :pending]
-    |> Enum.map(&{&1, render_status_label(&1)})
-    |> Jason.encode!()
   end
 
   defp render_status_label(:disabled), do: gettext("Disabled")

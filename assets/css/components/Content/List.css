@@ -92,7 +92,7 @@
 
         &.active {
           background-color: theme(colors.peachDarker);
-        }
+        }        
       }
 
       .label {
@@ -419,33 +419,25 @@
           border: 1px solid var(--brando-color-dark);
         }
 
-        .dropdown-content {
-          display: none;
-          opacity: 0;
-          background-color: var(--brando-color-peach);
-          color: var(--brando-color-dark); 
-          position: absolute;
-          width: 175px;
+        .status-dropdown {
           border: 1px solid var(--brando-color-dark);
-          z-index: 2;
+          position: absolute;
+          background-color: var(--brando-color-peach);
+          width: 200px;
+          z-index: 1;
+          margin-top: 5px;
+          border-radius: 16px;
+          padding: 12px;
+          font-size: 16px;
 
-          li {
-            a, button {
-              @font mono;
-              display: block;
-              padding: 15px;
-              text-align: right;
-              line-height: 1;
-              border: none;
-              float: right;
-              width: 100%;
-              font-size: 15px;
-              text-transform: uppercase;
+          button {
+            width: 100%;
+            border: none;
+            display: flex;
+            align-items: center;
 
-              &:hover {
-                background-color: var(--brando-color-dark); 
-                color: theme(colors.peach);
-              }
+            svg {
+              margin-right: 10px;
             }
           }
         }
