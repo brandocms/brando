@@ -15,18 +15,17 @@
 
   .inner {
     @space padding-x sm;
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
   }
 
   h2 {
     @fontsize 13px;
     @space margin-bottom 10px;
-
-    &:after {
-      content: '↑';
-      right: 15px;
-      position: absolute;
-      top: 11px;
-    }
   }
 
   .selected-language {

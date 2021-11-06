@@ -31,12 +31,13 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
     ~H"""
     <div class="content-language-selector" phx-click={JS.push("show_language_picker", target: @myself)}>
       <div class="inner">
-        <h2>Current content language</h2>
-        <div class="selected-language">
-          <div class="circle">
-            <%= @content_language %>
+        <div class="top">
+          <h2>Current content language</h2>
+          <div class="selected-language">
+            <div class="circle">
+              <%= @content_language %>
+            </div>
           </div>
-          <span><%= @language_long %></span>
         </div>
 
         <%= if @show_language_picker do %>
