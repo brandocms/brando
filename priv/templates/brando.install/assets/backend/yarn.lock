@@ -27,7 +27,7 @@
     nprogress "^0.2.0"
     phoenix "^1.6.2"
     phoenix_html "^3.0.4"
-    phoenix_live_view "^0.16.4"
+    phoenix_live_view "^0.17.5"
     slugify "^1.6.1"
     sortablejs "^1.14.0"
     tippy.js "^6.3.2"
@@ -384,10 +384,10 @@
   resolved "https://registry.yarnpkg.com/@shopify/draggable/-/draggable-1.0.0-beta.12.tgz#483c7f691e8918868ec0c95eabcb83e244c2b49d"
   integrity sha512-Un/Dn61sv2er9yjDXLGWMauCOWBb0BMbm0yzmmrD+oUX2/x50yhNJASTsCRdndUCpWlqYfZH8jEfaOgTPsKc/g==
 
-"@sveltejs/vite-plugin-svelte@1.0.0-next.27":
-  version "1.0.0-next.27"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.27.tgz#c4b5c95d2336d1a35126b2592b923f639fbb9636"
-  integrity sha512-hiau09LA/5eGGFTxXtRPIxKmWw8By8t+Vw+uvgKYeUf+4zJLe/Q5yX3Przf2CmW0J6fPi4NWWIeYsLrOd78a2w==
+"@sveltejs/vite-plugin-svelte@1.0.0-next.30":
+  version "1.0.0-next.30"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.30.tgz#a6cd181bb406d590c1fa8d480c55950d567689f9"
+  integrity sha512-YQqdMxjL1VgSFk4/+IY3yLwuRRapPafPiZTiaGEq1psbJYSNYUWx9F1zMm32GMsnogg3zn99mGJOqe3ld3HZSg==
   dependencies:
     "@rollup/pluginutils" "^4.1.1"
     debug "^4.3.2"
@@ -1178,10 +1178,10 @@ phoenix_html@^3.0.4:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-3.0.4.tgz#96d498aa3e4889289d7035d5ed1c893ad5344048"
   integrity sha512-P+FHH9eyp87Fjcrje/tOmGfdc3boPUhwAHeQytoNeM6rhacLefG3H2mo+cj85K5pTgyngc6FK1z2igqLviSGEg==
 
-phoenix_live_view@^0.16.4:
-  version "0.16.4"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.16.4.tgz#77590fda6d776fb65b2f7ef909aeb04134ef378d"
-  integrity sha512-aP1VpXmOx/fknNB99x87XXgjjtgcJdio7NNs/nxzovR/hoMab38i3XjrfEc34hbVrCJEk08z1LSqsZSSHH08KA==
+phoenix_live_view@^0.17.5:
+  version "0.17.5"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.17.5.tgz#a1ade60693a44d9df5d39eaad71483f8a8a28a91"
+  integrity sha512-5KkaL/qfeQN4Ti8Hv81Z2hdaO1040Erumj4I1H5ADRDI4eRirgvFWlFgjhd43WcWVlAsOHRB/g/5PimvEc3gTA==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1207,7 +1207,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
@@ -1486,10 +1486,10 @@ svelte-preprocess@^4.9.8:
     sorcery "^0.10.0"
     strip-indent "^3.0.0"
 
-svelte@^3.43.1:
-  version "3.44.0"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.44.0.tgz#e6176cb3ad93846ddb4140e93f43098136b23f3b"
-  integrity sha512-zWACSJBSncGiDvFfYOMFGNV5zDLOlyhftmO5yOZ0lEtQMptpElaRtl39MWz1+lYCpwUq4F3Q2lTzI9TrTL+eMA==
+svelte@^3.44.1:
+  version "3.44.1"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.44.1.tgz#5cc772a8340f4519a4ecd1ac1a842325466b1a63"
+  integrity sha512-4DrCEJoBvdR689efHNSxIQn2pnFwB7E7j2yLEJtHE/P8hxwZWIphCtJ8are7bjl/iVMlcEf5uh5pJ68IwR09vQ==
 
 tippy.js@^6.3.2:
   version "6.3.2"
