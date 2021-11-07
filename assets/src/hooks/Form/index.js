@@ -5,7 +5,8 @@ export default (app) => ({
     this.$form = this.el.querySelector('form')
     this.$input = this.$form.querySelector('input')
 
-    window.addEventListener('keydown', this.submitListener.bind(this), false)
+    this.submitListenerEvent = this.submitListener.bind(this)
+    window.addEventListener('keydown', this.submitListenerEvent, false)
 
     this.handleEvent(`b:validate`, () => {
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -40,7 +41,7 @@ export default (app) => ({
   },
 
   destroyed() { 
-    window.removeEventListener('keydown', this.submitListener.bind(this), false)
+    window.removeEventListener('keydown', this.submitListenerEvent, false)
   },
 
   submitListener (ev) {
