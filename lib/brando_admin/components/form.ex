@@ -17,13 +17,13 @@ defmodule BrandoAdmin.Components.Form do
   def mount(socket) do
     {:ok,
      socket
+     |> assign(:initial_update, true)
      |> assign(:has_meta?, false)
      |> assign(:status_meta, :closed)
      |> assign(:status_scheduled, :closed)
      |> assign(:status_revisions, :closed)
-     |> assign(:live_preview_active?, false)
      |> assign(:processing, false)
-     |> assign_new(:uploads, fn -> nil end)
+     |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
   end
 
@@ -130,9 +130,9 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_assign_uploads(socket) do
-    if connected?(socket) && !socket.assigns[:initial_update] do
+    if connected?(socket) && socket.assigns[:initial_update] do
       socket
-      |> assign(:initial_update, true)
+      |> assign(:initial_update, false)
       |> allow_uploads()
     else
       socket
@@ -267,6 +267,7 @@ defmodule BrandoAdmin.Components.Form do
       <.form
         for={@changeset}
         let={f}
+        phx-target={@myself}
         phx-submit={JS.push("save", target: @myself)}
         phx-change={JS.push("validate", target: @myself)}>
 
@@ -341,15 +342,19 @@ defmodule BrandoAdmin.Components.Form do
         )
       end)
 
-    Enum.reduce(gallery_fields, socket_with_image_uploads, fn gallery_field, updated_socket ->
-      allow_upload(updated_socket, gallery_field.name,
-        # TODO: Read max_entries from gallery config!
-        max_entries: 10,
-        accept: :any,
-        auto_upload: true,
-        progress: &__MODULE__.handle_gallery_progress/3
-      )
-    end)
+    socket_with_gallery_uploads =
+      Enum.reduce(gallery_fields, socket_with_image_uploads, fn gallery_field, updated_socket ->
+        allow_upload(updated_socket, gallery_field.name,
+          # TODO: Read max_entries from gallery config!
+          max_entries: 10,
+          accept: :any,
+          auto_upload: true,
+          progress: &__MODULE__.handle_gallery_progress/3
+        )
+      end)
+
+    # fallback to nil if no uploads
+    assign_new(socket_with_gallery_uploads, :uploads, fn -> nil end)
   end
 
   def handle_event(
@@ -557,6 +562,60 @@ defmodule BrandoAdmin.Components.Form do
       {:noreply,
        socket
        |> update_changeset(key, [image_struct | existing_images])
+       |> assign(:processing, true)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_image_progress(
+        key,
+        upload_entry,
+        %{
+          assigns: %{
+            schema: schema,
+            entry: entry,
+            current_user: current_user,
+            id: form_id
+          }
+        } = socket
+      ) do
+    if upload_entry.done? do
+      relation_key = String.to_existing_atom("#{key}_id")
+      %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "image:#{inspect(schema)}:#{key}"
+
+      {:ok, image} =
+        consume_uploaded_entry(
+          socket,
+          upload_entry,
+          fn meta ->
+            Brando.Upload.handle_upload(
+              Map.put(meta, :config_target, config_target),
+              upload_entry,
+              cfg,
+              current_user
+            )
+          end
+        )
+
+      Brando.Images.Processing.queue_processing(image, current_user)
+
+      updated_image =
+        if entry && is_map(Map.get(entry, key)) do
+          # keep the :alt, :title and :credits field and set a default focal point
+          Map.merge(
+            image,
+            Map.take(Map.get(entry, key), [:alt, :title, :credits])
+          )
+        else
+          image
+        end
+
+      {:noreply,
+       socket
+       |> update_changeset(relation_key, updated_image.id)
+       #  |> update_changeset(key, updated_image)
        |> assign(:processing, true)}
     else
       {:noreply, socket}

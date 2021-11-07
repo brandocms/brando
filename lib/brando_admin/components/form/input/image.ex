@@ -60,12 +60,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> prepare_input_component()
      |> assign(:image, image)
      |> assign(:file_name, file_name)
-     |> assign_new(:upload_field, fn ->
-       assigns.uploads[assigns.field]
-     end)
-     |> assign_new(:relation_field, fn ->
-       String.to_existing_atom("#{assigns.field}_id")
-     end)
+     |> assign(:upload_field, assigns.uploads[assigns.field])
+     |> assign_new(:relation_field, fn -> relation_field end)
      |> assign(:focal, focal)}
   end
 
@@ -241,17 +237,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                             for={:formats}>
                             <input type="hidden" name={array_name} value={array_value} />
                           </Form.array_inputs>
-
-                          <div class="file-input-wrapper">
-                            <span class="label">
-                              Pick a file
-                            </span>
-                            <%= live_file_input Map.get(@uploads, @field) %>
-                          </div>
-                          <button
-                            class="secondary fw"
-                            type="button"
-                            phx-click={JS.push("reset_field", target: @myself)}>Reset field</button>
                         </Form.inputs>
                       <% else %>
 
@@ -262,12 +247,24 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                           <span class="label">
                             Pick a file
                           </span>
-                          <%= live_file_input Map.get(@uploads, @field) %>
+                          <%= live_file_input @upload_field %>
                         </div>
                       <% end %>
                     </div>
                   </div>
                 </div>
+                <:footer>
+                  <div class="file-input-wrapper">
+                    <span class="label">
+                      Pick a file
+                    </span>
+                    <%= live_file_input @upload_field %>
+                  </div>
+                  <button
+                    class="secondary fw"
+                    type="button"
+                    phx-click={JS.push("reset_field", target: @myself)}>Reset field</button>
+                </:footer>
               </.live_component>
             </div>
           </div>

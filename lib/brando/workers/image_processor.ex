@@ -13,17 +13,21 @@ defmodule Brando.Worker.ImageProcessor do
             "user_id" => user_id
           } = args
       }) do
-    Logger.info("==> ImageProcessor")
-    Logger.info(inspect(args, pretty: true))
-
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, user} <- Users.get_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
          {:ok, operations} <- Images.Operations.create(image, config, user),
-         {:ok, %{sizes: processed_sizes, formats: processed_formats}} <-
-           Images.Operations.perform(operations, user) do
-      # {:ok, updated_image} =
-      Images.update_image(image, %{sizes: processed_sizes, formats: processed_formats}, user)
+         {:ok, process_map} <- Images.Operations.perform(operations, user) do
+      result = Map.get(process_map, image_id)
+
+      Images.update_image(
+        image,
+        %{
+          sizes: result.sizes,
+          formats: result.formats
+        },
+        user
+      )
 
       # Phoenix.PubSub.broadcast(
       #   Brando.pubsub(),
@@ -32,10 +36,8 @@ defmodule Brando.Worker.ImageProcessor do
       # )
     else
       err ->
-        Logger.error(inspect(err, pretty: true))
+        {:error, err}
     end
-
-    :ok
   end
 
   @impl Oban.Worker
