@@ -15,6 +15,7 @@
 @import './components/Form.css';
 @import './components/Form/BlockEditor.css';
 @import './components/Form/FieldBase.css';
+@import './components/Form/Subform.css';
 @import './components/Form/Input/CodeEditor.css';
 @import './components/Form/Input/CustomCheckbox.css';
 @import './components/Form/Input/Datetime.css';
