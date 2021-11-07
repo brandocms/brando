@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.FieldBase
+  import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   # prop form, :form
   # prop field, :atom
@@ -76,6 +77,12 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
   end
 
   def render_compact(assigns) do
+    assigns =
+      assigns
+      |> prepare_input_component()
+      |> assign(:current_status, input_value(assigns.form, assigns.field))
+      |> assign(:id, "status-dropdown-#{assigns.form.id}-#{assigns.form.index}-#{assigns.field}")
+
     ~H"""
     <FieldBase.render
       form={@form}
@@ -84,7 +91,9 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div class="radios-wrapper status">
+      <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
+        <.status_circle status={@current_status} publish_at={nil} />
+        <div class="status-dropdown hidden" id={@id}>
         <%= for status <- @statuses do %>
           <div class="form-check">
             <label class="form-check-label">
@@ -106,6 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Status do
             </label>
           </div>
         <% end %>
+        </div>
       </div>
     </FieldBase.render>
     """

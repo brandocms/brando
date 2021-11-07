@@ -20,7 +20,8 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
 
   def render(assigns) do
     failed = assigns.form && has_error(assigns.form, assigns.field)
-    label = assigns.label || assigns.field |> to_string |> Brando.Utils.humanize()
+    label = get_label(assigns)
+    hidden = label == :hidden
 
     assigns =
       assigns
@@ -28,13 +29,14 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
       |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
       |> assign(:failed, failed)
+      |> assign(:hidden, hidden)
       |> assign(:label, label)
 
     ~H"""
     <div
       class={render_classes(["field-wrapper", @class])}
       id={"#{@form.id}-#{@field}-field-wrapper"}>
-      <div class="label-wrapper">
+      <div class={render_classes(["label-wrapper", hidden: @hidden])}>
         <label
           for={input_id(@form, @field)}
           class={render_classes(["control-label", failed: @failed])}>
@@ -71,6 +73,16 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
       <% end %>
     </div>
     """
+  end
+
+  defp get_label(%{label: nil} = assigns) do
+    assigns.field
+    |> to_string
+    |> Brando.Utils.humanize()
+  end
+
+  defp get_label(%{label: label}) do
+    label
   end
 
   defp has_error(form, field) do

@@ -43,18 +43,12 @@ defmodule Brando.Navigation.Menu do
             cardinality: :many,
             size: :full,
             default: %Brando.Navigation.Item{} do
-            input :status, :select,
-              options: [
-                %{label: gettext("Draft"), value: :draft},
-                %{label: gettext("Published"), value: :published},
-                %{label: gettext("Disabled"), value: :disabled},
-                %{label: gettext("Pending"), value: :pending}
-              ]
+            input :status, :status, compact: true, label: :hidden
 
             input :title, :text
             input :key, :text, monospace: true
             input :url, :text, monospace: true
-            input :open_in_new_window, :toggle
+            input :open_in_new_window, :toggle, label: "New window?"
           end
         end
       end

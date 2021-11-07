@@ -10,12 +10,15 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
 
+    assign_opts = assigns[:opts] || []
+
     assign(socket,
-      class: assigns.opts[:class],
-      monospace: assigns.opts[:monospace] || false,
-      disabled: assigns.opts[:disabled] || false,
-      debounce: assigns.opts[:debounce] || 750,
-      compact: assigns.opts[:compact]
+      class: assign_opts[:class],
+      monospace: assign_opts[:monospace] || false,
+      disabled: assign_opts[:disabled] || false,
+      debounce: assign_opts[:debounce] || 750,
+      compact: assign_opts[:compact],
+      label: assign_opts[:label] || assigns.label
     )
   end
 
@@ -32,7 +35,8 @@ defmodule BrandoAdmin.Utils do
       monospace: assigns.opts[:monospace] || false,
       disabled: assigns.opts[:disabled] || false,
       debounce: assigns.opts[:debounce] || 750,
-      compact: assigns.opts[:compact]
+      compact: assigns.opts[:compact],
+      label: assigns.opts[:label] || assigns.label
     )
   end
 

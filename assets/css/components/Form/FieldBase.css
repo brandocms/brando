@@ -171,10 +171,9 @@
 
         &:first-of-type {
           .label-wrapper {
-            @space margin-bottom 1vw;
+            @space margin-bottom 0.5vw;
             height: auto;
             overflow: visible;
-            border-bottom: 1px solid gainsboro;
           }
 
           .help-text {
@@ -221,6 +220,11 @@
     justify-content: space-between;
     margin-bottom: 4px;
     position: relative;
+
+    &.hidden {
+      display: flex;
+      visibility: hidden;
+    }
 
     > span.field-error {
       font-size: 14px;

@@ -16,10 +16,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   # data component_opts, :any
   # data component_id, :string
 
-  def mount(socket) do
-    {:ok, socket}
-  end
-
   defp is_live?(module) do
     {:__live__, 0} in module.__info__(:functions)
   end
@@ -43,10 +39,6 @@ defmodule BrandoAdmin.Components.Form.Input do
             Module.concat([__MODULE__, input_type])
         end
       end)
-
-    require Logger
-    Logger.error("====> #{inspect(assigns.component_module)}")
-    Logger.error("live? #{is_live?(assigns.component_module)}")
 
     if is_live?(assigns.component_module) do
       ~H"""
