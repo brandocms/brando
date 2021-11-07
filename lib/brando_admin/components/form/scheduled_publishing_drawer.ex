@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
-  use BrandoAdmin, :live_component
+  use BrandoAdmin, :component
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
 
   # prop form, :form, required: true
@@ -9,31 +10,16 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class={render_classes(["drawer", "scheduled-publishing-drawer", "hidden"])}>
-      <div class="inner">
-        <div class="drawer-header">
-          <h2>
-            Scheduled publishing
-          </h2>
-          <button
-            phx-click={@close}
-            type="button"
-            class="drawer-close-button">
-            Close
-          </button>
-        </div>
-        <div class="drawer-info">
-          <p>
-            Set a future publishing date for this entry. Leave blank for immediate publishing.
-          </p>
-        </div>
-        <div class="drawer-form">
-          <div class="brando-input">
-            <Input.Datetime.render field={:publish_at} form={@form} />
-          </div>
-        </div>
+    <Content.drawer id={@id} heading={"Scheduled publishing"} close={@close}>
+      <:info>
+        <p>
+          Set a future publishing date for this entry. Leave blank for immediate publishing.
+        </p>
+      </:info>
+      <div class="brando-input">
+        <Input.Datetime.render field={:publish_at} form={@form} />
       </div>
-    </div>
+    </Content.drawer>
     """
   end
 end

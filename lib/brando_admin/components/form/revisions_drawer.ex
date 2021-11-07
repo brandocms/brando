@@ -1,7 +1,8 @@
 defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   use BrandoAdmin, :live_component
-  alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Button
+  alias BrandoAdmin.Components.CircleDropdown
+  alias BrandoAdmin.Components.Content
 
   # prop form, :form, required: true
   # prop current_user, :any, required: true
@@ -83,181 +84,168 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class={render_classes(["drawer", "revisions-drawer", "hidden"])}>
-      <%= if @status == :open do %>
-        <div class="inner">
-          <div class="drawer-header">
-            <h2>
-              Entry revisions
-            </h2>
+    <div>
+      <Content.drawer id={@id} heading={"Entry revisions"} close={@close}>
+        <:info>
+          <p>
+            This is a list of this entry's revisions. Click a row to preview.
+          </p>
+          <p>
+            You may also store a new version of the entry without activating it.
+            This might be useful for scheduling content publishing,
+            or sharing previews of unpublished entries.
+          </p>
+          <div class="button-group">
             <button
-              phx-click={@close}
               type="button"
-              class="drawer-close-button">
-              Close
+              class="secondary"
+              phx-click={JS.push("store_revision", target: @myself)}>
+              Save version without activating
+            </button>
+
+            <button
+              type="button"
+              class="secondary"
+              id={"revisions-drawer-confirm-purge"}
+              phx-hook="Brando.ConfirmClick"
+              phx-confirm-click-message={"Are you sure you want to purge unprotected and non active revisions of this entry?"}
+              phx-confirm-click="purge_inactive_revisions"
+              phx-target={@myself}>
+              Purge inactive versions
             </button>
           </div>
-          <div class="drawer-info">
-            <p>
-              This is a list of this entry's revisions. Click a row to preview.
-            </p>
-            <p>
-              You may also store a new version of the entry without activating it.
-              This might be useful for scheduling content publishing,
-              or sharing previews of unpublished entries.
-            </p>
-            <div class="button-group">
-              <button
-                type="button"
-                class="secondary"
-                phx-click={JS.push("store_revision", target: @myself)}>
-                Save version without activating
-              </button>
-
-              <button
-                type="button"
-                class="secondary"
-                id={"revisions-drawer-confirm-purge"}
-                phx-hook="Brando.ConfirmClick"
-                phx-confirm-click-message={"Are you sure you want to purge unprotected and non active revisions of this entry?"}
-                phx-confirm-click="purge_inactive_revisions"
-                phx-target={@myself}>
-                Purge inactive versions
-              </button>
-            </div>
-          </div>
-          <%= if true do %>
-            <table class="revisions-table">
-              <%= for revision <- @revisions do %>
-                <tr
-                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}
-                  phx-click={JS.push("select_revision", target: @myself)}
-                  phx-value-revision={revision.revision}
-                  phx-page-loading>
-                  <td class="fit">
-                    #<%= revision.revision %>
-                  </td>
-                  <td class="fit">
-                    <%= if revision.active do %>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 17l-5.878 3.59 1.598-6.7-5.23-4.48 6.865-.55L12 2.5l2.645 6.36 6.866.55-5.231 4.48 1.598 6.7z"/></svg>
-                    <% end %>
-                  </td>
-                  <td class="fit">
+        </:info>
+        <%= if @status == :open do %>
+          <table class="revisions-table">
+            <%= for revision <- @revisions do %>
+              <tr
+                class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}
+                phx-click={JS.push("select_revision", target: @myself)}
+                phx-value-revision={revision.revision}
+                phx-page-loading>
+                <td class="fit">
+                  #<%= revision.revision %>
+                </td>
+                <td class="fit">
+                  <%= if revision.active do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 17l-5.878 3.59 1.598-6.7-5.23-4.48 6.865-.55L12 2.5l2.645 6.36 6.866.55-5.231 4.48 1.598 6.7z"/></svg>
+                  <% end %>
+                </td>
+                <td class="fit">
+                  <%= if revision.protected do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M6 8V7a6 6 0 1 1 12 0v1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2zm13 2H5v10h14V10zm-8 5.732a2 2 0 1 1 2 0V18h-2v-2.268zM8 8h8V7a4 4 0 1 0-8 0v1z"/></svg>
+                  <% end %>
+                </td>
+                <td class="date fit">
+                  <%= Calendar.strftime(revision.inserted_at, "%d/%m/%y") %>, <%= Calendar.strftime(revision.inserted_at, "%H:%M") %>
+                </td>
+                <td class="user">{revision.creator.name}</td>
+                <td class="activate fit">
+                  <CircleDropdown.render
+                    id={"revision-dropdown-#{revision.revision}"}>
+                    <Button.dropdown
+                      confirm="Are you sure you want to activate this version?"
+                      event="activate_revision"
+                      value={revision.revision}>
+                      Activate revision
+                    </Button.dropdown>
                     <%= if revision.protected do %>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M6 8V7a6 6 0 1 1 12 0v1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2zm13 2H5v10h14V10zm-8 5.732a2 2 0 1 1 2 0V18h-2v-2.268zM8 8h8V7a4 4 0 1 0-8 0v1z"/></svg>
-                    <% end %>
-                  </td>
-                  <td class="date fit">
-                    <%= Calendar.strftime(revision.inserted_at, "%d/%m/%y") %>, <%= Calendar.strftime(revision.inserted_at, "%H:%M") %>
-                  </td>
-                  <td class="user">{revision.creator.name}</td>
-                  <td class="activate fit">
-                    <CircleDropdown.render
-                      id={"revision-dropdown-#{revision.revision}"}>
                       <Button.dropdown
-                        confirm="Are you sure you want to activate this version?"
-                        event="activate_revision"
-                        value={revision.revision}>
-                        Activate revision
+                        event="unprotect_revision"
+                        value={revision.revision}
+                        loading>
+                        Unprotect version
                       </Button.dropdown>
-                      <%= if revision.protected do %>
-                        <Button.dropdown
-                          event="unprotect_revision"
-                          value={revision.revision}
-                          loading>
-                          Unprotect version
-                        </Button.dropdown>
-                      <% else %>
-                        <Button.dropdown
-                          event="protect_revision"
-                          value={revision.revision}
-                          loading>
-                          Protect version
-                        </Button.dropdown>
-                      <% end %>
-                      <%= if !revision.protected && !revision.active do %>
-                        <Button.dropdown
-                          confirm="Are you sure you want to delete this?"
-                          event="delete_revision"
-                          value={revision.revision}
-                          loading>
-                          Delete version
-                        </Button.dropdown>
-                      <% end %>
-                    </CircleDropdown.render>
-                    <!--
-                    <CircleDropdown>
-                      <li v-if="!revision.active">
-                        <button
-                          type="button"
-                          @click="openPublishModal(revision)">
+                    <% else %>
+                      <Button.dropdown
+                        event="protect_revision"
+                        value={revision.revision}
+                        loading>
+                        Protect version
+                      </Button.dropdown>
+                    <% end %>
+                    <%= if !revision.protected && !revision.active do %>
+                      <Button.dropdown
+                        confirm="Are you sure you want to delete this?"
+                        event="delete_revision"
+                        value={revision.revision}
+                        loading>
+                        Delete version
+                      </Button.dropdown>
+                    <% end %>
+                  </CircleDropdown.render>
+                  <!--
+                  <CircleDropdown>
+                    <li v-if="!revision.active">
+                      <button
+                        type="button"
+                        @click="openPublishModal(revision)">
+                        {{ $t('schedule-revision') }}
+                      </button>
+                      <KModal
+                        v-if="showPublishModal && revision === modalRevision"
+                        :ref="`publishModal${revision.revision}`"
+                        v-shortkey="['esc', 'enter']"
+                        :ok-text="$t('close')"
+                        @shortkey.native="schedulePublishing(revision)"
+                        @ok="schedulePublishing(revision)">
+                        <template #header>
                           {{ $t('schedule-revision') }}
-                        </button>
-                        <KModal
-                          v-if="showPublishModal && revision === modalRevision"
-                          :ref="`publishModal${revision.revision}`"
-                          v-shortkey="['esc', 'enter']"
-                          :ok-text="$t('close')"
-                          @shortkey.native="schedulePublishing(revision)"
-                          @ok="schedulePublishing(revision)">
-                          <template #header>
-                            {{ $t('schedule-revision') }}
-                          </template>
-                          <KInputDatetime
-                            v-model="publishAt"
-                            name="publishAt"
-                            :label="$t('publishAt-label')"
-                            :help-text="$t('publishAt-helpText')" />
-                        </KModal>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          @click="$parent.sharePreview(revision)">
-                          Share preview
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          @click="openDescribeModal(revision)">
-                          Describe revision
-                        </button>
-                        <KModal
-                          v-if="showDescribeModal && revision === modalRevision"
-                          :ref="`describeModal${revision.revision}`"
-                          v-shortkey="['esc', 'enter']"
-                          :ok-text="$t('close')"
-                          @shortkey.native="describeRevision(revision)"
-                          @ok="describeRevision(revision)">
-                          <template #header>
-                            {{ $t('describe-revision') }}
-                          </template>
-                          <KInput
-                            v-model="description"
-                            name="description"
-                            :label="$t('description-label')"
-                            :help-text="$t('description-helpText')" />
-                        </KModal>
-                      </li>
-                    </CircleDropdown>
-                    -->
-                  </td>
+                        </template>
+                        <KInputDatetime
+                          v-model="publishAt"
+                          name="publishAt"
+                          :label="$t('publishAt-label')"
+                          :help-text="$t('publishAt-helpText')" />
+                      </KModal>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        @click="$parent.sharePreview(revision)">
+                        Share preview
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        @click="openDescribeModal(revision)">
+                        Describe revision
+                      </button>
+                      <KModal
+                        v-if="showDescribeModal && revision === modalRevision"
+                        :ref="`describeModal${revision.revision}`"
+                        v-shortkey="['esc', 'enter']"
+                        :ok-text="$t('close')"
+                        @shortkey.native="describeRevision(revision)"
+                        @ok="describeRevision(revision)">
+                        <template #header>
+                          {{ $t('describe-revision') }}
+                        </template>
+                        <KInput
+                          v-model="description"
+                          name="description"
+                          :label="$t('description-label')"
+                          :help-text="$t('description-helpText')" />
+                      </KModal>
+                    </li>
+                  </CircleDropdown>
+                  -->
+                </td>
+              </tr>
+              <%= if revision.description do %>
+                <tr
+                  :key="`${revision.entryName}_${revision.entryId}_${revision.revision}_description`"
+                  :class="{ active: $parent.activeRevision.revision === revision.revision }"
+                  class="revisions-line">
+                  <td colspan="3"></td>
+                  <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
                 </tr>
-                <%= if revision.description do %>
-                  <tr
-                    :key="`${revision.entryName}_${revision.entryId}_${revision.revision}_description`"
-                    :class="{ active: $parent.activeRevision.revision === revision.revision }"
-                    class="revisions-line">
-                    <td colspan="3"></td>
-                    <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
-                  </tr>
-                <% end %>
               <% end %>
-            </table>
-          <% end %>
-        </div>
-      <% end %>
+            <% end %>
+          </table>
+        <% end %>
+      </Content.drawer>
     </div>
     """
   end

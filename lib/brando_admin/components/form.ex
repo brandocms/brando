@@ -82,6 +82,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:image_drawer_id, fn -> nil end)
+     |> assign_new(:image_drawer_field_path, fn -> [] end)
      |> assign_new(:entry_id, fn -> nil end)
      |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
@@ -262,6 +264,8 @@ defmodule BrandoAdmin.Components.Form do
         </div>
       </div>
 
+      <.image_drawer image_id={@image_drawer_id} field_path={@image_drawer_field_path} />
+
       <.form
         for={@changeset}
         let={f}
@@ -270,7 +274,7 @@ defmodule BrandoAdmin.Components.Form do
         phx-change={JS.push("validate", target: @myself)}>
 
         <%= if @has_meta? do %>
-          <.live_component module={MetaDrawer}
+          <MetaDrawer.render
             id={"#{@id}-meta-drawer"}
             blueprint={@blueprint}
             form={f}
@@ -289,7 +293,7 @@ defmodule BrandoAdmin.Components.Form do
         <% end %>
 
         <%= if @has_scheduled_publishing? do %>
-          <.live_component module={ScheduledPublishingDrawer}
+          <ScheduledPublishingDrawer.render
             id={"#{@id}-scheduled-publishing-drawer"}
             blueprint={@blueprint}
             form={f}
@@ -637,6 +641,17 @@ defmodule BrandoAdmin.Components.Form do
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value) do
     new_changeset = put_change(changeset, key, value)
     assign(socket, :changeset, new_changeset)
+  end
+
+  ##
+  ## Function components
+
+  def image_drawer(assigns) do
+    ~H"""
+    <div class="drawer hidden" id="image-drawer">
+      Zapp!
+    </div>
+    """
   end
 
   def inputs(assigns) do
