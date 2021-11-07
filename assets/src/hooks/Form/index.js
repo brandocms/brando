@@ -18,26 +18,6 @@ export default (app) => ({
         '_blank'
       )
     })
-
-    // set drawers off screen
-    gsap.set('.drawer', { xPercent: 100 })
-
-    /**
-     * Open and close side drawers.
-     * 
-     * We unfortunately have to do this with JS, since if we do not clear the transform
-     * any modals triggered from inside the drawers will be bound to the transformed 
-     * element and not allowed to overflow. This ruins the backdrop, and also cramps the size
-     */
-    this.handleEvent('b:drawer:open', ({ id }) => {
-      gsap.to(id, { xPercent: 0, ease: 'circ.out', onComplete: () => {
-        gsap.set(id, { clearProps: 'transform' })
-      }})
-    })
-
-    this.handleEvent('b:drawer:close', ({ id }) => {
-      gsap.to(id, { xPercent: 100, ease: 'circ.in' })
-    })
   },
 
   destroyed() { 

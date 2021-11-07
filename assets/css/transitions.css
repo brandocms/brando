@@ -16,6 +16,14 @@
   transform: translateY(0);
 }
 
+.x-100 {
+  transform: translateX(100%);
+}
+
+.x-0 {
+  transform: translateX(0);
+}
+
 .hidden {
   display: none;
 }

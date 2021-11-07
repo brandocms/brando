@@ -58,4 +58,14 @@ defmodule BrandoAdmin.Utils do
       time: 300
     )
   end
+
+  def toggle_drawer(js \\ %JS{}, drawer_id) do
+    js
+    |> JS.toggle(
+      to: drawer_id,
+      in: {"transition ease-out duration-300", "x-100", "x-0"},
+      out: {"transition ease-in duration-300", "x-0", "x-100"},
+      time: 300
+    )
+  end
 end

@@ -10,6 +10,7 @@
 @import './components/Content/List.css';
 @import './components/Content/SelectedRows.css';
 @import './components/Dialog.css';
+@import './components/Drawer.css';
 @import './components/Modal.css';
 @import './components/Progress.css';
 @import './components/Form.css';

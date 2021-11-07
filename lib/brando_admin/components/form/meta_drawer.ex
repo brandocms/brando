@@ -11,7 +11,9 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={render_classes(["drawer", "meta-drawer", open: @status == :open])}>
+    <div
+      id={@id}
+      class={render_classes(["drawer", "meta-drawer", "hidden"])}>
       <div class="inner">
         <div class="drawer-header">
           <h2>

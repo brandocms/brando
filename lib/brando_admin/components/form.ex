@@ -19,8 +19,6 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:initial_update, true)
      |> assign(:has_meta?, false)
-     |> assign(:status_meta, :closed)
-     |> assign(:status_scheduled, :closed)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
      |> assign(:live_preview_active?, false)
@@ -221,7 +219,7 @@ defmodule BrandoAdmin.Components.Form do
         <div class="form-tab-builtins">
           <%= if @has_meta? do %>
             <button
-              phx-click={JS.push("open_meta_drawer", target: @myself)}
+              phx-click={toggle_drawer("##{@id}-meta-drawer")}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
               <span class="tab-text">Meta</span>
@@ -229,7 +227,7 @@ defmodule BrandoAdmin.Components.Form do
           <% end %>
           <%= if @has_revisioning? do %>
             <button
-              phx-click={JS.push("open_revisions_drawer", target: @myself)}
+              phx-click={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
               <span class="tab-text">Revisions</span>
@@ -237,7 +235,7 @@ defmodule BrandoAdmin.Components.Form do
           <% end %>
           <%= if @has_scheduled_publishing? do %>
             <button
-              phx-click={JS.push("open_scheduled_publishing_drawer", target: @myself)}
+              phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
               <span class="tab-text">Scheduled publishing</span>
@@ -276,9 +274,8 @@ defmodule BrandoAdmin.Components.Form do
             id={"#{@id}-meta-drawer"}
             blueprint={@blueprint}
             form={f}
-            status={@status_meta}
             uploads={@uploads}
-            close={JS.push("close_meta_drawer", target: @myself)} />
+            close={toggle_drawer("##{@id}-meta-drawer")} />
         <% end %>
 
         <%= if @has_revisioning? do %>
@@ -288,7 +285,7 @@ defmodule BrandoAdmin.Components.Form do
             blueprint={@blueprint}
             form={f}
             status={@status_revisions}
-            close={JS.push("close_revisions_drawer", target: @myself)} />
+            close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
         <% end %>
 
         <%= if @has_scheduled_publishing? do %>
@@ -296,8 +293,7 @@ defmodule BrandoAdmin.Components.Form do
             id={"#{@id}-scheduled-publishing-drawer"}
             blueprint={@blueprint}
             form={f}
-            status={@status_scheduled}
-            close={JS.push("close_scheduled_publishing_drawer", target: @myself)} />
+            close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
         <% end %>
 
         <%= for {tab, _tab_idx} <- Enum.with_index(@form.tabs) do %>
@@ -381,28 +377,14 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_event(socket, "b:submit", %{})}
   end
 
-  def handle_event("open_scheduled_publishing_drawer", _, socket) do
-    {:noreply, push_event(socket, "b:drawer:open", %{id: ".scheduled-publishing-drawer"})}
-  end
-
-  def handle_event("close_scheduled_publishing_drawer", _, socket) do
-    {:noreply, push_event(socket, "b:drawer:close", %{id: ".scheduled-publishing-drawer"})}
-  end
-
-  def handle_event("open_meta_drawer", _, socket) do
-    {:noreply, push_event(socket, "b:drawer:open", %{id: ".meta-drawer"})}
-  end
-
-  def handle_event("close_meta_drawer", _, socket) do
-    {:noreply, push_event(socket, "b:drawer:close", %{id: ".meta-drawer"})}
-  end
-
-  def handle_event("open_revisions_drawer", _, socket) do
+  def handle_event("toggle_revisions_drawer_status", _, socket) do
     if Ecto.Changeset.get_field(socket.assigns.changeset, :id) do
       {:noreply,
        socket
-       |> assign(:status_revisions, :open)
-       |> push_event("b:drawer:open", %{id: ".revisions-drawer"})}
+       |> assign(
+         :status_revisions,
+         (socket.assigns.status_revisions == :open && :closed) || :open
+       )}
     else
       error_title = "Notice"
 
@@ -411,13 +393,6 @@ defmodule BrandoAdmin.Components.Form do
 
       {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
     end
-  end
-
-  def handle_event("close_revisions_drawer", _, socket) do
-    {:noreply,
-     socket
-     |> assign(:status_revisions, :closed)
-     |> push_event("b:drawer:close", %{id: ".revisions-drawer"})}
   end
 
   def handle_event("select_tab", %{"name" => tab}, socket) do

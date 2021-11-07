@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   def render(assigns) do
     ~H"""
-    <div class={render_classes([drawer: true, "revisions-drawer": true, open: @status == :open])}>
+    <div id={@id} class={render_classes(["drawer", "revisions-drawer", "hidden"])}>
       <%= if @status == :open do %>
         <div class="inner">
           <div class="drawer-header">
