@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.Villain
 
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
@@ -82,8 +83,6 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:image_drawer_id, fn -> nil end)
-     |> assign_new(:image_drawer_field_path, fn -> [] end)
      |> assign_new(:entry_id, fn -> nil end)
      |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
@@ -263,8 +262,6 @@ defmodule BrandoAdmin.Components.Form do
           </button>
         </div>
       </div>
-
-      <.image_drawer image_id={@image_drawer_id} field_path={@image_drawer_field_path} />
 
       <.form
         for={@changeset}
@@ -554,8 +551,7 @@ defmodule BrandoAdmin.Components.Form do
           assigns: %{
             schema: schema,
             entry: entry,
-            current_user: current_user,
-            id: form_id
+            current_user: current_user
           }
         } = socket
       ) do
@@ -645,14 +641,6 @@ defmodule BrandoAdmin.Components.Form do
 
   ##
   ## Function components
-
-  def image_drawer(assigns) do
-    ~H"""
-    <div class="drawer hidden" id="image-drawer">
-      Zapp!
-    </div>
-    """
-  end
 
   def inputs(assigns) do
     assigns = assign_new(assigns, :opts, fn -> [] end)

@@ -32,12 +32,14 @@ defmodule BrandoAdmin.Components.Content do
   end
 
   def drawer(assigns) do
+    assigns = assign_new(assigns, :narrow, fn -> false end)
+
     ~H"""
-    <div id={@id} class={render_classes(["drawer", "hidden"])}>
+    <div id={@id} class={render_classes(["drawer", "hidden", narrow: @narrow])}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
-            <%= @heading %>
+            <%= @title %>
           </h2>
           <button
             phx-click={@close}

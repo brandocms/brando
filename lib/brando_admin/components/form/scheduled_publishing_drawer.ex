@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id={@id} heading={"Scheduled publishing"} close={@close}>
+    <Content.drawer id={@id} title={"Scheduled publishing"} close={@close}>
       <:info>
         <p>
           Set a future publishing date for this entry. Leave blank for immediate publishing.

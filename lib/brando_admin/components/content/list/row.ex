@@ -271,7 +271,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def status_circle(%{status: status} = assigns) do
+  def status_circle(%{status: _status} = assigns) do
     ~H"""
     <svg
       data-testid={"status-#{@status}"}

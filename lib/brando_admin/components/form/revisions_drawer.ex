@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} heading={"Entry revisions"} close={@close}>
+      <Content.drawer id={@id} title={"Entry revisions"} close={@close}>
         <:info>
           <p>
             This is a list of this entry's revisions. Click a row to preview.
@@ -139,26 +139,26 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                 <td class="date fit">
                   <%= Calendar.strftime(revision.inserted_at, "%d/%m/%y") %>, <%= Calendar.strftime(revision.inserted_at, "%H:%M") %>
                 </td>
-                <td class="user">{revision.creator.name}</td>
+                <td class="user"><%= revision.creator.name %></td>
                 <td class="activate fit">
                   <CircleDropdown.render
                     id={"revision-dropdown-#{revision.revision}"}>
                     <Button.dropdown
                       confirm="Are you sure you want to activate this version?"
-                      event="activate_revision"
+                      event={JS.push("activate_revision", target: @myself)}
                       value={revision.revision}>
                       Activate revision
                     </Button.dropdown>
                     <%= if revision.protected do %>
                       <Button.dropdown
-                        event="unprotect_revision"
+                        event={JS.push("unprotect_revision", target: @myself)}
                         value={revision.revision}
                         loading>
                         Unprotect version
                       </Button.dropdown>
                     <% else %>
                       <Button.dropdown
-                        event="protect_revision"
+                        event={JS.push("protect_revision", target: @myself)}
                         value={revision.revision}
                         loading>
                         Protect version
@@ -167,7 +167,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <%= if !revision.protected && !revision.active do %>
                       <Button.dropdown
                         confirm="Are you sure you want to delete this?"
-                        event="delete_revision"
+                        event={JS.push("delete_revision", target: @myself)}
                         value={revision.revision}
                         loading>
                         Delete version

@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id={@id} heading={"Meta properties"} close={@close}>
+    <Content.drawer id={@id} title={"Meta properties"} close={@close}>
       <:info>
         <p>
           Meta information for search engines. Try to keep the title tag below 70

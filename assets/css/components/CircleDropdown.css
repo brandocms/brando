@@ -84,6 +84,7 @@
     border: 1px solid var(--brando-color-dark);
     z-index: 2;
     top: 50px;
+    right: 0;
 
     li {
       a, button {
