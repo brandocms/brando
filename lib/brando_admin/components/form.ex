@@ -662,13 +662,15 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:input_value, input_value)
 
     ~H"""
-    <%= for {map_key, map_value} <- @input_value do %>
-      <%= render_slot @inner_block, %{
-        name: "#{@form.name}[#{@for}][#{map_key}]",
-        key: map_key,
-        value: map_value,
-        subform: @subform
-      } %>
+    <%= if @input_value do %>
+      <%= for {map_key, map_value} <- @input_value do %>
+        <%= render_slot @inner_block, %{
+          name: "#{@form.name}[#{@for}][#{map_key}]",
+          key: map_key,
+          value: map_value,
+          subform: @subform
+        } %>
+      <% end %>
     <% end %>
     """
   end
