@@ -295,6 +295,7 @@ defmodule Brando.Pages do
   Returns the rendered value of the var.
   """
   @spec get_var(page, binary) :: any
+  def get_var(%Page{vars: nil}, _), do: nil
   def get_var(%Page{vars: []}, _), do: nil
 
   def get_var(%Page{vars: vars}, var_key) do
