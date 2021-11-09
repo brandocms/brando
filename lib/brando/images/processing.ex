@@ -41,25 +41,15 @@ defmodule Brando.Images.Processing do
   Recreate all transforms for a single image
   """
   @spec recreate_sizes_for_image(image, user) :: {:ok, image} | {:error, changeset}
-  def recreate_sizes_for_image(%{id: image_id} = image, user) do
-    {:ok, image_config} = Images.get_config_for(image)
-    Images.Utils.delete_sized_images(image)
+  def recreate_sizes_for_image(image, user) do
+    queue_processing(image, user)
+  end
 
-    with {:ok, ops} <- Operations.create(image, image_config, user),
-         {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
-      image
-      |> Image.changeset(%{sizes: result.sizes, formats: result.formats})
-      |> Brando.repo().update
-    else
-      err ->
-        Logger.error("""
+  def recreate_sizes_for_images(user) do
+    {:ok, images} = Images.list_images()
 
-        ==> recreate_sizes_for(:image, ...) failed
-        #{inspect(err)}
-
-        """)
-
-        err
+    for image <- images do
+      recreate_sizes_for_image(image, user)
     end
   end
 
