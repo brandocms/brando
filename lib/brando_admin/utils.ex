@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Utils do
       disabled: assign_opts[:disabled] || false,
       debounce: assign_opts[:debounce] || 750,
       compact: assign_opts[:compact],
-      label: assign_opts[:label] || assigns.label
+      label: assign_opts[:label] || assigns[:label]
     )
   end
 
