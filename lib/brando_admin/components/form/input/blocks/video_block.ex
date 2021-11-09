@@ -68,13 +68,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
               </div>
               <div class="panel">
-                <%= hidden_input @block_data, :url %>
                 <%= hidden_input @block_data, :source %>
                 <%= hidden_input(@block_data, :width) %>
                 <%= hidden_input(@block_data, :height) %>
                 <%= hidden_input(@block_data, :remote_id) %>
                 <%= hidden_input(@block_data, :thumbnail_url) %>
 
+                <Input.Text.render form={@block_data} field={:remote_id} />
                 <Input.Text.render form={@block_data} field={:title} />
                 <Input.Text.render form={@block_data} field={:poster} />
                 <%= if v(@block_data, :cover) in ["false", "svg"] do %>
