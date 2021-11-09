@@ -82,6 +82,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_multi, input_value(block_data, :multi))
         |> assign(:entry_template, module.entry_template)
         |> assign(:refs, refs)
+        |> assign(:vars, vars)
         |> assign_new(:important_vars, fn ->
           Enum.filter(vars, &(&1.important == true))
         end)
@@ -404,10 +405,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     # on every render
 
     # entry = Brando.repo().preload(entry, [:category], force: true)
-
-    require Logger
-    Logger.error("==> render_variable")
-
     Brando.Utils.try_path(entry, var_path)
+  end
+
+  defp render_variable(var, assigns) do
+    case Enum.find(assigns.vars, &(&1.key == var)) do
+      %{value: value} -> value
+      nil -> var
+    end
   end
 end
