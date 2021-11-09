@@ -96,8 +96,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             <% end %>
           </div>
         </div>
-        <.image_drawer id={"edit-image-#{@form.id}-#{@field}"} pick_image={toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
-        <.image_picker id={"image-picker-#{@form.id}-#{@field}"} select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
+        <.image_drawer
+          id={"edit-image-#{@form.id}-#{@field}"}
+          pick_image={toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
+        <.image_picker
+          id={"image-picker-#{@form.id}-#{@field}"}
+          schema={@form.source.data.__struct__}
+          field={@field}
+          select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
       </FieldBase.render>
     </div>
     """
@@ -130,7 +136,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def image_picker(assigns) do
     assigns =
       assign_new(assigns, :images, fn ->
-        {:ok, images} = Brando.Images.list_images(%{order: "desc id"})
+        {:ok, images} =
+          Brando.Images.list_images(%{
+            filter: %{config_target: {assigns.schema, assigns.field}},
+            order: "desc id"
+          })
+
         images
       end)
 
