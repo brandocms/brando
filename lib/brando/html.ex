@@ -231,7 +231,7 @@ defmodule Brando.HTML do
     show_breakpoint_debug? = Application.get_env(Brando.otp_app(), :show_breakpoint_debug)
 
     ~H"""
-    <body id={id} class={[classes, "unloaded"]} data_script={data_script} data_vsn={data_vsn}>
+    <body id={id} class={[classes, "unloaded"]} data-script={data_script} data-vsn={data_vsn}>
       <%= if show_breakpoint_debug? do %>
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
