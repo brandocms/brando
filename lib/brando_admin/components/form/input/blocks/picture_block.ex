@@ -131,7 +131,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <div class="image-picker-images">
             <%= for image <- @images do %>
               <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself)} phx-value-id={image.id}>
-                <img src={"/media/#{image.image.sizes["thumb"]}"} />
+                <img src={"/media/#{image.sizes["thumb"]}"} />
               </div>
             <% end %>
           </div>
@@ -329,7 +329,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     updated_data_map =
       block_data
-      |> Map.merge(image.image)
+      |> Map.merge(image)
       |> Map.from_struct()
 
     updated_data_struct = struct(PictureBlock.Data, updated_data_map)
