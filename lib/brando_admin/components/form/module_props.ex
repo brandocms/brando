@@ -238,7 +238,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.Text.render form={block_data} field={:link} />
                               <Input.Text.render form={block_data} field={:picture_class} />
                               <Input.Text.render form={block_data} field={:img_class} />
-                              <Input.Select.render
+                              <.live_component
+                                module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
                                 form={block_data}
                                 field={:placeholder}
@@ -390,7 +391,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 <%= for tpl_data <- inputs_for(block_data, :template_picture) do %>
                                   <Input.Text.render form={tpl_data} field={:picture_class} />
                                   <Input.Text.render form={tpl_data} field={:img_class} />
-                                  <Input.Select.render
+                                  <.live_component
+                                    module={Input.Select}
                                     id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
                                     form={tpl_data}
                                     field={:placeholder}

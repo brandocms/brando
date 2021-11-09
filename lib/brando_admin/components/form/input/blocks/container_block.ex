@@ -149,7 +149,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         <:config>
           <%= if @selected_palette do %>
             <div class="instructions mb-1">Select a new palette:</div>
-            <Input.Select.render
+            <.live_component
+              module={Input.Select}
               id={"#{@block_data.id}-palette-select"}
               form={@block_data}
               field={:palette_id}
@@ -158,7 +159,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           <% end %>
         </:config>
         <%= if !@selected_palette do %>
-          <Input.Select.render
+          <.live_component
+            module={Input.Select}
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
