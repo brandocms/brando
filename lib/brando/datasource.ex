@@ -364,7 +364,11 @@ defmodule Brando.Datasource do
       ) do
     ds_block = %{
       type: "datasource",
-      data: %{module: datasource_module, type: datasource_type, query: datasource_query}
+      data: %{
+        module: inspect(datasource_module),
+        type: datasource_type,
+        query: datasource_query
+      }
     }
 
     t = [
@@ -397,7 +401,7 @@ defmodule Brando.Datasource do
   def list_ids_with_datasource(schema, datasource_module, data_field) do
     ds_block = %{
       type: "datasource",
-      data: %{module: datasource_module}
+      data: %{module: inspect(datasource_module)}
     }
 
     t = [
