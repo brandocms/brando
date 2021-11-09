@@ -672,7 +672,10 @@ defmodule Brando.Query do
     preloads = Keyword.get(opts, :preload)
 
     quote do
-      @spec unquote(:"delete_#{singular_schema}")(integer | binary) ::
+      @spec unquote(:"delete_#{singular_schema}")(
+              integer | binary,
+              Brando.Users.User.t() | :system
+            ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"delete_#{singular_schema}")(id, user \\ :system) do
         Brando.Query.Mutations.delete(

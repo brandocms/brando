@@ -1,0 +1,14 @@
+.image-picker {
+  @row 3/wrap/1;
+
+  &__image {
+    @column 1/3;
+    @space padding 0.5vw;
+    background-color: white;
+
+    img {
+      aspect-ratio: 1/1;
+      object-fit: cover;
+    }
+  }
+}

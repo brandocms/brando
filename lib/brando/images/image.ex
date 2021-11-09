@@ -11,11 +11,14 @@ defmodule Brando.Images.Image do
     gettext_module: Brando.Gettext
 
   alias Brando.Images.Focal
+  import Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
+
+  identifier "{{ entry.id }}"
 
   attributes do
     attribute :title, :text
@@ -33,6 +36,53 @@ defmodule Brando.Images.Image do
 
   relations do
     relation :focal, :embeds_one, module: Focal
+  end
+
+  listings do
+    listing do
+      listing_query %{
+        order: [{:desc, :id}]
+      }
+
+      filters([
+        [label: gettext("Path"), filter: "path"]
+      ])
+
+      template(
+        """
+        <div class="padded">
+          <img
+            width="25"
+            height="25"
+            src="{{ entry|src:"original" }}" />
+        </div>
+        """,
+        columns: 2
+      )
+
+      template(
+        """
+        <small class="monospace">\#{{ entry.id }}</small><br>
+        <small class="monospace">{{ entry.path }}</small><br>
+        <small>{{ entry.width }}&times;{{ entry.height }}</small>
+        """,
+        columns: 8
+      )
+
+      actions([
+        [label: gettext("Edit image"), event: "edit_entry"],
+        [label: gettext("Duplicate image"), event: "duplicate_entry"],
+        [
+          label: gettext("Delete image"),
+          event: "delete_entry",
+          confirm: gettext("Are you sure?")
+        ]
+      ])
+
+      selection_actions([
+        [label: gettext("Delete images"), event: "delete_selected"]
+      ])
+    end
   end
 
   @derive {Jason.Encoder,

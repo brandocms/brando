@@ -86,10 +86,20 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         {:halt, socket}
 
-      "delete_selected", %{"ids" => ids}, socket ->
+      "delete_selected",
+      %{"ids" => ids},
+      %{assigns: %{current_user: user, schema: schema}} = socket ->
         ids = Jason.decode!(ids)
-        require Logger
-        Logger.error("==> delete selected #{inspect(ids)}")
+
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+
+        for entry_id <- ids do
+          apply(context, :"delete_#{singular}", [entry_id, user])
+        end
+
+        update_list_entries(schema)
+
         {:halt, socket}
 
       "duplicate_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->

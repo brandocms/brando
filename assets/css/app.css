@@ -39,12 +39,14 @@
 @import './components/Form/Input/Blocks/TableBlock.css';
 @import './components/Form/Input/Blocks/TextBlock.css';
 @import './components/Form/Input/Blocks/VideoBlock.css';
+@import './components/Image/ImagePicker.css';
 @import './components/SideBar/ContentLanguageSelector.css';
 @import './components/SideBar/CurrentUser.css';
 @import './components/SideBar/NavigationHeader.css';
 @import './components/SideBar/NavigationMenu.css';
 @import './components/SideBar/NavigationMenuSection.css';
 @import './components/SideBar/NavigationMenuSectionItem.css';
+@import './views/assets/Images.css';
 @import './views/config/Cache.css';
 @import './views/config/Globals.css';
 @import './views/config/ScheduledPublishing.css';

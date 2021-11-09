@@ -71,6 +71,7 @@ defmodule Brando.Router do
         live_session :admin do
           # brando routes
           live "/", BrandoAdmin.DashboardLive
+          live "/assets/images", BrandoAdmin.Assets.ImagesLive
           live "/config/cache", BrandoAdmin.Sites.CacheLive
           live "/config/global_sets", BrandoAdmin.Sites.GlobalSetListLive
           live "/config/global_sets/create", BrandoAdmin.Sites.GlobalSetCreateLive

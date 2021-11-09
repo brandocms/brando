@@ -1,0 +1,25 @@
+.assets-images-live {
+  .images {
+    &__image {
+      @row 3;
+      @space padding-y 1.5vw;
+      @space padding-x 1.5vw;
+
+      &:nth-of-type(odd) {
+        @color bg peach;
+      }
+
+      &__thumb {
+        @column 2/16;
+      }
+
+      &__meta {
+        @column 10/16;
+
+        &__path {
+          @font mono;
+        }
+      }
+    }
+  }
+}

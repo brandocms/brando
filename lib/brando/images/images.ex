@@ -35,8 +35,13 @@ defmodule Brando.Images do
       {:config_target, {schema, field}}, query ->
         target_string = "image:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
+
+      {:path, path}, query ->
+        from q in query, where: ilike(q.path, ^"%#{path}%")
     end
   end
+
+  mutation :delete, Image
 
   @doc """
   Create new image
