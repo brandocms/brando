@@ -36,6 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def mount(socket) do
     {:ok,
      socket
+     |> assign_new(:relation_field, fn -> nil end)
+     |> assign_new(:image, fn -> nil end)
      |> assign_new(:opts, fn -> [] end)
      |> assign_new(:label, fn -> nil end)
      |> assign_new(:instructions, fn -> nil end)
@@ -62,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(:image, image)
      |> assign(:file_name, file_name)
      |> assign(:upload_field, assigns.uploads[assigns.field])
-     |> assign_new(:relation_field, fn -> relation_field end)
+     |> assign(:relation_field, relation_field)
      |> assign(:focal, focal)}
   end
 
@@ -78,22 +80,83 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         <div>
           <div class="input-image">
             <%= if @image && @image.path do %>
-              <.image_preview image={@image} form={@form} field={@field} click={toggle_drawer("#edit-image-#{@form.id}-#{@field}")} file_name={@file_name} />
+              <.image_preview
+                image={@image}
+                relation_field={@relation_field}
+                form={@form}
+                field={@field}
+                click={toggle_drawer("#edit-image-#{@form.id}-#{@field}")}
+                file_name={@file_name} />
             <% else %>
-              <.empty_preview form={@form} field={@field} click={JS.push("show_meta_edit_modal", target: @myself)} />
+              <.empty_preview
+                form={@form}
+                relation_field={@relation_field}
+                field={@field}
+                click={JS.push("show_meta_edit_modal", target: @myself)} />
             <% end %>
           </div>
         </div>
-        <.image_drawer id={"edit-image-#{@form.id}-#{@field}"} />
+        <.image_drawer id={"edit-image-#{@form.id}-#{@field}"} pick_image={toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
+        <.image_picker id={"image-picker-#{@form.id}-#{@field}"} select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
       </FieldBase.render>
     </div>
+    """
+  end
+
+  def handle_event(
+        "select_image",
+        %{"id" => image_id},
+        %{assigns: %{relation_field: relation_field}} = socket
+      ) do
+    changeset = socket.assigns.form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    updated_changeset =
+      Ecto.Changeset.put_change(
+        changeset,
+        relation_field,
+        image_id
+      )
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def image_picker(assigns) do
+    assigns =
+      assign_new(assigns, :images, fn ->
+        {:ok, images} = Brando.Images.list_images(%{order: "desc id"})
+        images
+      end)
+
+    ~H"""
+    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")}>
+      <:info>
+        Select existing image
+      </:info>
+      <div class="image-picker">
+        <%= for image <- @images do %>
+        <div class="image-picker__image" phx-click={@select_image} phx-value-id={image.id}>
+          <img
+            width="25"
+            height="25"
+            src={"#{Utils.img_url(image, :original, prefix: Utils.media_url())}"} />
+        </div>
+        <% end %>
+      </div>
+    </Content.drawer>
     """
   end
 
   def empty_preview(assigns) do
     ~H"""
     <div class="image-wrapper-compact">
-      <input type="hidden" name={"#{@form.name}[#{@field}]"} value="" />
+      <input type="hidden" name={"#{@form.name}[#{@relation_field}]"} value="" />
 
       <div class="img-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
@@ -117,6 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def image_preview(assigns) do
     ~H"""
     <div class="image-wrapper-compact">
+      <input type="hidden" name={"#{@form.name}[#{@relation_field}]"} value={@image.id} />
       <%= if @image.sizes["thumb"] do %>
         <img
           width="25"
@@ -151,6 +215,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       <:info>
         ...
       </:info>
+      <button type="button" class="secondary" phx-click={@pick_image}>
+        Pick image
+      </button>
     </Content.drawer>
 
     """
