@@ -678,6 +678,10 @@ defmodule Brando.Utils do
       "" <> add_cache_string(opts)
   end
 
+  def img_url(image_field, "original", opts) do
+    img_url(image_field, :original, opts)
+  end
+
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
 
