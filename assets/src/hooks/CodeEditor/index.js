@@ -9,14 +9,14 @@ export default (app) => ({
     this.initialize()    
   },
 
-  updated() {
-    if (this._value !== this.$input.value) {
-      this._value = this.$input.value
-      const transaction = this.view.state.update({ changes: { from: 0, to: this.view.state.doc.length, insert: this._value }})
-      const update = this.view.state.update(transaction)
-      this.view.update([update])
-    }
-  }, 
+  // updated() {
+  //   if (this._value !== this.$input.value) {
+  //     this._value = this.$input.value
+  //     const transaction = this.view.state.update({ changes: { from: 0, to: this.view.state.doc.length, insert: this._value }})
+  //     const update = this.view.state.update(transaction)
+  //     this.view.update([update])
+  //   }
+  // }, 
 
   destroyed () {
     this.editor?.destroy()
