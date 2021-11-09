@@ -5,6 +5,10 @@ defmodule Brando.OEmbed do
   }
 
   @spec get(binary, binary) :: {:error, binary} | {:ok, map}
+  def get("file", _) do
+    {:error, "no oEmbed target"}
+  end
+
   def get(source, url) do
     fetch(@providers[source] <> URI.encode(url, &URI.char_unreserved?/1))
   end
