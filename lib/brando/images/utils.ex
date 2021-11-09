@@ -28,13 +28,16 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete sizes associated with `image`, but keep original.
   """
-  @spec delete_sized_images(Image.t()) :: any
-  def delete_sized_images(nil), do: nil
+  @spec delete_sized_images(Image.t()) :: {:ok, integer}
+  def delete_sized_images(nil), do: {:ok, 0}
 
   def delete_sized_images(%{formats: formats, sizes: sizes} = image) do
-    for {_size, file} <- sizes do
-      delete_media(file)
-    end
+    res =
+      for {_size, file} <- sizes do
+        delete_media(file)
+      end
+
+    {:ok, Enum.count(res)}
   end
 
   @doc """
