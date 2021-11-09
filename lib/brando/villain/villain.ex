@@ -172,7 +172,10 @@ defmodule Brando.Villain do
          {result, _} <- Liquex.Render.render([], parsed_doc, context) do
       Enum.join(result)
     else
-      {:error, "expected end of string", _} ->
+      {:error, "expected end of string", err} ->
+        require Logger
+        Logger.error("==> Error parsing liquex template")
+        Logger.error(inspect(err, pretty: true))
         ">>> Error parsing liquex template <<<"
     end
   end
