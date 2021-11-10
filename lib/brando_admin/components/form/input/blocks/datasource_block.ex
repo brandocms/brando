@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         query = v(block_data, :query)
         ids = v(block_data, :ids)
 
-        {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
+        {:ok, selected_entries} = Datasource.get_selection(module, query, ids)
         assign(socket, :selected_entries, selected_entries)
 
       _ ->

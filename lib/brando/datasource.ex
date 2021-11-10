@@ -249,7 +249,7 @@ defmodule Brando.Datasource do
     {:ok,
      modules
      |> Enum.filter(&is_datasource/1)
-     |> Enum.map(&String.replace(to_string(&1), "Elixir.", ""))}
+     |> Enum.map(&to_string/1)}
   end
 
   @doc """
@@ -365,7 +365,7 @@ defmodule Brando.Datasource do
     ds_block = %{
       type: "datasource",
       data: %{
-        module: inspect(datasource_module),
+        module: to_string(datasource_module),
         type: datasource_type,
         query: datasource_query
       }
@@ -401,7 +401,7 @@ defmodule Brando.Datasource do
   def list_ids_with_datasource(schema, datasource_module, data_field) do
     ds_block = %{
       type: "datasource",
-      data: %{module: inspect(datasource_module)}
+      data: %{module: to_string(datasource_module)}
     }
 
     t = [
