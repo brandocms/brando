@@ -45,11 +45,36 @@ defmodule Brando.Images.Processing do
     queue_processing(image, user)
   end
 
+  @doc """
+  Recreate all transforms for all images
+  """
+  @spec recreate_sizes_for_images(user) :: list
   def recreate_sizes_for_images(user) do
     {:ok, images} = Images.list_images()
 
     for image <- images do
       recreate_sizes_for_image(image, user)
+    end
+  end
+
+  @doc """
+  Set dominant color for a single image
+  """
+  @spec set_dominant_color(image, user) :: {:ok, image} | {:error, changeset}
+  def set_dominant_color(image, user) do
+    dominant_color = Images.Operations.Info.get_dominant_color(image.path)
+    Images.update_image(image, %{dominant_color: dominant_color}, user)
+  end
+
+  @doc """
+  Set dominant color for all images
+  """
+  @spec set_dominant_color_for_images(user) :: list
+  def set_dominant_color_for_images(user) do
+    {:ok, images} = Images.list_images()
+
+    for image <- images do
+      set_dominant_color(image, user)
     end
   end
 
