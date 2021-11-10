@@ -71,6 +71,7 @@ defmodule <%= application_module %>.MixProject do
       {:swoosh, "~> 1.0"},
       {:jason, "~> 1.0"},
       {:ex_machina, "~> 2.3"},
+      {:remote_ip, "~> 1.0"},
 
       # release management and production tools
       {:recon, "~> 2.3"},
