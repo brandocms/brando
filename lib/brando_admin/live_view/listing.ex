@@ -49,7 +49,6 @@ defmodule BrandoAdmin.LiveView.Listing do
       |> set_admin_locale()
       |> assign_schema(schema)
       |> assign_title()
-      |> assign_blueprint(schema)
       |> attach_hooks(schema)
 
     {:cont, socket}
@@ -202,11 +201,5 @@ defmodule BrandoAdmin.LiveView.Listing do
       :page_title,
       (translated_plural && String.capitalize(translated_plural)) || nil
     )
-  end
-
-  defp assign_blueprint(socket, schema) do
-    assign_new(socket, :blueprint, fn ->
-      schema.__blueprint__()
-    end)
   end
 end

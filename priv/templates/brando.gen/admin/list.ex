@@ -14,7 +14,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
     <.live_component
       module={Content.List}
       id={"content_listing_#{@schema}_default"}
-      blueprint={@blueprint}
+      schema={@schema}
       current_user={@current_user}
       uri={@uri}
       params={@params}

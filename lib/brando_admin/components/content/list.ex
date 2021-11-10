@@ -128,12 +128,11 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp assign_defaults(socket, assigns) do
-    blueprint = assigns.blueprint
-    schema = blueprint.modules.schema
-    context = blueprint.modules.context
-    singular = blueprint.naming.singular
-    plural = blueprint.naming.plural
-    listings = blueprint.listings
+    schema = assigns.schema
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
+    plural = schema.__naming__().plural
+    listings = schema.__listings__()
 
     socket
     |> assign(:uri, assigns.uri)

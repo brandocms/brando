@@ -273,7 +273,6 @@ defmodule BrandoAdmin.Components.Form do
         <%= if @has_meta? do %>
           <MetaDrawer.render
             id={"#{@id}-meta-drawer"}
-            blueprint={@blueprint}
             form={f}
             uploads={@uploads}
             close={toggle_drawer("##{@id}-meta-drawer")} />
@@ -283,7 +282,6 @@ defmodule BrandoAdmin.Components.Form do
           <.live_component module={RevisionsDrawer}
             id={"#{@id}-revisions-drawer"}
             current_user={@current_user}
-            blueprint={@blueprint}
             form={f}
             status={@status_revisions}
             close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
@@ -292,7 +290,6 @@ defmodule BrandoAdmin.Components.Form do
         <%= if @has_scheduled_publishing? do %>
           <ScheduledPublishingDrawer.render
             id={"#{@id}-scheduled-publishing-drawer"}
-            blueprint={@blueprint}
             form={f}
             close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
         <% end %>
@@ -305,8 +302,8 @@ defmodule BrandoAdmin.Components.Form do
               <%= for {fieldset, fs_idx} <- Enum.with_index(tab.fields) do %>
                 <Fieldset.render
                   id={"#{f.id}-fieldset-#{tab.name}-#{fs_idx}"}
-                  translations={@blueprint.translations}
-                  relations={@blueprint.relations}
+                  translations={@schema.__translations__}
+                  relations={@schema.__relations__}
                   form={f}
                   fieldset={fieldset}
                   uploads={@uploads}

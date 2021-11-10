@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Assets.ImagesLive do
 
     <.live_component module={Content.List}
       id={"content_listing_#{@schema}_default"}
-      blueprint={@blueprint}
+      schema={@schema}
       current_user={@current_user}
       uri={@uri}
       params={@params}
