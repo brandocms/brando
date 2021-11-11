@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
         asset: %{type: :image, name: name}
       }) do
     """
-    add #{inspect(name)}, :jsonb
+    add #{inspect(name)}_id, references(:images, on_delete: :nilify_all)
     """
   end
 

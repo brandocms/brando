@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
   use BrandoAdmin, :live_component
+  use BrandoAdmin.Translator, "listings"
   import Brando.Utils.Datetime
   import Brando.Gettext
 
@@ -71,6 +72,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <% end %>
 
         <.entry_menu
+          schema={@schema}
           entry={@entry}
           listing={@listing} />
       </div>
@@ -190,7 +192,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
                 phx-confirm-click={event}
                 phx-value-language={@language}
                 phx-value-id={@entry.id}>
-                <%= label %>
+                <%= g(@schema, label) %>
               </button>
             <% else %>
               <button
@@ -198,7 +200,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
                 phx-value-id={@entry.id}
                 phx-value-language={@language}
                 phx-click={event}>
-                <%= label %>
+                <%= g(@schema, label) %>
               </button>
             <% end %>
           </li>
@@ -365,6 +367,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           soft_delete?={@soft_delete?}/>
       <% end %>
       <.entry_menu
+        schema={@schema}
         entry={@entry}
         listing={@listing} />
     </div>

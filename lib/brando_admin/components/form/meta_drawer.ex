@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   use BrandoAdmin, :component
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Content
+  import Brando.Gettext
 
   # prop form, :form, required: true
   # prop blueprint, :any, required: true
@@ -14,11 +15,13 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
     <Content.drawer id={@id} title={"Meta properties"} close={@close}>
       <:info>
         <p>
+          <%= gettext ~s(
           Meta information for search engines. Try to keep the title tag below 70
           characters while incorporating key terms for your content. The description
           tag should be around 155 characters to prevent getting truncated in search
           results. You can also attach your own META image which will override your
           entry's cover image, if it has one.
+          ) %>
         </p>
       </:info>
       <div class="brando-input">

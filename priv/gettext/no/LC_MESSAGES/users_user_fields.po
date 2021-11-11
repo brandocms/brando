@@ -1,42 +1,51 @@
-## "msgid"s in this file come from POT (.pot) files.
-##
-## Do not add, change, or remove "msgid"s manually here as
-## they're tied to the ones in the corresponding POT file
-## (with the same domain).
-##
-## Use "mix gettext.extract --merge" or "mix gettext.merge"
-## to merge POT files into PO files.
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: no\n"
-"Plural-Forms: nplurals=2\n"
+"Plural-Forms: nplurals=2;\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
 
 #, elixir-format
-#: lib/brando/users/user.ex:102 lib/brando/users/user.ex:103
+#: lib/brando/users/user.ex:103 lib/brando/users/user.ex:104
 msgid "Email"
 msgstr "Epost"
 
 #, elixir-format
-#: lib/brando/users/user.ex:97 lib/brando/users/user.ex:98
+#: lib/brando/users/user.ex:98 lib/brando/users/user.ex:99
 msgid "Name"
 msgstr "Navn"
 
 #, elixir-format
-#: lib/brando/users/user.ex:112 lib/brando/users/user.ex:113
+#: lib/brando/users/user.ex:113 lib/brando/users/user.ex:114
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #, elixir-format
-#: lib/brando/users/user.ex:107 lib/brando/users/user.ex:108
+#: lib/brando/users/user.ex:108 lib/brando/users/user.ex:109
 msgid "Password"
-msgstr ""
+msgstr "Passord"
 
 #, elixir-format
-#: lib/brando/users/user.ex:121
+#: lib/brando/users/user.ex:122
 msgid "Profile picture"
-msgstr ""
+msgstr "Profilbilde"
 
 #, elixir-format
-#: lib/brando/users/user.ex:117
+#: lib/brando/users/user.ex:118
 msgid "Role"
-msgstr ""
+msgstr "Rolle"

@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
 
   def assign_modules(socket) do
     assign_new(socket, :modules, fn ->
-      {:ok, modules} = Brando.Content.list_modules()
+      {:ok, modules} = Brando.Content.list_modules(%{order: "asc namespace, asc name"})
       Enum.map(modules, &%{label: "[#{&1.namespace}] #{&1.name}", value: &1.id})
     end)
   end

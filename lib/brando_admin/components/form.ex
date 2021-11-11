@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin, :live_component
+  use BrandoAdmin.Translator, "forms"
 
   import Brando.Gettext
   import Ecto.Changeset
@@ -212,7 +213,7 @@ defmodule BrandoAdmin.Components.Form do
               class={render_classes([active: @active_tab == tab])}
               phx-click={JS.push("select_tab", target: @myself)}
               phx-value-name={tab}>
-              <%= tab %>
+              <%= g(@schema, tab) %>
             </button>
           <% end %>
         </div>
@@ -231,7 +232,7 @@ defmodule BrandoAdmin.Components.Form do
               phx-click={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-              <span class="tab-text">Revisions</span>
+              <span class="tab-text"><%= gettext "Revisions" %></span>
             </button>
           <% end %>
           <%= if @has_scheduled_publishing? do %>
@@ -239,7 +240,7 @@ defmodule BrandoAdmin.Components.Form do
               phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
               type="button">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
-              <span class="tab-text">Scheduled publishing</span>
+              <span class="tab-text"><%= gettext "Scheduled publishing" %></span>
             </button>
           <% end %>
           <%= if @has_live_preview? do %>

@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Content.List do
   use BrandoAdmin, :live_component
+  use BrandoAdmin.Translator, "listings"
 
   import Brando.Gettext
 
@@ -312,7 +313,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp active_filters(assigns) do
     ~H"""
     <div class="active-filters">
-      Active filters &rarr;
+      <%= gettext "Active filters" %> &rarr;
       <%= for {name, value} <- @active_filters do %>
         <button
           class="filter"
@@ -421,7 +422,7 @@ defmodule BrandoAdmin.Components.Content.List do
               <button
                 class="filter-key"
                 phx-click={@next_filter_key}>
-                <span><%= filter[:label] %></span>
+                <span><%= g(@schema, filter[:label]) %></span>
               </button>
               <.form
                 for={:filter_form}
@@ -521,7 +522,7 @@ defmodule BrandoAdmin.Components.Content.List do
                 <button
                   phx-click={event}
                   phx-value-ids={@encoded_selected_rows}>
-                  <%= label %>
+                  <%= g(@schema, label) %>
                 </button>
               </li>
             <% end %>

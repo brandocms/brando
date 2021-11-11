@@ -296,6 +296,8 @@ defmodule Brando.HTML.Images do
 
   defp srcset_placeholder?(:svg), do: true
   defp srcset_placeholder?(:dominant_color), do: true
+  defp srcset_placeholder?("svg"), do: true
+  defp srcset_placeholder?("dominant_color"), do: true
   defp srcset_placeholder?(false), do: true
   defp srcset_placeholder?(_), do: false
 
@@ -326,7 +328,9 @@ defmodule Brando.HTML.Images do
     fallback =
       case placeholder do
         :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
+        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
         :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
+        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
@@ -350,7 +354,7 @@ defmodule Brando.HTML.Images do
 
   defp add_dominant_color(attrs, image_struct) do
     case Keyword.get(attrs.opts, :placeholder) do
-      :dominant_color ->
+      pl when pl in [:dominant_color, "dominant_color"] ->
         attrs
         |> put_in(
           [:picture, :style],
@@ -632,7 +636,8 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+              k,
             opts
           )
 
@@ -678,7 +683,8 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+              k,
             opts
           )
 
@@ -700,7 +706,8 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+              k,
             opts
           )
 
@@ -717,7 +724,8 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+              k,
             opts
           )
 
@@ -741,7 +749,8 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+              k,
             opts
           )
 

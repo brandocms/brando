@@ -48,7 +48,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     relation_field = String.to_existing_atom("#{assigns.field}_id")
     image_id = get_field(assigns.form.source, relation_field)
 
-    {:ok, image} = (image_id && Images.get_image(image_id)) || {:ok, nil}
+    {:ok, image} =
+      if image_id do
+        case Images.get_image(image_id) do
+          {:ok, image} -> {:ok, image}
+          {:error, _} -> {:ok, nil}
+        end
+      else
+        {:ok, nil}
+      end
 
     focal =
       if is_map(image) && image.path,
@@ -92,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                 form={@form}
                 relation_field={@relation_field}
                 field={@field}
-                click={JS.push("show_meta_edit_modal", target: @myself)} />
+                click={toggle_drawer("#edit-image-#{@form.id}-#{@field}")} />
             <% end %>
           </div>
         </div>

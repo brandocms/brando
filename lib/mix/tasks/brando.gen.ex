@@ -150,7 +150,7 @@ defmodule Mix.Tasks.Brando.Gen do
           villain_fields: villain_fields,
           gallery_fields: gallery_fields,
           module: module,
-          params: Mix.Brando.params(attrs),
+          params: params,
           snake_domain: snake_domain,
           schema_module: blueprint.modules.schema,
           domain: domain,
@@ -158,7 +158,6 @@ defmodule Mix.Tasks.Brando.Gen do
           types: types,
           migration_types: migration_types,
           defaults: defs,
-          params: params,
           vue_singular: vue_singular,
           vue_plural: vue_plural
         ]

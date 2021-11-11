@@ -1,0 +1,36 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/redirect.ex:30 lib/brando/sites/redirect.ex:35
+msgid "/uri"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/redirect.ex:40
+msgid "302"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/redirect.ex:39
+msgid "Status Code"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/redirect.ex:29
+msgid "To"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/redirect.ex:34
+msgid "from"
+msgstr ""

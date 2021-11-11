@@ -122,19 +122,6 @@ defmodule Brando.Users.User do
         label t("Profile picture")
       end
     end
-
-    context :strings do
-      translate [:user, :error], t("Error")
-      translate [:user, :superuser_cannot_be_deactivated], t("Superuser cannot be deactivated")
-      translate [:user, :title], t("Users")
-      translate [:user, :subtitle], t("Administrate users")
-      translate [:user, :new], t("Create user")
-      translate [:user, :edit], t("Edit user")
-      translate [:user, :activate], t("Activate user")
-      translate [:user, :activated], t("User activated")
-      translate [:user, :deactivate], t("Deactivate user")
-      translate [:user, :deactivated], t("User deactivated")
-    end
   end
 
   listings do
@@ -146,16 +133,16 @@ defmodule Brando.Users.User do
       field :avatar, :image, columns: 2
 
       filters([
-        [label: gettext("Name"), filter: "name"],
-        [label: gettext("Email"), filter: "email"]
+        [label: t("Name"), filter: "name"],
+        [label: t("Email"), filter: "email"]
       ])
 
       actions([
-        [label: gettext("Edit user"), event: "edit_entry"],
+        [label: t("Edit user"), event: "edit_entry"],
         [
-          label: gettext("Disable user"),
+          label: t("Disable user"),
           event: "disable_user",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ]
       ])
 
@@ -176,7 +163,7 @@ defmodule Brando.Users.User do
 
   forms do
     form do
-      tab "Content" do
+      tab t("Content") do
         fieldset size: :half do
           input :name, :text
           input :email, :email
@@ -185,10 +172,10 @@ defmodule Brando.Users.User do
 
           input :role, :radios,
             options: [
-              %{label: gettext("Superuser"), value: :superuser},
-              %{label: gettext("Admin"), value: :admin},
-              %{label: gettext("Editor"), value: :editor},
-              %{label: gettext("User"), value: :user}
+              %{label: t("Superuser"), value: :superuser},
+              %{label: t("Admin"), value: :admin},
+              %{label: t("Editor"), value: :editor},
+              %{label: t("User"), value: :user}
             ]
         end
 

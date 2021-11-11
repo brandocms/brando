@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
 
+  import Brando.Gettext
+
   # prop form, :form, required: true
   # prop blueprint, :any, required: true
   # prop status, :atom, default: :closed
@@ -10,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id={@id} title={"Scheduled publishing"} close={@close}>
+    <Content.drawer id={@id} title={gettext("Scheduled publishing")} close={@close}>
       <:info>
         <p>
           Set a future publishing date for this entry. Leave blank for immediate publishing.

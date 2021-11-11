@@ -3,9 +3,19 @@ import slugify from 'slugify'
 
 export default (app) => ({
   async mounted() {
-    this.for = Dom.find(`#${this.el.dataset.slugFor}`)
-    this.for.addEventListener('input', e => {
-      this.el.value = slugify(this.for.value, { lower: true, strict: true })
+    let fors = []
+    if (this.el.dataset.slugFor.indexOf(',') > -1) {
+      fors = this.el.dataset.slugFor.split(',')      
+    } else {
+      fors.push(this.el.dataset.slugFor)
+    }    
+
+    fors.forEach(f => {
+      const el = Dom.find(`#${f}`)      
+      el.addEventListener('input', e => {
+        const vals = fors.map(f => Dom.find(`#${f}`).value).join('-')   
+        this.el.value = slugify(vals, { lower: true, strict: true })
+      })
     })
   }
 })

@@ -17,6 +17,20 @@ html {
 }
 
 body {
+  --brando-color-background: theme(colors.peach);
+  --brando-color-content-background: theme(colors.white);
+  --brando-color-white: theme(colors.white);
+  --brando-color-gray: theme(colors.gray);
+  --brando-color-gray-light: theme(colors.grayLight);
+  --brando-color-black: theme(colors.black);
+  --brando-color-foreground: theme(colors.dark);
+  --brando-color-shaded: #fdf8f7;
+  --brando-color-dark: theme(colors.dark);
+  --brando-color-peach: theme(colors.peach);
+  --brando-color-peach-darker: theme(colors.peachDarker);
+  --brando-color-input: theme(colors.input);
+  --brando-color-blue: theme(colors.blue);
+
   color: var(--brando-color-dark); 
   background-color: var(--brando-color-dark); 
 }

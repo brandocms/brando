@@ -1,92 +1,101 @@
-## "msgid"s in this file come from POT (.pot) files.
-##
-## Do not add, change, or remove "msgid"s manually here as
-## they're tied to the ones in the corresponding POT file
-## (with the same domain).
-##
-## Use "mix gettext.extract --merge" or "mix gettext.merge"
-## to merge POT files into PO files.
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: no\n"
-"Plural-Forms: nplurals=2\n"
+"Plural-Forms: nplurals=2;\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:148
+#: lib/brando/sites/identity.ex:149
 msgid "A shortform version of the name"
 msgstr "Kortformsversjon av navnet"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:146 lib/brando/sites/identity.ex:147
+#: lib/brando/sites/identity.ex:147 lib/brando/sites/identity.ex:148
 msgid "Alternate name"
 msgstr "Alternativt navn"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:141 lib/brando/sites/identity.ex:142
+#: lib/brando/sites/identity.ex:142 lib/brando/sites/identity.ex:143
 msgid "Name"
 msgstr "Navn"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:136 lib/brando/sites/identity.ex:137
+#: lib/brando/sites/identity.ex:137 lib/brando/sites/identity.ex:138
 msgid "Type"
 msgstr "Type"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:162 lib/brando/sites/identity.ex:163
+#: lib/brando/sites/identity.ex:163 lib/brando/sites/identity.ex:164
 msgid "Address"
 msgstr "Adresse"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:167 lib/brando/sites/identity.ex:168
+#: lib/brando/sites/identity.ex:168 lib/brando/sites/identity.ex:169
 msgid "Address - second line"
 msgstr "Adresse - linje 2"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:172 lib/brando/sites/identity.ex:173
+#: lib/brando/sites/identity.ex:173 lib/brando/sites/identity.ex:174
 msgid "Address - third line"
 msgstr "Adresse - linje 3"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:182 lib/brando/sites/identity.ex:183
+#: lib/brando/sites/identity.ex:183 lib/brando/sites/identity.ex:184
 msgid "City"
 msgstr "Poststed"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:187 lib/brando/sites/identity.ex:188
+#: lib/brando/sites/identity.ex:188 lib/brando/sites/identity.ex:189
 msgid "Country"
 msgstr "Land"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:152 lib/brando/sites/identity.ex:153
+#: lib/brando/sites/identity.ex:153 lib/brando/sites/identity.ex:154
 msgid "Email"
 msgstr "Epost"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:157 lib/brando/sites/identity.ex:158
+#: lib/brando/sites/identity.ex:158 lib/brando/sites/identity.ex:159
 msgid "Phone"
 msgstr "Telefon"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:197 lib/brando/sites/identity.ex:198
+#: lib/brando/sites/identity.ex:198 lib/brando/sites/identity.ex:199
 msgid "Title"
 msgstr "Tittel"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:202 lib/brando/sites/identity.ex:203
+#: lib/brando/sites/identity.ex:203 lib/brando/sites/identity.ex:204
 msgid "Title (postfix)"
 msgstr "Tittel (postfix)"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:192 lib/brando/sites/identity.ex:193
+#: lib/brando/sites/identity.ex:193 lib/brando/sites/identity.ex:194
 msgid "Title (prefix)"
 msgstr "Tittel (prefix)"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:177 lib/brando/sites/identity.ex:178
+#: lib/brando/sites/identity.ex:178 lib/brando/sites/identity.ex:179
 msgid "Zipcode"
 msgstr "Postnr"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:207 lib/brando/sites/identity.ex:208
+#: lib/brando/sites/identity.ex:208 lib/brando/sites/identity.ex:209
 msgid "Logo"
-msgstr ""
+msgstr "Logo"

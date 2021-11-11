@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
+  import Brando.Gettext
 
   # prop form, :form, required: true
   # prop current_user, :any, required: true
@@ -88,19 +89,17 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       <Content.drawer id={@id} title={"Entry revisions"} close={@close}>
         <:info>
           <p>
-            This is a list of this entry's revisions. Click a row to preview.
+            <%= gettext "This is a list of this entry's revisions. Click a row to preview." %>
           </p>
           <p>
-            You may also store a new version of the entry without activating it.
-            This might be useful for scheduling content publishing,
-            or sharing previews of unpublished entries.
+            <%= gettext "You may also store a new version of the entry without activating it. This might be useful for scheduling content publishing, or sharing previews of unpublished entries." %>
           </p>
           <div class="button-group">
             <button
               type="button"
               class="secondary"
               phx-click={JS.push("store_revision", target: @myself)}>
-              Save version without activating
+              <%= gettext "Save version without activating" %>
             </button>
 
             <button
@@ -111,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               phx-confirm-click-message={"Are you sure you want to purge unprotected and non active revisions of this entry?"}
               phx-confirm-click="purge_inactive_revisions"
               phx-target={@myself}>
-              Purge inactive versions
+              <%= gettext "Purge inactive versions" %>
             </button>
           </div>
         </:info>
@@ -147,21 +146,21 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                       confirm="Are you sure you want to activate this version?"
                       event={JS.push("activate_revision", target: @myself)}
                       value={revision.revision}>
-                      Activate revision
+                      <%= gettext "Activate revision" %>
                     </Button.dropdown>
                     <%= if revision.protected do %>
                       <Button.dropdown
                         event={JS.push("unprotect_revision", target: @myself)}
                         value={revision.revision}
                         loading>
-                        Unprotect version
+                        <%= gettext "Unprotect version" %>
                       </Button.dropdown>
                     <% else %>
                       <Button.dropdown
                         event={JS.push("protect_revision", target: @myself)}
                         value={revision.revision}
                         loading>
-                        Protect version
+                        <%= gettext "Protect version" %>
                       </Button.dropdown>
                     <% end %>
                     <%= if !revision.protected && !revision.active do %>
@@ -170,7 +169,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         event={JS.push("delete_revision", target: @myself)}
                         value={revision.revision}
                         loading>
-                        Delete version
+                        <%= gettext "Delete version" %>
                       </Button.dropdown>
                     <% end %>
                   </CircleDropdown.render>

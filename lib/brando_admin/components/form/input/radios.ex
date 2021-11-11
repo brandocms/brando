@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Radios do
   use BrandoAdmin, :component
+  use BrandoAdmin.Translator, "forms"
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.FieldBase
 
@@ -61,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
               <label class="form-check-label">
                 <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
                 <span class="label-text">
-                  <%= opt.label %>
+                  <%= g(@form.source.data.__struct__, opt.label) %>
                 </span>
               </label>
             </div>

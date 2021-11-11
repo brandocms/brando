@@ -4,9 +4,17 @@ defmodule Brando.Blueprint.Form do
 
   ## Input types
 
-  ### `blocks`
+      - `blocks`: Block editor
+      - `slug`
+        - `for` - the field we want to create a slug from.
+        ```
+        input :slug, :slug, for: :title
+        ```
 
-  Block editor
+        Can also be a list for composite slugs:
+        ```
+        input :slug, :slug, for: [:location, :position]
+        ```
 
   #### Options
 
@@ -23,6 +31,7 @@ defmodule Brando.Blueprint.Form do
             redirect_on_save: nil
 
   defmacro forms(do: block) do
+    Module.put_attribute(__CALLER__.module, :ctx, "forms")
     forms(__CALLER__, block)
   end
 

@@ -39,6 +39,7 @@ defmodule Brando.Blueprint.Listings do
   end
 
   defmacro listings(do: block) do
+    Module.put_attribute(__CALLER__.module, :ctx, "listings")
     listings(__CALLER__, block)
   end
 

@@ -34,6 +34,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
     input_value(form, field)
   end
 
+  def mount(socket) do
+    {:ok, assign(socket, uploads: nil)}
+  end
+
   def update(assigns, socket) do
     {:ok,
      socket

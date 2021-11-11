@@ -12,11 +12,11 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/users/user.ex:91
+#: lib/brando/users/user.ex:92
 msgid "user"
 msgstr "bruker"
 
 #, elixir-format
-#: lib/brando/users/user.ex:92
+#: lib/brando/users/user.ex:93
 msgid "users"
 msgstr "brukere"
