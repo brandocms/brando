@@ -11,7 +11,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
       add :sequence, :integer
       timestamps()
       add :language, :text
-      add :cover, :jsonb
+      add :cover_id, references(:images, on_delete: :nilify_all)
       add :properties, :jsonb
       add :creator_id, references(:users, on_delete: :nothing)
     end

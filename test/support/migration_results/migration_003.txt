@@ -25,8 +25,8 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       add :slug, :text
       add :meta_description, :text
       add :meta_title, :text
-      add :cover, :jsonb
-      add :meta_image, :jsonb
+      add :cover_id, references(:images, on_delete: :nilify_all)
+      add :meta_image_id, references(:images, on_delete: :nilify_all)
       add :properties, :jsonb
       add :more_properties, :jsonb
       add :creator_id, references(:users)
