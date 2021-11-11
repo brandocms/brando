@@ -40,6 +40,12 @@ defmodule BrandoAdmin.Components.Form.Input do
         end
       end)
 
+    assigns =
+      assigns
+      |> assign_new(:function_capture, fn ->
+        Function.capture(assigns.component_module, :render, 1)
+      end)
+
     if is_live?(assigns.component_module) do
       ~H"""
       <div class="brando-input">
@@ -59,7 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     else
       ~H"""
       <div class="brando-input">
-        <%= apply(assigns.component_module, :render, List.wrap(assigns)) %>
+        <%= component(@function_capture, assigns) %>
       </div>
       """
     end
