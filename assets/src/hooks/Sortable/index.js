@@ -31,7 +31,6 @@ export default (app) => ({
   getOrder () {
     const items = this.el.querySelectorAll(this.sortableSelector)
     this.currentOrder = Array.from(items).map(r => parseInt(r.dataset.id))
-    console.log('this.currentOrder', this.currentOrder)
     return []
   },
 
