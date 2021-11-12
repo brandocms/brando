@@ -62,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.Radios do
               <label class="form-check-label">
                 <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
                 <span class="label-text">
-                  <%= g(@form.source.data.__struct__, opt.label) %>
+                  <%= g(@form.source.data.__struct__, to_string(opt.label)) %>
                 </span>
               </label>
             </div>
