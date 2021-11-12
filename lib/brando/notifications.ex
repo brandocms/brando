@@ -8,7 +8,7 @@ defmodule Brando.Notifications do
     payload = %{
       action: action,
       identifier: identifier,
-      user: user
+      user: Map.put(user, :avatar, nil)
     }
 
     Toast.send(payload, %{type: :mutation})
