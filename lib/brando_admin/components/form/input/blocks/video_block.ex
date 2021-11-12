@@ -71,7 +71,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <%= hidden_input @block_data, :source %>
                 <%= hidden_input(@block_data, :width) %>
                 <%= hidden_input(@block_data, :height) %>
-                <%= hidden_input(@block_data, :remote_id) %>
                 <%= hidden_input(@block_data, :thumbnail_url) %>
 
                 <Input.Text.render form={@block_data} field={:remote_id} />
