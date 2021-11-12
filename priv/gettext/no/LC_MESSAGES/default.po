@@ -824,3 +824,11 @@ msgstr "Aktive filtre"
 #: lib/brando_admin/live/users/user_update_live.ex:11
 msgid "Update user"
 msgstr "Oppdater bruker"
+
+#: lib/brando_admin/components/content_language_switch.ex:46
+msgid "Choose the content language you wish to edit entries in"
+msgstr "Velg innholdsspråk"
+
+#: lib/brando_admin/components/content_language_switch.ex:36
+msgid "Current content language"
+msgstr "Valgt innholdsspråk"

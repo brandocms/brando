@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Fieldset
@@ -230,7 +230,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= if @selected_options do %>
                 <%= @label |> raw %>
               <% else %>
-                No selection
+                <%= gettext("No selection") %>
               <% end %>
             <% end %>
           </span>

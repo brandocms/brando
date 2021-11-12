@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.Modal
+  import Brando.Gettext
 
   def mount(socket) do
     {:ok, assign(socket, :show_language_picker, false)}
@@ -32,7 +33,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
     <div class="content-language-selector" phx-click={JS.push("show_language_picker", target: @myself)}>
       <div class="inner">
         <div class="top">
-          <h2>Current content language</h2>
+          <h2><%= gettext "Current content language" %></h2>
           <div class="selected-language">
             <div class="circle">
               <%= @content_language %>
@@ -42,7 +43,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
         <%= if @show_language_picker do %>
           <div class="instructions">
-            Choose the content language you wish to edit entries in
+            <%= gettext "Choose the content language you wish to edit entries in" %>
           </div>
           <div class="languages">
             <%= for language <- @languages do %>

@@ -106,7 +106,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assign_new(assigns, :rendered_tpl, fn ->
         if tpl = Map.get(assigns.field, :template) do
           {:ok, parsed_template} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
-
           context = Brando.Villain.get_base_context(assigns.entry)
 
           Liquex.Render.render([], parsed_template, context)

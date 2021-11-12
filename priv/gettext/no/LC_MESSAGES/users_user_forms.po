@@ -20,22 +20,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
+#, elixir-format
 #: lib/brando/users/user.ex:176
 msgid "Admin"
 msgstr "Admin"
 
+#, elixir-format
 #: lib/brando/users/user.ex:166
 msgid "Content"
 msgstr "Innhold"
 
+#, elixir-format
 #: lib/brando/users/user.ex:177
 msgid "Editor"
 msgstr "Redaktør"
 
+#, elixir-format
 #: lib/brando/users/user.ex:175
 msgid "Superuser"
 msgstr "Superbruker"
 
+#, elixir-format
 #: lib/brando/users/user.ex:178
 msgid "User"
 msgstr "Bruker"

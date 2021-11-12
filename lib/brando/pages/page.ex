@@ -99,6 +99,13 @@ defmodule Brando.Pages.Page do
   {% endif %}
   """
 
+  translations do
+    context :naming do
+      translate :singular, t("page")
+      translate :plural, t("pages")
+    end
+  end
+
   listings do
     listing do
       listing_query %{
@@ -109,24 +116,24 @@ defmodule Brando.Pages.Page do
       }
 
       filters([
-        [label: gettext("URI"), filter: "uri"],
-        [label: gettext("Title"), filter: "title"]
+        [label: t("URI"), filter: "uri"],
+        [label: t("Title"), filter: "title"]
       ])
 
       actions([
-        [label: gettext("Edit page"), event: "edit_entry"],
+        [label: t("Edit page"), event: "edit_entry"],
         [
-          label: gettext("Delete page"),
+          label: t("Delete page"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ],
-        [label: gettext("Duplicate page"), event: "duplicate_entry"],
-        [label: gettext("Create subpage"), event: "create_subpage"],
-        [label: gettext("Create fragment"), event: "create_fragment"]
+        [label: t("Duplicate page"), event: "duplicate_entry"],
+        [label: t("Create subpage"), event: "create_subpage"],
+        [label: t("Create fragment"), event: "create_fragment"]
       ])
 
       selection_actions([
-        [label: gettext("Delete pages"), event: "delete_selected"]
+        [label: t("Delete pages"), event: "delete_selected"]
       ])
 
       field(:language, :language, columns: 1)
@@ -181,11 +188,11 @@ defmodule Brando.Pages.Page do
       )
 
       actions([
-        [label: gettext("Edit fragment"), event: "edit_entry"],
+        [label: t("Edit fragment"), event: "edit_entry"],
         [
-          label: gettext("Delete fragment"),
+          label: t("Delete fragment"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ]
       ])
     end
@@ -214,11 +221,11 @@ defmodule Brando.Pages.Page do
       )
 
       actions([
-        [label: gettext("Edit sub page"), event: "edit_entry"],
+        [label: t("Edit sub page"), event: "edit_entry"],
         [
-          label: gettext("Delete sub page"),
+          label: t("Delete sub page"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ]
       ])
     end
@@ -226,7 +233,7 @@ defmodule Brando.Pages.Page do
 
   forms do
     form default_params: %{status: :draft} do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset size: :full do
           input :status, :status
         end
@@ -246,7 +253,7 @@ defmodule Brando.Pages.Page do
         end
       end
 
-      tab gettext("Advanced") do
+      tab t("Advanced") do
         fieldset size: :half do
           input :is_homepage, :toggle
           input :template, :select, options: &__MODULE__.get_templates/2
