@@ -502,8 +502,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <%= gettext("selected, perform action") %>: →
         <div
           id="selected_rows_dropdown"
-          class="circle-dropdown wrapper"
-          phx-hook="Brando.CircleDropdown">
+          class="circle-dropdown wrapper">
           <button
             class="circle-dropdown-button"
             data-testid="circle-dropdown-button"
