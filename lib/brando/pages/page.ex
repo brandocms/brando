@@ -93,9 +93,9 @@ defmodule Brando.Pages.Page do
 
   absolute_url """
   {% if entry.uri == "index" %}
-    {% route page_path index %}
+    {% route_i18n entry.language page_path index %}
   {% else %}
-    {% route page_path show { entry.uri } %}
+    {% route_i18n entry.language page_path show { entry.uri } %}
   {% endif %}
   """
 
