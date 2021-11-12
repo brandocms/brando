@@ -373,14 +373,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
-      ~r/%{(\w+)}|{{ ([\w.]+) }}/
+      ~r/%{(\w+)}|<.*?>|\{\{\s?(.*?)\s?\}\}/
       |> Regex.split(module_code, include_captures: true)
       |> Enum.map(fn chunk ->
-        case Regex.run(~r/%{(?<ref>\w+)}|{{ (?<content>[\w.]+) }}/, chunk, capture: :all_names) do
-          nil -> chunk
-          ["content", ""] -> {:content, "content"}
-          [variable, ""] -> {:variable, variable, render_variable(variable, socket.assigns)}
-          ["", ref] -> {:ref, ref}
+        case Regex.run(~r/^%{(?<ref>\w+)}$|^{{ (?<content>[\w.]+) }}$/, chunk, capture: :all_names) do
+          nil ->
+            chunk
+
+          ["content", ""] ->
+            {:content, "content"}
+
+          [variable, ""] ->
+            {:variable, variable, render_variable(variable, socket.assigns)}
+
+          ["", ref] ->
+            {:ref, ref}
         end
       end)
 
