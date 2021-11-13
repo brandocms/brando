@@ -41,6 +41,7 @@ defmodule Brando.Images do
     end
   end
 
+  mutation :update, Image
   mutation :delete, Image
 
   @doc """
@@ -51,16 +52,6 @@ defmodule Brando.Images do
     %Image{}
     |> Image.changeset(params, user)
     |> Brando.repo().insert
-  end
-
-  @doc """
-  Update image
-  """
-  @spec update_image(schema :: Image.t(), params, user) :: {:ok, Image.t()} | {:error, changeset}
-  def update_image(schema, params, user) do
-    schema
-    |> Image.changeset(params, user)
-    |> Brando.repo().update
   end
 
   @doc """
