@@ -10,6 +10,10 @@
   overflow-x: hidden;
   overflow-y: scroll;
 
+  &.dark {
+    background-color: #000000;
+  }
+
   &.narrow {
     width: 425px;
   }
@@ -37,6 +41,33 @@
     width: 100%;
     @space margin-top 35px;
     @space margin-bottom 20px;
+
+    &.vertical {
+      flex-direction: column;
+
+      button {
+        display: block;
+
+        &:first-of-type {
+          border-top-left-radius: 30px;
+          border-top-right-radius: 30px;
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+        }
+
+        &:last-of-type {
+          border-top-left-radius: 0;
+          border-top-right-radius: 0;
+          border-bottom-left-radius: 30px;
+          border-bottom-right-radius: 30px;
+        }      
+
+        + button {
+          margin-left: 0;
+          margin-top: -1px !important;
+        }
+      }
+    }
 
     button {
       margin-top: 0 !important;

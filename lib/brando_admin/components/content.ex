@@ -32,10 +32,15 @@ defmodule BrandoAdmin.Components.Content do
   end
 
   def drawer(assigns) do
-    assigns = assign_new(assigns, :narrow, fn -> false end)
+    assigns =
+      assigns
+      |> assign_new(:z, fn -> 999 end)
+      |> assign_new(:narrow, fn -> false end)
+      |> assign_new(:info, fn -> nil end)
+      |> assign_new(:dark, fn -> false end)
 
     ~H"""
-    <div id={@id} class={render_classes(["drawer", "hidden", narrow: @narrow])}>
+    <div id={@id} class={render_classes(["drawer", "hidden", narrow: @narrow, dark: @dark])} style={"z-index: #{@z}"}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
@@ -48,9 +53,11 @@ defmodule BrandoAdmin.Components.Content do
             <%= gettext "Close" %>
           </button>
         </div>
-        <div class="drawer-info">
-          <%= render_slot(@info) %>
-        </div>
+        <%= if @info do %>
+          <div class="drawer-info">
+            <%= render_slot(@info) %>
+          </div>
+        <% end %>
         <div class="drawer-form">
           <%= render_slot(@inner_block) %>
         </div>
