@@ -4,6 +4,16 @@ defmodule Brando.Notifications do
   """
   alias BrandoAdmin.Toast
 
+  def push_mutation(action, identifier, :system) do
+    payload = %{
+      action: action,
+      identifier: identifier,
+      user: :system
+    }
+
+    Toast.send(payload, %{type: :mutation})
+  end
+
   def push_mutation(action, identifier, user) do
     payload = %{
       action: action,
