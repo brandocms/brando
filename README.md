@@ -123,7 +123,7 @@ Create your frontend translation directories: (for norwegian)
 
 Merge frontend translations
 
-    $ mix gettext.merge priv/gettext/frontend
+    $ mix gettext.merge priv/gettext/frontend --plural-forms=2
 
 
 ## Generator
