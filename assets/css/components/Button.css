@@ -131,9 +131,8 @@ a.danger, button.danger {
   }
 }
 
-a.secondary, button.secondary {
+%btnSecondary {
   @fontsize button;
-
   white-space: nowrap;
   color: var(--brando-color-dark); 
   border: 1px solid var(--brando-color-dark) !important;
@@ -171,6 +170,10 @@ a.secondary, button.secondary {
   &:hover {
     background-color: var(--brando-color-peach);
   }
+}
+
+a.secondary, button.secondary {
+  @extend %btnSecondary;
 }
 
 .secondary + .secondary {

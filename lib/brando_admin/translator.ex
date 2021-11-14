@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Translator do
       def g(schema, msgid) do
         if Brando.Blueprint.blueprint?(schema) do
           require Logger
-          Logger.error inspect schema, pretty: true
+          Logger.error(inspect(schema, pretty: true))
           gettext_module = schema.__modules__().gettext
 
           gettext_domain =
@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Translator do
           ==> Calling Gettext.dgettext
           -- gettext_module: #{inspect(gettext_module)}
           -- gettext_domain: #{inspect(gettext_domain)}
-          -- msgid: #{inspect(msgid)}"
+          -- msgid: #{inspect(msgid)}
           """)
 
           Gettext.dgettext(gettext_module, gettext_domain, msgid)

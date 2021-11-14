@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Fieldset
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
@@ -19,6 +20,8 @@ defmodule BrandoAdmin.Components.Form do
   def mount(socket) do
     {:ok,
      socket
+     |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
+     |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
@@ -43,19 +46,22 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, assign(socket, :changeset, updated_changeset)}
   end
 
-  def update(
-        %{updated_image: %{path: _, id: updated_id} = updated_image, key: key},
-        %{assigns: %{changeset: changeset, entry: entry}} = socket
-      ) do
-    relation_id = String.to_existing_atom("#{key}_id")
-    updated_changeset = Ecto.Changeset.put_change(changeset, relation_id, updated_id)
+  def update(%{edit_image: %{image: nil} = edit_image}, socket) do
+    image_changeset = Ecto.Changeset.change(%Brando.Images.Image{})
 
     {:ok,
      socket
-     |> assign(:changeset, updated_changeset)
-     |> assign(:processing, false)
-     |> assign(:entry, Brando.repo().preload(entry, key, force: true))
-     |> push_event("b:validate", %{})}
+     |> assign(:edit_image, edit_image)
+     |> assign(:image_changeset, image_changeset)}
+  end
+
+  def update(%{edit_image: %{image: image} = edit_image}, socket) do
+    image_changeset = Ecto.Changeset.change(image)
+
+    {:ok,
+     socket
+     |> assign(:edit_image, edit_image)
+     |> assign(:image_changeset, image_changeset)}
   end
 
   def update(
@@ -264,6 +270,94 @@ defmodule BrandoAdmin.Components.Form do
         </div>
       </div>
 
+      <.image_picker
+        id={"image-picker"}
+        schema={@schema}
+        path={@edit_image.path}
+        field={@edit_image.field}
+        select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker")} />
+
+      <Content.drawer id={"image-drawer"} title={"Image"} close={close_image(assigns)} z={1001} narrow>
+        <%= if @image_changeset do %>
+          <.form
+            id="image-drawer-form"
+            for={@image_changeset}
+            let={image_form}
+            phx-submit={JS.push("save_image", target: @myself)}
+            phx-change={JS.push("validate_image", target: @myself)}
+            phx-target={@myself}>
+            <div
+              class="image-drawer-preview"
+              phx-drop-target={@uploads[@edit_image.field].ref}>
+              <%= if @edit_image.image do %>
+              <figure>
+                <%#
+                <.live_component
+                  module={FocalPoint}
+                  id="image-drawer-focal"
+                  form={@form}
+                  field_name={@field}
+                  focal={@focal} />
+                %>
+                <img
+                  width={@edit_image.image.width}
+                  height={@edit_image.image.height}
+                  src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
+              </figure>
+              <% else %>
+              <div class="img-placeholder">
+                <div class="placeholder-wrapper">
+                  <div class="svg-wrapper">
+                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                      <circle cx="8" cy="9" r="2"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <% end %>
+            </div>
+
+            <div class="button-group vertical">
+              <div class="file-input-button">
+                <span class="label">
+                  <%= gettext "Upload image" %>
+                </span>
+                <%= live_file_input @uploads[@edit_image.field] %>
+              </div>
+              <button
+                class="secondary"
+                type="button"
+                phx-click={toggle_drawer("#image-picker")}>
+                <%= gettext "Select existing image" %>
+              </button>
+
+              <button
+                class="secondary"
+                type="button"
+                phx-click={reset_image_field(@myself)}>
+                <%= gettext "Reset image field" %>
+              </button>
+            </div>
+            <%= if @edit_image.image do %>
+              <div class="brando-input">
+                <Input.Text.render field={:title} form={image_form} />
+              </div>
+
+              <div class="brando-input">
+                <Input.Text.render field={:credits} form={image_form} />
+              </div>
+
+              <div class="brando-input">
+                <Input.Text.render field={:alt} form={image_form} />
+              </div>
+            <% end %>
+          </.form>
+        <% end %>
+      </Content.drawer>
+
       <.form
         for={@changeset}
         let={f}
@@ -324,6 +418,45 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def reset_image_field(js \\ %JS{}, target) do
+    js
+    |> JS.push("reset_image_field", target: target)
+    |> toggle_drawer("#image-drawer")
+  end
+
+  def image_picker(assigns) do
+    resolved_path = Enum.join(assigns.path ++ [assigns.field], ".")
+
+    assigns =
+      assign_new(assigns, :images, fn ->
+        {:ok, images} =
+          Brando.Images.list_images(%{
+            filter: %{config_target: {assigns.schema, resolved_path}},
+            order: "desc id"
+          })
+
+        images
+      end)
+
+    ~H"""
+    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={1002} dark>
+      <:info>
+        <%= gettext "Select similarly typed image from library" %>
+      </:info>
+      <div class="image-picker">
+        <%= for image <- @images do %>
+        <div class="image-picker__image" phx-click={@select_image} phx-value-id={image.id}>
+          <img
+            width="25"
+            height="25"
+            src={"#{Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url())}"} />
+        </div>
+        <% end %>
+      </div>
+    </Content.drawer>
+    """
+  end
+
   def allow_uploads(socket) do
     image_fields = socket.assigns.schema.__image_fields__()
     gallery_fields = socket.assigns.schema.__gallery_fields__()
@@ -350,6 +483,132 @@ defmodule BrandoAdmin.Components.Form do
 
     # fallback to nil if no uploads
     assign_new(socket_with_gallery_uploads, :uploads, fn -> nil end)
+  end
+
+  def close_image(js \\ %JS{}, assigns) do
+    js
+    |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> toggle_drawer("#image-drawer")
+  end
+
+  # this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+
+  def handle_event(
+        "reset_image_field",
+        _,
+        %{
+          assigns: %{
+            changeset: changeset,
+            edit_image: %{path: path, relation_field: relation_field} = edit_image
+          }
+        } = socket
+      ) do
+    full_path = path ++ [relation_field]
+
+    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
+
+    updated_edit_image = Map.put(edit_image, :image, nil)
+
+    {:noreply,
+     socket
+     |> assign(:image_changeset, nil)
+     |> assign(:edit_image, updated_edit_image)
+     |> assign(:changeset, updated_changeset)}
+  end
+
+  def handle_event(
+        "select_image",
+        %{"id" => selected_image_id},
+        %{
+          assigns: %{
+            changeset: changeset,
+            edit_image: %{path: path, relation_field: relation_field} = edit_image
+          }
+        } = socket
+      ) do
+    {:ok, image} = Brando.Images.get_image(selected_image_id)
+
+    full_path = path ++ [relation_field]
+
+    updated_changeset =
+      EctoNestedChangeset.update_at(changeset, full_path, fn _ -> selected_image_id end)
+
+    updated_edit_image = Map.put(edit_image, :image, image)
+    image_changeset = Ecto.Changeset.change(image)
+
+    {:noreply,
+     socket
+     |> assign(:edit_image, updated_edit_image)
+     |> assign(:image_changeset, image_changeset)
+     |> assign(:changeset, updated_changeset)}
+  end
+
+  def handle_event(
+        "validate_image",
+        %{"image" => image_params},
+        %{assigns: %{edit_image: %{image: image}, current_user: current_user}} = socket
+      ) do
+    validated_changeset =
+      image
+      |> Brando.Images.Image.changeset(image_params, current_user)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, image_changeset: validated_changeset)}
+  end
+
+  def handle_event("validate_image", _, socket) do
+    require Logger
+    Logger.error("Validate image with no image param!")
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_image",
+        %{"image" => image_params},
+        %{
+          assigns: %{
+            id: form_id,
+            changeset: changeset,
+            edit_image:
+              %{
+                image: image,
+                path: path,
+                relation_field: relation_field
+              } = edit_image,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    validated_changeset =
+      image
+      |> Brando.Images.Image.changeset(image_params, current_user)
+      |> Map.put(:action, :update)
+
+    {:ok, updated_image} = Brando.Images.update_image(validated_changeset, current_user)
+    edit_image = Map.put(edit_image, :image, updated_image)
+
+    full_path = path ++ [relation_field]
+
+    nilled_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
+    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
+
+    send_update_after(
+      __MODULE__,
+      [id: form_id, updated_changeset: updated_changeset],
+      1000
+    )
+
+    {:noreply,
+     assign(socket,
+       changeset: nilled_changeset,
+       image_changeset: validated_changeset,
+       edit_image: edit_image
+     )}
+  end
+
+  # without image in params
+  def handle_event("save_image", _, socket) do
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -548,7 +807,7 @@ defmodule BrandoAdmin.Components.Form do
         %{
           assigns: %{
             schema: schema,
-            entry: entry,
+            edit_image: edit_image,
             current_user: current_user
           }
         } = socket
@@ -574,21 +833,14 @@ defmodule BrandoAdmin.Components.Form do
 
       Brando.Images.Processing.queue_processing(image, current_user)
 
-      updated_image =
-        if entry && is_map(Map.get(entry, key)) do
-          # keep the :alt, :title and :credits field and set a default focal point
-          Map.merge(
-            image,
-            Map.take(Map.get(entry, key), [:alt, :title, :credits])
-          )
-        else
-          image
-        end
+      image_changeset = Ecto.Changeset.change(image)
+      edit_image = Map.put(edit_image, :image, image)
 
       {:noreply,
        socket
-       |> update_changeset(relation_key, updated_image.id)
-       #  |> update_changeset(key, updated_image)
+       |> update_changeset(relation_key, image.id)
+       |> assign(:edit_image, edit_image)
+       |> assign(:image_changeset, image_changeset)
        |> assign(:processing, true)}
     else
       {:noreply, socket}

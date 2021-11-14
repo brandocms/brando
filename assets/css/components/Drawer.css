@@ -36,6 +36,33 @@
     }
   }
 
+  .img-placeholder {
+    background-color: transparent;
+    color: azure;
+    padding: 2vw;
+    border: 1px solid azure;
+    border-radius: 20px;
+
+    .instructions {
+      text-align: center;
+      font-size: 15px;
+    }
+
+    svg {
+      margin-left: auto;
+      margin-right: auto;
+      user-select: none;
+      pointer-events: none;
+      width: 200px;
+
+      path:nth-of-type(2), .plus, circle {
+        user-select: none;
+        pointer-events: none;
+        fill: azure;
+      }
+    }
+  }
+
   .button-group {
     display: flex;
     width: 100%;
@@ -45,26 +72,67 @@
     &.vertical {
       flex-direction: column;
 
-      button {
-        display: block;
+      .file-input-button {
+        position: relative;
+        @extend %btnSecondary;
+        text-align: center;
+        border: 1px solid azure !important;
+        color: azure;
 
-        &:first-of-type {
-          border-top-left-radius: 30px;
-          border-top-right-radius: 30px;
-          border-bottom-left-radius: 0;
-          border-bottom-right-radius: 0;
+        &:hover {
+          background-color: azure;
+          color: #052753;
+          cursor: pointer;
         }
 
-        &:last-of-type {
-          border-top-left-radius: 0;
-          border-top-right-radius: 0;
-          border-bottom-left-radius: 30px;
-          border-bottom-right-radius: 30px;
-        }      
+        input[type=file] {
+          display: inline-block;
+          position: absolute;
+          z-index: 1;
+          width: 100%;
+          height: 100%;
+          top: 0;
+          left: 0;
+          opacity: 0;
+          cursor: pointer;
+        }
+      }
 
-        + button {
+      > * {
+        border-radius: 0 !important;
+
+        &:first-child {
+          border-top-left-radius: 30px !important;
+          border-top-right-radius: 30px !important;
+          border-bottom-left-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+          margin-top: 0 !important;
+        }
+
+        &:last-child {
+          border-top-left-radius: 0 !important;
+          border-top-right-radius: 0 !important;
+          border-bottom-left-radius: 30px !important;
+          border-bottom-right-radius: 30px !important;
+        }     
+
+        + * {
           margin-left: 0;
           margin-top: -1px !important;
+        }
+      }
+
+      .file-input-button + button {
+        margin-top: -1px !important;
+      }
+
+      button {
+        display: block;         
+        
+        &:hover {
+          background-color: azure;
+          color: #052753;
+          cursor: pointer;
         }
       }
     }

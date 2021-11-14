@@ -1,3 +1,7 @@
+.iziToast-capsule {
+  display: flex;
+}
+
 .iziToast {
   font-family: theme(typography.families.main);
   border-radius: 0;
@@ -61,6 +65,7 @@
   }
 
   &.iziToast-theme-mutations {
+    margin-left: auto;
     background-color: var(--brando-color-dark);
     border-radius: 15px;
     padding: 0;
@@ -101,6 +106,7 @@
 
   &.iziToast-theme-brando {
     color: var(--brando-color-peach);
+    margin-left: auto;
 
     > .iziToast-body .iziToast-message {
       @fontsize input;

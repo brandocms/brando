@@ -5,12 +5,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias Brando.Images
   alias Brando.Utils
-
   # prop form, :form
   # prop field, :atom
   # prop label, :string
@@ -70,6 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign(:image, image)
+     |> assign(:image_id, image_id)
      |> assign(:file_name, file_name)
      |> assign(:upload_field, assigns.uploads[assigns.field])
      |> assign(:relation_field, relation_field)
@@ -90,31 +88,63 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             <%= if @image && @image.path do %>
               <.image_preview
                 image={@image}
-                relation_field={@relation_field}
                 form={@form}
                 field={@field}
-                click={toggle_drawer("#edit-image-#{@form.id}-#{@field}")}
+                relation_field={@relation_field}
+                click={open_image(@myself)}
                 file_name={@file_name} />
             <% else %>
               <.empty_preview
                 form={@form}
-                relation_field={@relation_field}
                 field={@field}
-                click={toggle_drawer("#edit-image-#{@form.id}-#{@field}")} />
+                relation_field={@relation_field}
+                click={open_image(@myself)} />
             <% end %>
           </div>
         </div>
-        <.image_drawer
-          id={"edit-image-#{@form.id}-#{@field}"}
-          pick_image={toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
-        <.image_picker
-          id={"image-picker-#{@form.id}-#{@field}"}
-          schema={@form.source.data.__struct__}
-          field={@field}
-          select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}-#{@field}")} />
       </FieldBase.render>
     </div>
     """
+  end
+
+  def open_image(js \\ %JS{}, target) do
+    js
+    |> JS.push("open_image", target: target)
+    |> toggle_drawer("#image-drawer")
+  end
+
+  def handle_event(
+        "open_image",
+        _,
+        %{
+          assigns: %{
+            form: form,
+            field: field,
+            relation_field: relation_field,
+            image_id: image_id,
+            image: image
+          }
+        } = socket
+      ) do
+    path =
+      Regex.scan(~r/\[(\w+)\]/, form.name, capture: :all_but_first)
+      |> Enum.map(&(List.first(&1) |> String.to_existing_atom()))
+
+    module = form.source.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      edit_image: %{
+        id: image_id,
+        path: path,
+        field: field,
+        relation_field: relation_field,
+        image: image
+      }
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -141,37 +171,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     {:noreply, socket}
   end
 
-  def image_picker(assigns) do
-    assigns =
-      assign_new(assigns, :images, fn ->
-        {:ok, images} =
-          Brando.Images.list_images(%{
-            filter: %{config_target: {assigns.schema, assigns.field}},
-            order: "desc id"
-          })
-
-        images
-      end)
-
-    ~H"""
-    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")}>
-      <:info>
-        Select existing image
-      </:info>
-      <div class="image-picker">
-        <%= for image <- @images do %>
-        <div class="image-picker__image" phx-click={@select_image} phx-value-id={image.id}>
-          <img
-            width="25"
-            height="25"
-            src={"#{Utils.img_url(image, :original, prefix: Utils.media_url())}"} />
-        </div>
-        <% end %>
-      </div>
-    </Content.drawer>
-    """
-  end
-
   def empty_preview(assigns) do
     ~H"""
     <div class="image-wrapper-compact">
@@ -182,12 +181,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       </div>
 
       <div class="image-info">
-        No image associated with field
+        <%= gettext "No image associated with field" %>
         <button
           class="btn-small"
           type="button"
           phx-click={@click}
-          phx-value-id={"edit-image-#{@form.id}-#{@field}"}>Add image</button>
+          phx-value-id={"edit-image-#{@form.id}-#{@field}"}><%= gettext "Add image" %></button>
       </div>
     </div>
     """
@@ -215,30 +214,16 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       <div class="image-info">
         <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
         <%= if @image.title do %>
-          <div class="title">Caption: <%= @image.title %></div>
+          <div class="title"><%= gettext "Caption" %>: <%= @image.title %></div>
         <% end %>
         <button
           class="btn-small"
           type="button"
           phx-click={@click}>
-          Edit image
+          <%= gettext "Edit image" %>
         </button>
       </div>
     </div>
-    """
-  end
-
-  def image_drawer(assigns) do
-    ~H"""
-    <Content.drawer id={@id} title={gettext "Edit image"} close={toggle_drawer("##{@id}")} narrow>
-      <:info>
-        ...
-      </:info>
-      <button type="button" class="secondary" phx-click={@pick_image}>
-        Pick image
-      </button>
-    </Content.drawer>
-
     """
   end
 
@@ -391,29 +376,4 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     </:footer>
   </.live_component>
   """
-  def handle_event("show_meta_edit_modal", %{"id" => id}, socket) do
-    Modal.show(id)
-    {:noreply, socket}
-  end
-
-  def handle_event("reset_field", _, socket) do
-    field = socket.assigns.field
-    changeset = socket.assigns.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_changeset =
-      Ecto.Changeset.put_embed(
-        changeset,
-        field,
-        nil
-      )
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
-
-    {:noreply, socket}
-  end
 end
