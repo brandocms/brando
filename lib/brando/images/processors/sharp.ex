@@ -65,6 +65,13 @@ defmodule Brando.Images.Processor.Sharp do
       (optimize? && ["--optimize", "true"]) || []
     ]
 
+    extra_params =
+      if format == "jpg" do
+        ["flatten", "#ffffff", "--"] ++ extra_params
+      else
+        extra_params
+      end
+
     params = List.flatten(file_params ++ extra_params ++ resize_params)
 
     case Processor.Commands.delegate("sharp", params, stderr_to_stdout: true) do
@@ -163,6 +170,13 @@ defmodule Brando.Images.Processor.Sharp do
       format,
       (optimize? && ["--optimize", "true"]) || []
     ]
+
+    extra_params =
+      if format == "jpg" do
+        ["flatten", "#ffffff", "--"] ++ extra_params
+      else
+        extra_params
+      end
 
     params =
       List.flatten(file_params ++ extra_params ++ resize_params ++ ["--"] ++ extract_params)
