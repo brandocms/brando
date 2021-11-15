@@ -9,33 +9,3 @@
 ## effect: edit them in PO (.po) files instead.
 msgid ""
 msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:103 lib/brando/users/user.ex:104
-msgid "Email"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:98 lib/brando/users/user.ex:99
-msgid "Name"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:113 lib/brando/users/user.ex:114
-msgid "Language"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:108 lib/brando/users/user.ex:109
-msgid "Password"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:122
-msgid "Profile picture"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/users/user.ex:118
-msgid "Role"
-msgstr ""

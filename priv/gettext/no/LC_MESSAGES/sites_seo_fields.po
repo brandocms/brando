@@ -19,33 +19,3 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:98
-msgid "Base URL"
-msgstr "Base URL"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:83 lib/brando/sites/seo.ex:84
-msgid "Fallback META description"
-msgstr "META beskrivelse (reserve)"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:93 lib/brando/sites/seo.ex:94
-msgid "Fallback META image"
-msgstr "META bilde (reserve)"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:88 lib/brando/sites/seo.ex:89
-msgid "Fallback META title"
-msgstr "META tittel (reserve)"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:103 lib/brando/sites/seo.ex:104
-msgid "Robots"
-msgstr "Roboter"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:99
-msgid "https://yoursite.com"
-msgstr "https://dinside.com"

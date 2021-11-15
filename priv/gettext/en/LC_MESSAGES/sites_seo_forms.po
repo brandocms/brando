@@ -1,0 +1,62 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:64
+msgid "Base URL"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:75
+msgid "Code"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:57 lib/brando/sites/seo.ex:58
+msgid "Fallback META description"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:61 lib/brando/sites/seo.ex:62
+msgid "Fallback META image"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:53 lib/brando/sites/seo.ex:54
+msgid "Fallback META title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:76
+msgid "From"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:70
+msgid "Redirects"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:65 lib/brando/sites/seo.ex:65
+msgid "Robots"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:77
+msgid "To"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/seo.ex:64
+msgid "https://yoursite.com"
+msgstr ""

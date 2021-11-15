@@ -19,33 +19,3 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
-
-#, elixir-format
-#: lib/brando/users/user.ex:103 lib/brando/users/user.ex:104
-msgid "Email"
-msgstr "Epost"
-
-#, elixir-format
-#: lib/brando/users/user.ex:98 lib/brando/users/user.ex:99
-msgid "Name"
-msgstr "Navn"
-
-#, elixir-format
-#: lib/brando/users/user.ex:113 lib/brando/users/user.ex:114
-msgid "Language"
-msgstr "Språk"
-
-#, elixir-format
-#: lib/brando/users/user.ex:108 lib/brando/users/user.ex:109
-msgid "Password"
-msgstr "Passord"
-
-#, elixir-format
-#: lib/brando/users/user.ex:122
-msgid "Profile picture"
-msgstr "Profilbilde"
-
-#, elixir-format
-#: lib/brando/users/user.ex:118
-msgid "Role"
-msgstr "Rolle"

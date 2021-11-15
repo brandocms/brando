@@ -9,28 +9,3 @@
 ## effect: edit them in PO (.po) files instead.
 msgid ""
 msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:30 lib/brando/sites/redirect.ex:35
-msgid "/uri"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:40
-msgid "302"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:39
-msgid "Status Code"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:29
-msgid "To"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:34
-msgid "from"
-msgstr ""

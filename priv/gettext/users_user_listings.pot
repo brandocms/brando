@@ -11,26 +11,26 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:145
+#: lib/brando/users/user.ex:115
 msgid "Are you sure?"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:143
+#: lib/brando/users/user.ex:113
 msgid "Disable user"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:141
+#: lib/brando/users/user.ex:111
 msgid "Edit user"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:137
+#: lib/brando/users/user.ex:107
 msgid "Email"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:136
+#: lib/brando/users/user.ex:106
 msgid "Name"
 msgstr ""

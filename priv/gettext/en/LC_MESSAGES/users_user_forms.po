@@ -12,26 +12,26 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/users/user.ex:176
+#: lib/brando/users/user.ex:146
 msgid "Admin"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:166
+#: lib/brando/users/user.ex:136
 msgid "Content"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:177
+#: lib/brando/users/user.ex:147
 msgid "Editor"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:175
+#: lib/brando/users/user.ex:145
 msgid "Superuser"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:178
+#: lib/brando/users/user.ex:148
 msgid "User"
 msgstr ""

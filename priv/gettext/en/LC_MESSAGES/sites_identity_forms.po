@@ -1,0 +1,117 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:78
+msgid "A shortform version of the name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:87
+msgid "Address line 1"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:88
+msgid "Address line 2"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:89
+msgid "Address line 3"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:77
+msgid "Alternate name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:94
+msgid "City"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:95
+msgid "Country"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:82
+msgid "Email"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:127
+msgid "Key"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:110
+msgid "Links"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:105
+msgid "Logo"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:122
+msgid "Meta properties"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:74 lib/brando/sites/identity.ex:115
+msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:83
+msgid "Phone"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:100
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:101
+msgid "Title (postfix)"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:99
+msgid "Title (prefix)"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:70
+msgid "Type"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:116
+msgid "URL"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:128
+msgid "Value"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:93
+msgid "Zip code"
+msgstr ""

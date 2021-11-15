@@ -299,13 +299,13 @@ msgid "Edit page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:728
+#: lib/brando_admin/components/form.ex:734
 #: lib/brando_admin/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:729
+#: lib/brando_admin/components/form.ex:735
 msgid "Error while saving form. Please correct marked fields and resubmit"
 msgstr ""
 
@@ -366,7 +366,7 @@ msgid "Published"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:414
+#: lib/brando_admin/components/form.ex:335
 #: lib/brando_admin/live/content/modules_update_live.ex:101
 msgid "Save (⌘S)"
 msgstr ""
@@ -439,7 +439,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:172
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:103 lib/brando_admin/components/form/input/image.ex:217
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:103 lib/brando_admin/components/form/input/image.ex:213
 msgid "Caption"
 msgstr ""
 
@@ -599,7 +599,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/image.ex:73
-#: lib/brando_admin/components/form/input/image.ex:223
+#: lib/brando_admin/components/form/input/image.ex:219
 msgid "Edit image"
 msgstr ""
 
@@ -795,7 +795,7 @@ msgid "Select entries"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:442
+#: lib/brando_admin/components/form.ex:448
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:178
 msgid "Select image"
 msgstr ""
@@ -942,31 +942,31 @@ msgid "Current content language"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/image.ex:189
+#: lib/brando_admin/components/form/input/image.ex:185
 msgid "Add image"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/image.ex:184
+#: lib/brando_admin/components/form/input/image.ex:180
 msgid "No image associated with field"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:341
+#: lib/brando_admin/components/form.ex:405
 msgid "Reset image field"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:334
+#: lib/brando_admin/components/form.ex:398
 msgid "Select existing image"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:444
+#: lib/brando_admin/components/form.ex:450
 msgid "Select similarly typed image from library"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:326
+#: lib/brando_admin/components/form.ex:390
 msgid "Upload image"
 msgstr ""

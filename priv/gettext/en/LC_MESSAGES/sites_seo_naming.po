@@ -12,6 +12,6 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/sites/seo.ex:77 lib/brando/sites/seo.ex:78
+#: lib/brando/sites/seo.ex:86 lib/brando/sites/seo.ex:87
 msgid "SEO"
 msgstr ""

@@ -19,28 +19,3 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:30 lib/brando/sites/redirect.ex:35
-msgid "/uri"
-msgstr "/uri"
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:40
-msgid "302"
-msgstr "302"
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:39
-msgid "Status Code"
-msgstr "Statuskode"
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:29
-msgid "To"
-msgstr "Til"
-
-#, elixir-format
-#: lib/brando/sites/redirect.ex:34
-msgid "from"
-msgstr "fra"

@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Assets.ImagesLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Images.Image
 
-  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   import Brando.Gettext
 

@@ -10,33 +10,3 @@ msgid ""
 msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:98
-msgid "Base URL"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:83 lib/brando/sites/seo.ex:84
-msgid "Fallback META description"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:93 lib/brando/sites/seo.ex:94
-msgid "Fallback META image"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:88 lib/brando/sites/seo.ex:89
-msgid "Fallback META title"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:103 lib/brando/sites/seo.ex:104
-msgid "Robots"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/seo.ex:99
-msgid "https://yoursite.com"
-msgstr ""
