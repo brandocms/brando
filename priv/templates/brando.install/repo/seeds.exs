@@ -100,7 +100,6 @@ example_module = %Brando.Content.Module{
   code:
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
   help_text: "Used for the introduction page",
-  multi: false,
   name: "Example module",
   namespace: "general",
   refs: [
