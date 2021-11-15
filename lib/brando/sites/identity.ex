@@ -66,60 +66,66 @@ defmodule Brando.Sites.Identity do
             options: [
               %{value: :organization, label: gettext("Organization")},
               %{value: :corporation, label: gettext("Corporation")}
-            ]
+            ],
+            label: t("Type")
         end
 
         fieldset style: :inline do
-          input :name, :text
-          input :alternate_name, :text
+          input :name, :text, label: t("Name")
+
+          input :alternate_name, :text,
+            label: t("Alternate name"),
+            instructions: t("A shortform version of the name")
         end
 
         fieldset style: :inline do
-          input :email, :email
-          input :phone, :phone
+          input :email, :email, label: t("Email")
+          input :phone, :phone, label: t("Phone")
         end
 
         fieldset do
-          input :address, :text
-          input :address2, :text
-          input :address3, :text
+          input :address, :text, label: t("Address line 1")
+          input :address2, :text, label: t("Address line 2")
+          input :address3, :text, label: t("Address line 3")
         end
 
         fieldset style: :inline do
-          input :zipcode, :text
-          input :city, :text
-          input :country, :text
+          input :zipcode, :text, label: t("Zip code")
+          input :city, :text, label: t("City")
+          input :country, :text, label: t("Country")
         end
 
         fieldset style: :inline do
-          input :title_prefix, :text
-          input :title, :text
-          input :title_postfix, :text
+          input :title_prefix, :text, label: t("Title (prefix)")
+          input :title, :text, label: t("Title")
+          input :title_postfix, :text, label: t("Title (postfix)")
         end
 
         fieldset do
-          input :logo, :image
+          input :logo, :image, label: t("Logo")
         end
 
         fieldset size: :full do
           inputs_for :links,
+            label: t("Links"),
             style: :inline,
             cardinality: :many,
             size: :full,
             default: %Brando.Link{} do
-            input :name, :text
-            input :url, :text
+            input :name, :text, label: t("Name")
+            input :url, :text, label: t("URL")
           end
         end
 
         fieldset size: :full do
           inputs_for :metas,
+            label: t("Meta properties"),
             style: :inline,
             cardinality: :many,
             size: :full,
             default: %Brando.Meta{} do
-            input :key, :text
-            input :value, :text
+            input :key, :text, label: t("Key")
+            input :value, :text, label: t("Value")
           end
         end
       end
@@ -130,84 +136,6 @@ defmodule Brando.Sites.Identity do
     context :naming do
       translate :singular, t("identity")
       translate :plural, t("identity")
-    end
-
-    context :fields do
-      translate :type do
-        label t("Type")
-        placeholder t("Type")
-      end
-
-      translate :name do
-        label t("Name")
-        placeholder t("Name")
-      end
-
-      translate :alternate_name do
-        label t("Alternate name")
-        placeholder t("Alternate name")
-        instructions t("A shortform version of the name")
-      end
-
-      translate :email do
-        label t("Email")
-        placeholder t("Email")
-      end
-
-      translate :phone do
-        label t("Phone")
-        placeholder t("Phone")
-      end
-
-      translate :address do
-        label t("Address")
-        placeholder t("Address")
-      end
-
-      translate :address2 do
-        label t("Address - second line")
-        placeholder t("Address - second line")
-      end
-
-      translate :address3 do
-        label t("Address - third line")
-        placeholder t("Address - third line")
-      end
-
-      translate :zipcode do
-        label t("Zipcode")
-        placeholder t("Zipcode")
-      end
-
-      translate :city do
-        label t("City")
-        placeholder t("City")
-      end
-
-      translate :country do
-        label t("Country")
-        placeholder t("Country")
-      end
-
-      translate :title_prefix do
-        label t("Title (prefix)")
-        placeholder t("Title (prefix)")
-      end
-
-      translate :title do
-        label t("Title")
-        placeholder t("Title")
-      end
-
-      translate :title_postfix do
-        label t("Title (postfix)")
-        placeholder t("Title (postfix)")
-      end
-
-      translate :logo do
-        label t("Logo")
-        placeholder t("Logo")
-      end
     end
   end
 

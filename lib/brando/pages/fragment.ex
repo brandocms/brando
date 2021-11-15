@@ -62,35 +62,6 @@ defmodule Brando.Pages.Fragment do
       translate :singular, t("fragment")
       translate :plural, t("fragments")
     end
-
-    context :fields do
-      translate :title do
-        label t("Title")
-        placeholder t("Title")
-      end
-
-      translate :parent_key do
-        label t("Parent key")
-        placeholder t("parent_key")
-      end
-
-      translate :key do
-        label t("Key")
-        placeholder t("key")
-      end
-
-      translate :data do
-        label t("Content")
-      end
-
-      translate :wrapper do
-        label t("Wrapper")
-
-        instructions t(
-                       "You can access the fragment's rendered content as <code>{{ content }}</code>"
-                     )
-      end
-    end
   end
 
   forms do
@@ -99,9 +70,17 @@ defmodule Brando.Pages.Fragment do
 
       tab "Content" do
         fieldset size: :half do
-          input :title, :text
-          input :parent_key, :text, monospace: true
-          input :key, :text, monospace: true
+          input :title, :text, label: t("Title")
+
+          input :parent_key, :text,
+            monospace: true,
+            label: t("Parent key"),
+            placeholder: t("parent_key")
+
+          input :key, :text,
+            monospace: true,
+            label: t("Key"),
+            placeholder: t("key")
         end
 
         fieldset size: :half do
@@ -110,13 +89,16 @@ defmodule Brando.Pages.Fragment do
         end
 
         fieldset size: :full do
-          input :data, :blocks
+          input :data, :blocks, label: t("Content")
         end
       end
 
       tab "Advanced" do
         fieldset size: :full do
-          input :wrapper, :code
+          input :wrapper, :code,
+            label: t("Wrapper"),
+            instructions:
+              t("You can access the fragment's rendered content as <code>{{ content }}</code>")
         end
       end
     end
