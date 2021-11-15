@@ -98,7 +98,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         <%= if @extracted_path do %>
           <div class="preview">
             <img src={"/media/#{@extracted_path}"} />
-            <figcaption phx-click={JS.push("show_config", target: @myself)}>
+            <figcaption phx-click={show_modal("##{@uid}_config")}>
               <div id={"#{@uid}-figcaption-title"}>
                 <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
               </div>
@@ -120,7 +120,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </figure>
           <div class="instructions">
             <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
-            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself)}>pick an existing image</button>
+            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>pick an existing image</button>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           id={"#{@uid}-image-picker"}>
           <div class="image-picker-images">
             <%= for image <- @images do %>
-              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself)} phx-value-id={image.id}>
+              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself) |> hide_modal("##{@uid}-image-picker")} phx-value-id={image.id}>
                 <img src={"/media/#{image.sizes["thumb"]}"} />
               </div>
             <% end %>
@@ -227,16 +227,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     """
   end
 
-  def handle_event("show_config", _, socket) do
-    Modal.show("#{socket.assigns.uid}_config")
-    {:noreply, socket}
-  end
-
-  def handle_event("close_config", _, socket) do
-    Modal.hide("#{socket.assigns.uid}_config")
-    {:noreply, socket}
-  end
-
   def handle_event(
         "image_uploaded",
         %{"id" => id},
@@ -322,9 +312,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           }
         } = socket
       ) do
-    image_picker_modal_id = "#{uid}-image-picker"
-    Modal.hide(image_picker_modal_id)
-
     {:ok, image} = Brando.Images.get_image(id)
 
     updated_data_map =
@@ -357,10 +344,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, socket}
   end
 
-  def handle_event("show_image_picker", _, %{assigns: %{uid: uid}} = socket) do
-    modal_id = "#{uid}-image-picker"
+  def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
-    Modal.show(modal_id)
 
     {:noreply, assign(socket, :images, images)}
   end

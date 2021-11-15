@@ -80,9 +80,4 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   def handle_event("show_language_picker", _, socket) do
     {:noreply, assign(socket, :show_language_picker, true)}
   end
-
-  def handle_event("show_modal", _, socket) do
-    Modal.show("content-language-selector-modal")
-    {:noreply, socket}
-  end
 end

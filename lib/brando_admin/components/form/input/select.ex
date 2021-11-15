@@ -194,8 +194,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           <button
             type="button"
             class="button-edit"
-            phx-click={JS.push("toggle", target: @myself)}
-            phx-value-id={@modal_id}>
+            phx-click={show_modal("##{@modal_id}")}>
             <%= if @open do %>
               Close
             <% else %>
@@ -236,7 +235,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     ])}
                     data-label={opt.label}
                     value={opt.value}
-                    phx-click={JS.push("select_option", target: @myself)}>
+                    phx-click={JS.push("select_option", target: @myself) |> hide_modal("##{@modal_id}")}>
                     <%= opt.label |> raw %>
                   </button>
                 <% end %>
@@ -358,11 +357,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def handle_event(
         "select_option",
         %{"value" => value},
-        %{assigns: %{input_options: input_options, modal_id: modal_id}} = socket
+        %{assigns: %{input_options: input_options}} = socket
       ) do
     label = get_label(input_options, value)
-
-    Modal.hide(modal_id)
 
     {:noreply,
      socket
@@ -374,20 +371,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def handle_event(
         "reset",
         _,
-        %{assigns: %{input_options: input_options, modal_id: modal_id}} = socket
+        %{assigns: %{input_options: input_options}} = socket
       ) do
     label = get_label(input_options, "")
-
-    Modal.hide(modal_id)
 
     {:noreply,
      socket
      |> assign(:selected_option, "")
      |> assign(:select_label, label)}
-  end
-
-  def handle_event("toggle", %{"id" => id}, socket) do
-    Modal.show(id)
-    {:noreply, socket}
   end
 end

@@ -144,8 +144,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <span phx-update="ignore">
             <button type="button" class="tiny file-upload" id={"#{@uid}-up-btn"}>Upload images</button>
           </span>
-          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself)}>Select images</button>
-          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself)}>Edit captions</button>
+          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>Select images</button>
+          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("##{@uid}_captions")}>Edit captions</button>
           <div
             id={"sortable-#{@block_data.id}-images"}
             class={render_classes([
@@ -167,7 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   ])}
                   data-id={idx}>
                   <img src={"/media/#{img.path}"} />
-                  <figcaption phx-click={JS.push("show_captions", target: @myself)}>
+                  <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("##{@uid}_captions")}>
                     <div>
                       <span><%= gettext("Caption") %></span>
                       <%= raw(img.title || "{ No caption }") %>
@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <figure>
                     <img src={"/media/#{img.path}"} />
                   </figure>
-                  <figcaption phx-click={JS.push("show_config", target: @myself)}>
+                  <figcaption phx-click={show_modal("##{@uid}_config")}>
                     <div>
                       <span>{gettext("Caption")}</span>
                       <%= raw(img.title || "{ No caption }") %>
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             </figure>
             <div class="instructions">
               <span><%= gettext("Click or drag images here &uarr; to upload") |> raw() %></span><br>
-              <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself)}>pick existing images</button>
+              <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>pick existing images</button>
             </div>
           </div>
 
@@ -312,21 +312,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def handle_event("toggle_only_selected", _, socket) do
     {:noreply, assign(socket, :show_only_selected?, !socket.assigns.show_only_selected?)}
-  end
-
-  def handle_event("show_config", _, socket) do
-    Modal.show("#{socket.assigns.uid}_config")
-    {:noreply, socket}
-  end
-
-  def handle_event("close_config", _, socket) do
-    Modal.hide("#{socket.assigns.uid}_config")
-    {:noreply, socket}
-  end
-
-  def handle_event("show_captions", _, socket) do
-    Modal.show("#{socket.assigns.uid}_captions")
-    {:noreply, socket}
   end
 
   def handle_event(
@@ -481,11 +466,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
-  def handle_event("show_image_picker", _, %{assigns: %{uid: uid}} = socket) do
-    modal_id = "#{uid}-image-picker"
+  def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
-    Modal.show(modal_id)
-
     {:noreply, assign(socket, :available_images, images)}
   end
 end

@@ -50,6 +50,15 @@
 .duration-700 { transition-duration: 700ms }
 .duration-1000	{ transition-duration: 1000ms }
 
+.delay-75	{ transition-delay: 75ms }
+.delay-100 { transition-delay: 100ms }
+.delay-150 { transition-delay: 150ms }
+.delay-200 { transition-delay: 200ms }
+.delay-300 { transition-delay: 300ms }
+.delay-500 { transition-delay: 500ms }
+.delay-700 { transition-delay: 700ms }
+.delay-1000	{ transition-delay: 1000ms }
+
 .transition {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

@@ -17,25 +17,10 @@ defmodule BrandoAdmin.Components.Modal do
   # slot header
   # slot footer
 
-  def update(%{id: id} = assigns, socket) do
-    socket = assign(socket, assigns)
-
+  def update(assigns, socket) do
     socket =
-      case assigns[:action] do
-        nil ->
-          socket
-
-        :show ->
-          socket
-          |> assign(:show, true)
-          |> push_event("b:modal:show:#{id}", %{})
-
-        :hide ->
-          socket
-          |> assign(:show, false)
-          |> push_event("b:modal:hide:#{id}", %{})
-      end
-      |> assign(:action, nil)
+      socket
+      |> assign(assigns)
       |> assign_new(:header, fn -> nil end)
       |> assign_new(:footer, fn -> nil end)
       |> assign_new(:show, fn -> false end)
@@ -55,11 +40,9 @@ defmodule BrandoAdmin.Components.Modal do
     <div
       id={@id}
       class={render_classes([modal: true, narrow: @narrow, medium: @medium, wide: @wide])}
-      phx-key="Escape"
-      data-b-modal={@show && "show" || "hide"}
-      phx-hook="Brando.Modal"
-      :on-window-keydown={@close}>
-      <div class="modal-backdrop" />
+      phx-window-keydown={hide_modal("##{@id}")}
+      phx-key="escape">
+      <div class="modal-backdrop" phx-click={hide_modal("##{@id}")} />
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <header class={render_classes(["modal-header": true, centered: @center_header])}>
@@ -71,7 +54,7 @@ defmodule BrandoAdmin.Components.Modal do
               <button
                 type="button"
                 class="modal-close"
-                phx-click={@close || JS.push("close_modal", target: @myself)}>
+                phx-click={@close || hide_modal("##{@id}")}>
                 &times;
               </button>
             </div>
@@ -91,19 +74,5 @@ defmodule BrandoAdmin.Components.Modal do
       </div>
     </div>
     """
-  end
-
-  # Public API
-  def show(id) do
-    send_update(__MODULE__, id: id, action: :show)
-  end
-
-  def hide(id) do
-    send_update(__MODULE__, id: id, action: :hide)
-  end
-
-  def handle_event("close_modal", _params, %{assigns: %{id: id}} = socket) do
-    hide(id)
-    {:noreply, socket}
   end
 end

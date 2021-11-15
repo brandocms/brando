@@ -12,7 +12,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   # prop key, :string, default: "default"
   # prop entry_form, :boolean, default: false
 
-  # prop show_modal, :event, required: true
   # prop create_ref, :event, required: true
   # prop delete_ref, :event, required: true
   # prop create_var, :event, required: true
@@ -45,8 +44,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <%= if !@entry_form do %>
           <div class="button-group">
             <button
-              phx-click={@show_modal}
-              phx-value-id={"#{@form.id}-#{@key}-icon"}
+              phx-click={show_modal("##{@form.id}-#{@key}-icon")}
               class="secondary"
               type="button">
               Edit icon
@@ -62,103 +60,91 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <div class="button-group">
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="text"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Text
             </button>
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="header"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Header
             </button>
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="picture"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Picture
             </button>
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="gallery"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Gallery
             </button>
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="video"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Video
             </button>
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="media"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Media
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="table"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Table
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="html"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               HTML
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="svg"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               SVG
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="markdown"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Markdown
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="map"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Map
             </button>
 
             <button
               type="button"
-              phx-click={@create_ref}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
               phx-value-type="comment"
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
               class="secondary">
               Comment
             </button>
@@ -169,8 +155,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <h2>
             <div class="header-spread">REFs</div>
             <button
-              phx-click={@show_modal}
-              phx-value-id={"#{@form.id}-#{@key}-create-ref"}
+              phx-click={show_modal("##{@form.id}-#{@key}-create-ref")}
               type="button"
               class="circle">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" /></svg>
@@ -189,8 +174,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     <button
                       class="tiny"
                       type="button"
-                      phx-click={@show_modal}
-                      phx-value-id={"#{@form.id}-#{@key}-ref-#{idx}"}>
+                      phx-click={show_modal("##{@form.id}-#{@key}-ref-#{idx}")}>
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z" /><path d="M6.414 16L16.556 5.858l-1.414-1.414L5 14.586V16h1.414zm.829 2H3v-4.243L14.435 2.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 18zM3 20h18v2H3v-2z" /></svg>
                     </button>
                     <button class="tiny" type="button" phx-click={@delete_ref} phx-value-id={input_value(ref, :name)}>
@@ -595,49 +579,43 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <div class="button-group">
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="text"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               Text
             </button>
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="string"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               String
             </button>
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="html"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               Html
             </button>
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="datetime"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               Datetime
             </button>
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="boolean"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               Boolean
             </button>
             <button
               type="button"
-              phx-click={@create_var}
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="color"
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
               class="secondary">
               Color
             </button>
@@ -648,8 +626,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <h2>
             <div class="header-spread">Vars</div>
             <button
-              phx-click={@show_modal}
-              phx-value-id={"#{@form.id}-#{@key}-create-var"}
+              phx-click={show_modal("##{@form.id}-#{@key}-create-var")}
               type="button"
               class="circle">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" /></svg>
@@ -704,8 +681,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   <button
                     class="tiny"
                     type="button"
-                    phx-click={@show_modal}
-                    phx-value-id={"#{@form.id}-#{@key}-var-#{idx}"}>
+                    phx-click={show_modal("##{@form.id}-#{@key}-var-#{idx}")}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z" /><path d="M6.414 16L16.556 5.858l-1.414-1.414L5 14.586V16h1.414zm.829 2H3v-4.243L14.435 2.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 18zM3 20h18v2H3v-2z" /></svg>
                   </button>
                   <button class="tiny" type="button" phx-click={@delete_var} phx-value-id={input_value(var, :key)}>

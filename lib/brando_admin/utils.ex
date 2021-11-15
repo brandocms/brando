@@ -68,6 +68,45 @@ defmodule BrandoAdmin.Utils do
     )
   end
 
+  def show_modal(js \\ %JS{}, modal_id) do
+    js
+    |> JS.show(
+      to: "#{modal_id}",
+      display: "flex",
+      time: 0
+    )
+    |> JS.show(
+      to: "#{modal_id} .modal-backdrop",
+      transition: {"transition ease-out duration-500", "opacity-0", "opacity-100"},
+      time: 500
+    )
+    |> JS.show(
+      to: "#{modal_id} .modal-dialog",
+      transition:
+        {"transition ease-out delay-300 duration-300", "opacity-0 y-100", "opacity-100 y-0"},
+      time: 600
+    )
+  end
+
+  def hide_modal(js \\ %JS{}, modal_id) do
+    js
+    |> JS.hide(
+      to: "#{modal_id} .modal-dialog",
+      transition: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
+      time: 300
+    )
+    |> JS.hide(
+      to: "#{modal_id} .modal-backdrop",
+      transition: {"transition ease-in delay-300 duration-500", "opacity-100", "opacity-0"},
+      time: 800
+    )
+    |> JS.hide(
+      to: "#{modal_id}",
+      transition: {"transition", "opacity-100", "opacity-100"},
+      time: 800
+    )
+  end
+
   def toggle_drawer(js \\ %JS{}, drawer_id) do
     js
     |> JS.toggle(

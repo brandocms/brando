@@ -52,14 +52,13 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             module={ModuleProps}
             id="module-props"
             form={form}
-            create_ref="create_ref"
-            delete_ref="delete_ref"
-            create_var="create_var"
-            delete_var="delete_var"
+            create_ref={JS.push("create_ref")}
+            delete_ref={JS.push("delete_ref")}
+            create_var={JS.push("create_var")}
+            delete_var={JS.push("delete_var")}
             add_table_row="add_table_row"
             add_table_col="add_table_col"
             add_table_template="add_table_template"
-            show_modal="show_modal"
           />
         </div>
         <%= if input_value(form, :wrapper) in [true, "true"] do %>
@@ -83,9 +82,9 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                   id={"entry-module-props-#{entry.id}"}
                   form={entry}
                   entry_form
-                  create_ref="entry_create_ref"
+                  create_ref={JS.push("entry_create_ref")}
                   delete_ref="entry_delete_ref"
-                  create_var="entry_create_var"
+                  create_var={JS.push("entry_create_var")}
                   delete_var="entry_delete_var"
                   show_modal="show_modal"
                 />
@@ -245,14 +244,9 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply, assign(socket, :changeset, updated_changeset)}
   end
 
-  def handle_event("show_modal", %{"id" => modal_id}, socket) do
-    Modal.show(modal_id)
-    {:noreply, socket}
-  end
-
   def handle_event(
         "create_ref",
-        %{"type" => block_type, "id" => modal_id},
+        %{"type" => block_type},
         %{assigns: %{changeset: changeset}} = socket
       ) do
     refs = get_field(changeset, :refs)
@@ -270,7 +264,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     }
 
     updated_changeset = put_change(changeset, :refs, [new_ref | refs])
-    Modal.hide(modal_id)
 
     {:noreply,
      socket
@@ -291,7 +284,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   def handle_event(
         "create_var",
-        %{"type" => var_type, "id" => modal_id},
+        %{"type" => var_type},
         %{assigns: %{changeset: changeset}} = socket
       ) do
     vars = get_field(changeset, :vars) || []
@@ -309,7 +302,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       })
 
     updated_changeset = put_change(changeset, :vars, [new_var | vars])
-    Modal.hide(modal_id)
 
     {:noreply,
      socket
@@ -333,7 +325,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   def handle_event(
         "entry_create_ref",
-        %{"type" => block_type, "id" => modal_id},
+        %{"type" => block_type},
         %{assigns: %{changeset: changeset}} = socket
       ) do
     entry_template = get_field(changeset, :entry_template)
@@ -359,8 +351,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       |> Map.put(:id, 2107)
 
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
-
-    Modal.hide(modal_id)
 
     {:noreply,
      socket
@@ -391,7 +381,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   def handle_event(
         "entry_create_var",
-        %{"type" => var_type, "id" => modal_id},
+        %{"type" => var_type},
         %{assigns: %{changeset: changeset}} = socket
       ) do
     entry_template = get_field(changeset, :entry_template)
@@ -417,8 +407,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       |> Map.put(:id, 2107)
 
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
-
-    Modal.hide(modal_id)
 
     {:noreply,
      socket

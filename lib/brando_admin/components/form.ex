@@ -800,8 +800,7 @@ defmodule BrandoAdmin.Components.Form do
 
       {:noreply,
        socket
-       |> update_changeset(key, [image_struct | existing_images])
-       |> assign(:processing, true)}
+       |> update_changeset(key, [image_struct | existing_images])}
     else
       {:noreply, socket}
     end
@@ -846,8 +845,7 @@ defmodule BrandoAdmin.Components.Form do
        socket
        |> update_changeset(relation_key, image.id)
        |> assign(:edit_image, edit_image)
-       |> assign(:image_changeset, image_changeset)
-       |> assign(:processing, true)}
+       |> assign(:image_changeset, image_changeset)}
     else
       {:noreply, socket}
     end

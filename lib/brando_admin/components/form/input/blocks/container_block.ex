@@ -180,10 +180,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           uid={@uid}
           hide_sections
           insert_index={@insert_index}
-          insert_block={JS.push("insert_block", target: @myself)}
-          insert_section={JS.push("insert_section", target: @myself)}
-          insert_datasource={JS.push("insert_datasource", target: @myself)}
-          show_module_picker={JS.push("show_module_picker", target: @myself)}
+          insert_block={JS.push("insert_block", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_section={JS.push("insert_section", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_datasource={JS.push("insert_datasource", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
       </.live_component>
@@ -194,11 +194,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   def handle_event(
         "show_module_picker",
         %{"index" => index_binary},
-        %{assigns: %{block: block}} = socket
+        socket
       ) do
-    modal_id = "#{block.id}-container-blocks-module-picker"
-    Modal.show(modal_id)
-
     {:noreply, assign(socket, insert_index: index_binary)}
   end
 
@@ -209,13 +206,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           assigns: %{
             base_form: form,
             uid: block_uid,
-            block: %{id: block_id},
             data_field: data_field
           }
         } = socket
       ) do
-    modal_id = "#{block_id}-container-blocks-module-picker"
-
     changeset = form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -254,7 +248,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       updated_changeset: updated_changeset
     )
 
-    Modal.hide(modal_id)
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
 
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
@@ -267,13 +260,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           assigns: %{
             base_form: form,
             uid: block_uid,
-            block: %{id: block_id},
             data_field: data_field
           }
         } = socket
       ) do
-    modal_id = "#{block_id}-container-blocks-module-picker"
-
     changeset = form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -299,7 +289,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       updated_changeset: updated_changeset
     )
 
-    Modal.hide(modal_id)
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
 
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}

@@ -37,7 +37,11 @@ defmodule BrandoAdmin do
           hide_dropdown: 1,
           hide_dropdown: 2,
           toggle_drawer: 1,
-          toggle_drawer: 2
+          toggle_drawer: 2,
+          show_modal: 1,
+          show_modal: 2,
+          hide_modal: 1,
+          hide_modal: 2
         ]
 
       alias Phoenix.LiveView.JS
@@ -103,7 +107,11 @@ defmodule BrandoAdmin do
           hide_dropdown: 1,
           hide_dropdown: 2,
           toggle_drawer: 1,
-          toggle_drawer: 2
+          toggle_drawer: 2,
+          show_modal: 1,
+          show_modal: 2,
+          hide_modal: 1,
+          hide_modal: 2
         ]
     end
   end

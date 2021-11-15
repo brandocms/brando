@@ -238,8 +238,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <button
           type="button"
           class="button-edit"
-          phx-click={JS.push("toggle", target: @myself)}
-          phx-value-id={@modal_id}>
+          phx-click={show_modal("##{@modal_id}")}>
           <%= if @open do %>
             Close
           <% else %>
@@ -295,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <button
                       type="button"
                       class="secondary"
-                      phx-click={JS.push("reset", target: @myself)}>
+                      phx-click={JS.push("reset", target: @myself) |> hide_modal("##{@modal_id}")}>
                       Reset value
                     </button>
                   </div>
@@ -468,8 +467,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       ) do
     label = get_label(input_options, [])
 
-    Modal.hide(modal_id)
-
     {:noreply,
      socket
      |> assign(:selected_options, [])
@@ -482,10 +479,5 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("hide_form", _, socket) do
     {:noreply, assign(socket, :creating, false)}
-  end
-
-  def handle_event("toggle", %{"id" => id}, socket) do
-    Modal.show(id)
-    {:noreply, socket}
   end
 end

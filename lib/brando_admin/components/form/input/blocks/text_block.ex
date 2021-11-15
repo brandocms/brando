@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
-  alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Radios
 
@@ -96,25 +95,5 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
       </.live_component>
     </div>
     """
-  end
-
-  def handle_event("show_link_modal", %{"id" => id}, socket) do
-    Modal.show(id)
-    {:noreply, socket}
-  end
-
-  def handle_event("update_link", %{"id" => modal_id}, %{assigns: %{id: id}} = socket) do
-    Modal.hide(modal_id)
-    {:noreply, push_event(socket, "tiptap:link:#{id}", %{})}
-  end
-
-  def handle_event("show_button_modal", %{"id" => id}, socket) do
-    Modal.show(id)
-    {:noreply, socket}
-  end
-
-  def handle_event("update_button", %{"id" => modal_id}, %{assigns: %{id: id}} = socket) do
-    Modal.hide(modal_id)
-    {:noreply, push_event(socket, "tiptap:button:#{id}", %{})}
   end
 end
