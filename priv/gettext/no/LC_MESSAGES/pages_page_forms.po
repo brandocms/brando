@@ -1,0 +1,73 @@
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2;\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
+
+#: lib/brando/pages/page.ex:263
+msgid "Advanced"
+msgstr "Avansert"
+
+#: lib/brando/pages/page.ex:259
+msgid "Blocks"
+msgstr "Blokker"
+
+#: lib/brando/pages/page.ex:270
+msgid "CSS classes"
+msgstr "CSS klasser"
+
+#: lib/brando/pages/page.ex:236
+msgid "Content"
+msgstr "Innhold"
+
+#: lib/brando/pages/page.ex:266
+msgid "Homepage"
+msgstr "Hjemmeside"
+
+#: lib/brando/pages/page.ex:250
+msgid "Language"
+msgstr "Språk"
+
+#: lib/brando/pages/page.ex:275
+msgid "Page variables"
+msgstr "Sidevariabler"
+
+#: lib/brando/pages/page.ex:238
+msgid "Status"
+msgstr "Status"
+
+#: lib/brando/pages/page.ex:269
+msgid "Template"
+msgstr "Mal"
+
+#: lib/brando/pages/page.ex:242
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/pages/page.ex:243
+msgid "URI"
+msgstr "URI"
+
+#: lib/brando/pages/page.ex:255
+msgid "Parent page"
+msgstr "Overordnet side"
+
+#: lib/brando/pages/page.ex:267
+msgid "Page is loaded at root address"
+msgstr "Siden lastes inn på rotadressen"

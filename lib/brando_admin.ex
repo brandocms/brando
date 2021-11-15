@@ -28,7 +28,17 @@ defmodule BrandoAdmin do
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
       import BrandoAdmin.ErrorHelpers
-      import BrandoAdmin.Utils
+
+      import BrandoAdmin.Utils,
+        only: [
+          prepare_input_component: 1,
+          toggle_dropdown: 1,
+          toggle_dropdown: 2,
+          hide_dropdown: 1,
+          hide_dropdown: 2,
+          toggle_drawer: 1,
+          toggle_drawer: 2
+        ]
 
       alias Phoenix.LiveView.JS
     end
@@ -84,7 +94,17 @@ defmodule BrandoAdmin do
     quote do
       use Phoenix.Component
       import Brando.HTML
-      import BrandoAdmin.Utils
+
+      import BrandoAdmin.Utils,
+        only: [
+          prepare_input_component: 1,
+          toggle_dropdown: 1,
+          toggle_dropdown: 2,
+          hide_dropdown: 1,
+          hide_dropdown: 2,
+          toggle_drawer: 1,
+          toggle_drawer: 2
+        ]
     end
   end
 

@@ -1,8 +1,11 @@
 defmodule BrandoAdmin.Utils do
+  use BrandoAdmin.Translator, "forms"
   import Phoenix.LiveView
   alias Phoenix.LiveView.JS
 
   def prepare_input_component(%{assigns: assigns} = socket) do
+    schema = assigns.form.source.data.__struct__
+
     socket =
       socket
       |> assign_new(:opts, fn -> [] end)
@@ -18,11 +21,15 @@ defmodule BrandoAdmin.Utils do
       disabled: assign_opts[:disabled] || false,
       debounce: assign_opts[:debounce] || 750,
       compact: assign_opts[:compact],
-      label: assign_opts[:label] || assigns[:label]
+      placeholder: g(schema, assign_opts[:placeholder]) || socket.assigns.placeholder,
+      instructions: g(schema, assign_opts[:instructions]) || socket.assigns.instructions,
+      label: g(schema, assign_opts[:label]) || socket.assigns.label
     )
   end
 
   def prepare_input_component(assigns) do
+    schema = assigns.form.source.data.__struct__
+
     assigns =
       assigns
       |> assign_new(:opts, fn -> [] end)
@@ -36,7 +43,9 @@ defmodule BrandoAdmin.Utils do
       disabled: assigns.opts[:disabled] || false,
       debounce: assigns.opts[:debounce] || 750,
       compact: assigns.opts[:compact],
-      label: assigns.opts[:label] || assigns.label
+      placeholder: g(schema, assigns.opts[:placeholder]) || assigns.placeholder,
+      instructions: g(schema, assigns.opts[:instructions]) || assigns.instructions,
+      label: g(schema, assigns.opts[:label]) || assigns.label
     )
   end
 

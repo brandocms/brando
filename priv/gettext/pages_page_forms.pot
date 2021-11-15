@@ -1,0 +1,76 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:263
+msgid "Advanced"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:259
+msgid "Blocks"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:270
+msgid "CSS classes"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:236
+msgid "Content"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:266
+msgid "Homepage"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:250
+msgid "Language"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:275
+msgid "Page variables"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:238
+msgid "Status"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:269
+msgid "Template"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:242
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:243
+msgid "URI"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:255
+msgid "Parent page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:267
+msgid "Page is loaded at root address"
+msgstr ""

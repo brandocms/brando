@@ -92,36 +92,6 @@ defmodule Brando.Users.User do
       translate :singular, t("user")
       translate :plural, t("users")
     end
-
-    context :fields do
-      translate :name do
-        label t("Name")
-        placeholder t("Name")
-      end
-
-      translate :email do
-        label t("Email")
-        placeholder t("Email")
-      end
-
-      translate :password do
-        label t("Password")
-        placeholder t("Password")
-      end
-
-      translate :language do
-        label t("Language")
-        placeholder t("Language")
-      end
-
-      translate :role do
-        label t("Role")
-      end
-
-      translate :avatar do
-        label t("Profile picture")
-      end
-    end
   end
 
   listings do

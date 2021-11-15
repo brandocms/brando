@@ -69,6 +69,7 @@ locals_without_parens = [
   input: 2,
   input: 3,
   inputs_for: 2,
+  inputs_for: 3,
   fieldset: 1,
   fieldset: 2,
   redirect_on_save: 1,

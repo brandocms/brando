@@ -277,86 +277,7 @@ defmodule BrandoAdmin.Components.Form do
         field={@edit_image.field}
         select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker")} />
 
-      <Content.drawer id={"image-drawer"} title={"Image"} close={close_image(assigns)} z={1001} narrow>
-        <%= if @image_changeset do %>
-          <.form
-            id="image-drawer-form"
-            for={@image_changeset}
-            let={image_form}
-            phx-submit={JS.push("save_image", target: @myself)}
-            phx-change={JS.push("validate_image", target: @myself)}
-            phx-target={@myself}>
-            <div
-              class="image-drawer-preview"
-              phx-drop-target={@uploads[@edit_image.field].ref}>
-              <%= if @edit_image.image do %>
-              <figure>
-                <%#
-                <.live_component
-                  module={FocalPoint}
-                  id="image-drawer-focal"
-                  form={@form}
-                  field_name={@field}
-                  focal={@focal} />
-                %>
-                <img
-                  width={@edit_image.image.width}
-                  height={@edit_image.image.height}
-                  src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
-              </figure>
-              <% else %>
-              <div class="img-placeholder">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                      <circle cx="8" cy="9" r="2"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <% end %>
-            </div>
-
-            <div class="button-group vertical">
-              <div class="file-input-button">
-                <span class="label">
-                  <%= gettext "Upload image" %>
-                </span>
-                <%= live_file_input @uploads[@edit_image.field] %>
-              </div>
-              <button
-                class="secondary"
-                type="button"
-                phx-click={toggle_drawer("#image-picker")}>
-                <%= gettext "Select existing image" %>
-              </button>
-
-              <button
-                class="secondary"
-                type="button"
-                phx-click={reset_image_field(@myself)}>
-                <%= gettext "Reset image field" %>
-              </button>
-            </div>
-            <%= if @edit_image.image do %>
-              <div class="brando-input">
-                <Input.Text.render field={:title} form={image_form} />
-              </div>
-
-              <div class="brando-input">
-                <Input.Text.render field={:credits} form={image_form} />
-              </div>
-
-              <div class="brando-input">
-                <Input.Text.render field={:alt} form={image_form} />
-              </div>
-            <% end %>
-          </.form>
-        <% end %>
-      </Content.drawer>
+      <.image_drawer {assigns} />
 
       <.form
         for={@changeset}
@@ -415,6 +336,91 @@ defmodule BrandoAdmin.Components.Form do
           class="primary submit-button" />
       </.form>
     </div>
+    """
+  end
+
+  def image_drawer(assigns) do
+    ~H"""
+    <Content.drawer id={"image-drawer"} title={"Image"} close={close_image()} z={1001} narrow>
+      <%= if @image_changeset do %>
+        <.form
+          id="image-drawer-form"
+          for={@image_changeset}
+          let={image_form}
+          phx-submit={JS.push("save_image", target: @myself)}
+          phx-change={JS.push("validate_image", target: @myself)}
+          phx-target={@myself}>
+          <div
+            class="image-drawer-preview"
+            phx-drop-target={@uploads[@edit_image.field].ref}>
+            <%= if @edit_image.image do %>
+            <figure class="grid-overlay">
+              <%#
+              <.live_component
+                module={FocalPoint}
+                id="image-drawer-focal"
+                form={@form}
+                field_name={@field}
+                focal={@focal} />
+              %>
+              <img
+                width={@edit_image.image.width}
+                height={@edit_image.image.height}
+                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
+            </figure>
+            <% else %>
+            <div class="img-placeholder">
+              <div class="placeholder-wrapper">
+                <div class="svg-wrapper">
+                  <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                    <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                    <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                    <circle cx="8" cy="9" r="2"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <% end %>
+          </div>
+
+          <div class="button-group vertical">
+            <div class="file-input-button">
+              <span class="label">
+                <%= gettext "Upload image" %>
+              </span>
+              <%= live_file_input @uploads[@edit_image.field] %>
+            </div>
+            <button
+              class="secondary"
+              type="button"
+              phx-click={toggle_drawer("#image-picker")}>
+              <%= gettext "Select existing image" %>
+            </button>
+
+            <button
+              class="secondary"
+              type="button"
+              phx-click={reset_image_field(@myself)}>
+              <%= gettext "Reset image field" %>
+            </button>
+          </div>
+          <%= if @edit_image.image do %>
+            <div class="brando-input">
+              <Input.Text.render field={:title} form={image_form} />
+            </div>
+
+            <div class="brando-input">
+              <Input.Text.render field={:credits} form={image_form} />
+            </div>
+
+            <div class="brando-input">
+              <Input.Text.render field={:alt} form={image_form} />
+            </div>
+          <% end %>
+        </.form>
+      <% end %>
+    </Content.drawer>
     """
   end
 
@@ -485,7 +491,7 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket_with_gallery_uploads, :uploads, fn -> nil end)
   end
 
-  def close_image(js \\ %JS{}, assigns) do
+  def close_image(js \\ %JS{}) do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")

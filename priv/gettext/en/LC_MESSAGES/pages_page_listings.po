@@ -1,0 +1,78 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/brando/pages/page.ex:128 lib/brando/pages/page.ex:195
+#: lib/brando/pages/page.ex:228
+msgid "Are you sure?"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:132
+msgid "Create fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:131
+msgid "Create subpage"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:193
+msgid "Delete fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:126
+msgid "Delete page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:136
+msgid "Delete pages"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:226
+msgid "Delete sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:130
+msgid "Duplicate page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:191
+msgid "Edit fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:124
+msgid "Edit page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:224
+msgid "Edit sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:120
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:119
+msgid "URI"
+msgstr ""

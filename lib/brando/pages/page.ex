@@ -235,33 +235,44 @@ defmodule Brando.Pages.Page do
     form default_params: %{status: :draft} do
       tab t("Content") do
         fieldset size: :full do
-          input :status, :status
+          input :status, :status, label: t("Status")
         end
 
         fieldset size: :half do
-          input :title, :text
-          input :uri, :text, monospace: true
+          input :title, :text, label: t("Title")
+          input :uri, :text, monospace: true, label: t("URI")
         end
 
         fieldset size: :half do
-          input :language, :select, options: :languages, narrow: true
-          input :parent_id, :select, options: &__MODULE__.get_parents/2, resetable: true
+          input :language, :select,
+            options: :languages,
+            narrow: true,
+            label: t("Language")
+
+          input :parent_id, :select,
+            options: &__MODULE__.get_parents/2,
+            resetable: true,
+            label: t("Parent page")
         end
 
         fieldset size: :full do
-          input :data, :blocks
+          input :data, :blocks, label: t("Blocks")
         end
       end
 
       tab t("Advanced") do
         fieldset size: :half do
-          input :is_homepage, :toggle
-          input :template, :select, options: &__MODULE__.get_templates/2
-          input :css_classes, :text
+          input :is_homepage, :toggle,
+            label: t("Homepage"),
+            instructions: t("Page is loaded at root address")
+
+          input :template, :select, options: &__MODULE__.get_templates/2, label: t("Template")
+          input :css_classes, :text, label: t("CSS classes")
         end
 
         fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Pages.PageVars}
+          inputs_for :vars, {:component, BrandoAdmin.Components.Pages.PageVars},
+            label: t("Page variables")
         end
       end
     end

@@ -1,0 +1,77 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:128 lib/brando/pages/page.ex:195
+#: lib/brando/pages/page.ex:228
+msgid "Are you sure?"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:132
+msgid "Create fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:131
+msgid "Create subpage"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:193
+msgid "Delete fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:126
+msgid "Delete page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:136
+msgid "Delete pages"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:226
+msgid "Delete sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:130
+msgid "Duplicate page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:191
+msgid "Edit fragment"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:124
+msgid "Edit page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:224
+msgid "Edit sub page"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:120
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/pages/page.ex:119
+msgid "URI"
+msgstr ""
