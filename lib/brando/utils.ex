@@ -951,6 +951,9 @@ defmodule Brando.Utils do
     value
   end
 
+  def deep_merge(nil, right), do: right
+  def deep_merge(left, nil), do: left
+
   def deep_merge(left, right) do
     Map.merge(left, right, &deep_resolve/3)
   end
