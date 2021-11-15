@@ -1,62 +1,61 @@
-## "msgid"s in this file come from POT (.pot) files.
-##
-## Do not add, change, or remove "msgid"s manually here as
-## they're tied to the ones in the corresponding POT file
-## (with the same domain).
-##
-## Use "mix gettext.extract --merge" or "mix gettext.merge"
-## to merge POT files into PO files.
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: no\n"
-"Plural-Forms: nplurals=2\n"
+"Plural-Forms: nplurals=2;\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:64
 msgid "Base URL"
-msgstr ""
+msgstr "Primær URL-adresse"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:75
 msgid "Code"
-msgstr ""
+msgstr "Kode"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:57 lib/brando/sites/seo.ex:58
 msgid "Fallback META description"
-msgstr ""
+msgstr "Metabeskrivelse (reserve)"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:61 lib/brando/sites/seo.ex:62
 msgid "Fallback META image"
-msgstr ""
+msgstr "Metabilde (reserve)"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:53 lib/brando/sites/seo.ex:54
 msgid "Fallback META title"
-msgstr ""
+msgstr "Metatittel (reserve)"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:76
 msgid "From"
-msgstr ""
+msgstr "Fra"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:70
 msgid "Redirects"
-msgstr ""
+msgstr "Omdirigeringer"
 
-#, elixir-format
-#: lib/brando/sites/seo.ex:65 lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:65
 msgid "Robots"
-msgstr ""
+msgstr "Roboter"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:77
 msgid "To"
-msgstr ""
+msgstr "Til"
 
-#, elixir-format
 #: lib/brando/sites/seo.ex:64
 msgid "https://yoursite.com"
-msgstr ""
+msgstr "https://dittnettsted.no"
