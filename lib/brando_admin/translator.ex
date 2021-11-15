@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Translator do
   defmacro __using__(ctx) do
     quote do
       def g(schema, nil), do: nil
+      def g(schema, :hidden), do: :hidden
 
       def g(schema, msgid) do
         if Brando.Blueprint.blueprint?(schema) do
