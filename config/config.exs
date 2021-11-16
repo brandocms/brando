@@ -23,7 +23,7 @@ config :brando, Brando.Images,
     size_limit: 10_240_000,
     sizes: %{
       "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-      "thumb" => %{"size" => "150x150>", "quality" => 75, "crop" => true},
+      "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
       "small" => %{"size" => "700", "quality" => 75},
       "medium" => %{"size" => "1100", "quality" => 75},
       "large" => %{"size" => "1700", "quality" => 75},

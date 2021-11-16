@@ -10,7 +10,7 @@ defmodule Brando.Trait.Meta do
     size_limit: 5_240_000,
     sizes: %{
       "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-      "thumb" => %{"size" => "150x150>", "quality" => 75, "crop" => true},
+      "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
       "xlarge" => %{"size" => "1200x630", "quality" => 75, "crop" => true}
     }
   ]

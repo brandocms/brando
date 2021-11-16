@@ -16,7 +16,7 @@ defmodule Brando.Sites.SEO do
     size_limit: 10_240_000,
     sizes: %{
       "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-      "thumb" => %{"size" => "150x150>", "quality" => 65, "crop" => true},
+      "thumb" => %{"size" => "400x400>", "quality" => 65, "crop" => true},
       "xlarge" => %{"size" => "2100", "quality" => 65}
     }
   ]
