@@ -196,7 +196,7 @@ defmodule Brando.Upload do
     joined_dest = Path.join(ul_path, fname)
 
     dest =
-      if cfg[:overwrite] do
+      if Map.get(cfg, :overwrite) do
         joined_dest
       else
         (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
