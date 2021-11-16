@@ -35,11 +35,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
       <.live_component module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -54,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
           <% end %>
         </:description>
         <div class="markdown-block">
-          <Input.Code.render id={"#{@uid}-markdown-text"} form={@block_data} field={:text} />
+          <Input.Code.render id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} />
         </div>
       </.live_component>
     </div>

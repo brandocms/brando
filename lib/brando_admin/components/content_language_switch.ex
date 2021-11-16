@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   use BrandoAdmin, :live_component
-  alias BrandoAdmin.Components.Modal
   import Brando.Gettext
 
   def mount(socket) do

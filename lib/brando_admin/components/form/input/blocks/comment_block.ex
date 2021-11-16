@@ -40,12 +40,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
     ~H"""
     <div
       class="comment-block"
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
       <.live_component
         module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}

@@ -460,11 +460,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_label()}
   end
 
-  def handle_event(
-        "reset",
-        _,
-        %{assigns: %{input_options: input_options, modal_id: modal_id}} = socket
-      ) do
+  def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
     label = get_label(input_options, [])
 
     {:noreply,

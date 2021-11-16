@@ -71,12 +71,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
 
       <.live_component module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         block_count={@block_count}
         base_form={@base_form}
@@ -88,7 +88,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <:description><%= @module_name %></:description>
         <:config>
           <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-            <.live_component module={RenderVar} id={"#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+            <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
           <% end %>
 
           <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-                <.live_component module={RenderVar} id={"#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               <% end %>
             </div>
           <% end %>

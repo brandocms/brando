@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       class="gallery-block"
       phx-hook="Brando.LegacyImageUpload"
       data-upload-multi="true"
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
       <.live_component
         module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         <div phx-update="ignore">
           <input
-            name={"#{@uid}-f-in"}
+            name={"block-#{@uid}-f-in"}
             class="file-input"
             type="file"
             multiple>
@@ -142,10 +142,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         <%= if @has_images? do %>
           <span phx-update="ignore">
-            <button type="button" class="tiny file-upload" id={"#{@uid}-up-btn"}>Upload images</button>
+            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>Upload images</button>
           </span>
-          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>Select images</button>
-          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("##{@uid}_captions")}>Edit captions</button>
+          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>Select images</button>
+          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>Edit captions</button>
           <div
             id={"sortable-#{@block_data.id}-images"}
             class={render_classes([
@@ -167,7 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   ])}
                   data-id={idx}>
                   <img src={"/media/#{img.path}"} />
-                  <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("##{@uid}_captions")}>
+                  <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
                     <div>
                       <span><%= gettext("Caption") %></span>
                       <%= raw(img.title || "{ No caption }") %>
@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <figure>
                     <img src={"/media/#{img.path}"} />
                   </figure>
-                  <figcaption phx-click={show_modal("##{@uid}_config")}>
+                  <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
                     <div>
                       <span>{gettext("Caption")}</span>
                       <%= raw(img.title || "{ No caption }") %>
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             </figure>
             <div class="instructions">
               <span><%= gettext("Click or drag images here &uarr; to upload") |> raw() %></span><br>
-              <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>pick existing images</button>
+              <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>pick existing images</button>
             </div>
           </div>
 
@@ -226,7 +226,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           title="Pick images"
           center_header={true}
           remember_scroll_position
-          id={"#{@uid}-image-picker"}>
+          id={"block-#{@uid}-image-picker"}>
           <div class="buttons">
             <button type="button" class="tiny" phx-click={JS.push("toggle_only_selected", target: @myself)}>
               <%= if @show_only_selected? do %>
@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         <.live_component module={Modal}
           title="Edit captions"
-          id={"#{@uid}_captions"}>
+          id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
             <%= for image <- inputs_for(@block_data, :images) do %>
               <div class="caption-row">

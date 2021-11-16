@@ -40,11 +40,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
       <.live_component module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}

@@ -39,13 +39,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       class="video-block"
       data-block-index={@index}
       data-block-uid={@uid}>
       <.live_component
         module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -103,10 +103,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             <%= hidden_input(@block_data, :preload) %>
             <%= hidden_input(@block_data, :play_button) %>
 
-            <div id={"#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
+            <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
               <%= gettext("Enter the video's URL:") %>
-              <input id={"#{@uid}-url"} type="text" class="text">
-              <button id={"#{@uid}-button"} type="button" class="secondary small">
+              <input id={"block-#{@uid}-url"} type="text" class="text">
+              <button id={"block-#{@uid}-button"} type="button" class="secondary small">
                 <%= gettext("Get video info") %>
               </button>
             </div>
@@ -139,7 +139,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0H24V24H0z"/><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z"/></svg>
             </figure>
             <div class="instructions">
-              <button type="button" class="tiny" phx-click={show_modal("##{@uid}_config")}>Configure video block</button>
+              <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>Configure video block</button>
             </div>
           </div>
         <% end %>

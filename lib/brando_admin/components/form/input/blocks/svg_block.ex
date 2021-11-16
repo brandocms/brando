@@ -36,12 +36,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
       <.live_component
         module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -56,10 +56,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <% end %>
         </:description>
         <:config>
-          <Input.Code.render id={"#{@uid}-svg-code"} form={@block_data} field={:code} />
+          <Input.Code.render id={"block-#{@uid}-svg-code"} form={@block_data} field={:code} />
           <Input.Text.render form={@block_data} field={:class} />
         </:config>
-        <div class="svg-block" phx-hook="Brando.SVGDrop" id={"#{@uid}-svg-drop"} data-target={@myself}>
+        <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
           <%= if v(@block_data, :code) do %>
             <%= v(@block_data, :code) |> raw %>
           <% else %>
@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M24 12l-5.657 5.657-1.414-1.414L21.172 12l-4.243-4.243 1.414-1.414L24 12zM2.828 12l4.243 4.243-1.414 1.414L0 12l5.657-5.657L7.07 7.757 2.828 12zm6.96 9H7.66l6.552-18h2.128L9.788 21z"/></svg>
               </figure>
               <div class="instructions">
-                <button type="button" class="tiny" phx-click={show_modal("##{@uid}_config")}>Configure SVG block</button>
+                <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>Configure SVG block</button>
               </div>
             </div>
           <% end %>

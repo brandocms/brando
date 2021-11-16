@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-module-entries"}
+      id={"block-#{@uid}-module-entries"}
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">

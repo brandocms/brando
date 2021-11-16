@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Modal
   alias Brando.Content
 
   # prop block, :any
@@ -115,14 +114,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       class="container-block"
       data-block-index={@index}
       data-block-uid={@uid}>
 
       <.live_component
         module={Blocks.Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         block_count={@block_count}
         base_form={@base_form}

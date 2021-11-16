@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@uid}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       class="picture-block"
       phx-hook="Brando.LegacyImageUpload"
       data-text-uploading={gettext("Uploading...")}
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
       <.live_component
         module={Block}
-        id={"#{@uid}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -96,13 +96,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         </:description>
         <input class="file-input" type="file" />
         <%= if @extracted_path do %>
-          <div class="preview">
+          <div class="preview" phx-click={show_modal("#block-#{@uid}_config")}>
             <img src={"/media/#{@extracted_path}"} />
-            <figcaption phx-click={show_modal("##{@uid}_config")}>
-              <div id={"#{@uid}-figcaption-title"}>
+            <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
+              <div id={"block-#{@uid}-figcaption-title"}>
                 <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
               </div>
-              <div id={"#{@uid}-figcaption-alt"}>
+              <div id={"block-#{@uid}-figcaption-alt"}>
                 <span><%= gettext("Alt. text") %></span> <%= v(@block_data, :alt) %>
               </div>
             </figcaption>
@@ -120,17 +120,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </figure>
           <div class="instructions">
             <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
-            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("##{@uid}-image-picker")}>pick an existing image</button>
+            <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>
+              <%= gettext "Pick an existing image" %>
+            </button>
           </div>
         </div>
 
         <.live_component module={Modal}
           title="Pick image"
           center_header={true}
-          id={"#{@uid}-image-picker"}>
+          id={"block-#{@uid}-image-picker"}>
           <div class="image-picker-images">
             <%= for image <- @images do %>
-              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself) |> hide_modal("##{@uid}-image-picker")} phx-value-id={image.id}>
+              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself) |> hide_modal("#block-#{@uid}-image-picker")} phx-value-id={image.id}>
                 <img src={"/media/#{image.sizes["thumb"]}"} />
               </div>
             <% end %>
@@ -174,7 +176,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.Text.render form={@block_data} field={:alt} />
 
               <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself)}>
+                <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>
                   <%= gettext("Select image") %>
                 </button>
 
@@ -245,7 +247,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     updated_data_map =
       block_data
-      |> Map.merge(image.image)
+      |> Map.merge(image)
       |> Map.from_struct()
 
     updated_data_struct = struct(PictureBlock.Data, updated_data_map)
@@ -346,7 +348,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
-
     {:noreply, assign(socket, :images, images)}
   end
 end
