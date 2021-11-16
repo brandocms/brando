@@ -266,16 +266,16 @@ defmodule BrandoAdmin.Menu do
             url: nil,
             items: [
               %{
-                name: Brando.Gettext.gettext("Files"),
-                url: "/admin/assets/files"
-              },
-              %{
                 name: Brando.Gettext.gettext("Images"),
                 url: "/admin/assets/images"
               },
               %{
                 name: Brando.Gettext.gettext("Videos"),
                 url: "/admin/assets/videos"
+              },
+              %{
+                name: Brando.Gettext.gettext("Files"),
+                url: "/admin/assets/files"
               }
             ]
           },
