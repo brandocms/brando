@@ -6,9 +6,11 @@
   }
 
   label {
-    display: block;
     padding: 0 0 0 var(--padding-size);
     user-select: none;
+
+    display: flex;
+    align-items: center;
   }
 
   input[type=checkbox] {
@@ -27,16 +29,16 @@
     border-radius: var(--checkbox-size);
     left: 0;
     position: absolute;
-    top: 0;
+    /* top: 0; */
     width: var(--checkbox-size);
   }
 
   input[type=checkbox] + label::after {
     content: "";
-    margin-top: -2.5px;
+    /* margin-top: -2.5px; */
     margin-left: -2.5px;
     left: calc(var(--checkbox-size) / 4);
-    top: calc(var(--checkbox-size) / 4);
+    /* top: calc(var(--checkbox-size) / 4); */
     width: var(--checkmark-width);
     height: var(--checkmark-width);
     border-radius: var(--checkmark-width);
