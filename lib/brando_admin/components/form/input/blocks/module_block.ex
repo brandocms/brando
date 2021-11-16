@@ -55,12 +55,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:module_id, fn -> v(assigns.block, :data).module_id end)
      |> assign_module_data()
      |> parse_module_code()}
   end
 
-  defp assign_module_data(%{assigns: %{block: block}} = socket) do
-    case get_module(v(block, :data).module_id) do
+  defp assign_module_data(%{assigns: %{block: block, module_id: module_id}} = socket) do
+    case get_module(module_id) do
       nil ->
         assign(socket, :module_not_found, true)
 
@@ -91,9 +92,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
-    <div class="module-missing">
-      Missing module!
-    </div>
+    <section class="alert danger">
+      Module <code>#<%= @module_id %></code> is missing!<br><br>
+    </section>
     """
   end
 
@@ -208,12 +209,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           assigns: %{
             base_form: base_form,
             uid: block_uid,
-            block_data: block_data,
-            data_field: data_field
+            data_field: data_field,
+            module_id: module_id
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source
@@ -245,11 +245,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             base_form: base_form,
             uid: block_uid,
             block_data: block_data,
-            data_field: data_field
+            data_field: data_field,
+            module_id: module_id
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source
@@ -289,12 +289,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           assigns: %{
             base_form: base_form,
             uid: block_uid,
-            block_data: block_data,
-            data_field: data_field
+            data_field: data_field,
+            module_id: module_id
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source
@@ -328,11 +327,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             base_form: base_form,
             uid: block_uid,
             block_data: block_data,
-            data_field: data_field
+            data_field: data_field,
+            module_id: module_id
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source
