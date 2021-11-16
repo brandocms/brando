@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Components.Modal do
                 type="button"
                 class="modal-close"
                 phx-click={@close || hide_modal("##{@id}")}>
-                &times;
+                <span>&times;</span>
               </button>
             </div>
           </header>

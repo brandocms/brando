@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   alias Brando.Content
   alias Brando.Utils
-  alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
 

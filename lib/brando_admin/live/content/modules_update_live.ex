@@ -14,7 +14,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
-  alias BrandoAdmin.Components.Modal
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
     if connected?(socket) do
