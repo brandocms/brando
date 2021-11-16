@@ -21,6 +21,7 @@ defmodule Brando.Images.Image do
   identifier "{{ entry.id }}"
 
   attributes do
+    attribute :status, Ecto.Enum, values: [:processed, :unprocessed]
     attribute :title, :text
     attribute :credits, :text
     attribute :alt, :text

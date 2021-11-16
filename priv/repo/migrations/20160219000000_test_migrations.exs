@@ -14,6 +14,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :path, :text
       add :width, :integer
       add :height, :integer
+      add :status, :string
       add :sizes, :map
       add :cdn, :boolean, default: false
       add :dominant_color, :text

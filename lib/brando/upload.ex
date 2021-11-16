@@ -47,7 +47,11 @@ defmodule Brando.Upload do
   def process_upload(%{id: image_id} = image, cfg, user) do
     with {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
-      Images.update_image(image, %{sizes: result.sizes, formats: result.formats}, user)
+      Images.update_image(
+        image,
+        %{sizes: result.sizes, formats: result.formats, status: :processed},
+        user
+      )
     end
   end
 
@@ -73,7 +77,8 @@ defmodule Brando.Upload do
           height: height,
           dominant_color: dominant_color,
           focal: %{x: 50, y: 50},
-          sizes: %{}
+          sizes: %{},
+          status: :unprocessed
         }
 
         Images.create_image(image_params, user)

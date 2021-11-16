@@ -17,6 +17,7 @@ defmodule Brando.OperationsTest do
       "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
     },
     title: nil,
+    status: :unprocessed,
     width: 2600
   }
 
@@ -35,6 +36,7 @@ defmodule Brando.OperationsTest do
       "xlarge" => "images/exhibitions/cover/xlarge/image.png"
     },
     title: nil,
+    status: :unprocessed,
     width: 2600
   }
 
@@ -53,6 +55,7 @@ defmodule Brando.OperationsTest do
       "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
     },
     title: nil,
+    status: :unprocessed,
     width: 2600
   }
 
@@ -141,6 +144,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -181,6 +185,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -221,6 +226,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -261,6 +267,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -301,13 +308,14 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
                },
                operation_index: 5,
                processed_formats: [:jpg],
-               size_cfg: %{"crop" => true, "quality" => 90, "size" => "150x150>"},
+               size_cfg: %{"crop" => true, "quality" => 90, "size" => "400x400>"},
                size_key: "thumb",
                sized_image_dir: "images/exhibitions/cover/thumb",
                sized_image_path: "images/exhibitions/cover/thumb/image.jpg",
@@ -341,6 +349,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.jpg",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.jpg"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -393,6 +402,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -433,6 +443,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -473,6 +484,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -513,6 +525,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -553,13 +566,14 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
                },
                operation_index: 5,
                processed_formats: [:png],
-               size_cfg: %{"crop" => true, "quality" => 90, "size" => "150x150>"},
+               size_cfg: %{"crop" => true, "quality" => 90, "size" => "400x400>"},
                size_key: "thumb",
                sized_image_dir: "images/exhibitions/cover/thumb",
                sized_image_path: "images/exhibitions/cover/thumb/image.png",
@@ -593,6 +607,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.png",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.png"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -645,6 +660,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -685,6 +701,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -725,6 +742,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -765,6 +783,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
@@ -805,13 +824,14 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
                },
                operation_index: 5,
                processed_formats: [:gif],
-               size_cfg: %{"crop" => true, "quality" => 90, "size" => "150x150>"},
+               size_cfg: %{"crop" => true, "quality" => 90, "size" => "400x400>"},
                size_key: "thumb",
                sized_image_dir: "images/exhibitions/cover/thumb",
                sized_image_path: "images/exhibitions/cover/thumb/image.gif",
@@ -845,6 +865,7 @@ defmodule Brando.OperationsTest do
                    "thumb" => "images/exhibitions/cover/thumb/image.gif",
                    "xlarge" => "images/exhibitions/cover/xlarge/image.gif"
                  },
+                 status: :unprocessed,
                  title: nil,
                  updated_at: nil,
                  width: 2600
