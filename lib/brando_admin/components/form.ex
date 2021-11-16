@@ -197,8 +197,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp extract_tab_names(%{assigns: %{form: %{tabs: tabs}}} = socket) do
+    first_tab = List.first(tabs)
+
     socket
-    |> assign_new(:active_tab, fn -> "Content" end)
+    |> assign_new(:active_tab, fn -> Map.get(first_tab, :name) end)
     |> assign_new(:tabs, fn -> Enum.map(tabs, & &1.name) end)
   end
 
