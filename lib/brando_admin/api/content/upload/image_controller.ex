@@ -23,6 +23,8 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
     # insert the formats we have in the block
     cfg = Map.put(cfg, :formats, upload_formats)
 
+    params = Map.put(params, "config_target", "default")
+
     payload =
       case Schema.handle_upload(params, cfg, user) do
         {:error, err} ->
@@ -36,11 +38,11 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
             uid: uid,
             image: %{
               id: image.id,
-              dominant_color: image.image.dominant_color,
+              dominant_color: image.dominant_color,
               sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path),
-              width: image.image.width,
-              height: image.image.height
+              src: Brando.Utils.media_url(image.path),
+              width: image.width,
+              height: image.height
             }
           }
       end

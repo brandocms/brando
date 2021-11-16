@@ -23,26 +23,23 @@ defmodule Brando.Images.Uploads.Schema do
   @spec handle_upload(params :: map, cfg :: map, user :: user) ::
           {:ok, image} | {:error, changeset}
   def handle_upload(params, cfg, user) do
-    with {:ok, plug} <- Map.fetch(params, "image"),
-         {:ok, upload_entry} <- build_upload_entry(plug),
-         {:ok, meta} <- build_meta(plug),
-         {:ok, img_series_id} <- Map.fetch(params, "image_series_id"),
+    with {:ok, upload_entry} <- build_upload_entry(params),
+         {:ok, meta} <- build_meta(params),
          {:ok, image_struct} <- Upload.handle_upload(meta, upload_entry, cfg, user),
          {:ok, processed_image} <- Upload.process_upload(image_struct, cfg, user) do
-      image_params = %{
-        image: map_from_struct(processed_image),
-        image_series_id: img_series_id
-      }
+      image_params = map_from_struct(processed_image)
 
       Images.create_image(image_params, user)
     end
   end
 
-  def build_meta(%Plug.Upload{path: path}) do
-    {:ok, %{path: path}}
+  def build_meta(%{"image" => %Plug.Upload{path: path}, "config_target" => config_target}) do
+    {:ok, %{path: path, config_target: config_target}}
   end
 
-  def build_upload_entry(%Plug.Upload{filename: filename, content_type: content_type}) do
+  def build_upload_entry(%{
+        "image" => %Plug.Upload{filename: filename, content_type: content_type}
+      }) do
     {:ok, %{client_name: filename, client_type: content_type}}
   end
 end
