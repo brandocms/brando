@@ -115,8 +115,17 @@
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    line-height: 1.4;
+    line-height: 1;
     background-color: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    span {
+      @space translateY -2px;
+      display: inline-block;
+      margin-left: 1px;
+    }
 
     &:hover {
       background-color: var(--brando-color-dark);
