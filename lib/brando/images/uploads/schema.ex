@@ -11,8 +11,6 @@ defmodule Brando.Images.Uploads.Schema do
   alias Brando.Upload
   alias Brando.Users
 
-  import Brando.Utils, only: [map_from_struct: 1]
-
   @type changeset :: Ecto.Changeset.t()
   @type image :: Images.Image.t()
   @type user :: Users.User.t()
@@ -25,11 +23,8 @@ defmodule Brando.Images.Uploads.Schema do
   def handle_upload(params, cfg, user) do
     with {:ok, upload_entry} <- build_upload_entry(params),
          {:ok, meta} <- build_meta(params),
-         {:ok, image_struct} <- Upload.handle_upload(meta, upload_entry, cfg, user),
-         {:ok, processed_image} <- Upload.process_upload(image_struct, cfg, user) do
-      image_params = map_from_struct(processed_image)
-
-      Images.create_image(image_params, user)
+         {:ok, image} <- Upload.handle_upload(meta, upload_entry, cfg, user) do
+      Upload.process_upload(image, cfg, user)
     end
   end
 
