@@ -267,31 +267,31 @@ module.exports = {
         base: {
           iphone: {
             'font-size': '16px',
-            'line-height': '1.6vw'
+            'line-height': '1.4'
           },
           mobile: {
             'font-size': '16px',
-            'line-height': '1.6vw'
+            'line-height': '1.4'
           },
           ipad_portrait: {
             'font-size': '20px',
-            'line-height': '1.6vw'
+            'line-height': '1.4'
           },
           ipad_landscape: {
             'font-size': '1.3888888888888888vw',
-            'line-height': '1.6vw'
+            'line-height': '1.4'
           },
           desktop_md: {
             'font-size': '1.3888888888888888vw',
-            'line-height': '2vw'
+            'line-height': '1.4'
           },
           desktop_lg: {
             'font-size': '1.3888888888888888vw',
-            'line-height': '2vw'
+            'line-height': '1.4'
           },
           desktop_xl: {
             'font-size': '23px',
-            'line-height': '29px'
+            'line-height': '1.4'
           }
         },
 
