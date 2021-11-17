@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
       <%= if @show_children do %>
         <%= for child_field <- @child_fields do %>
-          <%= for child_entry <- Map.get(@entry, child_field) do %>
+          <%= for child_entry <- Map.get(@entry, child_field, []) do %>
             <.child_row
               entry={child_entry}
               schema={@schema}
@@ -157,7 +157,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           <.live_component module={ChildrenButton}
             id={"#{@entry.id}-children-button"}
             fields={@field.name}
-            entry={@entry} />
+            entry={@entry}
+            {@field.opts} />
         </div>
 
       <% :language -> %>
@@ -328,6 +329,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def child_row(%{schema: schema, entry: entry, child_listing: child_listing} = assigns) do
+    entry_schema = entry.__struct__
+
+    if !child_listing do
+      raise "No child listing set for `#{inspect(entry_schema)}`"
+    end
+
     assigns =
       assigns
       |> assign(:sortable?, entry.__struct__.has_trait(Trait.Sequenced))
@@ -335,8 +342,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:status?, entry.__struct__.has_trait(Trait.Status))
       |> assign(:soft_delete?, entry.__struct__.has_trait(Trait.SoftDelete))
       |> assign_new(:listing, fn ->
-        entry_schema = entry.__struct__
-
         listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
         listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
 
