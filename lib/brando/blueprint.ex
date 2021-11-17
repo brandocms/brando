@@ -371,6 +371,12 @@ defmodule Brando.Blueprint do
     |> Enum.map(&get_relation_key/1)
   end
 
+  def get_required_assets(rels) do
+    rels
+    |> Enum.filter(&Map.get(&1.opts, :required))
+    |> Enum.map(&get_relation_key/1)
+  end
+
   def get_castable_relation_fields(rels) do
     rels
     |> Enum.filter(&(&1.type == :belongs_to))
@@ -384,6 +390,7 @@ defmodule Brando.Blueprint do
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
+  def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
 
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)
@@ -514,8 +521,9 @@ defmodule Brando.Blueprint do
 
       @required_attrs Brando.Blueprint.get_required_attrs(@all_attributes)
       @required_relations Brando.Blueprint.get_required_relations(@all_relations)
+      @required_assets Brando.Blueprint.get_required_assets(@all_assets)
 
-      @all_required_attrs @required_attrs ++ @required_relations
+      @all_required_attrs @required_attrs ++ @required_relations ++ @required_assets
       def __required_attrs__ do
         @all_required_attrs
       end
