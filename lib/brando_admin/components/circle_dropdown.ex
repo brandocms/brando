@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         class="circle-dropdown-button"
         data-testid="circle-dropdown-button"
         type="button"
-        phx-click={toggle_dropdown("##{@id}")}
+        phx-click={show_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}>
         <.icon />
       </button>

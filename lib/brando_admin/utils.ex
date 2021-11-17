@@ -59,6 +59,15 @@ defmodule BrandoAdmin.Utils do
     )
   end
 
+  def show_dropdown(js \\ %JS{}, dropdown_id) do
+    js
+    |> JS.show(
+      to: dropdown_id,
+      transition: {"transition ease-out duration-300", "opacity-0 y-100", "opacity-100 y-0"},
+      time: 300
+    )
+  end
+
   def hide_dropdown(js \\ %JS{}, dropdown_id) do
     js
     |> JS.hide(
