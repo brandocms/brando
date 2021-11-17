@@ -25,7 +25,8 @@ defmodule Brando.Worker.ImageProcessor do
         image,
         %{
           sizes: result.sizes,
-          formats: result.formats
+          formats: result.formats,
+          status: :processed
         },
         user
       )
