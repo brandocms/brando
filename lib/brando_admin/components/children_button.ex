@@ -1,15 +1,19 @@
 defmodule BrandoAdmin.Components.ChildrenButton do
   # TODO: Can this be a function component with its event handled in the row instead?
   use BrandoAdmin, :live_component
+  import Brando.Gettext
 
   def mount(socket) do
-    {:ok, assign(socket, :active, false)}
+    {:ok,
+     socket
+     |> assign_new(:text, fn -> nil end)
+     |> assign(:active, false)}
   end
 
   def update(assigns, socket) do
     entry = assigns.entry
-    fields = assigns.fields
-    count = Enum.reduce(fields, 0, fn x, acc -> Enum.count(Map.get(entry, x)) + acc end)
+    fields = assigns.fields || []
+    count = Enum.reduce(fields, 0, fn x, acc -> Enum.count(Map.get(entry, x) || []) + acc end)
     singular = entry.__struct__.__naming__().singular
 
     {:ok,
@@ -28,9 +32,12 @@ defmodule BrandoAdmin.Components.ChildrenButton do
         phx-click={JS.push("toggle", target: @myself)}
         type="button"
         data-testid="children-button"
-        class={render_classes([active: @active])}
+        class={render_classes([active: @active, text: @text])}
         phx-page-loading>
-        <%= @active && "Close" || "+ #{@count}" %>
+        <%= @active && gettext("Close") || "+ #{@count}" %>
+        <%= if @text do %>
+          <%= @text %>
+        <% end %>
       </button>
     </div>
     """

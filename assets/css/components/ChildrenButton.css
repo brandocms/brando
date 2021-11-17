@@ -26,10 +26,17 @@
     transition: background-color 0.25s ease, border-color 0.25s ease;
     max-width: 44px;
 
+    &.text {
+       border-radius: 12px;
+       max-width: none;
+       aspect-ratio: auto;
+       @space padding-y 12px;
+    }
+
     &.active {
       background-color: var(--brando-color-dark); 
       border-color: var(--brando-color-dark); 
-      color: theme(colors.peach);
+      color: var(--brando-color-peach);
     }
 
     &:hover {
