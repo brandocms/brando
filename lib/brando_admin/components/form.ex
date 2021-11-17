@@ -565,8 +565,6 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("validate_image", _, socket) do
-    require Logger
-    Logger.error("Validate image with no image param!")
     {:noreply, socket}
   end
 
