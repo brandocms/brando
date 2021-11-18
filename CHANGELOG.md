@@ -22,7 +22,6 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Villain: Replace $timestamp in Villain HTML
 * Villain: Added localized date filter
 * Router: Add `Brando.Plug.Fragment` to assign a map of fragments to you connection:
-
   ```
   plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
   ```

@@ -144,7 +144,7 @@ defmodule Brando.HTML do
       <div class="cookie-container-inner">
         <div class="cookie-law">
           <div class="cookie-law-text">
-            <p><%= @inner_block %></p>
+            <p><%= render_slot(@inner_block) %></p>
           </div>
           <div class="cookie-law-buttons">
             <button class="dismiss-cookielaw">

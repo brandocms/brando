@@ -7,6 +7,7 @@ defmodule Brando.HTMLTest do
   import Brando.Utils, only: [media_url: 0]
   import Phoenix.HTML, only: [safe_to_string: 1]
   import Phoenix.LiveViewTest
+  import Phoenix.LiveView.Helpers
 
   alias Brando.Factory
 
@@ -54,16 +55,16 @@ defmodule Brando.HTMLTest do
   # end
 
   test "cookie_law" do
-    mock_conn = %{cookies: %{}}
+    assigns = %{__changed__: %{}}
 
-    html =
-      mock_conn
-      |> cookie_law("Accept cookielaw", info_text: "More info")
-      |> Phoenix.HTML.safe_to_string()
+    comp = ~H"""
+    <.cookie_law>
+      Inside text
+    </.cookie_law>
+    """
 
-    assert html =~ "<p>Accept cookielaw</p>"
-    assert html =~ "OK"
-    assert html =~ "More info"
+    assert rendered_to_string(comp) ==
+             "<div class=\"container cookie-container\">\n  <div class=\"cookie-container-inner\">\n    <div class=\"cookie-law\">\n      <div class=\"cookie-law-text\">\n        <p>\n  Inside text\n</p>\n      </div>\n      <div class=\"cookie-law-buttons\">\n        <button class=\"dismiss-cookielaw\">\n          OK\n        </button>\n        \n          <a href=\"/cookies\" class=\"info-cookielaw\">\n            More info\n          </a>\n        \n      </div>\n    </div>\n  </div>\n</div>"
   end
 
   test "google_analytics" do
