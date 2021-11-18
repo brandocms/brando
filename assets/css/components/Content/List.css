@@ -478,16 +478,16 @@
 
 .active-filters {
   margin-top: 0.8vw;
-  font-size: clamp(0.7vw, 0.9vw, 15px);
+  font-size: 13px;
 
   .filter {
     @font mono;
     background-color: palegoldenrod;
     border: 0;
-    font-size: clamp(0.6vw, 0.8vw, 14px);
+    font-size: 12px;
     text-transform: uppercase;
-    padding: 0vw 1vw 0vw 0.7vw;
-    border-radius: 1vw;
-    margin-left: 0.2vw;
+    padding: 3px 11px 3px 7px;
+    border-radius: 20px;
+    margin-left: 5px;
   }
 }
