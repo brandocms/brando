@@ -6,19 +6,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="format-detection" content="telephone=no">
 
-    <%%= preload_fonts([]) %>
-    <%%= init_js() %>
-    <%%= inject_critical_css() %>
+    <.preload_fonts fonts={[]} />
+    <.init_js />
+    <.inject_critical_css />
 
     <%%= render_meta(@conn) %>
-    <%%= render_rel(@conn) %>
-    <%%= render_palettes_css() %>
+    <.render_rel conn={@conn} />
+    <.render_palettes_css />
 
     <link rel="shortcut icon" href="/ico/favicon.ico">
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
 
-    <%%= include_assets() %>
+    <.include_assets />
     <%%= render_json_ld(@conn) %>
   </head>
   <.body_tag conn={@conn} id="top">
@@ -40,7 +40,7 @@
     <%%= render <%= application_module %>Web.PageView, "_footer.html", assigns %>
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
-    <%%= include_legacy_assets() %>
+    <.include_legacy_assets />
     <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </.body_tag>
 </html>

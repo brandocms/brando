@@ -18,7 +18,6 @@ defmodule Brando.Pages.Page do
   alias Brando.Pages.Fragment
 
   import Brando.Gettext
-  import Ecto.Query
 
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds

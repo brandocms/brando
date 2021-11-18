@@ -27,32 +27,29 @@ defmodule Brando.HTMLTest do
     assert zero_pad("1", 10) == "0000000001"
   end
 
-  # TODO: Revisit when `render_component` supports inner block
-  # test "body_tag" do
-  #   mock_conn = %{private: %{brando_css_classes: "one two three"}}
+  test "body_tag" do
+    assigns = %{
+      __changed__: %{}
+    }
 
-  #   html = render_component(&body_tag/1, conn: mock_conn, id: "top", inner_block: "hello!")
+    comp = ~H"""
+    <.body_tag conn={%{private: %{brando_css_classes: "one two three"}}} id="top">
+      hello!
+    </.body_tag>
+    """
 
-  #   assert html ==
-  #            ~s(<body id="top" class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
+    assert rendered_to_string(comp) =~
+             ~s(<body id="top" class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
 
-  #   mock_conn = %{
-  #     private: %{
-  #       brando_css_classes: "one two three",
-  #       brando_section_name: "some-section"
-  #     }
-  #   }
+    comp = ~H"""
+    <.body_tag conn={%{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}} id="top">
+      hello!
+    </.body_tag>
+    """
 
-  #   html = render_component(&body_tag/1, conn: mock_conn, id: "top", inner_block: "hello!")
-
-  #   assert html ==
-  #            "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{Brando.version()}\">"
-
-  #   html = render_component(&body_tag/1, conn: mock_conn, id: "test", inner_block: "hello!")
-
-  #   assert html ==
-  #            "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{Brando.version()}\" id=\"test\">"
-  # end
+    assert rendered_to_string(comp) =~
+             "<body id=\"top\" class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{Brando.version()}\">"
+  end
 
   test "cookie_law" do
     assigns = %{__changed__: %{}}
@@ -428,7 +425,13 @@ defmodule Brando.HTMLTest do
   end
 
   test "init_js" do
-    assert init_js() |> safe_to_string ==
+    assigns = %{__changed__: %{}}
+
+    comp = ~H"""
+    <.init_js />
+    """
+
+    assert rendered_to_string(comp) ==
              "<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
   end
 

@@ -36,33 +36,25 @@ defmodule Brando.HTML do
 
   ## Example
 
-      preload_fonts([{:woff2, "/fonts/my-font.woff2"}])
+      <.preload_fonts fonts={[{:woff2, "/fonts/my-font.woff2"}]} />
 
   """
-  def preload_fonts([]), do: []
+  def preload_fonts(assigns) do
+    assigns = assign_new(assigns, :fonts, fn -> [] end)
 
-  def preload_fonts(fonts) when is_list(fonts) do
-    Enum.map(
-      fonts,
-      fn {type, font} ->
-        tag(:link,
-          rel: "preload",
-          href: font,
-          as: "font",
-          type: "font/#{type}",
-          crossorigin: true
-        )
-      end
-    )
+    ~H"""
+    <%= for {type, font} <- @fonts do %>
+      <link rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true}>
+    <% end %>
+    """
   end
 
-  def render_palettes_css do
-    """
+  def render_palettes_css(assigns) do
+    ~H"""
     <style>
     #{Brando.Cache.Palettes.get()}
     </style>
     """
-    |> raw
   end
 
   @doc """
@@ -391,27 +383,37 @@ defmodule Brando.HTML do
   @doc """
   Inject critical css
   """
-  def inject_critical_css() do
-    "<style>#{Brando.Assets.Vite.Manifest.critical_css()}</style>" |> raw()
+  def inject_critical_css(assigns) do
+    ~H"""
+    <style>
+      <%= Brando.Assets.Vite.Manifest.critical_css() %>
+    </style>
+    """
   end
 
   @doc """
   If you use Vite assets pipeline
   """
-  def include_assets do
+  def include_assets(assigns) do
     if Brando.env() == :prod do
-      ~E|<%= Brando.Assets.Vite.Render.main_css() %>
-    <%= Brando.Assets.Vite.Render.main_js() %>|
+      ~H"""
+      <%= Brando.Assets.Vite.Render.main_css() %>
+      <%= Brando.Assets.Vite.Render.main_js() %>
+      """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
-        ~E|<%= Brando.Assets.Vite.Render.main_css() %>
-        <%= Brando.Assets.Vite.Render.main_js() %>|
+        ~H"""
+        <%= Brando.Assets.Vite.Render.main_css() %>
+        <%= Brando.Assets.Vite.Render.main_js() %>
+        """
       else
-        ~E|<!-- dev/test -->
+        ~H"""
+        <!-- dev/test -->
         <script type="module" src="http://localhost:3000/@vite/client"></script>
         <script type="module" src="http://localhost:3000/js/critical.js"></script>
         <script type="module" src="http://localhost:3000/js/index.js"></script>
-        <!-- end dev/test -->|
+        <!-- end dev/test -->
+        """
       end
     end
   end
@@ -421,20 +423,24 @@ defmodule Brando.HTML do
 
   Call this right before your closing `</body>` tag.
   """
-  def include_legacy_assets,
-    do: (Brando.env() == :prod && Brando.Assets.Vite.Render.legacy_js()) || []
+  def include_legacy_assets(assigns) do
+    if Brando.env() == :prod do
+      ~H"""
+      <%= Brando.Assets.Vite.Render.legacy_js() %>
+      """
+    else
+      ~H"""
+      """
+    end
+  end
 
   @doc """
   Run JS init code
   """
-  @spec init_js() :: safe_string
-  def init_js() do
-    js =
-      "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
-
-    :script
-    |> content_tag(raw(js))
-    |> raw
+  def init_js(assigns) do
+    ~H"""
+    <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>
+    """
   end
 
   @doc """
@@ -449,8 +455,10 @@ defmodule Brando.HTML do
   @doc """
   Render rel links
   """
-  @spec render_rel(conn) :: [safe_string]
-  def render_rel(_), do: []
+  def render_rel(assigns) do
+    ~H"""
+    """
+  end
 
   def absolute_url(%{__struct__: module} = entry) do
     module.__absolute_url__(entry)
