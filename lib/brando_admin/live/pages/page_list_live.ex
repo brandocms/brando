@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Pages.PageListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Pages.Page
 
+  alias Brando.Pages
   alias BrandoAdmin.Components.Content
   import Brando.Gettext
 
@@ -42,5 +43,43 @@ defmodule BrandoAdmin.Pages.PageListLive do
            language: language
          )
      )}
+  end
+
+  def handle_event("edit_subpage", %{"id" => entry_id}, socket) do
+    {:noreply,
+     push_redirect(socket,
+       to: Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageUpdateLive, entry_id)
+     )}
+  end
+
+  def handle_event("edit_fragment", %{"id" => entry_id}, socket) do
+    {:noreply,
+     push_redirect(socket,
+       to:
+         Brando.routes().admin_live_path(
+           socket,
+           BrandoAdmin.Pages.PageFragmentUpdateLive,
+           entry_id
+         )
+     )}
+  end
+
+  def handle_event(
+        "delete_fragment",
+        %{"id" => entry_id},
+        %{assigns: %{current_user: user}} = socket
+      ) do
+    schema = socket.assigns.schema
+
+    case Pages.delete_fragment(entry_id, user) do
+      {:ok, _} ->
+        send(self(), {:toast, "Fragment deleted"})
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+
+      {:error, _error} ->
+        send(self(), {:toast, "Error deleting fragment"})
+    end
+
+    {:noreply, socket}
   end
 end
