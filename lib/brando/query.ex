@@ -73,6 +73,10 @@ defmodule Brando.Query do
 
       {:ok, results} = list_posts(%{preload: [{:comments, {Comment, [desc: :inserted_at]}}]})
 
+  For slightly more advances ordered preloads you can supply a map:
+
+      {:ok, results} = list_posts(%{preload: [fragments: %{module: Fragment, order: [asc: :sequence], preload: [creator: :avatar], hide_deleted: true}]})
+
   You can also supply a preorder query directly:
 
       {:ok, results} = list_posts(%{preload: [{:comments, from(c in Comment, order_by: c.inserted_at)}]})
@@ -441,6 +445,34 @@ defmodule Brando.Query do
 
       {preload, :join}, query ->
         from(t in query, left_join: c in assoc(t, ^preload), preload: [{^preload, c}])
+
+      {key, %{module: mod} = preload_map}, query ->
+        preload_query = from(p in mod)
+
+        preload_query =
+          if pl = Map.get(preload_map, :preload) do
+            from t in preload_query, preload: ^pl
+          else
+            preload_query
+          end
+
+        preload_query =
+          if ob = Map.get(preload_map, :order) do
+            from t in preload_query, order_by: ^ob
+          else
+            preload_query
+          end
+
+        preload_query =
+          if Map.get(preload_map, :hide_deleted) do
+            from t in preload_query, where: is_nil(t.deleted_at)
+          else
+            preload_query
+          end
+
+        from(t in query,
+          preload: [{^key, ^preload_query}]
+        )
 
       {key, preload_query}, query ->
         from(t in query, preload: [{^key, ^preload_query}])
