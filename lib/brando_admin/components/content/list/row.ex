@@ -79,12 +79,23 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
       <%= if @show_children do %>
         <%= for child_field <- @child_fields do %>
-          <%= for child_entry <- Map.get(@entry, child_field, []) do %>
-            <.child_row
-              entry={child_entry}
-              schema={@schema}
-              child_listing={@listing.child_listing} />
-          <% end %>
+          <div
+            class="child-rows"
+            id={"sortable-#{@entry.id}-#{child_field}"}
+            data-target={@target}
+            class="sort-container"
+            phx-hook="Brando.Sortable"
+            data-sortable-id={"child_listing|#{@entry.id}|#{child_field}"}
+            data-sortable-handle=".sequence-handle"
+            data-sortable-selector=".child-row"
+            >
+            <%= for child_entry <- Map.get(@entry, child_field, []) do %>
+              <.child_row
+                entry={child_entry}
+                schema={@schema}
+                child_listing={@listing.child_listing} />
+            <% end %>
+          </div>
         <% end %>
       <% end %>
     </div>
@@ -177,7 +188,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns
       |> assign(:language, language)
       |> assign(:no_actions, Enum.empty?(assigns.listing.actions))
-      |> assign(:id, "entry-dropdown-#{assigns.entry.id}")
+      |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
 
     ~H"""
     <%= unless @no_actions do %>
@@ -186,7 +197,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           <li>
             <%= if action[:confirm] do %>
               <button
-                id={"action_#{event}_#{@entry.id}"}
+                id={"action_#{@listing.name}_#{event}_#{@entry.id}"}
                 phx-hook="Brando.ConfirmClick"
                 phx-confirm-click-message={action[:confirm]}
                 phx-confirm-click={event}
@@ -196,7 +207,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
               </button>
             <% else %>
               <button
-                id={"action_#{event}_#{@entry.id}"}
+                id={"action_#{@listing.name}_#{event}_#{@entry.id}"}
                 phx-value-id={@entry.id}
                 phx-value-language={@language}
                 phx-click={event}>
@@ -233,9 +244,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       </div>
     <% else %>
       <div class="status">
-        <div phx-click={toggle_dropdown("#status-dropdown-#{@entry.id}")}>
+        <div phx-click={toggle_dropdown("#status-dropdown-#{make_id(@entry)}")}>
           <.status_circle status={@entry.status} publish_at={@publish_at} />
-          <.status_dropdown id={@entry.id} />
+          <.status_dropdown id={"status-dropdown-#{make_id(@entry)}"} />
         </div>
       </div>
     <% end %>
@@ -246,7 +257,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     assigns = assign(assigns, :statuses, statuses())
 
     ~H"""
-    <div class="status-dropdown hidden" id={"status-dropdown-#{@id}"}>
+    <div class="status-dropdown hidden" id={@id}>
       <%= for status <- @statuses do %>
         <button type="button" phx-click={JS.push("set_status", value: %{id: @id, status: status})}>
           <.status_circle status={status} /> <%= render_status_label(status) %>
@@ -313,7 +324,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
             <div
               class="time"
-              id={"entry_creator_time_icon_#{@entry.id}"}
+              id={"entry_creator_time_icon_#{make_id(@entry)}"}
               data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}>
               <%= if @soft_delete? and @entry.deleted_at do %>
                 <%= format_datetime(@entry.deleted_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(@entry.deleted_at, "%H:%M") %>
@@ -337,10 +348,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     assigns =
       assigns
-      |> assign(:sortable?, entry.__struct__.has_trait(Trait.Sequenced))
-      |> assign(:creator?, entry.__struct__.has_trait(Trait.Creator))
-      |> assign(:status?, entry.__struct__.has_trait(Trait.Status))
-      |> assign(:soft_delete?, entry.__struct__.has_trait(Trait.SoftDelete))
+      |> assign(:sortable?, entry_schema.has_trait(Trait.Sequenced))
+      |> assign(:creator?, entry_schema.has_trait(Trait.Creator))
+      |> assign(:status?, entry_schema.has_trait(Trait.Status))
+      |> assign(:soft_delete?, entry_schema.has_trait(Trait.SoftDelete))
       |> assign_new(:listing, fn ->
         listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
         listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
@@ -353,7 +364,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       end)
 
     ~H"""
-    <div class="child-content">
+    <div
+      class="child-row draggable"
+      data-id={@entry.id}>
+      <%= if @sortable? do %>
+        <.handle />
+      <% end %>
       <%= if @status? do %>
         <.status
           entry={@entry}

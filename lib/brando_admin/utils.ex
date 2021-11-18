@@ -125,4 +125,13 @@ defmodule BrandoAdmin.Utils do
       time: 300
     )
   end
+
+  def make_id(entry) do
+    slugged_struct =
+      entry.__struct__
+      |> to_string
+      |> Brando.Utils.slugify()
+
+    "#{slugged_struct}-#{entry.id}"
+  end
 end

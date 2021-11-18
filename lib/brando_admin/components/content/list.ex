@@ -110,11 +110,23 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, assign(socket, :selected_rows, [])}
   end
 
-  def handle_event("sequenced", params, socket) do
-    schema = socket.assigns.schema
-    Sequenced.sequence(schema, params)
-    send(self(), {:toast, "Sequence updated"})
-    {:noreply, assign_entries(socket, socket.assigns)}
+  def handle_event(
+        "sequenced",
+        %{"sortable_id" => sortable_id} = params,
+        %{assigns: %{schema: schema}} = socket
+      ) do
+    case String.split(sortable_id, "|") do
+      ["child_listing", _parent_entry_id, child_field] ->
+        relation = schema.__relation__(String.to_existing_atom(child_field))
+        Sequenced.sequence(relation.opts.module, params)
+        send(self(), {:toast, gettext("Sequence updated")})
+        {:noreply, assign_entries(socket, socket.assigns)}
+
+      ["content_listing", _] ->
+        Sequenced.sequence(schema, params)
+        send(self(), {:toast, gettext("Sequence updated")})
+        {:noreply, assign_entries(socket, socket.assigns)}
+    end
   end
 
   defp select_row(%{assigns: %{selected_rows: selected_rows}} = socket, id) do
@@ -466,7 +478,7 @@ defmodule BrandoAdmin.Components.Content.List do
       data-target={@target}
       class="sort-container"
       phx-hook="Brando.Sortable"
-      data-sortable-id={"content_listing_#{@listing_name}"}
+      data-sortable-id={"content_listing|#{@listing_name}"}
       data-sortable-handle=".sequence-handle"
       data-sortable-selector=".list-row">
       <%= if Enum.empty?(@entries) do %>

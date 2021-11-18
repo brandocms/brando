@@ -379,7 +379,7 @@
       transition: background-color 250ms ease;
     }
 
-    .main-content, .child-content {
+    .main-content, .child-row {
       @row;
       @space padding-top 10px;
       @space padding-bottom 10px;
