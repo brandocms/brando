@@ -21,18 +21,16 @@ defmodule Brando.JSONLD.HTML do
     identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
     entity = render_json_ld(:entity, conn)
 
-    [breadcrumbs, identity, entity]
-
     ~H"""
-    <script type="application/ld+json">
+    <%= if breadcrumbs != "" do %><script type="application/ld+json">
       <%= breadcrumbs %>
-    </script>
-    <script type="application/ld+json">
+    </script><% end %>
+    <%= if identity != "" do %><script type="application/ld+json">
       <%= identity %>
-    </script>
-    <script type="application/ld+json">
+    </script><% end %>
+    <%= if entity != "" do %><script type="application/ld+json">
       <%= entity %>
-    </script>
+    </script><% end %>
     """
   end
 

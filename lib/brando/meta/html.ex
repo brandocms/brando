@@ -49,7 +49,7 @@ defmodule Brando.Meta.HTML do
 
     ~H"""
     <%= for {key, value} <- metas do %>
-      <.meta_tag key={key} value={value} /><% end %>
+        <.meta_tag key={key} value={value} /><% end %>
     """
   end
 

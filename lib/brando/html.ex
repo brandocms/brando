@@ -41,19 +41,14 @@ defmodule Brando.HTML do
   def preload_fonts(assigns) do
     assigns = assign_new(assigns, :fonts, fn -> [] end)
 
-    ~H"""
-    <%= for {type, font} <- @fonts do %>
-      <link rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true}>
-    <% end %>
-    """
+    ~H|<%= for {type, font} <- @fonts do %><link rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true}>
+    <% end %>|
   end
 
   def render_palettes_css(assigns) do
-    ~H"""
-    <style>
-    #{Brando.Cache.Palettes.get()}
-    </style>
-    """
+    palettes_css = Brando.Cache.Palettes.get()
+
+    ~H|<%= if palettes_css != "" do %><style><%= palettes_css %></style><% end %>|
   end
 
   @doc """
@@ -383,11 +378,7 @@ defmodule Brando.HTML do
   Inject critical css
   """
   def inject_critical_css(assigns) do
-    ~H"""
-    <style>
-      <%= Brando.Assets.Vite.Manifest.critical_css() %>
-    </style>
-    """
+    ~H|<style><%= Brando.Assets.Vite.Manifest.critical_css() %></style>|
   end
 
   @doc """
@@ -424,12 +415,9 @@ defmodule Brando.HTML do
   """
   def include_legacy_assets(assigns) do
     if Brando.env() == :prod do
-      ~H"""
-      <%= Brando.Assets.Vite.Render.legacy_js() %>
-      """
+      ~H|<%= Brando.Assets.Vite.Render.legacy_js() %>|
     else
-      ~H"""
-      """
+      ~H||
     end
   end
 
@@ -437,9 +425,7 @@ defmodule Brando.HTML do
   Run JS init code
   """
   def init_js(assigns) do
-    ~H"""
-    <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>
-    """
+    ~H|<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>|
   end
 
   @doc """
@@ -455,8 +441,7 @@ defmodule Brando.HTML do
   Render rel links
   """
   def render_rel(assigns) do
-    ~H"""
-    """
+    ~H||
   end
 
   def absolute_url(%{__struct__: module} = entry) do

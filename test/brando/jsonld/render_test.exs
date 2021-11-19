@@ -66,7 +66,7 @@ defmodule Brando.JSONLDRenderTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<script type=\"application/ld+json\">\n  \n</script>\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n<script type=\"application/ld+json\">\n  \n</script>"
+             "\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n"
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
@@ -130,6 +130,6 @@ defmodule Brando.JSONLDRenderTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<script type=\"application/ld+json\">\n  \n</script>\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n<script type=\"application/ld+json\">\n  \n</script>"
+             "\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n"
   end
 end
