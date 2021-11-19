@@ -71,38 +71,53 @@ defmodule Brando.Router do
         live_session :admin do
           # brando routes
           live "/", BrandoAdmin.DashboardLive
-          live "/assets/images", BrandoAdmin.Assets.ImagesLive
-          live "/config/cache", BrandoAdmin.Sites.CacheLive
-          live "/config/global_sets", BrandoAdmin.Sites.GlobalSetListLive
-          live "/config/global_sets/create", BrandoAdmin.Sites.GlobalSetCreateLive
-          live "/config/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetUpdateLive
-          live "/config/identity", BrandoAdmin.Sites.IdentityLive
-          live "/config/navigation/menus", BrandoAdmin.Navigation.MenuListLive
-          live "/config/navigation/menus/create", BrandoAdmin.Navigation.MenuCreateLive
-          live "/config/navigation/menus/update/:entry_id", BrandoAdmin.Navigation.MenuUpdateLive
-          live "/config/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
-          live "/config/seo", BrandoAdmin.Sites.SEOLive
-          live "/config/content/modules", BrandoAdmin.Content.ModuleListLive
-          live "/config/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleUpdateLive
-          live "/config/content/palettes", BrandoAdmin.Content.PaletteListLive
-          live "/config/content/palettes/create", BrandoAdmin.Content.PaletteCreateLive
-          live "/config/content/palettes/update/:entry_id", BrandoAdmin.Content.PaletteUpdateLive
-          live "/config/content/templates", BrandoAdmin.Content.TemplateListLive
-          live "/config/content/templates/create", BrandoAdmin.Content.TemplateCreateLive
 
-          live "/config/content/templates/update/:entry_id",
-               BrandoAdmin.Content.TemplateUpdateLive
+          scope "/assets", BrandoAdmin.Assets do
+            live "/assets/images", ImagesLive
+          end
 
-          live "/pages", BrandoAdmin.Pages.PageListLive
-          live "/pages/create", BrandoAdmin.Pages.PageCreateLive
-          live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive
-          live "/pages/update/:entry_id", BrandoAdmin.Pages.PageUpdateLive
-          live "/pages/fragments/create", BrandoAdmin.Pages.PageFragmentCreateLive
-          live "/pages/fragments/create/:parent_id", BrandoAdmin.Pages.PageFragmentCreateLive
-          live "/pages/fragments/update/:entry_id", BrandoAdmin.Pages.PageFragmentUpdateLive
-          live "/users", BrandoAdmin.Users.UserListLive
-          live "/users/create", BrandoAdmin.Users.UserCreateLive
-          live "/users/update/:entry_id", BrandoAdmin.Users.UserUpdateLive
+          scope "/config", BrandoAdmin.Sites do
+            live "/cache", CacheLive
+            live "/global_sets", GlobalSetListLive
+            live "/global_sets/create", GlobalSetCreateLive
+            live "/global_sets/update/:entry_id", GlobalSetUpdateLive
+            live "/identity", IdentityLive
+            live "/scheduled_publishing", ScheduledPublishingLive
+            live "/seo", SEOLive
+          end
+
+          scope "/config", BrandoAdmin.Navigation do
+            live "/navigation/menus", MenuListLive
+            live "/navigation/menus/create", MenuCreateLive
+            live "/navigation/menus/update/:entry_id", MenuUpdateLive
+          end
+
+          scope "/config", BrandoAdmin.Content do
+            live "/content/modules", ModuleListLive
+            live "/content/modules/update/:entry_id", ModuleUpdateLive
+            live "/content/palettes", PaletteListLive
+            live "/content/palettes/create", PaletteCreateLive
+            live "/content/palettes/update/:entry_id", PaletteUpdateLive
+            live "/content/templates", TemplateListLive
+            live "/content/templates/create", TemplateCreateLive
+            live "/content/templates/update/:entry_id", TemplateUpdateLive
+          end
+
+          scope "/pages", BrandoAdmin.Pages do
+            live "/", PageListLive
+            live "/create", PageCreateLive
+            live "/create/:parent_id", PageCreateLive
+            live "/update/:entry_id", PageUpdateLive
+            live "/fragments/create", PageFragmentCreateLive
+            live "/fragments/create/:parent_id", PageFragmentCreateLive
+            live "/fragments/update/:entry_id", PageFragmentUpdateLive
+          end
+
+          scope "/users", BrandoAdmin.Users do
+            live "/", UserListLive
+            live "/create", UserCreateLive
+            live "/update/:entry_id", UserUpdateLive
+          end
 
           # app routes
           unquote(block)
