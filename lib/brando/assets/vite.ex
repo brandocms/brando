@@ -49,8 +49,6 @@ defmodule Brando.Assets.Vite do
         %{}
       end
     end
-
-
   end
 
   defmodule Manifest do
@@ -203,7 +201,7 @@ defmodule Brando.Assets.Vite do
         css_files ->
           for css_file <- css_files do
             digested_css_file = static_path(css_file)
-            ~E|    <link phx-track-static rel="stylesheet" href="<%= digested_css_file %>">|
+            "    <link phx-track-static rel=\"stylesheet\" href=\"#{digested_css_file}\">"
           end
       end
     end
@@ -216,7 +214,7 @@ defmodule Brando.Assets.Vite do
         if js_file do
           digested_js_file = static_path(js_file)
 
-          ~E|<script type="module" crossorigin defer phx-track-static src="<%= digested_js_file %>"></script>|
+          "<script type=\"module\" crossorigin defer phx-track-static src=\"#{digested_js_file}\"></script>"
         else
           ""
         end
@@ -224,7 +222,7 @@ defmodule Brando.Assets.Vite do
       digested_vendor =
         if vendor_file do
           digested_vendor_file = static_path(vendor_file)
-          ~E|<link rel="modulepreload" phx-track-static href="<%= digested_vendor_file %>">|
+          "<link rel=\"modulepreload\" phx-track-static href=\"#{digested_vendor_file}\">"
         else
           ""
         end
@@ -240,7 +238,7 @@ defmodule Brando.Assets.Vite do
         if legacy_polyfills do
           digested_polyfills = static_path(legacy_polyfills)
 
-          ~E[<script nomodule phx-track-static src="<%= digested_polyfills %>"></script>]
+          "<script nomodule phx-track-static src=\"#{digested_polyfills}\"></script>"
         else
           ""
         end
@@ -249,13 +247,13 @@ defmodule Brando.Assets.Vite do
         if legacy_entry do
           digested_entry = static_path(legacy_entry)
 
-          ~E[<script nomodule phx-track-static id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
+          "<script nomodule phx-track-static id=\"vite-legacy-entry\" data-src=\"#{digested_entry}\">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>"
         else
           ""
         end
 
       helper =
-        ~E[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>]
+        "<script nomodule>!function(){var e=document,t=e.createElement(\"script\");if(!(\"noModule\" in t)&&\"onbeforeload\" in t){var n=!1;e.addEventListener(\"beforeload\",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute(\"nomodule\")||!n)return;e.preventDefault()}),!0),t.type=\"module\",t.src=\".\",e.head.appendChild(t),t.remove()}}();</script>"
 
       [helper, digested_legacy_polyfills, digested_entry_script]
     end

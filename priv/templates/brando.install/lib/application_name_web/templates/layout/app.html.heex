@@ -10,7 +10,7 @@
     <.init_js />
     <.inject_critical_css />
 
-    <%%= render_meta(@conn) %>
+    <.render_meta conn={@conn} />
     <.render_rel conn={@conn} />
     <.render_palettes_css />
 
@@ -19,7 +19,7 @@
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
 
     <.include_assets />
-    <%%= render_json_ld(@conn) %>
+    <.render_json_ld conn={@conn} />
   </head>
   <.body_tag conn={@conn} id="top">
     <.cookie_law 

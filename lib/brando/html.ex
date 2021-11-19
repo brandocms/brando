@@ -23,11 +23,10 @@ defmodule Brando.HTML do
   defdelegate img_tag(field, opts), to: Brando.HTML.Images
   defdelegate img_tag(field, size, opts), to: Brando.HTML.Images
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
-  defdelegate meta_tag(name, content), to: Brando.Meta.HTML
   defdelegate picture_tag(field, opts), to: Brando.HTML.Images
-  defdelegate render_json_ld(conn), to: Brando.JSONLD.HTML
+  defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
-  defdelegate render_meta(conn), to: Brando.Meta.HTML
+  defdelegate render_meta(assigns), to: Brando.Meta.HTML
   defdelegate video_tag(src), to: Brando.HTML.Video
   defdelegate video_tag(src, opts), to: Brando.HTML.Video
 

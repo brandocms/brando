@@ -1,6 +1,9 @@
 defmodule Brando.JSONLDRenderTest do
   use ExUnit.Case
   use Brando.ConnCase, async: false
+  import Phoenix.LiveView.Helpers
+  import Phoenix.LiveViewTest
+  import Brando.HTML
 
   alias Brando.Factory
 
@@ -56,35 +59,14 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(Brando.Pages.Page, @mock_data)
 
-    rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
+    assigns = %{__changed__: %{}}
 
-    assert rendered_json_ld == [
-             [],
-             {:safe,
-              [
-                60,
-                "script",
-                [32, "type", 61, 34, "application/ld+json", 34],
-                62,
-                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
-                60,
-                47,
-                "script",
-                62
-              ]},
-             {:safe,
-              [
-                60,
-                "script",
-                [32, "type", 61, 34, "application/ld+json", 34],
-                62,
-                "{\"@context\":\"http://schema.org\",\"@type\":\"Article\",\"author\":{\"@id\":\"http://localhost/#identity\"},\"copyrightHolder\":{\"@id\":\"http://localhost/#identity\"},\"copyrightYear\":2000,\"creator\":{\"@id\":\"http://localhost/#identity\"},\"dateModified\":\"2000-01-01T23:30:00Z\",\"datePublished\":\"2000-01-01T23:00:00Z\",\"description\":\"Meta description\",\"headline\":\"Title of page\",\"inLanguage\":\"no\",\"mainEntityOfPage\":\"http://localhost\",\"name\":\"Title of page\",\"publisher\":{\"@id\":\"http://localhost/#identity\"},\"url\":\"http://localhost\"}",
-                60,
-                47,
-                "script",
-                62
-              ]}
-           ]
+    comp = ~H"""
+    <.render_json_ld conn={mock_conn} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "<script type=\"application/ld+json\">\n  \n</script>\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n<script type=\"application/ld+json\">\n  \n</script>"
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
@@ -112,18 +94,10 @@ defmodule Brando.JSONLDRenderTest do
     rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {updated_identity, updated_seo})
 
     assert rendered_json_ld ==
-             {:safe,
-              [
-                60,
-                "script",
-                [32, "type", 61, 34, "application/ld+json", 34],
-                62,
-                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Corporation\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
-                60,
-                47,
-                "script",
-                62
-              ]}
+             {
+               :safe,
+               "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Corporation\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}"
+             }
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
@@ -149,36 +123,13 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(:breadcrumbs, breadcrumbs)
 
-    rendered_json_ld =
-      mock_conn
-      |> Brando.HTML.render_json_ld()
+    assigns = %{__changed__: %{}}
 
-    assert rendered_json_ld == [
-             {:safe,
-              [
-                60,
-                "script",
-                [32, "type", 61, 34, "application/ld+json", 34],
-                62,
-                "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"item\":\"/\",\"name\":\"Home\",\"position\":1},{\"@type\":\"ListItem\",\"item\":\"/about\",\"name\":\"About\",\"position\":2},{\"@type\":\"ListItem\",\"item\":\"/about/contact\",\"name\":\"Contact\",\"position\":3}]}",
-                60,
-                47,
-                "script",
-                62
-              ]},
-             {:safe,
-              [
-                60,
-                "script",
-                [32, "type", 61, 34, "application/ld+json", 34],
-                62,
-                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
-                60,
-                47,
-                "script",
-                62
-              ]},
-             []
-           ]
+    comp = ~H"""
+    <.render_json_ld conn={mock_conn} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "<script type=\"application/ld+json\">\n  \n</script>\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n<script type=\"application/ld+json\">\n  \n</script>"
   end
 end

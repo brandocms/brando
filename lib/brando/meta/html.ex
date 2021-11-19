@@ -2,10 +2,8 @@ defmodule Brando.Meta.HTML do
   @moduledoc """
   HTML functions for dealing with meta
   """
-
-  import Phoenix.HTML
-  import Phoenix.HTML.Tag
   import Brando.Plug.HTML
+  import Phoenix.LiveView.Helpers
   alias Brando.Cache
 
   @type conn :: Plug.Conn.t()
@@ -16,67 +14,72 @@ defmodule Brando.Meta.HTML do
   @doc """
   Renders a <meta> tag
   """
-  def meta_tag({"og:" <> og_property, content}),
-    do: tag(:meta, content: content, property: "og:" <> og_property)
+  def meta_tag(%{key: "og:" <> og_property, value: _value} = assigns) do
+    ~H"""
+    <meta property={"og:#{og_property}"} content={@value}>
+    """
+  end
 
-  def meta_tag({name, content}), do: tag(:meta, content: content, name: name)
-  def meta_tag(attrs) when is_list(attrs), do: tag(:meta, attrs)
-
-  def meta_tag("og:" <> og_property, content),
-    do: tag(:meta, content: content, property: "og:" <> og_property)
-
-  def meta_tag(name, content), do: tag(:meta, content: content, name: name)
+  def meta_tag(%{key: _key, value: _value} = assigns) do
+    ~H"""
+    <meta name={@key} content={@value}>
+    """
+  end
 
   @doc """
   Renders all meta/opengraph
   """
-  @spec render_meta(conn) :: {:safe, term}
-  def render_meta(%{assigns: %{language: language}} = conn) do
+  @spec render_meta(map) :: any
+  def render_meta(%{conn: %{assigns: %{language: language}} = conn} = assigns) do
     app_name = Brando.config(:app_name)
     seo = Brando.Cache.SEO.get(language)
 
-    conn
-    |> put_meta_if_missing("title", seo.fallback_meta_title)
-    |> put_meta_if_missing("og:title", seo.fallback_meta_title)
-    |> put_meta_if_missing("og:site_name", app_name)
-    |> put_meta_if_missing("og:type", "website")
-    |> put_meta_if_missing("og:url", Brando.Utils.current_url(conn))
-    |> maybe_put_meta_description(seo.fallback_meta_description)
-    |> maybe_put_meta_image(seo.fallback_meta_image)
-    |> get_meta()
-    |> Enum.map(&safe_to_string(meta_tag(&1)))
-    |> maybe_add_see_also(conn)
-    |> maybe_add_custom_meta(conn)
-    |> raw()
+    metas =
+      conn
+      |> put_meta_if_missing("title", seo.fallback_meta_title)
+      |> put_meta_if_missing("og:title", seo.fallback_meta_title)
+      |> put_meta_if_missing("og:site_name", app_name)
+      |> put_meta_if_missing("og:type", "website")
+      |> put_meta_if_missing("og:url", Brando.Utils.current_url(conn))
+      |> maybe_put_meta_description(seo.fallback_meta_description)
+      |> maybe_put_meta_image(seo.fallback_meta_image)
+      |> maybe_add_see_also()
+      |> maybe_add_custom_meta()
+      |> get_meta()
+
+    ~H"""
+    <%= for {key, value} <- metas do %>
+      <.meta_tag key={key} value={value} /><% end %>
+    """
   end
 
-  defp maybe_add_see_also(meta_tags, %{assigns: %{language: language}}) do
+  defp maybe_add_see_also(%{assigns: %{language: language}} = conn) do
     case Cache.Identity.get(language) do
       %{links: []} ->
-        meta_tags
+        conn
 
       %{links: links} ->
-        Enum.reduce(links, meta_tags, fn link, acc ->
-          [safe_to_string(meta_tag("og:see_also", link.url)) | acc]
+        Enum.reduce(links, conn, fn link, updated_conn ->
+          put_meta(updated_conn, "og:see_also", link.url)
         end)
 
       _ ->
-        meta_tags
+        conn
     end
   end
 
-  defp maybe_add_custom_meta(meta_tags, %{assigns: %{language: language}}) do
+  defp maybe_add_custom_meta(%{assigns: %{language: language}} = conn) do
     case Cache.Identity.get(language) do
       %{metas: []} ->
-        meta_tags
+        conn
 
       %{metas: metas} ->
-        Enum.reduce(metas, meta_tags, fn meta, acc ->
-          [safe_to_string(meta_tag(meta.key, meta.value)) | acc]
+        Enum.reduce(metas, conn, fn meta, updated_conn ->
+          put_meta(updated_conn, meta.key, meta.value)
         end)
 
       _ ->
-        meta_tags
+        conn
     end
   end
 

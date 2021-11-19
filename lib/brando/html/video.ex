@@ -22,17 +22,17 @@ defmodule Brando.HTML.Video do
         %Video{source: "vimeo", remote_id: remote_id, width: width, height: height},
         _opts
       ) do
-    ~E|
-      <iframe src="https://player.vimeo.com/video/<%= remote_id %>?dnt=1"
-              width="<%= width %>"
-              height="<%= height %>"
+    """
+      <iframe src="https://player.vimeo.com/video/#{remote_id}?dnt=1"
+              width="#{width}"
+              height="#{height}"
               frameborder="0"
               allow="autoplay; encrypted-media"
               webkitallowfullscreen
               mozallowfullscreen
               allowfullscreen>
       </iframe>
-    |
+    """
   end
 
   def video_tag(
@@ -42,17 +42,18 @@ defmodule Brando.HTML.Video do
     autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
     params = "autoplay=#{autoplay}&controls=#{controls}&showinfo=0&rel=0"
-    ~E|
-      <iframe src="https://www.youtube.com/embed/<%= remote_id %>?<%= params %>"
-              width="<%= width %>"
-              height="<%= height %>"
+
+    """
+      <iframe src="https://www.youtube.com/embed/#{remote_id}?#{params}"
+              width="#{width}"
+              height="#{height}"
               frameborder="0"
               allow="autoplay; encrypted-media"
               webkitallowfullscreen
               mozallowfullscreen
               allowfullscreen>
       </iframe>
-    |
+    """
   end
 
   def video_tag(src, opts) do

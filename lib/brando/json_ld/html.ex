@@ -5,26 +5,35 @@ defmodule Brando.JSONLD.HTML do
 
   alias Brando.JSONLD
   import Phoenix.HTML
-  import Phoenix.HTML.Tag
+  import Phoenix.LiveView.Helpers
 
   @type conn :: Plug.Conn.t()
 
   @doc """
   Renders all JSON LD
   """
-  @spec render_json_ld(conn) :: [{:safe, term}]
-  def render_json_ld(%{assigns: %{language: language}} = conn) do
+  def render_json_ld(%{conn: %{assigns: %{language: language} = conn}} = assigns) do
     cached_identity = Brando.Cache.Identity.get(language)
+    cached_identity_type = String.to_existing_atom(cached_identity.type)
     cached_seo = Brando.Cache.SEO.get(language)
 
     breadcrumbs = render_json_ld(:breadcrumbs, conn)
-
-    identity =
-      render_json_ld(String.to_existing_atom(cached_identity.type), {cached_identity, cached_seo})
-
+    identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
     entity = render_json_ld(:entity, conn)
 
     [breadcrumbs, identity, entity]
+
+    ~H"""
+    <script type="application/ld+json">
+      <%= breadcrumbs %>
+    </script>
+    <script type="application/ld+json">
+      <%= identity %>
+    </script>
+    <script type="application/ld+json">
+      <%= entity %>
+    </script>
+    """
   end
 
   def render_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
@@ -35,7 +44,7 @@ defmodule Brando.JSONLD.HTML do
       |> JSONLD.Schema.BreadcrumbList.build()
       |> JSONLD.to_json()
 
-    content_tag(:script, raw(breadcrumb_json), type: "application/ld+json")
+    raw(breadcrumb_json)
   end
 
   def render_json_ld(:corporation, {cached_identity, cached_seo}) do
@@ -44,7 +53,7 @@ defmodule Brando.JSONLD.HTML do
       |> JSONLD.Schema.Corporation.build()
       |> JSONLD.to_json()
 
-    content_tag(:script, raw(corporation_json), type: "application/ld+json")
+    raw(corporation_json)
   end
 
   def render_json_ld(:organization, {cached_identity, cached_seo}) do
@@ -53,13 +62,13 @@ defmodule Brando.JSONLD.HTML do
       |> JSONLD.Schema.Organization.build()
       |> JSONLD.to_json()
 
-    content_tag(:script, raw(organization_json), type: "application/ld+json")
+    raw(organization_json)
   end
 
   def render_json_ld(:entity, %{assigns: %{json_ld_entity: entity}}) do
     entity_json = JSONLD.to_json(entity)
-    content_tag(:script, raw(entity_json), type: "application/ld+json")
+    raw(entity_json)
   end
 
-  def render_json_ld(_, _), do: []
+  def render_json_ld(_, _), do: ""
 end

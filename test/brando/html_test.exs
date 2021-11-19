@@ -81,26 +81,21 @@ defmodule Brando.HTMLTest do
     assert truncate(5, 5) == 5
   end
 
-  test "meta_tag" do
-    assert meta_tag("keywords", "hello, world") |> safe_to_string ==
-             "<meta content=\"hello, world\" name=\"keywords\">"
-
-    assert meta_tag({"keywords", "hello, world"}) |> safe_to_string ==
-             "<meta content=\"hello, world\" name=\"keywords\">"
-  end
-
   test "render_meta" do
     mock_conn = %Plug.Conn{assigns: %{language: "en"}, private: %{plug_session: %{}}}
 
-    html =
-      mock_conn
-      |> render_meta()
-      |> safe_to_string()
+    assigns = %{__changed__: %{}}
 
-    assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
-    assert html =~ ~s(<meta content="Fallback meta title" property="og:title">)
-    assert html =~ ~s(<meta content="Fallback meta title" name="title">)
-    assert html =~ ~s(<meta content="http://localhost" property="og:url">)
+    comp = ~H"""
+    <.render_meta conn={mock_conn} />
+    """
+
+    html = rendered_to_string(comp)
+
+    assert html =~ ~s(<meta property="og:site_name" content="MyApp">)
+    assert html =~ ~s(<meta property="og:title" content="Fallback meta title">)
+    assert html =~ ~s(<meta property="og:url" content="http://localhost">)
+    assert html =~ ~s(<meta name="title" content="Fallback meta title">)
   end
 
   test "active/2" do
