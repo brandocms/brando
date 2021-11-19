@@ -1,9 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
-
   import Brando.Gettext
-
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 

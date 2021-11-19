@@ -1,12 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
-
+  import Brando.Gettext
   alias BrandoAdmin.Components.Identifier
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  import Brando.Gettext
 
   # prop base_form, :any
   # prop block, :any
@@ -125,17 +124,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         duplicate_block={@duplicate_block}>
         <:description><%= v(@block, :data).description %></:description>
         <:config>
-          <Input.Text.render form={@block_data} field={:description} />
-          <Input.Radios.render form={@block_data} field={:module} opts={[options: @available_sources]} />
-          <Input.Radios.render form={@block_data} field={:type} opts={[options: [
-            %{label: "List", value: :list},
-            %{label: "Single", value: :single},
-            %{label: "Selection", value: :selection},
+          <Input.Text.render form={@block_data} field={:description} label={gettext "Description"} />
+          <Input.Radios.render form={@block_data} field={:module} label={gettext "Module"} opts={[options: @available_sources]} />
+          <Input.Radios.render form={@block_data} field={:type} label={gettext "Type"} opts={[options: [
+            %{label: gettext("List"), value: :list},
+            %{label: gettext("Single"), value: :single},
+            %{label: gettext("Selection"), value: :selection},
           ]]} />
-          <Input.Radios.render form={@block_data} field={:query} opts={[options: @available_queries]} />
-          <.live_component module={Input.Select} id={"#{@block_data.id}-modules"} form={@block_data} field={:module_id} opts={[options: @modules]} />
-          <Input.Text.render form={@block_data} field={:arg} />
-          <Input.Text.render form={@block_data} field={:limit} />
+          <Input.Radios.render form={@block_data} field={:query} label={gettext "Query"} opts={[options: @available_queries]} />
+          <.live_component
+            module={Input.Select}
+            id={"#{@block_data.id}-modules"}
+            form={@block_data}
+            field={:module_id}
+            label={gettext "Module ID"}
+            opts={[options: @modules]} />
+          <Input.Text.render form={@block_data} field={:arg} label={gettext "Arg"} />
+          <Input.Text.render form={@block_data} field={:limit} label={gettext "Limit"} />
         </:config>
         <div class="datasource-block">
           <div class="villain-block-datasource-info">

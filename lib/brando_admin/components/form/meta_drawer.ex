@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Form.MetaDrawer do
   use BrandoAdmin, :component
+  import Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
 
   # prop form, :form, required: true
   # prop blueprint, :any, required: true
@@ -25,11 +25,11 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </p>
       </:info>
       <div class="brando-input">
-        <Input.Text.render field={:meta_title} form={@form} />
+        <Input.Text.render field={:meta_title} form={@form} label={gettext "META title"} />
       </div>
 
       <div class="brando-input">
-        <Input.Textarea.render field={:meta_description} form={@form} />
+        <Input.Textarea.render field={:meta_description} form={@form} label={gettext "META description"} />
       </div>
 
       <div class="brando-input">
@@ -38,7 +38,8 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           id={"#{@form.id}-meta-image"}
           field={:meta_image}
           uploads={@uploads}
-          form={@form} />
+          form={@form}
+          label={gettext "META image"} />
       </div>
     </Content.drawer>
     """

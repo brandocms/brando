@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  import Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
@@ -54,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
           <% end %>
         </:description>
         <div class="markdown-block">
-          <Input.Code.render id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} />
+          <Input.Code.render id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
         </div>
       </.live_component>
     </div>

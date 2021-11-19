@@ -7,7 +7,6 @@ defmodule Brando.Blueprint.Upload do
   alias Brando.Type
   alias Brando.CDN
   alias Ecto.Changeset
-  import Ecto.Changeset
 
   @type changeset :: Changeset.t()
   @type config :: list()

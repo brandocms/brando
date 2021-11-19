@@ -1,13 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
-
   import Brando.Gettext
   alias Brando.Blueprint.Villain.Blocks
   alias Brando.Blueprint.Villain.Blocks.GalleryBlock
   alias Brando.Utils
   alias Brando.Villain
-
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
@@ -263,9 +261,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <img src={"/media/#{input_value(image, :path)}"} />
                 </figure>
                 <div>
-                  <Input.RichText.render form={image} field={:title} />
-                  <Input.Text.render form={image} field={:credits} />
-                  <Input.Text.render form={image} field={:alt} />
+                  <Input.RichText.render form={image} field={:title} label={gettext "Title"} />
+                  <Input.Text.render form={image} field={:credits} label={gettext "Credits"} />
+                  <Input.Text.render form={image} field={:alt} label={gettext "Alt. text"} />
                 </div>
               </div>
             <% end %>
@@ -282,13 +280,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               %{label: "Grid", value: :grid},
               %{label: "List", value: :list},
             ]]} />
-          <Input.Text.render form={@block_data} field={:class} />
-          <Input.Text.render form={@block_data} field={:series_slug} />
-          <Input.Toggle.render form={@block_data} field={:lightbox} />
+          <Input.Text.render form={@block_data} field={:class} label={gettext "Class"} />
+          <Input.Text.render form={@block_data} field={:series_slug} label={gettext "Series slug"} />
+          <Input.Toggle.render form={@block_data} field={:lightbox} label={gettext "Lightbox"} />
 
           <Input.Radios.render
             form={@block_data}
             field={:placeholder}
+            label={gettext "Placeholder"}
             opts={[options: [
               %{label: "SVG", value: :svg},
               %{label: "Dominant Color", value: :dominant_color},

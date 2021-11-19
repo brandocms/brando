@@ -1,9 +1,8 @@
 defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
   use BrandoAdmin, :component
+  import Brando.Gettext
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
-
-  import Brando.Gettext
 
   # prop form, :form, required: true
   # prop blueprint, :any, required: true
@@ -19,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </p>
       </:info>
       <div class="brando-input">
-        <Input.Datetime.render field={:publish_at} form={@form} />
+        <Input.Datetime.render field={:publish_at} form={@form} label={gettext "Publish at"} />
       </div>
     </Content.drawer>
     """

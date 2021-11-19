@@ -72,25 +72,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <%= hidden_input(@block_data, :height) %>
                 <%= hidden_input(@block_data, :thumbnail_url) %>
 
-                <Input.Text.render form={@block_data} field={:remote_id} />
-                <Input.Text.render form={@block_data} field={:title} />
-                <Input.Text.render form={@block_data} field={:poster} />
+                <Input.Text.render form={@block_data} field={:remote_id} label={gettext "Remote ID"} />
+                <Input.Text.render form={@block_data} field={:title} label={gettext "Title"} />
+                <Input.Text.render form={@block_data} field={:poster} label={gettext "Poster"} />
                 <%= if v(@block_data, :cover) in ["false", "svg"] do %>
                   <%= hidden_input(@block_data, :cover) %>
                 <% else %>
-                  <Input.Text.render form={@block_data} field={:cover} />
+                  <Input.Text.render form={@block_data} field={:cover} label={gettext "Cover"} />
                 <% end %>
 
                 <%= hidden_input(@block_data, :opacity) %>
                 <%= hidden_input(@block_data, :play_button) %>
 
-                <Input.Toggle.render form={@block_data} field={:autoplay} />
-                <Input.Toggle.render form={@block_data} field={:preload} />
+                <Input.Toggle.render form={@block_data} field={:autoplay} label={gettext "Autoplay"} />
+                <Input.Toggle.render form={@block_data} field={:preload} label={gettext "Preload"} />
               </div>
             </div>
           <% else %>
-            <%= hidden_input @block_data, :url %>
-            <%= hidden_input @block_data, :source %>
+            <%= hidden_input(@block_data, :url) %>
+            <%= hidden_input(@block_data, :source) %>
             <%= hidden_input(@block_data, :width) %>
             <%= hidden_input(@block_data, :height) %>
             <%= hidden_input(@block_data, :remote_id) %>

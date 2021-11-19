@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
 
@@ -89,13 +90,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               </div>
 
               <div class={render_classes(["variable-content", hidden: !@visible])}>
-                <Input.Toggle.render form={@var} field={:marked_as_deleted} />
-                <Input.Toggle.render form={@var} field={:important} />
-                <Input.Text.render form={@var} field={:key} />
-                <Input.Text.render form={@var} field={:label} />
-                <Input.Text.render form={@var} field={:instructions} />
-                <Input.Text.render form={@var} field={:placeholder} />
-                <Input.Radios.render form={@var} field={:type} opts={[options: [
+                <Input.Toggle.render form={@var} field={:marked_as_deleted} label={gettext "Marked as deleted"} />
+                <Input.Toggle.render form={@var} field={:important} label={gettext "Important"} />
+                <Input.Text.render form={@var} field={:key} label={gettext "Key"} />
+                <Input.Text.render form={@var} field={:label} label={gettext "Label"} />
+                <Input.Text.render form={@var} field={:instructions} label={gettext "Instructions"} />
+                <Input.Text.render form={@var} field={:placeholder} label={gettext "Placeholder"} />
+                <Input.Radios.render form={@var} field={:type} label={gettext "Type"} opts={[options: [
                   %{label: "Boolean", value: "boolean"},
                   %{label: "Color", value: "color"},
                   %{label: "Datetime", value: "datetime"},

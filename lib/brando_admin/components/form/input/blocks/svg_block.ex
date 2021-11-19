@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  import Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
@@ -56,8 +57,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <% end %>
         </:description>
         <:config>
-          <Input.Code.render id={"block-#{@uid}-svg-code"} form={@block_data} field={:code} />
-          <Input.Text.render form={@block_data} field={:class} />
+          <Input.Code.render id={"block-#{@uid}-svg-code"} form={@block_data} field={:code} label={gettext "Code"} />
+          <Input.Text.render form={@block_data} field={:class} label={gettext "Class"} />
         </:config>
         <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
           <%= if v(@block_data, :code) do %>

@@ -172,8 +172,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <% end %>
             </div>
             <div class="panel">
-              <Input.RichText.render form={@block_data} field={:title} />
-              <Input.Text.render form={@block_data} field={:alt} />
+              <Input.RichText.render form={@block_data} field={:title} label={gettext "Title"} />
+              <Input.Text.render form={@block_data} field={:alt} label={gettext "Alt"} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>

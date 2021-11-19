@@ -409,15 +409,15 @@ defmodule BrandoAdmin.Components.Form do
           </div>
           <%= if @edit_image.image do %>
             <div class="brando-input">
-              <Input.Text.render field={:title} form={image_form} />
+              <Input.Text.render field={:title} form={image_form} label={gettext "Caption"} />
             </div>
 
             <div class="brando-input">
-              <Input.Text.render field={:credits} form={image_form} />
+              <Input.Text.render field={:credits} form={image_form} label={gettext "Credits"} />
             </div>
 
             <div class="brando-input">
-              <Input.Text.render field={:alt} form={image_form} />
+              <Input.Text.render field={:alt} form={image_form} label={gettext "Alt. text"} />
             </div>
           <% end %>
         </.form>

@@ -20,86 +20,107 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:78
 msgid "A shortform version of the name"
 msgstr "En kortformversjon av navnet"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:87
 msgid "Address line 1"
 msgstr "Adresselinje 1"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:88
 msgid "Address line 2"
 msgstr "Adresselinje 2"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:89
 msgid "Address line 3"
 msgstr "Adresselinje 3"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:77
 msgid "Alternate name"
 msgstr "Alternativt navn"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:94
 msgid "City"
 msgstr "Sted"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:95
 msgid "Country"
 msgstr "Land"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:82
 msgid "Email"
 msgstr "Epost"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:127
 msgid "Key"
 msgstr "Nøkkel"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:110
 msgid "Links"
 msgstr "Lenker"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:105
 msgid "Logo"
 msgstr "Logo"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:122
 msgid "Meta properties"
 msgstr "Meta egenskaper"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:74 lib/brando/sites/identity.ex:115
 msgid "Name"
 msgstr "Navn"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:83
 msgid "Phone"
 msgstr "Telefon"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:100
 msgid "Title"
 msgstr "Tittel"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:101
 msgid "Title (postfix)"
 msgstr "Tittel (postfix)"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:99
 msgid "Title (prefix)"
 msgstr "Tittel (prefiks)"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:70
 msgid "Type"
 msgstr "Type"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:116
 msgid "URL"
 msgstr "URL"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:128
 msgid "Value"
 msgstr "Verdi"
 
+#, elixir-format
 #: lib/brando/sites/identity.ex:93
 msgid "Zip code"
 msgstr "Postnummer"
