@@ -73,7 +73,7 @@ defmodule Brando.Router do
           live "/", BrandoAdmin.DashboardLive
 
           scope "/assets", BrandoAdmin.Assets do
-            live "/assets/images", ImagesLive
+            live "/images", ImagesLive
           end
 
           scope "/config", BrandoAdmin.Sites do
