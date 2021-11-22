@@ -363,10 +363,10 @@
     require-relative "^0.8.7"
     svelte-hmr "^0.14.7"
 
-"@tiptap/core@^2.0.0-beta.138":
-  version "2.0.0-beta.138"
-  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.138.tgz#3a73b32b10f07ba2842142552457b52abf8cfc41"
-  integrity sha512-Cg3ig6c+NCBILYaVNf5h8vJdsRynhKzy+zQzH/91kLoWzpNV5J6R2sW32Oufuwvr0Kra1+kKKh/WIGpB3Ia4RA==
+"@tiptap/core@^2.0.0-beta.141":
+  version "2.0.0-beta.141"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.141.tgz#7ba5d98f2ed9e45b278844ba38394241a020e86e"
+  integrity sha512-jfU0zfIpyz9TS8mbWNuKuJb2pXj/RtMkRCvvO7rdYwVshcDLi/s30ZU1tD6MAIea8zm1k0Q6PbN8Xd3G+wefUA==
   dependencies:
     "@types/prosemirror-commands" "^1.0.4"
     "@types/prosemirror-keymap" "^1.0.4"
@@ -381,7 +381,7 @@
     prosemirror-schema-list "^1.1.6"
     prosemirror-state "^1.3.4"
     prosemirror-transform "^1.3.3"
-    prosemirror-view "^1.22.0"
+    prosemirror-view "^1.23.1"
 
 "@tiptap/extension-blockquote@^2.0.0-beta.24":
   version "2.0.0-beta.24"
@@ -420,21 +420,21 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-document/-/extension-document-2.0.0-beta.15.tgz#5d17a0289244a913ab2ef08e8495a1e46950711e"
   integrity sha512-ypENC+xUYD5m2t+KOKNYqyXnanXd5fxyIyhR1qeEEwwQwMXGNrO3kCH6O4mIDCpy+/WqHvVay2tV5dVsXnvY8w==
 
-"@tiptap/extension-dropcursor@^2.0.0-beta.24":
-  version "2.0.0-beta.24"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-dropcursor/-/extension-dropcursor-2.0.0-beta.24.tgz#e0263c8d784304cb885aea299bfd5255d3435765"
-  integrity sha512-B4bzY84g82VY78kv6BFNSCgO9Sc3dtgkvzFDJ57X2QweYyLkXbYeZxI8SqO7Nva1QRZadBlFyRPm+aP1rLZsew==
+"@tiptap/extension-dropcursor@^2.0.0-beta.25":
+  version "2.0.0-beta.25"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-dropcursor/-/extension-dropcursor-2.0.0-beta.25.tgz#962f290a200259533a26194daca5a4b4a53e72d3"
+  integrity sha512-GYf5s6dkZtsDy+TEkrQK6kLbfbitG4qnk02D+FlhlJMI/Nnx8rYCRJbwEHDdqrfX7XwZzULMqqqHvzxZYrEeNg==
   dependencies:
     "@types/prosemirror-dropcursor" "^1.0.3"
-    prosemirror-dropcursor "^1.3.5"
+    prosemirror-dropcursor "^1.4.0"
 
-"@tiptap/extension-focus@^2.0.0-beta.36":
-  version "2.0.0-beta.36"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-focus/-/extension-focus-2.0.0-beta.36.tgz#1bfc98acbda477a254003a963235ddecc475c08e"
-  integrity sha512-UMfSvuDrm7om5ZQ9X1/Jmswa6WQqLB/NsTNldeyykDIoY75+0nuRq3oZnvHN4A8PJqve/gPtxkhR3NnUUdLY+w==
+"@tiptap/extension-focus@^2.0.0-beta.37":
+  version "2.0.0-beta.37"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-focus/-/extension-focus-2.0.0-beta.37.tgz#f82ef62bb604c754246094e6f3c41d3ecb29db7f"
+  integrity sha512-sSQgsHn9laByKMFIbJereE5vQTUh9Um5Jry2MZ/yScbEZc1ACDQxPhsHmqnDtx9wOJrFYcMSlwhxWGmbEJzGsg==
   dependencies:
     prosemirror-state "^1.3.4"
-    prosemirror-view "^1.22.0"
+    prosemirror-view "^1.23.1"
 
 "@tiptap/extension-gapcursor@^2.0.0-beta.33":
   version "2.0.0-beta.33"
@@ -517,19 +517,19 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-typography/-/extension-typography-2.0.0-beta.19.tgz#3a3cf25590b7d84bcf40525d558ab5997c554b3d"
   integrity sha512-9Y3or/X0IkHqfJg1eOqqMiPFgXKQKNOwDy+xN6qhORQSUzCPOCHttAUdp8AN/WUEQOoOK4uaRida8ik1ATK7ZQ==
 
-"@tiptap/starter-kit@^2.0.0-beta.140":
-  version "2.0.0-beta.140"
-  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.140.tgz#4610a28084742f3512ea7cbb8e8f2b2428690013"
-  integrity sha512-19E5duT0rRcp2SHZK0OYiIEjnYLn+Lf1GBBnsTFRoze8mHP2Zym11HmcpW6iyuaWj9mPFjlXJJr6yTc0HmpPpA==
+"@tiptap/starter-kit@^2.0.0-beta.143":
+  version "2.0.0-beta.143"
+  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.143.tgz#7c01dbd467122681b1e231a02fac7b67c2ecb4e2"
+  integrity sha512-3mxSGnVq0R2O/cVfwpZBwQ1f8rNo2TKJoRscurufAftdq1KTxRofmMokWVBDvodivAhJr1gNxEU9jCgP/qJM1w==
   dependencies:
-    "@tiptap/core" "^2.0.0-beta.138"
+    "@tiptap/core" "^2.0.0-beta.141"
     "@tiptap/extension-blockquote" "^2.0.0-beta.24"
     "@tiptap/extension-bold" "^2.0.0-beta.24"
     "@tiptap/extension-bullet-list" "^2.0.0-beta.23"
     "@tiptap/extension-code" "^2.0.0-beta.25"
     "@tiptap/extension-code-block" "^2.0.0-beta.29"
     "@tiptap/extension-document" "^2.0.0-beta.15"
-    "@tiptap/extension-dropcursor" "^2.0.0-beta.24"
+    "@tiptap/extension-dropcursor" "^2.0.0-beta.25"
     "@tiptap/extension-gapcursor" "^2.0.0-beta.33"
     "@tiptap/extension-hard-break" "^2.0.0-beta.30"
     "@tiptap/extension-heading" "^2.0.0-beta.23"
@@ -1278,10 +1278,10 @@ prosemirror-commands@^1.1.12:
     prosemirror-state "^1.0.0"
     prosemirror-transform "^1.0.0"
 
-prosemirror-dropcursor@^1.3.5:
-  version "1.3.5"
-  resolved "https://registry.yarnpkg.com/prosemirror-dropcursor/-/prosemirror-dropcursor-1.3.5.tgz#d2808c17089df0e441ad66016aecc2b6457c8a1f"
-  integrity sha512-tNUwcF2lPAkwKBZPZRtbxpwljnODRNZ3eiYloN1DSUqDjMT1nBZm0nejaEMS1TvNQ+3amibUSAiV4hX+jpASFA==
+prosemirror-dropcursor@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/prosemirror-dropcursor/-/prosemirror-dropcursor-1.4.0.tgz#91a859d4ee79c99b1c0ba6ee61c093b195c0d9f0"
+  integrity sha512-6+YwTjmqDwlA/Dm+5wK67ezgqgjA/MhSDgaNxKUzH97SmeuWFXyLeDRxxOPZeSo7yTxcDGUCWTEjmQZsVBuMrQ==
   dependencies:
     prosemirror-state "^1.0.0"
     prosemirror-transform "^1.1.0"
@@ -1353,10 +1353,10 @@ prosemirror-view@^1.0.0, prosemirror-view@^1.1.0:
     prosemirror-state "^1.0.0"
     prosemirror-transform "^1.1.0"
 
-prosemirror-view@^1.22.0:
-  version "1.22.0"
-  resolved "https://registry.yarnpkg.com/prosemirror-view/-/prosemirror-view-1.22.0.tgz#235dca38ed62ae028d627be5684d45b36550d310"
-  integrity sha512-kCZoHp0Sa2AHhwV64aNFi69QlqBocZ8G8gbvZRFDdEj57whOCdPjdVLYBVyM9+S5oHDSrzjkoMm+JvvHFhMRJw==
+prosemirror-view@^1.23.1:
+  version "1.23.2"
+  resolved "https://registry.yarnpkg.com/prosemirror-view/-/prosemirror-view-1.23.2.tgz#20606ab3faad8a6a5320182256e92a2b96a87d31"
+  integrity sha512-iPgRw6tpcN+KH1yKmSnRmDKsJBVkWLFP6laHcz9rh/n0Ndz7YKKCDldtw6FhHBYoWmZeubbhV/rrQW0VCDG9iw==
   dependencies:
     prosemirror-model "^1.14.3"
     prosemirror-state "^1.0.0"
@@ -1483,10 +1483,10 @@ svelte-preprocess@^4.9.8:
     sorcery "^0.10.0"
     strip-indent "^3.0.0"
 
-svelte@^3.44.1:
-  version "3.44.1"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.44.1.tgz#5cc772a8340f4519a4ecd1ac1a842325466b1a63"
-  integrity sha512-4DrCEJoBvdR689efHNSxIQn2pnFwB7E7j2yLEJtHE/P8hxwZWIphCtJ8are7bjl/iVMlcEf5uh5pJ68IwR09vQ==
+svelte@^3.44.2:
+  version "3.44.2"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.44.2.tgz#3e69be2598308dfc8354ba584cec54e648a50f7f"
+  integrity sha512-jrZhZtmH3ZMweXg1Q15onb8QlWD+a5T5Oca4C1jYvSURp2oD35h4A5TV6t6MEa93K4LlX6BkafZPdQoFjw/ylA==
 
 tippy.js@^6.3.7:
   version "6.3.7"

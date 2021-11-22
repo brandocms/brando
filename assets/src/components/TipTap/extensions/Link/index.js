@@ -22,7 +22,7 @@ export default Mark.create({
 
   inclusive: false,
 
-  defaultOptions: {
+  addOptions: {
     openOnClick: false,
     linkOnPaste: true,
     HTMLAttributes: {

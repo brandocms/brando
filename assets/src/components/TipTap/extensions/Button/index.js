@@ -20,7 +20,7 @@ export default Mark.create({
   priority: 1100,
   inclusive: false,
 
-  defaultOptions: {
+  addOptions: {
     linkOnPaste: true,
     HTMLAttributes: {
       class: 'action-button',
