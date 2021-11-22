@@ -444,6 +444,12 @@ defmodule Brando.HTML do
     ~H||
   end
 
+  def render_blocks(assigns) do
+    ~H"""
+    <%= @entry.html |> raw %>
+    """
+  end
+
   def absolute_url(%{__struct__: module} = entry) do
     module.__absolute_url__(entry)
   end
