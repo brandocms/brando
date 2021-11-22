@@ -20,13 +20,15 @@ export default Mark.create({
   priority: 1100,
   inclusive: false,
 
-  addOptions: {
-    linkOnPaste: true,
-    HTMLAttributes: {
-      class: 'action-button',
-      target: '_blank',
-      rel: 'noopener noreferrer nofollow',
-    },
+  addOptions () {
+    return {
+      linkOnPaste: true,
+      HTMLAttributes: {
+        class: 'action-button',
+        target: '_blank',
+        rel: 'noopener noreferrer nofollow',
+      }
+    }
   },
 
   addAttributes() {

@@ -17,18 +17,18 @@ export const pasteRegexExact = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,25
 
 export default Mark.create({
   name: 'link',
-
   priority: 1000,
-
   inclusive: false,
 
-  addOptions: {
-    openOnClick: false,
-    linkOnPaste: true,
-    HTMLAttributes: {
-      target: '_blank',
-      rel: 'noopener noreferrer nofollow',
-    },
+  addOptions () {
+    return {
+      openOnClick: false,
+      linkOnPaste: true,
+      HTMLAttributes: {
+        target: '_blank',
+        rel: 'noopener noreferrer nofollow',
+      }
+    }
   },
 
   addAttributes() {
