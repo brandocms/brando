@@ -99,7 +99,7 @@
     display: none;
   }
 
-  &.hidden {
+  &.hidden-block {
     .block {
       min-height: 49px;
       padding: 0;

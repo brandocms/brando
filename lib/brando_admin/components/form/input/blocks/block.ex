@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
       data-block-uid={@uid}
       class={render_classes([
         "base-block",
-        hidden: @hidden,
+        "hidden-block": @hidden,
         deleted: @marked_as_deleted
       ])}>
       <%= if !@is_ref? and !@is_entry? do %>
