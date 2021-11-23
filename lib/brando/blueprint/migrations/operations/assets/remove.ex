@@ -12,6 +12,14 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
   end
 
   def down(%{
+        asset: %{type: :gallery, name: name}
+      }) do
+    """
+    add #{inspect(name)}_id, references(:images_galleries, on_delete: :nilify_all)
+    """
+  end
+
+  def down(%{
         asset: %{type: :file, name: name}
       }) do
     """
@@ -21,14 +29,6 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
 
   def down(%{
         asset: %{type: :video, name: name}
-      }) do
-    """
-    add #{inspect(name)}, :jsonb
-    """
-  end
-
-  def down(%{
-        asset: %{type: :gallery, name: name}
       }) do
     """
     add #{inspect(name)}, :jsonb
@@ -43,7 +43,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
         asset: %{type: :image, name: name}
       }) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 
@@ -67,7 +67,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
         asset: %{type: :gallery, name: name}
       }) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 

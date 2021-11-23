@@ -73,6 +73,18 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
         srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
       ]
     )
+
+    asset(:photos, :gallery,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+        default_size: "medium",
+        upload_path: Path.join("images", "photos"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
+        srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
+      ]
+    )
   end
 
   relations do
