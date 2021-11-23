@@ -135,7 +135,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -176,7 +175,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -217,7 +215,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -258,7 +255,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -299,7 +295,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -340,7 +335,6 @@ defmodule Brando.OperationsTest do
                  id: 1,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.jpeg",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.jpg",
                    "medium" => "images/exhibitions/cover/medium/image.jpg",
@@ -393,7 +387,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -434,7 +427,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -475,7 +467,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -516,7 +507,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -557,7 +547,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -598,7 +587,6 @@ defmodule Brando.OperationsTest do
                  id: 2,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.png",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.png",
                    "medium" => "images/exhibitions/cover/medium/image.png",
@@ -651,7 +639,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -692,7 +679,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -733,7 +719,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -774,7 +759,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -815,7 +799,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",
@@ -856,7 +839,6 @@ defmodule Brando.OperationsTest do
                  id: 3,
                  inserted_at: nil,
                  path: "images/exhibitions/cover/image.gif",
-                 sequence: 0,
                  sizes: %{
                    "large" => "images/exhibitions/cover/large/image.gif",
                    "medium" => "images/exhibitions/cover/medium/image.gif",

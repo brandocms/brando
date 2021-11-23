@@ -1,4 +1,7 @@
 defmodule Brando.Blueprint.Utils do
+  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints]
+  @strip_embeds_opts [:cast, :module, :unique, :constraints]
+
   def to_ecto_type(:text), do: :string
   def to_ecto_type(:status), do: Brando.Type.Status
   def to_ecto_type(:file), do: Brando.Type.File
@@ -11,8 +14,6 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
 
-  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints]
-  @strip_embeds_opts [:cast, :module, :unique, :constraints]
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
 
   def to_ecto_opts(:belongs_to, opts),

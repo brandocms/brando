@@ -13,8 +13,8 @@ defmodule Brando.ImagesTest do
   test "update_image" do
     user = Factory.insert(:random_user)
     img = Factory.insert(:image)
-    assert {:ok, img} = Images.update_image(img, %{sequence: 99}, user)
-    assert img.sequence == 99
+    assert {:ok, img} = Images.update_image(img, %{title: "Hey"}, user)
+    assert img.title == "Hey"
   end
 
   test "get_image" do

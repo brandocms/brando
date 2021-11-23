@@ -70,7 +70,7 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, :gallery, opts) do
-    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
+    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Gallery})
     default_config = Brando.config(Brando.Images)[:default_config]
 
     cfg =
