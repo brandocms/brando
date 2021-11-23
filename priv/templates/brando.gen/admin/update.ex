@@ -2,7 +2,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
   use BrandoAdmin.LiveView.Form, schema: <%= schema_module %>
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
-  import <%= web_module %>.Gettext
+  import <%= admin_module %>.Gettext
 
   def render(assigns) do
     ~H"""
