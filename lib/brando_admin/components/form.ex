@@ -146,13 +146,31 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp add_preloads(%{preload: preloads} = query_params, schema) do
-    image_preloads = schema.__assets__ |> Enum.filter(&(&1.type == :image)) |> Enum.map(& &1.name)
-    Map.put(query_params, :preload, image_preloads ++ preloads)
+    image_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :image))
+      |> Enum.map(& &1.name)
+
+    gallery_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :gallery))
+      |> Enum.map(&[{&1.name, :gallery_images}])
+
+    Map.put(query_params, :preload, gallery_preloads ++ image_preloads ++ preloads)
   end
 
   defp add_preloads(query_params, schema) do
-    image_preloads = schema.__assets__ |> Enum.filter(&(&1.type == :image)) |> Enum.map(& &1.name)
-    Map.put(query_params, :preload, image_preloads)
+    image_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :image))
+      |> Enum.map(& &1.name)
+
+    gallery_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :gallery))
+      |> Enum.map(&[{&1.name, [{:gallery_images, :image}]}])
+
+    Map.put(query_params, :preload, image_preloads ++ gallery_preloads)
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema}} = socket) do
