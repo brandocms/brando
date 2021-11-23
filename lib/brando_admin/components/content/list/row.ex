@@ -48,14 +48,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       phx-value-id={@entry.id}
       phx-page-loading>
       <div class="main-content">
-        <%= if @sortable? do %>
-          <.handle />
-        <% end %>
-
         <%= if @status? do %>
           <.status
             entry={@entry}
             soft_delete?={@soft_delete?} />
+        <% end %>
+
+        <%= if @sortable? do %>
+          <.handle />
         <% end %>
 
         <%= for field <- @listing.fields do %>
@@ -223,7 +223,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def handle(assigns) do
     ~H"""
-    <div class="col-1">
+    <div class="col-1 seq">
       <div class="center sequence-handle">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="7.5" cy="1.5" r="1.5"></circle><circle cx="13.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="7.5" cy="7.5" r="1.5"></circle><circle cx="13.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle><circle cx="13.5" cy="13.5" r="1.5"></circle></svg>
       </div>

@@ -299,6 +299,11 @@
 
     transition: background-color 250ms ease;
 
+    .main-content .status + div {
+      margin-left: 0 !important;
+      padding-left: 1vw;
+    }
+
     &:nth-of-type(even) {
       background-color: #fafafa;
 

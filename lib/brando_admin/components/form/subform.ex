@@ -16,6 +16,17 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop instructions, :string
   # prop placeholder, :string
 
+  def update(assigns, socket) do
+    require Logger
+
+    socket =
+      socket
+      |> assign(assigns)
+      |> prepare_subform_component()
+
+    {:ok, socket}
+  end
+
   def render(assigns) do
     ~H"""
     <fieldset>
@@ -29,6 +40,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <%= for sub_form <- inputs_for(@form, @subform.field) do %>
             <div class="subform-entry">
               <%= for input <- @subform.sub_fields do %>
+                <%= inspect input, pretty: true %>
                 <Subform.Field.render
                   cardinality={:one}
                   form={@form}
@@ -55,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             phx-hook="Brando.SubFormSortable">
             <%= if Enum.empty?(inputs_for(@form, @subform.field)) do %>
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
-              <div class="subform-empty">&rarr; No associated entries</div>
+              <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
             <% end %>
             <%= for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field)) do %>
               <div
@@ -79,9 +91,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     cardinality={:many}
                     form={@form}
                     sub_form={sub_form}
-                    label={@label}
-                    instructions={@instructions}
-                    placeholder={@placeholder}
                     input={input}
                     uploads={@uploads}
                     current_user={@current_user} />

@@ -3,6 +3,29 @@ defmodule BrandoAdmin.Utils do
   import Phoenix.LiveView
   alias Phoenix.LiveView.JS
 
+  def prepare_subform_component(%{assigns: assigns} = socket) do
+    schema = assigns.form.source.data.__struct__
+
+    socket =
+      socket
+      |> assign_new(:opts, fn -> [] end)
+      |> assign_new(:label, fn -> nil end)
+      |> assign_new(:instructions, fn -> nil end)
+      |> assign_new(:placeholder, fn -> nil end)
+
+    assign_opts = assigns[:opts] || []
+
+    assign(socket,
+      class: assign_opts[:class],
+      monospace: assign_opts[:monospace] || false,
+      disabled: assign_opts[:disabled] || false,
+      debounce: assign_opts[:debounce] || 750,
+      compact: assign_opts[:compact],
+      instructions: g(schema, Map.get(socket.assigns.subform, :instructions)),
+      label: g(schema, Map.get(socket.assigns.subform, :label))
+    )
+  end
+
   def prepare_input_component(%{assigns: assigns} = socket) do
     schema = assigns.form.source.data.__struct__
 

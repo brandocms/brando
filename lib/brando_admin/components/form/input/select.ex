@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> maybe_assign_select_form()
      |> assign_new(:inner_block, fn -> nil end)
      |> assign_new(:modal_id, fn ->
-       "select-#{assigns.form.id}-#{assigns.field}-modal"
+       "select-#{assigns.id}-modal"
      end)}
   end
 

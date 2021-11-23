@@ -100,7 +100,7 @@ defmodule Brando.Users.User do
         order: [{:asc, :name}]
       }
 
-      field :avatar, :image, columns: 2
+      field :avatar, :image, columns: 2, class: "padded"
 
       filters([
         [label: t("Name"), filter: "name"],

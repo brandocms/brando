@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           phx-hook="Brando.SubFormSortable">
           <%= if Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
             <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
-            <div class="subform-empty">&rarr; No associated entries</div>
+            <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
           <% end %>
           <Form.poly_inputs
             form={@form}
@@ -97,7 +97,10 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
     form_id = "#{module.__naming__().singular}_form"
 
     current_globals = Ecto.Changeset.get_field(changeset, field_name) || []
-    updated_field = current_globals ++ default
+    require Logger
+    Logger.error("== add sub")
+    Logger.error(inspect(current_globals, pretty: true))
+    updated_field = current_globals ++ List.wrap(default)
     updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_field)
 
     send_update(BrandoAdmin.Components.Form,

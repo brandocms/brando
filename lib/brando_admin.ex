@@ -31,6 +31,7 @@ defmodule BrandoAdmin do
 
       import BrandoAdmin.Utils,
         only: [
+          prepare_subform_component: 1,
           prepare_input_component: 1,
           toggle_dropdown: 1,
           toggle_dropdown: 2,

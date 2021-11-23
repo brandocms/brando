@@ -15,6 +15,15 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   # prop cardinality, :atom
 
   def render(assigns) do
+    require Logger
+    Logger.error("== #{inspect(assigns, pretty: true)}")
+
+    assigns =
+      assigns
+      |> assign_new(:label, fn -> nil end)
+      |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:instructions, fn -> nil end)
+
     ~H"""
     <Input.render
       id={"#{@form.id}-#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
