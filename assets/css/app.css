@@ -3,7 +3,7 @@
 @import 'tippy.js/dist/tippy.css';
 @import 'flatpickr/dist/flatpickr.css';
 @import 'izitoast/dist/css/iziToast.css';
-/** EU **/
+
 @import './base.css';
 @import './fonts.css';
 @import './transitions.css';
@@ -19,8 +19,6 @@
 @import './components/Content/SelectedRows.css';
 @import './components/Dialog.css';
 @import './components/Drawer.css';
-@import './components/Modal.css';
-@import './components/Progress.css';
 @import './components/Form.css';
 @import './components/Form/BlockEditor.css';
 @import './components/Form/FieldBase.css';
@@ -47,6 +45,8 @@
 @import './components/Form/Input/Blocks/TableBlock.css';
 @import './components/Form/Input/Blocks/TextBlock.css';
 @import './components/Form/Input/Blocks/VideoBlock.css';
+@import './components/Modal.css';
+@import './components/Progress.css';
 @import './components/Image/ImagePicker.css';
 @import './components/SideBar/ContentLanguageSelector.css';
 @import './components/SideBar/CurrentUser.css';
@@ -54,6 +54,7 @@
 @import './components/SideBar/NavigationMenu.css';
 @import './components/SideBar/NavigationMenuSection.css';
 @import './components/SideBar/NavigationMenuSectionItem.css';
+@import './components/Toast.css';
 @import './views/assets/Images.css';
 @import './views/config/Cache.css';
 @import './views/config/Globals.css';
