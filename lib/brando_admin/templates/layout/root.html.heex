@@ -8,8 +8,17 @@
     <meta name="user_token" content={Brando.Users.build_token(@current_user.id)}>
     <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>
     <style>html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}</style>
-    <script type="module" src="http://localhost:3333/@vite/client"></script>
-    <script type="module" src="http://localhost:3333/src/main.js"></script>
+    <%= if Brando.env() == :prod do %>
+      <!-- production -->
+      <script type="module" src={Brando.helpers().static_path(@conn, "/assets/admin/admin.js")} phx-track-static crossorigin defer></script>
+      <link rel="modulepreload" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/vendor.js")}>
+      <link rel="stylesheet" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/admin.css")}>
+      <link rel="stylesheet" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/vendor.css")}>
+    <% else %>
+      <!-- development -->
+      <script type="module" src="http://localhost:3333/@vite/client"></script>
+      <script type="module" src="http://localhost:3333/src/main.js"></script>
+    <% end %>
   </head>
   <body id="app">
     <div class="fader" id="fader">
