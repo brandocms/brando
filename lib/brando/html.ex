@@ -222,9 +222,10 @@ defmodule Brando.HTML do
     classes = conn.private[:brando_css_classes]
     data_vsn = Application.spec(Brando.otp_app(), :vsn)
     show_breakpoint_debug? = Application.get_env(Brando.otp_app(), :show_breakpoint_debug)
+    extra = assigns_to_attributes(assigns, [:id, :conn])
 
     ~H"""
-    <body id={id} class={[classes, "unloaded"]} data-script={data_script} data-vsn={data_vsn}>
+    <body id={id} class={[classes, "unloaded"]} data-script={data_script} data-vsn={data_vsn} {extra}>
       <%= if show_breakpoint_debug? do %>
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
