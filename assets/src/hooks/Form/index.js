@@ -27,7 +27,7 @@ export default (app) => ({
   submitListener (ev) {
     if (ev.metaKey && ev.key === 's') {
       ev.preventDefault();
-      this.$form.dispatchEvent(new Event('submit', { bubbles: true }))
+      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     }
   }
 })
