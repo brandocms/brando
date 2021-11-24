@@ -40,7 +40,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <%= for sub_form <- inputs_for(@form, @subform.field) do %>
             <div class="subform-entry">
               <%= for input <- @subform.sub_fields do %>
-                <%= inspect input, pretty: true %>
                 <Subform.Field.render
                   cardinality={:one}
                   form={@form}
