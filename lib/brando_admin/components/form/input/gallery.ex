@@ -3,11 +3,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   use Phoenix.HTML
 
   import Ecto.Changeset
+  import Brando.Gettext
 
-  alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Form
+  alias Brando.Utils
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Input.Gallery.ImagePreview
 
   # prop form, :form
   # prop field, :atom
@@ -45,7 +44,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     gallery = get_field(form.source, field)
     require Logger
     Logger.error(inspect(gallery, pretty: true))
-    assign(socket, :gallery, gallery)
+    gallery_images = (gallery && gallery.gallery_images) || []
+
+    socket
+    |> assign(:gallery, gallery)
+    |> assign(:gallery_images, gallery_images)
   end
 
   def render(assigns) do
@@ -58,26 +61,46 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         instructions={@instructions}
         class={@class}
         compact={@compact}>
-      No gallery!
+        <%= if @gallery_images do %>
+          <div
+            id={"sortable-gallery-images"}
+            phx-hook="Brando.Sortable"
+            data-target={@myself}
+            data-sortable-id={"sortable-gallery"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".gallery-image"
+            class="gallery-images">
+            <%= for gallery_image <- @gallery_images do %>
+              <figure class="gallery-image sort-handle draggable">
+                <img
+                  width="25"
+                  height="25"
+                  src={"#{Utils.img_url(gallery_image.image, :thumb, prefix: Utils.media_url())}"} />
+              </figure>
+            <% end %>
+          </div>
+        <% else %>
+          <%= gettext "No associated gallery" %>
+        <% end %>
       </FieldBase.render>
     </div>
     """
   end
 
   def handle_event("sequenced", %{"ids" => order_indices}, socket) do
-    field_name = socket.assigns.input.name
-    changeset = socket.assigns.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
+    # field_name = socket.assigns.input.name
+    # changeset = socket.assigns.form.source
+    # module = changeset.data.__struct__
+    # form_id = "#{module.__naming__().singular}_form"
 
-    entries = Ecto.Changeset.get_field(changeset, field_name)
-    sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
-    updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, sorted_entries)
+    # entries = Ecto.Changeset.get_field(changeset, field_name)
+    # sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
+    # updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, sorted_entries)
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
+    # send_update(BrandoAdmin.Components.Form,
+    #   id: form_id,
+    #   updated_changeset: updated_changeset
+    # )
 
     {:noreply, socket}
   end
