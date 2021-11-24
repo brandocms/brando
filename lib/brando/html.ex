@@ -388,14 +388,14 @@ defmodule Brando.HTML do
   def include_assets(assigns) do
     if Brando.env() == :prod do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_css() %>
-      <%= Brando.Assets.Vite.Render.main_js() %>
+      <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+      <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        <%= Brando.Assets.Vite.Render.main_css() %>
-        <%= Brando.Assets.Vite.Render.main_js() %>
+        <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+        <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
         """
       else
         ~H"""
@@ -416,7 +416,7 @@ defmodule Brando.HTML do
   """
   def include_legacy_assets(assigns) do
     if Brando.env() == :prod do
-      ~H|<%= Brando.Assets.Vite.Render.legacy_js() %>|
+      ~H{<%= Brando.Assets.Vite.Render.legacy_js() |> raw() %>}
     else
       ~H||
     end

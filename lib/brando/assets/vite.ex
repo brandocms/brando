@@ -188,7 +188,6 @@ defmodule Brando.Assets.Vite do
   end
 
   defmodule Render do
-    import Phoenix.HTML
     alias Brando.Assets.Vite
 
     def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
