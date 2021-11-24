@@ -41,6 +41,22 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create(index(:users, [:email], unique: true))
 
+    create table(:images_galleries) do
+      add :config_target, :text
+      add :deleted_at, :utc_datetime
+      add :creator_id, references(:users, on_delete: :nothing)
+      timestamps()
+    end
+
+    create table(:images_gallery_images) do
+      add :sequence, :integer
+      add :gallery_id, references(:images_galleries, on_delete: :delete_all)
+      add :image_id, references(:images, on_delete: :delete_all)
+      add :creator_id, references(:users, on_delete: :nothing)
+      timestamps()
+    end
+
+
     alter table(:images) do
       add :creator_id, references(:users)
     end
@@ -318,6 +334,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     drop index(:posts, [:status])
 
     drop table(:images)
+    drop table(:images_galleries)
+    drop table(:images_gallery_images)
 
     drop table(:pages_fragments)
     drop index(:pages_fragments, [:language])

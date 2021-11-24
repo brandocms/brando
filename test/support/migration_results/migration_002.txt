@@ -7,6 +7,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
       add :unique_hash, :text
       add :meta_description, :text
       add :meta_title, :text
+      add :photos_id, references(:images_galleries, on_delete: :nilify_all)
       add :meta_image_id, references(:images, on_delete: :nilify_all)
       add :more_properties, :jsonb
       remove :deleted_at
@@ -21,7 +22,8 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
       remove :unique_hash
       remove :meta_description
       remove :meta_title
-      remove :meta_image
+      remove :photos_id
+      remove :meta_image_id
       remove :more_properties
       add :deleted_at, :utc_datetime
     end

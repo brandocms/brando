@@ -255,6 +255,12 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:many_to_many, opts)
           )
 
+        %{type: :has_many, name: name, opts: %{through: through} = opts} ->
+          Ecto.Schema.has_many(
+            name,
+            to_ecto_opts(:has_many, opts)
+          )
+
         %{type: :has_many, name: name, opts: opts} ->
           Ecto.Schema.has_many(
             name,
@@ -301,6 +307,13 @@ defmodule Brando.Blueprint do
             on_replace: :update
           )
 
+        %Asset{type: :gallery, name: name} ->
+          Ecto.Schema.belongs_to(
+            name,
+            Brando.Images.Gallery,
+            on_replace: :update
+          )
+
         %Asset{type: :video, name: name} ->
           # videoes are embedded
           Ecto.Schema.embeds_one(
@@ -310,18 +323,10 @@ defmodule Brando.Blueprint do
           )
 
         %Asset{type: :file, name: name} ->
-          # videoes are embedded
+          # files are embedded
           Ecto.Schema.embeds_one(
             name,
             Brando.Files.File,
-            on_replace: :delete
-          )
-
-        %Asset{type: :gallery, name: name} ->
-          # galleries are embedded
-          Ecto.Schema.embeds_many(
-            name,
-            Brando.Images.Image,
             on_replace: :delete
           )
 
@@ -363,6 +368,7 @@ defmodule Brando.Blueprint do
     |> Enum.reject(&Map.get(&1.opts, :required))
     |> Villain.maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
+    |> Enum.uniq()
   end
 
   def get_required_relations(rels) do
@@ -385,12 +391,13 @@ defmodule Brando.Blueprint do
 
   def get_castable_asset_fields(rels) do
     rels
-    |> Enum.filter(&(&1.type == :image))
+    |> Enum.filter(&(&1.type in [:image, :gallery]))
     |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
+  def get_relation_key(%{type: :gallery, name: name}), do: :"#{name}_id"
 
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)

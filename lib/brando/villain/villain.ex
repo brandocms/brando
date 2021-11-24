@@ -287,6 +287,7 @@ defmodule Brando.Villain do
           integer | binary
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
+    # TODO: Use blueprint's context get/1 here if available!
     query =
       from(s in schema,
         where: s.id == ^id

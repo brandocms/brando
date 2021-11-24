@@ -1,17 +1,17 @@
-defmodule Brando.Images.Image do
+defmodule Brando.Images.Gallery do
   @moduledoc """
-  Embedded image
+  Collection of images
   """
   use Brando.Blueprint,
     application: "Brando",
     domain: "Images",
-    schema: "Image",
-    singular: "image",
-    plural: "images",
+    schema: "Gallery",
+    singular: "gallery",
+    plural: "galleries",
     gettext_module: Brando.Gettext
 
-  alias Brando.Images.Focal
   import Brando.Gettext
+  alias Brando.Images.GalleryImage
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
@@ -20,22 +20,11 @@ defmodule Brando.Images.Image do
   identifier "{{ entry.id }}"
 
   attributes do
-    attribute :status, Ecto.Enum, values: [:processed, :unprocessed]
-    attribute :title, :text
-    attribute :credits, :text
-    attribute :alt, :text
-    attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif]
-    attribute :path, :text, required: true
-    attribute :width, :integer
-    attribute :height, :integer
-    attribute :sizes, :map
-    attribute :cdn, :boolean, default: false
-    attribute :dominant_color, :text
     attribute :config_target, :text
   end
 
   relations do
-    relation :focal, :embeds_one, module: Focal
+    relation :gallery_images, :has_many, module: GalleryImage, preload_order: [asc: :sequence]
   end
 
   listings do

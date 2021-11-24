@@ -8,8 +8,9 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       remove :slug
       remove :meta_description
       remove :meta_title
-      remove :cover
-      remove :meta_image
+      remove :cover_id
+      remove :photos_id
+      remove :meta_image_id
       remove :properties
       remove :more_properties
       remove :creator_id
@@ -26,6 +27,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       add :meta_description, :text
       add :meta_title, :text
       add :cover_id, references(:images, on_delete: :nilify_all)
+      add :photos_id, references(:images_galleries, on_delete: :nilify_all)
       add :meta_image_id, references(:images, on_delete: :nilify_all)
       add :properties, :jsonb
       add :more_properties, :jsonb
