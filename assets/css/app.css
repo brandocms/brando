@@ -1,5 +1,13 @@
+@import 'nprogress/nprogress.css';
+@import 'vex-js/dist/css/vex.css';
+@import 'tippy.js/dist/tippy.css';
+@import 'flatpickr/dist/flatpickr.css';
+@import 'izitoast/dist/css/iziToast.css';
+/** EU **/
+@import './base.css';
 @import './fonts.css';
 @import './transitions.css';
+@import './auth.css';
 @import './components/Button.css';
 @import './components/ChildrenButton.css';
 @import './components/CircleDropdown.css';
@@ -50,8 +58,6 @@
 @import './views/config/Cache.css';
 @import './views/config/Globals.css';
 @import './views/config/ScheduledPublishing.css';
-
-@europa base;
 
 .button-group-horizontal {
   display: flex;

@@ -9,8 +9,7 @@
       <!-- production -->
       <script type="module" src={Brando.helpers().static_path(@conn, "/assets/admin/auth.js")} phx-track-static crossorigin defer></script>
       <link rel="modulepreload" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/vendor.js")}>
-      <link rel="stylesheet" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/auth.css")}>
-      <link rel="stylesheet" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/vendor.css")}>
+      <link rel="stylesheet" phx-track-static href={Brando.helpers().static_path(@conn, "/assets/admin/admin.css")}>
     <% else %>
       <!-- development -->
       <script type="module" src="http://localhost:3333/@vite/client"></script>

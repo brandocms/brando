@@ -1,6 +1,3 @@
-// CSS imports
-import '../css/auth.css'
-
 import { Application, Events, Moonwalk, gsap } from '@brandocms/jupiter'
 import configureBreakpoints from './config/BREAKPOINTS'
 

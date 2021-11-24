@@ -34,13 +34,6 @@
 //                \_________.-'Ojo/gnv
 //
 
-// CSS imports
-import 'nprogress/nprogress.css'
-import 'vex-js/dist/css/vex.css'
-import 'tippy.js/dist/tippy.css'
-import 'flatpickr/dist/flatpickr.css'
-import '../css/app.css'
-
 // main app construction
 import buildApplication from './buildApplication'
 import brandoHooks from './hooks'

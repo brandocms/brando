@@ -1,4 +1,5 @@
 import '../css/app.css'
+import '@brandocms/brandojs/css/app.css'
 
 import { Events } from '@brandocms/jupiter'
 import { buildApplication, brandoHooks, initializeLiveSocket } from '@brandocms/brandojs'

@@ -14,7 +14,7 @@ export default defineConfig({
     ]
   },
   build: {
-    manifest: true,
+    manifest: false,
     emptyOutDir: false,
     target: "modules",
     outDir: "../../priv/static", // <- Phoenix expects our files here

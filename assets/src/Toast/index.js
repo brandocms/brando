@@ -1,5 +1,3 @@
-import 'izitoast/dist/css/iziToast.css'
-import '../../css/components/Toast.css'
 import iziToast from 'izitoast'
 
 export default class Toast {
