@@ -43,188 +43,24 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   defp assign_value(%{assigns: %{form: form, field: field}} = socket) do
     gallery = get_field(form.source, field)
+    require Logger
+    Logger.error(inspect(gallery, pretty: true))
     assign(socket, :gallery, gallery)
   end
 
   def render(assigns) do
     ~H"""
-    <FieldBase.render
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}>
-
-      <div
-        id={"#{@form.id}-#{@field}-gallery-dropzone"}
-        class="input-gallery">
-
-        <div class="button-group">
-          <div class="file-input-wrapper">
-            <span class="label">
-              Upload
-            </span>
-            <%= live_file_input Map.get(@uploads, @field) %>
-          </div>
-          <button
-            type="button"
-            class="secondary"
-            phx-click={JS.push("delete_selected", target: @myself)}
-            phx-value-ids={Jason.encode!(@selected_images)}
-            disabled={Enum.empty?(@selected_images)}
-            phx-page-loading>
-            Delete <span><%= Enum.count(@selected_images) %></span> selected
-          </button>
-
-          <button
-            type="button"
-            class="secondary"
-            phx-click={JS.push("reset_gallery", target: @myself)}
-            phx-page-loading>Reset field</button>
-        </div>
-        <div
-          class="drop-target"
-          phx-drop-target={@uploads[@field].ref}>
-          <div class="drop-indicator">
-            <div>Drop here to upload</div>
-          </div>
-        </div>
-
-        <%= if !@gallery || Enum.empty?(@gallery) && Enum.empty?(@uploads[@field].entries) do %>
-          <div class="gallery-empty">
-            No images in image gallery.
-          </div>
-        <% end %>
-
-        <%= if !Enum.empty?(@uploads[@field].entries) do %>
-          <div class="input-gallery-previews">
-            <%= for entry <- @uploads[@field].entries do %>
-              <%= if entry.progress do %>
-                <article class="upload-entry" data-upload-uuid={entry.uuid}>
-                  <progress value={entry.progress} max="100"></progress>
-                  <div class="file-info">
-                    <div class="preview">
-                      <%= live_img_preview entry %>
-                    </div>
-
-                    <div class="file">
-                      <%= entry.client_name %>
-                      <small><%= entry.client_type %>, <%= Brando.Utils.human_size(entry.client_size) %></small>
-                      <div class="progress-percent">
-                        <%= entry.progress %>%
-                      </div>
-                    </div>
-                  </div>
-
-                  <%= for err <- upload_errors(@uploads[@field], entry) do %>
-                    <p class="alert alert-danger">
-                      <%= Brando.Upload.error_to_string(err) %>
-                    </p>
-                  <% end %>
-                </article>
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-
-        <%= if !Enum.empty?(@gallery) do %>
-          <div
-            id={"sortable-#{@form.id}-#{@field}-images"}
-            class={render_classes(["image-previews", @preview_layout])}
-            phx-hook="Brando.Sortable"
-            data-target={@myself}
-            data-sortable-id={"sortable-#{@form.id}-#{@field}-images"}
-            data-sortable-handle=".sort-handle"
-            data-sortable-selector=".image-preview">
-            <Form.inputs
-              let={%{form: sf, index: idx}}
-              form={@form}
-              for={@field}>
-              <div
-                class={render_classes([
-                  "image-preview",
-                  "sort-handle",
-                  "draggable",
-                  selected: idx in @selected_images
-                ])}
-                data-id={idx}
-                phx-click={JS.push("select_row", target: @myself)}
-                phx-value-id={idx}
-                phx-page-loading>
-                <%= case @preview_layout do %>
-                  <% :grid -> %>
-                    <div class="overlay">
-                      <button
-                        type="button"
-                        phx-click={JS.push("edit_image", target: @myself)}
-                        phx-value-id={idx}>Edit</button>
-                    </div>
-                    <ImagePreview.render
-                      layout={:grid}
-                      form={sf} />
-                <% end %>
-
-                <div class="image-meta">
-                  <.live_component module={Modal}
-                    title="Edit image"
-                    center_header={true}
-                    id={"edit-image-#{@form.id}-#{@field}-modal-#{idx}"}>
-                    <div class="field-wrapper">
-                      <div class="label-wrapper">
-                        <label class="control-label"><span>Caption/Title</span></label>
-                      </div>
-                      <div class="field-base">
-                        <%= text_input sf, :title, class: "text" %>
-                      </div>
-                    </div>
-                    <div class="field-wrapper">
-                      <div class="label-wrapper">
-                        <label class="control-label"><span>Alt text (for accessibility)</span></label>
-                      </div>
-                      <div class="field-base">
-                        <%= text_input sf, :alt, class: "text" %>
-                      </div>
-                    </div>
-                    <div class="field-wrapper">
-                      <div class="label-wrapper">
-                        <label class="control-label"><span>Credits</span></label>
-                      </div>
-                      <div class="field-base">
-                        <%= text_input sf, :credits, class: "text" %>
-                      </div>
-                    </div>
-
-                    <%= hidden_input sf, :id %>
-                    <%= hidden_input sf, :cdn %>
-                    <%= hidden_input sf, :dominant_color %>
-                    <%= hidden_input sf, :height %>
-                    <%= hidden_input sf, :path %>
-                    <%= hidden_input sf, :width %>
-                    <%= hidden_input sf, :marked_as_deleted %>
-
-                    <Form.inputs
-                      form={sf}
-                      for={:focal}
-                      let={%{form: focal_form}}>
-                      <%= hidden_input focal_form, :x %>
-                      <%= hidden_input focal_form, :y %>
-                    </Form.inputs>
-
-                    <Form.map_inputs
-                      let={%{value: value, name: name}}
-                      form={sf}
-                      for={:sizes}>
-                      <input type="hidden" name={"#{name}"} value={"#{value}"} />
-                    </Form.map_inputs>
-                  </.live_component>
-                </div>
-              </div>
-            </Form.inputs>
-          </div>
-        <% end %>
-      </div>
-    </FieldBase.render>
+    <div>
+      <FieldBase.render
+        form={@form}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
+      No gallery!
+      </FieldBase.render>
+    </div>
     """
   end
 

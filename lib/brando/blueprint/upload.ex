@@ -15,12 +15,16 @@ defmodule Brando.Blueprint.Upload do
     do_validate_upload(changeset, {:image, field_name}, user, cfg)
   end
 
+  def validate_upload(changeset, {:gallery, field_name}, user, cfg) do
+    do_validate_upload(changeset, {:gallery, field_name}, user, cfg)
+  end
+
   def validate_upload(changeset, {:file, field_name}, user, cfg) do
     do_validate_upload(changeset, {:file, field_name}, user, cfg)
   end
 
   # TODO: Clean this up -- check focal if image, maybe upload to CDN etc
-  defp do_validate_upload(changeset, {_, field_name}, _user, _cfg) do
+  defp do_validate_upload(changeset, {:image, field_name}, _user, _cfg) do
     with {:ok, field_changes} <- Utils.field_has_changed(changeset, field_name),
          {:ok, _} <- Utils.changeset_has_no_errors(changeset),
          {:ok, :focal_changed} <- check_focal(field_changes) do
@@ -31,6 +35,12 @@ defmodule Brando.Blueprint.Upload do
     else
       _ -> changeset
     end
+  end
+
+  defp do_validate_upload(changeset, {:gallery, field_name}, _user, _cfg) do
+    require Logger
+    Logger.error("== do_validate_upload :gallery --> #{inspect(field_name)}")
+    changeset
   end
 
   defp check_focal(%{changes: %{path: _}} = changeset) do
