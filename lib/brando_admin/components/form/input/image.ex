@@ -43,7 +43,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
   def update(assigns, socket) do
     relation_field = String.to_existing_atom("#{assigns.field}_id")
-    image_id = get_field(assigns.form.source, relation_field)
+
+    image_id =
+      assigns.form.source
+      |> get_field(relation_field)
+      |> try_force_int()
 
     previous_image_id = Map.get(socket.assigns, :previous_image_id)
     image = get_image(Map.get(socket.assigns, :image), image_id, previous_image_id)
@@ -68,6 +72,10 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(:focal, focal)}
   end
 
+  def try_force_int(str) when is_binary(str), do: String.to_integer(str)
+  def try_force_int(int) when is_integer(int), do: int
+  def try_force_int(val), do: val
+
   def get_image(nil, nil, _) do
     nil
   end
@@ -87,7 +95,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     image
   end
 
-  def get_image(nil, image_id, _) do
+  def get_image(_, image_id, _) do
     case Images.get_image(image_id) do
       {:ok, image} -> image
       {:error, _} -> nil
