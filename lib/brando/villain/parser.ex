@@ -512,7 +512,8 @@ defmodule Brando.Villain.Parser do
                 sizes: "auto",
                 srcset: default_srcset,
                 lazyload: true,
-                lightbox: data.lightbox || false
+                lightbox: data.lightbox || false,
+                prefix: Utils.media_url()
               )
               |> safe_to_string
 
@@ -569,7 +570,8 @@ defmodule Brando.Villain.Parser do
                 sizes: "auto",
                 srcset: default_srcset,
                 lazyload: true,
-                lightbox: data.lightbox || false
+                lightbox: data.lightbox || false,
+                prefix: Utils.media_url()
               )
               |> safe_to_string
 
