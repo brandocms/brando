@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:templates, fn -> nil end)
      |> assign_new(:type, fn -> "root" end)
      |> assign_new(:hide_sections, fn -> false end)
      |> assign(block_count: block_count)}
