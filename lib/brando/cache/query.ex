@@ -25,8 +25,16 @@ defmodule Brando.Cache.Query do
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
   def evict({:ok, entry}) do
     source = entry.__struct__.__schema__(:source)
+
     perform_eviction(:list, source)
     perform_eviction(:single, source, entry.id)
+
+    # TODO: a declarative way to specify any related entries to evict?
+    # Evict parent page if applicable
+    if Map.get(entry, :parent_id) do
+      perform_eviction(:single, source, entry.parent_id)
+    end
+
     {:ok, entry}
   end
 
