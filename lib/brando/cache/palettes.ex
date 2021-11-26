@@ -48,12 +48,16 @@ defmodule Brando.Cache.Palettes do
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("\r\n")
     |> minify_css
+    |> Phoenix.HTML.raw()
   end
 
   defp namespace_css(%{global: true} = palette) do
-    Enum.map(palette.colors, fn color ->
-      "--palette-#{palette.namespace}-#{palette.key}-#{color.key}: #{color.hex_value};"
-    end)
+    palette_vars =
+      Enum.map(palette.colors, fn color ->
+        "--palette-#{palette.namespace}-#{palette.key}-#{color.key}: #{color.hex_value};"
+      end)
+
+    ":root {#{palette_vars}}"
   end
 
   defp namespace_css(%{namespace: namespace, key: key} = palette) do
