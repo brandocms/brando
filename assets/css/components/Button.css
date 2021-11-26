@@ -1,11 +1,6 @@
 a.primary {
-  padding-top: 13px;
   display: inline-block;
   font-weight: 400;
-}
-
-button.primary {
-  padding-top: 6px;
 }
 
 button.primary, a.primary {
@@ -15,7 +10,7 @@ button.primary, a.primary {
   background-color: var(--brando-color-blue);
   border-radius: 30px;
   height: 60px;
-  padding-bottom: 6px;
+  line-height: 58px;
   padding-left: 25px;
   padding-right: 25px;
   min-width: 205px;
