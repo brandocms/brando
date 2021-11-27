@@ -169,10 +169,12 @@ defmodule Brando.Villain.Parser do
               base_context
               |> add_vars_to_context(vars)
               |> add_refs_to_context(refs)
+              |> add_admin_to_context(opts)
+              |> add_parser_to_context(__MODULE__)
+              |> add_module_id_to_context(id)
               |> Context.assign("forloop", forloop)
 
             module.entry_template.code
-            |> render_refs(entry.data.refs, id)
             |> Villain.parse_and_render(context)
           end)
           |> Enum.join("\n")
@@ -184,11 +186,13 @@ defmodule Brando.Villain.Parser do
           base_context
           |> add_vars_to_context(base_vars)
           |> add_refs_to_context(base_refs)
+          |> add_admin_to_context(opts)
+          |> add_parser_to_context(__MODULE__)
+          |> add_module_id_to_context(id)
           |> Context.assign("entries", entries)
           |> Context.assign("content", content)
 
         module.code
-        |> render_refs(block.refs, 0)
         |> Villain.parse_and_render(context)
       end
 
@@ -206,9 +210,11 @@ defmodule Brando.Villain.Parser do
           base_context
           |> add_vars_to_context(processed_vars)
           |> add_refs_to_context(processed_refs)
+          |> add_admin_to_context(opts)
+          |> add_parser_to_context(__MODULE__)
+          |> add_module_id_to_context(id)
 
         module.code
-        |> render_refs(refs, id, opts)
         |> Villain.parse_and_render(context)
       end
 
@@ -818,13 +824,27 @@ defmodule Brando.Villain.Parser do
       defp process_refs(nil), do: %{}
       defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
 
-      defp process_ref(%{name: ref_name, data: ref_block}), do: {ref_name, ref_block}
+      defp process_ref(%{name: ref_name} = ref_block), do: {ref_name, ref_block}
 
       defp add_vars_to_context(context, vars),
         do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
 
       defp add_refs_to_context(context, refs),
         do: Context.assign(context, :refs, refs)
+
+      defp add_admin_to_context(context, opts) do
+        if Map.get(opts, :brando_render_for_admin) do
+          Context.assign(context, :brando_render_for_admin, true)
+        else
+          context
+        end
+      end
+
+      defp add_parser_to_context(context, module),
+        do: Context.assign(context, :brando_parser_module, module)
+
+      defp add_module_id_to_context(context, module_id),
+        do: Context.assign(context, :brando_module_id, module_id)
 
       defp render_datasource_entries({:code, code}, entries, opts) do
         base_context = opts.context
@@ -839,37 +859,6 @@ defmodule Brando.Villain.Parser do
         {:ok, module} = Content.find_module(modules, module_id)
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(module.code, context)
-      end
-
-      defp render_refs(module_code, refs, id, opts \\ %{}) do
-        render_for_admin = Map.get(opts, :render_for_admin) && :render_for_admin
-
-        Regex.replace(~r/%{(\w+)}/, module_code, fn _, ref_name ->
-          refs
-          |> Enum.find(&(&1.name == ref_name))
-          |> render_ref(id, ref_name, render_for_admin)
-        end)
-      end
-
-      defp render_ref(nil, id, ref_name, _),
-        do: "<!-- REF #{ref_name} missing // module: #{id}. -->"
-
-      defp render_ref(%{hidden: true}, _id, _ref_name, _), do: "<!-- h -->"
-      defp render_ref(%{data: %{hidden: true}}, _id, _ref_name, _), do: "<!-- h -->"
-      defp render_ref(%{deleted: true}, _id, _ref_name, _), do: "<!-- d -->"
-
-      defp render_ref(%{data: block, description: description}, id, ref_name, :render_for_admin) do
-        rendered_ref = apply(__MODULE__, String.to_atom(block.type), [block.data, []])
-
-        """
-        <section phx-click="edit_ref" b-module-id="#{id}" b-ref="#{ref_name}" b-ref-desc="#{description}">
-          #{rendered_ref}
-        </section>
-        """
-      end
-
-      defp render_ref(%{data: block, description: description}, _id, ref_name, _) do
-        apply(__MODULE__, String.to_atom(block.type), [block.data, []])
       end
     end
   end

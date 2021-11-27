@@ -3,6 +3,7 @@ defmodule Brando.Villain.LiquexParser do
 
   use Liquex.Parser,
     tags: [
+      Tags.Ref,
       Tags.Picture,
       Tags.Route,
       Tags.RouteI18n,

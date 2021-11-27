@@ -365,7 +365,7 @@ defmodule Brando.VillainTest do
 
   test "access refs in context", %{user: user} do
     module_params = %{
-      code: "A variable: {{ testvar }} -- A ref: {{ refs.lede.data.text }}",
+      code: "A variable: {{ testvar }} -- A ref: {% ref refs.lede %}",
       name: "Name",
       help_text: "Help text",
       refs: [],
@@ -411,7 +411,7 @@ defmodule Brando.VillainTest do
 
     {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
 
-    assert page.html == "A variable: VARIABLE! -- A ref: <p>A REF!</p>"
+    assert page.html == "A variable: VARIABLE! -- A ref: <div class=\"lede\"><p>A REF!</p></div>"
   end
 
   test "rerender_villains_for", %{user: user} do
