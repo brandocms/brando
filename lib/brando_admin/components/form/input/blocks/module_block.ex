@@ -372,10 +372,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
-      ~r/%{(\w+)}|<.*?>|\{\{\s?(.*?)\s?\}\}/
+      ~r/{% ref refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
       |> Regex.split(module_code, include_captures: true)
       |> Enum.map(fn chunk ->
-        case Regex.run(~r/^%{(?<ref>\w+)}$|^{{ (?<content>[\w.]+) }}$/, chunk, capture: :all_names) do
+        case Regex.run(~r/^{% ref refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/, chunk,
+               capture: :all_names
+             ) do
           nil ->
             chunk
 
