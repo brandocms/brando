@@ -106,7 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
               </div>
             <% end %>
           </div>
-          <button type="button" class="tiny add-row" phx-click={JS.push("add_row", target: @myself)}>{gettext "Add row"}</button>
+          <button type="button" class="tiny add-row" phx-click={JS.push("add_row", target: @myself)}><%= gettext "Add row" %></button>
         <% end %>
 
         <!-- template row -->
