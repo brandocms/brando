@@ -65,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {:ok,
      socket
      |> assign(assigns)
+     |> prepare_input_component()
      |> assign(:selected_identifiers, selected_identifiers)
      |> assign(:selected_identifiers_forms, selected_identifiers_forms)
      |> assign_available_schemas(wanted_schemas)
@@ -89,67 +90,69 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def render(assigns) do
     ~H"""
-    <FieldBase.render
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}>
-      <%= if Enum.empty?(@selected_identifiers) do %>
-        <div class="empty-list">
-          <%= gettext("No selected entries") %>
-        </div>
-      <% end %>
-
-      <Form.inputs
+    <div>
+      <FieldBase.render
         form={@form}
-        for={@field}
-        let={%{form: identifier_form}}>
-        <%= hidden_input identifier_form, :id %>
-        <%= hidden_input identifier_form, :schema %>
-        <%= hidden_input identifier_form, :status %>
-        <%= hidden_input identifier_form, :title %>
-        <%= hidden_input identifier_form, :cover %>
-        <%= hidden_input identifier_form, :type %>
-        <%= hidden_input identifier_form, :absolute_url %>
-      </Form.inputs>
-
-      <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
-        <Identifier.render
-          identifier={selected_identifier}
-          remove="remove_identifier"
-          param={idx}
-        />
-      <% end %>
-
-      <button type="button" class="add-entry-button" phx-click={show_modal("##{@form.id}-#{@field}-select-entries")}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
-        <%= gettext("Select entries") %>
-      </button>
-
-      <.live_component module={Modal} title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
-        <h2 class="titlecase"><%= gettext("Select content type") %></h2>
-        <div class="button-group-vertical">
-        <%= for {label, schema, _} <- @available_schemas do %>
-          <button type="button" class="secondary" phx-click={JS.push("select_schema", target: @myself)} phx-value-schema={schema}>
-            <%= label %>
-          </button>
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
+        <%= if Enum.empty?(@selected_identifiers) do %>
+          <div class="empty-list">
+            <%= gettext("No selected entries") %>
+          </div>
         <% end %>
-        </div>
-        <%= if !Enum.empty?(@identifiers) do %>
-          <h2 class="titlecase">{gettext("Available entries")}</h2>
-          <%= for {identifier, idx} <- Enum.with_index(@identifiers) do %>
-            <Identifier.render
-              identifier={identifier}
-              select="select_identifier"
-              selected_identifiers={@selected_identifiers}
-              param={idx}
-            />
+
+        <Form.inputs
+          form={@form}
+          for={@field}
+          let={%{form: identifier_form}}>
+          <%= hidden_input identifier_form, :id %>
+          <%= hidden_input identifier_form, :schema %>
+          <%= hidden_input identifier_form, :status %>
+          <%= hidden_input identifier_form, :title %>
+          <%= hidden_input identifier_form, :cover %>
+          <%= hidden_input identifier_form, :type %>
+          <%= hidden_input identifier_form, :absolute_url %>
+        </Form.inputs>
+
+        <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
+          <Identifier.render
+            identifier={selected_identifier}
+            remove="remove_identifier"
+            param={idx}
+          />
+        <% end %>
+
+        <button type="button" class="add-entry-button" phx-click={show_modal("##{@form.id}-#{@field}-select-entries")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
+          <%= gettext("Select entries") %>
+        </button>
+
+        <.live_component module={Modal} title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
+          <h2 class="titlecase"><%= gettext("Select content type") %></h2>
+          <div class="button-group-vertical">
+          <%= for {label, schema, _} <- @available_schemas do %>
+            <button type="button" class="secondary" phx-click={JS.push("select_schema", target: @myself)} phx-value-schema={schema}>
+              <%= label %>
+            </button>
           <% end %>
-        <% end %>
-      </.live_component>
-    </FieldBase.render>
+          </div>
+          <%= if !Enum.empty?(@identifiers) do %>
+            <h2 class="titlecase">{gettext("Available entries")}</h2>
+            <%= for {identifier, idx} <- Enum.with_index(@identifiers) do %>
+              <Identifier.render
+                identifier={identifier}
+                select="select_identifier"
+                selected_identifiers={@selected_identifiers}
+                param={idx}
+              />
+            <% end %>
+          <% end %>
+        </.live_component>
+      </FieldBase.render>
+    </div>
     """
   end
 
