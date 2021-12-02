@@ -55,6 +55,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
     %{id: id, processed_data_field: replace_block(data_field)}
   end
 
+  def replace_block(nil), do: nil
   def replace_block(blocks) do
     Enum.reduce(blocks, [], fn
       %{"type" => "slideshow"} = old_block, acc ->

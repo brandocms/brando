@@ -32,6 +32,7 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
     %{id: id, processed_data_field: replace_block(data_field)}
   end
 
+  def replace_block(nil), do: nil
   def replace_block(blocks) do
     Enum.reduce(blocks, [], fn
       %{"data" => %{"type" => "picture"} = old_block} = ref, acc ->
