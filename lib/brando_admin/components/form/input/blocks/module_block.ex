@@ -366,18 +366,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:noreply, socket}
   end
 
-  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket) do
-    socket
-  end
+  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket), do: socket
+
+  @regex_splits ~r/{% ref refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
+  @regex_chunks ~r/^{% ref refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/
 
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
-      ~r/{% ref refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
+      @regex_splits
       |> Regex.split(module_code, include_captures: true)
       |> Enum.map(fn chunk ->
-        case Regex.run(~r/^{% ref refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/, chunk,
-               capture: :all_names
-             ) do
+        case Regex.run(@regex_chunks, chunk, capture: :all_names) do
           nil ->
             chunk
 
@@ -411,6 +410,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     # We could track all relations from the schema blueprint, store their ids and check, but .. ugh.
     # If we assign the entry as rendered_entry every time, we at least won't have to preload
     # on every render
+
+    # The best might be to not preload here, but preload directly from the input component
+    # that updates the relation. So if it is a select box, send_update to the form with
+    # the field we wish to reload?
 
     # entry = Brando.repo().preload(entry, [:category], force: true)
     Brando.Utils.try_path(entry, var_path)
