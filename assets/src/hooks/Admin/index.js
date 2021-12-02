@@ -80,7 +80,6 @@ export default (app) => ({
 
   initializeTippy () {
     // tippy
-    console.log('init tippy')
     const $tippyEls = Dom.all(this.el, '[data-popover]')
     $tippyEls.forEach(el => {
       const content = el.dataset.popover
@@ -95,10 +94,6 @@ export default (app) => ({
     this.tippys.forEach(t => {
       t.destroy()
     })
-  },
-
-  updated() {
-    console.log('==> Brando.Admin updated')
   },
 
   destroyed() {

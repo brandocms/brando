@@ -62,7 +62,6 @@ export default class Presence {
       })      
 
       const $users = Dom.all(presencesEl, 'a')
-      console.log($users)
       gsap.set($users, { yPercent: 150, rotate: 180 })
       gsap.set(presencesEl, { display: 'flex' })
       setTimeout(() => {

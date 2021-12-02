@@ -36,11 +36,7 @@
 
 // main app construction
 import buildApplication from './buildApplication'
-import brandoHooks from './hooks'
-import initializeLiveSocket from './initializeLiveSocket'
 
 export {
   buildApplication,
-  brandoHooks,
-  initializeLiveSocket,
 }

@@ -8,7 +8,6 @@ export default (app) => ({
     this.handle = this.el.dataset.sortableHandle
     this.sortableId = this.el.dataset.sortableId
     this.sortableParams = this.el.dataset.sortableParams
-    console.log('params', this.sortableParams)
     this.bindSortable()
   },
 
@@ -19,7 +18,6 @@ export default (app) => ({
       ghostClass: 'is-sorting',
       swapThreshold: 0.50,
       handle: this.handle,
-      // TODO: `group` by level? Get from data-group?
       draggable: '.draggable',
       store: {
         get: this.getOrder.bind(this),

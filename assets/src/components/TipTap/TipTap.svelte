@@ -95,8 +95,12 @@
         updateInput()
       },
       onTransaction: () => {
-        // force re-render so `editor.isActive` works as expected
-        //editor = editor
+        // if (editor.options.element.clientHeight > document.body.clientHeight) {
+        //   editor.options.element.classList.add('pinned')
+        // } else {
+        //   editor.options.element.classList.remove('pinned')
+        // }
+        editor = editor
       },
     })
 

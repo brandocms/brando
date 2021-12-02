@@ -10,7 +10,6 @@
   }
 
   .tiptap-menu {
-    position: sticky;
     display: flex;
     border: 1px solid;
     height: 34px;
@@ -18,6 +17,8 @@
     background-color: rgba(255, 255, 255, 0.9);
     z-index: 2;
     margin-bottom: 0px;
+    /* position: sticky; */
+    /* top: 65px; */
 
     .menu-item {
       width: 32px;
