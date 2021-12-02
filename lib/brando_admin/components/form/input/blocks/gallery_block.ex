@@ -469,4 +469,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :available_images, images)}
   end
+
+  def handle_event("show_captions", _, socket) do
+    {:noreply, socket}
+  end
 end
