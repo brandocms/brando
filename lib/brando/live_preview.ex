@@ -123,8 +123,13 @@ defmodule Brando.LivePreview do
             Map.put(updated_entry, html_attr.name, parsed_villain)
           end)
 
+        language = Map.get(var!(entry), :language, Brando.config(:default_language))
+
         # build conn
-        conn = Brando.Plug.HTML.put_section(Phoenix.ConnTest.build_conn(), section)
+        conn =
+          Phoenix.ConnTest.build_conn()
+          |> Brando.Plug.HTML.put_section(section)
+          |> Plug.Conn.assign(:language, language)
 
         render_assigns =
           ([
@@ -234,38 +239,38 @@ defmodule Brando.LivePreview do
       schema_module = Module.concat([schema])
       entry_struct = Ecto.Changeset.apply_changes(changeset)
 
-      try do
-        wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
+      # try do
+      wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
 
-        if Cachex.get(:cache, cache_key) == {:ok, nil} do
-          Brando.LivePreview.store_cache(cache_key, wrapper_html)
-        end
-
-        Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
-
-        {:ok, cache_key}
-      rescue
-        err ->
-          Logger.error("""
-          Livepreview Initialization failed.
-          """)
-
-          Logger.error("""
-          Error:
-
-          #{inspect(err, pretty: true)}
-          """)
-
-          Logger.error("""
-
-          Stacktrace:
-
-          #{inspect(__STACKTRACE__, pretty: true)}
-
-          """)
-
-          {:error, "Initialization failed. #{inspect(err)}"}
+      if Cachex.get(:cache, cache_key) == {:ok, nil} do
+        Brando.LivePreview.store_cache(cache_key, wrapper_html)
       end
+
+      Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
+
+      {:ok, cache_key}
+      # rescue
+      #   err ->
+      #     Logger.error("""
+      #     Livepreview Initialization failed.
+      #     """)
+
+      #     Logger.error("""
+      #     Error:
+
+      #     #{inspect(err, pretty: true)}
+      #     """)
+
+      #     Logger.error("""
+
+      #     Stacktrace:
+
+      #     #{inspect(__STACKTRACE__, pretty: true)}
+
+      #     """)
+
+      #     {:error, "Initialization failed. #{inspect(err)}"}
+      # end
     else
       {:error, "No render/3 function found in LivePreview module"}
     end
