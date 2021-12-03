@@ -21,12 +21,12 @@ export default defineConfig({
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        admin: "src/main.js",
-        auth: "src/auth.js"
+        admin: "src/main.js"
       },
       output: {
+        manualChunks: () => 'everything.js',
         entryFileNames: `assets/admin/[name].js`,
-        chunkFileNames: `assets/admin/[name].js`,
+        chunkFileNames: `assets/admin/__[name].js`,
         assetFileNames: `assets/admin/[name].[ext]`
       },
     },

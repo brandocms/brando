@@ -15,8 +15,7 @@ export default defineConfig({
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        admin: "src/main.js",
-        auth: "src/auth.js"
+        admin: "src/main.js"
       },
       output: {
         entryFileNames: `assets/[name].js`,
