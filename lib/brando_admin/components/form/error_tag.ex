@@ -11,6 +11,13 @@ defmodule BrandoAdmin.Components.Form.ErrorTag do
         &apply(mod, fun, [&1])
       end)
 
+    assigns =
+      if assigns.relation do
+        assign(assigns, :field, :"#{assigns.field}_id")
+      else
+        assigns
+      end
+
     ~H"""
     <%= for error <- Keyword.get_values(@form.errors, @field) do %>
     <span

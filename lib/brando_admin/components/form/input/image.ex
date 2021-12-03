@@ -110,7 +110,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         field={@field}
         label={@label}
         instructions={@instructions}
-        class={@class}>
+        class={@class}
+        relation>
         <div>
           <div class="input-image">
             <%= if @image && @image.path do %>

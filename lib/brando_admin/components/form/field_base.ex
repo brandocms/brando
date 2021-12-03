@@ -19,7 +19,8 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   # slot header
 
   def render(assigns) do
-    failed = assigns.form && has_error(assigns.form, assigns.field)
+    relation = Map.get(assigns, :relation, false)
+    failed = assigns.form && has_error(assigns.form, assigns.field, relation)
     label = get_label(assigns)
     hidden = label == :hidden
 
@@ -28,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
       |> assign_new(:header, fn -> nil end)
       |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
+      |> assign(:relation, relation)
       |> assign(:failed, failed)
       |> assign(:hidden, hidden)
       |> assign(:label, label)
@@ -46,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
           <ErrorTag.render
             form={@form}
             field={@field}
+            relation={@relation}
           />
         <% end %>
         <%= if @header do %>
@@ -85,7 +88,16 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
     label
   end
 
-  defp has_error(form, field) do
+  defp has_error(form, field, true) do
+    field = :"#{field}_id"
+
+    case Keyword.get_values(form.errors, field) do
+      [] -> false
+      _ -> true
+    end
+  end
+
+  defp has_error(form, field, _) do
     case Keyword.get_values(form.errors, field) do
       [] -> false
       _ -> true
