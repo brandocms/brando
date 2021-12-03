@@ -46,8 +46,6 @@ defmodule <%= application_module %>Web.Endpoint do
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :<%= application_name %>
   end
 
-  plug Brando.Plug.LivePreview
-
   plug Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",
     cookie_key: "request_logger"
@@ -63,5 +61,6 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug Brando.Plug.LivePreview
   plug <%= application_module %>Web.Router
 end
