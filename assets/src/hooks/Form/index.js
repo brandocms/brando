@@ -1,5 +1,3 @@
-import { gsap } from '@brandocms/jupiter'
-
 export default (app) => ({
   mounted() {
     this.$form = this.el.querySelector('form')
