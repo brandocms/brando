@@ -197,9 +197,11 @@ defmodule Mix.Tasks.Brando.Gen do
     instructions = """
     If you want to manage this schema through the admin, add these routes to your router
 
-        live "/#{snake_domain}/#{plural}", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}ListLive
-        live "/#{snake_domain}/#{plural}/create", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}CreateLive
-        live "/#{snake_domain}/#{plural}/update/:entry_id", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}UpdateLive
+        scope "/#{snake_domain}", #{admin_module}.#{domain} do
+          live "/#{plural}", #{Recase.to_pascal(vue_singular)}ListLive
+          live "/#{plural}/create", #{Recase.to_pascal(vue_singular)}CreateLive
+          live "/#{plural}/update/:entry_id", #{Recase.to_pascal(vue_singular)}UpdateLive
+        end
 
     ================================================================================================
     """
