@@ -81,8 +81,19 @@ defmodule Brando.LivePreview do
         unquote(block)
         processed_opts = var!(opts)
 
-        template = processed_opts[:view_template].(var!(entry))
-        section = processed_opts[:template_section].(var!(entry))
+        template =
+          if is_function(processed_opts[:view_template]) do
+            processed_opts[:view_template].(var!(entry))
+          else
+            processed_opts[:view_template]
+          end
+
+        section =
+          if is_function(processed_opts[:view_section]) do
+            processed_opts[:view_section].(var!(entry))
+          else
+            processed_opts[:view_section]
+          end
 
         # preloads
         var!(entry) =
