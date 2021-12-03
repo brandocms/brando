@@ -98,7 +98,7 @@ defmodule BrandoAdmin.Menu do
       snake_domain = domain |> Recase.to_snake()
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
-      msgid = plural
+      msgid = Brando.Utils.humanize(plural, :downcase)
 
       url_base = "/admin/#{snake_domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Menu do
       snake_domain = domain |> Recase.to_snake()
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
-      msgid = plural
+      msgid = Brando.Utils.humanize(plural, :downcase)
 
       url_base = "/admin/#{snake_domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))

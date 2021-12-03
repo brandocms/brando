@@ -69,6 +69,13 @@ defmodule Brando.Utils do
     |> String.capitalize()
   end
 
+  @spec humanize(binary, :downcase) :: binary
+  def humanize(value, :downcase) do
+    value
+    |> String.replace(["-", "_"], " ")
+    |> String.downcase()
+  end
+
   @doc """
   Generates a random basename for `filename`.
   Keeps the original extension.

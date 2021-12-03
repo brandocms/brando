@@ -34,8 +34,8 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   translations do
     context :naming do
-      translate :singular, t("<%= Recase.to_snake(schema) %>")
-      translate :plural, t("<%= Recase.to_snake(schema) %>s")
+      translate :singular, t("<%= Recase.to_snake(schema) |> Brando.Utils.humanize(:downcase) %>")
+      translate :plural, t("<%= Recase.to_snake(schema) |> Brando.Utils.humanize(:downcase) %>s")
     end
   end
 end
