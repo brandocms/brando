@@ -3,6 +3,8 @@ import slugify from 'slugify'
 
 export default (app) => ({
   async mounted() {
+    slugify.extend({ '/': '-' })
+
     let fors = []
     if (this.el.dataset.slugFor.indexOf(',') > -1) {
       fors = this.el.dataset.slugFor.split(',')      
