@@ -371,6 +371,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   @regex_splits ~r/{% ref refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
   @regex_chunks ~r/^{% ref refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/
 
+  # TODO: Is there a way we could parse and render this with liquex?
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
       @regex_splits
