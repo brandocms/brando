@@ -45,7 +45,7 @@ defmodule Brando.Villain.Filters do
 
   def inspect(value, _), do: "#{Kernel.inspect(value, pretty: true)}"
 
-  def rows(%{data: %{data: %{rows: rows}}} = val, _), do: rows
+  def rows(%{data: %{data: %{rows: rows}}}, _), do: rows
 
   def humanize(value, _), do: Brando.Utils.humanize(value)
 
