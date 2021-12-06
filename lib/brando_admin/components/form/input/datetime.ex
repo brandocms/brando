@@ -36,7 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
     assigns =
       assign(assigns,
         value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
-        class: assigns.opts[:class]
+        class: assigns.opts[:class],
+        locale: Gettext.get_locale()
       )
 
     ~H"""
@@ -50,7 +51,8 @@ defmodule BrandoAdmin.Components.Form.Input.Datetime do
       <div
         id={"#{@form.id}-#{@field}-datetimepicker"}
         class="datetime-wrapper"
-        phx-hook="Brando.DateTimePicker">
+        phx-hook="Brando.DateTimePicker"
+        data-locale={@locale}>
           <div phx-update="ignore">
             <button
               type="button"
