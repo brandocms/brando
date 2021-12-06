@@ -21,7 +21,7 @@ defmodule Brando.Plug.HTML do
       plug :put_section, "users"
   """
 
-  @spec put_section(conn, binary) :: conn
+  @spec put_section(conn, atom | binary) :: conn
   def put_section(conn, name) do
     conn
     |> put_private(:brando_section_name, name)
