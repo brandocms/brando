@@ -111,6 +111,7 @@ defmodule BrandoAdmin.Menu do
       query_params =
         default_listing.query
         |> BrandoAdmin.Menu.strip_preloads()
+        |> BrandoAdmin.Menu.encode_advanced_order()
         |> Plug.Conn.Query.encode()
         |> String.replace("%3A", ":")
         |> String.replace("%5B", "[")
@@ -150,6 +151,27 @@ defmodule BrandoAdmin.Menu do
 
   def strip_preloads(query) do
     Map.drop(query, [:preload])
+  end
+
+  def encode_advanced_order(%{order: orders} = query) do
+    order_string =
+      orders
+      |> stringify_orders()
+      |> Enum.join(", ")
+
+    Map.put(query, :order, order_string)
+  end
+
+  def encode_advanced_order(query), do: query
+
+  defp stringify_orders(orders) do
+    Enum.reduce(orders, [], fn
+      {dir, {relation, field}}, acc ->
+        acc ++ List.wrap("#{dir} #{relation}.#{field}")
+
+      {dir, field}, acc ->
+        acc ++ List.wrap("#{dir} #{field}")
+    end)
   end
 
   defmacro menu_subitem(schema) do

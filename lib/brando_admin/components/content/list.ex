@@ -242,6 +242,9 @@ defmodule BrandoAdmin.Components.Content.List do
         offset = Map.get(list_opts, :limit, 25) * page_number
         Map.put(new_list_opts, :offset, offset)
 
+      {"order", order}, new_list_opts when is_binary(order) ->
+        Map.put(new_list_opts, :order, order)
+
       {"order", order}, new_list_opts ->
         order =
           order

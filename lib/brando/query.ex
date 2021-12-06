@@ -59,6 +59,10 @@ defmodule Brando.Query do
 
         {:ok, posts} = list_posts(%{order: [{:asc, {:comments, :title}]})
 
+  or
+
+        {:ok, posts} = list_posts(%{order: "asc comments.title"})
+
 
   # Preload
 
@@ -408,7 +412,12 @@ defmodule Brando.Query do
       |> Enum.map(fn e ->
         String.trim(e)
         |> String.split(" ")
-        |> Enum.map(&String.to_atom/1)
+        |> Enum.map(fn val ->
+          case String.split(val, ".") do
+            [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
+            [val] -> String.to_atom(val)
+          end
+        end)
         |> List.to_tuple()
       end)
 
