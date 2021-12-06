@@ -1,8 +1,14 @@
 import { Dom } from '@brandocms/jupiter'
 import Flatpickr from 'flatpickr'
+import { Norwegian } from 'flatpickr/dist/l10n/no.js'
+
+const LOCALES = {
+  no: Norwegian
+}
 
 export default (app) => ({
-  mounted() {
+  mounted () {
+    this.locale = this.el.dataset.locale
     this.initialize()
   },
 
@@ -11,7 +17,7 @@ export default (app) => ({
   },
 
   initialize () {
-    const opts = {
+    let opts = {      
       enableTime: true,
       minuteIncrement: 15,
       time_24hr: true,
@@ -19,6 +25,10 @@ export default (app) => ({
       altFormat: 'l j F, Y @ H:i',
       dateFormat: 'Z',
       allowInput: true
+    }
+
+    if (this.locale !== 'en') {
+      opts = { ...opts, locale: LOCALES[this.locale] }
     }
     
     this.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
