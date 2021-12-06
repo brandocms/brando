@@ -43,9 +43,11 @@ defmodule Brando.Villain.Filters do
     Utils.Datetime.format_datetime(value, format, locale)
   end
 
-  def humanize(value, _) do
-    Brando.Utils.humanize(value)
-  end
+  def inspect(value, _), do: "#{Kernel.inspect(value, pretty: true)}"
+
+  def rows(%{data: %{data: %{rows: rows}}} = val, _), do: rows
+
+  def humanize(value, _), do: Brando.Utils.humanize(value) end
 
   @doc """
   Get key from image.
