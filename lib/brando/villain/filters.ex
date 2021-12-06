@@ -47,7 +47,7 @@ defmodule Brando.Villain.Filters do
 
   def rows(%{data: %{data: %{rows: rows}}} = val, _), do: rows
 
-  def humanize(value, _), do: Brando.Utils.humanize(value) end
+  def humanize(value, _), do: Brando.Utils.humanize(value)
 
   @doc """
   Get key from image.
