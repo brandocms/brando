@@ -56,8 +56,8 @@
 
   .timezone {
     position: absolute;
-    font-size: 13px;
+    font-size: 12px;
     margin-top: 3px;
-    right: 0;
+    left: 0;
   }
 }
