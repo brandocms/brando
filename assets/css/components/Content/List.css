@@ -304,6 +304,10 @@
       padding-left: 1vw;
     }
 
+    .main-content > div:first-of-type {
+      padding-left: 1vw;
+    }
+
     &:nth-of-type(even) {
       background-color: #fafafa;
 
@@ -418,6 +422,7 @@
         margin-left: -1px;
         border-radius: 50%;
         margin-left: -37px;
+        padding-left: 0 !important;
 
         &:hover {
           cursor: pointer;
