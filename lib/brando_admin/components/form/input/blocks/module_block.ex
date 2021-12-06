@@ -368,14 +368,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
   defp parse_module_code(%{assigns: %{module_not_found: true}} = socket), do: socket
 
-  @regex_splits ~r/{% ref refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
-  @regex_chunks ~r/^{% ref refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/
+  @regex_strips ~r/((?:{% for (\w+) in [a-zA-Z0-9_.?|"-]+ %})(?:.*?)(?:{% endfor %}))|({% assign .*? %})|(({% if .* %}(?:.*?){% endif %}))|(({% unless .* %}(?:.*?){% endunless %}))/s
+  @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
+  @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/
 
   # TODO: Is there a way we could parse and render this with liquex?
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
       @regex_splits
-      |> Regex.split(module_code, include_captures: true)
+      |> Regex.split(strip_logic(module_code), include_captures: true)
       |> Enum.map(fn chunk ->
         case Regex.run(@regex_chunks, chunk, capture: :all_names) do
           nil ->
@@ -394,6 +395,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     assign(socket, :splits, splits)
   end
+
+  defp strip_logic(module_code), do: Regex.replace(@regex_strips, module_code, "")
 
   defp render_variable("entry." <> var_path_string, assigns) do
     var_path =
