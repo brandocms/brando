@@ -15,9 +15,6 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   # prop cardinality, :atom
 
   def render(assigns) do
-    require Logger
-    Logger.error("== #{inspect(assigns, pretty: true)}")
-
     assigns =
       assigns
       |> assign_new(:label, fn -> nil end)

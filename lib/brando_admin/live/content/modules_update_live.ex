@@ -182,10 +182,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     ref = Enum.find(refs, &(&1.name == ref_name))
     update_in(ref, [Access.key(:data), Access.key(:data), Access.key(:rows)], &[new_row | &1])
 
-    require Logger
-    Logger.error(inspect(ref, pretty: true))
-    Logger.error(inspect(new_row, pretty: true))
-
     # filtered_vars = Enum.reject(vars, &(&1.key == var_key))
     # updated_changeset = put_change(changeset, :vars, filtered_vars)
 
