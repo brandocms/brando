@@ -60,10 +60,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
     available_sources =
       Enum.map(
         available_sources,
-        &%{
-          label: String.capitalize(Module.concat(List.wrap(&1)).__naming__().singular),
-          value: &1
-        }
+        fn module_bin ->
+          module = Module.concat(List.wrap(module_bin))
+          domain = module.__naming__().domain
+          schema = module.__naming__().schema
+
+          gettext_module = module.__modules__().gettext
+          gettext_domain = String.downcase("#{domain}_#{schema}_naming")
+          msgid = Brando.Utils.humanize(module.__naming__().singular, :downcase)
+
+          %{
+            label: String.capitalize(Gettext.dgettext(gettext_module, gettext_domain, msgid)),
+            value: module_bin
+          }
+        end
       )
 
     assign(socket, :available_sources, available_sources)
