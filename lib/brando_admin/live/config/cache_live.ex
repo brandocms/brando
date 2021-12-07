@@ -35,24 +35,24 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
     <div class="cache-live">
       <p class="help">
-        A cache is like a snapshot of your data that is accessed in memory to deliver content faster without rebuilding it from scratch every time. If you have changed some content and it is not reflected on the website, you can attempt to empty these caches in order to produce fresh data.
+        <%= gettext "A cache is like a snapshot of your data that is accessed in memory to deliver content faster without rebuilding it from scratch every time. If you have changed some content and it is not reflected on the website, you can attempt to empty these caches in order to produce fresh data." %>
       </p>
       <table>
         <%= for {category, entries} <- @caches do %>
           <h1><%= category %></h1>
           <tr>
-            <th>Type</th>
-            <th>Module</th>
-            <th>Cache key</th>
-            <th>Entry ID</th>
+            <th><%= gettext "Type" %></th>
+            <th><%= gettext "Module" %></th>
+            <th><%= gettext "Cache key" %></th>
+            <th><%= gettext "Entry ID" %></th>
           </tr>
           <%= for entry <- entries do %>
             <tr>
               <%= case entry do %>
                 <% {:list, module, key} -> %>
                   <td>
-                    <div class="badge">
-                      List
+                    <div class="badge no-border">
+                      <%= gettext "List" %>
                     </div>
                   </td>
                   <td>
@@ -63,12 +63,12 @@ defmodule BrandoAdmin.Sites.CacheLive do
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z"/></svg>
                     <%= key %>
                   </td>
-                  <td>N/A</td>
+                  <td></td>
 
                 <% {:single, module, key, entry_id} -> %>
                   <td>
-                    <div class="badge">
-                      Single
+                    <div class="badge no-border">
+                      <%= gettext "Single" %>
                     </div>
                   </td>
                   <td>
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
       </table>
 
       <button type="button" class="primary" phx-click={JS.push("empty_caches")}>
-        Empty all caches
+        <%= gettext "Empty all caches" %>
       </button>
     </div>
     """
