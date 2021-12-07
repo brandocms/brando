@@ -361,7 +361,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def image_drawer(assigns) do
     ~H"""
-    <Content.drawer id={"image-drawer"} title={"Image"} close={close_image()} z={1001} narrow>
+    <Content.drawer id={"image-drawer"} title={gettext "Image"} close={close_image()} z={1001} narrow>
       <%= if @image_changeset do %>
         <.form
           id="image-drawer-form"
@@ -371,36 +371,41 @@ defmodule BrandoAdmin.Components.Form do
           phx-change={JS.push("validate_image", target: @myself)}
           phx-target={@myself}>
           <div
+            id="image-drawer-form-preview"
+            phx-hook="Brando.DragDrop"
             class="image-drawer-preview"
             phx-drop-target={@uploads[@edit_image.field].ref}>
             <%= if @edit_image.image do %>
-            <figure class="grid-overlay">
-              <%#
-              <.live_component
-                module={FocalPoint}
-                id="image-drawer-focal"
-                form={@form}
-                field_name={@field}
-                focal={@focal} />
-              %>
-              <img
-                width={@edit_image.image.width}
-                height={@edit_image.image.height}
-                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
-            </figure>
+              <figure class="grid-overlay">
+                <div class="drop-indicator">
+                  <div><%= gettext "+ Drop here to upload" %></div>
+                </div>
+                <%#
+                <.live_component
+                  module={FocalPoint}
+                  id="image-drawer-focal"
+                  form={@form}
+                  field_name={@field}
+                  focal={@focal} />
+                %>
+                <img
+                  width={@edit_image.image.width}
+                  height={@edit_image.image.height}
+                  src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
+              </figure>
             <% else %>
-            <div class="img-placeholder">
-              <div class="placeholder-wrapper">
-                <div class="svg-wrapper">
-                  <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                    <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                    <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                    <circle cx="8" cy="9" r="2"/>
-                  </svg>
+              <div class="img-placeholder">
+                <div class="placeholder-wrapper">
+                  <div class="svg-wrapper">
+                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                      <circle cx="8" cy="9" r="2"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
             <% end %>
           </div>
 

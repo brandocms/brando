@@ -1,5 +1,5 @@
 export default (app) => ({
-  mounted() {
+  mounted () {
     this.el.addEventListener('dragenter', this.highlight.bind(this), false)
     this.el.addEventListener('dragover', this.highlight.bind(this), false)
     this.el.addEventListener('dragleave', this.unhighlight.bind(this), false)

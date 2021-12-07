@@ -5,6 +5,27 @@
   }
 }
 
+.drop-indicator {
+  pointer-events: none;
+  position: absolute;
+  display: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 80, 0.6);
+  font-size: 30px;
+  font-weight: bold;
+  color: white;
+  z-index: 9;
+
+  > div {
+    text-align: center;
+  }
+}
+
 .secondary + .file-input-wrapper {
   .label {
     border-top: none;
@@ -89,27 +110,6 @@
       .svg-wrapper {
         padding: 75px;
       }
-    }
-  }
-
-  .drop-indicator {
-    pointer-events: none;
-    position: absolute;
-    display: none;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 0, 80, 0.6);
-    font-size: 30px;
-    font-weight: bold;
-    color: white;
-    z-index: 9;
-
-    > div {
-      text-align: center;
     }
   }
 
