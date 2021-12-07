@@ -489,8 +489,11 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_image_uploads =
       Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
+        max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
+
         allow_upload(updated_socket, img_field.name,
           accept: :any,
+          max_file_size: max_size,
           auto_upload: true,
           progress: &__MODULE__.handle_image_progress/3
         )
