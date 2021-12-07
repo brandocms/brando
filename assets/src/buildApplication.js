@@ -215,12 +215,9 @@ export default (hooks) => {
             tl.to(keyEl, { opacity: 0 })
               .to(keyEl, { height: 0 })
               .call(() => {
-                setTimeout(() => {
-                  keyEl.remove()
-                  gsap.to($progressWrapper, { height: getHeights() })
-                }, 1000)
+                keyEl.remove()
+                gsap.to($progressWrapper, { height: getHeights() })
               })
-
           }
         } else {
           const updateProgress = document.createRange().createContextualFragment(`
