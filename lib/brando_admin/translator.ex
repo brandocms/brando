@@ -18,6 +18,21 @@ defmodule BrandoAdmin.Translator do
           msgid
         end
       end
+
+      def g(schema, context, msgid) do
+        if Brando.Blueprint.blueprint?(schema) do
+          gettext_module = schema.__modules__().gettext
+
+          gettext_domain =
+            String.downcase(
+              "#{schema.__naming__().domain}_#{schema.__naming__().schema}_#{context}"
+            )
+
+          Gettext.dgettext(gettext_module, gettext_domain, msgid)
+        else
+          msgid
+        end
+      end
     end
   end
 end
