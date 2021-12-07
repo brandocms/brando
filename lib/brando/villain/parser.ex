@@ -257,6 +257,8 @@ defmodule Brando.Villain.Parser do
         end
       end
 
+      def datasource(_, _), do: ""
+
       defoverridable datasource: 2
 
       @doc """
