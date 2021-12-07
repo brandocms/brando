@@ -139,17 +139,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                   <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
                 </div>
               <% end %>
+              <div class="button-group-vertical">
+                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @myself)}>
+                  Fetch missing refs
+                </button>
+                <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
+                  Reset all variables
+                </button>
+                <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
+                  Reset all block refs
+                </button>
+              </div>
             </div>
           </div>
         </:config>
-        <:config_footer>
-          <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
-            Reset all variables
-          </button>
-          <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
-            Reset all block refs
-          </button>
-        </:config_footer>
 
         <div b-editor-tpl={@module_class}>
           <%= unless Enum.empty?(@important_vars) do %>
@@ -269,6 +272,55 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         data_field,
         block_uid,
         %{data: %{vars: updated_vars}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "fetch_missing_refs",
+        _,
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field,
+            module_id: module_id
+          }
+        } = socket
+      ) do
+    {:ok, module} = Brando.Content.get_module(module_id)
+
+    changeset = base_form.source
+
+    current_refs = input_value(block_data, :refs)
+    current_ref_names = Enum.map(current_refs, & &1.name)
+
+    module_refs = module.refs
+    module_ref_names = Enum.map(module_refs, & &1.name)
+
+    missing_ref_names = module_ref_names -- current_ref_names
+    missing_refs = Enum.filter(module_refs, &(&1.name in missing_ref_names))
+
+    new_refs = current_refs ++ missing_refs
+
+    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(new_refs)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{refs: refs_with_generated_uids}}
       )
 
     schema = changeset.data.__struct__

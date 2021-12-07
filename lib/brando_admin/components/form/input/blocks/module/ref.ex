@@ -73,8 +73,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
         Ref <code><%= @ref_name %></code> is missing!<br><br>
         If the module has been changed, this block might be out of sync!<br><br>
         Available refs are:<br><br>
-        <%= for available_ref <- @module_refs do %>
-          &rarr; <%= inspect available_ref %>
+        <%= for {%{data: %{name: ref_name}}, _} <- @module_refs do %>
+          &rarr; <%= ref_name %><br>
         <% end %>
       </section>
     <% end %>
