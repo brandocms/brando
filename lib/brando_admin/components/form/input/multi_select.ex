@@ -240,9 +240,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           class="button-edit"
           phx-click={show_modal("##{@modal_id}")}>
           <%= if @open do %>
-            Close
+            <%= gettext "Close" %>
           <% else %>
-            Select
+            <%= gettext "Select" %>
           <% end %>
         </button>
         <.live_component module={Modal} title="Select options" id={@modal_id} narrow={@narrow}>
