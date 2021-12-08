@@ -8,11 +8,15 @@ defmodule Brando.Cache.SEO do
   @type seo :: Brando.Sites.SEO.t()
   @type changeset :: Ecto.Changeset.t()
 
+  @empty_seo %Sites.SEO{
+    fallback_meta_image: nil
+  }
+
   @doc """
   Get SEO from cache
   """
   @spec get(binary()) :: map()
-  def get(language), do: Map.get(Cache.get(:seo), language, %{})
+  def get(language), do: Map.get(Cache.get(:seo), language, @empty_seo)
 
   @doc """
   Set initial SEO cache. Called on startup
@@ -41,13 +45,7 @@ defmodule Brando.Cache.SEO do
   defp process_seos(seos) do
     Enum.reduce(seos, %{}, fn
       %{language: language} = seo, acc ->
-        put_in(
-          acc,
-          [
-            Brando.Utils.access_map(to_string(language))
-          ],
-          seo
-        )
+        put_in(acc, [Brando.Utils.access_map(to_string(language))], seo)
     end)
   end
 end
