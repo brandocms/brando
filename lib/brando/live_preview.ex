@@ -89,10 +89,10 @@ defmodule Brando.LivePreview do
           end
 
         section =
-          if is_function(processed_opts[:view_section]) do
-            processed_opts[:view_section].(var!(entry))
+          if is_function(processed_opts[:template_section]) do
+            processed_opts[:template_section].(var!(entry))
           else
-            processed_opts[:view_section]
+            processed_opts[:template_section]
           end
 
         # preloads
