@@ -65,27 +65,25 @@ defmodule Brando.Images.Operations.Sizing do
      }}
   end
 
-  def create_image_size(
-        %Images.Operation{
-          type: type,
-          image_id: image_id,
-          processed_formats: processed_formats,
-          total_operations: total_operations,
-          operation_index: operation_index,
-          image_struct: %{
-            path: image_src,
-            focal: focal,
-            width: width,
-            height: height
-          },
-          filename: filename,
-          sized_image_path: image_dest,
-          sized_image_dir: image_dest_dir,
-          size_key: size_key,
-          size_cfg: size_cfg,
-          user: user
-        } = op
-      ) do
+  def create_image_size(%Images.Operation{
+        type: type,
+        image_id: image_id,
+        processed_formats: processed_formats,
+        total_operations: total_operations,
+        operation_index: operation_index,
+        image_struct: %{
+          path: image_src,
+          focal: focal,
+          width: width,
+          height: height
+        },
+        filename: filename,
+        sized_image_path: image_dest,
+        sized_image_dir: image_dest_dir,
+        size_key: size_key,
+        size_cfg: size_cfg,
+        user: user
+      }) do
     format = maybe_change_format(type)
     image_src_path = Images.Utils.media_path(image_src)
     image_dest_path = Images.Utils.media_path(image_dest)
