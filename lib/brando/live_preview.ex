@@ -129,7 +129,7 @@ defmodule Brando.LivePreview do
         conn =
           Phoenix.ConnTest.build_conn()
           |> Brando.Plug.HTML.put_section(section)
-          |> Plug.Conn.assign(:language, language)
+          |> Plug.Conn.assign(:language, to_string(language))
 
         render_assigns =
           ([
