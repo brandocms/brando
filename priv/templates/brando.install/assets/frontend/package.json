@@ -16,7 +16,7 @@
     "postcss-preset-env": "^7.0.1",
     "postcss-reporter": "^7.0.3",
     "stylelint": "^14.1.0",
-    "vite": "^2.6.14"
+    "vite": "^2.7.1"
   },
   "dependencies": {
     "@brandocms/jupiter": "^3.42.4",
