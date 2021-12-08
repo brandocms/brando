@@ -538,16 +538,15 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     full_path = path ++ [relation_field]
-
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
-
     updated_edit_image = Map.put(edit_image, :image, nil)
 
     {:noreply,
      socket
      |> assign(:image_changeset, nil)
      |> assign(:edit_image, updated_edit_image)
-     |> assign(:changeset, updated_changeset)}
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{})}
   end
 
   def handle_event(
@@ -574,7 +573,8 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, updated_edit_image)
      |> assign(:image_changeset, image_changeset)
-     |> assign(:changeset, updated_changeset)}
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{})}
   end
 
   def handle_event(
