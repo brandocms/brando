@@ -269,7 +269,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      updated_changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply, socket}
@@ -295,7 +296,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      updated_changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply, socket}
@@ -340,7 +342,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      updated_changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply, socket}

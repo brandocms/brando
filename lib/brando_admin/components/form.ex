@@ -42,6 +42,13 @@ defmodule BrandoAdmin.Components.Form do
      |> force_svelte_remounts()}
   end
 
+  def update(%{updated_changeset: updated_changeset, force_validation: true}, socket) do
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{})}
+  end
+
   def update(%{updated_changeset: updated_changeset}, socket) do
     {:ok, assign(socket, :changeset, updated_changeset)}
   end
