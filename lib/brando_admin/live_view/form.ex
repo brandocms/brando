@@ -88,7 +88,7 @@ defmodule BrandoAdmin.LiveView.Form do
     assign(socket, :form_action, action)
   end
 
-  defp attach_hooks(socket, schema) do
+  defp attach_hooks(socket, _schema) do
     socket
     |> attach_hook(:b_form_events, :handle_event, fn
       "update_focal_point",
