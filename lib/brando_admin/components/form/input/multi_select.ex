@@ -245,7 +245,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <%= gettext "Select" %>
           <% end %>
         </button>
-        <.live_component module={Modal} title="Select options" id={@modal_id} narrow={@narrow}>
+        <.live_component module={Modal} title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
           <:header>
             <%= if @select_form && !@creating do %>
               <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create {@singular}</button>
@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <div class="field-wrapper">
                 <div class="label-wrapper">
                   <label for="select-modal-search" class="control-label">
-                    <span>Filter options</span>
+                    <span><%= gettext "Filter options" %></span>
                   </label>
                 </div>
                 <div class="field-base">
@@ -270,9 +270,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <%= if !@creating do %>
               <div class="select-modal">
                 <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
-                  <h2 class="titlecase">Available options</h2>
+                  <h2 class="titlecase"><%= gettext "Available options" %></h2>
                   <%= if Enum.empty?(@input_options) do %>
-                    No options found
+                    <%= gettext "No options found" %>
                   <% end %>
                   <%= for opt <- @input_options do %>
                     <button

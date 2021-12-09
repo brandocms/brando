@@ -201,7 +201,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <%= gettext "Select" %>
             <% end %>
           </button>
-          <.live_component module={Modal} title="Select option" id={@modal_id} narrow={@narrow}>
+          <.live_component module={Modal} title={gettext "Select option"} id={@modal_id} narrow={@narrow}>
             <div class="select-modal">
               <%= if @show_filter && !Enum.empty?(@input_options) do %>
                 <div
@@ -222,7 +222,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <% end %>
 
               <div class="options">
-                <h2 class="titlecase">Available options</h2>
+                <h2 class="titlecase"><%= gettext "Available options" %></h2>
                 <%= if Enum.empty?(@input_options) do %>
                   <%= gettext("No options found") %>
                 <% end %>
