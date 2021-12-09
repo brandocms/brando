@@ -750,16 +750,29 @@ defmodule BrandoAdmin.Components.Form do
     # one day i will figure out why this is neccessary...
     new_changeset = Villain.reject_blocks_marked_as_deleted(schema, changeset)
 
-    case new_changeset.valid? do
-      true ->
-        send(self(), {:save, new_changeset, form})
-        {:noreply, socket}
+    # if redirect_on_save is set in form, use this
+    redirect_fn =
+      form.redirect_on_save ||
+        fn socket, _entry ->
+          generated_list_view = schema.__modules__().admin_list_view
+          Brando.routes().admin_live_path(socket, generated_list_view)
+        end
 
-      false ->
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    mutation_type = (Ecto.Changeset.get_field(new_changeset, :id) && "update") || "create"
+
+    case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
+      {:ok, entry} ->
+        send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
+        {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry))}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply,
          socket
-         |> assign(changeset: new_changeset)
-         |> push_errors(new_changeset, form)}
+         |> assign(:changeset, changeset)
+         |> push_errors(changeset, form)}
     end
   end
 

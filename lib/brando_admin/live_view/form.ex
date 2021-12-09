@@ -110,29 +110,6 @@ defmodule BrandoAdmin.LiveView.Form do
         {:cont, socket}
     end)
     |> attach_hook(:b_form_infos, :handle_info, fn
-      {:save, changeset, form}, %{assigns: %{current_user: user}} = socket ->
-        # if redirect_on_save is set in form, use this
-        redirect_fn =
-          form.redirect_on_save ||
-            fn socket, _entry ->
-              generated_list_view = schema.__modules__().admin_list_view
-              Brando.routes().admin_live_path(socket, generated_list_view)
-            end
-
-        singular = schema.__naming__().singular
-        context = schema.__modules__().context
-
-        mutation_type = (Ecto.Changeset.get_field(changeset, :id) && "update") || "create"
-
-        case apply(context, :"#{mutation_type}_#{singular}", [changeset, user]) do
-          {:ok, entry} ->
-            send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
-            {:halt, push_redirect(socket, to: redirect_fn.(socket, entry))}
-
-          {:error, %Ecto.Changeset{} = changeset} ->
-            {:halt, assign(socket, changeset: changeset)}
-        end
-
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}
