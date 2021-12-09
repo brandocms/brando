@@ -2,13 +2,11 @@ defmodule Brando.HTMLTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
   use RouterHelper
-
   import Brando.HTML
   import Brando.Utils, only: [media_url: 0]
   import Phoenix.HTML, only: [safe_to_string: 1]
   import Phoenix.LiveViewTest
   import Phoenix.LiveView.Helpers
-
   alias Brando.Factory
 
   doctest Brando.HTML
@@ -115,11 +113,16 @@ defmodule Brando.HTMLTest do
       autoplay: true
     ]
 
-    assert video_tag("https://src.vid", opts) ==
-             {
-               :safe,
-               "\n      <div style=\"--aspect-ratio: 0.75\" class=\"video-wrapper\" data-smart-video>\n        \n        \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n        <video\n          width=\"400\"\n          height=\"300\"\n          alt=\"\"\n          tabindex=\"0\"\n          role=\"presentation\"\n          preload=\"auto\"\n          autoplay\n          muted\n          loop\n          playsinline\n          data-video\n          poster=\"my_poster.jpg\"\n          data-src=\"https://src.vid\"\n          ></video>\n        <noscript>\n          <video\n            width=\"400\"\n            height=\"300\"\n            alt=\"\"\n            tabindex=\"0\"\n            role=\"presentation\"\n            preload=\"metadata\"\n            muted\n            loop\n            playsinline\n            src=\"https://src.vid\"></video>\n        </noscript>\n      </div>\n      "
-             }
+    assigns = %{
+      __changed__: %{}
+    }
+
+    comp = ~H"""
+    <.video_tag video={"https://src.vid"} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "<div class=\"video-wrapper\" data-smart-video style=\"--aspect-ratio: 0.75\">\n  \n  \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"my_poster.jpg\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n</div>"
   end
 
   test "img_tag" do

@@ -27,8 +27,7 @@ defmodule Brando.HTML do
   defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(assigns), to: Brando.Meta.HTML
-  defdelegate video_tag(src), to: Brando.HTML.Video
-  defdelegate video_tag(src, opts), to: Brando.HTML.Video
+  defdelegate video_tag(assigns), to: Brando.HTML.Video
 
   @doc """
   Link preload fonts

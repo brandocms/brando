@@ -341,7 +341,7 @@ defmodule Brando.Villain.Parser do
 
       # Convert file video to html
       def video(%{remote_id: src, source: :file} = data, _) do
-        video_tag(src,
+        opts = [
           width: data.width,
           height: data.height,
           cover: :svg,
@@ -349,8 +349,9 @@ defmodule Brando.Villain.Parser do
           poster: data.poster || nil,
           preload: data.preload || true,
           opacity: data.opacity || 0.1
-        )
-        |> safe_to_string()
+        ]
+
+        Phoenix.LiveViewTest.rendered_to_string(video_tag(%{video: src, opts: opts}))
       end
 
       def video(_, _), do: ""
