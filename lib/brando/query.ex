@@ -535,6 +535,7 @@ defmodule Brando.Query do
   def run_single_query_reducer(context, args, module) do
     Enum.reduce(args, module, fn
       {_, nil}, q -> q
+      {:select, select}, q -> with_select(q, select)
       {:limit, limit}, q -> limit(q, ^limit)
       {:status, status}, q -> with_status(q, status)
       {:preload, preload}, q -> with_preload(q, preload)
