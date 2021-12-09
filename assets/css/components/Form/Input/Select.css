@@ -1,5 +1,5 @@
 h2.titlecase {
-  font-size: 12px;
+  font-size: 12px !important;
   text-transform: uppercase;
   font-weight: normal;
   margin-top: 10px;
