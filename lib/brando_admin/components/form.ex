@@ -12,10 +12,11 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Blocks.Utils
+  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
-  alias BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   def mount(socket) do
     {:ok,
@@ -387,14 +388,11 @@ defmodule BrandoAdmin.Components.Form do
                 <div class="drop-indicator">
                   <div><%= gettext "+ Drop here to upload" %></div>
                 </div>
-                <%#
                 <.live_component
                   module={FocalPoint}
-                  id="image-drawer-focal"
-                  form={@form}
-                  field_name={@field}
-                  focal={@focal} />
-                %>
+                  id={"image-drawer-focal-#{@edit_image.id}"}
+                  image={@edit_image}
+                  form={image_form} />
                 <img
                   width={@edit_image.image.width}
                   height={@edit_image.image.height}
@@ -573,7 +571,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset =
       EctoNestedChangeset.update_at(changeset, full_path, fn _ -> selected_image_id end)
 
-    updated_edit_image = Map.put(edit_image, :image, image)
+    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
     image_changeset = Ecto.Changeset.change(image)
 
     {:noreply,
@@ -624,6 +622,14 @@ defmodule BrandoAdmin.Components.Form do
       |> Map.put(:action, :update)
 
     {:ok, updated_image} = Brando.Images.update_image(validated_changeset, current_user)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Images.Image,
+      updated_image,
+      validated_changeset,
+      current_user
+    )
+
     edit_image = Map.put(edit_image, :image, updated_image)
 
     full_path = path ++ [relation_field]
@@ -750,23 +756,24 @@ defmodule BrandoAdmin.Components.Form do
     # one day i will figure out why this is neccessary...
     new_changeset = Villain.reject_blocks_marked_as_deleted(schema, changeset)
 
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    mutation_type = (Ecto.Changeset.get_field(new_changeset, :id) && :update) || :create
+
     # if redirect_on_save is set in form, use this
     redirect_fn =
       form.redirect_on_save ||
-        fn socket, _entry ->
+        fn socket, _entry, _mutation_type ->
           generated_list_view = schema.__modules__().admin_list_view
           Brando.routes().admin_live_path(socket, generated_list_view)
         end
 
-    singular = schema.__naming__().singular
-    context = schema.__modules__().context
-
-    mutation_type = (Ecto.Changeset.get_field(new_changeset, :id) && "update") || "create"
-
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
+        Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
-        {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry))}
+        {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply,
@@ -885,7 +892,7 @@ defmodule BrandoAdmin.Components.Form do
       Brando.Images.Processing.queue_processing(image, current_user)
 
       image_changeset = Ecto.Changeset.change(image)
-      edit_image = Map.put(edit_image, :image, image)
+      edit_image = Map.merge(edit_image, %{id: image.id, image: image})
 
       {:noreply,
        socket

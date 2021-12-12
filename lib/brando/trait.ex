@@ -19,6 +19,7 @@ defmodule Brando.Trait do
   @callback trait_assets(list(), list(), list()) :: list()
   @callback trait_relations(list(), list(), list()) :: list()
   @callback validate(module, config) :: true | no_return
+  @callback after_save(entry, changeset, user) :: any()
 
   defmacro __using__(_) do
     defprotocol Module.concat([__CALLER__.module, Implemented]) do
@@ -48,6 +49,9 @@ defmodule Brando.Trait do
 
       def trait_attributes(_, _, _), do: []
       defoverridable trait_attributes: 3
+
+      def after_save(_, _, _), do: :ok
+      defoverridable after_save: 3
 
       def list_implementations, do: list_implementations(__MODULE__)
     end
@@ -151,5 +155,11 @@ defmodule Brando.Trait do
   def list_implementations(trait) do
     {:consolidated, impls} = Module.concat([trait, Implemented]).__protocol__(:impls)
     impls
+  end
+
+  def run_trait_after_save_callbacks(schema, entry, changeset, user) do
+    for {trait, _} <- schema.__traits__() do
+      trait.after_save(entry, changeset, user)
+    end
   end
 end
