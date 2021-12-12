@@ -27,6 +27,10 @@ defmodule Brando.Blueprint.Upload do
     changeset
   end
 
+  defp do_validate_upload(changeset, {:file, _field_name}, _user, _cfg) do
+    changeset
+  end
+
   defp do_validate_upload(changeset, {:gallery, _field_name}, _user, _cfg) do
     changeset
   end
