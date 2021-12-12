@@ -116,10 +116,10 @@ defmodule Brando.Blueprint.Form do
   ## Example
 
       form do
-        redirect_on_save &__MODULE__.my_custom_redirect/2
+        redirect_on_save &__MODULE__.my_custom_redirect/3
       end
 
-      def my_custom_redirect(socket, _entry) do
+      def my_custom_redirect(socket, _entry, _mutation_type) do
         Brando.routes().admin_live_path(socket, BrandoAdmin.PageListView)
       end
   """
@@ -142,18 +142,18 @@ defmodule Brando.Blueprint.Form do
           """
       end
 
-      unless is_function(unquote(target), 2) do
+      unless is_function(unquote(target), 3) do
         raise Brando.Exception.BlueprintError,
           message: """
-          `redirect_on_save/1` needs a 2-arity function as parameter
+          `redirect_on_save/1` needs a 3-arity function as parameter
 
           Example:
 
               form do
-                redirect_on_save &__MODULE__.my_custom_redirect/2
+                redirect_on_save &__MODULE__.my_custom_redirect/3
               end
 
-              def my_custom_redirect(socket, entry) do
+              def my_custom_redirect(socket, entry, mutation_type) do
                 # ...
               end
           """
