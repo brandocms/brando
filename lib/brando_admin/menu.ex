@@ -203,6 +203,7 @@ defmodule BrandoAdmin.Menu do
       query_params =
         default_listing.query
         |> BrandoAdmin.Menu.strip_preloads()
+        |> BrandoAdmin.Menu.encode_advanced_order()
         |> Plug.Conn.Query.encode()
         |> String.replace("%3A", ":")
         |> String.replace("%5B", "[")
