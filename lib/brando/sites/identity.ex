@@ -58,7 +58,7 @@ defmodule Brando.Sites.Identity do
   forms do
     form do
       form_query &__MODULE__.query_with_preloads/1
-      redirect_on_save &__MODULE__.redirect/2
+      redirect_on_save &__MODULE__.redirect/3
 
       tab "Content" do
         fieldset do
@@ -139,7 +139,7 @@ defmodule Brando.Sites.Identity do
     end
   end
 
-  def redirect(socket, _entry) do
+  def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.IdentityLive)
   end
 

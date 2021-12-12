@@ -45,7 +45,7 @@ defmodule Brando.Sites.SEO do
 
   forms do
     form do
-      redirect_on_save &__MODULE__.redirect/2
+      redirect_on_save &__MODULE__.redirect/3
 
       tab "Content" do
         fieldset do
@@ -88,7 +88,7 @@ defmodule Brando.Sites.SEO do
     end
   end
 
-  def redirect(socket, _entry) do
+  def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.SEOLive)
   end
 end

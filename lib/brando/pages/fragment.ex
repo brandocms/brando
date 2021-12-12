@@ -66,7 +66,7 @@ defmodule Brando.Pages.Fragment do
 
   forms do
     form do
-      redirect_on_save &__MODULE__.redirect/2
+      redirect_on_save &__MODULE__.redirect/3
 
       tab "Content" do
         fieldset size: :half do
@@ -104,7 +104,7 @@ defmodule Brando.Pages.Fragment do
     end
   end
 
-  def redirect(socket, _entry) do
+  def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageListLive)
   end
 
