@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
   # data x, :number
   # data y, :number
 
-  def update(%{focal: %{x: x, y: y}} = assigns, socket) do
+  def update(%{image: %{image: %{focal: %{x: x, y: y}}}} = assigns, socket) do
     socket =
       socket
       |> assign(assigns)
@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
     {:ok, socket}
   end
 
-  def update(%{focal: nil} = assigns, socket) do
+  def update(%{image: %{image: %{focal: nil}}} = assigns, socket) do
     socket =
       socket
       |> assign(assigns)
@@ -32,14 +32,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{@form.id}-#{@field_name}-image-focal-point"}
+      id={"#{@form.id}-#{@image.image.id}-image-focal-point"}
       class="focus-point"
       phx-hook="Brando.FocalPoint"
-      data-field={"#{@field_name}"}
       data-x={"#{@x}"}
       data-y={"#{@y}"}>
-      <input type="hidden" name={"#{@form.name}[#{@field_name}][focal][x]"} value={@x} />
-      <input type="hidden" name={"#{@form.name}[#{@field_name}][focal][y]"} value={@y} />
+      <input type="hidden" name={"#{@form.name}[focal][x]"} value={@x} />
+      <input type="hidden" name={"#{@form.name}[focal][y]"} value={@y} />
 
       <div phx-update="ignore">
         <div class="focus-point-pin"></div>

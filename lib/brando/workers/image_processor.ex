@@ -30,12 +30,6 @@ defmodule Brando.Worker.ImageProcessor do
         },
         user
       )
-
-      # Phoenix.PubSub.broadcast(
-      #   Brando.pubsub(),
-      #   "brando:image_updated",
-      #   {schema, [:image, :updated], []}
-      # )
     else
       err ->
         {:error, err}
