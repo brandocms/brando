@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
     <Content.header
       title={gettext("Global sets")}
       subtitle={gettext("Overview")}>
-      <%= live_patch "Create new set", to: "/admin/config/global_sets/create", class: "primary" %>
+      <%= live_patch gettext("Create new"), to: "/admin/config/global_sets/create", class: "primary" %>
     </Content.header>
 
     <.live_component module={Content.List}

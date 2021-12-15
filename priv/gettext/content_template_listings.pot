@@ -1,0 +1,41 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:49
+msgid "Are you sure?"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:47
+msgid "Delete template"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:51
+msgid "Duplicate template"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:45
+msgid "Edit template"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:40
+msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/content/template.ex:41
+msgid "Namespace"
+msgstr ""

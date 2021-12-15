@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Content.PaletteListLive do
     <Content.header
       title={gettext("Content Palettes")}
       subtitle={gettext("Overview")}>
-      <%= live_patch "Create new", to: "/admin/config/content/palettes/create", class: "primary" %>
+      <%= live_patch gettext("Create new"), to: "/admin/config/content/palettes/create", class: "primary" %>
     </Content.header>
 
     <.live_component module={Content.List}

@@ -63,19 +63,19 @@ defmodule Brando.Content.Module do
       }
 
       filters([
-        [label: gettext("Name"), filter: "name"],
-        [label: gettext("Namespace"), filter: "namespace"],
-        [label: gettext("Class"), filter: "class"]
+        [label: t("Name"), filter: "name"],
+        [label: t("Namespace"), filter: "namespace"],
+        [label: t("Class"), filter: "class"]
       ])
 
       actions([
-        [label: gettext("Edit module"), event: "edit_entry"],
+        [label: t("Edit module"), event: "edit_entry"],
         [
-          label: gettext("Delete module"),
+          label: t("Delete module"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ],
-        [label: gettext("Duplicate module"), event: "duplicate_entry"]
+        [label: t("Duplicate module"), event: "duplicate_entry"]
       ])
 
       template(
@@ -106,6 +106,13 @@ defmodule Brando.Content.Module do
         """,
         columns: 9
       )
+    end
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("module")
+      translate :plural, t("modules")
     end
   end
 end

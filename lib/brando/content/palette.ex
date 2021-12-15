@@ -38,7 +38,7 @@ defmodule Brando.Content.Palette do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset size: :half do
           input :global, :toggle
           input :name, :text
@@ -70,18 +70,18 @@ defmodule Brando.Content.Palette do
       }
 
       filters([
-        [label: gettext("Name"), filter: "name"],
-        [label: gettext("Color"), filter: "color"]
+        [label: t("Name"), filter: "name"],
+        [label: t("Color"), filter: "color"]
       ])
 
       actions([
-        [label: gettext("Edit palette"), event: "edit_entry"],
+        [label: t("Edit palette"), event: "edit_entry"],
         [
-          label: gettext("Delete palette"),
+          label: t("Delete palette"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ],
-        [label: gettext("Duplicate palette"), event: "duplicate_entry"]
+        [label: t("Duplicate palette"), event: "duplicate_entry"]
       ])
 
       template(

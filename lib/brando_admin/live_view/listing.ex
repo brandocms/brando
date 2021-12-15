@@ -72,15 +72,29 @@ defmodule BrandoAdmin.LiveView.Listing do
 
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
         singular = schema.__naming__().singular
+        domain = schema.__naming__().domain
         context = schema.__modules__().context
+        msgid = Brando.Utils.humanize(singular, :downcase)
+
+        gettext_module = schema.__modules__(:gettext)
+        gettext_domain = String.downcase("#{domain}_#{singular}_naming")
+
+        translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
 
         case apply(context, :"delete_#{singular}", [entry_id, user]) do
           {:ok, _} ->
-            send(self(), {:toast, "#{String.capitalize(singular)} deleted"})
+            send(
+              self(),
+              {:toast, "#{String.capitalize(translated_singular)} #{gettext("deleted")}"}
+            )
+
             update_list_entries(schema)
 
           {:error, _error} ->
-            send(self(), {:toast, "Error deleting #{String.capitalize(singular)}"})
+            send(
+              self(),
+              {:toast, "#{gettext("Error deleting")} #{String.capitalize(translated_singular)}"}
+            )
         end
 
         {:halt, socket}

@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       title={gettext("Content Modules")}
       subtitle={gettext("Overview")}>
       <button class="primary" phx-click={JS.push("create_module")}>
-        Create new module
+        <%= gettext "Create new" %>
       </button>
     </Content.header>
 

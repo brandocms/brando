@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
     <Content.header
       title={gettext("Navigation")}
       subtitle={gettext("Overview")}>
-      <%= live_patch "Create new", to: "/admin/config/navigation/menus/create", class: "primary" %>
+      <%= live_patch gettext("Create new"), to: "/admin/config/navigation/menus/create", class: "primary" %>
     </Content.header>
 
     <.live_component module={Content.List}

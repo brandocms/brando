@@ -37,18 +37,18 @@ defmodule Brando.Content.Template do
       }
 
       filters([
-        [label: gettext("Name"), filter: "name"],
-        [label: gettext("Namespace"), filter: "namespace"]
+        [label: t("Name"), filter: "name"],
+        [label: t("Namespace"), filter: "namespace"]
       ])
 
       actions([
-        [label: gettext("Edit template"), event: "edit_entry"],
+        [label: t("Edit template"), event: "edit_entry"],
         [
-          label: gettext("Delete template"),
+          label: t("Delete template"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ],
-        [label: gettext("Duplicate template"), event: "duplicate_entry"]
+        [label: t("Duplicate template"), event: "duplicate_entry"]
       ])
 
       template(
@@ -77,7 +77,7 @@ defmodule Brando.Content.Template do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset size: :half do
           input :name, :text
           input :namespace, :text, monospace: true
