@@ -772,21 +772,33 @@ defmodule Brando.Villain.Parser do
       def container(%{blocks: blocks, palette_id: palette_id}, opts) do
         palettes = opts.palettes
 
-        {:ok, palette} = Content.find_palette(palettes, palette_id)
+        with {:ok, palette} <- Content.find_palette(palettes, palette_id) do
+          blocks_html =
+            (blocks || [])
+            |> Enum.reduce([], fn d, acc ->
+              [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
+            end)
+            |> Enum.reverse()
+            |> Enum.join("")
 
-        blocks_html =
-          (blocks || [])
-          |> Enum.reduce([], fn d, acc ->
-            [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
-          end)
-          |> Enum.reverse()
-          |> Enum.join("")
-
-        """
-        <section b-section="#{palette.namespace}-#{palette.key}">
-          #{blocks_html}
-        </section>
-        """
+          """
+          <section b-section="#{palette.namespace}-#{palette.key}">
+            #{blocks_html}
+          </section>
+          """
+        else
+          {:error, {:palette, :not_found, nil}} ->
+            """
+            <div>
+              <code>>>> Error parsing container module <<<</code><br><br>
+              <code>
+                Could not find palette [#{palette_id}].<br>
+                Make sure that you have selected an existing and
+                valid palette in the container block.
+              </code>
+            </div>
+            """
+        end
       end
 
       defoverridable container: 2
