@@ -153,6 +153,10 @@ defmodule BrandoAdmin.Menu do
     Map.drop(query, [:preload])
   end
 
+  def encode_advanced_order(%{order: orders} = query) when is_binary(orders) do
+    query
+  end
+
   def encode_advanced_order(%{order: orders} = query) do
     order_string =
       orders
