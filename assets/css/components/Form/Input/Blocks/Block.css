@@ -110,6 +110,17 @@
     }
   }
 
+  &.collapsed {
+    .block {
+      min-height: 49px;
+      padding: 0;
+    }
+
+    .block-content {
+      display: none;
+    }
+  }
+
   &.multi {
     > [data-type="module"] {
       background-color: transparent;
