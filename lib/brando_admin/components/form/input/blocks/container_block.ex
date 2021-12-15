@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
   alias BrandoAdmin.Components.Form.Input
@@ -142,17 +143,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               <% end %>
             </div>
           <% else %>
-            No palette selected
+            <%= gettext "No palette selected" %>
           <% end %>
         </:description>
         <:config>
           <%= if @selected_palette do %>
-            <div class="instructions mb-1">Select a new palette:</div>
+            <div class="instructions mb-1"><%= gettext "Select a new palette" %>:</div>
             <.live_component
               module={Input.Select}
               id={"#{@block_data.id}-palette-select"}
               form={@block_data}
               field={:palette_id}
+              label={gettext "Palette"}
               opts={[options: @palette_options]}
             />
           <% end %>
@@ -163,6 +165,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
+            label={gettext "Palette"}
             opts={[options: @palette_options]}
           />
         <% end %>

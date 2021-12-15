@@ -185,15 +185,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   </figure>
                   <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
                     <div>
-                      <span>{gettext("Caption")}</span>
+                      <span><%= gettext("Caption") %></span>
                       <%= raw(img.title || "{ No caption }") %>
                     </div>
                     <div>
-                      <span>{gettext("Alt. text")}</span>
+                      <span><%= gettext("Alt. text") %></span>
                       <%= img.alt || "{ No alt text }" %>
                     </div>
                     <div>
-                      <span>{gettext("Dimensions")}</span>
+                      <span><%= gettext("Dimensions") %></span>
                       <%= img.width %>&times;<%= img.height %>
                     </div>
                   </figcaption>
