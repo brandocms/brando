@@ -392,6 +392,14 @@ defmodule Brando.Query do
           )
         )
 
+      {dir, {join_assoc_1, join_assoc_2, order_field}}, query ->
+        from(
+          q in query,
+          left_join: j in assoc(q, ^join_assoc_1),
+          left_join: j2 in assoc(j, ^join_assoc_2),
+          order_by: [{^dir, field(j2, ^order_field)}]
+        )
+
       {dir, {join_assoc, order_field}}, query ->
         from(
           q in query,
@@ -414,6 +422,7 @@ defmodule Brando.Query do
         |> String.split(" ")
         |> Enum.map(fn val ->
           case String.split(val, ".") do
+            [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
             [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
             [val] -> String.to_atom(val)
           end
