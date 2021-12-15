@@ -208,7 +208,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     duplicated_block =
       data
       |> Enum.at(source_position)
-      |> Map.put(:uid, Brando.Utils.random_string(13) |> String.upcase())
+      |> replace_uids()
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
     updated_changeset = put_change(changeset, data_field, new_data)
@@ -223,5 +223,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   defp get_blocks_data(changeset) do
     get_field(changeset, :data) || []
+  end
+
+  defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
+    updated_refs = Brando.Villain.add_uid_to_refs(refs)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
   end
 end
