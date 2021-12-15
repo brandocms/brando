@@ -113,4 +113,6 @@ defmodule Brando do
   Concat the configured web module with `module`
   """
   def web_module(module), do: Module.concat(config(:web_module), module)
+
+  defdelegate global(language, set, key), to: Brando.Sites
 end

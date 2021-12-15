@@ -261,6 +261,10 @@ defmodule Brando.Sites do
     end
   end
 
+  def global(language, cat_key, key) do
+    get_in(Cache.Globals.get(language), [cat_key, key])
+  end
+
   @doc """
   Get global by key path
   """
