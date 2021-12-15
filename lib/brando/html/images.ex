@@ -114,6 +114,17 @@ defmodule Brando.HTML.Images do
     end
   end
 
+  def picture_tag(%Ecto.Association.NotLoaded{} = not_loaded, _opts) do
+    """
+    <div>
+    <code>
+      Trying to call picture_tag on an unloaded association<br><br>
+      #{inspect(not_loaded, structs: false, pretty: true)}
+    </code>
+    """
+    |> Phoenix.HTML.raw()
+  end
+
   # when we're not given a struct
   def picture_tag(img_map, opts) do
     #! TODO: this is very hacky, but only a stopgap until we do away
@@ -123,6 +134,7 @@ defmodule Brando.HTML.Images do
 
     require Logger
     Logger.error("==> picture_tag called with map")
+    Logger.error(inspect(img_map, pretty: true))
 
     opts =
       if img_map["original"] && String.starts_with?(img_map["original"], "/media") do
