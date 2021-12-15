@@ -678,12 +678,8 @@ module.exports = {
           'sans-serif'
         ],
 
-        serif: [
-          'Georgia',
-          'Cambria',
-          '"Times New Roman"',
-          'Times',
-          'serif'
+        blocks: [
+          'Blocks',
         ],
 
         mono: [

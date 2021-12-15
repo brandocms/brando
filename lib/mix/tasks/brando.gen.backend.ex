@@ -36,16 +36,29 @@ defmodule Mix.Tasks.Brando.Gen.Backend do
       # Backend resources
       {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
       {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
+      {:copy, "assets/backend/public/fonts/Blocks-Bold.woff2",
+       "assets/backend/public/fonts/Blocks-Bold.woff2"},
+      {:copy, "assets/backend/public/fonts/Blocks-Light.woff2",
+       "assets/backend/public/fonts/Blocks-Light.woff2"},
+      {:copy, "assets/backend/public/fonts/Blocks-Medium.woff2",
+       "assets/backend/public/fonts/Blocks-Medium.woff2"},
+      {:copy, "assets/backend/public/fonts/Blocks-Regular.woff2",
+       "assets/backend/public/fonts/Blocks-Medium.woff2"},
+      {:copy, "assets/backend/public/fonts/Manrope-Bold.woff2",
+       "assets/backend/public/fonts/Manrope-Bold.woff2"},
+      {:copy, "assets/backend/public/fonts/Manrope-Light.woff2",
+       "assets/backend/public/fonts/Manrope-Light.woff2"},
+      {:copy, "assets/backend/public/fonts/Manrope-Medium.woff2",
+       "assets/backend/public/fonts/Manrope-Medium.woff2"},
+      {:copy, "assets/backend/public/fonts/Manrope-Regular.woff2",
+       "assets/backend/public/fonts/Manrope-Regular.woff2"},
       {:copy, "assets/backend/public/images/admin/avatar.svg",
        "assets/backend/public/images/admin/avatar.svg"},
 
       # Backend src
       {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
       {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
-      {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"},
-      {:copy, "assets/backend/css/fonts.css", "assets/backend/css/fonts.css"}
-
-      # {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
+      {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"}
     ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)

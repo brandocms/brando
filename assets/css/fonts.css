@@ -1,27 +1,55 @@
 @font-face {
+  font-family: 'Blocks';
+  src: url('/fonts/Blocks-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Blocks';
+  src: url('/fonts/Blocks-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Blocks';
+  src: url('/fonts/Blocks-Bold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Blocks';
+  src: url('/fonts/Blocks-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
   font-family: 'Main';
-  src: url('/fonts/Regular.woff2') format('woff2');
+  src: url('/fonts/Manrope-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Main';
-  src: url('/fonts/Medium.woff2') format('woff2');
+  src: url('/fonts/Manrope-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Main';
-  src: url('/fonts/Bold.woff2') format('woff2');
+  src: url('/fonts/Manrope-Bold.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Main';
-  src: url('/fonts/Light.woff2') format('woff2');
+  src: url('/fonts/Manrope-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
 }
