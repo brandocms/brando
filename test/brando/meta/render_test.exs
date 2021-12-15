@@ -76,9 +76,7 @@ defmodule Brando.MetaRenderTest do
         @mock_data
       )
 
-    assigns = %{
-      __changed__: %{}
-    }
+    assigns = %{}
 
     comp = ~H"""
     <.render_meta conn={mock_conn} />

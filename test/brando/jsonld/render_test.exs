@@ -59,7 +59,7 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(Brando.Pages.Page, @mock_data)
 
-    assigns = %{__changed__: %{}}
+    assigns = %{}
 
     comp = ~H"""
     <.render_json_ld conn={mock_conn} />
@@ -123,7 +123,7 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(:breadcrumbs, breadcrumbs)
 
-    assigns = %{__changed__: %{}}
+    assigns = %{}
 
     comp = ~H"""
     <.render_json_ld conn={mock_conn} />

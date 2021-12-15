@@ -26,9 +26,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "body_tag" do
-    assigns = %{
-      __changed__: %{}
-    }
+    assigns = %{}
 
     comp = ~H"""
     <.body_tag conn={%{private: %{brando_css_classes: "one two three"}}} id="top">
@@ -50,7 +48,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "cookie_law" do
-    assigns = %{__changed__: %{}}
+    assigns = %{}
 
     comp = ~H"""
     <.cookie_law>
@@ -82,7 +80,7 @@ defmodule Brando.HTMLTest do
   test "render_meta" do
     mock_conn = %Plug.Conn{assigns: %{language: "en"}, private: %{plug_session: %{}}}
 
-    assigns = %{__changed__: %{}}
+    assigns = %{}
 
     comp = ~H"""
     <.render_meta conn={mock_conn} />
@@ -113,9 +111,7 @@ defmodule Brando.HTMLTest do
       autoplay: true
     ]
 
-    assigns = %{
-      __changed__: %{}
-    }
+    assigns = %{}
 
     comp = ~H"""
     <.video_tag video={"https://src.vid"} opts={opts} />
@@ -423,7 +419,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "init_js" do
-    assigns = %{__changed__: %{}}
+    assigns = %{}
 
     comp = ~H"""
     <.init_js />
