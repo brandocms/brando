@@ -21,4 +21,12 @@ defmodule Brando.Content.Var.Html do
     attribute :placeholder, :string
     attribute :instructions, :string
   end
+
+  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+    def to_iodata(%{value: value}) do
+      value
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+  end
 end
