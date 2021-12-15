@@ -932,7 +932,7 @@ msgstr "Oppdater bruker"
 #, elixir-format
 #: lib/brando_admin/components/content_language_switch.ex:45
 msgid "Choose the content language you wish to edit entries in"
-msgstr "Velg innholdsspråk"
+msgstr "Velg språk du vil filtrere innlegg etter"
 
 #, elixir-format
 #: lib/brando_admin/components/content_language_switch.ex:35
