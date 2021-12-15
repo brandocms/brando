@@ -31,7 +31,14 @@ defmodule Brando.I18n.Helpers do
       # if the locale is the default language, we use the regular path
       apply(Brando.helpers(), :"#{fun}", args)
     else
-      apply(Brando.helpers(), :"#{locale}_#{fun}", args)
+      localized_fun = :"#{locale}_#{fun}"
+
+      if Brando.helpers().__info__(:functions) |> Keyword.has_key?(localized_fun) do
+        apply(Brando.helpers(), localized_fun, args)
+      else
+        # fallback to regular function (mostly used for page_path)
+        apply(Brando.helpers(), :"#{fun}", args)
+      end
     end
   end
 end

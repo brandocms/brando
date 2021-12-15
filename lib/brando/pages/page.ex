@@ -91,7 +91,13 @@ defmodule Brando.Pages.Page do
   @derive {Jason.Encoder, only: @derived_fields}
   identifier "{{ entry.title }} [{{ entry.language }}]"
 
-  absolute_url ""
+  absolute_url """
+  {% if entry.uri == "index" %}
+    {% route_i18n entry.language page_path index %}
+  {% else %}
+    {% route_i18n entry.language page_path show { entry.uri } %}
+  {% endif %}
+  """
 
   translations do
     context :naming do
