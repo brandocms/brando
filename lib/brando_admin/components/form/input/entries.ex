@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Identifier
 
   # prop form, :form
   # prop field, :atom
@@ -31,9 +30,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def update(assigns, socket) do
     value = assigns[:value]
 
+    iv =
+      case input_value(assigns.form, assigns.field) do
+        "" -> []
+        val -> val
+      end
+
     selected_identifiers =
-      assigns.form
-      |> input_value(assigns.field)
+      iv
       |> Enum.map(fn
         %Brando.Content.Identifier{} = identifier ->
           identifier
@@ -102,25 +106,26 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <div class="empty-list">
             <%= gettext("No selected entries") %>
           </div>
+          <input type="hidden" name={"#{@form.name}[#{@field}]"} value="" />
+        <% else %>
+          <Form.inputs
+            form={@form}
+            for={@field}
+            let={%{form: identifier_form}}>
+            <%= hidden_input identifier_form, :id %>
+            <%= hidden_input identifier_form, :schema %>
+            <%= hidden_input identifier_form, :status %>
+            <%= hidden_input identifier_form, :title %>
+            <%= hidden_input identifier_form, :cover %>
+            <%= hidden_input identifier_form, :type %>
+            <%= hidden_input identifier_form, :absolute_url %>
+          </Form.inputs>
         <% end %>
 
-        <Form.inputs
-          form={@form}
-          for={@field}
-          let={%{form: identifier_form}}>
-          <%= hidden_input identifier_form, :id %>
-          <%= hidden_input identifier_form, :schema %>
-          <%= hidden_input identifier_form, :status %>
-          <%= hidden_input identifier_form, :title %>
-          <%= hidden_input identifier_form, :cover %>
-          <%= hidden_input identifier_form, :type %>
-          <%= hidden_input identifier_form, :absolute_url %>
-        </Form.inputs>
-
         <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
-          <Identifier.render
+          <.identifier
             identifier={selected_identifier}
-            remove="remove_identifier"
+            remove={JS.push("remove_identifier", target: @myself)}
             param={idx}
           />
         <% end %>
@@ -140,11 +145,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <% end %>
           </div>
           <%= if !Enum.empty?(@identifiers) do %>
-            <h2 class="titlecase">{gettext("Available entries")}</h2>
+            <h2 class="titlecase"><%= gettext("Available entries") %></h2>
             <%= for {identifier, idx} <- Enum.with_index(@identifiers) do %>
-              <Identifier.render
+              <.identifier
                 identifier={identifier}
-                select="select_identifier"
+                select={JS.push("select_identifier", target: @myself)}
                 selected_identifiers={@selected_identifiers}
                 param={idx}
               />
@@ -224,6 +229,81 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
     {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
     {:noreply, assign(socket, :identifiers, identifiers)}
+  end
+
+  def identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
+    assigns =
+      assigns
+      |> assign_new(:select, fn -> false end)
+      |> assign_new(:remove, fn -> false end)
+      |> assign_new(:selected_identifiers, fn -> [] end)
+
+    ~H"""
+    <article
+      class={render_classes([identifier: true, selected: @identifier in @selected_identifiers])}
+      phx-click={@select}
+      phx-value-param={@param}>
+
+      <section class="cover-wrapper">
+        <div class="cover">
+          <img src={@identifier.cover || "/images/admin/avatar.svg"}>
+        </div>
+      </section>
+      <section class="content">
+        <div class="info">
+          <div class="name">
+            <%= @identifier.title %>
+          </div>
+          <div class="meta-info">
+            <%= @identifier.type %>
+          </div>
+        </div>
+      </section>
+      <%= if @remove do %>
+        <div class="remove">
+          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
+        </div>
+      <% end %>
+    </article>
+    """
+  end
+
+  def identifier(%{identifier_form: identifier_form} = assigns)
+      when not is_nil(identifier_form) do
+    assigns =
+      assigns
+      |> assign_new(:select, fn -> false end)
+      |> assign_new(:remove, fn -> false end)
+      |> assign_new(:selected_identifiers, fn -> [] end)
+
+    ~H"""
+    <article
+      class={render_classes([identifier: true, selected: @identifier_form in @selected_identifiers])}
+      phx-click={@select}
+      phx-value-param={@param}>
+
+      <section class="cover-wrapper">
+        <div class="cover">
+          <img src={input_value(@identifier_form, :cover) || "/images/admin/avatar.svg"}>
+        </div>
+      </section>
+      <section class="content">
+        <div class="info">
+          <div class="name">
+            <%= input_value(@identifier_form, :title) %>
+          </div>
+          <div class="meta-info">
+            <%= input_value(@identifier_form, :type) %>
+          </div>
+        </div>
+      </section>
+      <%= if @remove do %>
+        <div class="remove">
+          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
+        </div>
+      <% end %>
+    </article>
+    """
   end
 
   defp get_list_opts(schema_module, available_schemas) do
