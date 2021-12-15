@@ -2,9 +2,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
-  alias BrandoAdmin.Components.Identifier
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
   # prop base_form, :any
@@ -177,7 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
 
                 <div class="selected-entries">
                   <%= for identifier <- @selected_entries do %>
-                    <Identifier.render identifier={identifier} />
+                    <Entries.render identifier={identifier} />
                   <% end %>
                 </div>
 
