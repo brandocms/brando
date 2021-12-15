@@ -58,7 +58,7 @@
   }
 
   .img-placeholder {
-    background-color: transparent;
+    background-color: transparent !important;
     color: azure;
     padding: 2vw;
     border: 1px solid azure;
@@ -191,6 +191,7 @@
 
   .input-image .image-wrapper-compact .image-info .btn-small:hover {
     color: var(--brando-color-dark);
+    background-color: azure;
   }
 
   button.secondary {
