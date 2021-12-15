@@ -22,7 +22,7 @@ defmodule Brando.Blueprint.Villain.Block do
 
       def changeset(struct, params \\ %{}) do
         struct
-        |> cast(params, ~w(uid type hidden marked_as_deleted)a)
+        |> cast(params, ~w(uid type hidden marked_as_deleted collapsed)a)
         |> cast_embed(:data)
         |> ensure_uid()
         |> maybe_mark_for_deletion()

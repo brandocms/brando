@@ -99,18 +99,7 @@
     display: none;
   }
 
-  &.hidden-block {
-    .block {
-      min-height: 49px;
-      padding: 0;
-    }
-
-    .block-content {
-      display: none;
-    }
-  }
-
-  &.collapsed {
+  &.hidden-block, &.collapsed {
     .block {
       min-height: 49px;
       padding: 0;
@@ -124,6 +113,19 @@
   &.multi {
     > [data-type="module"] {
       background-color: transparent;
+    }
+  }
+}
+
+.container-block {
+  &.hidden-block, &.collapsed {
+    .block {
+      min-height: 49px;
+      padding: 0;
+    }
+
+    .block-content {
+      display: none;
     }
   }
 }
