@@ -81,6 +81,7 @@
     background-color: var(--brando-color-peach);
     border: none;
     font-size: 28px;
+    line-height: 1;
     width: 35px;
     border-radius: 50%;
     height: 35px;
