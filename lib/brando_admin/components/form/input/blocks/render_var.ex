@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
+  import Ecto.Changeset
 
   alias BrandoAdmin.Components.Form.Input
 
@@ -18,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data visible, :boolean
 
   def v(form, field) do
-    input_value(form, field)
+    get_field(form.source, field)
   end
 
   def mount(socket) do
@@ -26,7 +27,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def update(%{var: var} = assigns, socket) do
-    important = v(var, :important)
+    changeset = var.source
+    important = get_field(changeset, :important)
     render = Map.get(assigns, :render, :all)
     edit = Map.get(assigns, :edit, false)
 
@@ -38,9 +40,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         true -> false
       end
 
-    type = v(var, :type)
-    value = v(var, :value)
-
+    type = get_field(changeset, :type)
+    value = get_field(changeset, :value)
     value = control_value(type, value)
 
     {:ok,
@@ -48,11 +49,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      |> assign(:edit, edit)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
-     |> assign(:label, v(var, :label))
+     |> assign(:label, get_field(changeset, :label))
      |> assign(:type, type)
      |> assign(:value, value)
-     |> assign(:instructions, v(var, :instructions))
-     |> assign(:placeholder, v(var, :placeholder))
+     |> assign(:instructions, get_field(changeset, :instructions))
+     |> assign(:placeholder, get_field(changeset, :placeholder))
      |> assign(:var, var)}
   end
 
@@ -77,15 +78,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-      <div class={render_classes(["variable", input_value(@var, :type)])}>
+      <div class={render_classes(["variable", v(@var, :type)])}>
         <%= if @should_render? do %>
           <%= if @edit do %>
             <div id={"#{@var.id}-edit"}>
               <div class="variable-header" phx-click={JS.push("toggle_visible", target: @myself)}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-2.29-2.333A17.9 17.9 0 0 1 8.027 13H4.062a8.008 8.008 0 0 0 5.648 6.667zM10.03 13c.151 2.439.848 4.73 1.97 6.752A15.905 15.905 0 0 0 13.97 13h-3.94zm9.908 0h-3.965a17.9 17.9 0 0 1-1.683 6.667A8.008 8.008 0 0 0 19.938 13zM4.062 11h3.965A17.9 17.9 0 0 1 9.71 4.333 8.008 8.008 0 0 0 4.062 11zm5.969 0h3.938A15.905 15.905 0 0 0 12 4.248 15.905 15.905 0 0 0 10.03 11zm4.259-6.667A17.9 17.9 0 0 1 15.973 11h3.965a8.008 8.008 0 0 0-5.648-6.667z"/></svg>
                 <div class="variable-key">
-                  <%= input_value(@var, :key) %>
-                  <span><%= input_value(@var, :type) %></span>
+                  <%= v(@var, :key) %>
+                  <span><%= v(@var, :type) %></span>
                 </div>
               </div>
 
@@ -104,7 +105,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   %{label: "String", value: "string"},
                   %{label: "Text", value: "text"}
                 ]]} />
-                <%= hidden_input @var, :value, value: @value %>
+
+                <.render_value_inputs
+                  type={@type}
+                  var={@var}
+                  label={@label}
+                  placeholder={@placeholder}
+                  instructions={@instructions} />
               </div>
             </div>
           <% else %>
@@ -116,31 +123,42 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <%= hidden_input @var, :instructions %>
               <%= hidden_input @var, :placeholder %>
 
-              <div class="brando-input">
-                <%= case @type do %>
-                  <% "string" -> %>
-                    <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
-
-                  <% "text" -> %>
-                    <Input.Textarea.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
-
-                  <% "boolean" -> %>
-                    <Input.Toggle.render form={@var} field={:value} label={@label} instructions={@instructions} />
-
-                  <% "color" -> %>
-                    <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
-
-                  <% "datetime" -> %>
-                    <Input.Datetime.render form={@var} field={:value} label={@label} instructions={@instructions} />
-
-                  <% "html" -> %>
-                    <Input.RichText.render form={@var} field={:value} label={@label} instructions={@instructions} />
-                <% end %>
-              </div>
+              <.render_value_inputs
+                type={@type}
+                var={@var}
+                label={@label}
+                placeholder={@placeholder}
+                instructions={@instructions} />
             </div>
           <% end %>
         <% end %>
       </div>
+    """
+  end
+
+  def render_value_inputs(assigns) do
+    ~H"""
+    <div class="brando-input">
+      <%= case @type do %>
+        <% "string" -> %>
+          <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+
+        <% "text" -> %>
+          <Input.Textarea.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+
+        <% "boolean" -> %>
+          <Input.Toggle.render form={@var} field={:value} label={@label} instructions={@instructions} />
+
+        <% "color" -> %>
+          <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+
+        <% "datetime" -> %>
+          <Input.Datetime.render form={@var} field={:value} label={@label} instructions={@instructions} />
+
+        <% "html" -> %>
+          <Input.RichText.render form={@var} field={:value} label={@label} instructions={@instructions} />
+      <% end %>
+    </div>
     """
   end
 

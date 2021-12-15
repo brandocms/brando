@@ -92,6 +92,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     name = to_string(form.name <> "[#{field}]")
 
     params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
+    params = if params == [""], do: [%{}], else: params
+
     list_data = Ecto.Changeset.get_field(source_changeset, field) |> List.wrap()
 
     list_data
