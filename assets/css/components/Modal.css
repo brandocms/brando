@@ -109,20 +109,18 @@
     color: var(--brando-color-dark);
     border: 0;
     position: absolute;
-    top: 9px;
+    top: 10px;
     right: 15px;
     font-size: 35px;
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    line-height: 1;
     background-color: #fafafa;
     display: flex;
     align-items: center;
     justify-content: center;
 
     span {
-      @space translateY -2px;
       display: inline-block;
       margin-left: 1px;
     }
@@ -246,7 +244,7 @@
   overflow-y: scroll;
   background-color: #fff;
 
-  h2 {
+  > h2 {
     font-size: 23px;
     margin-bottom: 20px;
   }
