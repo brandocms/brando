@@ -41,7 +41,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   def assign_available_palettes(socket) do
     socket
     |> assign_new(:available_palettes, fn ->
-      {:ok, available_palettes} = Content.list_palettes(%{cache: {:ttl, :infinite}})
+      {:ok, available_palettes} =
+        Content.list_palettes(%{
+          order: "asc namespace, asc sequence, desc inserted_at",
+          cache: {:ttl, :infinite}
+        })
+
       available_palettes
     end)
   end
