@@ -77,7 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           click={@insert_block} />
       <% end %>
 
-      <.live_component module={Modal} title="Configure" id={"block-#{@uid}_config"} wide={@wide_config}>
+      <.live_component module={Modal} title={gettext "Configure"} id={"block-#{@uid}_config"} wide={@wide_config}>
         <%= if @config do %>
           <%= render_slot @config %>
         <% end %>
