@@ -21,31 +21,31 @@ msgstr ""
 "X-Generator: Poedit 3.0.1\n"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:82
+#: lib/brando/sites/global_set.ex:70
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:74
-msgid "Color"
-msgstr "Farge"
+#: lib/brando/sites/global_set.ex:68
+msgid "Delete set"
+msgstr "Slett sett"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:80
-msgid "Delete palette"
-msgstr "Slett palett"
+#: lib/brando/sites/global_set.ex:72
+msgid "Duplicate set"
+msgstr "Dupliser sett"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:84
-msgid "Duplicate palette"
-msgstr "Dupliser palett"
+#: lib/brando/sites/global_set.ex:66
+msgid "Edit set"
+msgstr "Oppdater sett"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:78
-msgid "Edit palette"
-msgstr "Oppdater palett"
+#: lib/brando/sites/global_set.ex:62
+msgid "Label"
+msgstr "Merkelapp"
 
 #, elixir-format
-#: lib/brando/content/palette.ex:73
-msgid "Name"
-msgstr "Navn"
+#: lib/brando/sites/global_set.ex:98
+msgid "variables in set"
+msgstr "variabler i settet"

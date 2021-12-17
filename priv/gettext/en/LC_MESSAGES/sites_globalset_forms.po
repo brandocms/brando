@@ -12,11 +12,26 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:107
-msgid "global set"
+#: lib/brando/sites/global_set.ex:40
+msgid "Content"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:108
-msgid "global sets"
+#: lib/brando/sites/global_set.ex:49
+msgid "Globals"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:44
+msgid "Key"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:43
+msgid "Label"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:42
+msgid "Language"
 msgstr ""

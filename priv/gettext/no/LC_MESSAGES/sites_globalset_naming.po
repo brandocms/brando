@@ -21,11 +21,11 @@ msgstr ""
 "X-Generator: Poedit 3.0\n"
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:106
+#: lib/brando/sites/global_set.ex:107
 msgid "global set"
 msgstr "globalsett"
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:107
+#: lib/brando/sites/global_set.ex:108
 msgid "global sets"
 msgstr "globalsett"

@@ -1,0 +1,41 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:70
+msgid "Are you sure?"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:68
+msgid "Delete set"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:72
+msgid "Duplicate set"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:66
+msgid "Edit set"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:62
+msgid "Label"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/global_set.ex:98
+msgid "variables in set"
+msgstr ""

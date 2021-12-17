@@ -37,15 +37,16 @@ defmodule Brando.Sites.GlobalSet do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset size: :half do
-          input :language, :select, options: :languages, narrow: true
-          input :label, :text
-          input :key, :text, monospace: true
+          input :language, :select, options: :languages, narrow: true, label: t("Language")
+          input :label, :text, label: t("Label")
+          input :key, :text, monospace: true, label: t("Key")
         end
 
         fieldset size: :full do
-          inputs_for :globals, {:component, BrandoAdmin.Components.Form.Input.Globals}
+          inputs_for :globals, {:component, BrandoAdmin.Components.Form.Input.Globals},
+            label: t("Globals")
         end
       end
     end
@@ -58,17 +59,17 @@ defmodule Brando.Sites.GlobalSet do
       }
 
       filters([
-        [label: gettext("Label"), filter: "label"]
+        [label: t("Label"), filter: "label"]
       ])
 
       actions([
-        [label: gettext("Edit set"), event: "edit_entry"],
+        [label: t("Edit set"), event: "edit_entry"],
         [
-          label: gettext("Delete set"),
+          label: t("Delete set"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ],
-        [label: gettext("Duplicate set"), event: "duplicate_entry"]
+        [label: t("Duplicate set"), event: "duplicate_entry"]
       ])
 
       template(
@@ -94,7 +95,7 @@ defmodule Brando.Sites.GlobalSet do
 
       template(
         """
-        <small>{{ entry.globals | size }} #{gettext("variables in set")}</small>
+        <small>{{ entry.globals | size }} #{t("variables in set")}</small>
         """,
         columns: 3
       )

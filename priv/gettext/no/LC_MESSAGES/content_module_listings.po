@@ -20,30 +20,37 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
+#, elixir-format
 #: lib/brando/content/module.ex:76
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
+#, elixir-format
 #: lib/brando/content/module.ex:68
 msgid "Class"
 msgstr "Klasse"
 
+#, elixir-format
 #: lib/brando/content/module.ex:74
 msgid "Delete module"
 msgstr "Slett modul"
 
+#, elixir-format
 #: lib/brando/content/module.ex:78
 msgid "Duplicate module"
 msgstr "Dupliser modul"
 
+#, elixir-format
 #: lib/brando/content/module.ex:72
 msgid "Edit module"
 msgstr "Oppdater modul"
 
+#, elixir-format
 #: lib/brando/content/module.ex:66
 msgid "Name"
 msgstr "Navn"
 
+#, elixir-format
 #: lib/brando/content/module.ex:67
 msgid "Namespace"
 msgstr "Navneområde"
