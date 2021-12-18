@@ -1,5 +1,6 @@
 input.text {
   @fontsize input;
+  @space height 51px;
   background-color: var(--brando-color-input);
   padding-top: 12px;
   padding-bottom: 12px;
