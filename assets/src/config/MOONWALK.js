@@ -33,22 +33,44 @@ export default () => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
+        const toolsWrapper = Dom.find(el, '.list-tools-wrapper')
         const toolEls = Dom.all(el, '.list-tools .statuses > *, .list-tools .filters > *') || []
-        const listRows = Dom.all(el, '.list-row')
         const paginationEls = Dom.all(el, '.pagination > *')
+        const listRows = Dom.all(el, '.list-row')
+        let emptyList
 
+        if (listRows.length) {
+          gsap.set(listRows, { opacity: 0, x: -15 })
+        } else {
+          emptyList = Dom.find(el, '.empty-list')
+          gsap.set(emptyList, { opacity: 0, y: 30 })
+        }
+
+        gsap.set(toolsWrapper, { opacity: 0 })
         gsap.set(toolEls, { opacity: 0, y: -15 })
-        gsap.set(listRows, { opacity: 0, x: -15 })
         gsap.set(paginationEls, { opacity: 0, x: -15 })
 
         timeline
           .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
+          .to(toolsWrapper, { opacity: 1, duration: 0.5, ease: 'none' })
           .to(toolEls, { y: 0, duration: 0.5, ease: 'power3.out', stagger: 0.1 }, '<0.2')
           .to(toolEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.1 }, '<')
-          .to(listRows, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
-          .to(listRows, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06, onComplete: () => {
-            gsap.set(listRows, { clearProps: 'all' })
-          } }, '<')
+          
+        if (listRows.length) {
+          timeline
+            .to(listRows, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
+            .to(listRows, {
+              opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06, onComplete: () => {
+                gsap.set(listRows, { clearProps: 'all' })
+              }
+            }, '<')
+        } else {
+          timeline
+            .to(emptyList, { y: 0, ease: 'power3.out' })
+            .to(emptyList, { opacity: 1, ease: 'none' }, '<')
+        }
+
+        timeline
           .to(paginationEls, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
           .to(paginationEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
       }
