@@ -54,6 +54,7 @@ defmodule Brando.Cache.Globals do
       %{language: language, globals: globals} = set, acc ->
         set_globals =
           globals
+          |> Enum.map(&preload_images/1)
           |> Enum.map(&{&1.key, &1})
           |> Enum.into(%{})
 
@@ -67,4 +68,9 @@ defmodule Brando.Cache.Globals do
         )
     end)
   end
+
+  defp preload_images(%Brando.Content.Var.Image{} = image_var),
+    do: Brando.repo().preload(image_var, :value)
+
+  defp preload_images(var), do: var
 end

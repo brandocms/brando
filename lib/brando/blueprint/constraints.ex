@@ -16,12 +16,16 @@ defmodule Brando.Blueprint.Constraints do
 
   def run_fk_constraints(changeset, _module, []), do: changeset
 
-  def run_fk_constraints(changeset, _module, relations) do
-    relations
-    |> Enum.filter(&(&1.type == :belongs_to))
-    |> Enum.reduce(changeset, fn relation, validated_changeset ->
-      foreign_key_constraint(validated_changeset, :"#{relation.name}_id")
-    end)
+  def run_fk_constraints(changeset, module, relations) do
+    if module.__schema__(:source) do
+      relations
+      |> Enum.filter(&(&1.type == :belongs_to))
+      |> Enum.reduce(changeset, fn relation, validated_changeset ->
+        foreign_key_constraint(validated_changeset, :"#{relation.name}_id")
+      end)
+    else
+      changeset
+    end
   end
 
   defp run_validation({:min_length, min_length}, validated_changeset, %{name: name}),

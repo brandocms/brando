@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Modal
 
   # prop form, :form, required: true
@@ -582,7 +583,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           </ul>
         </div>
 
-        <.live_component module={Modal} title="Create var" id={"#{@form.id}-#{@key}-create-var"} narrow>
+        <.live_component module={Modal} title={gettext "Create var"} id={"#{@form.id}-#{@key}-create-var"} narrow>
           <div class="button-group">
             <button
               type="button"
@@ -626,6 +627,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               class="secondary">
               Color
             </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="image"
+              class="secondary">
+              Image
+            </button>
           </div>
         </.live_component>
 
@@ -648,40 +656,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <Form.poly_inputs form={@form} for={:vars} let={%{form: var, index: idx}}>
               <li class="var padded sort-handle draggable" data-id={idx}>
                 <.live_component module={Modal} title="Edit var" id={"#{@form.id}-#{@key}-var-#{idx}"}>
-                  <Input.Toggle.render form={var} field={:important} label={gettext "Important"} />
-                  <Input.Text.render form={var} field={:key} label={gettext "Key"} />
-                  <Input.Text.render form={var} field={:label} label={gettext "Label"} />
-                  <Input.Text.render form={var} field={:instructions} label={gettext "Instructions"} />
-                  <Input.Text.render form={var} field={:placeholder} label={gettext "Placeholder"} />
-                  <Input.Radios.render
-                    form={var}
-                    field={:type}
-                    opts={[options: [
-                      %{label: "Boolean", value: "boolean"},
-                      %{label: "Text", value: "text"},
-                      %{label: "String", value: "string"},
-                      %{label: "Color", value: "color"},
-                      %{label: "Html", value: "html"},
-                      %{label: "Datetime", value: "datetime"}
-                    ]]}
-                  />
-                  <%= case input_value(var, :type) do %>
-                    <% "text" -> %>
-                      <Input.Text.render form={var} field={:value} label={gettext "Value"} />
-                    <% "string" -> %>
-                      <Input.Text.render form={var} field={:value} label={gettext "Value"} />
-                    <% "boolean" -> %>
-                      <Input.Toggle.render form={var} field={:value} label={gettext "Value"} />
-                    <% "datetime" -> %>
-                      <Input.Datetime.render form={var} field={:value} label={gettext "Value"} />
-                    <% "html" -> %>
-                      <Input.RichText.render form={var} field={:value} label={gettext "Value"} />
-                    <% "color" -> %>
-                      <!-- #TODO: Input.Color -->
-                      <Input.Text.render form={var} field={:value} label={gettext "Value"} />
-                    <% _ -> %>
-                      <Input.Text.render form={var} field={:value} label={gettext "Value"} />
-                  <% end %>
+                  <.live_component module={RenderVar}
+                    id={"#{@form.id}-#{@key}-render-var-#{idx}"}
+                    var={var}
+                    render={:all}
+                    edit />
                 </.live_component>
                 <span class="text-mono"><%= input_value(var, :type) %> - &lcub;&lcub; <%= input_value(var, :key) %> &rcub;&rcub;</span>
                 <div class="actions">

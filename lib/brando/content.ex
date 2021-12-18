@@ -36,15 +36,6 @@ defmodule Brando.Content do
   alias Brando.Content.Var
   alias Brando.Villain
 
-  @default_vars %{
-    boolean: Var.Boolean,
-    string: Var.String,
-    text: Var.Text,
-    color: Var.Color,
-    html: Var.Html,
-    datetime: Var.Datetime
-  }
-
   query :list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
   filters Module do
@@ -266,6 +257,6 @@ defmodule Brando.Content do
   mutation :duplicate, {Template, change_fields: [:name]}
 
   def get_var_by_type(var_type) do
-    Map.get(@default_vars, var_type)
+    Keyword.get(Var.types(), var_type)
   end
 end

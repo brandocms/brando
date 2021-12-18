@@ -8,6 +8,7 @@ export default (app) => ({
   mounted() {
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
+    this.eventTarget = this.el.hasAttribute('data-upload-event-target') ? this.el.getAttribute('data-upload-event-target') : this.el
 
     this.strings = {}
     this.strings.idle = Dom.find(this.el, '.instructions span')
@@ -136,7 +137,7 @@ export default (app) => ({
           this.stopPlus()
 
           const image = data.image
-          this.pushEventTo(this.el, 'image_uploaded', { id: image.id })
+          this.pushEventTo(this.eventTarget, 'image_uploaded', { id: image.id })
           resolve()
         } else {
           this.status = IDLE

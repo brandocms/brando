@@ -1,0 +1,73 @@
+.variable {
+  .image-info {
+    @fontsize 13px;
+    @space margin-top 15px;
+  }
+
+  .image-picker-images {
+    display: grid;
+    grid-gap: 1vw;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: min-content;
+  }
+
+  .img-placeholder {
+    background-color: var(--brando-color-white) !important;
+  }
+
+  .file-input {
+    display: none;
+  }
+
+  .empty {
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
+    flex-direction: column;
+    max-width: 400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    padding: 1vw;
+    border-radius: 25px;
+
+    .placeholder-wrapper {
+      margin-bottom: 25px;
+
+      svg {
+        width: 200px;
+        user-select: none;
+        pointer-events: none;
+
+        path:nth-of-type(2), .plus, circle {
+          user-select: none;
+          pointer-events: none;
+          fill: var(--brando-color-dark);
+        }
+      }
+    }
+
+    &.hidden {
+      display: none !important;
+    }
+
+    .instructions {
+      font-size: 16px;
+
+      button {
+        margin-top: 10px;
+      }
+    }
+  }
+
+  .upload-canvas {
+    &.dragging {
+      background-color: theme(colors.peachDarker) !important;
+      cursor: plus;
+
+      svg .plus {
+        backface-visibility: hidden;
+      }
+    }
+  }
+}

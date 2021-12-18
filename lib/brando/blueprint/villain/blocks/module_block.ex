@@ -23,14 +23,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       attribute :multi, :boolean, default: false
 
       attribute :vars, {:array, PolymorphicEmbed},
-        types: [
-          boolean: Var.Boolean,
-          text: Var.Text,
-          string: Var.String,
-          datetime: Var.Datetime,
-          html: Var.Html,
-          color: Var.Color
-        ],
+        types: Var.types(),
         type_field: :type,
         on_type_not_found: :raise,
         on_replace: :delete

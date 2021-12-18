@@ -9,6 +9,7 @@
 @import './transitions.css';
 @import './auth.css';
 @import './components/Button.css';
+@import './components/Var.css';
 @import './components/ChildrenButton.css';
 @import './components/CircleDropdown.css';
 @import './components/CircleFlag.css';
