@@ -25,8 +25,13 @@ defmodule Brando.Plug.LivePreview do
         #! CONSECUTIVE UPDATES WILL ONLY TARGET <MAIN>
 
         require Logger
-        conn_copy = Plug.Conn.fetch_session(conn)
-        conn_copy = BrandoAdmin.UserAuth.fetch_current_user(conn_copy, nil)
+
+        conn_copy =
+          conn
+          |> Plug.Conn.fetch_session()
+          |> Phoenix.Controller.fetch_flash()
+          |> BrandoAdmin.UserAuth.fetch_current_user(nil)
+
         current_user = conn_copy.assigns[:current_user]
 
         try do

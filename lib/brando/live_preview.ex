@@ -128,6 +128,8 @@ defmodule Brando.LivePreview do
         # build conn
         conn =
           Phoenix.ConnTest.build_conn()
+          |> Plug.Test.init_test_session(%{})
+          |> Phoenix.Controller.fetch_flash()
           |> Brando.Plug.HTML.put_section(section)
           |> Plug.Conn.assign(:language, to_string(language))
 
