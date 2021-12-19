@@ -101,14 +101,15 @@ export default () => ({
         const els = [
           Dom.find(el, 'h1'),
           Dom.find(el, 'h3'),
-          Dom.find(el, '.instructions')
+          Dom.find(el, '.actions')
         ]
 
+        gsap.set(el, { scaleX: 0, transformOrigin: 'left', opacity: 1 })
         gsap.set(els, { opacity: 0, x: -15 })
 
         timeline
-          .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
-          .to(els, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
+          .to(el, { delay: 0.5, scaleX: 1, ease: 'circ.in', duration: 0.5 })
+          .to(els, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
           .to(els, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
       }
     }

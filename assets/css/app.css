@@ -3,6 +3,7 @@
 @import 'tippy.js/dist/tippy.css';
 @import 'flatpickr/dist/flatpickr.css';
 @import 'izitoast/dist/css/iziToast.css';
+@import 'vanilla-picker/dist/vanilla-picker.csp.css';
 
 @import './base.css';
 @import './fonts.css';
@@ -25,6 +26,7 @@
 @import './components/Form/FieldBase.css';
 @import './components/Form/Subform.css';
 @import './components/Form/Input/CodeEditor.css';
+@import './components/Form/Input/ColorPicker.css';
 @import './components/Form/Input/CustomCheckbox.css';
 @import './components/Form/Input/Datetime.css';
 @import './components/Form/Input/Gallery.css';
@@ -98,6 +100,17 @@ code {
 
 .avatar img {
   vertical-align: baseline;
+}
+
+.popup.popup_right {
+  top: 0;
+  left: 25px;
+}
+
+.picker_editor {
+  input {
+    @font mono;
+  }
 }
 
 .tooltip {

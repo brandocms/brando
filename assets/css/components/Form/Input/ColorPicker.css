@@ -1,0 +1,15 @@
+.picker {
+  position: relative;
+  cursor: pointer;
+
+  .circle-and-hex {
+    display: flex;
+    align-items: center;
+
+    .color-hex {
+      @font mono;
+      @fontsize 16px;
+      margin-left: 15px;
+    }
+  }
+}

@@ -2,6 +2,7 @@
 import AdminHook from './hooks/Admin'
 import BlockHook from './hooks/Block'
 import CodeEditorHook from './hooks/CodeEditor'
+import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
 import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
@@ -28,6 +29,7 @@ export default app => {
     'Brando.Admin': AdminHook(app),
     'Brando.Block': BlockHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
+    'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
     'Brando.DragDrop': DragDropHook(app),
