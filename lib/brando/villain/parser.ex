@@ -21,9 +21,6 @@ defmodule Brando.Villain.Parser do
   @doc "Parses map"
   @callback map(data :: map, opts :: map) :: binary
 
-  @doc "Parses image (deprecated)"
-  @callback image(data :: map, opts :: map) :: binary
-
   @doc "Parses input (deprecated)"
   @callback input(data :: map, opts :: map) :: binary
 
@@ -72,6 +69,7 @@ defmodule Brando.Villain.Parser do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Brando.Villain.Parser
+      use Phoenix.Component
 
       import Brando.HTML
       import Phoenix.HTML
@@ -351,7 +349,9 @@ defmodule Brando.Villain.Parser do
           opacity: data.opacity || 0.1
         ]
 
-        Phoenix.LiveViewTest.rendered_to_string(video_tag(%{video: src, opts: opts}))
+        %{video: src, opts: opts}
+        |> video_tag()
+        |> Phoenix.LiveViewTest.rendered_to_string()
       end
 
       def video(_, _), do: ""
@@ -391,22 +391,14 @@ defmodule Brando.Villain.Parser do
         credits = if credits == "", do: nil, else: credits
         srcset = if srcset == "", do: nil, else: srcset
 
-        {link_open, link_close} =
-          if link != "" do
-            {rel, target} =
-              if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
-                {"", ""}
-              else
-                {~s( rel="nofollow noopener"), ~s( target="_blank")}
-              end
-
-            {~s(<a href="#{link}" #{rel}#{target}>), ~s(</a>)}
-          else
+        {rel, target} =
+          if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
             {"", ""}
+          else
+            {"nofollow noopener", "_blank"}
           end
 
         caption = render_caption(Map.merge(data, %{title: title, credits: credits}))
-
         media_queries = nil
 
         alt =
@@ -416,89 +408,31 @@ defmodule Brando.Villain.Parser do
             true -> ""
           end
 
-        ptag =
-          picture_tag(data,
+        assigns = %{
+          src: data,
+          link: link,
+          rel: rel,
+          target: target,
+          caption: caption,
+          opts: [
             img_class: img_class,
             picture_class: picture_class,
             media_queries: media_queries,
             alt: alt,
-            width: true,
-            height: true,
+            width: width,
+            height: height,
             lightbox: lightbox,
-            placeholder: placeholder || :svg,
-            lazyload: true,
-            sizes: "auto",
-            srcset: srcset || default_srcset,
-            cache: :timestamp,
-            prefix: Utils.media_url()
-          )
-          |> safe_to_string
+            placeholder: placeholder,
+            srcset: srcset
+          ]
+        }
 
-        """
-        <div class="picture-wrapper" data-orientation="#{orientation}">
-          #{link_open}
-          #{ptag}
-          #{link_close}
-          #{caption}
-        </div>
-        """
+        assigns
+        |> Brando.Villain.Parser.picture_tag()
+        |> Phoenix.LiveViewTest.rendered_to_string()
       end
 
       defoverridable picture: 2
-
-      @doc """
-      Convert image to html, with caption and credits and optional link
-      """
-      def image(data, _) do
-        title = Map.get(data, :title, "")
-        credits = Map.get(data, :credits, "")
-        link = Map.get(data, :link, "")
-        class = Map.get(data, :class, "")
-
-        {link_open, link_close} =
-          if link != "" do
-            {~s(<a href="#{data.link}" title="#{title}">), ~s(</a>)}
-          else
-            {"", ""}
-          end
-
-        title = if title == "", do: nil, else: title
-
-        caption =
-          if title do
-            """
-            <p class="small photo-caption"><span class="arrow-se">&searr;</span> #{title}</p>
-            """
-          else
-            ""
-          end
-
-        srcset = [
-          {"small", "700w"},
-          {"medium", "1000w"},
-          {"large", "1400w"},
-          {"xlarge", "1900w"}
-        ]
-
-        itag =
-          img_tag(data, :xlarge,
-            srcset: srcset,
-            alt: "#{title}/#{credits}",
-            class: class
-          )
-          |> safe_to_string
-
-        """
-        <div class="img-wrapper">
-          #{link_open}
-          #{itag}
-          #{link_close}
-          #{caption}
-        </div>
-        """
-      end
-
-      defoverridable image: 2
 
       @doc """
       Slideshow
@@ -511,8 +445,11 @@ defmodule Brando.Villain.Parser do
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
             caption = img["title"] || nil
 
-            ptag =
-              picture_tag(img,
+            assigns = %{
+              src: img,
+              orientation: orientation,
+              caption: caption,
+              opts: [
                 key: :xlarge,
                 alt: img["title"] || "Ill.",
                 width: true,
@@ -523,15 +460,12 @@ defmodule Brando.Villain.Parser do
                 lazyload: true,
                 lightbox: data.lightbox || false,
                 prefix: Utils.media_url()
-              )
-              |> safe_to_string
+              ]
+            }
 
-            """
-            <figure data-panner-item data-orientation="#{orientation}" data-moonwalk="panner">
-              #{ptag}
-              <figcaption>#{caption}</figcaption>
-            </figure>
-            """
+            assigns
+            |> Brando.Villain.Parser.panner_item()
+            |> Phoenix.LiveViewTest.rendered_to_string()
           end)
 
         """
@@ -569,8 +503,11 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
-            ptag =
-              picture_tag(img,
+            assigns = %{
+              src: img,
+              link: "",
+              caption: caption,
+              opts: [
                 key: :xlarge,
                 alt: alt,
                 width: true,
@@ -581,15 +518,12 @@ defmodule Brando.Villain.Parser do
                 lazyload: true,
                 lightbox: data.lightbox || false,
                 prefix: Utils.media_url()
-              )
-              |> safe_to_string
+              ]
+            }
 
-            """
-            <div class="picture-wrapper" data-orientation="#{orientation}">
-              #{ptag}
-              #{caption}
-            </div>
-            """
+            assigns
+            |> Brando.Villain.Parser.picture_tag()
+            |> Phoenix.LiveViewTest.rendered_to_string()
           end)
 
         """
@@ -876,5 +810,36 @@ defmodule Brando.Villain.Parser do
         Villain.parse_and_render(module.code, context)
       end
     end
+  end
+
+  use Phoenix.Component
+  import Brando.HTML
+
+  def picture_tag(assigns) do
+    ~H"""
+    <div class="picture-wrapper" data-orientation={@orientation}>
+      <%= if @link != "" do %>
+        <.link url={@link} rel={@rel} target={@target}>
+          <.picture
+            src={@src}
+            opts={@opts} />
+        </.link>
+      <% else %>
+        <.picture
+          src={@src}
+          opts={@opts} />
+      <% end %>
+      <%= @caption %>
+    </div>
+    """
+  end
+
+  def panner_item(assigns) do
+    ~H"""
+    <figure data-panner-item data-orientation={@orientation} data-moonwalk="panner">
+      <.picture src={@src} opts={@opts} />
+      <figcaption><%= @caption %></figcaption>
+    </figure>
+    """
   end
 end

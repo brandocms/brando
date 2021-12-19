@@ -20,14 +20,23 @@ defmodule Brando.HTML do
     end
   end
 
-  defdelegate img_tag(field, opts), to: Brando.HTML.Images
-  defdelegate img_tag(field, size, opts), to: Brando.HTML.Images
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
-  defdelegate picture_tag(field, opts), to: Brando.HTML.Images
+  defdelegate picture(assigns), to: Brando.HTML.Images
   defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(assigns), to: Brando.Meta.HTML
   defdelegate video_tag(assigns), to: Brando.HTML.Video
+
+  # TODO: Drop before 1.0
+  @deprecated "Use heex component `<.picture src={src} opts={opts} />` instead"
+  def picture_tag(src, opts \\ []) do
+    assigns = %{src: src, opts: opts}
+
+    ~H"""
+    <Brando.HTML.Images.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
 
   @doc """
   Link preload fonts
@@ -48,6 +57,20 @@ defmodule Brando.HTML do
     palettes_css = Brando.Cache.Palettes.get()
 
     ~H|<%= if palettes_css != "" do %><style><%= palettes_css %></style><% end %>|
+  end
+
+  def link(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:rel, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
+      |> assign_new(:inner_block, fn -> [] end)
+
+    ~H"""
+    <a href={@link} rel={@rel} target={@target}>
+      <%= render_slot(@inner_block) %>
+    </a>
+    """
   end
 
   @doc """

@@ -1,5 +1,6 @@
 defmodule Brando.Villain.Filters do
   use Liquex.Filter
+  use Phoenix.Component
   alias Brando.Utils
 
   @doc """
@@ -54,44 +55,101 @@ defmodule Brando.Villain.Filters do
 
   It is prefered to use |size:"thumb" instead of this, but keeping these for backwards
   compatibility
+
+  TODO: Remove before 1.0
   """
+  @deprecated "Use `|size:\"large\"` instead"
   def large(%Brando.Images.Image{} = img, _) do
-    img
-    |> Brando.HTML.picture_tag(key: :large, prefix: Brando.Utils.media_url())
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: :large,
+        prefix: Brando.Utils.media_url()
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  @deprecated "Use `|size:\"large\"` instead"
   def large(img, _) do
-    img
-    |> Brando.HTML.picture_tag(key: :large)
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: :large
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  @deprecated "Use `|size:\"xlarge\"` instead"
   def xlarge(%Brando.Images.Image{} = img, _) do
-    img
-    |> Brando.HTML.picture_tag(key: :xlarge, prefix: Brando.Utils.media_url())
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: :xlarge,
+        prefix: Brando.Utils.media_url()
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  @deprecated "Use `|size:\"xlarge\"` instead"
   def xlarge(img, _) do
-    img
-    |> Brando.HTML.picture_tag(key: :xlarge)
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: :xlarge
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   @doc """
   Get sized version of image
   """
   def size(%Brando.Images.Image{} = img, size, _) do
-    img
-    |> Brando.HTML.picture_tag(key: size, prefix: Brando.Utils.media_url())
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: size,
+        prefix: Brando.Utils.media_url()
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   def size(img, size, _) do
-    img
-    |> Brando.HTML.picture_tag(key: size)
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        key: size
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   @doc """
@@ -101,14 +159,20 @@ defmodule Brando.Villain.Filters do
   """
   def srcset(%struct_type{} = img, srcset, _)
       when struct_type in [Brando.Images.Image] do
-    img
-    |> Brando.HTML.picture_tag(
-      placeholder: :svg,
-      lazyload: true,
-      srcset: srcset,
-      prefix: Brando.Utils.media_url()
-    )
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        placeholder: :svg,
+        lazyload: true,
+        srcset: srcset,
+        prefix: Brando.Utils.media_url()
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   def srcset(img, srcset, _) do
@@ -116,13 +180,19 @@ defmodule Brando.Villain.Filters do
     module = Module.concat([module_string])
     field = String.to_existing_atom(field_string)
 
-    img
-    |> Brando.HTML.picture_tag(
-      placeholder: :svg,
-      lazyload: true,
-      srcset: {module, field}
-    )
-    |> Phoenix.HTML.safe_to_string()
+    assigns = %{
+      src: img,
+      opts: [
+        placeholder: :svg,
+        lazyload: true,
+        srcset: {module, field}
+      ]
+    }
+
+    ~H"""
+    <Brando.HTML.picture src={@src} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   @doc """

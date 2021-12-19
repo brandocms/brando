@@ -121,235 +121,299 @@ defmodule Brando.HTMLTest do
              "<div class=\"video-wrapper\" data-smart-video style=\"--aspect-ratio: 0.75\">\n  \n  \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"my_poster.jpg\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n</div>"
   end
 
-  test "img_tag" do
-    user = Factory.build(:user)
-
-    assert img_tag(user.avatar, :medium) |> safe_to_string ==
-             "<img src=\"images/avatars/medium/27i97a.jpeg\">"
-
-    assert img_tag(user.avatar, :medium, prefix: media_url()) |> safe_to_string ==
-             "<img src=\"/media/images/avatars/medium/27i97a.jpeg\">"
-
-    assert img_tag(nil, :medium, default: "test.jpg") |> safe_to_string ==
-             "<img src=\"test.jpg\">"
-
-    assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.Users.User, :avatar})
-           |> safe_to_string ==
-             "<img src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">"
-  end
-
   test "picture_tag" do
     user = Factory.build(:user)
     srcset = {Brando.Users.User, :avatar}
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
 
-    assert picture_tag(
-             Map.put(user.avatar, :formats, [:jpg, :webp]),
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    assigns = %{}
 
-    assert picture_tag(
-             Map.put(user.avatar, :formats, [:jpg, :webp, :avif]),
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.avif 300w, /media/images/avatars/medium/27i97a.avif 500w, /media/images/avatars/large/27i97a.avif 700w\" type=\"image/avif\"><source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             caption: true,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><figcaption>Title!</figcaption><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             height: true,
-             width: true,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" height=\"200\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             height: 200,
-             width: 200,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" height=\"200\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" width=\"200\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    comp = ~H"""
+    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
+    """
 
-    assert picture_tag(
-             user.avatar,
-             lightbox: true,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             height: 200,
-             width: 200,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<a data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\" href=\"/media/images/avatars/small/27i97a.jpeg\"><picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" height=\"200\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" width=\"200\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture></a>"
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
 
-    assert picture_tag(
-             user.avatar,
-             lightbox: true,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             placeholder: :svg,
-             lazyload: true,
-             height: 200,
-             width: 200,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<a data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" href=\"/media/images/avatars/small/27i97a.jpeg\"><picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture></a>"
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
 
-    assert picture_tag(
-             Map.put(user.avatar, :formats, [:jpg, :webp]),
-             lightbox: true,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             placeholder: :svg,
-             lazyload: true,
-             height: 200,
-             width: 200,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<a data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" href=\"/media/images/avatars/small/27i97a.jpeg\"><picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture></a>"
+    comp = ~H"""
+    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp, :avif])} opts={opts} />
+    """
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             lazyload: true,
-             placeholder: :micro
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"/media/images/avatars/micro/27i97a.jpeg\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.avif 300w, /media/images/avatars/medium/27i97a.avif 500w, /media/images/avatars/large/27i97a.avif 700w\" type=\"image/avif\"><source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             placeholder: :svg,
-             lazyload: true
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      caption: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             placeholder: :dominant_color,
-             lazyload: true
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\" style=\"background-color: #deadb33f\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             lazyload: true
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" data-ll-placeholder data-ll-srcset-image data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" width=\"300\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n    <figcaption>Title!</figcaption>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
 
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      height: true,
+      width: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      height: 200,
+      width: 200,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"200\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      lightbox: true,
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      height: 200,
+      width: 200,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"200\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n  \n</a>\n"
+
+    # ---
+    opts = [
+      lightbox: true,
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      placeholder: :svg,
+      lazyload: true,
+      height: 200,
+      width: 200,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n  \n</a>\n"
+
+    # ---
+    opts = [
+      lightbox: true,
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      placeholder: :svg,
+      lazyload: true,
+      height: 200,
+      width: 200,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n  \n</a>\n"
+
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      lazyload: true,
+      placeholder: :micro
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"/media/images/avatars/micro/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      placeholder: :svg,
+      lazyload: true
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      placeholder: :dominant_color,
+      lazyload: true
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" style=\"background-color: #deadb33f\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      lazyload: true
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
     media_queries = [
       {"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}
     ]
 
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             media_queries: media_queries,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    opts = [
+      srcset: srcset,
+      media_queries: media_queries,
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
 
-    assert picture_tag(
-             user.avatar,
-             alt: "hepp!",
-             srcset: srcset,
-             media_queries: media_queries,
-             prefix: media_url(),
-             key: :small,
-             picture_attrs: [data_test: true, data_test_params: "hepp"],
-             img_attrs: [data_test2: true, data_test2_params: "hepp"],
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\" data-test data-test-params=\"hepp\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img alt=\"hepp!\" class=\"img-fluid\" data-test2 data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img alt=\"hepp!\" src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
 
-    assert picture_tag(
-             user.avatar,
-             key: :small,
-             prefix: media_url(),
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-orientation=\"landscape\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  <source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\">\n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      alt: "hepp!",
+      srcset: srcset,
+      media_queries: media_queries,
+      prefix: media_url(),
+      key: :small,
+      picture_attrs: [data_test: true, data_test_params: "hepp"],
+      img_attrs: [data_test2: true, data_test2_params: "hepp"],
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-test-params=\"hepp\" data-test data-orientation=\"landscape\">\n  <source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\">\n  <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img class=\"img-fluid\" data-test2-params=\"hepp\" data-test2 src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" alt=\"hepp!\">\n  \n  <noscript>\n  <img alt=\"hepp!\" src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
+
+    # ---
+    opts = [
+      key: :small,
+      prefix: media_url(),
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    comp = ~H"""
+    <.picture src={user.avatar} opts={opts} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n  \n  \n  <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n  <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
   end
 
   test "svg_fallback" do

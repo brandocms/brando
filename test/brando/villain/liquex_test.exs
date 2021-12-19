@@ -154,6 +154,6 @@ defmodule Brando.Villain.LiquexTest do
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
 
     assert Enum.join(result) ==
-             "<picture data-ll-srcset data-orientation=\"landscape\"><source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img data-ll-placeholder data-ll-srcset-image data-src=\"images/avatars/small/27i97a.jpeg\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" height=\"200\" width=\"300\"><noscript><img src=\"images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "\n  <picture data-orientation=\"landscape\" data-ll-srcset>\n  \n  <source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n  <img data-ll-srcset-image data-src=\"images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n  \n  <noscript>\n  <img src=\"images/avatars/small/27i97a.jpeg\">\n</noscript>\n</picture>\n"
   end
 end

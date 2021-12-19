@@ -9,6 +9,7 @@ defmodule Brando.Villain.Tags.Picture do
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
   alias Liquex.Parser.Object
+  import Phoenix.LiveView.Helpers
 
   @impl true
   def parse() do
@@ -32,10 +33,13 @@ defmodule Brando.Villain.Tags.Picture do
         {String.to_existing_atom(key), val}
       end)
 
-    html =
-      evaled_source
-      |> Brando.HTML.Images.picture_tag(evaled_args)
-      |> Phoenix.HTML.safe_to_string()
+    assigns = %{src: evaled_source, opts: evaled_args}
+
+    comp = ~H"""
+    <Brando.HTML.Images.picture src={@src} opts={@opts} />
+    """
+
+    html = Phoenix.LiveViewTest.rendered_to_string(comp)
 
     {[html], context}
   end

@@ -3,11 +3,11 @@ defmodule Brando.HTML.Images do
   HTML functions for rendering image/picture tags
   """
 
+  use Phoenix.Component
   alias Brando.Utils
-  import Phoenix.HTML.Tag
 
   @doc """
-  Outputs a `picture` tag with source, img and a noscript fallback
+  Outputs a `picture` tag with source, img and a noscript fallback
 
   The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
   image type's `sizes` map.
@@ -50,11 +50,18 @@ defmodule Brando.HTML.Images do
       Or a list of srcsets to generate multiple source elements:
 
   """
+  def picture(%{src: %Ecto.Association.NotLoaded{}} = assigns) do
+    ~H"""
+    <div>
+      <code>
+        Trying to call `picture` tag on an unloaded association<br><br>
+        <%= inspect(@src, structs: false, pretty: true) %>
+      </code>
+    </div>
+    """
+  end
 
-  @spec picture_tag(map, keyword()) :: {:safe, [...]}
-  def picture_tag(image_struct, opts \\ [])
-
-  def picture_tag(%struct_type{} = image_struct, opts)
+  def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
       when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
       img: [],
@@ -80,100 +87,93 @@ defmodule Brando.HTML.Images do
       |> add_classes()
       |> add_moonwalk()
 
-    img_tag = tag(:img, attrs.img)
-    source_tag = build_source_tags(image_struct, attrs)
+    assigns = assign(assigns, :attrs, attrs)
 
-    figcaption_tag =
-      if Keyword.get(opts, :caption) && image_struct.title && image_struct.title != "" do
-        content_tag(:figcaption, image_struct.title)
-      else
-        ""
-      end
+    lightbox_src = Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src)
+    lightbox_srcset = Keyword.get(attrs.img, :data_srcset)
 
-    mq_source_tags = attrs.mq_sources
-
-    noscript_alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))
-    noscript_img_tag = tag(:img, attrs.noscript_img ++ [alt: noscript_alt])
-    noscript_tag = content_tag(:noscript, noscript_img_tag)
-
-    picture_tag =
-      content_tag(
-        :picture,
-        [mq_source_tags, source_tag, img_tag, figcaption_tag, noscript_tag],
-        attrs.picture
-      )
-
-    if Keyword.get(opts, :lightbox, false) do
-      wrap_lightbox(
-        picture_tag,
-        Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src),
-        Keyword.get(attrs.img, :data_srcset)
-      )
-    else
-      picture_tag
-    end
-  end
-
-  def picture_tag(%Ecto.Association.NotLoaded{} = not_loaded, _opts) do
+    ~H"""
+    <%= if @opts[:lightbox] do %>
+      <.lightbox src={lightbox_src} srcset={lightbox_srcset}>
+        <.picture_tag src={@src} opts={@opts} attrs={@attrs} />
+      </.lightbox>
+    <% else %>
+      <.picture_tag src={@src} opts={@opts} attrs={@attrs} />
+    <% end %>
     """
-    <div>
-    <code>
-      Trying to call picture_tag on an unloaded association<br><br>
-      #{inspect(not_loaded, structs: false, pretty: true)}
-    </code>
+  end
+
+  defp picture_tag(%{src: src, attrs: attrs, opts: opts} = assigns) do
+    figcaption? = Keyword.get(opts, :caption) && src.title && src.title != ""
+
+    assigns =
+      assigns
+      |> assign(:figcaption?, figcaption?)
+      |> assign(:noscript_alt, Keyword.get(attrs.opts, :alt, Map.get(src, :alt, "")))
+
+    ~H"""
+    <picture {@attrs.picture}>
+      <.mq_sources mqs={@attrs.mq_sources} />
+      <.source_tags src={@src} attrs={@attrs} />
+      <img {@attrs.img} />
+      <%= if @figcaption? do %>
+        <.figcaption_tag caption={@src.title} />
+      <% end %>
+      <.noscript_tag attrs={@attrs.noscript_img} alt={@noscript_alt} />
+    </picture>
     """
-    |> Phoenix.HTML.raw()
   end
 
-  # when we're not given a struct
-  def picture_tag(img_map, opts) do
-    #! TODO: this is very hacky, but only a stopgap until we do away
-    #! with `prefix` media_url's entirely
-
-    #! UPDATE: This might not be needed anymore, now that we have Block structs.
-
-    require Logger
-    Logger.error("==> picture_tag called with map")
-    Logger.error(inspect(img_map, pretty: true))
-
-    opts =
-      if img_map["original"] && String.starts_with?(img_map["original"], "/media") do
-        Keyword.drop(opts, [:prefix])
-      else
-        opts
-      end
-
-    image_struct = Utils.stringy_struct(Brando.Images.Image, img_map)
-    picture_tag(image_struct, opts)
+  defp mq_sources(assigns) do
+    ~H"""
+    <%= for {media, srcset} <- @mqs do %><source media={media} srcset={srcset} /><% end %>
+    """
   end
 
-  defp build_source_tags(%{formats: nil}, attrs) do
+  defp source_tags(%{src: %{formats: nil}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
     if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
-      ""
+      ~H||
     else
-      [tag(:source, attrs.source)]
+      ~H|<source {@attrs.source} />|
     end
   end
 
-  defp build_source_tags(%{formats: formats}, attrs) do
+  defp source_tags(%{src: %{formats: formats}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
     if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
-      ""
+      ~H||
     else
       sizes_format = List.first(formats)
 
-      Enum.map(formats, fn
-        format when format == sizes_format ->
-          tag(:source, attrs.source)
-
-        format ->
-          tag(:source, replace_attrs(attrs.source, format))
-      end)
-      |> Enum.reverse()
+      ~H"""
+      <%= for format <- Enum.reverse(@src.formats) do %><%= if format == sizes_format do %><source {@attrs.source} /><% else %><source {replace_attrs(@attrs.source, format)} /><% end %><% end %>
+      """
     end
+  end
+
+  defp figcaption_tag(assigns) do
+    ~H"""
+    <figcaption><%= @caption %></figcaption>
+    """
+  end
+
+  defp noscript_tag(assigns) do
+    ~H"""
+    <noscript>
+      <img alt={@alt} {@attrs} />
+    </noscript>
+    """
+  end
+
+  defp lightbox(assigns) do
+    ~H"""
+    <a href={@src} data-srcset={@srcset} data-lightbox={@src}>
+      <%= render_slot(@inner_block) %>
+    </a>
+    """
   end
 
   defp replace_attrs(source_attrs, format) do
@@ -321,13 +321,7 @@ defmodule Brando.HTML.Images do
         attrs
 
       mqs ->
-        tags =
-          Enum.map(mqs, fn {media_query, srcset} ->
-            tag(:source, media: media_query, srcset: srcset)
-          end)
-
-        attrs
-        |> put_in([:mq_sources], tags)
+        put_in(attrs, [:mq_sources], mqs)
     end
   end
 
@@ -449,112 +443,6 @@ defmodule Brando.HTML.Images do
     put_in(attrs, [:picture, :data_moonwalk], moonwalk)
   end
 
-  defp wrap_lightbox(rendered_tag, img_src, srcset \\ nil),
-    do: content_tag(:a, rendered_tag, href: img_src, data_srcset: srcset, data_lightbox: img_src)
-
-  @doc """
-  Outputs an `img` tag marked as safe html
-
-  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
-  image type's `sizes` map.
-
-  ## Options:
-
-    * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
-    * `default` - default value if `image_field` is nil. Does not respect `prefix`, so use
-      full path.
-    * `cache` - key to cache by, i.e `cache: schema.updated_at`
-    * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
-      I.e `srcset: {Brando.Users.User, :avatar}`
-      You can also reference a config struct directly:
-      I.e `srcset: image_series.cfg`
-      Or supply a srcset directly:
-        srcset: [
-          {"small", "300w"},
-          {"medium", "582w"},
-          {"large", "936w"},
-          {"xlarge", "1200w"}
-        ]
-    * `attrs` - extra attributes to the tag, ie data attrs
-  """
-  def img_tag(image_field, size, opts \\ []) do
-    lightbox = Keyword.get(opts, :lightbox, false)
-    img_src = Utils.img_url(image_field, size, opts)
-    attrs = extract_attrs(image_field, img_src, opts)
-    rendered_tag = tag(:img, attrs)
-    (lightbox && wrap_lightbox(rendered_tag, img_src)) || rendered_tag
-  end
-
-  defp extract_attrs(image_field, img_src, opts) do
-    srcset_attr = extract_srcset_attr(image_field, opts)
-    sizes_attr = extract_sizes_attr(image_field, opts)
-    width_attr = extract_width_attr(image_field, opts)
-    height_attr = extract_height_attr(image_field, opts)
-    extra_attrs = extract_extra_attr(image_field, opts)
-
-    cleaned_opts =
-      Keyword.drop(opts, [
-        :lightbox,
-        :cache,
-        :attrs,
-        :prefix,
-        :srcset,
-        :sizes,
-        :default,
-        :width,
-        :height
-      ])
-
-    attrs =
-      Keyword.new()
-      |> Keyword.put(:src, img_src)
-      |> Keyword.merge(
-        cleaned_opts ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
-      )
-
-    # if we have srcset, set src as empty svg
-    (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field, 0, attrs))) || attrs
-  end
-
-  defp extract_srcset_attr(img_field, opts),
-    do:
-      (Keyword.get(opts, :srcset) &&
-         [srcset: get_srcset(img_field, opts[:srcset], opts) |> elem(1)]) || []
-
-  defp extract_sizes_attr(_, opts),
-    do: (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
-
-  defp extract_width_attr(img_field, opts) do
-    case Keyword.fetch(opts, :width) do
-      :error ->
-        []
-
-      {:ok, true} ->
-        [width: Map.get(img_field, :width)]
-
-      {:ok, width} ->
-        [width: width]
-    end
-  end
-
-  defp extract_height_attr(img_field, opts) do
-    case Keyword.fetch(opts, :height) do
-      :error ->
-        []
-
-      {:ok, true} ->
-        [height: Map.get(img_field, :height)]
-
-      {:ok, height} ->
-        [height: height]
-    end
-  end
-
-  defp extract_extra_attr(_, opts), do: Keyword.get(opts, :attrs, [])
-
-  @doc """
-  Return a correctly sized svg fallback
-  """
   def svg_fallback(image_field, opacity \\ 0, attrs \\ []) do
     width =
       case Keyword.fetch(attrs, :width) do
