@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                   <Input.Code.render form={entry} field={:code} label={gettext "Code"} />
                 </div>
 
-                <%= hidden_input entry, :id, value: 2107 %>
+                <%= hidden_input entry, :id %>
 
                 <.live_component
                   module={ModuleProps}
@@ -341,9 +341,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_entry_template =
       entry_template
       |> Map.from_struct()
-      |> Map.drop([:__meta__])
+      |> Map.drop([:__meta__, :id])
       |> Map.put(:refs, [new_ref | refs])
-      |> Map.put(:id, 2107)
 
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
 
@@ -365,9 +364,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_entry_template =
       entry_template
       |> Map.from_struct()
-      |> Map.drop([:__meta__])
+      |> Map.drop([:__meta__, :id])
       |> Map.put(:refs, filtered_refs)
-      |> Map.put(:id, 2107)
 
     updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
 
@@ -397,9 +395,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_entry_template =
       entry_template
       |> Map.from_struct()
-      |> Map.drop([:__meta__])
+      |> Map.drop([:__meta__, :id])
       |> Map.put(:vars, [new_var | vars])
-      |> Map.put(:id, 2107)
 
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
 
@@ -422,9 +419,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_entry_template =
       entry_template
       |> Map.from_struct()
-      |> Map.drop([:__meta__])
+      |> Map.drop([:__meta__, :id])
       |> Map.put(:vars, filtered_vars)
-      |> Map.put(:id, 2107)
 
     updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
 
