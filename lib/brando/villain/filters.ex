@@ -222,6 +222,10 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
+  def renderless(_, _) do
+    ""
+  end
+
   @doc """
   Get src of image
   """
