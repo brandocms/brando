@@ -180,6 +180,13 @@ defmodule Brando.Villain.Parser do
         base_vars = process_vars(block.vars)
         base_refs = process_refs(block.refs)
 
+        entries =
+          Enum.map(entries, fn entry ->
+            entry
+            |> put_in([Access.key(:data), Access.key(:vars)], process_vars(entry.data.vars))
+            |> put_in([Access.key(:data), Access.key(:refs)], process_refs(entry.data.refs))
+          end)
+
         context =
           base_context
           |> add_vars_to_context(base_vars)
