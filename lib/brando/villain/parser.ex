@@ -768,6 +768,18 @@ defmodule Brando.Villain.Parser do
       defp process_vars(nil), do: %{}
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
+      defp process_var(
+             %Brando.Content.Var.Image{
+               key: key,
+               label: _,
+               type: _,
+               value: %Ecto.Association.NotLoaded{}
+             } = var
+           ) do
+        %{value: value} = Brando.repo().preload(var, [:value])
+        {key, value}
+      end
+
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
       defp process_refs(nil), do: %{}
