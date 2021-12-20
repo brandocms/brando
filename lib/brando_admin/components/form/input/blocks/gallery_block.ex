@@ -140,10 +140,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         <%= if @has_images? do %>
           <span phx-update="ignore">
-            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>Upload images</button>
+            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
           </span>
-          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>Select images</button>
-          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>Edit captions</button>
+          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}><%= gettext "Select images" %></button>
+          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}><%= gettext "Edit captions" %></button>
           <div
             id={"sortable-#{@block_data.id}-images"}
             class={render_classes([
@@ -168,11 +168,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
                     <div>
                       <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ No caption }") %>
+                      <%= raw(img.title || "{ #{gettext"No caption"} }") %>
                     </div>
                     <div>
                       <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ No alt text }" %>
+                      <%= img.alt || "{ #{gettext"No alt text"} }" %>
                     </div>
                   </figcaption>
                 </div>
@@ -186,11 +186,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
                     <div>
                       <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ No caption }") %>
+                      <%= raw(img.title || "{ #{gettext"No caption"} }") %>
                     </div>
                     <div>
                       <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ No alt text }" %>
+                      <%= img.alt || "{ #{gettext"No alt text"} }" %>
                     </div>
                     <div>
                       <span><%= gettext("Dimensions") %></span>
@@ -239,13 +239,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               <div
                 class={render_classes([
                   "image-picker-image",
-                  selected: image.image.path in @selected_images_paths,
-                  hidden: @show_only_selected? && image.image.path not in @selected_images_paths
+                  selected: image.path in @selected_images_paths,
+                  hidden: @show_only_selected? && image.path not in @selected_images_paths
                 ])}
                 phx-click={JS.push("select_image", target: @myself)}
                 phx-value-id={image.id}
-                phx-value-selected={image.image.path in @selected_images_paths && "true" || "false"}>
-                <img src={"/media/#{image.image.sizes["thumb"]}"} />
+                phx-value-selected={image.path in @selected_images_paths && "true" || "false"}>
+                <img src={"/media/#{image.sizes["thumb"]}"} />
               </div>
             <% end %>
           </div>
@@ -358,7 +358,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image.image))
+    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image))
 
     images = input_value(block_data, :images) ++ [picture_data_tpl]
 
@@ -416,7 +416,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image.image))
+    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image))
 
     images = input_value(block_data, :images) ++ [picture_data_tpl]
 
@@ -448,7 +448,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    images = Enum.reject(input_value(block_data, :images), &(&1.path == image.image.path))
+    images = Enum.reject(input_value(block_data, :images), &(&1.path == image.path))
 
     changeset = base_form.source
     module = changeset.data.__struct__
