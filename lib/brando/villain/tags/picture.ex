@@ -1,6 +1,6 @@
 defmodule Brando.Villain.Tags.Picture do
   @moduledoc """
-  {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.regular', prefix: 'media' } %}
+  {% picture entry.cover { size: 'auto', lazyload: true, srcset: 'MyApp.Projects.Project:cover.default', prefix: '/media' } %}
   """
   @behaviour Liquex.Tag
 
