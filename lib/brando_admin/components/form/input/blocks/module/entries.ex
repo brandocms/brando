@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
+  import Brando.Gettext
 
   # prop block_data, :form, required: true
   # prop base_form, :form, required: true
@@ -44,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       <% end %>
 
       <button class="add-module-entry" type="button" phx-click={JS.push("add_entry", target: @myself)} phx-page-loading>
-        Add new entry [<%= @entry_template.name %>]
+        <%= gettext "Add" %> [<%= @entry_template.name %>]
       </button>
     </div>
     """
