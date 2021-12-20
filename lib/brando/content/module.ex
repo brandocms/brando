@@ -3,6 +3,25 @@ defmodule Brando.Content.Module do
   Ecto schema for the Villain Content Module schema
 
   A module can hold a setup for multiple blocks.
+
+  ## Multi module
+
+  A module can be setup as a multi module, meaning it can contain X other entries.
+
+  If the entry template is not floating your boat, you can access the child entries directly
+  from you main module's code:
+
+  ```
+  {% for link in entries %}
+    <h2>{{ link.data.vars.header_text }}</h2>
+  {% endfor %}
+
+  {{ content | renderless }}
+  ```
+
+  We include `{{ content | renderless }}` at the bottom to show the proper UI for the
+  child entries in the admin area, but since it runs through the `renderless` filter,
+  it will be excluded from rendering in the frontend.
   """
 
   @type t :: %__MODULE__{}
