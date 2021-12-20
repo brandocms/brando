@@ -88,13 +88,13 @@ defmodule Brando.Villain.Parser do
       def render_caption(%{title: "", credits: ""}), do: ""
 
       def render_caption(%{title: title, credits: nil}),
-        do: "<figcaption>#{title}</figcaption>"
+        do: "#{title}"
 
       def render_caption(%{title: nil, credits: credits}),
-        do: "<figcaption>#{credits}</figcaption>"
+        do: "#{credits}"
 
       def render_caption(%{title: title, credits: credits}),
-        do: "<figcaption>#{title} — #{credits}</figcaption>"
+        do: "#{title} — #{credits}"
 
       defoverridable render_caption: 1
 
@@ -420,8 +420,9 @@ defmodule Brando.Villain.Parser do
           link: link,
           rel: rel,
           target: target,
-          caption: caption,
+          orientation: orientation,
           opts: [
+            caption: caption,
             img_class: img_class,
             picture_class: picture_class,
             media_queries: media_queries,
@@ -430,7 +431,8 @@ defmodule Brando.Villain.Parser do
             height: height,
             lightbox: lightbox,
             placeholder: placeholder,
-            srcset: srcset
+            srcset: srcset,
+            prefix: Brando.Utils.media_url()
           ]
         }
 
@@ -458,6 +460,7 @@ defmodule Brando.Villain.Parser do
               caption: caption,
               opts: [
                 key: :xlarge,
+                caption: caption,
                 alt: img["title"] || "Ill.",
                 width: true,
                 height: true,
@@ -516,6 +519,7 @@ defmodule Brando.Villain.Parser do
               caption: caption,
               opts: [
                 key: :xlarge,
+                caption: caption,
                 alt: alt,
                 width: true,
                 height: true,
@@ -634,7 +638,7 @@ defmodule Brando.Villain.Parser do
       defoverridable datatable: 2
 
       @doc """
-      Datatable
+      Table
       """
       def table(_, _) do
         # TODO
@@ -836,20 +840,21 @@ defmodule Brando.Villain.Parser do
 
   def picture_tag(assigns) do
     ~H"""
-    <div class="picture-wrapper" data-orientation={@orientation}>
-      <%= if @link != "" do %>
-        <.link url={@link} rel={@rel} target={@target}>
+    <%= if @src.path do %>
+      <div class="picture-wrapper" data-orientation={@orientation}>
+        <%= if @link != "" do %>
+          <.link url={@link} rel={@rel} target={@target}>
+            <.picture
+              src={@src}
+              opts={@opts} />
+          </.link>
+        <% else %>
           <.picture
             src={@src}
             opts={@opts} />
-        </.link>
-      <% else %>
-        <.picture
-          src={@src}
-          opts={@opts} />
-      <% end %>
-      <%= @caption %>
-    </div>
+        <% end %>
+      </div>
+    <% end %>
     """
   end
 
@@ -857,7 +862,6 @@ defmodule Brando.Villain.Parser do
     ~H"""
     <figure data-panner-item data-orientation={@orientation} data-moonwalk="panner">
       <.picture src={@src} opts={@opts} />
-      <figcaption><%= @caption %></figcaption>
     </figure>
     """
   end
