@@ -162,7 +162,7 @@ defmodule Brando.HTML.Images do
 
   defp figcaption_tag(assigns) do
     ~H"""
-    <figcaption><%= @caption %></figcaption>
+    <figcaption><%= Phoenix.HTML.raw(@caption) %></figcaption>
     """
   end
 
