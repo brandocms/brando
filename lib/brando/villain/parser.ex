@@ -444,9 +444,16 @@ defmodule Brando.Villain.Parser do
       defoverridable picture: 2
 
       @doc """
-      Slideshow
+      Gallery.
+
+      3 types:
+
+        - slider
+        - slideshow
+        - gallery
+
       """
-      def slideshow(%{images: images} = data, _) do
+      def gallery(%{type: :slider, images: images} = data, _) do
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         items =
@@ -489,12 +496,7 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      defoverridable slideshow: 2
-
-      @doc """
-      Gallery
-      """
-      def gallery(%{images: images} = data, _) do
+      def gallery(%{type: :slideshow, images: images} = data, _) do
         class = Map.get(data, :class, "")
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
@@ -517,6 +519,58 @@ defmodule Brando.Villain.Parser do
               src: img,
               link: "",
               caption: caption,
+              orientation: orientation,
+              opts: [
+                key: :xlarge,
+                caption: caption,
+                alt: alt,
+                width: true,
+                height: true,
+                placeholder: placeholder,
+                sizes: "auto",
+                srcset: default_srcset,
+                lazyload: true,
+                lightbox: data.lightbox || false,
+                prefix: Utils.media_url()
+              ]
+            }
+
+            assigns
+            |> Brando.Villain.Parser.picture_tag()
+            |> Phoenix.LiveViewTest.rendered_to_string()
+          end)
+
+        """
+        <div data-slideshow="#{class}">
+          #{items}
+        </div>
+        """
+      end
+
+      def gallery(%{type: :gallery, images: images} = data, _) do
+        class = Map.get(data, :class, "")
+        default_srcset = Brando.config(Brando.Images)[:default_srcset]
+
+        items =
+          Enum.map_join(images, "\n", fn img ->
+            title = Map.get(img, :title, nil)
+            credits = Map.get(img, :credits, nil)
+            alt = Map.get(img, :alt, nil)
+            width = Map.get(img, :width, nil)
+            height = Map.get(img, :height, nil)
+            placeholder = Map.get(data, :placeholder, :svg)
+
+            placeholder =
+              (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
+
+            orientation = (img.width > img.height && "landscape") || "portrait"
+            caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
+
+            assigns = %{
+              src: img,
+              link: "",
+              caption: caption,
+              orientation: orientation,
               opts: [
                 key: :xlarge,
                 caption: caption,
