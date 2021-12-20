@@ -26,9 +26,7 @@ defmodule Brando.Content.Module.EmbeddedModule do
   @derived_fields ~w(id name sequence namespace help_text multi wrapper class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  trait Brando.Trait.Sequenced
-  trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  # trait Brando.Trait.Timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
 
   attributes do
@@ -48,7 +46,6 @@ defmodule Brando.Content.Module.EmbeddedModule do
   end
 
   relations do
-    # relation :entry_template, :embeds_one, module: Module, on_replace: :delete
     relation :refs, :embeds_many, module: Module.Ref, on_replace: :delete
   end
 
