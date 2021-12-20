@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -63,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
     |> assign(:module_code, entry_template.code)
     |> assign(:module_multi, true)
     |> assign(:refs, refs)
+    |> assign(:vars, vars)
     |> assign_new(:important_vars, fn ->
       Enum.filter(vars, &(&1.important == true))
     end)
@@ -118,6 +120,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                   module_refs={@refs}
                   module_ref_name={ref}
                   base_form={@base_form} />
+
+              <% {:variable, var_name, variable_value} -> %>
+                <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
+                  <%= variable_value %>
+                </div>
+
+              <% {:picture, _, img_src} -> %>
+                <img src={img_src} />
 
               <% _ -> %>
                 <%= raw split %>
@@ -206,22 +216,84 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
     {:noreply, socket}
   end
 
-  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket) do
-    socket
-  end
+  @regex_strips ~r/((?:{% for (\w+) in [a-zA-Z0-9_.?|"-]+ %})(?:.*?)(?:{% endfor %}))|({% assign .*? %})|(({% if .* %}(?:.*?){% endif %}))|(({% unless .* %}(?:.*?){% endunless %}))/s
+  @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
+  @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/
+
+  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket), do: socket
 
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
-      ~r/%{(\w+)}|{{ (\w+) }}/
-      |> Regex.split(module_code, include_captures: true)
+      @regex_splits
+      |> Regex.split(strip_logic(module_code), include_captures: true)
       |> Enum.map(fn chunk ->
-        case Regex.run(~r/%{(?<ref>\w+)}|{{ (?<content>content) }}/, chunk, capture: :all_names) do
-          nil -> chunk
-          [content, ""] -> {:content, content}
-          ["", ref] -> {:ref, ref}
+        case Regex.run(@regex_chunks, chunk, capture: :all_names) do
+          nil ->
+            chunk
+
+          ["content", "", ""] ->
+            {:content, "content"}
+
+          [variable, "", ""] ->
+            {:variable, variable, render_variable(variable, socket.assigns)}
+
+          ["", pic, ""] ->
+            {:picture, pic, render_picture_src(pic, socket.assigns)}
+
+          ["", "", ref] ->
+            {:ref, ref}
         end
       end)
 
     assign(socket, :splits, splits)
+  end
+
+  defp strip_logic(module_code), do: Regex.replace(@regex_strips, module_code, "")
+
+  defp render_picture_src("entry." <> var_path_string, assigns) do
+    var_path =
+      var_path_string
+      |> String.split(".")
+      |> Enum.map(&String.to_existing_atom/1)
+
+    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
+
+    if img = Brando.Utils.try_path(entry, var_path) do
+      Brando.Utils.media_url(img.path)
+    else
+      ""
+    end
+  end
+
+  defp render_variable("entry." <> var_path_string, assigns) do
+    var_path =
+      var_path_string
+      |> String.split(".")
+      |> Enum.map(&String.to_existing_atom/1)
+
+    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
+
+    # TODO: Find a way to preload any changed associations here? otherwise, if we for instance have
+    # an `entry.category_id` that changes, entry.category will still show the old relation.
+    # if we Brando.repo().preload(entry, [:category], force: true) it will be correct.
+    # However, it isn't very efficient to force a preload on every render_variable call!
+
+    # We could track all relations from the schema blueprint, store their ids and check, but .. ugh.
+    # If we assign the entry as rendered_entry every time, we at least won't have to preload
+    # on every render
+
+    # The best might be to not preload here, but preload directly from the input component
+    # that updates the relation. So if it is a select box, send_update to the form with
+    # the field we wish to reload?
+
+    # entry = Brando.repo().preload(entry, [:category], force: true)
+    Brando.Utils.try_path(entry, var_path) |> raw()
+  end
+
+  defp render_variable(var, assigns) do
+    case Enum.find(assigns.vars, &(&1.key == var)) do
+      %{value: value} -> value
+      nil -> var
+    end
   end
 end

@@ -55,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:entry, fn -> Ecto.Changeset.apply_changes(assigns.base_form.source) end)
      |> assign_new(:module_id, fn -> v(assigns.block, :data).module_id end)
      |> assign_module_data()
      |> parse_module_code()}
@@ -191,6 +192,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
                   <%= variable_value %>
                 </div>
+
+              <% {:picture, _, img_src} -> %>
+                <img src={img_src} />
 
               <% _ -> %>
                 <%= raw split %>
@@ -418,13 +422,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:noreply, socket}
   end
 
+  @regex_strips ~r/((?:{% for (\w+) in [a-zA-Z0-9_.?|"-]+ %})(?:.*?)(?:{% endfor %}))|({% assign .*? %})|(({% if .* %}(?:.*?){% endif %}))|(({% unless .* %}(?:.*?){% endunless %}))/s
+  @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
+  @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/
+
   defp parse_module_code(%{assigns: %{module_not_found: true}} = socket), do: socket
 
-  @regex_strips ~r/((?:{% for (\w+) in [a-zA-Z0-9_.?|"-]+ %})(?:.*?)(?:{% endfor %}))|({% assign .*? %})|(({% if .* %}(?:.*?){% endif %}))|(({% unless .* %}(?:.*?){% endunless %}))/s
-  @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}/
-  @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w.]+) }}$/
-
-  # TODO: Is there a way we could parse and render this with liquex?
   defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
     splits =
       @regex_splits
@@ -434,13 +437,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           nil ->
             chunk
 
-          ["content", ""] ->
+          ["content", "", ""] ->
             {:content, "content"}
 
-          [variable, ""] ->
+          [variable, "", ""] ->
             {:variable, variable, render_variable(variable, socket.assigns)}
 
-          ["", ref] ->
+          ["", pic, ""] ->
+            {:picture, pic, render_picture_src(pic, socket.assigns)}
+
+          ["", "", ref] ->
             {:ref, ref}
         end
       end)
@@ -449,6 +455,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   defp strip_logic(module_code), do: Regex.replace(@regex_strips, module_code, "")
+
+  defp render_picture_src("entry." <> var_path_string, assigns) do
+    var_path =
+      var_path_string
+      |> String.split(".")
+      |> Enum.map(&String.to_existing_atom/1)
+
+    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
+
+    if img = Brando.Utils.try_path(entry, var_path) do
+      Brando.Utils.media_url(img.path)
+    else
+      ""
+    end
+  end
 
   defp render_variable("entry." <> var_path_string, assigns) do
     var_path =
@@ -472,7 +493,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     # the field we wish to reload?
 
     # entry = Brando.repo().preload(entry, [:category], force: true)
-    Brando.Utils.try_path(entry, var_path)
+    Brando.Utils.try_path(entry, var_path) |> raw()
   end
 
   defp render_variable(var, assigns) do

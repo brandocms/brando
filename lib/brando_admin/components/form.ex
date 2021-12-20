@@ -604,12 +604,13 @@ defmodule BrandoAdmin.Components.Form do
         %{"image" => image_params},
         %{
           assigns: %{
-            id: form_id,
             changeset: changeset,
+            entry: entry,
             edit_image:
               %{
                 image: image,
                 path: path,
+                field: field,
                 relation_field: relation_field
               } = edit_image,
             current_user: current_user
@@ -631,24 +632,18 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_image = Map.put(edit_image, :image, updated_image)
-
     full_path = path ++ [relation_field]
-
-    nilled_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
 
-    send_update_after(
-      __MODULE__,
-      [id: form_id, updated_changeset: updated_changeset],
-      1000
-    )
+    updated_entry = Map.put(entry, field, updated_image)
 
     {:noreply,
-     assign(socket,
-       changeset: nilled_changeset,
-       image_changeset: validated_changeset,
-       edit_image: edit_image
-     )}
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:changeset, updated_changeset)
+     |> assign(:image_changeset, validated_changeset)
+     |> assign(:edit_image, edit_image)
+     |> push_event("b:validate", %{})}
   end
 
   # without image in params
