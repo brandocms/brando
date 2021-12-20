@@ -50,6 +50,10 @@ defmodule Brando.HTML.Images do
       Or a list of srcsets to generate multiple source elements:
 
   """
+  def picture(%{src: nil} = assigns) do
+    ~H||
+  end
+
   def picture(%{src: %Ecto.Association.NotLoaded{}} = assigns) do
     ~H"""
     <div>
@@ -112,15 +116,17 @@ defmodule Brando.HTML.Images do
       |> assign(:noscript_alt, Keyword.get(attrs.opts, :alt, Map.get(src, :alt, "")))
 
     ~H"""
-    <picture {@attrs.picture}>
-      <.mq_sources mqs={@attrs.mq_sources} />
-      <.source_tags src={@src} attrs={@attrs} />
-      <img {@attrs.img} />
+    <figure>
+      <picture {@attrs.picture}>
+        <.mq_sources mqs={@attrs.mq_sources} />
+        <.source_tags src={@src} attrs={@attrs} />
+        <img {@attrs.img} />
+        <.noscript_tag attrs={@attrs.noscript_img} alt={@noscript_alt} />
+      </picture>
       <%= if @figcaption? do %>
         <.figcaption_tag caption={@src.title} />
       <% end %>
-      <.noscript_tag attrs={@attrs.noscript_img} alt={@noscript_alt} />
-    </picture>
+    </figure>
     """
   end
 
