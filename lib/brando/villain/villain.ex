@@ -287,13 +287,12 @@ defmodule Brando.Villain do
           integer | binary
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
-    # TODO: Use blueprint's context get/1 here if available!
-    query =
-      from(s in schema,
-        where: s.id == ^id
-      )
+    ctx = schema.__modules__().context
+    singular = schema.__naming__().singular
+    get_opts = %{matches: %{id: id}}
 
-    record = Brando.repo().one(query)
+    {:ok, record} = apply(ctx, :"get_#{singular}", [get_opts])
+
     parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
 
     changeset =
