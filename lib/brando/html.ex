@@ -36,6 +36,7 @@ defmodule Brando.HTML do
     <Brando.HTML.Images.picture src={@src} opts={@opts} />
     """
     |> Phoenix.LiveViewTest.rendered_to_string()
+    |> raw()
   end
 
   @doc """
