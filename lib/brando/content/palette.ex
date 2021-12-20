@@ -88,7 +88,7 @@ defmodule Brando.Content.Palette do
         """
         <div class="circle-stack">
           {% for color in entry.colors reversed %}
-            <div class="circle" data-color-no="{{ forloop.index0 }}" style="background-color: {{ color.hex_value }}"></div>
+            <div class="circle" data-color-no="{{ forloop.index0 }}" data-popover="{{ color.hex_value }}" style="background-color: {{ color.hex_value }}"></div>
           {% endfor %}
         </div>
         """,
