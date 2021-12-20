@@ -232,4 +232,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
     |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
   end
+
+  defp replace_uids(
+         %Brando.Blueprint.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block
+       ) do
+    updated_blocks = Enum.map(blocks, &replace_uids/1)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:blocks)], updated_blocks)
+  end
 end
