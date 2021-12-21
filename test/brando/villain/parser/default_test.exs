@@ -79,35 +79,6 @@ defmodule Brando.Villain.ParserTest do
              "<ul id=\"ul_id\" class=\"ul_class\">\n  <li class=\"test\">\n  val here!\n</li>\n\n<li>\n  val 2 here!\n</li>\n\n</ul>\n"
   end
 
-  test "columns/2" do
-    assert columns(
-             [
-               %{
-                 class: "six",
-                 data: [
-                   %{data: %{text: "Header 1"}, type: "header"},
-                   %{
-                     data: %{text: "Paragraph 1", type: "paragraph"},
-                     type: "text"
-                   }
-                 ]
-               },
-               %{
-                 class: "six",
-                 data: [
-                   %{data: %{text: "Header 2"}, type: "header"},
-                   %{
-                     data: %{text: "Paragraph 2", type: "paragraph"},
-                     type: "text"
-                   }
-                 ]
-               }
-             ],
-             []
-           ) ==
-             "<div class=\"row\"><div class=\"col-md-6\"><h1>Header 1</h1>Paragraph 1</div><div class=\"col-md-6\"><h1>Header 2</h1>Paragraph 2</div></div>"
-  end
-
   test "blockquote/2" do
     assert blockquote(%{text: "Some text", cite: "J. Williamson"}, []) ==
              "<blockquote>\n  <p>Some text</p>\n\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
