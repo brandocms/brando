@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.FieldBase
-  alias Brando.Images
   alias Brando.Utils
 
   # prop form, :form
@@ -50,14 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       |> get_field(relation_field)
       |> try_force_int()
 
-    previous_image_id = Map.get(socket.assigns, :previous_image_id)
-    image = get_image(Map.get(socket.assigns, :image), image_id, previous_image_id)
-
-    focal =
-      if is_map(image) && image.path,
-        do: Map.get(image, :focal, %Images.Focal{}),
-        else: nil
-
+    image = get_field(assigns.form.source, assigns.field)
     file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
 
     {:ok,
@@ -66,42 +58,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> prepare_input_component()
      |> assign(:image, image)
      |> assign(:image_id, image_id)
-     |> assign(:previous_image_id, image_id)
      |> assign(:file_name, file_name)
      |> assign(:upload_field, assigns.uploads[assigns.field])
-     |> assign(:relation_field, relation_field)
-     |> assign(:focal, focal)}
+     |> assign(:relation_field, relation_field)}
   end
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
   def try_force_int(int) when is_integer(int), do: int
   def try_force_int(val), do: val
-
-  def get_image(nil, nil, _) do
-    nil
-  end
-
-  def get_image(nil, image_id, previous_image_id) when image_id == previous_image_id do
-    case Images.get_image(image_id) do
-      {:ok, image} -> image
-      {:error, _} -> nil
-    end
-  end
-
-  def get_image(_image, nil, _) do
-    nil
-  end
-
-  def get_image(image, image_id, previous_image_id) when image_id == previous_image_id do
-    image
-  end
-
-  def get_image(_, image_id, _) do
-    case Images.get_image(image_id) do
-      {:ok, image} -> image
-      {:error, _} -> nil
-    end
-  end
 
   def render(assigns) do
     ~H"""

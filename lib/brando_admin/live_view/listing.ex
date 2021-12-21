@@ -169,9 +169,6 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   def update_list_entries(schema) do
-    require Logger
-    Logger.error("==> update_list_entries for #{inspect(schema)}")
-
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       "brando:listing:content_listing_#{schema}_default",

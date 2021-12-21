@@ -6,12 +6,11 @@ defmodule Brando.Worker.ImageProcessor do
 
   @impl Oban.Worker
   def perform(%Oban.Job{
-        args:
-          %{
-            "image_id" => image_id,
-            "config_target" => config_target,
-            "user_id" => user_id
-          } = args
+        args: %{
+          "image_id" => image_id,
+          "config_target" => config_target,
+          "user_id" => user_id
+        }
       }) do
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, _} <- Images.Utils.delete_sized_images(image),
@@ -21,15 +20,25 @@ defmodule Brando.Worker.ImageProcessor do
          {:ok, process_map} <- Images.Operations.perform(operations, user) do
       result = Map.get(process_map, image_id)
 
-      Images.update_image(
-        image,
-        %{
-          sizes: result.sizes,
-          formats: result.formats,
-          status: :processed
-        },
-        user
-      )
+      image_params = %{
+        sizes: result.sizes,
+        formats: result.formats,
+        status: :processed
+      }
+
+      case Images.update_image(image, image_params, user) do
+        {:ok, image} ->
+          Phoenix.PubSub.broadcast(
+            Brando.pubsub(),
+            "brando:image:#{image.id}",
+            {image, [:image, :updated], []}
+          )
+
+          {:ok, image}
+
+        err ->
+          err
+      end
     else
       err ->
         {:error, err}

@@ -110,6 +110,28 @@ defmodule BrandoAdmin.LiveView.Form do
         {:cont, socket}
     end)
     |> attach_hook(:b_form_infos, :handle_info, fn
+      {image, [:image, :updated], []}, socket ->
+        case String.split(image.config_target, ":") do
+          ["image", _schema, field_name] ->
+            field_atom = String.to_existing_atom(field_name)
+            schema = socket.assigns.schema
+            singular = schema.__naming__().singular
+            target_id = "#{singular}_form"
+
+            send_update(BrandoAdmin.Components.Form,
+              id: target_id,
+              action: :update_entry_relation,
+              updated_relation: image,
+              field: field_atom,
+              force_validation: true
+            )
+
+          _ ->
+            nil
+        end
+
+        {:halt, socket}
+
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}

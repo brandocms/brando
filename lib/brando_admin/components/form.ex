@@ -32,6 +32,23 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{
+          action: :update_entry_relation,
+          updated_relation: updated_relation,
+          field: field_atom,
+          force_validation: true
+        },
+        %{assigns: %{entry: entry}} = socket
+      ) do
+    updated_entry = Map.put(entry, field_atom, updated_relation)
+
+    {:ok,
+     socket
+     |> assign(:entry, updated_entry)
+     |> push_event("b:validate", %{})}
+  end
+
+  def update(
         %{updated_entry: updated_entry},
         %{assigns: %{schema: schema, current_user: current_user}} = socket
       ) do
@@ -538,16 +555,18 @@ defmodule BrandoAdmin.Components.Form do
         %{
           assigns: %{
             changeset: changeset,
-            edit_image: %{path: path, relation_field: relation_field} = edit_image
+            edit_image: edit_image,
+            entry: entry
           }
         } = socket
       ) do
-    full_path = path ++ [relation_field]
+    full_path = edit_image.path ++ [edit_image.relation_field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_image = Map.put(edit_image, :image, nil)
 
     {:noreply,
      socket
+     |> assign(:entry, Map.put(entry, edit_image.field, nil))
      |> assign(:image_changeset, nil)
      |> assign(:edit_image, updated_edit_image)
      |> assign(:changeset, updated_changeset)
@@ -635,7 +654,16 @@ defmodule BrandoAdmin.Components.Form do
     full_path = path ++ [relation_field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
 
-    updated_entry = Map.put(entry, field, updated_image)
+    entrys_current_image = Map.get(entry, field)
+
+    updated_entry =
+      if entrys_current_image && entrys_current_image.id == image.id &&
+           entrys_current_image.status == :processed do
+        # the image has already been marked as processed, do not update the relation
+        entry
+      else
+        Map.put(entry, field, updated_image)
+      end
 
     {:noreply,
      socket
@@ -884,6 +912,8 @@ defmodule BrandoAdmin.Components.Form do
           end
         )
 
+      # Subscribe parent live view to changes to this image
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
       Brando.Images.Processing.queue_processing(image, current_user)
 
       image_changeset = Ecto.Changeset.change(image)
