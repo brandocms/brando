@@ -305,6 +305,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  def creator(%{entry: %{creator: nil}} = assigns) do
+    ~H"""
+    <div class="col-4">
+      —
+    </div>
+    """
+  end
+
   def creator(%{entry: %{creator: %{avatar: avatar}}} = assigns) do
     assigns =
       assign(
