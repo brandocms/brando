@@ -53,16 +53,9 @@ defmodule Brando.Villain do
     html =
       data
       |> Enum.reduce([], fn
-        %{hidden: true}, acc ->
-          acc
-
-        %{marked_as_deleted: true}, acc ->
-          acc
-
-        data_node, acc ->
-          type_atom = String.to_atom(data_node.type)
-          data_node_content = data_node.data
-          [apply(parser, type_atom, [data_node_content, opts_map]) | acc]
+        %{hidden: true}, acc -> acc
+        %{marked_as_deleted: true}, acc -> acc
+        data_node, acc -> [parse_node(parser, data_node, opts_map) | acc]
       end)
       |> Enum.reverse()
       |> Enum.join()
@@ -74,6 +67,12 @@ defmodule Brando.Villain do
     })
 
     output
+  end
+
+  defp parse_node(parser, data_node, opts_map) do
+    type_atom = String.to_atom(data_node.type)
+    data_node_content = data_node.data
+    apply(parser, type_atom, [data_node_content, opts_map])
   end
 
   # so we don't pass around unneccessary data in the parser

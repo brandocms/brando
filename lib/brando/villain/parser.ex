@@ -24,9 +24,6 @@ defmodule Brando.Villain.Parser do
   @doc "Parses input (deprecated)"
   @callback input(data :: map, opts :: map) :: binary
 
-  @doc "Parses slideshow (deprecated)"
-  @callback slideshow(data :: map, opts :: map) :: binary
-
   @doc "Parses gallery"
   @callback gallery(data :: map, opts :: map) :: binary
 
@@ -38,9 +35,6 @@ defmodule Brando.Villain.Parser do
 
   @doc "Parses blockquote (deprecated)"
   @callback blockquote(data :: map, opts :: map) :: binary
-
-  @doc "Parses columns (deprecated)"
-  @callback columns(data :: map, opts :: map) :: binary
 
   @doc "Parses datatables (deprecated)"
   @callback datatable(data :: map, opts :: map) :: binary
@@ -385,6 +379,7 @@ defmodule Brando.Villain.Parser do
         orientation = (width > height && "landscape") || "portrait"
         lightbox = Map.get(data, :lightbox, nil)
         placeholder = Map.get(data, :placeholder, nil)
+        moonwalk = Map.get(data, :moonwalk, false)
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         link = Map.get(data, :link) || ""
@@ -427,6 +422,7 @@ defmodule Brando.Villain.Parser do
             picture_class: picture_class,
             media_queries: media_queries,
             alt: alt,
+            moonwalk: moonwalk,
             width: width,
             height: height,
             lightbox: lightbox,
@@ -743,29 +739,6 @@ defmodule Brando.Villain.Parser do
       defoverridable comment: 2
 
       @doc """
-      Convert columns to html. Recursive parsing.
-      """
-      def columns(cols, opts) do
-        col_html =
-          for col <- cols do
-            c =
-              Enum.reduce(col[:data], [], fn d, acc ->
-                [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
-              end)
-
-            class =
-              case col[:class] do
-                "six" -> "col-md-6"
-                other -> other
-              end
-
-            ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
-          end
-
-        ~s(<div class="row">#{col_html}</div>)
-      end
-
-      @doc """
       Convert container to html. Recursive parsing.
       """
       def container(%{blocks: blocks, palette_id: palette_id}, opts) do
@@ -774,8 +747,10 @@ defmodule Brando.Villain.Parser do
         with {:ok, palette} <- Content.find_palette(palettes, palette_id) do
           blocks_html =
             (blocks || [])
-            |> Enum.reduce([], fn d, acc ->
-              [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
+            |> Enum.reduce([], fn
+              %{hidden: true}, acc -> acc
+              %{marked_as_deleted: true}, acc -> acc
+              d, acc -> [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
             end)
             |> Enum.reverse()
             |> Enum.join("")
