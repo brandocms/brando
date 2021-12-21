@@ -194,7 +194,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 </div>
 
               <% {:picture, _, img_src} -> %>
-                <img src={img_src} />
+                <figure>
+                  <img src={img_src} />
+                </figure>
 
               <% _ -> %>
                 <%= raw split %>
