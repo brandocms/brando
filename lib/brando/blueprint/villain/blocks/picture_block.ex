@@ -30,6 +30,8 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
       attribute :height, :integer
       attribute :sizes, :map
       attribute :cdn, :boolean, default: false
+      attribute :lazyload, :boolean, default: false
+      attribute :moonwalk, :boolean, default: false
       attribute :dominant_color, :text
 
       attribute :placeholder, :enum,

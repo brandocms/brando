@@ -380,12 +380,13 @@ defmodule Brando.Villain.Parser do
         lightbox = Map.get(data, :lightbox, nil)
         placeholder = Map.get(data, :placeholder, nil)
         moonwalk = Map.get(data, :moonwalk, false)
+        lazyload = Map.get(data, :lazyload, false)
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         link = Map.get(data, :link) || ""
         img_class = Map.get(data, :img_class, "")
         picture_class = Map.get(data, :picture_class, "")
-        srcset = Map.get(data, :srcset)
+        srcset = Map.get(data, :srcset, nil)
 
         media_queries = Map.get(data, :media_queries)
 
@@ -423,11 +424,12 @@ defmodule Brando.Villain.Parser do
             media_queries: media_queries,
             alt: alt,
             moonwalk: moonwalk,
+            lazyload: lazyload,
             width: width,
             height: height,
             lightbox: lightbox,
             placeholder: placeholder,
-            srcset: srcset,
+            srcset: srcset || default_srcset,
             prefix: Brando.Utils.media_url()
           ]
         }

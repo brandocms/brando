@@ -26,6 +26,7 @@ defmodule Brando.HTML.Images do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
+    * `moonwalk` - set moonwalk attr
     * `media_queries` - list of media queries to add to source.
        I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `sizes` - set to "auto" for adding `data-sizes="auto"` which Jupiter parses and updates to image's size.
@@ -70,6 +71,7 @@ defmodule Brando.HTML.Images do
     initial_map = %{
       img: [],
       picture: [],
+      figure: [],
       source: [],
       noscript_img: [],
       mq_sources: [],
@@ -116,7 +118,7 @@ defmodule Brando.HTML.Images do
       |> assign(:noscript_alt, Keyword.get(attrs.opts, :alt, Map.get(src, :alt, "")))
 
     ~H"""
-    <figure>
+    <figure {@attrs.figure}>
       <picture {@attrs.picture}>
         <.mq_sources mqs={@attrs.mq_sources} />
         <.source_tags src={@src} attrs={@attrs} />
@@ -367,11 +369,11 @@ defmodule Brando.HTML.Images do
   defp add_dominant_color(attrs, image_struct) do
     case Keyword.get(attrs.opts, :placeholder) do
       pl when pl in [:dominant_color, "dominant_color"] ->
+        style = "background-color: #{image_struct.dominant_color || "transparent"}"
+
         attrs
-        |> put_in(
-          [:picture, :style],
-          "background-color: #{image_struct.dominant_color || "transparent"}"
-        )
+        |> put_in([:picture, :style], style)
+        |> put_in([:figure, :data_placeholder], "dominant_color")
 
       _ ->
         attrs
@@ -411,6 +413,7 @@ defmodule Brando.HTML.Images do
     attrs
     |> put_in([:img, :width], width)
     |> put_in([:img, :height], height)
+    |> put_in([:figure, :data_orientation], orientation)
     |> put_in([:picture, :data_orientation], orientation)
   end
 
@@ -446,7 +449,7 @@ defmodule Brando.HTML.Images do
 
   defp add_moonwalk(attrs) do
     moonwalk = Keyword.get(attrs.opts, :moonwalk, false)
-    put_in(attrs, [:picture, :data_moonwalk], moonwalk)
+    put_in(attrs, [:figure, :data_moonwalk], moonwalk)
   end
 
   def svg_fallback(image_field, opacity \\ 0, attrs \\ []) do

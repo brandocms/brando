@@ -189,6 +189,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
           <%= hidden_input @block_data, :placeholder %>
           <%= hidden_input @block_data, :cdn %>
+          <%= hidden_input @block_data, :moonwalk %>
+          <%= hidden_input @block_data, :lazyload %>
           <%= hidden_input @block_data, :credits %>
           <%= hidden_input @block_data, :dominant_color %>
           <%= hidden_input @block_data, :height %>
@@ -319,12 +321,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:ok, image} = Brando.Images.get_image(id)
 
     updated_data_map =
-      block_data
+      block_data.data
       |> Map.merge(image)
       |> Map.from_struct()
 
     updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-
     updated_picture_block = Map.put(block.data, :data, updated_data_struct)
 
     changeset = base_form.source

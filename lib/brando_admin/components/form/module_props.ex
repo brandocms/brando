@@ -217,6 +217,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           <% "picture" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <%= hidden_input(block_data, :cdn) %>
+                              <Input.Toggle.render form={block_data} field={:lazyload} label={gettext "Lazyload"} />
+                              <Input.Toggle.render form={block_data} field={:moonwalk} label={gettext "Moonwalk"} />
                               <Input.Text.render form={block_data} field={:title} label={gettext "Title/Caption"} />
                               <Input.Text.render form={block_data} field={:alt} label={gettext "Alt. text"} />
                               <Input.Text.render form={block_data} field={:credits} label={gettext "Credits"} />
