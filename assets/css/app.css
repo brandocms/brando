@@ -72,6 +72,7 @@
 
   > button {
     &:first-of-type {
+      margin-top: 0 !important;
       border-top-left-radius: 25px;
       border-bottom-left-radius: 25px;
     }

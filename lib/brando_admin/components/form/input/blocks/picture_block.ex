@@ -11,7 +11,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Modal
 
   # prop uploads, :any
   # prop base_form, :any
@@ -126,19 +125,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </div>
         </div>
 
-        <.live_component module={Modal}
-          title="Pick image"
-          center_header={true}
-          id={"block-#{@uid}-image-picker"}>
-          <div class="image-picker-images">
-            <%= for image <- @images do %>
-              <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself) |> hide_modal("#block-#{@uid}-image-picker")} phx-value-id={image.id}>
-                <img src={"/media/#{image.sizes["thumb"]}"} />
-              </div>
-            <% end %>
-          </div>
-        </.live_component>
-
         <:config>
           <div class="panels">
             <div class="panel">
@@ -175,8 +161,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.RichText.render form={@block_data} field={:title} label={gettext "Title"} />
               <Input.Text.render form={@block_data} field={:alt} label={gettext "Alt"} />
 
+              <Form.image_picker
+                id={"image-picker-#{@uid}"}
+                config_target={nil}
+                select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@uid}")} />
+
               <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>
+                <button type="button" class="secondary" phx-click={toggle_drawer("#image-picker-#{@uid}")}>
                   <%= gettext("Select image") %>
                 </button>
 

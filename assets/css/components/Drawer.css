@@ -39,7 +39,8 @@
     width: 425px;
   }
 
-  .inner {
+  > .inner {
+    display: block;
     @space padding-y 15px;
     @space padding-x sm;
   }

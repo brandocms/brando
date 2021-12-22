@@ -317,9 +317,7 @@ defmodule BrandoAdmin.Components.Form do
 
       <.image_picker
         id={"image-picker"}
-        schema={@schema}
-        path={@edit_image.path}
-        field={@edit_image.field}
+        config_target={{@schema, Enum.join(@edit_image.path ++ [@edit_image.field], ".")}}
         select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker")} />
 
       <.image_drawer {assigns} />
@@ -478,13 +476,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def image_picker(assigns) do
-    resolved_path = Enum.join(assigns.path ++ [assigns.field], ".")
-
     assigns =
       assign_new(assigns, :images, fn ->
         {:ok, images} =
           Brando.Images.list_images(%{
-            filter: %{config_target: {assigns.schema, resolved_path}},
+            filter: %{config_target: assigns.config_target},
             order: "desc id"
           })
 
@@ -494,20 +490,56 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={1002} dark>
       <:info>
-        <%= gettext "Select similarly typed image from library" %>
+        <%= if @config_target do %>
+          <div class="mb-2">
+            <%= gettext "Select similarly typed image from library" %>
+          </div>
+        <% end %>
+        <div class="button-group-horizontal mb-1">
+          <button class="secondary" type="button" phx-click={show_grid(@id)}>
+            Grid
+          </button>
+          <button class="secondary" type="button" phx-click={show_list(@id)}>
+            List
+          </button>
+        </div>
       </:info>
-      <div class="image-picker">
+      <div class="image-picker grid" id={"image-picker-drawer-#{@id}"}>
         <%= for image <- @images do %>
         <div class="image-picker__image" phx-click={@select_image} phx-value-id={image.id}>
           <img
             width="25"
             height="25"
             src={"#{Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url())}"} />
+          <div class="image-picker__info">
+            <div class="image-picker__filename"><%= image.path %></div>
+            <div class="image-picker__dims">
+              Dimensions....: <%= image.width %>&times;<%= image.height %>
+            </div>
+            <div class="image-picker__formats">
+              Formats.......: <%= inspect image.formats %>
+            </div>
+            <div class="image-picker__processed">
+              Status........: <%= inspect image.status %>
+            </div>
+          </div>
         </div>
         <% end %>
       </div>
     </Content.drawer>
     """
+  end
+
+  def show_grid(js \\ %JS{}, id) do
+    js
+    |> JS.add_class("grid", to: "#image-picker-drawer-#{id}")
+    |> JS.remove_class("list", to: "#image-picker-drawer-#{id}")
+  end
+
+  def show_list(js \\ %JS{}, id) do
+    js
+    |> JS.add_class("list", to: "#image-picker-drawer-#{id}")
+    |> JS.remove_class("grid", to: "#image-picker-drawer-#{id}")
   end
 
   def allow_uploads(socket) do

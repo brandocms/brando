@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   import Ecto.Changeset
 
   alias Brando.Utils
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Modal
@@ -57,7 +58,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     socket =
       if type == "image" do
         assign_new(socket, :image, fn ->
-          (value && Brando.Images.get_image!(value)) || nil
+          if value do
+            case Brando.Images.get_image(value) do
+              {:ok, image} -> image
+              {:error, _} -> nil
+            end
+          end
         end)
       else
         assign_new(socket, :image, fn -> nil end)
@@ -216,27 +222,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   click={show_modal("#var-#{@var.id}-image-config")} />
               <% end %>
               <.image_modal form={@var} image={@image} myself={@myself} />
-              <.image_picker_modal images={@images} form={@var} myself={@myself} />
             </div>
           </FieldBase.render>
       <% end %>
     </div>
-    """
-  end
-
-  def image_picker_modal(assigns) do
-    ~H"""
-    <.live_component module={Modal} title={gettext "Pick image"} id={"var-#{@form.id}-image-picker"}>
-      <div class="image-picker-images">
-        <%= if @images do %>
-          <%= for image <- @images do %>
-            <div class="image-picker-image" phx-click={JS.push("select_image", target: @myself, value: %{id: image.id}) |> hide_modal("#var-#{@form.id}-image-picker")}>
-              <img src={"/media/#{image.sizes["thumb"]}"} />
-            </div>
-          <% end %>
-        <% end %>
-      </div>
-    </.live_component>
     """
   end
 
@@ -284,9 +273,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
         </div>
         <div class="panel">
-          <%# Input.RichText.render form={@block_data} field={:title} label={gettext "Title"} %>
-          <%# Input.Text.render form={@block_data} field={:alt} label={gettext "Alt"} %>
-
+          <Form.image_picker
+            id={"image-picker-#{@form.id}"}
+            config_target={nil}
+            select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}")} />
           <div class="button-group-vertical">
             <button type="button" class="secondary" phx-click={open_image_picker(@form.id, @myself)}>
               <%= gettext("Select image") %>
@@ -305,7 +295,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def open_image_picker(var_id, target) do
     %JS{}
     |> JS.push("assign_images", target: target)
-    |> show_modal("#var-#{var_id}-image-picker")
+    |> toggle_drawer("#image-picker-#{var_id}")
   end
 
   def handle_event("assign_images", _, socket) do
