@@ -351,7 +351,7 @@ defmodule Brando.Villain.Parser do
         ]
 
         %{video: src, opts: opts}
-        |> video_tag()
+        |> video()
         |> Phoenix.LiveViewTest.rendered_to_string()
       end
 

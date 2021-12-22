@@ -114,7 +114,7 @@ defmodule Brando.HTMLTest do
     assigns = %{}
 
     comp = ~H"""
-    <.video_tag video={"https://src.vid"} opts={opts} />
+    <.video video={"https://src.vid"} opts={opts} />
     """
 
     assert rendered_to_string(comp) ==

@@ -25,7 +25,7 @@ defmodule Brando.HTML do
   defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(assigns), to: Brando.Meta.HTML
-  defdelegate video_tag(assigns), to: Brando.HTML.Video
+  defdelegate video(assigns), to: Brando.HTML.Video
 
   # TODO: Drop before 1.0
   @deprecated "Use heex component `<.picture src={src} opts={opts} />` instead"
@@ -40,12 +40,12 @@ defmodule Brando.HTML do
   end
 
   # TODO: Drop before 1.0
-  @deprecated "Use heex component `<.video_tag video={src} opts={opts} />` instead"
+  @deprecated "Use heex component `<.video video={src} opts={opts} />` instead"
   def video_tag(video, opts \\ []) do
     assigns = %{video: video, opts: opts}
 
     ~H"""
-    <Brando.HTML.Video.video_tag video={@video} opts={@opts} />
+    <Brando.HTML.Video.video video={@video} opts={@opts} />
     """
     |> Phoenix.LiveViewTest.rendered_to_string()
     |> raw()

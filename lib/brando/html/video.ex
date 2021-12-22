@@ -15,9 +15,9 @@ defmodule Brando.HTML.Video do
       - `html` -> for instance, provide a rendered picture_tag
     - `poster` -> url to poster, i.e. on vimeo.
   """
-  def video_tag(assigns)
+  def video(assigns)
 
-  def video_tag(%{
+  def video(%{
         assigns:
           %{
             video: %Video{
@@ -41,7 +41,7 @@ defmodule Brando.HTML.Video do
     """
   end
 
-  def video_tag(%{
+  def video(%{
         assigns:
           %{
             video: %Video{
@@ -70,7 +70,7 @@ defmodule Brando.HTML.Video do
     """
   end
 
-  def video_tag(%{video: src, opts: opts} = assigns) when is_binary(src) do
+  def video(%{video: src, opts: opts} = assigns) when is_binary(src) do
     width = Keyword.get(opts, :width)
     height = Keyword.get(opts, :height)
     opacity = Keyword.get(opts, :opacity, 0)
