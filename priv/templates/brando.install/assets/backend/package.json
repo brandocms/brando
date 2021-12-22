@@ -16,6 +16,6 @@
     "autoprefixer": "^10.3.7",
     "svelte": "^3.44.3",
     "svelte-preprocess": "^4.10.1",
-    "vite": "^2.7.3"
+    "vite": "^2.7.5"
   }
 }
