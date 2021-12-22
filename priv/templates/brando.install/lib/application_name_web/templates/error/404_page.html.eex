@@ -21,7 +21,10 @@
 <body>
   <div id="wrapper">
     <div class="container">
-      <h2>404<br><br>Page not found.<br />Maybe it was outdated and has been deleted?<br /><br />Go back <a href="/">to the main page</a>.</h3>
+    <h2>404<br><br>
+    <%%= gettext "Page not found." %>.<br />
+    <%%= gettext "Maybe it was outdated and has been deleted?" %><br /><br />
+    <%%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
     </div>
   </div>
 </body>
