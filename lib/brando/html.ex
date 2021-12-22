@@ -39,6 +39,18 @@ defmodule Brando.HTML do
     |> raw()
   end
 
+  # TODO: Drop before 1.0
+  @deprecated "Use heex component `<.video_tag video={src} opts={opts} />` instead"
+  def video_tag(video, opts \\ []) do
+    assigns = %{video: video, opts: opts}
+
+    ~H"""
+    <Brando.HTML.Video.video_tag video={@video} opts={@opts} />
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
+    |> raw()
+  end
+
   @doc """
   Link preload fonts
 
