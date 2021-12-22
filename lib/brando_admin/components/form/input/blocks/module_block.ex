@@ -499,6 +499,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     # entry = Brando.repo().preload(entry, [:category], force: true)
     Brando.Utils.try_path(entry, var_path) |> raw()
+  rescue
+    ArgumentError ->
+      "entry.#{var_path_string}"
   end
 
   defp render_variable(var, assigns) do
