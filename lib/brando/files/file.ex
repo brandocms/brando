@@ -24,7 +24,6 @@ defmodule Brando.Files.File do
 
   @derive {Jason.Encoder,
            only: [
-             :id,
              :path,
              :size,
              :mimetype,

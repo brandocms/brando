@@ -76,17 +76,7 @@ defmodule Brando.Images.Gallery do
 
   @derive {Jason.Encoder,
            only: [
-             :title,
-             :credits,
-             :formats,
-             :alt,
-             :focal,
-             :path,
-             :sizes,
-             :width,
-             :height,
-             :cdn,
-             :dominant_color,
+             :gallery_images,
              :config_target
            ]}
 end

@@ -23,7 +23,7 @@ defmodule Brando.Content.Module.EmbeddedModule do
 
   identifier "{{ entry.name }}"
 
-  @derived_fields ~w(id name sequence namespace help_text multi wrapper class code refs vars svg deleted_at)a
+  @derived_fields ~w(id name namespace help_text wrapper class code refs vars svg)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   # trait Brando.Trait.Timestamped
