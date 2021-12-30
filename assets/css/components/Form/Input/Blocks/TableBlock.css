@@ -126,4 +126,19 @@
   .add-row {
     @space margin-top 15px;
   }
+
+  .insert-row {
+    display: flex;
+    position: absolute;
+    margin-top: -22px;
+    justify-content: center;
+    width: 100%;
+    opacity: 0;
+    transition: opacity 350ms ease;
+
+    &:hover {
+      opacity: 1;
+      transition: opacity 250ms ease;
+    }
+  }
 }

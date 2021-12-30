@@ -104,9 +104,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
                 </Form.poly_inputs>
               </div>
+              <div class="insert-row">
+                <button
+                  type="button"
+                  class="tiny"
+                  phx-click={JS.push("add_row", value: %{idx: index}, target: @myself)}
+                  phx-page-loading><%= gettext "Add row" %></button>
+              </div>
             <% end %>
           </div>
-          <button type="button" class="tiny add-row" phx-click={JS.push("add_row", target: @myself)}><%= gettext "Add row" %></button>
         <% end %>
 
         <!-- template row -->
@@ -156,7 +162,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
   def handle_event(
         "add_row",
-        _,
+        %{"idx" => idx},
         %{assigns: %{uid: uid, data_field: data_field, base_form: form, block_data: block_data}} =
           socket
       ) do
@@ -164,8 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
     changeset = form.source
     rows = input_value(block_data, :rows)
     new_row = input_value(block_data, :template_row)
-
-    new_rows = rows ++ [new_row]
+    new_rows = List.insert_at(rows, idx + 1, new_row)
 
     updated_changeset =
       Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
