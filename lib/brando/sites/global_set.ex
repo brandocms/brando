@@ -21,7 +21,7 @@ defmodule Brando.Sites.GlobalSet do
     attribute :label, :string, required: true
     attribute :key, :string, unique: [prevent_collision: :language], required: true
 
-    attribute :globals, {:array, PolymorphicEmbed},
+    attribute :globals, {:array, Brando.PolymorphicEmbed},
       types: Var.types(),
       type_field: :type,
       on_type_not_found: :raise,

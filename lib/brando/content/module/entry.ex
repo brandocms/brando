@@ -20,7 +20,7 @@ defmodule Brando.Content.Module.Entry do
     attributes do
       attribute :sequence, :integer
 
-      attribute :vars, {:array, PolymorphicEmbed},
+      attribute :vars, {:array, Brando.PolymorphicEmbed},
         types: Var.types(),
         type_field: :type,
         on_type_not_found: :raise,

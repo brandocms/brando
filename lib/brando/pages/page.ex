@@ -68,7 +68,7 @@ defmodule Brando.Pages.Page do
     attribute :data, :villain
     attribute :css_classes, :string
 
-    attribute :vars, {:array, PolymorphicEmbed},
+    attribute :vars, {:array, Brando.PolymorphicEmbed},
       types: Var.types(),
       type_field: :type,
       on_type_not_found: :raise,

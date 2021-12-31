@@ -24,7 +24,7 @@ defmodule Brando.Content.Module.Ref do
     attribute :name, :text, required: true
     attribute :description, :text
 
-    attribute :data, PolymorphicEmbed,
+    attribute :data, Brando.PolymorphicEmbed,
       types: Blocks.list_blocks(),
       type_field: :type,
       on_type_not_found: :raise,

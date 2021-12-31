@@ -73,7 +73,6 @@ defmodule Brando.Mixfile do
 
       # Misc
       # {:brotli, "~> 0.2"},
-      {:polymorphic_embed, github: "tmjoen/polymorphic_embed", override: true},
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
       {:earmark, "1.4.4"},
@@ -109,7 +108,8 @@ defmodule Brando.Mixfile do
         "test",
         "mix.exs",
         "README.md",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "UPGRADE.md"
       ]
     ]
   end

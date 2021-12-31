@@ -22,7 +22,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       attribute :sequence, :integer
       attribute :multi, :boolean, default: false
 
-      attribute :vars, {:array, PolymorphicEmbed},
+      attribute :vars, {:array, Brando.PolymorphicEmbed},
         types: Var.types(),
         type_field: :type,
         on_type_not_found: :raise,

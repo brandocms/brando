@@ -18,7 +18,7 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
     identifier ""
 
     attributes do
-      attribute :cols, {:array, PolymorphicEmbed},
+      attribute :cols, {:array, Brando.PolymorphicEmbed},
         types: Var.types(),
         type_field: :type,
         on_type_not_found: :raise,

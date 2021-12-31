@@ -56,7 +56,7 @@ defmodule Brando.Content.Module do
     attribute :svg, :text
     attribute :wrapper, :boolean
 
-    attribute :vars, {:array, PolymorphicEmbed},
+    attribute :vars, {:array, Brando.PolymorphicEmbed},
       types: Var.types(),
       type_field: :type,
       on_type_not_found: :raise,

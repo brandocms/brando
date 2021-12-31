@@ -689,7 +689,7 @@ defmodule Brando.Blueprint do
 
       @poly_fields Enum.filter(
                      @attrs,
-                     &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
+                     &(&1.type in [{:array, Brando.PolymorphicEmbed}, Brando.PolymorphicEmbed])
                    )
       def __poly_fields__ do
         @poly_fields

@@ -19,7 +19,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ContainerBlock do
     attributes do
       attribute :palette_id, :id
 
-      attribute :blocks, {:array, PolymorphicEmbed},
+      attribute :blocks, {:array, Brando.PolymorphicEmbed},
         types: Blocks.list_blocks(),
         type_field: :type,
         on_type_not_found: :raise,
