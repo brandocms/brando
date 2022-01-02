@@ -86,6 +86,11 @@
     top: 50px;
     right: 0;
 
+    &.over {
+      top: auto;
+      bottom: 50px;
+    }
+
     li {
       a, button {
         @font mono;

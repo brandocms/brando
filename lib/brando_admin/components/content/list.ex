@@ -521,6 +521,8 @@ defmodule BrandoAdmin.Components.Content.List do
           <button
             class="circle-dropdown-button"
             data-testid="circle-dropdown-button"
+            phx-click={toggle_dropdown("#selected-actions-dropdown-content")}
+            phx-click-away={hide_dropdown("#selected-actions-dropdown-content")}
             type="button">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
@@ -530,7 +532,7 @@ defmodule BrandoAdmin.Components.Content.List do
               <circle cx="13.5" cy="26.5" r="1.5" fill="white" class="inverted"></circle>
             </svg>
           </button>
-          <ul data-testid="circle-dropdown-content" class="dropdown-content">
+          <ul data-testid="circle-dropdown-content" class="dropdown-content hidden over" id="selected-actions-dropdown-content">
             <%= for %{event: event, label: label} <- @selection_actions do %>
               <li>
                 <button
