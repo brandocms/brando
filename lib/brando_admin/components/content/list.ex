@@ -176,7 +176,7 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp assign_filter(%{assigns: %{listing: %{filters: filters}}} = socket, _assigns) do
-    assign(socket, :active_filter, List.first(filters))
+    assign_new(socket, :active_filter, fn -> List.first(filters) end)
   end
 
   defp assign_entries(
