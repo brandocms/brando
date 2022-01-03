@@ -137,11 +137,7 @@ defmodule Brando.Pages do
   Re-render page
   """
   def rerender_page(page_id) do
-    {:ok, page} = get_page(%{matches: %{id: page_id}})
-
-    page
-    |> Changeset.change()
-    |> Villain.rerender_html()
+    Villain.rerender_html_from_id({Brando.Pages.Page, :data, :html}, page_id)
   end
 
   @doc """
