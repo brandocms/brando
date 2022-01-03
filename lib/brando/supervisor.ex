@@ -28,17 +28,22 @@ defmodule Brando.Supervisor do
         queues: [default: [limit: 1]],
         plugins: [
           {Oban.Plugins.Cron,
-           crontab: [
-             # Generate a Sitemap every night at 02:00 UTC
-             {"0 2 * * *", Brando.Worker.SitemapGenerator},
-             # Clean up soft deleted entries every night at 03:00 UTC
-             {"0 3 * * *", Brando.Worker.SoftDeletePurger},
-             # Purge inactive/unprotected revisions older than 14 days
-             {"0 4 * * *", Brando.Worker.RevisionPurger}
-           ],
+           crontab:
+             [
+               # Generate a Sitemap every night at 02:00 UTC
+               {"0 2 * * *", Brando.Worker.SitemapGenerator},
+               # Clean up soft deleted entries every night at 03:00 UTC
+               {"0 3 * * *", Brando.Worker.SoftDeletePurger},
+               # Purge inactive/unprotected revisions older than 14 days
+               {"0 4 * * *", Brando.Worker.RevisionPurger}
+             ] ++ extra_oban_cron_jobs(),
            timezone: "Etc/UTC"},
           Oban.Plugins.Pruner
         ]
       ]
+  end
+
+  defp extra_oban_cron_jobs do
+    Application.get_env(Brando.config(:otp_app), :cron_jobs) || []
   end
 end

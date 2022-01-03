@@ -16,6 +16,12 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   pubsub_server: <%= application_module %>.PubSub,
   live_view: [signing_salt: "<%= lv_signing_salt %>"]
 
+# Additional cron jobs to run
+# - Format is `[{"* * * * *", MyApp.Worker.ModuleName}]`
+# https://hexdocs.pm/oban/Oban.Plugins.Cron.html
+config :<%= application_name %>,
+  cron_jobs: []
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
