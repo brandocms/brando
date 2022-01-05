@@ -54,6 +54,10 @@ defmodule BrandoAdmin.LiveView.Listing do
     {:cont, socket}
   end
 
+  defp attach_hooks(socket, nil) do
+    attach_listing_info_hooks(socket, nil)
+  end
+
   defp attach_hooks(socket, schema) do
     socket
     |> attach_hook(:b_listing_events, :handle_event, fn
@@ -133,7 +137,39 @@ defmodule BrandoAdmin.LiveView.Listing do
       _, _, socket ->
         {:cont, socket}
     end)
-    |> attach_hook(:b_listing_infos, :handle_info, fn
+    |> attach_listing_info_hooks(schema)
+  end
+
+  defp attach_listing_info_hooks(socket, nil) do
+    attach_hook(socket, :b_listing_infos, :handle_info, fn
+      {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
+        BrandoAdmin.Toast.send_to(current_user, message)
+        {:halt, socket}
+
+      {:set_content_language, language}, %{assigns: %{current_user: current_user}} = socket ->
+        {:ok, updated_current_user} =
+          Brando.Users.update_user(
+            current_user,
+            %{config: %{content_language: language}},
+            :system,
+            show_notification: false
+          )
+
+        send(
+          self(),
+          {:toast,
+           gettext("Content language is now %{language}", language: String.upcase(language))}
+        )
+
+        {:halt, assign(socket, :current_user, updated_current_user)}
+
+      _, socket ->
+        {:cont, socket}
+    end)
+  end
+
+  defp attach_listing_info_hooks(socket, _) do
+    attach_hook(socket, :b_listing_infos, :handle_info, fn
       {schema, [:entries, :updated], []}, socket ->
         send_update(BrandoAdmin.Components.Content.List,
           id: "content_listing_#{schema}_default",
@@ -176,6 +212,8 @@ defmodule BrandoAdmin.LiveView.Listing do
     )
   end
 
+  defp subscribe(nil), do: :ok
+
   defp subscribe(schema) do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:listing:content_listing_#{schema}_default",
       link: true
@@ -200,6 +238,10 @@ defmodule BrandoAdmin.LiveView.Listing do
     assign_new(socket, :schema, fn ->
       schema
     end)
+  end
+
+  defp assign_title(%{assigns: %{schema: nil}} = socket) do
+    assign(socket, :page_title, nil)
   end
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
