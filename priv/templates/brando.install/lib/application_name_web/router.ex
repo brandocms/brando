@@ -43,9 +43,10 @@ defmodule <%= application_module %>Web.Router do
   end
 
   admin_routes do
-    # live "/projects", <%= application_module %>Web.Projects.ProjectListLive
-    # live "/projects/create", <%= application_module %>Web.Projects.ProjectCreateLive
-    # live "/projects/update/:entry_id", <%= application_module %>Web.Projects.ProjectUpdateLive
+    live "/", <%= application_module %>Admin.DashboardLive
+    # live "/projects", <%= application_module %>Admin.Projects.ProjectListLive
+    # live "/projects/create", <%= application_module %>Admin.Projects.ProjectCreateLive
+    # live "/projects/update/:entry_id", <%= application_module %>Admin.Projects.ProjectUpdateLive
   end
 
   scope "/coming-soon", <%= application_module %>Web do

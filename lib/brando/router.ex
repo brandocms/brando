@@ -70,8 +70,6 @@ defmodule Brando.Router do
 
         live_session :admin do
           # brando routes
-          live "/", BrandoAdmin.DashboardLive
-
           scope "/assets", BrandoAdmin.Assets do
             live "/images", ImagesLive
           end

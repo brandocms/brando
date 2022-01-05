@@ -163,7 +163,9 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/live_preview.ex"},
 
     # Admin
-    {:eex, "lib/application_name_admin/menus.ex", "lib/application_name_admin/menus.ex"}
+    {:eex, "lib/application_name_admin/menus.ex", "lib/application_name_admin/menus.ex"},
+    {:eex, "lib/application_name_admin/live/dashboard_live.ex",
+     "lib/application_name_admin/live/dashboard_live.ex"}
   ]
 
   @static [
