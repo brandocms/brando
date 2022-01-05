@@ -1,5 +1,5 @@
 <div class="fullscreen-toggle">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M21 3a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zM7 5H4v14h3V5zm13 0H9v14h11V5z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12"><path d="M291.36 414.51h12v12h-12Z" transform="translate(-291.36 -414.51)" style="fill:none"/><path d="M1.5 9h9v1h-9z"/><path id="chevron" d="m3.3 1.95.7.71-1.59 1.59L4 5.84l-.7.71L1 4.25l2.3-2.3z"/><path d="M6 5.5h4.5v1H6zM6 2h4.5v1H6z"/></svg>
 </div>
 
 <section id="navigation">

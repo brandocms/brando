@@ -4,6 +4,24 @@
   left: 5px;
   cursor: pointer;
   z-index: 9;
+
+  svg {
+    #chevron {
+      transition: transform 1s ease;
+      transform: rotate(0deg);
+      transform-box: fill-box;
+      transform-origin: 50% 50%;
+    }
+  }
+
+  &.minimized {
+    svg {
+      #chevron {
+        transition: transform 1s ease;
+        transform: rotate(180deg);
+      }
+    }
+  }
 }
 
 #navigation {

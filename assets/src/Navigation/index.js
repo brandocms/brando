@@ -19,6 +19,7 @@ export default class Navigation {
   setupFullscreenToggle () {
     const fsToggle = Dom.find('.fullscreen-toggle')
     fsToggle.addEventListener('click', e => {
+      fsToggle.classList.toggle('minimized')
       this.setFullscreen(!this.fullscreen)
     })
   }
@@ -139,7 +140,7 @@ export default class Navigation {
 
     if (value) {
       gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '-100' })
-      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 30 })
+      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 24 })
     } else {
       const marginLeft = this.getCSSVar(main, '--main-margin-left')
       gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '0' })
@@ -152,7 +153,7 @@ export default class Navigation {
   checkFullscreen () {
     if (this.fullscreen) {
       const main = document.querySelector('main')
-      gsap.set(main, { marginLeft: 30 })
+      gsap.set(main, { marginLeft: 24 })
     }
   }
 
