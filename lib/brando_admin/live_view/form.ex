@@ -37,11 +37,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   # with entry_id means it's an update
   def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
-    require Logger
-
     if connected?(socket) do
-      Logger.error("==> form|update: Socket is connected.")
-
       socket =
         socket
         |> assign(:socket_connected, true)
@@ -55,17 +51,12 @@ defmodule BrandoAdmin.LiveView.Form do
 
       {:cont, socket}
     else
-      Logger.error("==> form|update: Socket is --not connected.")
       {:cont, assign(socket, :socket_connected, false)}
     end
   end
 
   def hooks(_params, %{"user_token" => token}, socket, schema) do
-    require Logger
-
     if connected?(socket) do
-      Logger.error("==> form|create: Socket is connected.")
-
       socket =
         socket
         |> assign(:socket_connected, true)
@@ -79,7 +70,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
       {:cont, socket}
     else
-      Logger.error("==> form|create: Socket is not connected.")
       {:cont, assign(socket, :socket_connected, false)}
     end
   end
