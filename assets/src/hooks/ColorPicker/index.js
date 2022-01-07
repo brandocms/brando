@@ -3,7 +3,6 @@ import Picker from 'vanilla-picker/csp'
 
 export default (app) => ({
   mounted () {
-    console.log('Mounted ???') 
     const initialColor = this.el.dataset.color
     const inputTarget = Dom.find(this.el.dataset.input)
 
@@ -14,14 +13,18 @@ export default (app) => ({
     colorHex.innerHTML = initialColor
 
     const parent = this.el.querySelector('.picker-target')
-    const picker = new Picker({ parent: parent, popup: 'left', color: '#000000' })
+    const picker = new Picker({ parent: parent, popup: 'left', color: initialColor || '#000000', alpha: false })
 
     // You can do what you want with the chosen color using two callbacks: onChange and onDone.
     picker.onChange = function (color) {
-      inputTarget.value = color.hex
-      circle.style.background = color.hex
-      colorHex.innerHTML = color.hex
+      let processedColor = color.printHex(false)
+      // if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
+      //   processedColor = processedColor.slice(0, -2)
+      // }
+      inputTarget.value = processedColor
+      circle.style.background = processedColor
+      colorHex.innerHTML = processedColor
       inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
-    };
+    }
   }
 })

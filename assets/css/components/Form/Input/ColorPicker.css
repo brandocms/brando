@@ -6,6 +6,10 @@
     display: flex;
     align-items: center;
 
+    .subform-entry & {
+      padding-top: 6px;
+    }
+
     .color-hex {
       @font mono;
       @fontsize 16px;
