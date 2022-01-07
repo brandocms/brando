@@ -850,13 +850,19 @@ defmodule Brando.Villain.Parser do
         do: Context.assign(context, :brando_module_id, module_id)
 
       defp render_datasource_entries({:code, code}, entries, opts) do
-        base_context = opts.context
+        base_context =
+          opts.context
+          |> add_parser_to_context(__MODULE__)
+
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(code, context)
       end
 
       defp render_datasource_entries({:module, module_id}, entries, opts) do
-        base_context = opts.context
+        base_context =
+          opts.context
+          |> add_parser_to_context(__MODULE__)
+
         modules = opts.modules
 
         {:ok, module} = Content.find_module(modules, module_id)
