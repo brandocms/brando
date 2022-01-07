@@ -450,7 +450,7 @@ defmodule Brando.HTML do
   Call this right before your closing `</body>` tag.
   """
   def include_legacy_assets(assigns) do
-    if Brando.env() == :prod do
+    if Application.get_env(Brando.otp_app(), :hmr) === false do
       ~H{<%= Brando.Assets.Vite.Render.legacy_js() |> raw() %>}
     else
       ~H||
