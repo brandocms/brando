@@ -90,7 +90,9 @@ defmodule Brando.Images.Processing do
   """
   @spec recreate_sizes_for_image_field(module, atom, user) :: {:ok, [id]}
   def recreate_sizes_for_image_field(schema, field_name, user) do
-    {:ok, images} = Brando.Images.list_images(%{filter: %{config_target: {schema, field_name}}})
+    {:ok, images} =
+      Brando.Images.list_images(%{filter: %{config_target: {"image", schema, field_name}}})
+
     %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     operations =
