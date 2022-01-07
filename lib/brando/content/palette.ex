@@ -53,9 +53,9 @@ defmodule Brando.Content.Palette do
             cardinality: :many,
             size: :full,
             default: %Brando.Content.Palette.Color{} do
+            input :hex_value, :color, monospace: true
             input :name, :text
             input :key, :text, monospace: true
-            input :hex_value, :text, monospace: true
             input :instructions, :text, break: true
           end
         end
@@ -92,7 +92,7 @@ defmodule Brando.Content.Palette do
           {% endfor %}
         </div>
         """,
-        columns: 2
+        columns: 3
       )
 
       template(
@@ -109,11 +109,10 @@ defmodule Brando.Content.Palette do
           data-phx-link-state="push"
           href="/admin/config/content/palettes/update/{{ entry.id }}"
           class="entry-link">
-          {{ entry.name }}
+          <small>{{ entry.name }}</small>
         </a>
-        <div class="monospace tiny"></div>
         """,
-        columns: 5
+        columns: 4
       )
     end
   end
