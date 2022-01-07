@@ -910,7 +910,7 @@ h3 {
   .circle {
     z-index: 9;
     flex-shrink: 0;
-    margin-left: -25px;
+    margin-left: -30px;
     transition: margin-left 250ms ease;
 
     &:nth-of-type(1) {
