@@ -317,7 +317,7 @@ defmodule BrandoAdmin.Components.Form do
 
       <.image_picker
         id={"image-picker"}
-        config_target={{@schema, Enum.join(@edit_image.path ++ [@edit_image.field], ".")}}
+        config_target={{"image", @schema, Enum.join(@edit_image.path ++ [@edit_image.field], ".")}}
         select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker")} />
 
       <.image_drawer {assigns} />
