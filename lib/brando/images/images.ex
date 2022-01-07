@@ -35,8 +35,8 @@ defmodule Brando.Images do
       {:config_target, nil}, query ->
         from(t in query)
 
-      {:config_target, {schema, field}}, query ->
-        target_string = "image:#{inspect(schema)}:#{field}"
+      {:config_target, {type, schema, field}}, query ->
+        target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
 
       {:path, path}, query ->
