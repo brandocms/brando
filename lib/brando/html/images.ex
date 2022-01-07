@@ -66,6 +66,11 @@ defmodule Brando.HTML.Images do
     """
   end
 
+  def picture(%{src: %Brando.Content.Var.Image{} = var} = assigns) do
+    assigns = assign(assigns, src: var.value)
+    picture(assigns)
+  end
+
   def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
       when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
@@ -508,6 +513,11 @@ defmodule Brando.HTML.Images do
   def get_srcset(image_field, cfg, opts, placeholder \\ false)
   def get_srcset(_, nil, _, _), do: {false, nil}
 
+  def get_srcset(image_field, "default", opts, placeholder) do
+    default_config = Brando.config(Brando.Images)[:default_config]
+    get_srcset(image_field, default_config.srcset, opts, placeholder)
+  end
+
   def get_srcset(image_field, srcset, opts, placeholder) when is_binary(srcset) do
     [module_string, field_string] = String.split(srcset, ":")
     module = Module.concat([module_string])
@@ -650,6 +660,11 @@ defmodule Brando.HTML.Images do
 
     #{inspect(srcset, pretty: true)}
     """
+  end
+
+  def get_srcset(image_field, :default, opts, placeholder) do
+    default_config = Brando.config(Brando.Images)[:default_config]
+    get_srcset(image_field, default_config.srcset, opts, placeholder)
   end
 
   def get_srcset(image_field, srcset, opts, placeholder) do
