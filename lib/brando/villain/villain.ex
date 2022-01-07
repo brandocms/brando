@@ -14,6 +14,8 @@ defmodule Brando.Villain do
   alias Ecto.Changeset
   alias Liquex.Context
 
+  @type changeset :: Ecto.Changeset.t()
+
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
@@ -282,9 +284,9 @@ defmodule Brando.Villain do
   pages and fragments
   """
   @spec rerender_html_from_id(
-          {schema :: Module, data_field :: atom, html_field :: atom},
+          {schema :: module, data_field :: atom, html_field :: atom},
           integer | binary
-        ) :: any()
+        ) :: {:ok, map} | {:error, changeset}
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     ctx = schema.__modules__().context
     singular = schema.__naming__().singular
