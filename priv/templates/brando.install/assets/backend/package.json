@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.6.3",
-    "@sveltejs/vite-plugin-svelte": "1.0.0-next.33",
+    "@sveltejs/vite-plugin-svelte": "1.0.0-next.34",
     "autoprefixer": "^10.4.1",
     "svelte": "^3.44.3",
     "svelte-preprocess": "^4.10.1",
