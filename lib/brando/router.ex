@@ -101,6 +101,10 @@ defmodule Brando.Router do
             live "/content/templates/update/:entry_id", TemplateUpdateLive
           end
 
+          scope "/globals", BrandoAdmin.Globals do
+            live "/", GlobalsLive
+          end
+
           scope "/pages", BrandoAdmin.Pages do
             live "/", PageListLive
             live "/create", PageCreateLive

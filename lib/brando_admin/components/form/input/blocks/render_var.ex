@@ -71,6 +71,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:ok,
      socket
+     |> assign(:id, assigns.id)
      |> assign(:edit, edit)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
@@ -109,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-      <div class={render_classes(["variable", v(@var, :type)])}>
+      <div id={@id} class={render_classes(["variable", v(@var, :type)])}>
         <%= if @should_render? do %>
           <%= if @edit do %>
             <div id={"#{@var.id}-edit"}>

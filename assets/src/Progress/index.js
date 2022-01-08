@@ -14,7 +14,7 @@ export default class Progress {
 
   setupListener () {    
     window.addEventListener(`phx:hook:b:progress:${this.userId}`, ({ detail: { action, data }}) => {
-      console.log('b:progress:${this.userId}', action, data)
+      console.log(`b:progress:${this.userId}`, action, data)
       switch (action) {
         case 'show':
           console.log('show!')

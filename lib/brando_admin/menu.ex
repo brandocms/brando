@@ -319,6 +319,10 @@ defmodule BrandoAdmin.Menu do
             %{
               name: Brando.Gettext.gettext("Pages & Sections"),
               url: "/admin/pages"
+            },
+            %{
+              name: Brando.Gettext.gettext("Globals"),
+              url: "/admin/globals"
             }
           ] ++ content_menus
       }

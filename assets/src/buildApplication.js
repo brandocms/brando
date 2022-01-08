@@ -113,10 +113,11 @@ export default (hooks) => {
       app.presence = new Presence(app)
       app.toast = new Toast(app)
 
-      window.addEventListener('phx:hook:b:component:remount', () => {
+      window.addEventListener('phx:b:component:remount', () => {
+        console.log('remount!')
         app.components.forEach(cmp => cmp.remount())
       })
-
+      
       // Show progress bar on live navigation and form submits
       window.addEventListener('phx:page-loading-start', ({ detail }) => {
         NProgress.start()
