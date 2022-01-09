@@ -21,11 +21,11 @@ msgstr ""
 "X-Generator: Poedit 3.0\n"
 
 #, elixir-format
-#: lib/brando/content/module.ex:114
+#: lib/brando/content/module.ex:126
 msgid "module"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/content/module.ex:115
+#: lib/brando/content/module.ex:127
 msgid "modules"
 msgstr ""

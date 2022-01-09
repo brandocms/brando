@@ -215,7 +215,6 @@ defmodule BrandoAdmin.Components.Content.List do
     |> maybe_preload_creator(schema)
     |> preload_assets(schema)
     |> maybe_order_by_sequence(schema)
-    |> IO.inspect()
   end
 
   defp maybe_merge_listing_query(query_params, listing) do

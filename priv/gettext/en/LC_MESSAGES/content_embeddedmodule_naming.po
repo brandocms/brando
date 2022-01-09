@@ -8,11 +8,15 @@
 ## to merge POT files into PO files.
 msgid ""
 msgstr ""
-"Language: no\n"
+"Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format
-#: lib/brando/sites/identity.ex:137
-#: lib/brando/sites/identity.ex:138
-msgid "identity"
-msgstr "identitet"
+#, elixir-format, ex-autogen
+#: lib/brando/content/module/embedded_module.ex:54
+msgid "embedded module"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/content/module/embedded_module.ex:55
+msgid "embedded modules"
+msgstr ""

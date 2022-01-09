@@ -67,11 +67,12 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
 
   def tabs(assigns) do
     ~H"""
-    <div class="form-tabs">
+    <div class="form-tabs" data-moonwalk-section>
       <div class="form-tab-customs">
         <%= for {global_set, index} <- Enum.with_index(@global_sets) do %>
           <button
             type="button"
+            data-moonwalk="upDly"
             class={render_classes([active: @active_tab == index])}
             phx-click={JS.push("select_tab", value: %{index: index})}><%= global_set.label %></button>
         <% end %>

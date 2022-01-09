@@ -12,67 +12,68 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/pages/page.ex:141 lib/brando/pages/page.ex:208
-#: lib/brando/pages/page.ex:241
+#: lib/brando/pages/page.ex:134
+#: lib/brando/pages/page.ex:201
+#: lib/brando/pages/page.ex:234
 msgid "Are you sure?"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:145
+#: lib/brando/pages/page.ex:138
 msgid "Create fragment"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:144
+#: lib/brando/pages/page.ex:137
 msgid "Create subpage"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:206
+#: lib/brando/pages/page.ex:199
 msgid "Delete fragment"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:139
+#: lib/brando/pages/page.ex:132
 msgid "Delete page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:142
 msgid "Delete pages"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:239
+#: lib/brando/pages/page.ex:232
 msgid "Delete sub page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:136
 msgid "Duplicate page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:204
+#: lib/brando/pages/page.ex:197
 msgid "Edit fragment"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:137
+#: lib/brando/pages/page.ex:130
 msgid "Edit page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:237
+#: lib/brando/pages/page.ex:230
 msgid "Edit sub page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:133
+#: lib/brando/pages/page.ex:126
 msgid "Title"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/pages/page.ex:132
+#: lib/brando/pages/page.ex:125
 msgid "URI"
 msgstr ""

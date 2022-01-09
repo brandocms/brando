@@ -11,7 +11,6 @@ defmodule Brando.Images.Gallery do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  alias Brando.Images.GalleryImage
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
@@ -23,8 +22,8 @@ defmodule Brando.Images.Gallery do
     attribute :config_target, :text
   end
 
-  relations do
-    relation :gallery_images, :has_many, module: GalleryImage, preload_order: [asc: :sequence]
+  assets do
+    asset :gallery_images, :gallery_images
   end
 
   listings do

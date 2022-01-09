@@ -71,7 +71,7 @@ defmodule Brando.Blueprint.Assets do
 
   def build_asset(name, :gallery, opts) do
     opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Gallery})
-    default_config = Brando.config(Brando.Images)[:default_config]
+    default_config = Brando.config(Brando.Images)[:default_config] || %{}
 
     cfg =
       case Map.get(opts_map, :cfg) do
@@ -89,11 +89,11 @@ defmodule Brando.Blueprint.Assets do
           fun.()
 
         map when is_map(map) ->
-          Brando.Utils.deep_merge(default_config, map)
+          map = Brando.Utils.deep_merge(default_config, map)
           struct(Brando.Type.ImageConfig, map)
 
         kwlist when is_list(kwlist) ->
-          Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
           struct(Brando.Type.ImageConfig, kwlist)
       end
 
@@ -102,6 +102,16 @@ defmodule Brando.Blueprint.Assets do
     %Asset{
       name: name,
       type: :gallery,
+      opts: opts_map
+    }
+  end
+
+  def build_asset(name, :gallery_images, opts) do
+    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.GalleryImage})
+
+    %Asset{
+      name: name,
+      type: :gallery_images,
       opts: opts_map
     }
   end
@@ -191,9 +201,19 @@ defmodule Brando.Blueprint.Assets do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      nil -> changeset
-      "" -> put_embed(changeset, name, [])
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+      "" -> put_assoc(changeset, name, nil)
+      _ -> cast_assoc(changeset, name, to_changeset_opts(:belongs_to, opts))
+    end
+  end
+
+  def run_cast_asset(
+        %{type: :gallery_images, name: name, opts: opts},
+        changeset,
+        _user
+      ) do
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_assoc(changeset, name, nil)
+      _ -> cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
     end
   end
 

@@ -477,7 +477,10 @@ defmodule BrandoAdmin.Components.Form do
 
   def image_picker(assigns) do
     assigns =
-      assign_new(assigns, :images, fn ->
+      assigns
+      |> assign_new(:deselect_image, fn -> nil end)
+      |> assign_new(:selected_images, fn -> [] end)
+      |> assign_new(:images, fn ->
         {:ok, images} =
           Brando.Images.list_images(%{
             filter: %{config_target: assigns.config_target},
@@ -506,7 +509,11 @@ defmodule BrandoAdmin.Components.Form do
       </:info>
       <div class="image-picker grid" id={"image-picker-drawer-#{@id}"}>
         <%= for image <- @images do %>
-        <div class="image-picker__image" phx-click={@select_image} phx-value-id={image.id}>
+        <div
+          class={render_classes(["image-picker__image": true, selected: image.id in @selected_images])}
+          phx-click={(@deselect_image && image.id in @selected_images) && @deselect_image || @select_image}
+          phx-value-id={image.id}
+          phx-page-loading>
           <img
             width="25"
             height="25"
@@ -560,12 +567,16 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_gallery_uploads =
       Enum.reduce(gallery_fields, socket_with_image_uploads, fn gallery_field, updated_socket ->
+        max_size = Brando.Utils.try_path(gallery_field, [:opts, :cfg, :size_limit]) || 4_000_000
+        max_entries = Brando.Utils.try_path(gallery_field, [:opts, :max_entries]) || 25
+
         allow_upload(updated_socket, gallery_field.name,
           # TODO: Read max_entries from gallery config!
-          max_entries: 10,
+          max_entries: max_entries,
+          max_file_size: max_size,
           accept: :any,
           auto_upload: true,
-          progress: &__MODULE__.handle_gallery_progress/3
+          progress: &BrandoAdmin.Components.Form.Input.Gallery.handle_gallery_progress/3
         )
       end)
 
@@ -657,6 +668,7 @@ defmodule BrandoAdmin.Components.Form do
           assigns: %{
             changeset: changeset,
             entry: entry,
+            schema: schema,
             edit_image:
               %{
                 image: image,
@@ -668,6 +680,8 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    entry_or_default = entry || struct(schema)
+
     validated_changeset =
       image
       |> Brando.Images.Image.changeset(image_params, current_user)
@@ -686,15 +700,21 @@ defmodule BrandoAdmin.Components.Form do
     full_path = path ++ [relation_field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
 
-    entrys_current_image = Map.get(entry, field)
+    entry_has_image = Map.get(entry_or_default, relation_field) != nil
+    entrys_current_image = Map.get(entry_or_default, field)
 
     updated_entry =
-      if entrys_current_image && entrys_current_image.id == image.id &&
-           entrys_current_image.status == :processed do
-        # the image has already been marked as processed, do not update the relation
-        entry
-      else
-        Map.put(entry, field, updated_image)
+      cond do
+        !entry_has_image ->
+          Map.put(entry_or_default, field, updated_image)
+
+        entrys_current_image && entrys_current_image.id == image.id &&
+            entrys_current_image.status == :processed ->
+          # the image has already been marked as processed, do not update the relation
+          entry
+
+        true ->
+          Map.put(entry_or_default, field, updated_image)
       end
 
     {:noreply,
@@ -831,6 +851,9 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        require Logger
+        Logger.error(inspect(changeset, pretty: true))
+
         {:noreply,
          socket
          |> assign(:changeset, changeset)
@@ -862,57 +885,68 @@ defmodule BrandoAdmin.Components.Form do
     #{inspect(error_keys, pretty: true)}
     """
 
+    require Logger
+
+    Logger.error("""
+
+
+    Changeset errors:
+
+    #{inspect(changeset.errors, pretty: true)}
+
+    """)
+
     socket
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
   end
 
-  def handle_gallery_progress(
-        key,
-        upload_entry,
-        %{
-          assigns: %{
-            changeset: changeset,
-            schema: schema,
-            current_user: current_user,
-            id: form_id
-          }
-        } = socket
-      ) do
-    if upload_entry.done? do
-      %{cfg: cfg} = schema.__asset_opts__(key)
+  # def handle_gallery_progress(
+  #       key,
+  #       upload_entry,
+  #       %{
+  #         assigns: %{
+  #           changeset: changeset,
+  #           schema: schema,
+  #           current_user: current_user,
+  #           id: form_id
+  #         }
+  #       } = socket
+  #     ) do
+  #   if upload_entry.done? do
+  #     %{cfg: cfg} = schema.__asset_opts__(key)
 
-      {:ok, image_struct} =
-        consume_uploaded_entry(
-          socket,
-          upload_entry,
-          fn meta ->
-            Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user)
-          end
-        )
+  #     {:ok, image_struct} =
+  #       consume_uploaded_entry(
+  #         socket,
+  #         upload_entry,
+  #         fn meta ->
+  #           Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user)
+  #         end
+  #       )
 
-      pid = self()
+  #     pid = self()
 
-      Task.start_link(fn ->
-        {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
+  #     Task.start_link(fn ->
+  #       {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
 
-        send_update(pid, __MODULE__,
-          id: form_id,
-          key: key,
-          updated_gallery_image: image_struct
-        )
-      end)
+  #       send_update(pid, __MODULE__,
+  #         id: form_id,
+  #         key: key,
+  #         updated_gallery_image: image_struct
+  #       )
+  #     end)
 
-      existing_images = get_field(changeset, key)
+  #     existing_images = get_field(changeset, key)
 
-      {:noreply,
-       socket
-       |> update_changeset(key, [image_struct | existing_images])}
-    else
-      {:noreply, socket}
-    end
-  end
+  #     {:noreply,
+  #      socket
+  #      |> update_changeset(key, [image_struct | existing_images])}
+  #   else
+  #     {:noreply, socket}
+  #   end
+  # end
 
   def handle_image_progress(
         key,

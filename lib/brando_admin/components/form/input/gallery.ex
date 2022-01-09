@@ -6,7 +6,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   import Brando.Gettext
 
   alias Brando.Utils
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
+
+  alias Brando.Images.GalleryImage
 
   # prop form, :form
   # prop field, :atom
@@ -32,23 +35,39 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def update(assigns, socket) do
+    schema = assigns.form.data.__struct__
+
     {:ok,
      socket
      |> assign(assigns)
      |> prepare_input_component()
      |> assign(preview_layout: assigns.opts[:layout] || :grid)
+     |> assign(:schema, schema)
      |> assign_value()}
   end
 
   defp assign_value(%{assigns: %{form: form, field: field}} = socket) do
     gallery = get_field(form.source, field)
-    require Logger
-    Logger.error(inspect(gallery, pretty: true))
     gallery_images = (gallery && gallery.gallery_images) || []
+    selected_images = Enum.map(gallery_images, & &1.image_id)
 
     socket
     |> assign(:gallery, gallery)
-    |> assign(:gallery_images, gallery_images)
+    |> assign(:selected_images, selected_images)
+    |> assign_new(:gallery_images, fn -> gallery_images end)
+    |> assign_new(:images, fn ->
+      get_images(socket.assigns.schema, to_string(field))
+    end)
+  end
+
+  defp get_images(schema, field) do
+    {:ok, images} =
+      Brando.Images.list_images(%{
+        filter: %{config_target: {"gallery", schema, field}},
+        order: "desc id"
+      })
+
+    images
   end
 
   def render(assigns) do
@@ -61,48 +80,235 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         instructions={@instructions}
         class={@class}
         compact={@compact}>
-        <%= if @gallery_images do %>
-          <div
-            id={"sortable-gallery-images"}
-            phx-hook="Brando.Sortable"
-            data-target={@myself}
-            data-sortable-id={"sortable-gallery"}
-            data-sortable-handle=".sort-handle"
-            data-sortable-selector=".gallery-image"
-            class="gallery-images">
-            <%= for gallery_image <- @gallery_images do %>
-              <figure class="gallery-image sort-handle draggable">
-                <img
-                  width="25"
-                  height="25"
-                  src={"#{Utils.img_url(gallery_image.image, :thumb, prefix: Utils.media_url())}"} />
-              </figure>
+        <div class="gallery-input">
+          <%= for gallery_form <- inputs_for(@form, @field) do %>
+            <%= hidden_input gallery_form, :id %>
+            <%= hidden_input gallery_form, :config_target %>
+            <%= hidden_input gallery_form, :creator_id %>
+            <%= for gallery_image <- inputs_for(gallery_form, :gallery_images) do %>
+              <%= if input_value(gallery_image, :id) do %>
+                <%= hidden_input gallery_image, :id %>
+              <% end %>
+              <%= hidden_input gallery_image, :image_id %>
+              <%= hidden_input gallery_image, :gallery_id %>
+              <%= hidden_input gallery_image, :creator_id %>
+              <%= hidden_input gallery_image, :sequence %>
             <% end %>
+          <% end %>
+
+          <div class="actions">
+            <button type="button" class="tiny upload-button">
+              <%= gettext "Upload images" %>
+              <%= live_file_input @uploads[@field] %>
+            </button>
+            <button phx-click={JS.push("refresh_images", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}-#{@field}")} type="button" class="tiny">
+              <%= gettext "Select images" %>
+            </button>
           </div>
-        <% else %>
-          <%= gettext "No associated gallery" %>
-        <% end %>
+          <Form.image_picker
+            id={"image-picker-#{@form.id}-#{@field}"}
+            selected_images={@selected_images}
+            images={@images}
+            config_target={{"gallery", @schema, to_string(@field)}}
+            select_image={JS.push("select_image", target: @myself)}
+            deselect_image={JS.push("deselect_image", target: @myself)} />
+
+          <%= if @gallery_images == [] do %>
+            <%= gettext "No associated gallery" %>
+          <% else %>
+            <div
+              id={"sortable-gallery-images"}
+              phx-hook="Brando.Sortable"
+              data-target={@myself}
+              data-sortable-id={"sortable-gallery"}
+              data-sortable-handle=".sort-handle"
+              data-sortable-selector=".gallery-image"
+              class="gallery-images">
+              <%= for gallery_image <- @gallery_images do %>
+                <figure
+                  class="gallery-image sort-handle draggable"
+                  data-id={gallery_image.image_id}>
+                  <img
+                    width="25"
+                    height="25"
+                    src={"#{Utils.img_url(gallery_image.image, :thumb, prefix: Utils.media_url())}"} />
+                </figure>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
       </FieldBase.render>
     </div>
     """
   end
 
-  def handle_event("sequenced", %{"ids" => order_indices}, socket) do
-    # field_name = socket.assigns.input.name
-    # changeset = socket.assigns.form.source
-    # module = changeset.data.__struct__
-    # form_id = "#{module.__naming__().singular}_form"
+  defp sequence(gallery_images) do
+    Enum.map(Enum.with_index(gallery_images), fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
+  end
 
-    # entries = Ecto.Changeset.get_field(changeset, field_name)
-    # sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
-    # updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, sorted_entries)
+  def handle_event("refresh_images", _, socket) do
+    {:noreply,
+     assign(socket, :images, get_images(socket.assigns.schema, to_string(socket.assigns.field)))}
+  end
 
-    # send_update(BrandoAdmin.Components.Form,
-    #   id: form_id,
-    #   updated_changeset: updated_changeset
-    # )
+  def handle_event(
+        "select_image",
+        %{"id" => image_id},
+        %{
+          assigns: %{
+            form: form,
+            field: field,
+            gallery_images: gallery_images,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    schema = form.data.__struct__
+    gallery = get_field(changeset, field)
 
-    {:noreply, socket}
+    current_gallery_images =
+      if gallery do
+        Enum.map(
+          gallery.gallery_images || [],
+          &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+        )
+      else
+        []
+      end
+
+    new_gallery_image = %{image_id: String.to_integer(image_id), creator_id: current_user.id}
+    new_gallery_images = current_gallery_images ++ List.wrap(new_gallery_image)
+
+    new_gallery =
+      if gallery do
+        %{
+          id: gallery.id,
+          config_target: gallery.config_target,
+          gallery_images: sequence(new_gallery_images),
+          creator_id: gallery.creator_id
+        }
+      else
+        %{
+          config_target: "gallery:#{inspect(schema)}:#{field}",
+          gallery_images: sequence(new_gallery_images),
+          creator_id: current_user.id
+        }
+      end
+
+    updated_changeset = put_assoc(changeset, field, new_gallery)
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:ok, new_image} = Brando.Images.get_image(image_id)
+
+    new_gallery_images =
+      gallery_images ++ List.wrap(%GalleryImage{image_id: new_image.id, image: new_image})
+
+    {:noreply, assign(socket, gallery_images: new_gallery_images)}
+  end
+
+  def handle_event(
+        "deselect_image",
+        %{"id" => image_id},
+        %{
+          assigns: %{
+            form: form,
+            field: field,
+            gallery_images: gallery_images
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    gallery = get_field(changeset, field)
+
+    current_gallery_images =
+      Enum.map(
+        gallery.gallery_images,
+        &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+      )
+
+    new_gallery_images =
+      Enum.filter(current_gallery_images, &(&1.image_id != String.to_integer(image_id)))
+
+    new_gallery = %{
+      id: gallery.id,
+      config_target: gallery.config_target,
+      gallery_images: sequence(new_gallery_images),
+      creator_id: gallery.creator_id
+    }
+
+    updated_changeset = put_assoc(changeset, field, new_gallery)
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    new_gallery_images =
+      Enum.filter(gallery_images, &(&1.image_id != String.to_integer(image_id)))
+
+    {:noreply, assign(socket, gallery_images: new_gallery_images)}
+  end
+
+  def handle_event(
+        "sequenced",
+        %{"ids" => order_indices},
+        %{
+          assigns: %{
+            form: form,
+            field: field_name,
+            gallery_images: gallery_images
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    gallery = Ecto.Changeset.get_field(changeset, field_name)
+
+    entries =
+      Enum.map(
+        gallery.gallery_images,
+        &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+      )
+
+    sorted_entries =
+      Enum.map(Enum.with_index(order_indices), fn {id, idx} ->
+        Enum.find(entries, &(to_string(&1.image_id) == to_string(id))) |> Map.put(:sequence, idx)
+      end)
+
+    sorted_gallery_images =
+      Enum.map(order_indices, fn id -> Enum.find(gallery_images, &(&1.image_id == id)) end)
+
+    updated_gallery = %{
+      id: gallery.id,
+      config_target: gallery.config_target,
+      gallery_images: sorted_entries,
+      creator_id: gallery.creator_id
+    }
+
+    updated_changeset = Ecto.Changeset.put_assoc(changeset, field_name, updated_gallery)
+
+    require Logger
+    Logger.error(inspect(updated_changeset, pretty: true))
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, assign(socket, :gallery_images, sorted_gallery_images)}
   end
 
   def handle_event("select_row", %{"id" => id}, socket) do
@@ -140,6 +346,44 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     )
 
     {:noreply, assign(socket, :selected_images, [])}
+  end
+
+  def handle_gallery_progress(
+        key,
+        upload_entry,
+        %{
+          assigns: %{
+            current_user: current_user,
+            schema: schema
+          }
+        } = socket
+      ) do
+    if upload_entry.done? do
+      %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "gallery:#{inspect(schema)}:#{key}"
+
+      {:ok, image} =
+        consume_uploaded_entry(
+          socket,
+          upload_entry,
+          fn meta ->
+            Brando.Upload.handle_upload(
+              Map.put(meta, :config_target, config_target),
+              upload_entry,
+              cfg,
+              current_user
+            )
+          end
+        )
+
+      # Subscribe parent live view to changes to this image
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:gallery_image:#{image.id}", link: true)
+      Brando.Images.Processing.queue_processing(image, current_user)
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
   end
 
   defp select_row(%{assigns: assigns} = socket, id) do

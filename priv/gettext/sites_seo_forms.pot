@@ -21,17 +21,20 @@ msgid "Code"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/seo.ex:57 lib/brando/sites/seo.ex:58
+#: lib/brando/sites/seo.ex:57
+#: lib/brando/sites/seo.ex:58
 msgid "Fallback META description"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/seo.ex:61 lib/brando/sites/seo.ex:62
+#: lib/brando/sites/seo.ex:61
+#: lib/brando/sites/seo.ex:62
 msgid "Fallback META image"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/seo.ex:53 lib/brando/sites/seo.ex:54
+#: lib/brando/sites/seo.ex:53
+#: lib/brando/sites/seo.ex:54
 msgid "Fallback META title"
 msgstr ""
 
@@ -46,7 +49,8 @@ msgid "Redirects"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/seo.ex:65 lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:65
 msgid "Robots"
 msgstr ""
 

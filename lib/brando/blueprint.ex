@@ -311,7 +311,15 @@ defmodule Brando.Blueprint do
           Ecto.Schema.belongs_to(
             name,
             Brando.Images.Gallery,
-            on_replace: :update
+            on_replace: :delete
+          )
+
+        %Asset{type: :gallery_images, name: name} ->
+          Ecto.Schema.has_many(
+            name,
+            Brando.Images.GalleryImage,
+            preload_order: [asc: :sequence],
+            on_replace: :delete_if_exists
           )
 
         %Asset{type: :video, name: name} ->

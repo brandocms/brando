@@ -5,13 +5,10 @@ export default (app) => ({
   mounted () {
     this.mount()    
     app.components.push(this)
-    console.log(app.components)
   },
 
   mount () {
-    console.log('==> MOUNTING TIPTAP.')
     const props = this.el.getAttribute('data-props')
-    console.log(props)
     const parsedProps = props ? JSON.parse(props) : {}
 
     this._instance = new TipTap({
@@ -21,7 +18,6 @@ export default (app) => ({
   },
 
   remount () {
-    console.log('remount', this)
     this._instance?.$destroy()
     this.mount()
   },

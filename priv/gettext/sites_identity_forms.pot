@@ -71,7 +71,8 @@ msgid "Meta properties"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:74 lib/brando/sites/identity.ex:115
+#: lib/brando/sites/identity.ex:74
+#: lib/brando/sites/identity.ex:115
 msgid "Name"
 msgstr ""
 

@@ -1,4 +1,4 @@
-import { Dom, gsap } from '@brandocms/jupiter'
+import { Dom } from '@brandocms/jupiter'
 import Picker from 'vanilla-picker/csp'
 
 export default (app) => ({
@@ -18,9 +18,9 @@ export default (app) => ({
     // You can do what you want with the chosen color using two callbacks: onChange and onDone.
     picker.onChange = function (color) {
       let processedColor = color.printHex(false)
-      // if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
-      //   processedColor = processedColor.slice(0, -2)
-      // }
+      if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
+        processedColor = processedColor.slice(0, -2)
+      }
       inputTarget.value = processedColor
       circle.style.background = processedColor
       colorHex.innerHTML = processedColor

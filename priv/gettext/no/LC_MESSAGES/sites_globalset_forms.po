@@ -20,22 +20,27 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#: lib/brando/sites/global_set.ex:40
+#, elixir-format
+#: lib/brando/sites/global_set.ex:33
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/sites/global_set.ex:49
+#, elixir-format
+#: lib/brando/sites/global_set.ex:42
 msgid "Globals"
 msgstr "Globaler"
 
-#: lib/brando/sites/global_set.ex:44
+#, elixir-format
+#: lib/brando/sites/global_set.ex:37
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/sites/global_set.ex:43
+#, elixir-format
+#: lib/brando/sites/global_set.ex:36
 msgid "Label"
 msgstr "Merkelapp"
 
-#: lib/brando/sites/global_set.ex:42
+#, elixir-format
+#: lib/brando/sites/global_set.ex:35
 msgid "Language"
 msgstr "Språk"

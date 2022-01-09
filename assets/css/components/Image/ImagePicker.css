@@ -8,6 +8,10 @@
       background-color: white;
       cursor: pointer;
 
+      &.selected {
+        background-color: blue;
+      }
+
       img {
         aspect-ratio: 1/1;
         object-fit: cover;
@@ -29,6 +33,10 @@
         width: 100px;
         max-width: 100px;
         min-width: auto;
+      }
+
+      &.selected img {
+        border: 3px solid blue;
       }
 
       .image-picker__info {

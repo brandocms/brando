@@ -11,26 +11,26 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:40
+#: lib/brando/sites/global_set.ex:33
 msgid "Content"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:49
+#: lib/brando/sites/global_set.ex:42
 msgid "Globals"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:44
+#: lib/brando/sites/global_set.ex:37
 msgid "Key"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:43
+#: lib/brando/sites/global_set.ex:36
 msgid "Label"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/global_set.ex:42
+#: lib/brando/sites/global_set.ex:35
 msgid "Language"
 msgstr ""

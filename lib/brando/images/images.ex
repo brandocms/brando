@@ -94,10 +94,10 @@ defmodule Brando.Images do
     Brando.config(Brando.Images)[:default_config]
   end
 
-  def get_config_for(%{config_target: config_target}) do
+  def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
-        ["image", schema, field_name] ->
+        [type, schema, field_name] when type in ["image", "gallery"] ->
           schema_module = Module.concat([schema])
 
           field_name

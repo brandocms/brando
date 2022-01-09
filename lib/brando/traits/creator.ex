@@ -18,11 +18,13 @@ defmodule Brando.Trait.Creator do
   @changeset_phase :before_validate_required
   def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, :system, _), do: cs
 
-  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user, _) when is_map(user),
-    do: Changeset.put_change(cs, :creator_id, user.id)
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user, _) when is_map(user) do
+    Changeset.put_change(cs, :creator_id, user.id)
+  end
 
-  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user_id, _),
-    do: Changeset.put_change(cs, :creator_id, user_id)
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user_id, _) do
+    Changeset.put_change(cs, :creator_id, user_id)
+  end
 
   def changeset_mutator(_, _, changeset, _, _), do: changeset
 end

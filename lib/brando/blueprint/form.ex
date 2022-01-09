@@ -467,7 +467,6 @@ defmodule Brando.Blueprint.Form do
 
   defp find_field(inputs, field) do
     Enum.find(inputs, fn
-      %{name: name, type: :gallery} -> "#{name}_id" == to_string(field)
       %{name: name, type: :image} -> "#{name}_id" == to_string(field)
       %{name: name} -> name == field
       %{field: subform_field} -> subform_field == field

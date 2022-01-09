@@ -122,6 +122,23 @@ export default () => ({
       transition: null
     },
 
+    upDly: {
+      interval: 0.15,
+      duration: 0.3,
+      startDelay: 1,
+      alphaTween: true,
+      transition: {
+        from: {
+          y: 10
+        },
+
+        to: {
+          ease: 'circ.out',
+          y: 0
+        }
+      }
+    },
+
     fadeIn: {
       interval: 0,
       duration: 0.35,
