@@ -12,7 +12,6 @@ defmodule Brando.Images.Gallery do
 
   import Brando.Gettext
 
-  trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
 
