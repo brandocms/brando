@@ -16,14 +16,14 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.4":
-  version "3.42.4"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.4.tgz#030e8d3f86f13f8ad67913b8f04bb905642a52cc"
-  integrity sha512-gKktFLmlFuT93H/6glX/jrpir4bXtzvRWx7e4hshueH4YN3difGZzxyfnGyCP3hszmvJAkMJIrV7ql+67Glkvw==
+"@brandocms/jupiter@^3.42.5":
+  version "3.42.5"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.5.tgz#e112d9b2ae0a9d66111ea41e890c19ba2905e3df"
+  integrity sha512-TC1juD9hJREQGcM8lEoFvEdkXUAH6IU9qoQJs3BhXghGvVx6iW9eIJw97U96W+ZaFLLOGZrnlHuR9HarJHSDbw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^3.1.5"
-    gsap "3.6.1"
+    body-scroll-lock "^4.0.0-beta.0"
+    gsap "3.8.0"
     lodash.defaultsdeep "^4.6.1"
 
 "@codemirror/autocomplete@^0.19.0":
@@ -395,10 +395,10 @@
   resolved "https://registry.yarnpkg.com/@sphinxxxx/color-conversion/-/color-conversion-2.2.2.tgz#03ecc29279e3c0c832f6185a5bfa3497858ac8ca"
   integrity sha512-XExJS3cLqgrmNBIP3bBw6+1oQ1ksGjFh0+oClDKFYpCCqx/hlqwWO5KO/S63fzUo67SxI9dMrF0y5T/Ey7h8Zw==
 
-"@sveltejs/vite-plugin-svelte@1.0.0-next.33":
-  version "1.0.0-next.33"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.33.tgz#99ecda078709929a2323e40f66801f5aa329c5b8"
-  integrity sha512-aj0h2+ZixgT+yoJFIs8dRRw/Cj9tgNu3+hY4CJikpa04mfhR61wXqJFfi2ZEFMUvFda5nCxKYIChFkc6wq5fJA==
+"@sveltejs/vite-plugin-svelte@1.0.0-next.34":
+  version "1.0.0-next.34"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.34.tgz#24150ba572652cb3abdfc1205d6aae2326cc93b4"
+  integrity sha512-qZH2jndijrdkvevgbO7OH3iQsviM5Kz7h5APiNP4yEMZTrwq9bifzYvco6BprwtPvLb5wYlRVFZUOdusY6AovQ==
   dependencies:
     "@rollup/pluginutils" "^4.1.2"
     debug "^4.3.3"
@@ -407,14 +407,14 @@
     require-relative "^0.8.7"
     svelte-hmr "^0.14.9"
 
-"@tiptap/core@^2.0.0-beta.160":
-  version "2.0.0-beta.160"
-  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.160.tgz#98f0625dc12a3498c6bbe2ae4aed4667b62a2a11"
-  integrity sha512-oKtx4vn4ew+mCH3kiBeD4UdPa5IVLLBCuSgGNnqdoIuRv397uh5SwOz7TiL5A+vTa6yke0xLSKxZ+QNR2qfVXg==
+"@tiptap/core@^2.0.0-beta.161":
+  version "2.0.0-beta.161"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.0.0-beta.161.tgz#d91f4639c6ea5ad02fe1194cd7466daf9f12a2eb"
+  integrity sha512-SRp4dia0O3xxRYfoghYId0LWLkLeMrnYm1CyboJHsFMH28qL4ckzTTaWQ0UwO8FdvziSNCNUIUFWL1bXOiqwXw==
   dependencies:
     "@types/prosemirror-commands" "^1.0.4"
     "@types/prosemirror-keymap" "^1.0.4"
-    "@types/prosemirror-model" "^1.13.2"
+    "@types/prosemirror-model" "^1.16.0"
     "@types/prosemirror-schema-list" "^1.0.3"
     "@types/prosemirror-state" "^1.2.8"
     "@types/prosemirror-transform" "^1.1.5"
@@ -447,7 +447,7 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-character-count/-/extension-character-count-2.0.0-beta.24.tgz#8b5dba59be75343b0d660c59656acbb0a0eb4c4b"
   integrity sha512-zMe+iNmHypvGQop5yV6xLetXvgEx7oMXJUvX+WwvtjZwx+/jJKLOzsR5EVt0vY/T5P5VCC8hkTseQhgrv4p72w==
 
-"@tiptap/extension-code-block@^2.0.0-beta.34":
+"@tiptap/extension-code-block@^2.0.0-beta.35":
   version "2.0.0-beta.35"
   resolved "https://registry.yarnpkg.com/@tiptap/extension-code-block/-/extension-code-block-2.0.0-beta.35.tgz#32cfb1cdeb849701a4a143985598d16e5ffa20d3"
   integrity sha512-8SIP45Bl/mii3mdRdVPCF3yJGU37Nt2EJiU9eyfTzQSMbaf9Vf1Kop39tjKdbjTrsZ3W7Lnycj+q4x18Zusb6Q==
@@ -518,10 +518,10 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-italic/-/extension-italic-2.0.0-beta.25.tgz#c2ec95cc5baf855134883c5e261da4ab0d3b9479"
   integrity sha512-7PvhioTX9baVp5+AmmZU0qna+dFPZCRlSEN/GciH57N77d2uhJ/ZW5iQWTbvy5HBNddQB4Jts1UDIaC7WASrGA==
 
-"@tiptap/extension-link@^2.0.0-beta.34":
-  version "2.0.0-beta.34"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-link/-/extension-link-2.0.0-beta.34.tgz#9f07b9db6a3b62192b0162afdab5480fcd93e731"
-  integrity sha512-v9qqPWyKfJ9BbV2eWR4a+za1cepZywV/2Rng+1gTivzLpfBgy6Q50vgUyMe7KTZpNZw5MuZO4sBwlvangmj6Vg==
+"@tiptap/extension-link@^2.0.0-beta.35":
+  version "2.0.0-beta.35"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-link/-/extension-link-2.0.0-beta.35.tgz#78fff63542a9032499bfeed7b695dab1c8f9d43e"
+  integrity sha512-FQRjboP69QvUxPI97BRlLzfm7LHDYuAdM/mgEBwDE/i0w7I9lVlfpdGGd4hiPNfD2gMEqHfYJzb1K1qMZw+yRw==
   dependencies:
     linkifyjs "^3.0.5"
     prosemirror-model "^1.16.1"
@@ -562,17 +562,17 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-typography/-/extension-typography-2.0.0-beta.19.tgz#3a3cf25590b7d84bcf40525d558ab5997c554b3d"
   integrity sha512-9Y3or/X0IkHqfJg1eOqqMiPFgXKQKNOwDy+xN6qhORQSUzCPOCHttAUdp8AN/WUEQOoOK4uaRida8ik1ATK7ZQ==
 
-"@tiptap/starter-kit@^2.0.0-beta.167":
-  version "2.0.0-beta.167"
-  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.167.tgz#446eea61b089e60ed37066c13f39cceed220c47f"
-  integrity sha512-D2yUinwMBh2iaIqnDyJDrtrqwOjIuvRHUrVFQFz6NSEP93FyxEGGk7wTwyflucNF+9rJfF/KeCVj5/IqMYm7sQ==
+"@tiptap/starter-kit@^2.0.0-beta.169":
+  version "2.0.0-beta.169"
+  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.0.0-beta.169.tgz#e65e9354b2bdb4682f59723477be6b45c3e33ce7"
+  integrity sha512-SWyo6FPoiwrEkzf4SlZP7j35i5QTKc7Qyy+A14In94OjvDfPRl0cdGLfgFzh/KlEbMsfUT0KTLlNcsB3tMLg8A==
   dependencies:
-    "@tiptap/core" "^2.0.0-beta.160"
+    "@tiptap/core" "^2.0.0-beta.161"
     "@tiptap/extension-blockquote" "^2.0.0-beta.26"
     "@tiptap/extension-bold" "^2.0.0-beta.25"
     "@tiptap/extension-bullet-list" "^2.0.0-beta.26"
     "@tiptap/extension-code" "^2.0.0-beta.26"
-    "@tiptap/extension-code-block" "^2.0.0-beta.34"
+    "@tiptap/extension-code-block" "^2.0.0-beta.35"
     "@tiptap/extension-document" "^2.0.0-beta.15"
     "@tiptap/extension-dropcursor" "^2.0.0-beta.25"
     "@tiptap/extension-gapcursor" "^2.0.0-beta.34"
@@ -644,10 +644,17 @@
     "@types/prosemirror-state" "*"
     "@types/prosemirror-view" "*"
 
-"@types/prosemirror-model@*", "@types/prosemirror-model@^1.13.2":
+"@types/prosemirror-model@*":
   version "1.13.2"
   resolved "https://registry.yarnpkg.com/@types/prosemirror-model/-/prosemirror-model-1.13.2.tgz#2adad3ec478f83204f155d7fb94c9dfde2fc3296"
   integrity sha512-a2rDB0aZ+7aIP7uBqQq1wLb4Hg4qqEvpkCqvhsgT/gG8IWC0peCAZfQ24sgTco0qSJLeDgIbtPeU6mgr869/kg==
+  dependencies:
+    "@types/orderedmap" "*"
+
+"@types/prosemirror-model@^1.16.0":
+  version "1.16.0"
+  resolved "https://registry.yarnpkg.com/@types/prosemirror-model/-/prosemirror-model-1.16.0.tgz#8b22c7431a4c93f7f550fc89c4b0e2d44d42c8b6"
+  integrity sha512-nv93YLyTEcDDl17OB90EldxZjyJQJll2WSMLDvLzTewbpvE/vtMjHT3j4mik3uSzQ6YD486AcloCO3WODY/lDg==
   dependencies:
     "@types/orderedmap" "*"
 
@@ -729,13 +736,13 @@ ansi-styles@^3.2.1:
   dependencies:
     color-convert "^1.9.0"
 
-autoprefixer@^10.4.1:
-  version "10.4.1"
-  resolved "https://registry.yarnpkg.com/autoprefixer/-/autoprefixer-10.4.1.tgz#1735959d6462420569bc42408016acbc56861c12"
-  integrity sha512-B3ZEG7wtzXDRCEFsan7HmR2AeNsxdJB0+sEC0Hc5/c2NbhJqPwuZm+tn233GBVw82L+6CtD6IPSfVruwKjfV3A==
+autoprefixer@^10.4.2:
+  version "10.4.2"
+  resolved "https://registry.yarnpkg.com/autoprefixer/-/autoprefixer-10.4.2.tgz#25e1df09a31a9fba5c40b578936b90d35c9d4d3b"
+  integrity sha512-9fOPpHKuDW1w/0EKfRmVnxTDt8166MAnLI3mgZ1JCnhNtYWxcJ6Ud5CO/AVOZi/AvFa8DY9RTy3h3+tFBlrrdQ==
   dependencies:
     browserslist "^4.19.1"
-    caniuse-lite "^1.0.30001294"
+    caniuse-lite "^1.0.30001297"
     fraction.js "^4.1.2"
     normalize-range "^0.1.2"
     picocolors "^1.0.0"
@@ -751,10 +758,10 @@ balanced-match@^1.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
-body-scroll-lock@^3.1.5:
-  version "3.1.5"
-  resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-3.1.5.tgz#c1392d9217ed2c3e237fee1e910f6cdd80b7aaec"
-  integrity sha512-Yi1Xaml0EvNA0OYWxXiYNqY24AfWkbA6w5vxE7GWxtKfzIbZM+Qw+aSmkgsbWzbHiy/RCSkUZBplVxTA+E4jJg==
+body-scroll-lock@^4.0.0-beta.0:
+  version "4.0.0-beta.0"
+  resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-4.0.0-beta.0.tgz#4f78789d10e6388115c0460cd6d7d4dd2bbc4f7e"
+  integrity sha512-a7tP5+0Mw3YlUJcGAKUqIBkYYGlYxk2fnCasq/FUph1hadxlTRjF+gAcZksxANnaMnALjxEddmSi/H3OR8ugcQ==
 
 brace-expansion@^1.1.7:
   version "1.1.11"
@@ -780,10 +787,15 @@ buffer-crc32@^0.2.5:
   resolved "https://registry.yarnpkg.com/buffer-crc32/-/buffer-crc32-0.2.13.tgz#0d333e3f00eac50aa1454abd30ef8c2a5d9a7242"
   integrity sha1-DTM+PwDqxQqhRUq9MO+MKl2ackI=
 
-caniuse-lite@^1.0.30001286, caniuse-lite@^1.0.30001294:
+caniuse-lite@^1.0.30001286:
   version "1.0.30001294"
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001294.tgz#4849f27b101fd59ddee3751598c663801032533d"
   integrity sha512-LiMlrs1nSKZ8qkNhpUf5KD0Al1KCBE3zaT7OLOwEkagXMEDij98SiOovn9wxVGQpklk9vVC/pUSqgYmkmKOS8g==
+
+caniuse-lite@^1.0.30001297:
+  version "1.0.30001298"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001298.tgz#0e690039f62e91c3ea581673d716890512e7ec52"
+  integrity sha512-AcKqikjMLlvghZL/vfTHorlQsLDhGRalYf1+GmWCf5SCMziSGjRYQW/JEksj14NaYHIR6KIhrFAy0HV5C25UzQ==
 
 chalk@^2.0.1, chalk@^2.4.1:
   version "2.4.2"
@@ -1050,10 +1062,10 @@ graceful-fs@^4.1.3:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.8.tgz#e412b8d33f5e006593cbd3cee6df9f2cebbe802a"
   integrity sha512-qkIilPUYcNhJpd33n0GBXTB1MMPp14TxEsEs0pTrsSVucApsYzW5V+Q8Qxhik6KU3evy+qkAAowTByymK0avdg==
 
-gsap@3.6.1:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.6.1.tgz#618f2338044d2b78b8cbced8ea8bf246d1cf6407"
-  integrity sha512-hCkjk7UVbeEmlpFbiy7lIsh742bwVlMhdCnnQ1CvVOAdURyPX8hXjFZGh/0YzUyAcWPyJPE0/paMhSYtLhGlfA==
+gsap@3.8.0:
+  version "3.8.0"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.8.0.tgz#a404dd6ebbaabc92605539aea9d98e3098688064"
+  integrity sha512-cvpzKkWFePDZCycwXwJnDSpTR3j+a4QLQF/t0c+pXqzRESgAYx5hieaoshzZFjbwsARqr0+5c3GKE7wI273w/g==
 
 gsap@^3.9.1:
   version "3.9.1"
@@ -1556,10 +1568,10 @@ svelte-preprocess@^4.10.1:
     sorcery "^0.10.0"
     strip-indent "^3.0.0"
 
-svelte@^3.44.3:
-  version "3.44.3"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.44.3.tgz#795b1ced6ed3da44969099e5061b850c93c95e9a"
-  integrity sha512-aGgrNCip5PQFNfq9e9tmm7EYxWLVHoFsEsmKrtOeRD8dmoGDdyTQ+21xd7qgFd8MNdKGSYvg7F9dr+Tc0yDymg==
+svelte@^3.45.0:
+  version "3.45.0"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.45.0.tgz#bcb90a72e984f809c419529f8cf9100ad9937a4b"
+  integrity sha512-6AWftH2eqqKLYH1HvKpuUWe8OfjflarhegN57P/Cqwc2Rb2F5oIdDtANU/jMscyZMzG0v6nTQox0siZR9cmRVQ==
 
 tippy.js@^6.3.7:
   version "6.3.7"

@@ -19,7 +19,7 @@
     "vite": "^2.7.10"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.42.4",
+    "@brandocms/jupiter": "^3.42.5",
     "objectFitPolyfill": "^2.3.5"
   }
 }

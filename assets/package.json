@@ -8,19 +8,19 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.42.4",
+    "@brandocms/jupiter": "^3.42.5",
     "@codemirror/basic-setup": "^0.19.1",
     "@codemirror/lang-html": "^0.19.4",
     "@codemirror/lang-markdown": "^0.19.4",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
-    "@tiptap/core": "^2.0.0-beta.160",
+    "@tiptap/core": "^2.0.0-beta.161",
     "@tiptap/extension-character-count": "^2.0.0-beta.24",
     "@tiptap/extension-focus": "^2.0.0-beta.39",
-    "@tiptap/extension-link": "^2.0.0-beta.34",
+    "@tiptap/extension-link": "^2.0.0-beta.35",
     "@tiptap/extension-subscript": "^2.0.0-beta.10",
     "@tiptap/extension-typography": "^2.0.0-beta.19",
-    "@tiptap/starter-kit": "^2.0.0-beta.167",
+    "@tiptap/starter-kit": "^2.0.0-beta.169",
     "autosize": "^5.0.1",
     "flatpickr": "^4.6.9",
     "gsap": "^3.9.1",
@@ -42,9 +42,9 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.6.3",
-    "@sveltejs/vite-plugin-svelte": "1.0.0-next.33",
-    "autoprefixer": "^10.4.1",
-    "svelte": "^3.44.3",
+    "@sveltejs/vite-plugin-svelte": "1.0.0-next.34",
+    "autoprefixer": "^10.4.2",
+    "svelte": "^3.45.0",
     "svelte-preprocess": "^4.10.1",
     "vite": "^2.7.10"
   }
