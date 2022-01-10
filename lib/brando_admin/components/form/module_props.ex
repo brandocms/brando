@@ -148,6 +148,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               class="secondary">
               Comment
             </button>
+
+            <button
+              type="button"
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-value-type="datasource"
+              class="secondary">
+              Datasource
+            </button>
           </div>
         </.live_component>
 
@@ -489,6 +497,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 <% end %>
                               <% end %>
 
+                            <% end %>
+
+                          <% "datasource" -> %>
+                            <%= for block_data <- inputs_for_block(ref_data, :data) do %>
+                              <Input.Text.render form={block_data} field={:description} label={gettext "Description"} />
+                              <Input.Text.render form={block_data} field={:arg} label={gettext "Arg"} />
+                              <Input.Text.render form={block_data} field={:limit} label={gettext "Limit"} />
                             <% end %>
 
                           <% "table" -> %>
