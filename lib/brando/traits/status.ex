@@ -12,5 +12,6 @@ defmodule Brando.Trait.Status do
   def update_status(schema, id, status) do
     query = from q in schema, where: q.id == ^id, update: [set: [status: ^status]]
     Brando.repo().update_all(query, [])
+    Brando.Datasource.update_datasource(schema)
   end
 end
