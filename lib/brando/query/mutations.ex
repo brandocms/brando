@@ -178,7 +178,11 @@ defmodule Brando.Query.Mutations do
   defp maybe_change_fields(entry, _), do: entry
 
   defp maybe_delete_fields(entry, %{delete_fields: delete_fields}) do
-    Map.delete(entry, delete_fields)
+    unless is_list(delete_fields) do
+      raise ArgumentError, message: "delete_fields must be a list"
+    end
+
+    Map.drop(entry, delete_fields)
   end
 
   defp maybe_delete_fields(entry, _), do: entry
