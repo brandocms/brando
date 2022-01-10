@@ -3,10 +3,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   use Phoenix.HTML
 
   import Brando.Gettext
+  import Brando.Utils.Datetime, only: [format_datetime: 1]
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Modal
+  alias BrandoAdmin.Components.Content.List.Row
 
   # prop form, :form
   # prop field, :atom
@@ -240,7 +242,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     ~H"""
     <article
-      class={render_classes([identifier: true, selected: @identifier in @selected_identifiers])}
+      data-id={@identifier.id}
+      class={render_classes([
+        draggable: true,
+        identifier: true,
+        selected: @identifier in @selected_identifiers,
+        "sort-handle": true
+      ])}
       phx-click={@select}
       phx-value-param={@param}>
 
@@ -255,7 +263,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
-            <%= @identifier.type %>
+            <Row.status_circle status={@identifier.status} /> <%= @identifier.type %> <span>|</span> <%= format_datetime(@identifier.updated_at) %>
           </div>
         </div>
       </section>

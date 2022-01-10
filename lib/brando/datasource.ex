@@ -51,9 +51,8 @@ defmodule Brando.Datasource do
 
         selection
           :featured,
-            fn _, _ ->
-              {:ok, posts} = Posts.list_posts()
-              {:ok, Enum.map(posts, &(%{id: &1.id, label: &1.title}))}
+            fn _, arg ->
+              {:ok, posts} = Posts.list_posts(%{filter: %{language: arg}})
             end,
             fn _, ids ->
               results =
@@ -300,11 +299,7 @@ defmodule Brando.Datasource do
 
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
-
-    {:ok, selected_entries} =
-      module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
-
-    Identifier.identifiers_for(selected_entries)
+    module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
   end
 
   @doc """
@@ -389,12 +384,22 @@ defmodule Brando.Datasource do
       }
     ]
 
+    contained_refed_t = [
+      %{
+        type: "container",
+        data: %{
+          blocks: refed_t
+        }
+      }
+    ]
+
     Brando.repo().all(
       from s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t)
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_refed_t)
     )
   end
 
@@ -422,12 +427,22 @@ defmodule Brando.Datasource do
       }
     ]
 
+    contained_refed_t = [
+      %{
+        type: "container",
+        data: %{
+          blocks: refed_t
+        }
+      }
+    ]
+
     Brando.repo().all(
       from s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t)
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_refed_t)
     )
   end
 

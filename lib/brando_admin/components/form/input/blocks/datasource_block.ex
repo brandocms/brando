@@ -2,10 +2,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
+  alias Brando.Blueprint.Identifier
+  alias Brando.Datasource
+  alias Brando.Villain
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Modal
 
   # prop base_form, :any
   # prop block, :any
@@ -24,15 +28,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   # data available_entries, :list
   # data selected_entries, :list
 
-  alias Brando.Datasource
-
   def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:available_entries, fn -> [] end)
      |> assign(:block_data, List.first(inputs_for(assigns.block, :data)))
+     |> assign(:uid, v(assigns.block, :uid))
      |> assign_available_sources()
      |> assign_available_queries()
      |> assign_modules()
@@ -46,8 +50,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         query = v(block_data, :query)
         ids = v(block_data, :ids)
 
-        {:ok, selected_entries} = Datasource.get_selection(module, query, ids)
-        assign(socket, :selected_entries, selected_entries)
+        assign_new(socket, :selected_entries, fn ->
+          {:ok, selected_entries} = Datasource.get_selection(module, query, ids)
+          {:ok, identifiers} = Identifier.identifiers_for(selected_entries)
+          identifiers
+        end)
 
       _ ->
         assign(socket, :selected_entries, [])
@@ -118,12 +125,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   def render(assigns) do
     ~H"""
     <div
-      id={"#{v(@block, :uid)}-wrapper"}
+      id={"#{@uid}-wrapper"}
       data-block-index={@index}
-      data-block-uid={v(@block, :uid)}>
+      data-block-uid={@uid}>
       <.live_component
         module={Block}
-        id={"#{v(@block, :uid)}-base"}
+        id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -175,22 +182,46 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
                   <input type="hidden" name={array_name} value={array_value} />
                 </Form.array_inputs>
 
-                <div class="selected-entries">
-                  <%= for identifier <- @selected_entries do %>
-                    <Entries.render identifier={identifier} />
+                <div
+                  id={"sortable-#{@uid}-identifiers"}
+                  class="selected-entries"
+                  phx-hook="Brando.Sortable"
+                  data-target={@myself}
+                  data-sortable-id={"sortable-#{@uid}-identifiers"}
+                  data-sortable-handle=".sort-handle"
+                  data-sortable-selector=".identifier">
+                  <%= for {identifier, idx} <- Enum.with_index(@selected_entries) do %>
+                    <Entries.identifier
+                      identifier={identifier}
+                      remove={JS.push("remove_identifier", target: @myself)}
+                      param={idx} />
                   <% end %>
                 </div>
 
                 <button
                   class="tiny select-button"
                   type="button"
-                  phx-click={JS.push("select_entries", target: @myself)}>
+                  phx-click={JS.push("select_entries", target: @myself) |> show_modal("#select-entries-#{@uid}")}>
                   <%= gettext "Select entries" %>
                 </button>
               <% end %>
             </div>
           </div>
         </div>
+
+        <.live_component module={Modal} title="Select entries" id={"select-entries-#{@uid}"} narrow>
+          <%= if !Enum.empty?(@available_entries) do %>
+            <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+            <%= for {identifier, idx} <- Enum.with_index(@available_entries) do %>
+              <Entries.identifier
+                identifier={identifier}
+                select={JS.push("select_identifier", target: @myself)}
+                selected_identifiers={@selected_entries}
+                param={idx}
+              />
+            <% end %>
+          <% end %>
+        </.live_component>
       </.live_component>
     </div>
     """
@@ -198,5 +229,109 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
 
   def handle_event("select_entries", _, socket) do
     {:noreply, assign_available_entries(socket)}
+  end
+
+  def handle_event(
+        "select_identifier",
+        %{"param" => idx},
+        %{assigns: %{available_entries: available_entries, selected_entries: selected_entries}} =
+          socket
+      ) do
+    picked_entry = Enum.at(available_entries, String.to_integer(idx))
+
+    {:noreply,
+     socket
+     |> assign(:selected_entries, selected_entries ++ List.wrap(picked_entry))
+     |> update_ids(:add, picked_entry)}
+  end
+
+  def handle_event(
+        "remove_identifier",
+        %{"param" => idx},
+        %{assigns: %{selected_entries: selected_entries}} = socket
+      ) do
+    picked_entry = Enum.at(selected_entries, String.to_integer(idx))
+    new_entries = selected_entries |> Enum.filter(&(&1 != picked_entry))
+
+    {:noreply,
+     socket
+     |> assign(:selected_entries, new_entries)
+     |> update_ids(:remove, picked_entry)}
+  end
+
+  def handle_event(
+        "sequenced",
+        %{"ids" => ordered_ids},
+        %{
+          assigns: %{
+            base_form: form,
+            uid: uid,
+            block: block,
+            data_field: data_field,
+            selected_entries: selected_entries
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    current_data = input_value(block, :data)
+    new_data = Map.put(current_data, :ids, ordered_ids)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    updated_entries =
+      Enum.map(ordered_ids, fn id -> Enum.find(selected_entries, &(&1.id == id)) end)
+
+    require Logger
+    Logger.error(inspect(ordered_ids, pretty: true))
+    Logger.error(inspect(selected_entries, pretty: true))
+    Logger.error(inspect(updated_entries, pretty: true))
+
+    {:noreply, assign(socket, :selected_entries, updated_entries)}
+  end
+
+  def update_ids(
+        %{
+          assigns: %{
+            base_form: form,
+            uid: uid,
+            block: block,
+            data_field: data_field
+          }
+        } = socket,
+        action,
+        entry
+      ) do
+    # replace block
+    changeset = form.source
+    current_data = input_value(block, :data)
+
+    new_data =
+      if action == :add do
+        Map.put(current_data, :ids, (current_data.ids || []) ++ List.wrap(entry.id))
+      else
+        Map.put(current_data, :ids, Enum.filter(current_data.ids || [], &(&1 != entry.id)))
+      end
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    socket
   end
 end

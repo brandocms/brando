@@ -20,7 +20,7 @@
       text-align: center;
     }
 
-    svg {
+    > svg {
       margin-bottom: 25px;
     }
   }
