@@ -31,7 +31,8 @@ defmodule Brando.Blueprint.Identifier do
           status: status,
           absolute_url: absolute_url,
           cover: cover,
-          schema: __MODULE__
+          schema: __MODULE__,
+          updated_at: entry.updated_at
         }
       end
     end

@@ -19,6 +19,7 @@ defmodule Brando.Content.Identifier do
     field :absolute_url, :string
     field :cover, :string
     field :schema, Brando.Type.Module
+    field :updated_at, :utc_datetime
   end
 
   def changeset(struct, params \\ %{}) do
