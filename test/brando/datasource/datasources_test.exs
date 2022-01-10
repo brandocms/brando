@@ -182,30 +182,8 @@ defmodule Brando.DatasourcesTest do
   end
 
   test "get_selection" do
-    get_result =
-      {:ok,
-       [
-         %Brando.Content.Identifier{
-           id: 3,
-           status: :published,
-           title: "The actual entry 3 [en]",
-           absolute_url: "/test3",
-           cover: nil,
-           schema: Brando.Pages.Page,
-           type: "Page"
-         },
-         %Brando.Content.Identifier{
-           id: 1,
-           status: :draft,
-           title: "The actual entry [en]",
-           absolute_url: "/test1",
-           cover: nil,
-           schema: Brando.Pages.Page,
-           type: "Page"
-         }
-       ]}
-
-    assert Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1]) == get_result
+    {:ok, entries} = Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1])
+    assert Enum.map(entries, & &1.id) == [3, 1]
   end
 
   test "update_datasource" do
