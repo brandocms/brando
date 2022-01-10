@@ -42,14 +42,14 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.4":
-  version "3.42.4"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.4.tgz#030e8d3f86f13f8ad67913b8f04bb905642a52cc"
-  integrity sha512-gKktFLmlFuT93H/6glX/jrpir4bXtzvRWx7e4hshueH4YN3difGZzxyfnGyCP3hszmvJAkMJIrV7ql+67Glkvw==
+"@brandocms/jupiter@^3.42.5":
+  version "3.42.5"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.5.tgz#e112d9b2ae0a9d66111ea41e890c19ba2905e3df"
+  integrity sha512-TC1juD9hJREQGcM8lEoFvEdkXUAH6IU9qoQJs3BhXghGvVx6iW9eIJw97U96W+ZaFLLOGZrnlHuR9HarJHSDbw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^3.1.5"
-    gsap "3.6.1"
+    body-scroll-lock "^4.0.0-beta.0"
+    gsap "3.8.0"
     lodash.defaultsdeep "^4.6.1"
 
 "@egjs/hammerjs@^2.0.17":
@@ -177,10 +177,10 @@ balanced-match@^2.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-2.0.0.tgz#dc70f920d78db8b858535795867bf48f820633d9"
   integrity sha512-1ugUSr8BHXRnK23KfuYS+gVMC3LB8QGH9W1iGtDPsNWoQbgtXSExkBu2aDR4epiGWZOjZsj6lDl/N/AqqTC3UA==
 
-body-scroll-lock@^3.1.5:
-  version "3.1.5"
-  resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-3.1.5.tgz#c1392d9217ed2c3e237fee1e910f6cdd80b7aaec"
-  integrity sha512-Yi1Xaml0EvNA0OYWxXiYNqY24AfWkbA6w5vxE7GWxtKfzIbZM+Qw+aSmkgsbWzbHiy/RCSkUZBplVxTA+E4jJg==
+body-scroll-lock@^4.0.0-beta.0:
+  version "4.0.0-beta.0"
+  resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-4.0.0-beta.0.tgz#4f78789d10e6388115c0460cd6d7d4dd2bbc4f7e"
+  integrity sha512-a7tP5+0Mw3YlUJcGAKUqIBkYYGlYxk2fnCasq/FUph1hadxlTRjF+gAcZksxANnaMnALjxEddmSi/H3OR8ugcQ==
 
 brace-expansion@^1.1.7:
   version "1.1.11"
@@ -678,10 +678,10 @@ globjoin@^0.1.4:
   resolved "https://registry.yarnpkg.com/globjoin/-/globjoin-0.1.4.tgz#2f4494ac8919e3767c5cbb691e9f463324285d43"
   integrity sha1-L0SUrIkZ43Z8XLtpHp9GMyQoXUM=
 
-gsap@3.6.1:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.6.1.tgz#618f2338044d2b78b8cbced8ea8bf246d1cf6407"
-  integrity sha512-hCkjk7UVbeEmlpFbiy7lIsh742bwVlMhdCnnQ1CvVOAdURyPX8hXjFZGh/0YzUyAcWPyJPE0/paMhSYtLhGlfA==
+gsap@3.8.0:
+  version "3.8.0"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.8.0.tgz#a404dd6ebbaabc92605539aea9d98e3098688064"
+  integrity sha512-cvpzKkWFePDZCycwXwJnDSpTR3j+a4QLQF/t0c+pXqzRESgAYx5hieaoshzZFjbwsARqr0+5c3GKE7wI273w/g==
 
 hard-rejection@^2.1.0:
   version "2.1.0"
