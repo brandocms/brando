@@ -35,7 +35,8 @@ defmodule Brando.Villain.Filters do
     |> Utils.Datetime.format_datetime(format, nil)
   end
 
-  # {{ entry.inserted_at | date:"%A","nb_NO" }}
+  # {{ entry.inserted_at | date:""%-d. %B %Y"","no" }}
+  # = 4. januar 2022
   def date(%DateTime{} = value, format, locale, _) do
     Utils.Datetime.format_datetime(value, format, locale)
   end
