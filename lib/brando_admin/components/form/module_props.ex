@@ -652,7 +652,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <ul
             id={"#{@form.id}-vars-#{@key}-list"}
             phx-hook="Brando.Sortable"
-            data-sortable-id="sortable-vars"
+            data-sortable-id={"sortable-vars#{@entry_form && "-entry-form" || ""}"}
             data-sortable-selector=".var"
             data-sortable-handle=".sort-handle">
             <Form.poly_inputs form={@form} for={:vars} let={%{form: var, index: idx}}>

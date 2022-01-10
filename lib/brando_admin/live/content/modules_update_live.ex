@@ -240,6 +240,26 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   end
 
   def handle_event(
+        "sequenced",
+        %{"ids" => order_indices, "sortable_id" => "sortable-vars-entry-form"},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    entry_template = get_field(changeset, :entry_template)
+    vars = entry_template.vars
+
+    sorted_vars = Enum.map(order_indices, &Enum.at(vars, &1))
+
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__, :id])
+      |> Map.put(:vars, sorted_vars)
+
+    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
         "create_ref",
         %{"type" => block_type},
         %{assigns: %{changeset: changeset}} = socket
