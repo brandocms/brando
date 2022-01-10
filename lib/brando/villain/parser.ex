@@ -851,7 +851,7 @@ defmodule Brando.Villain.Parser do
 
       defp render_datasource_entries({:code, code}, entries, opts) do
         base_context =
-          opts.context
+          (opts[:context] || Liquex.Context.new(%{}))
           |> add_parser_to_context(__MODULE__)
 
         context = Context.assign(base_context, "entries", entries)
@@ -860,7 +860,7 @@ defmodule Brando.Villain.Parser do
 
       defp render_datasource_entries({:module, module_id}, entries, opts) do
         base_context =
-          opts.context
+          (opts[:context] || Liquex.Context.new(%{}))
           |> add_parser_to_context(__MODULE__)
 
         modules = opts.modules
