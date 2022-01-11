@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     ~H"""
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
-    <div id="module-form-el">
+    <div id="module-form-el" phx-hook="Brando.Form">
       <.form for={@changeset} let={form} phx-change="validate" phx-submit="save">
         <div class="block-editor">
           <div class="code">
