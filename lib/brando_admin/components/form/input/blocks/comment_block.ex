@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
         </:config>
         <div>
           <%= if v(@block_data, :text) do %>
-            <%= v(@block_data, :text) |> raw %>
+            <%= v(@block_data, :text) |> Brando.HTML.nl2br |> raw %>
           <% end %>
         </div>
       </.live_component>
