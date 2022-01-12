@@ -38,9 +38,10 @@ defmodule BrandoAdmin.Components.Form do
           field: field_atom,
           force_validation: true
         },
-        %{assigns: %{entry: entry}} = socket
+        %{assigns: %{entry: entry, schema: schema}} = socket
       ) do
-    updated_entry = Map.put(entry, field_atom, updated_relation)
+    entry_or_default = entry || struct(schema)
+    updated_entry = Map.put(entry_or_default, field_atom, updated_relation)
 
     {:ok,
      socket
