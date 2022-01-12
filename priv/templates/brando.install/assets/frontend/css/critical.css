@@ -1,4 +1,13 @@
 /** Critical CSS **/
+html.js body.unloaded {
+  opacity: 0;
+}
+
+html.moonwalk {
+  [data-moonwalk-children] > * {
+    opacity: 0;
+  }
+}
 
 html.moonwalk {
   [data-moonwalk],
@@ -6,6 +15,15 @@ html.moonwalk {
   [data-moonwalk-run] {
     opacity: 0;
   }
+}
+
+[b-section] {
+  opacity: 0;
+}
+
+[data-app-ready="true"] [b-section] {
+  opacity: 1;
+  transition: opacity 0.5s ease;
 }
 
 .fader {
