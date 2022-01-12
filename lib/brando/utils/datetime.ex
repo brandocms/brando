@@ -1,6 +1,8 @@
 defmodule Brando.Utils.Datetime do
   def format_datetime(datetime, format_string \\ "%d/%m/%y", locale \\ nil)
 
+  def format_datetime(nil, _, _), do: ""
+
   def format_datetime(%NaiveDateTime{} = datetime, format_string, locale) do
     locale = locale || Gettext.get_locale()
 
