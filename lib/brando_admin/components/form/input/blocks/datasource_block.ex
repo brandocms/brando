@@ -284,16 +284,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      updated_changeset: updated_changeset,
+      force_validation: true
     )
 
     updated_entries =
       Enum.map(ordered_ids, fn id -> Enum.find(selected_entries, &(&1.id == id)) end)
-
-    require Logger
-    Logger.error(inspect(ordered_ids, pretty: true))
-    Logger.error(inspect(selected_entries, pretty: true))
-    Logger.error(inspect(updated_entries, pretty: true))
 
     {:noreply, assign(socket, :selected_entries, updated_entries)}
   end

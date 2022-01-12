@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+
+  import Ecto.Changeset
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -207,6 +209,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def handle_event(
+        "duplicate_block",
+        %{"block_uid" => block_uid},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: container_uid,
+            data_field: data_field,
+            blocks: container_blocks
+          }
+        } = socket
+      ) do
+    changeset = base_form.source
+    source_position = Enum.find_index(container_blocks, &(&1.uid == block_uid))
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
+    duplicated_block = replace_uids(original_block)
+    new_blocks = List.insert_at(container_blocks, source_position, duplicated_block)
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, container_uid, %{
+        data: %{blocks: new_blocks}
+      })
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
         "insert_block",
         %{"index" => index_binary, "module-id" => module_id_binary},
         %{
@@ -299,5 +337,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
 
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+  end
+
+  defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
+    updated_refs = Brando.Villain.add_uid_to_refs(refs)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
+  end
+
+  defp replace_uids(
+         %Brando.Blueprint.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block
+       ) do
+    updated_blocks = Enum.map(blocks, &replace_uids/1)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:blocks)], updated_blocks)
   end
 end
