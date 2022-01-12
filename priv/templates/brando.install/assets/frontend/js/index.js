@@ -35,7 +35,8 @@ const app = new Application({
   breakpointConfig: configureBreakpoints,
   faderOpts: {
     fadeIn: (callback) => {
-        callback()
+      document.body.classList.remove('unloaded')
+      callback()
     }
   }
 })
