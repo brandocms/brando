@@ -265,6 +265,12 @@ defmodule Brando.Sites do
     get_in(Cache.Globals.get(language), [cat_key, key])
   end
 
+  def render_global(language, cat_key, key) do
+    language
+    |> Cache.Globals.get()
+    |> get_in([cat_key, key, Access.key(:value)])
+  end
+
   @doc """
   Get global by key path
   """

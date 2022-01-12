@@ -504,4 +504,6 @@ defmodule Brando.HTML do
     end)
     |> Enum.join(" ")
   end
+
+  defdelegate global(lang, category, key), to: Brando.Sites, as: :render_global
 end
