@@ -506,4 +506,5 @@ defmodule Brando.HTML do
   end
 
   defdelegate global(lang, category, key), to: Brando.Sites, as: :render_global
+  defdelegate identity(lang, key), to: Brando.Sites, as: :render_identity
 end

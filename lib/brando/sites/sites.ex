@@ -271,6 +271,12 @@ defmodule Brando.Sites do
     |> get_in([cat_key, key, Access.key(:value)])
   end
 
+  def render_identity(language, key) do
+    language
+    |> Cache.Identity.get()
+    |> get_in([Access.key(key)])
+  end
+
   @doc """
   Get global by key path
   """
