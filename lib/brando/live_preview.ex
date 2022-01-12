@@ -138,7 +138,7 @@ defmodule Brando.LivePreview do
              {:conn, conn},
              {:section, section},
              {:LIVE_PREVIEW, true},
-             {:language, language},
+             {:language, to_string(language)},
              {atom_prop, var!(entry)}
            ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
