@@ -246,9 +246,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       class={render_classes([
         draggable: true,
         identifier: true,
+        selectable: @select,
         selected: @identifier in @selected_identifiers,
         "sort-handle": true
       ])}
+      phx-page-loading
       phx-click={@select}
       phx-value-param={@param}>
 
@@ -269,7 +271,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       </section>
       <%= if @remove do %>
         <div class="remove">
-          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
+          <button type="button" phx-page-loading phx-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
       <% end %>
     </article>
@@ -287,6 +289,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       class={render_classes([identifier: true, selected: @identifier_form in @selected_identifiers])}
+      phx-page-loading
       phx-click={@select}
       phx-value-param={@param}>
 
@@ -307,7 +310,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       </section>
       <%= if @remove do %>
         <div class="remove">
-          <button type="button" phx-click={@remove} phx-value-param={@param}>&times;</button>
+          <button type="button" phx-page-loading phx-click={@remove} phx-value-param={@param}>&times;</button>
         </div>
       <% end %>
     </article>

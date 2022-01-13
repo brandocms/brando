@@ -91,6 +91,10 @@
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 
+  &.selectable {
+    cursor: pointer;
+  }
+
   &.selected {
     background-color: var(--brando-color-dark);
     color: var(--brando-color-peach);
