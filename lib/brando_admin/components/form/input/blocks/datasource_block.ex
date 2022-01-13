@@ -239,9 +239,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
       ) do
     picked_entry = Enum.at(available_entries, String.to_integer(idx))
 
+    # deselect if already selected
+    selected_entries =
+      if Enum.find(selected_entries, &(&1 == picked_entry)) do
+        Enum.filter(selected_entries, &(&1 != picked_entry))
+      else
+        selected_entries ++ List.wrap(picked_entry)
+      end
+
     {:noreply,
      socket
-     |> assign(:selected_entries, selected_entries ++ List.wrap(picked_entry))
+     |> assign(:selected_entries, selected_entries)
      |> update_ids(:add, picked_entry)}
   end
 
