@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
 
-  import Ecto.Changeset
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 

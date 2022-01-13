@@ -138,8 +138,10 @@ defmodule BrandoAdmin.Components.Form do
      |> maybe_assign_uploads()}
   end
 
-  defp assign_entry(%{assigns: %{entry_id: nil}} = socket) do
-    assign_new(socket, :entry, fn -> nil end)
+  defp assign_entry(
+         %{assigns: %{entry_id: nil, schema: schema, current_user: current_user}} = socket
+       ) do
+    assign_new(socket, :entry, fn -> prepare_empty_entry(schema, current_user) |> IO.inspect() end)
   end
 
   defp assign_entry(
@@ -246,6 +248,30 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign_new(:active_tab, fn -> Map.get(first_tab, :name) end)
     |> assign_new(:tabs, fn -> Enum.map(tabs, & &1.name) end)
+  end
+
+  def prepare_empty_entry(schema, current_user) do
+    schema
+    |> struct()
+    |> maybe_put_language(current_user)
+    |> nil_relations(schema)
+  end
+
+  def nil_relations(entry, schema) do
+    relations =
+      schema.__relations__()
+      |> Enum.filter(&(&1.type == :belongs_to))
+      |> Enum.map(& &1.name)
+
+    Brando.repo().preload(entry, relations)
+  end
+
+  def maybe_put_language(%{language: _} = entry, current_user) do
+    Map.put(entry, :language, current_user.config.content_language)
+  end
+
+  def maybe_put_language(entry, _) do
+    entry
   end
 
   def render(assigns) do
@@ -942,7 +968,7 @@ defmodule BrandoAdmin.Components.Form do
       # so we add default_params here
       schema.changeset(
         struct(schema),
-        Map.put(default_params, :language, current_user.config.content_language),
+        default_params,
         current_user,
         skip_villain: true
       )
