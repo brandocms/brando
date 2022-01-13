@@ -55,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
     entry_form = Keyword.get(assigns.opts, :form)
+    update_relation = Keyword.get(assigns.opts, :update_relation)
 
     {:ok,
      socket
@@ -67,6 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
      |> assign(:changeset_fun, changeset_fun)
+     |> assign(:update_relation, update_relation)
      |> assign(:default, default)
      |> assign(:entry_form, entry_form)
      |> maybe_assign_select_changeset()
@@ -357,9 +359,37 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def handle_event(
         "select_option",
         %{"value" => value},
-        %{assigns: %{input_options: input_options}} = socket
+        %{
+          assigns: %{
+            form: form,
+            input_options: input_options,
+            update_relation: update_relation
+          }
+        } = socket
       ) do
     label = get_label(input_options, value)
+    changeset = form.source
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    if update_relation do
+      {update_field, fetcher_fn} = update_relation
+
+      fetched_relation =
+        case fetcher_fn.(value) do
+          {:ok, fetched_relation} -> fetched_relation
+          _ -> nil
+        end
+
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        action: :update_entry_relation,
+        updated_relation: fetched_relation,
+        field: update_field,
+        force_validation: true
+      )
+    end
 
     {:noreply,
      socket
