@@ -469,8 +469,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
 
-    if img = Brando.Utils.try_path(entry, var_path) do
-      Brando.Utils.media_url(img.path)
+    if path = Brando.Utils.try_path(entry, var_path ++ [:path]) do
+      Brando.Utils.media_url(path)
     else
       ""
     end
