@@ -600,7 +600,8 @@ defmodule BrandoAdmin.Components.Form do
           assigns: %{
             changeset: changeset,
             edit_image: edit_image,
-            entry: entry
+            entry: entry,
+            singular: singular
           }
         } = socket
       ) do
@@ -614,25 +615,15 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:edit_image, updated_edit_image)
      |> assign(:changeset, updated_changeset)
-     |> push_event("b:validate", %{})}
+     |> push_event("b:validate", %{target: "#{singular}[#{edit_image.relation_field}]", value: ""})}
   end
 
   def handle_event(
         "select_image",
         %{"id" => selected_image_id},
-        %{
-          assigns: %{
-            changeset: changeset,
-            edit_image: %{path: path, relation_field: relation_field} = edit_image
-          }
-        } = socket
+        %{assigns: %{edit_image: edit_image}} = socket
       ) do
     {:ok, image} = Brando.Images.get_image(selected_image_id)
-
-    full_path = path ++ [relation_field]
-
-    updated_changeset =
-      EctoNestedChangeset.update_at(changeset, full_path, fn _ -> selected_image_id end)
 
     updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
     image_changeset = Ecto.Changeset.change(image)
@@ -640,22 +631,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:edit_image, updated_edit_image)
-     |> assign(:image_changeset, image_changeset)
-     |> assign(:changeset, updated_changeset)
-     |> push_event("b:validate", %{})}
-  end
-
-  def handle_event(
-        "validate_image",
-        %{"image" => image_params},
-        %{assigns: %{edit_image: %{image: image}, current_user: current_user}} = socket
-      ) do
-    validated_changeset =
-      image
-      |> Brando.Images.Image.changeset(image_params, current_user)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, image_changeset: validated_changeset)}
+     |> assign(:image_changeset, image_changeset)}
   end
 
   def handle_event("validate_image", _, socket) do
@@ -699,6 +675,7 @@ defmodule BrandoAdmin.Components.Form do
 
     edit_image = Map.put(edit_image, :image, updated_image)
     full_path = path ++ [relation_field]
+
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
 
     entry_has_image = Map.get(entry_or_default, relation_field) != nil
@@ -804,7 +781,7 @@ defmodule BrandoAdmin.Components.Form do
       Brando.LivePreview.update(schema, changeset, live_preview_cache_key)
     end
 
-    {:noreply, assign(socket, changeset: changeset)}
+    {:noreply, assign(socket, :changeset, changeset)}
   end
 
   def handle_event(
@@ -902,52 +879,6 @@ defmodule BrandoAdmin.Components.Form do
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
   end
-
-  # def handle_gallery_progress(
-  #       key,
-  #       upload_entry,
-  #       %{
-  #         assigns: %{
-  #           changeset: changeset,
-  #           schema: schema,
-  #           current_user: current_user,
-  #           id: form_id
-  #         }
-  #       } = socket
-  #     ) do
-  #   if upload_entry.done? do
-  #     %{cfg: cfg} = schema.__asset_opts__(key)
-
-  #     {:ok, image_struct} =
-  #       consume_uploaded_entry(
-  #         socket,
-  #         upload_entry,
-  #         fn meta ->
-  #           Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user)
-  #         end
-  #       )
-
-  #     pid = self()
-
-  #     Task.start_link(fn ->
-  #       {:ok, image_struct} = Brando.Upload.process_upload(image_struct, cfg, current_user)
-
-  #       send_update(pid, __MODULE__,
-  #         id: form_id,
-  #         key: key,
-  #         updated_gallery_image: image_struct
-  #       )
-  #     end)
-
-  #     existing_images = get_field(changeset, key)
-
-  #     {:noreply,
-  #      socket
-  #      |> update_changeset(key, [image_struct | existing_images])}
-  #   else
-  #     {:noreply, socket}
-  #   end
-  # end
 
   def handle_image_progress(
         key,
@@ -1180,56 +1111,4 @@ defmodule BrandoAdmin.Components.Form do
     </label>
     """
   end
-
-  # def input(assigns) do
-  #   translations = get_in(assigns.blueprint.translations, [:fields, assigns.input.name]) || []
-
-  #   label = Keyword.get(translations, :label)
-
-  #   instructions =
-  #     case Keyword.get(translations, :instructions) do
-  #       nil -> nil
-  #       val -> raw(val)
-  #     end
-
-  #   assigns =
-  #     assigns
-  #     |> assign(:component_id, fn ->
-  #       Enum.join(
-  #         [assigns.form.id, assigns.input.name],
-  #         "-"
-  #       )
-  #     end)
-  #     |> assign(:component_module, fn ->
-  #       case assigns.input.type do
-  #         {:component, module} ->
-  #           module
-
-  #         type ->
-  #           input_type = type |> to_string |> Recase.to_pascal()
-  #           Module.concat([__MODULE__, input_type])
-  #       end
-  #     end)
-  #     |> assign(:input_opts, assigns.input.opts)
-  #     |> assign(:label, label)
-  #     |> assign(:instructions, instructions)
-  #     |> assign(:placeholder, placeholder)
-  #     |> assign(:field, assigns.input.name)
-
-  #   ~H"""
-  #   <div class="brando-input">
-  #     <.live_component
-  #       module={@component_module}
-  #       id={@component_id}
-  #       form={@form}
-  #       field={@field}
-  #       label={@label}
-  #       placeholder={@placeholder}
-  #       instructions={@instructions}
-  #       opts={@input_opts}
-  #       current_user={@current_user}
-  #     />
-  #   </div>
-  #   """
-  # end
 end
