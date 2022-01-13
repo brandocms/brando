@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Components.Form do
   defp assign_entry(
          %{assigns: %{entry_id: nil, schema: schema, current_user: current_user}} = socket
        ) do
-    assign_new(socket, :entry, fn -> prepare_empty_entry(schema, current_user) |> IO.inspect() end)
+    assign_new(socket, :entry, fn -> prepare_empty_entry(schema, current_user) end)
   end
 
   defp assign_entry(
