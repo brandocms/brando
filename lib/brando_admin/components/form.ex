@@ -1009,7 +1009,12 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :changeset, fn ->
       # this is the initial assignment of changeset with an empty entry,
       # so we add default_params here
-      schema.changeset(struct(schema), default_params, current_user, skip_villain: true)
+      schema.changeset(
+        struct(schema),
+        Map.put(default_params, :language, current_user.config.content_language),
+        current_user,
+        skip_villain: true
+      )
     end)
   end
 
