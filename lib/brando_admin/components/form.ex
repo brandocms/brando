@@ -473,6 +473,7 @@ defmodule BrandoAdmin.Components.Form do
             <button
               class="secondary"
               type="button"
+              phx-page-loading
               phx-click={reset_image_field(@myself)}>
               <%= gettext "Reset image field" %>
             </button>
@@ -617,8 +618,6 @@ defmodule BrandoAdmin.Components.Form do
     |> toggle_drawer("#image-drawer")
   end
 
-  # this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-
   def handle_event(
         "reset_image_field",
         _,
@@ -672,6 +671,7 @@ defmodule BrandoAdmin.Components.Form do
             changeset: changeset,
             entry: entry,
             schema: schema,
+            singular: singular,
             edit_image:
               %{
                 image: image,
@@ -727,7 +727,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:changeset, updated_changeset)
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
-     |> push_event("b:validate", %{})}
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{edit_image.relation_field}]",
+       value: image.id
+     })}
   end
 
   # without image in params
