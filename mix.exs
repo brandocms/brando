@@ -79,7 +79,7 @@ defmodule Brando.Mixfile do
       {:jason, "~> 1.0"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
-      {:ecto_nested_changeset, "~> 0.1.3"},
+      {:ecto_nested_changeset, "~> 0.2.0"},
 
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},
