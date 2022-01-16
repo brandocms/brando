@@ -551,6 +551,7 @@ defmodule Brando.Query do
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
       {:revision, revision}, _ -> get_revision(module, args, revision)
+      {:with_deleted, true}, q -> from query in q, or_where: not is_nil(query.deleted_at)
     end)
   end
 

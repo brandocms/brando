@@ -290,7 +290,13 @@ defmodule Brando.Villain do
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     ctx = schema.__modules__().context
     singular = schema.__naming__().singular
-    get_opts = %{matches: %{id: id}}
+
+    get_opts =
+      if schema.has_trait(Brando.Trait.SoftDelete) do
+        %{matches: %{id: id}, with_deleted: true}
+      else
+        %{matches: %{id: id}}
+      end
 
     {:ok, record} = apply(ctx, :"get_#{singular}", [get_opts])
 
