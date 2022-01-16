@@ -119,6 +119,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           </figure>
           <div class="instructions">
             <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
+            <button
+              type="button"
+              class="tiny"
+              phx-click={show_modal("#block-#{@uid}_config")}>
+              <%= gettext "Pick an existing image" %>
+            </button>
           </div>
         </div>
 
