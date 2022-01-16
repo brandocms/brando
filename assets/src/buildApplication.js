@@ -28,7 +28,7 @@ if (PREFERS_REDUCED_MOTION) {
 
 const IS_LOGIN = Dom.find('.auth-login')
 
-export default (hooks) => {
+export default (hooks, enableDebug = true) => {
   let app
   if (IS_LOGIN) {
     const MOONWALK_CONFIG = {
@@ -254,7 +254,7 @@ export default (hooks) => {
       })
     })
 
-    app.registerCallback(Events.APPLICATION_READY, () => initializeLiveSocket({ ...hooks, ...brandoHooks(app) }))
+    app.registerCallback(Events.APPLICATION_READY, () => initializeLiveSocket({ ...hooks, ...brandoHooks(app) }, enableDebug))
   }
 
   return app

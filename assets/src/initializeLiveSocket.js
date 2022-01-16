@@ -2,7 +2,7 @@ import { LiveSocket } from 'phoenix_live_view'
 import { Socket } from 'phoenix'
 import morphdomCallbacks from './morphdomCallbacks'
 
-export default hooks => {
+export default (hooks, enableDebug) => {
   let csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content")
   let liveSocket = new LiveSocket("/live", Socket, {
     hooks: hooks,
@@ -15,8 +15,9 @@ export default hooks => {
   liveSocket.connect()
 
   // expose liveSocket on window for web console debug logs and latency simulation:
-  liveSocket.enableDebug()
-  // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
-  // >> liveSocket.disableLatencySim()
+  if (enableDebug) {
+    liveSocket.enableDebug()
+  }
+  
   window.liveSocket = liveSocket
 }
