@@ -45,7 +45,8 @@ defmodule BrandoAdmin do
           show_modal: 2,
           hide_modal: 1,
           hide_modal: 2,
-          make_id: 1
+          make_id: 1,
+          make_uid: 3
         ]
 
       alias Phoenix.LiveView.JS
@@ -118,7 +119,8 @@ defmodule BrandoAdmin do
           show_modal: 2,
           hide_modal: 1,
           hide_modal: 2,
-          make_id: 1
+          make_id: 1,
+          make_uid: 3
         ]
     end
   end

@@ -42,7 +42,9 @@ defmodule BrandoAdmin.Components.Form.Input.Textarea do
         placeholder: @placeholder,
         rows: @rows,
         disabled: @disabled,
-        phx_debounce: @debounce %>
+        phx_debounce: @debounce,
+        id: make_uid(@form, @field, @uid)
+      %>
     </FieldBase.render>
     """
   end

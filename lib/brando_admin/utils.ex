@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:uid, fn -> nil end)
 
     assign_opts = assigns[:opts] || []
 
@@ -35,6 +36,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:uid, fn -> nil end)
 
     assign_opts = assigns[:opts] || []
 
@@ -59,6 +61,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:uid, fn -> nil end)
 
     assign(assigns,
       class: assigns.opts[:class],
@@ -70,6 +73,14 @@ defmodule BrandoAdmin.Utils do
       instructions: g(schema, assigns.opts[:instructions]) || assigns.instructions,
       label: g(schema, assigns.opts[:label]) || assigns.label
     )
+  end
+
+  def make_uid(_form, _field, nil) do
+    nil
+  end
+
+  def make_uid(form, field, uid) do
+    "#{form.id}-#{field}-#{uid}"
   end
 
   def toggle_dropdown(js \\ %JS{}, dropdown_id) do

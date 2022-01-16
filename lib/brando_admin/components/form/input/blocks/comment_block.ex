@@ -56,9 +56,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
           <%= gettext("Not shown...") %>
         </:description>
         <:config>
-          <Input.Textarea.render form={@block_data} field={:text} />
+          <div id={"block-#{@uid}-conf-textarea"}>
+            <Input.Textarea.render form={@block_data} field={:text} uid={@uid} />
+          </div>
         </:config>
-        <div>
+        <div id={"block-#{@uid}-comment"}>
           <%= if v(@block_data, :text) do %>
             <%= v(@block_data, :text) |> Brando.HTML.nl2br |> raw %>
           <% end %>
