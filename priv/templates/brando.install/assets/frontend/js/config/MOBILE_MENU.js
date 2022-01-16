@@ -39,7 +39,7 @@ export default () => ({
       })
       .fromTo(m.bg, {
         duration: 0.35,
-        x: '0%',
+        x: 0,
         opacity: 0,
         height: window.innerHeight
       }, {
