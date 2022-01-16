@@ -537,6 +537,7 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
+      {:with_deleted, true}, q -> from query in q, or_where: not is_nil(query.deleted_at)
       {:paginate, true}, q -> q
     end)
   end
