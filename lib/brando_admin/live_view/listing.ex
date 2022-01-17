@@ -74,6 +74,37 @@ defmodule BrandoAdmin.LiveView.Listing do
         {:halt,
          push_redirect(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
 
+      "undelete_entry", %{"id" => entry_id}, socket ->
+        singular = schema.__naming__().singular
+        domain = schema.__naming__().domain
+        context = schema.__modules__().context
+        msgid = Brando.Utils.humanize(singular, :downcase)
+
+        gettext_module = schema.__modules__(:gettext)
+        gettext_domain = String.downcase("#{domain}_#{singular}_naming")
+
+        translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
+
+        case apply(context, :"get_#{singular}", [entry_id]) do
+          {:ok, entry} ->
+            Brando.repo().restore(entry)
+
+            send(
+              self(),
+              {:toast, "#{String.capitalize(translated_singular)} #{gettext("undeleted")}"}
+            )
+
+            update_list_entries(schema)
+
+          {:error, _error} ->
+            send(
+              self(),
+              {:toast, "#{gettext("Error undeleting")} #{String.capitalize(translated_singular)}"}
+            )
+        end
+
+        {:halt, socket}
+
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
         singular = schema.__naming__().singular
         domain = schema.__naming__().domain

@@ -224,6 +224,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             <% end %>
           </li>
         <% end %>
+        <%= if Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at) do %>
+          <li>
+            <button
+              id={"action_#{@listing.name}_undelete_#{@entry.id}"}
+              phx-value-id={@entry.id}
+              phx-value-language={@language}
+              phx-click="undelete_entry">
+              <%= gettext "Undelete entry" %>
+            </button>
+          </li>
+        <% end %>
       </CircleDropdown.render>
     <% end %>
     """
