@@ -16,7 +16,7 @@ then
   gsed -i '/{:phoenix,/i\      {:brando, github: "brandocms/brando"},' mix.exs
   mix do deps.get, brando.install --module $MODULE, deps.get, deps.compile
   direnv allow
-  cd assets/frontend && yarn && yarn upgrade @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add @brandocms/brandojs && yarn && yarn lint --fix && cd ../../
+  cd assets/frontend && yarn && yarn upgrade @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add @brandocms/brandojs && yarn && cd ../../
   mix deps.get && mix brando.upgrade
   mix ecto.setup
   mix ecto.dump
