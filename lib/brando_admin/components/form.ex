@@ -159,6 +159,7 @@ defmodule BrandoAdmin.Components.Form do
       entry_id
       |> form.query.()
       |> add_preloads(schema)
+      |> Map.put(:with_deleted, true)
 
     assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
   end

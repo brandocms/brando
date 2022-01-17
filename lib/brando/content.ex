@@ -36,7 +36,7 @@ defmodule Brando.Content do
   alias Brando.Content.Var
   alias Brando.Villain
 
-  query :list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :list, Module, do: fn query -> from(q in query) end
 
   filters Module do
     fn
@@ -49,7 +49,6 @@ defmodule Brando.Content do
       {:namespace, namespace}, query ->
         query =
           from(t in query,
-            where: is_nil(t.deleted_at),
             order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
           )
 
@@ -69,7 +68,7 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :single, Module, do: fn query -> from(q in query) end
 
   matches Module do
     fn
@@ -116,7 +115,7 @@ defmodule Brando.Content do
   ## Palettes
   ##
 
-  query :list, Palette, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :list, Palette, do: fn query -> from(q in query) end
 
   filters Palette do
     fn
@@ -133,7 +132,6 @@ defmodule Brando.Content do
       {:namespace, namespace}, query ->
         query =
           from(t in query,
-            where: is_nil(t.deleted_at),
             order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
           )
 
@@ -153,7 +151,7 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Palette, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :single, Palette, do: fn query -> from(q in query) end
 
   matches Palette do
     fn
@@ -207,7 +205,7 @@ defmodule Brando.Content do
   ## Templates
   ##
 
-  query :list, Template, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :list, Template, do: fn query -> from(q in query) end
 
   filters Template do
     fn
@@ -217,7 +215,6 @@ defmodule Brando.Content do
       {:namespace, namespace}, query ->
         query =
           from(t in query,
-            where: is_nil(t.deleted_at),
             order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
           )
 
@@ -237,7 +234,7 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Template, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
+  query :single, Template, do: fn query -> from(q in query) end
 
   matches Template do
     fn

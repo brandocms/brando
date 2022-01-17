@@ -28,11 +28,7 @@ defmodule Brando.Pages do
   end
 
   query :list, Page do
-    fn
-      query ->
-        from q in query,
-          where: is_nil(q.deleted_at)
-    end
+    fn query -> from(q in query) end
   end
 
   filters Page do
@@ -46,7 +42,7 @@ defmodule Brando.Pages do
 
   query :single, Page,
     do: fn query ->
-      from q in query, where: is_nil(q.deleted_at), preload: [:parent, :meta_image]
+      from q in query, preload: [:parent, :meta_image]
     end
 
   matches Page do
@@ -154,7 +150,6 @@ defmodule Brando.Pages do
   query :list, Fragment do
     fn query ->
       from q in query,
-        where: is_nil(q.deleted_at),
         order_by: [asc: q.parent_key, asc: q.sequence, asc: q.language]
     end
   end
@@ -172,7 +167,7 @@ defmodule Brando.Pages do
     end
   end
 
-  query :single, Fragment, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query :single, Fragment, do: fn query -> from(q in query) end
 
   matches Fragment do
     fn

@@ -98,7 +98,7 @@ user = <%= application_module %>.Repo.insert!(user)
 example_module = %Brando.Content.Module{
   class: "example",
   code:
-    "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
+    "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t{% ref refs.h1 %}\n        {% ref refs.p %}\n\t</div>\n</article>",
   help_text: "Used for the introduction page",
   name: "Example module",
   namespace: "general",
@@ -135,13 +135,15 @@ example_module = %Brando.Content.Module{
   wrapper: nil
 }
 
+m1 = <%= application_module %>.Repo.insert!(example_module)
+
 page = %Brando.Pages.Page{
   creator_id: user.id,
   css_classes: nil,
   data: [
     %Brando.Blueprint.Villain.Blocks.ModuleBlock{
       data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
-        module_id: example_module.id,
+        module_id: m1.id,
         multi: false,
         refs: [
           %Brando.Content.Module.Ref{

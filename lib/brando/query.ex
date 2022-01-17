@@ -113,7 +113,7 @@ defmodule Brando.Query do
 
       query :list, Product do
         default fn
-          query -> from q in query, where: is_nil(q.deleted_at)
+          query -> from q in query
         end
       end
 
@@ -440,7 +440,7 @@ defmodule Brando.Query do
   def with_status(query, "all"), do: query
 
   def with_status(query, "deleted"),
-    do: from(q in exclude(query, :where), where: not is_nil(q.deleted_at))
+    do: query
 
   def with_status(query, "published_and_pending"),
     do:
@@ -528,7 +528,9 @@ defmodule Brando.Query do
   end
 
   def run_list_query_reducer(context, args, initial_query, module) do
-    Enum.reduce(args, initial_query, fn
+    args
+    |> prepare_args(module)
+    |> Enum.reduce(initial_query, fn
       {_, nil}, q -> q
       {:select, select}, q -> with_select(q, select)
       {:order, order}, q -> with_order(q, order)
@@ -537,13 +539,17 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
-      {:with_deleted, true}, q -> from query in q, or_where: not is_nil(query.deleted_at)
       {:paginate, true}, q -> q
+      {:with_deleted, true}, q -> q
+      {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
+      {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
     end)
   end
 
   def run_single_query_reducer(context, args, module) do
-    Enum.reduce(args, module, fn
+    args
+    |> prepare_args(module)
+    |> Enum.reduce(module, fn
       {_, nil}, q -> q
       {:select, select}, q -> with_select(q, select)
       {:limit, limit}, q -> limit(q, ^limit)
@@ -551,8 +557,34 @@ defmodule Brando.Query do
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
       {:revision, revision}, _ -> get_revision(module, args, revision)
-      {:with_deleted, true}, q -> from query in q, or_where: not is_nil(query.deleted_at)
+      {:with_deleted, true}, q -> q
+      {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
+      {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
     end)
+  end
+
+  defp prepare_args(%{revision: _} = args, _) do
+    args
+  end
+
+  defp prepare_args(%{with_deleted: true} = args, _) do
+    args
+  end
+
+  defp prepare_args(%{status: :deleted} = args, module) do
+    if module.has_trait(Brando.Trait.SoftDelete) do
+      Map.put(args, :with_deleted, :only)
+    else
+      args
+    end
+  end
+
+  defp prepare_args(args, module) do
+    if module.has_trait(Brando.Trait.SoftDelete) do
+      Map.put(args, :with_deleted, false)
+    else
+      args
+    end
   end
 
   defp get_revision(module, %{matches: %{id: id}}, revision) do

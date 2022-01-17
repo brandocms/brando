@@ -6,7 +6,7 @@ mutation :update, <%= alias %>
 mutation :delete, <%= alias %>
 
 query :list, <%= alias %> do
-  fn query -> from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
+  fn query -> from t in query end
 end
 
 filters <%= alias %> do
@@ -19,7 +19,7 @@ filters <%= alias %> do
   end
 end
 
-query :single, <%= alias %>, do: fn query -> from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
+query :single, <%= alias %>, do: fn query -> from t in query end
 
 matches <%= alias %> do
   fn

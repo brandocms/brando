@@ -19,7 +19,7 @@ defmodule Brando.Images do
   @type params :: map
   @type user :: User.t()
 
-  query :single, Image, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+  query :single, Image, do: fn query -> from(t in query) end
 
   matches Image do
     fn
@@ -28,7 +28,7 @@ defmodule Brando.Images do
     end
   end
 
-  query :list, Image, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+  query :list, Image, do: fn query -> from(t in query) end
 
   filters Image do
     fn

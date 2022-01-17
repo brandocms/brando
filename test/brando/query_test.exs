@@ -14,7 +14,7 @@ defmodule Brando.QueryTest do
 
     query :list, Page do
       fn
-        query -> from q in query, where: is_nil(q.deleted_at)
+        query -> from(q in query)
       end
     end
 
@@ -26,7 +26,7 @@ defmodule Brando.QueryTest do
 
     query :single, Page do
       fn
-        query -> from q in query, where: is_nil(q.deleted_at)
+        query -> from(q in query)
       end
     end
 
@@ -42,7 +42,7 @@ defmodule Brando.QueryTest do
 
     query :single, Page do
       fn
-        query -> from q in query, where: is_nil(q.deleted_at)
+        query -> from(q in query)
       end
     end
 

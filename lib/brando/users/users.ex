@@ -12,7 +12,7 @@ defmodule Brando.Users do
   @type user :: User.t()
 
   query :list, User do
-    fn q -> from t in q, where: is_nil(t.deleted_at) end
+    fn q -> from(t in q) end
   end
 
   filters User do
@@ -24,7 +24,7 @@ defmodule Brando.Users do
   end
 
   query :single, User do
-    fn q -> from t in q, where: is_nil(t.deleted_at) end
+    fn q -> from(t in q) end
   end
 
   matches User do
