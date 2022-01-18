@@ -31,6 +31,15 @@ defmodule Brando.Images.Utils do
   @spec delete_sized_images(Image.t()) :: {:ok, integer}
   def delete_sized_images(nil), do: {:ok, 0}
 
+  def delete_sized_images(%{formats: nil, sizes: sizes}) do
+    res =
+      for {_size, file} <- sizes do
+        delete_media(file)
+      end
+
+    {:ok, Enum.count(res)}
+  end
+
   def delete_sized_images(%{formats: formats, sizes: sizes}) do
     res =
       for format <- formats,
