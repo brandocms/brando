@@ -60,42 +60,42 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <div class="button-group">
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="text"
               class="secondary">
               Text
             </button>
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="header"
               class="secondary">
               Header
             </button>
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="picture"
               class="secondary">
               Picture
             </button>
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="gallery"
               class="secondary">
               Gallery
             </button>
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="video"
               class="secondary">
               Video
             </button>
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="media"
               class="secondary">
               Media
@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="table"
               class="secondary">
               Table
@@ -111,7 +111,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="html"
               class="secondary">
               HTML
@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="svg"
               class="secondary">
               SVG
@@ -127,7 +127,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="markdown"
               class="secondary">
               Markdown
@@ -135,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="map"
               class="secondary">
               Map
@@ -143,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="comment"
               class="secondary">
               Comment
@@ -151,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
             <button
               type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref")}
+              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
               phx-value-type="datasource"
               class="secondary">
               Datasource
