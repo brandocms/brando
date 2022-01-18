@@ -15,7 +15,7 @@
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.34",
     "autoprefixer": "^10.4.2",
     "svelte": "^3.46.2",
-    "svelte-preprocess": "^4.10.1",
+    "svelte-preprocess": "^4.10.2",
     "vite": "^2.7.12"
   }
 }
