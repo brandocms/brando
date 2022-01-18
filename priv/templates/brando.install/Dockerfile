@@ -5,8 +5,7 @@
 # - job: dependencies
 # -----------------------------------
 
-# 3.2 = OTP24 + elixir 1.12
-FROM twined/fehn:3.2 AS deps
+FROM --platform=linux/amd64 twined/fehn:3.4 as deps
 
 ARG MIX_ENV=prod
 ARG HEX_MIRROR_URL=https://repo.hex.pm
@@ -16,10 +15,7 @@ WORKDIR /opt/app
 COPY config/ ./config
 COPY mix.exs mix.lock /opt/app/
 
-RUN --mount=type=cache,target=~/.hex/packages/hexpm,sharing=locked \
-    --mount=type=cache,target=~/.cache/rebar3,sharing=locked \
-    mix deps.get \
-    --only $MIX_ENV
+RUN mix deps.get --only $MIX_ENV
 
 
 # -----------------------------------
@@ -57,11 +53,11 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM node:14 AS assets_backend
+FROM --platform=linux/arm64 node:16 AS assets_backend
 WORKDIR /opt/app/assets/backend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
-COPY --from=deps /opt/app/deps /opt/app/deps/
+# COPY --from=deps /opt/app/deps /opt/app/deps/
 COPY assets/backend/package.json assets/backend/yarn.lock ./
 COPY assets/backend/.yalc ./.yalc
 # Use the yarn cache directory as a cache mount
@@ -82,12 +78,12 @@ RUN yarn build
 # - job: assets frontend
 # -----------------------------------
 
-FROM node:14 AS assets_frontend
+FROM --platform=linux/arm64 node:16 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
 COPY assets/frontend/package.json assets/frontend/yarn.lock ./
-COPY assets/frontend/.yalc ./.yalc
+#COPY assets/frontend/.yalc ./.yalc
 # Use the yarn cache directory as a cache mount
 RUN --mount=type=cache,target=~/.yarn,sharing=locked \
       yarn \
