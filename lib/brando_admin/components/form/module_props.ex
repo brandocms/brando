@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     <%= for ref_data <- inputs_for_block(ref, :data) do %>
                       <%= hidden_input(ref_data, :type, value: input_value(ref_data, :type)) %>
                       <div class="panel">
-                        <h2>Block template</h2>
+                        <h2 class="titlecase">Block template</h2>
                         <%= case input_value(ref_data, :type) do %>
                           <% "header" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
@@ -586,7 +586,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       </div>
 
                       <div class="panel">
-                        <h2>Ref config — <%= input_value(ref_data, :type) %></h2>
+                        <h2 class="titlecase">Ref config — <%= input_value(ref_data, :type) %></h2>
 
                         <Input.Text.render form={ref} field={:name} label={gettext "Name"} />
                         <Input.Text.render form={ref} field={:description} label={gettext "Description"} />
