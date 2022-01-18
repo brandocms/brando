@@ -2,13 +2,7 @@ defmodule Brando.Blueprint.Upload do
   @moduledoc """
   Villain parsing
   """
-  alias Brando.Images
-  alias Brando.Utils
-  alias Brando.Type
-  alias Brando.CDN
-  alias Ecto.Changeset
-
-  @type changeset :: Changeset.t()
+  @type changeset :: Ecto.Changeset.t()
   @type config :: list()
 
   def validate_upload(changeset, {:image, field_name}, user, cfg) do
@@ -33,10 +27,6 @@ defmodule Brando.Blueprint.Upload do
 
   defp do_validate_upload(changeset, {:gallery, _field_name}, _user, _cfg) do
     changeset
-  end
-
-  defp get_image_cfg(cfg, _, _) do
-    {:ok, Brando.Utils.map_to_struct(cfg, Type.ImageConfig)}
   end
 
   @doc """

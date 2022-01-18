@@ -31,10 +31,12 @@ defmodule Brando.Images.Utils do
   @spec delete_sized_images(Image.t()) :: {:ok, integer}
   def delete_sized_images(nil), do: {:ok, 0}
 
-  def delete_sized_images(%{formats: formats, sizes: sizes} = image) do
+  def delete_sized_images(%{formats: formats, sizes: sizes}) do
     res =
-      for {_size, file} <- sizes do
-        delete_media(file)
+      for format <- formats,
+          {_size, file} <- sizes do
+        file_in_format = Brando.Utils.change_extension(file, to_string(format))
+        delete_media(file_in_format)
       end
 
     {:ok, Enum.count(res)}
