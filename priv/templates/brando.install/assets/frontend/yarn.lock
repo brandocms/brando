@@ -42,10 +42,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.6":
-  version "3.42.6"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.6.tgz#69c92591377645e3fe057643d893e2661cd4e59e"
-  integrity sha512-oSDm2dy3OzJfWtMxwapqRMSZFprrn9TiOcW3jya6U2ese1evVyiD7L2yjEP9neQZFrV+1e3WjOHF+eElOVBtzQ==
+"@brandocms/jupiter@^3.42.7":
+  version "3.42.7"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.7.tgz#5a7d093b422a9c92ab4aaad6f17c269e4ff990d4"
+  integrity sha512-kqaVHc98KP80dkRUzdFbM63oiagezdPHsVxXI/j96WEwRkSOW9g7LUYsNbGs2xKOEAaxAVG8QuVAonQie8PUxg==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
