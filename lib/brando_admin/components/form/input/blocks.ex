@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   alias Brando.Content
   alias Brando.Utils
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
 
@@ -29,6 +30,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok, assign(socket, insert_index: 0)}
   end
 
+  def update(%{image_drawer_target: target}, socket) do
+    {:ok, assign(socket, :image_drawer_target, target)}
+  end
+
   def update(assigns, socket) do
     # TODO: when using input_value here, we sometimes end up with the whole block field as a params map %{"0" => ...}
     blocks = Utils.iv(assigns.form, assigns.field) || []
@@ -37,6 +42,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:image_drawer_target, fn ->
+       socket.assigns.myself
+     end)
      |> assign_new(:templates, fn ->
        if template_namespace = assigns.opts[:template_namespace] do
          {:ok, templates} = Content.list_templates(%{filter: %{namespace: template_namespace}})
@@ -58,6 +66,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         field={@field}
         label={@label}
         instructions={@instructions}>
+        <Form.image_picker
+          id={"image-picker-blocks-#{@form.id}-#{@field}"}
+          config_target={"default"}
+          z_index={5000}
+          select_image={JS.push("select_image", target: @image_drawer_target) |> toggle_drawer("#image-picker-blocks-#{@form.id}-#{@field}")} />
         <.live_component
           module={Blocks.BlockRenderer}
           id={"#{@form.id}-#{@field}-blocks"}

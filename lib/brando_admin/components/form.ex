@@ -507,6 +507,7 @@ defmodule BrandoAdmin.Components.Form do
   def image_picker(assigns) do
     assigns =
       assigns
+      |> assign_new(:z_index, fn -> 1002 end)
       |> assign_new(:deselect_image, fn -> nil end)
       |> assign_new(:selected_images, fn -> [] end)
       |> assign_new(:images, fn ->
@@ -520,7 +521,7 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     ~H"""
-    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={1002} dark>
+    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={@z_index} dark>
       <:info>
         <%= if @config_target do %>
           <div class="mb-2">
