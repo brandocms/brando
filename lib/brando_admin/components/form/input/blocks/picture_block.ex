@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
               <Form.image_picker
                 id={"image-picker-#{@uid}"}
-                config_target={nil}
+                config_target={"default"}
                 select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@uid}")} />
 
               <div class="button-group-vertical">
