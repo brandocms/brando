@@ -10,7 +10,7 @@
   </head>
   <body id="lockdown">
     <section class="container">
-      <%%= render <%= web_module %>.LockdownView, "index.html", assigns %>
+      <%%= render <%= application_module %>Web.LockdownView, "index.html", assigns %>
     </section>
   </body>
 </html>
