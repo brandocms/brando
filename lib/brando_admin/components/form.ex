@@ -708,7 +708,7 @@ defmodule BrandoAdmin.Components.Form do
 
     updated_entry =
       cond do
-        entrys_current_image && entrys_current_image.id == image.id &&
+        is_loaded_image(entrys_current_image) && entrys_current_image.id == image.id &&
             entrys_current_image.status == :processed ->
           # the image has already been marked as processed, do not update the relation
           entry
@@ -863,6 +863,10 @@ defmodule BrandoAdmin.Components.Form do
          |> push_errors(changeset, form)}
     end
   end
+
+  defp is_loaded_image(nil), do: false
+  defp is_loaded_image(%Ecto.Association.NotLoaded{}), do: false
+  defp is_loaded_image(%Brando.Images.Image{}), do: true
 
   defp push_errors(socket, changeset, form) do
     error_title = gettext("Error")
