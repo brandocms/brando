@@ -704,15 +704,10 @@ defmodule BrandoAdmin.Components.Form do
     full_path = path ++ [relation_field]
 
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
-
-    entry_has_image = Map.get(entry_or_default, relation_field) != nil
     entrys_current_image = Map.get(entry_or_default, field)
 
     updated_entry =
       cond do
-        !entry_has_image ->
-          Map.put(entry_or_default, field, updated_image)
-
         entrys_current_image && entrys_current_image.id == image.id &&
             entrys_current_image.status == :processed ->
           # the image has already been marked as processed, do not update the relation
