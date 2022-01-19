@@ -17,7 +17,7 @@ defmodule BrandoWeb.FallbackController do
       {:ok, {:redirect, {url, code}}} ->
         conn
         |> put_resp_header("location", url)
-        |> resp(String.to_integer(code), "You are being redirected.")
+        |> resp(code, "You are being redirected.")
         |> halt()
     end
   end
