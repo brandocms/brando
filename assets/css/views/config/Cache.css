@@ -29,8 +29,6 @@
 
       .badge {
         width: 100%;
-        text-align: center !important;
-        justify-content: center;
       }
 
       svg {

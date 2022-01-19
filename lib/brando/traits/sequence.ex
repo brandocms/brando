@@ -3,6 +3,8 @@ defmodule Brando.Trait.Sequenced do
   A sequenced resource
   """
   use Brando.Trait
+  alias Brando.Cache
+  alias Brando.Datasource
   alias Ecto.Changeset
   import Ecto.Query
 
@@ -40,8 +42,11 @@ defmodule Brando.Trait.Sequenced do
       end
     end)
 
+    # throw out cached listings
+    Cache.Query.evict_schema(module)
+
     # update referenced Datasources in Villains
-    Brando.Datasource.update_datasource(module)
+    Datasource.update_datasource(module)
   end
 
   def sequence(module, %{"ids" => keys}) do
@@ -62,7 +67,10 @@ defmodule Brando.Trait.Sequenced do
 
     Brando.repo().update_all(q, [])
 
+    # throw out cached listings
+    Cache.Query.evict_schema(module)
+
     # update referenced Datasources in Villains
-    Brando.Datasource.update_datasource(module)
+    Datasource.update_datasource(module)
   end
 end

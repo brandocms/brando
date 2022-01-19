@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
               <%= case entry do %>
                 <% {:list, module, key} -> %>
                   <td>
-                    <div class="badge no-border">
+                    <div class="badge no-border ta-left">
                       <%= gettext "List" %>
                     </div>
                   </td>

@@ -951,8 +951,16 @@ h3 {
   }
 }
 
-.text-center {
+.text-center, .ta-center {
   text-align: center !important;
+}
+
+.ta-left {
+  text-align: left !important;
+}
+
+.ta-right {
+  text-align: right !important;
 }
 
 .text-small {

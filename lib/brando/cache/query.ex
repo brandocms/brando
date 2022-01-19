@@ -48,6 +48,12 @@ defmodule Brando.Cache.Query do
     entry
   end
 
+  def evict_schema(schema) do
+    source = schema.__schema__(:source)
+    perform_eviction(:list, source)
+    schema
+  end
+
   @spec perform_eviction(:list, binary()) :: [:ok]
   defp perform_eviction(:list, schema) do
     ms = [{{:entry, {:list, schema, :_}, :_, :_, :_}, [], [:"$_"]}]
