@@ -926,7 +926,7 @@ defmodule BrandoAdmin.Components.Form do
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "image:#{inspect(schema)}:#{key}"
 
-      {:ok, image} =
+      image =
         consume_uploaded_entry(
           socket,
           upload_entry,
