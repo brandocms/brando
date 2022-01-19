@@ -88,8 +88,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 </div>
               </div>
             </div>
-            <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750 %>
-            <%= hidden_input block_data, :extensions %>
+            <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750, id: "block-rich-text-hidden-input-text-#{@uid}" %>
+            <%= hidden_input block_data, :extensions, id: "block-rich-text-hidden-input-extensions-#{@uid}" %>
           </div>
         <% end %>
       </.live_component>
