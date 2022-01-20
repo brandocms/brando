@@ -176,11 +176,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </Label.render>
         </div>
       </div>
-      <%= if @last_block? and !@is_ref? and !@is_entry? do %>
-        <Blocks.Plus.render
-          index={@index + 1}
-          click={@insert_block} />
-      <% end %>
     </div>
     """
   end

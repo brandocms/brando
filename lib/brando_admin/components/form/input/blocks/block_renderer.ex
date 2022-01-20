@@ -62,7 +62,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         hide_sections={@hide_sections} />
 
       <%= if @block_count == 0 do %>
-
         <div class="blocks-empty-instructions">
           <%= gettext "Click the plus to start adding content blocks" %>
           <%= if @templates do %>
@@ -92,6 +91,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           insert_block={@show_module_picker}
           duplicate_block={@duplicate_block} />
       <% end %>
+
+      <Blocks.Plus.render
+        index={@block_count}
+        click={@show_module_picker} />
     </div>
     """
   end
