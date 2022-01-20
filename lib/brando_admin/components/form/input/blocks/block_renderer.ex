@@ -76,7 +76,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
             </div>
           <% end %>
         </div>
-        <Blocks.Plus.render index={0} click={@show_module_picker} />
       <% end %>
 
       <%= for {block_form, index} <- Enum.with_index(@block_forms) do %>
