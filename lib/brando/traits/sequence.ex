@@ -1,6 +1,12 @@
 defmodule Brando.Trait.Sequenced do
   @moduledoc """
   A sequenced resource
+
+
+  ## Options
+
+      - `append: true`: Sequences the item to the last possible position.
+
   """
   use Brando.Trait
   alias Brando.Cache
@@ -72,5 +78,34 @@ defmodule Brando.Trait.Sequenced do
 
     # update referenced Datasources in Villains
     Datasource.update_datasource(module)
+  end
+
+  def changeset_mutator(module, %{append: true}, changeset, _user, _opts) do
+    Changeset.prepare_changes(changeset, fn
+      %{action: :insert} = cs ->
+        # set as highest sequence on insert
+        seq = get_highest_sequence(module)
+        Changeset.put_change(cs, :sequence, seq)
+
+      cs ->
+        cs
+    end)
+  end
+
+  def changeset_mutator(_module, _config, changeset, _user, _opts) do
+    changeset
+  end
+
+  def get_highest_sequence(module) do
+    query =
+      from t in module,
+        select: t.sequence,
+        order_by: [desc: t.sequence],
+        limit: 1
+
+    case Brando.repo().all(query) do
+      [] -> 0
+      [seq] -> seq + 1
+    end
   end
 end
