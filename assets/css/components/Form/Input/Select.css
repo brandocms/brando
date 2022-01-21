@@ -6,6 +6,10 @@ h2.titlecase {
   margin-bottom: 8px;
 }
 
+h2.titlecase + .button-group-vertical button:first-of-type {
+  margin-top: 0 !important;
+}
+
 .select-modal-wrapper {
   @row 2;
 
