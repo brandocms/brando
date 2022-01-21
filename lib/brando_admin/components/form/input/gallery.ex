@@ -300,9 +300,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     updated_changeset = Ecto.Changeset.put_assoc(changeset, field_name, updated_gallery)
 
-    require Logger
-    Logger.error(inspect(updated_changeset, pretty: true))
-
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       updated_changeset: updated_changeset

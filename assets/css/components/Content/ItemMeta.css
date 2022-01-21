@@ -84,12 +84,9 @@
 
 .identifier {
   @fontsize 16px;
-  background-color: #ffffff;
-  border: 1px solid var(--brando-color-dark);
+  background-color: var(--brando-color-input);
+  color: var(--brando-color-dark);
   padding: 7px;
-  border-radius: 50px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 
   &.selectable {
     cursor: pointer;
@@ -111,7 +108,7 @@
   .remove  {
     @space margin-left 15px;
     button {
-      background-color: var(--brando-color-peach);
+      background-color: white;
       border: none;
       font-size: 28px;
       line-height: 1;

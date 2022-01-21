@@ -8,7 +8,7 @@ defmodule Brando.Content.Identifier do
   import Ecto.Changeset
 
   @primary_key false
-  @fields ~w(id title type status absolute_url cover schema)a
+  @fields ~w(id title type status absolute_url cover schema updated_at)a
 
   @derive {Jason.Encoder, only: @fields}
   embedded_schema do

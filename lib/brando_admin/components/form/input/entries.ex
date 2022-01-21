@@ -10,6 +10,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Content.List.Row
 
+  alias Ecto.Changeset
+
   # prop form, :form
   # prop field, :atom
   # prop label, :string
@@ -32,25 +34,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def update(assigns, socket) do
     value = assigns[:value]
 
-    iv =
+    identifiers =
       case input_value(assigns.form, assigns.field) do
         "" -> []
         val -> val
       end
 
     selected_identifiers =
-      iv
-      |> Enum.map(fn
-        %Brando.Content.Identifier{} = identifier ->
-          identifier
-
-        %Ecto.Changeset{action: :replace} ->
-          nil
-
-        %Ecto.Changeset{} = changeset ->
-          Ecto.Changeset.apply_changes(changeset)
-      end)
-      |> Enum.reject(&(&1 == nil))
+      identifiers
+      |> process_identifiers()
 
     selected_identifiers_forms = inputs_for(assigns.form, assigns.field)
     wanted_schemas = Keyword.get(assigns.opts, :for)
@@ -77,6 +69,17 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign_available_schemas(wanted_schemas)
      |> assign_selected_schema()
      |> assign(value: value)}
+  end
+
+  defp process_identifiers(identifiers) do
+    processed_identifiers =
+      Enum.map(identifiers, fn
+        %Brando.Content.Identifier{} = identifier -> identifier
+        %Changeset{action: :replace} -> nil
+        %Changeset{} = changeset -> Changeset.apply_changes(changeset)
+      end)
+
+    Enum.reject(processed_identifiers, &(&1 == nil))
   end
 
   def assign_available_schemas(socket, wanted_schemas) do
@@ -121,23 +124,34 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <%= hidden_input identifier_form, :cover %>
             <%= hidden_input identifier_form, :type %>
             <%= hidden_input identifier_form, :absolute_url %>
+            <%= hidden_input identifier_form, :updated_at %>
           </Form.inputs>
         <% end %>
 
-        <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
-          <.identifier
-            identifier={selected_identifier}
-            remove={JS.push("remove_identifier", target: @myself)}
-            param={idx}
-          />
-        <% end %>
+        <div
+          id={"sortable-#{@form.id}-#{@field}-identifiers"}
+          class="selected-entries"
+          phx-hook="Brando.Sortable"
+          data-target={@myself}
+          data-sortable-id={"sortable-#{@form.id}-#{@field}-identifiers"}
+          data-sortable-handle=".sort-handle"
+          data-sortable-selector=".identifier">
+          <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
+            <.identifier
+              identifier={selected_identifier}
+              remove={JS.push("remove_identifier", target: @myself)}
+              param={idx}
+            />
+          <% end %>
+        </div>
+
 
         <button type="button" class="add-entry-button" phx-click={show_modal("##{@form.id}-#{@field}-select-entries")}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
           <%= gettext("Select entries") %>
         </button>
 
-        <.live_component module={Modal} title="Select entries" id={"#{@form.id}-#{@field}-select-entries"} narrow>
+        <.live_component module={Modal} title={gettext("Select entries")} id={"#{@form.id}-#{@field}-select-entries"} narrow>
           <h2 class="titlecase"><%= gettext("Select content type") %></h2>
           <div class="button-group-vertical">
           <%= for {label, schema, _} <- @available_schemas do %>
@@ -186,7 +200,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, updated_identifiers)
+    updated_changeset = Changeset.put_embed(changeset, field_name, updated_identifiers)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -212,7 +226,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    updated_changeset = Ecto.Changeset.put_embed(changeset, field_name, new_list)
+    updated_changeset = Changeset.put_embed(changeset, field_name, new_list)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -231,6 +245,40 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
     {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
     {:noreply, assign(socket, :identifiers, identifiers)}
+  end
+
+  def handle_event(
+        "sequenced",
+        %{"ids" => ordered_ids},
+        %{
+          assigns: %{
+            form: form,
+            field: field,
+            selected_identifiers: selected_identifiers
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    current_data = Changeset.get_change(changeset, field)
+    applied_data = Enum.map(current_data, &Changeset.apply_changes/1)
+    deduped_data = Enum.dedup(applied_data)
+    sorted_data = Enum.map(ordered_ids, fn id -> Enum.find(deduped_data, &(&1.id == id)) end)
+
+    updated_changeset = Changeset.put_change(changeset, field, sorted_data)
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset,
+      force_validation: true
+    )
+
+    updated_identifiers =
+      Enum.map(ordered_ids, fn id -> Enum.find(selected_identifiers, &(&1.id == id)) end)
+
+    {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
   end
 
   def identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
@@ -265,7 +313,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @identifier.type %> <span>|</span> <%= format_datetime(@identifier.updated_at) %>
+            <Row.status_circle status={@identifier.status} /> <%= @identifier.type %>#<%= Brando.HTML.zero_pad(@identifier.id) %> <span>|</span> <%= format_datetime(@identifier.updated_at) %>
           </div>
         </div>
       </section>
