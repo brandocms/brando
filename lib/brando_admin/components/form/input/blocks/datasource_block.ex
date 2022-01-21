@@ -209,7 +209,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
           </div>
         </div>
 
-        <.live_component module={Modal} title="Select entries" id={"select-entries-#{@uid}"} narrow>
+        <.live_component module={Modal} title={gettext("Select entries")} id={"select-entries-#{@uid}"} narrow>
           <%= if !Enum.empty?(@available_entries) do %>
             <h2 class="titlecase"><%= gettext("Available entries") %></h2>
             <%= for {identifier, idx} <- Enum.with_index(@available_entries) do %>
