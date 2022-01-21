@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       |> assign_new(:duplicate_block, fn -> nil end)
       |> assign_new(:belongs_to, fn -> nil end)
       |> assign_new(:is_ref?, fn -> false end)
+      |> assign_new(:opts, fn -> [] end)
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:block_id, fn -> v(assigns.block, :uid) end)
@@ -66,6 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       base_form={@base_form}
       data_field={@data_field}
       index={@index}
+      opts={@opts}
       belongs_to={@belongs_to}
       ref_name={@ref_name}
       ref_description={@ref_description}

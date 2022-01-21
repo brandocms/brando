@@ -81,6 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           templates={@templates}
           data_field={@data_field}
           insert_index={@insert_index}
+          opts={@opts}
           insert_block={JS.push("insert_block", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           insert_datasource={JS.push("insert_datasource", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}

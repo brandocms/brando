@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:opts, fn -> [] end)
      |> assign_new(:templates, fn -> nil end)
      |> assign_new(:type, fn -> "root" end)
      |> assign_new(:hide_sections, fn -> false end)
@@ -87,6 +88,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           block_count={@block_count}
           block={block_form}
           belongs_to={@type}
+          opts={@opts}
           insert_block={@show_module_picker}
           duplicate_block={@duplicate_block} />
       <% end %>

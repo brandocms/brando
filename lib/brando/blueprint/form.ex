@@ -4,22 +4,28 @@ defmodule Brando.Blueprint.Form do
 
   ## Input types
 
-      - `blocks`: Block editor
-      - `slug`
-        - `for` - the field we want to create a slug from.
-        ```
-        input :slug, :slug, for: :title
-        ```
-
-        Can also be a list for composite slugs:
-        ```
-        input :slug, :slug, for: [:location, :position]
-        ```
+  ### `blocks`: Block editor
 
   #### Options
 
+      - `palette_namespace`: Show palettes from this namespace in containers
       - `template_namespace`: Show templates from this namespace as starting
         points when presented with a blank editor
+
+
+  ### `slug`: Slug field
+
+  #### Options
+
+      - `for` - the field we want to create a slug from.
+      ```
+      input :slug, :slug, for: :title
+      ```
+
+      Can also be a list for composite slugs:
+      ```
+      input :slug, :slug, for: [:location, :position]
+      ```
 
   """
   import Brando.Gettext

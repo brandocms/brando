@@ -34,16 +34,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   def v(form, field), do: input_value(form, field)
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign(insert_index: 0)}
+    {:ok, assign(socket, insert_index: 0)}
   end
 
   def assign_available_palettes(socket) do
-    socket
-    |> assign_new(:available_palettes, fn ->
+    assign_new(socket, :available_palettes, fn ->
+      palette_namespace = Keyword.get(socket.assigns.opts, :palette_namespace, "all")
+
       {:ok, available_palettes} =
         Content.list_palettes(%{
+          filter: %{namespace: palette_namespace},
           order: "asc namespace, asc sequence, desc inserted_at",
           cache: {:ttl, :infinite}
         })
