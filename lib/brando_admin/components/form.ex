@@ -961,7 +961,7 @@ defmodule BrandoAdmin.Components.Form do
         %{
           assigns: %{
             default_params: default_params,
-            entry: nil,
+            entry: %{id: nil},
             schema: schema,
             current_user: current_user
           }
