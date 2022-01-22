@@ -28,6 +28,8 @@ defmodule Brando.Blueprint.Form do
           ```
 
       - `camel_case: true` - Returns slug as `camelCase` instead of `this-type-of-slug`.
+      - `show_url: true` - Runs the applied changeset through the schema's `__absolute_url__`
+        function and displays the resulting url.
 
   """
   import Brando.Gettext

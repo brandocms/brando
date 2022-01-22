@@ -17,6 +17,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
         |> elem(0)
         |> Enum.join()
         |> String.trim()
+      rescue
+        UndefinedFunctionError ->
+          "<no valid url found>"
+
+        ArgumentError ->
+          "<no valid url found>"
       end
     end
   end

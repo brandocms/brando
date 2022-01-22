@@ -997,6 +997,10 @@ h3 {
     text-transform: lowercase;
   }
 
+  &.no-case {
+    text-transform: none !important;
+  }
+
   &.no-border {
     border: none;
     padding-left: 0;
