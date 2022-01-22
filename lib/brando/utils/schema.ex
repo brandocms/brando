@@ -8,7 +8,6 @@ defmodule Brando.Utils.Schema do
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
-
   @field_val_collision_attemps 30
 
   @doc """
@@ -89,24 +88,26 @@ defmodule Brando.Utils.Schema do
   def avoid_field_collision(changeset, _), do: changeset
 
   def do_avoid_field_collision(fields, changeset, src) do
-    Enum.reduce(fields, changeset, fn field, new_changeset ->
-      field_val = Changeset.get_change(new_changeset, field)
+    Changeset.prepare_changes(changeset, fn cs ->
+      Enum.reduce(fields, cs, fn field, new_cs ->
+        field_val = Changeset.get_change(new_cs, field)
 
-      if field_val do
-        case get_unique_field_value(new_changeset, src, field, field_val, 0) do
-          {:ok, unique_value} ->
-            Changeset.put_change(new_changeset, field, unique_value)
+        if field_val do
+          case get_unique_field_value(new_cs, src, field, field_val, 0) do
+            {:ok, unique_value} ->
+              Changeset.put_change(new_cs, field, unique_value)
 
-          {:error, :too_many_attempts} ->
-            Changeset.add_error(
-              new_changeset,
-              field,
-              "Could not find available field value"
-            )
+            {:error, :too_many_attempts} ->
+              Changeset.add_error(
+                new_cs,
+                field,
+                "Could not find available field value"
+              )
+          end
+        else
+          new_cs
         end
-      else
-        new_changeset
-      end
+      end)
     end)
   end
 
