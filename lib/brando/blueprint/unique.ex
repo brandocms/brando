@@ -21,6 +21,16 @@ defmodule Brando.Blueprint.Unique do
         |> Utils.Schema.avoid_field_collision(module, [f.name], filter_fn)
         |> unique_constraint(f.name)
 
+      %{opts: %{unique: [prevent_collision: filter_fields]}} = f, new_changeset
+      when is_list(filter_fields) ->
+        new_changeset
+        |> Utils.Schema.avoid_field_collision(
+          module,
+          [f.name],
+          {filter_fields, &filter_by_fields/3}
+        )
+        |> unique_constraint([f.name] ++ filter_fields)
+
       %{opts: %{unique: [prevent_collision: filter_field]}} = f, new_changeset ->
         new_changeset
         |> Utils.Schema.avoid_field_collision(
@@ -75,5 +85,11 @@ defmodule Brando.Blueprint.Unique do
     from(m in module,
       where: field(m, ^field) == ^get_field(changeset, field)
     )
+  end
+
+  defp filter_by_fields(module, fields, changeset) do
+    Enum.reduce(fields, from(m in module), fn field, query ->
+      from q in query, where: field(q, ^field) == ^get_field(changeset, field)
+    end)
   end
 end
