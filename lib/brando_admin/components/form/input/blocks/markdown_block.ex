@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
           <% end %>
         </:description>
         <div class="markdown-block">
-          <Input.Code.render id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
+          <Input.code id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
         </div>
       </.live_component>
     </div>

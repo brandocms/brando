@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
   use Phoenix.HTML
   import Phoenix.HTML.Form, only: [input_id: 2]
   import Brando.HTML, only: [render_classes: 1]
-  alias BrandoAdmin.Components.Form.ErrorTag
+  alias BrandoAdmin.Components.Form
 
   # prop form, :form
   # prop field, :any, required: true
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.FieldBase do
           <span><%= @label %></span>
         </label>
         <%= if @form do %>
-          <ErrorTag.render
+          <Form.error_tag
             form={@form}
             field={@field}
             relation={@relation}

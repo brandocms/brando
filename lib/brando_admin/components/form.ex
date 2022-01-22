@@ -3,9 +3,9 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator, "forms"
 
   import Brando.Gettext
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Ecto.Changeset
   import Phoenix.HTML.Form
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
 
   alias Brando.Villain
 
@@ -480,15 +480,15 @@ defmodule BrandoAdmin.Components.Form do
           </div>
           <%= if @edit_image.image do %>
             <div class="brando-input">
-              <Input.Text.render field={:title} form={image_form} label={gettext "Caption"} />
+              <Input.text field={:title} form={image_form} label={gettext "Caption"} />
             </div>
 
             <div class="brando-input">
-              <Input.Text.render field={:credits} form={image_form} label={gettext "Credits"} />
+              <Input.text field={:credits} form={image_form} label={gettext "Credits"} />
             </div>
 
             <div class="brando-input">
-              <Input.Text.render field={:alt} form={image_form} label={gettext "Alt. text"} />
+              <Input.text field={:alt} form={image_form} label={gettext "Alt. text"} />
             </div>
           <% end %>
         </.form>
@@ -767,10 +767,12 @@ defmodule BrandoAdmin.Components.Form do
          (socket.assigns.status_revisions == :open && :closed) || :open
        )}
     else
-      error_title = "Notice"
+      error_title = gettext("Notice")
 
       error_msg =
-        "To create and administrate revisions, the entry must be saved at least one time first."
+        gettext(
+          "To create and administrate revisions, the entry must be saved at least one time first."
+        )
 
       {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
     end
@@ -1012,6 +1014,55 @@ defmodule BrandoAdmin.Components.Form do
   ##
   ## Function components
 
+  def input(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:component_id, fn ->
+        Enum.join(
+          [assigns.form.id, assigns.field],
+          "-"
+        )
+      end)
+      |> assign_new(:component_target, fn ->
+        case assigns.type do
+          {:component, module} ->
+            module
+
+          type ->
+            type_module = type |> to_string |> Recase.to_pascal()
+            input_module = Module.concat([Input, type_module])
+
+            # if module exists, it's a live component. if not, function component
+            case Code.ensure_compiled(input_module) do
+              {:module, _} -> input_module
+              _ -> Function.capture(BrandoAdmin.Components.Form.Input, type, 1)
+            end
+        end
+      end)
+
+    ~H"""
+    <%= if is_function(@component_target) do %>
+      <div class="brando-input">
+        <%= component(@component_target, assigns) %>
+      </div>
+    <% else %>
+      <div class="brando-input">
+        <.live_component
+          module={@component_target}
+          id={@component_id}
+          form={@form}
+          field={@field}
+          label={@label}
+          placeholder={@placeholder}
+          instructions={@instructions}
+          uploads={@uploads}
+          opts={@opts}
+          current_user={@current_user} />
+      </div>
+    <% end %>
+    """
+  end
+
   def inputs(assigns) do
     assigns = assign_new(assigns, :opts, fn -> [] end)
 
@@ -1137,12 +1188,43 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  def label(assigns) do
-    assigns = assign(assigns, input_id: Phoenix.HTML.Form.input_id(assigns.form, assigns.field))
+  def error_tag(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:feedback_for, fn -> nil end)
+      |> assign_new(:translate_fn, fn ->
+        {mod, fun} = assigns[:translator] || {Brando.web_module(ErrorHelpers), :translate_error}
+        &apply(mod, fun, [&1])
+      end)
+
+    assigns =
+      if assigns.relation do
+        assign(assigns, :field, :"#{assigns.field}_id")
+      else
+        assigns
+      end
 
     ~H"""
-    <label class={@class} for={@input_id}>
-      <%= render_slot(@inner_block) %>
+    <%= for error <- Keyword.get_values(@form.errors, @field) do %>
+    <span
+      id={"#{@form.id}-#{@field}-error"}
+      class="field-error"
+      phx-feedback-for={@feedback_for || input_id(@form, @field)}>
+      <%= @translate_fn.(error) %>
+    </span>
+    <% end %>
+    """
+  end
+
+  def label(assigns) do
+    assigns =
+      assign_new(assigns, :input_id, fn ->
+        Phoenix.HTML.Form.input_id(assigns.form, assigns.field)
+      end)
+
+    ~H"""
+    <label class={render_classes(List.wrap(@class))} for={@input_id}>
+      <%= render_slot @inner_block %>
     </label>
     """
   end

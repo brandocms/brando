@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   use BrandoAdmin, :component
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
 
   # prop input, :map
@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           current_user={@current_user} />
       <% end %>
     <% else %>
-      <Input.render
+      <Form.input
         id={"#{@form.id}-#{@input.name}"}
         form={@form}
         field={@input.name}

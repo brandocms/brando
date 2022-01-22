@@ -2,8 +2,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
 
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Form.Input.Radios
 
   # prop block, :any
   # prop base_form, :any
@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
         <:description>(H<%= v(@block, :data).level %>)</:description>
         <:config>
           <%= for block_data <- inputs_for(@block, :data) do %>
-            <Radios.render
+            <Input.radios
               form={block_data}
               field={:level}
               label="Level"

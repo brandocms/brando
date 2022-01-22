@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       <.form for={@changeset} let={form} phx-change="validate" phx-submit="save">
         <div class="block-editor">
           <div class="code">
-            <Input.Code.render form={form} field={:code} label={gettext "Code"} />
+            <Input.code form={form} field={:code} label={gettext "Code"} />
           </div>
 
           <.live_component
@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
               <div class="block-editor">
                 <div class="code">
-                  <Input.Code.render form={entry} field={:code} label={gettext "Code"} />
+                  <Input.code form={entry} field={:code} label={gettext "Code"} />
                 </div>
 
                 <%= hidden_input entry, :id %>

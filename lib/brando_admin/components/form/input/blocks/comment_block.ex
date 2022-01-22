@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.CommentBlock do
         </:description>
         <:config>
           <div id={"block-#{@uid}-conf-textarea"}>
-            <Input.Textarea.render form={@block_data} field={:text} uid={@uid} />
+            <Input.textarea form={@block_data} field={:text} uid={@uid} />
           </div>
         </:config>
         <div id={"block-#{@uid}-comment"}>

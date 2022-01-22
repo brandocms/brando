@@ -141,14 +141,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         duplicate_block={@duplicate_block}>
         <:description><%= v(@block, :data).description %></:description>
         <:config>
-          <Input.Text.render form={@block_data} field={:description} label={gettext "Description"} />
-          <Input.Radios.render form={@block_data} field={:module} label={gettext "Module"} opts={[options: @available_sources]} />
-          <Input.Radios.render form={@block_data} field={:type} label={gettext "Type"} opts={[options: [
+          <Input.text form={@block_data} field={:description} label={gettext "Description"} />
+          <Input.radios form={@block_data} field={:module} label={gettext "Module"} opts={[options: @available_sources]} />
+          <Input.radios form={@block_data} field={:type} label={gettext "Type"} opts={[options: [
             %{label: gettext("List"), value: :list},
             %{label: gettext("Single"), value: :single},
             %{label: gettext("Selection"), value: :selection},
           ]]} />
-          <Input.Radios.render form={@block_data} field={:query} label={gettext "Query"} opts={[options: @available_queries]} />
+          <Input.radios form={@block_data} field={:query} label={gettext "Query"} opts={[options: @available_queries]} />
           <.live_component
             module={Input.Select}
             id={"#{@block_data.id}-modules"}
@@ -156,8 +156,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
             field={:module_id}
             label={gettext "Module ID"}
             opts={[options: @modules]} />
-          <Input.Text.render form={@block_data} field={:arg} label={gettext "Arg"} />
-          <Input.Text.render form={@block_data} field={:limit} label={gettext "Limit"} />
+          <Input.text form={@block_data} field={:arg} label={gettext "Arg"} />
+          <Input.text form={@block_data} field={:limit} label={gettext "Limit"} />
         </:config>
         <div class="datasource-block">
           <div class="villain-block-datasource-info">

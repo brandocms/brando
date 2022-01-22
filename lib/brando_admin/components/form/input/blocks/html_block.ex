@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HtmlBlock do
           <% end %>
         </:description>
         <div class="html-block">
-          <Input.Code.render id={"block-#{@uid}-html-text"} form={@block_data} field={:text} label={gettext "Text"} />
+          <Input.code id={"block-#{@uid}-html-text"} form={@block_data} field={:text} label={gettext "Text"} />
         </div>
       </.live_component>
     </div>

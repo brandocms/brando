@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Form.Input.Radios
 
   # prop block, :form
   # prop base_form, :form
@@ -58,7 +58,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
         </:description>
         <:config>
           <%= for block_data <- inputs_for(@block, :data) do %>
-            <Radios.render
+            <Input.radios
               form={block_data}
               field={:type}
               label="Type"

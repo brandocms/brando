@@ -8,8 +8,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Modal
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Label
 
   # prop block, :any
   # prop base_form, :any
@@ -103,10 +103,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         phx-hook="Brando.Block">
 
         <div class="block-description" id={"block-#{@uid}-block-description"}>
-          <Label.render form={@block} field={:hidden} class="switch small inverse">
+          <Form.label form={@block} field={:hidden} class="switch small inverse">
             <%= checkbox @block, :hidden %>
             <div class="slider round"></div>
-          </Label.render>
+          </Form.label>
           <span class="block-type"><%= @type %></span> &rarr; <%= render_slot @description %>
         </div>
         <div class="block-content" id={"block-#{@uid}-block-content"}>
@@ -155,15 +155,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </button>
           <% end %>
           <%= if !@is_ref? do %>
-          <Label.render
+          <Form.label
             form={@block}
             field={:marked_as_deleted}
             class="block-action toggler">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
             <%= checkbox @block, :marked_as_deleted %>
-          </Label.render>
+          </Form.label>
           <% end %>
-          <Label.render
+          <Form.label
             form={@block}
             field={:collapsed}
             class="block-action toggler">
@@ -173,7 +173,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
             <% end %>
             <%= checkbox @block, :collapsed %>
-          </Label.render>
+          </Form.label>
         </div>
       </div>
     </div>

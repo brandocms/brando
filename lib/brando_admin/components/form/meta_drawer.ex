@@ -25,11 +25,11 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         </p>
       </:info>
       <div class="brando-input">
-        <Input.Text.render field={:meta_title} form={@form} label={gettext "META title"} />
+        <Input.text field={:meta_title} form={@form} label={gettext "META title"} />
       </div>
 
       <div class="brando-input">
-        <Input.Textarea.render field={:meta_description} form={@form} label={gettext "META description"} />
+        <Input.textarea field={:meta_description} form={@form} label={gettext "META description"} />
       </div>
 
       <div class="brando-input">

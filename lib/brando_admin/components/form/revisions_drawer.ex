@@ -86,7 +86,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={"Entry revisions"} close={@close}>
+      <Content.drawer id={@id} title={gettext("Entry revisions")} close={@close}>
         <:info>
           <p>
             <%= gettext "This is a list of this entry's revisions. Click a row to preview." %>

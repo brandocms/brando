@@ -261,9 +261,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <img src={"/media/#{input_value(image, :path)}"} />
                 </figure>
                 <div>
-                  <Input.RichText.render form={image} field={:title} label={gettext "Title"} />
-                  <Input.Text.render form={image} field={:credits} label={gettext "Credits"} />
-                  <Input.Text.render form={image} field={:alt} label={gettext "Alt. text"} />
+                  <Input.rich_text form={image} field={:title} label={gettext "Title"} />
+                  <Input.text form={image} field={:credits} label={gettext "Credits"} />
+                  <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
                 </div>
               </div>
             <% end %>
@@ -272,7 +272,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         <:config>
           <%= hidden_input(@block_data, :type) %>
-          <Input.Radios.render
+          <Input.radios
             form={@block_data}
             field={:display}
             label={gettext("Display")}
@@ -280,11 +280,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               %{label: "Grid", value: :grid},
               %{label: "List", value: :list},
             ]]} />
-          <Input.Text.render form={@block_data} field={:class} label={gettext "Class"} />
-          <Input.Text.render form={@block_data} field={:series_slug} label={gettext "Series slug"} />
-          <Input.Toggle.render form={@block_data} field={:lightbox} label={gettext "Lightbox"} />
+          <Input.text form={@block_data} field={:class} label={gettext "Class"} />
+          <Input.text form={@block_data} field={:series_slug} label={gettext "Series slug"} />
+          <Input.toggle form={@block_data} field={:lightbox} label={gettext "Lightbox"} />
 
-          <Input.Radios.render
+          <Input.radios
             form={@block_data}
             field={:placeholder}
             label={gettext "Placeholder"}

@@ -35,11 +35,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     ~H"""
     <div class="properties shaded">
       <div class="inner">
-        <Input.Text.render form={@form} field={:name} label={gettext "Name"} />
-        <Input.Text.render form={@form} field={:namespace} label={gettext "Namespace"} />
-        <Input.Textarea.render form={@form} field={:help_text} label={gettext "Help text"} />
-        <Input.Text.render form={@form} field={:class} label={gettext "Class"} />
-        <Input.Toggle.render form={@form} field={:wrapper} label={gettext "Wrapper"} />
+        <Input.text form={@form} field={:name} label={gettext "Name"} />
+        <Input.text form={@form} field={:namespace} label={gettext "Namespace"} />
+        <Input.textarea form={@form} field={:help_text} label={gettext "Help text"} />
+        <Input.text form={@form} field={:class} label={gettext "Class"} />
+        <Input.toggle form={@form} field={:wrapper} label={gettext "Wrapper"} />
 
         <%= if !@entry_form do %>
           <div class="button-group">
@@ -53,7 +53,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <% end %>
 
         <.live_component module={Modal} title="Edit icon" id={"#{@form.id}-#{@key}-icon"}>
-          <Input.Code.render id={"#{@form.id}-svg"} form={@form} field={:svg} label={gettext "SVG"} />
+          <Input.code id={"#{@form.id}-svg"} form={@form} field={:svg} label={gettext "SVG"} />
         </.live_component>
 
         <.live_component module={Modal} title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
@@ -200,14 +200,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                         <%= case input_value(ref_data, :type) do %>
                           <% "header" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:level} label={gettext "Level"} />
-                              <Input.Text.render form={block_data} field={:text} label={gettext "Text"} />
+                              <Input.text form={block_data} field={:level} label={gettext "Level"} />
+                              <Input.text form={block_data} field={:text} label={gettext "Text"} />
                             <% end %>
 
                           <% "svg" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:class} label={gettext "Class"} />
-                              <Input.Code.render
+                              <Input.text form={block_data} field={:class} label={gettext "Class"} />
+                              <Input.code
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-svg-code"}
                                 form={block_data}
                                 field={:code}
@@ -217,22 +217,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                           <% "text" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:text} label={gettext "Text"} />
-                              <Input.Text.render form={block_data} field={:type} label={gettext "Type"} />
-                              <Input.Text.render form={block_data} field={:extensions} label={gettext "Extensions"} />
+                              <Input.text form={block_data} field={:text} label={gettext "Text"} />
+                              <Input.text form={block_data} field={:type} label={gettext "Type"} />
+                              <Input.text form={block_data} field={:extensions} label={gettext "Extensions"} />
                             <% end %>
 
                           <% "picture" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <%= hidden_input(block_data, :cdn) %>
-                              <Input.Toggle.render form={block_data} field={:lazyload} label={gettext "Lazyload"} />
-                              <Input.Toggle.render form={block_data} field={:moonwalk} label={gettext "Moonwalk"} />
-                              <Input.Text.render form={block_data} field={:title} label={gettext "Title/Caption"} />
-                              <Input.Text.render form={block_data} field={:alt} label={gettext "Alt. text"} />
-                              <Input.Text.render form={block_data} field={:credits} label={gettext "Credits"} />
-                              <Input.Text.render form={block_data} field={:link} label={gettext "Link"} />
-                              <Input.Text.render form={block_data} field={:picture_class} label={gettext "Picture class(es)"} />
-                              <Input.Text.render form={block_data} field={:img_class} label={gettext "Img class(es)"} />
+                              <Input.toggle form={block_data} field={:lazyload} label={gettext "Lazyload"} />
+                              <Input.toggle form={block_data} field={:moonwalk} label={gettext "Moonwalk"} />
+                              <Input.text form={block_data} field={:title} label={gettext "Title/Caption"} />
+                              <Input.text form={block_data} field={:alt} label={gettext "Alt. text"} />
+                              <Input.text form={block_data} field={:credits} label={gettext "Credits"} />
+                              <Input.text form={block_data} field={:link} label={gettext "Link"} />
+                              <Input.text form={block_data} field={:picture_class} label={gettext "Picture class(es)"} />
+                              <Input.text form={block_data} field={:img_class} label={gettext "Img class(es)"} />
                               <.live_component
                                 module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
@@ -275,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                           <% "gallery" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Radios.render
+                              <Input.radios
                                 form={block_data}
                                 field={:type}
                                 label={gettext "Type"}
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   %{label: gettext("Slider"), value: :slider},
                                   %{label: gettext("Slideshow"), value: :slideshow},
                                 ]]} />
-                              <Input.Radios.render
+                              <Input.radios
                                 form={block_data}
                                 field={:display}
                                 label={gettext "Display"}
@@ -292,10 +292,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   %{label: gettext("Grid"), value: :grid},
                                   %{label: gettext("List"), value: :list},
                                 ]]} />
-                              <Input.Text.render form={block_data} field={:class} label={gettext "Class"} />
-                              <Input.Text.render form={block_data} field={:series_slug} label={gettext "Series slug"} />
-                              <Input.Toggle.render form={block_data} field={:lightbox} label={gettext "Lightbox"} />
-                              <Input.Radios.render
+                              <Input.text form={block_data} field={:class} label={gettext "Class"} />
+                              <Input.text form={block_data} field={:series_slug} label={gettext "Series slug"} />
+                              <Input.toggle form={block_data} field={:lightbox} label={gettext "Lightbox"} />
+                              <Input.radios
                                 form={block_data}
                                 field={:placeholder}
                                 label={gettext "Placeholder"}
@@ -335,8 +335,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                           <% "video" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:url} label={gettext "URL"} />
-                              <Input.Radios.render
+                              <Input.text form={block_data} field={:url} label={gettext "URL"} />
+                              <Input.radios
                                 form={block_data}
                                 field={:source}
                                 label={gettext "Source"}
@@ -348,13 +348,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               />
                               <%= hidden_input(block_data, :width) %>
                               <%= hidden_input(block_data, :height) %>
-                              <Input.Text.render form={block_data} field={:remote_id} label={gettext "Remote ID"} />
-                              <Input.Text.render form={block_data} field={:poster} label={gettext "Poster"} />
-                              <Input.Text.render form={block_data} field={:cover} label={gettext "Cover"} />
-                              <Input.Number.render form={block_data} field={:opacity} label={gettext "Opacity"} />
-                              <Input.Toggle.render form={block_data} field={:autoplay} label={gettext "Autoplay"} />
-                              <Input.Toggle.render form={block_data} field={:preload} label={gettext "Preload"} />
-                              <Input.Toggle.render form={block_data} field={:play_button} label={gettext "Play button"} />
+                              <Input.text form={block_data} field={:remote_id} label={gettext "Remote ID"} />
+                              <Input.text form={block_data} field={:poster} label={gettext "Poster"} />
+                              <Input.text form={block_data} field={:cover} label={gettext "Cover"} />
+                              <Input.number form={block_data} field={:opacity} label={gettext "Opacity"} />
+                              <Input.toggle form={block_data} field={:autoplay} label={gettext "Autoplay"} />
+                              <Input.toggle form={block_data} field={:preload} label={gettext "Preload"} />
+                              <Input.toggle form={block_data} field={:play_button} label={gettext "Play button"} />
                             <% end %>
 
                           <% "media" -> %>
@@ -388,8 +388,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "picture" in input_value(block_data, :available_blocks) do %>
                                 <h2>Picture block template</h2>
                                 <%= for tpl_data <- inputs_for(block_data, :template_picture) do %>
-                                  <Input.Text.render form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
-                                  <Input.Text.render form={tpl_data} field={:img_class} label={gettext "Image class"} />
+                                  <Input.text form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
+                                  <Input.text form={tpl_data} field={:img_class} label={gettext "Image class"} />
                                   <.live_component
                                     module={Input.Select}
                                     id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
@@ -428,17 +428,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "video" in input_value(block_data, :available_blocks) do %>
                                 <h2>Video block template</h2>
                                 <%= for tpl_data <- inputs_for(block_data, :template_video) do %>
-                                  <Input.Number.render form={tpl_data} field={:opacity} label={gettext "Opacity"} />
-                                  <Input.Toggle.render form={tpl_data} field={:autoplay} label={gettext "Autoplay"} />
-                                  <Input.Toggle.render form={tpl_data} field={:preload} label={gettext "Preload"} />
-                                  <Input.Toggle.render form={tpl_data} field={:play_button} label={gettext "Play button"} />
+                                  <Input.number form={tpl_data} field={:opacity} label={gettext "Opacity"} />
+                                  <Input.toggle form={tpl_data} field={:autoplay} label={gettext "Autoplay"} />
+                                  <Input.toggle form={tpl_data} field={:preload} label={gettext "Preload"} />
+                                  <Input.toggle form={tpl_data} field={:play_button} label={gettext "Play button"} />
                                 <% end %>
                               <% end %>
 
                               <%= if "gallery" in input_value(block_data, :available_blocks) do %>
                                 <h2>Gallery block template</h2>
                                 <%= for tpl_data <- inputs_for(block_data, :template_gallery) do %>
-                                  <Input.Radios.render
+                                  <Input.radios
                                     form={tpl_data}
                                     field={:type}
                                     label={gettext "Type"}
@@ -447,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       %{label: "Slider", value: :slider},
                                       %{label: "Slideshow", value: :slideshow},
                                     ]]} />
-                                  <Input.Radios.render
+                                  <Input.radios
                                     form={tpl_data}
                                     field={:display}
                                     label={gettext "Display"}
@@ -455,10 +455,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       %{label: "Grid", value: :grid},
                                       %{label: "List", value: :list},
                                     ]]} />
-                                  <Input.Text.render form={tpl_data} field={:class} label={gettext "Class"} />
-                                  <Input.Text.render form={tpl_data} field={:series_slug} label={gettext "Series slug"} />
-                                  <Input.Toggle.render form={tpl_data} field={:lightbox} label={gettext "Lightbox"} />
-                                  <Input.Radios.render
+                                  <Input.text form={tpl_data} field={:class} label={gettext "Class"} />
+                                  <Input.text form={tpl_data} field={:series_slug} label={gettext "Series slug"} />
+                                  <Input.toggle form={tpl_data} field={:lightbox} label={gettext "Lightbox"} />
+                                  <Input.radios
                                     form={tpl_data}
                                     field={:placeholder}
                                     opts={[options: [
@@ -493,7 +493,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "svg" in input_value(block_data, :available_blocks) do %>
                                 <h2>SVG block template</h2>
                                 <%= for tpl_data <- inputs_for(block_data, :template_svg) do %>
-                                  <Input.Text.render form={tpl_data} field={:class} label={gettext "Class"} />
+                                  <Input.text form={tpl_data} field={:class} label={gettext "Class"} />
                                 <% end %>
                               <% end %>
 
@@ -501,15 +501,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                           <% "datasource" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:description} label={gettext "Description"} />
-                              <Input.Text.render form={block_data} field={:arg} label={gettext "Arg"} />
-                              <Input.Text.render form={block_data} field={:limit} label={gettext "Limit"} />
+                              <Input.text form={block_data} field={:description} label={gettext "Description"} />
+                              <Input.text form={block_data} field={:arg} label={gettext "Arg"} />
+                              <Input.text form={block_data} field={:limit} label={gettext "Limit"} />
                             <% end %>
 
                           <% "table" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <Input.Text.render form={block_data} field={:key} label={gettext "Key"} />
-                              <Input.Textarea.render form={block_data} field={:instructions} label={gettext "Instructions"} />
+                              <Input.text form={block_data} field={:key} label={gettext "Key"} />
+                              <Input.textarea form={block_data} field={:instructions} label={gettext "Instructions"} />
 
                               <%= for tpl_row <- inputs_for(block_data, :template_row) do %>
                                 <%= if !input_value(tpl_row, :cols) do %>
@@ -541,25 +541,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                           <%= hidden_input var, :key %>
                                           <%= hidden_input var, :type %>
                                           <%= hidden_input var, :important %>
-                                          <Input.Text.render form={var} field={:label} label={gettext "Label"} />
-                                          <Input.Text.render form={var} field={:instructions} label={gettext "Instructions"} />
-                                          <Input.Text.render form={var} field={:placeholder} label={gettext "Placeholder"} />
+                                          <Input.text form={var} field={:label} label={gettext "Label"} />
+                                          <Input.text form={var} field={:instructions} label={gettext "Instructions"} />
+                                          <Input.text form={var} field={:placeholder} label={gettext "Placeholder"} />
                                           <%= case input_value(var, :type) do %>
                                             <% "text" -> %>
-                                              <Input.Text.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.text form={var} field={:value} label={gettext "Value"} />
                                             <% "string" -> %>
-                                              <Input.Text.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.text form={var} field={:value} label={gettext "Value"} />
                                             <% "boolean" -> %>
-                                              <Input.Toggle.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.toggle form={var} field={:value} label={gettext "Value"} />
                                             <% "datetime" -> %>
-                                              <Input.Datetime.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.datetime form={var} field={:value} label={gettext "Value"} />
                                             <% "html" -> %>
-                                              <Input.RichText.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.rich_text form={var} field={:value} label={gettext "Value"} />
                                             <% "color" -> %>
-                                              <!-- #TODO: Input.Color -->
-                                              <Input.Text.render form={var} field={:value} label={gettext "Value"} />
+                                              <!-- #TODO: Input.color -->
+                                              <Input.text form={var} field={:value} label={gettext "Value"} />
                                             <% _ -> %>
-                                              <Input.Text.render form={var} field={:value} label={gettext "Value"} />
+                                              <Input.text form={var} field={:value} label={gettext "Value"} />
                                           <% end %>
                                         </div>
                                       </div>
@@ -588,8 +588,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <div class="panel">
                         <h2 class="titlecase">Ref config — <%= input_value(ref_data, :type) %></h2>
 
-                        <Input.Text.render form={ref} field={:name} label={gettext "Name"} />
-                        <Input.Text.render form={ref} field={:description} label={gettext "Description"} />
+                        <Input.text form={ref} field={:name} label={gettext "Name"} />
+                        <Input.text form={ref} field={:description} label={gettext "Description"} />
                         <%= hidden_input(ref_data, :uid, value: input_value(ref_data, :uid) || Brando.Utils.generate_uid()) %>
                       </div>
                     <% end %>

@@ -123,13 +123,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               </div>
 
               <div class={render_classes(["variable-content", hidden: !@visible])}>
-                <Input.Toggle.render form={@var} field={:marked_as_deleted} label={gettext "Marked as deleted"} />
-                <Input.Toggle.render form={@var} field={:important} label={gettext "Important"} />
-                <Input.Text.render form={@var} field={:key} label={gettext "Key"} />
-                <Input.Text.render form={@var} field={:label} label={gettext "Label"} />
-                <Input.Text.render form={@var} field={:instructions} label={gettext "Instructions"} />
-                <Input.Text.render form={@var} field={:placeholder} label={gettext "Placeholder"} />
-                <Input.Radios.render form={@var} field={:type} label={gettext "Type"} opts={[options: [
+                <Input.toggle form={@var} field={:marked_as_deleted} label={gettext "Marked as deleted"} />
+                <Input.toggle form={@var} field={:important} label={gettext "Important"} />
+                <Input.text form={@var} field={:key} label={gettext "Key"} />
+                <Input.text form={@var} field={:label} label={gettext "Label"} />
+                <Input.text form={@var} field={:instructions} label={gettext "Instructions"} />
+                <Input.text form={@var} field={:placeholder} label={gettext "Placeholder"} />
+                <Input.radios form={@var} field={:type} label={gettext "Type"} opts={[options: [
                   %{label: "Boolean", value: "boolean"},
                   %{label: "Color", value: "color"},
                   %{label: "Datetime", value: "datetime"},
@@ -182,22 +182,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <%= case @type do %>
         <% "string" -> %>
-          <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "text" -> %>
-          <Input.Textarea.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "boolean" -> %>
-          <Input.Toggle.render form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.toggle form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "color" -> %>
-          <Input.Text.render form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "datetime" -> %>
-          <Input.Datetime.render form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "html" -> %>
-          <Input.RichText.render form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.rich_text form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "image" -> %>
           <FieldBase.render
