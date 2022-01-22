@@ -39,7 +39,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/query/mutations.ex:209
-#: lib/brando_admin/live_view/listing.ex:92
+#: lib/brando_admin/live_view/listing.ex:123
 msgid "deleted"
 msgstr ""
 
@@ -86,7 +86,7 @@ msgid "Configuration"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/blueprint/form.ex:223
+#: lib/brando/blueprint/form.ex:233
 #: lib/brando_admin/menu.ex:316
 msgid "Content"
 msgstr ""
@@ -190,7 +190,6 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:65
-#: lib/brando/images/image.ex:79
 #: lib/brando/navigation/menu.ex:74
 msgid "Are you sure?"
 msgstr ""
@@ -265,7 +264,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:576
-#: lib/brando_admin/components/content/list/row.ex:421
+#: lib/brando_admin/components/content/list/row.ex:432
 msgid "Deleted"
 msgstr ""
 
@@ -276,13 +275,13 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:572
-#: lib/brando_admin/components/content/list/row.ex:417
+#: lib/brando_admin/components/content/list/row.ex:428
 msgid "Disabled"
 msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:573
-#: lib/brando_admin/components/content/list/row.ex:418
+#: lib/brando_admin/components/content/list/row.ex:429
 #: lib/brando_admin/components/form/input/status.ex:33
 msgid "Draft"
 msgstr ""
@@ -358,14 +357,14 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:574
-#: lib/brando_admin/components/content/list/row.ex:419
+#: lib/brando_admin/components/content/list/row.ex:430
 #: lib/brando_admin/components/form/input/status.ex:34
 msgid "Pending"
 msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:575
-#: lib/brando_admin/components/content/list/row.ex:420
+#: lib/brando_admin/components/content/list/row.ex:431
 #: lib/brando_admin/components/form/input/status.ex:35
 msgid "Published"
 msgstr ""
@@ -503,8 +502,8 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/live_view/form.ex:141
-#: lib/brando_admin/live_view/listing.ex:161
-#: lib/brando_admin/live_view/listing.ex:197
+#: lib/brando_admin/live_view/listing.ex:192
+#: lib/brando_admin/live_view/listing.ex:228
 msgid "Content language is now %{language}"
 msgstr ""
 
@@ -535,13 +534,11 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:63
-#: lib/brando/images/image.ex:77
 msgid "Delete image"
 msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:70
-#: lib/brando/images/image.ex:84
 msgid "Delete images"
 msgstr ""
 
@@ -569,7 +566,6 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:61
-#: lib/brando/images/image.ex:75
 msgid "Duplicate image"
 msgstr ""
 
@@ -585,7 +581,6 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:60
-#: lib/brando/images/image.ex:74
 #: lib/brando_admin/components/form/input/image.ex:193
 msgid "Edit image"
 msgstr ""
@@ -702,7 +697,7 @@ msgid "No options found"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/entries.ex:109
+#: lib/brando_admin/components/form/input/entries.ex:112
 msgid "No selected entries"
 msgstr ""
 
@@ -725,7 +720,6 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/images/gallery.ex:35
-#: lib/brando/images/image.ex:49
 msgid "Path"
 msgstr ""
 
@@ -747,7 +741,7 @@ msgid "Reset"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:178
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:173
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:287
 msgid "Reset image"
 msgstr ""
@@ -776,19 +770,21 @@ msgid "Scheduled publishing"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/entries.ex:141
+#: lib/brando_admin/components/form/input/entries.ex:155
 msgid "Select content type"
 msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/datasource_block.ex:205
-#: lib/brando_admin/components/form/input/entries.ex:137
+#: lib/brando_admin/components/form/input/blocks/datasource_block.ex:212
+#: lib/brando_admin/components/form/input/entries.ex:151
+#: lib/brando_admin/components/form/input/entries.ex:154
 msgid "Select entries"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:522
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:174
+#: lib/brando_admin/components/form.ex:523
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:169
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:283
 msgid "Select image"
 msgstr ""
@@ -952,7 +948,7 @@ msgid "Select existing image"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:526
+#: lib/brando_admin/components/form.ex:527
 msgid "Select similarly typed image from library"
 msgstr ""
 
@@ -1345,7 +1341,7 @@ msgid "Select options"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/live_view/listing.ex:100
+#: lib/brando_admin/live_view/listing.ex:131
 msgid "Error deleting"
 msgstr ""
 
@@ -1361,7 +1357,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/datasource_block.ex:214
-#: lib/brando_admin/components/form/input/entries.ex:150
+#: lib/brando_admin/components/form/input/entries.ex:164
 msgid "Available entries"
 msgstr ""
 
@@ -1453,4 +1449,19 @@ msgstr ""
 #, elixir-format, ex-autogen
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:126
 msgid "Pick an existing image"
+msgstr ""
+
+#, elixir-format, ex-autogen, fuzzy
+#: lib/brando_admin/live_view/listing.ex:102
+msgid "Error undeleting"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/content/list/row.ex:234
+msgid "Undelete entry"
+msgstr ""
+
+#, elixir-format, ex-autogen, fuzzy
+#: lib/brando_admin/live_view/listing.ex:94
+msgid "undeleted"
 msgstr ""

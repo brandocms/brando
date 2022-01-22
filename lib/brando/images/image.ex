@@ -46,7 +46,7 @@ defmodule Brando.Images.Image do
       }
 
       filters([
-        [label: gettext("Path"), filter: "path"]
+        [label: t("Path"), filter: "path"]
       ])
 
       template(
@@ -67,21 +67,21 @@ defmodule Brando.Images.Image do
         <small class="monospace">{{ entry.path }}</small><br>
         <small>{{ entry.width }}&times;{{ entry.height }}</small>
         """,
-        columns: 8
+        columns: 9
       )
 
       actions([
-        [label: gettext("Edit image"), event: "edit_entry"],
-        [label: gettext("Duplicate image"), event: "duplicate_entry"],
+        # [label: t("Edit image"), event: "edit_entry"],
+        [label: t("Duplicate image"), event: "duplicate_entry"],
         [
-          label: gettext("Delete image"),
+          label: t("Delete image"),
           event: "delete_entry",
-          confirm: gettext("Are you sure?")
+          confirm: t("Are you sure?")
         ]
       ])
 
       selection_actions([
-        [label: gettext("Delete images"), event: "delete_selected"]
+        [label: t("Delete images"), event: "delete_selected"]
       ])
     end
   end
