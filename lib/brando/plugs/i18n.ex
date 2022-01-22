@@ -44,9 +44,10 @@ defmodule Brando.Plug.I18n do
         user -> Map.get(user, :language, Brando.config(:default_admin_language))
       end
 
-    # set for default brando backend
+    # set for default brando backend and application backend
     language = (is_atom(language) && to_string(language)) || language
     Gettext.put_locale(Brando.Gettext, language)
+    Gettext.put_locale(Brando.gettext_admin(), language)
     conn
   end
 
