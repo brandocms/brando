@@ -18,14 +18,16 @@ defmodule Brando.Blueprint.Form do
   #### Options
 
       - `for` - the field we want to create a slug from.
-      ```
-      input :slug, :slug, for: :title
-      ```
+          ```
+          input :slug, :slug, for: :title
+          ```
 
-      Can also be a list for composite slugs:
-      ```
-      input :slug, :slug, for: [:location, :position]
-      ```
+          Can also be a list for composite slugs:
+          ```
+          input :slug, :slug, for: [:location, :position]
+          ```
+
+      - `camel_case: true` - Returns slug as `camelCase` instead of `this-type-of-slug`.
 
   """
   import Brando.Gettext

@@ -42,7 +42,7 @@ defmodule Brando.Content.Palette do
         fieldset size: :half do
           input :global, :toggle
           input :name, :text
-          input :key, :text, monospace: true
+          input :key, :slug, for: :name, camel_case: true
           input :namespace, :text, monospace: true
           input :instructions, :textarea
         end
