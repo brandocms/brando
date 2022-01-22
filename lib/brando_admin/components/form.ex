@@ -174,21 +174,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp add_preloads(%{preload: preloads} = query_params, schema) do
-    image_preloads =
-      schema.__assets__
-      |> Enum.filter(&(&1.type == :image))
-      |> Enum.map(& &1.name)
-
-    gallery_preloads =
-      schema.__assets__
-      |> Enum.filter(&(&1.type == :gallery))
-      |> Enum.map(&[{&1.name, :gallery_images}])
-
-    Map.put(query_params, :preload, gallery_preloads ++ image_preloads ++ preloads)
-  end
-
   defp add_preloads(query_params, schema) do
+    default_preloads = Map.get(query_params, :preload, [])
+
     image_preloads =
       schema.__assets__
       |> Enum.filter(&(&1.type == :image))
@@ -199,7 +187,18 @@ defmodule BrandoAdmin.Components.Form do
       |> Enum.filter(&(&1.type == :gallery))
       |> Enum.map(&[{&1.name, [{:gallery_images, :image}]}])
 
-    Map.put(query_params, :preload, image_preloads ++ gallery_preloads)
+    rel_preloads =
+      schema.__relations__
+      |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
+      |> Enum.map(& &1.name)
+
+    preloads = Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads ++ default_preloads)
+
+    Map.put(
+      query_params,
+      :preload,
+      preloads
+    )
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema}} = socket) do
@@ -980,7 +979,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assign_changeset(
-        %{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket
+        %{
+          assigns: %{
+            entry: entry,
+            schema: schema,
+            current_user: current_user
+          }
+        } = socket
       ) do
     assign_new(socket, :changeset, fn ->
       schema.changeset(entry, %{}, current_user, skip_villain: true)
