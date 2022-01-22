@@ -257,7 +257,7 @@ msgid "Datasource"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/status.ex:36
+#: lib/brando_admin/components/form/input.ex:437
 msgid "Deactivated"
 msgstr ""
 
@@ -281,7 +281,7 @@ msgstr ""
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:573
 #: lib/brando_admin/components/content/list/row.ex:429
-#: lib/brando_admin/components/form/input/status.ex:33
+#: lib/brando_admin/components/form/input.ex:434
 msgid "Draft"
 msgstr ""
 
@@ -301,13 +301,13 @@ msgid "Edit page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:872
+#: lib/brando_admin/components/form.ex:874
 #: lib/brando_admin/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:873
+#: lib/brando_admin/components/form.ex:875
 msgid "Error while saving form. Please correct marked fields and resubmit"
 msgstr ""
 
@@ -357,14 +357,14 @@ msgstr ""
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:574
 #: lib/brando_admin/components/content/list/row.ex:430
-#: lib/brando_admin/components/form/input/status.ex:34
+#: lib/brando_admin/components/form/input.ex:435
 msgid "Pending"
 msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/content/list.ex:575
 #: lib/brando_admin/components/content/list/row.ex:431
-#: lib/brando_admin/components/form/input/status.ex:35
+#: lib/brando_admin/components/form/input.ex:436
 msgid "Published"
 msgstr ""
 
@@ -453,8 +453,8 @@ msgid "Caption"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/date.ex:58
-#: lib/brando_admin/components/form/input/datetime.ex:60
+#: lib/brando_admin/components/form/input.ex:141
+#: lib/brando_admin/components/form/input.ex:177
 msgid "Clear"
 msgstr ""
 
@@ -822,7 +822,7 @@ msgid "You have selected too many files"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/datetime.ex:63
+#: lib/brando_admin/components/form/input.ex:180
 msgid "Your timezone is"
 msgstr ""
 
@@ -1429,7 +1429,7 @@ msgid "No caption"
 msgstr ""
 
 #, elixir-format, ex-autogen
-#: lib/brando_admin/components/form/input/color.ex:37
+#: lib/brando_admin/components/form/input.ex:93
 msgid "No color selected"
 msgstr ""
 
@@ -1463,4 +1463,24 @@ msgstr ""
 #, elixir-format, ex-autogen
 #: lib/brando_admin/live_view/listing.ex:94
 msgid "undeleted"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/form/revisions_drawer.ex:89
+msgid "Entry revisions"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/form.ex:770
+msgid "Notice"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:17
+msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/form.ex:773
+msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr ""
