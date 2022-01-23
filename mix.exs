@@ -40,7 +40,7 @@ defmodule Brando.Mixfile do
       {:floki, ">= 0.27.0", only: :test},
 
       # hashing/passwords
-      {:bcrypt_elixir, "~> 2.0"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:comeonin, "~> 5.0"},
       {:base62, "~> 1.2"},
 
