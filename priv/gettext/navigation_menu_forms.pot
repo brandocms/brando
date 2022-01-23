@@ -1,0 +1,43 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:42
+msgid "Items"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:37
+#: lib/brando/navigation/menu.ex:50
+msgid "Key"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:35
+msgid "Language"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:52
+msgid "New window?"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:36
+#: lib/brando/navigation/menu.ex:49
+msgid "Title"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:51
+msgid "URL"
+msgstr ""

@@ -1,0 +1,44 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:42
+msgid "Items"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:37
+#: lib/brando/navigation/menu.ex:50
+msgid "Key"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:35
+msgid "Language"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:52
+msgid "New window?"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:36
+#: lib/brando/navigation/menu.ex:49
+msgid "Title"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/navigation/menu.ex:51
+msgid "URL"
+msgstr ""
