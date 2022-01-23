@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",
-    "@brandocms/jupiter": "^3.42.6"
+    "@brandocms/jupiter": "^3.42.7"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.6.3",
-    "@sveltejs/vite-plugin-svelte": "1.0.0-next.34",
+    "@brandocms/europacss": "^0.7.0",
+    "@sveltejs/vite-plugin-svelte": "1.0.0-next.35",
     "autoprefixer": "^10.4.2",
     "svelte": "^3.46.2",
-    "svelte-preprocess": "^4.10.1",
-    "vite": "^2.7.12"
+    "svelte-preprocess": "^4.10.2",
+    "vite": "^2.7.13"
   }
 }
