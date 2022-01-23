@@ -116,3 +116,13 @@ msgstr ""
 #: lib/brando/sites/identity.ex:93
 msgid "Zip code"
 msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/sites/identity.ex:68
+msgid "Corporation"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando/sites/identity.ex:67
+msgid "Organization"
+msgstr ""

@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
 
     <div class="scheduled-publishing-live">
       <p class="help">
-        A list of upcoming publisher queue jobs.
+        <%= gettext("A list of upcoming publisher queue jobs.") %>
       </p>
 
       <table>

@@ -92,11 +92,6 @@ msgid "Content"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:68
-msgid "Corporation"
-msgstr ""
-
-#, elixir-format
 #: lib/brando_admin/menu.ex:246
 msgid "Dashboard"
 msgstr ""
@@ -136,11 +131,6 @@ msgstr ""
 #: lib/brando_admin/live/navigation/menu_list_live.ex:9
 #: lib/brando_admin/menu.ex:254
 msgid "Navigation"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/identity.ex:67
-msgid "Organization"
 msgstr ""
 
 #, elixir-format
@@ -1456,4 +1446,9 @@ msgstr ""
 #, elixir-format, ex-autogen
 #: lib/brando_admin/components/form.ex:773
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/live/config/scheduled_publishing_live.ex:40
+msgid "A list of upcoming publisher queue jobs."
 msgstr ""

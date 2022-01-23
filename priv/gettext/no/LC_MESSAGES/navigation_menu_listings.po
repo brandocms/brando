@@ -20,34 +20,42 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:75
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:78
 msgid "Create menu item"
 msgstr "Opprett menypunkt"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:73
 msgid "Delete menu"
 msgstr "Slett meny"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:82
 msgid "Delete menus"
 msgstr "Slett menyer"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:77
 msgid "Duplicate menu"
 msgstr "Dupliser meny"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:71
 msgid "Edit menu"
 msgstr "Oppdater meny"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:67
 msgid "Title"
 msgstr "Tittel"
 
+#, elixir-format, ex-autogen
 #: lib/brando/navigation/menu.ex:97
 msgid "menu items"
 msgstr "menypunkter"

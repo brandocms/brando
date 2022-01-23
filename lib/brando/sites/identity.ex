@@ -64,8 +64,8 @@ defmodule Brando.Sites.Identity do
         fieldset do
           input :type, :radios,
             options: [
-              %{value: :organization, label: gettext("Organization")},
-              %{value: :corporation, label: gettext("Corporation")}
+              %{value: :organization, label: t("Organization")},
+              %{value: :corporation, label: t("Corporation")}
             ],
             label: t("Type")
         end
