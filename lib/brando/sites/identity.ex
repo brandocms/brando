@@ -112,8 +112,8 @@ defmodule Brando.Sites.Identity do
             cardinality: :many,
             size: :full,
             default: %Brando.Link{} do
-            input :name, :text, label: t("Name")
-            input :url, :text, label: t("URL")
+            input :name, :text, label: t("Name", Brando.Link)
+            input :url, :text, label: t("URL", Brando.Link)
           end
         end
 
@@ -124,8 +124,8 @@ defmodule Brando.Sites.Identity do
             cardinality: :many,
             size: :full,
             default: %Brando.Meta{} do
-            input :key, :text, label: t("Key")
-            input :value, :text, label: t("Value")
+            input :key, :text, label: t("Key", Brando.Meta)
+            input :value, :text, label: t("Value", Brando.Meta)
           end
         end
       end

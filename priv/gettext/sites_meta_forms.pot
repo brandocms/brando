@@ -11,21 +11,11 @@ msgid ""
 msgstr ""
 
 #, elixir-format, ex-autogen
-#: lib/brando/navigation/menu.ex:49
-msgid "Items"
-msgstr ""
-
-#, elixir-format, ex-autogen
-#: lib/brando/navigation/menu.ex:44
+#: lib/brando/sites/identity.ex:127
 msgid "Key"
 msgstr ""
 
 #, elixir-format, ex-autogen
-#: lib/brando/navigation/menu.ex:42
-msgid "Language"
-msgstr ""
-
-#, elixir-format, ex-autogen
-#: lib/brando/navigation/menu.ex:43
-msgid "Title"
+#: lib/brando/sites/identity.ex:128
+msgid "Value"
 msgstr ""

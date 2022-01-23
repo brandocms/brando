@@ -27,6 +27,13 @@ defmodule Brando.Navigation.Menu do
     relation :items, :embeds_many, module: Brando.Navigation.Item, on_replace: :delete
   end
 
+  translations do
+    context :naming do
+      translate :singular, t("menu")
+      translate :plural, t("menus")
+    end
+  end
+
   forms do
     form do
       tab "Content" do
@@ -46,10 +53,10 @@ defmodule Brando.Navigation.Menu do
             default: %Brando.Navigation.Item{} do
             input :status, :status, compact: true, label: :hidden
 
-            input :title, :text, label: t("Title")
-            input :key, :text, monospace: true, label: t("Key")
-            input :url, :text, monospace: true, label: t("URL")
-            input :open_in_new_window, :toggle, label: t("New window?")
+            input :title, :text, label: t("Title", Brando.Navigation.Item)
+            input :key, :text, monospace: true, label: t("Key", Brando.Navigation.Item)
+            input :url, :text, monospace: true, label: t("URL", Brando.Navigation.Item)
+            input :open_in_new_window, :toggle, label: t("New window?", Brando.Navigation.Item)
           end
         end
       end

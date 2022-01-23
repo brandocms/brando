@@ -52,11 +52,6 @@ msgid "Email"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:127
-msgid "Key"
-msgstr ""
-
-#, elixir-format
 #: lib/brando/sites/identity.ex:110
 msgid "Links"
 msgstr ""
@@ -73,7 +68,6 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando/sites/identity.ex:74
-#: lib/brando/sites/identity.ex:115
 msgid "Name"
 msgstr ""
 
@@ -100,16 +94,6 @@ msgstr ""
 #, elixir-format
 #: lib/brando/sites/identity.ex:70
 msgid "Type"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/identity.ex:116
-msgid "URL"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/sites/identity.ex:128
-msgid "Value"
 msgstr ""
 
 #, elixir-format

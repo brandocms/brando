@@ -141,7 +141,7 @@ msgid "A short description of the events leading to the error"
 msgstr "En kort beskrivelse av feilens hendelsesforløp"
 
 #: lib/brando_admin/components/form/input/globals.ex:86
-#: lib/brando_admin/components/form/subform.ex:107
+#: lib/brando_admin/components/form/subform.ex:105
 #: lib/brando_admin/components/pages/page_vars.ex:92
 msgid "Add entry"
 msgstr "Ny rad"
@@ -540,7 +540,7 @@ msgid "Module updated"
 msgstr "Modulen ble oppdatert"
 
 #: lib/brando_admin/components/form/input/globals.ex:48
-#: lib/brando_admin/components/form/subform.ex:69
+#: lib/brando_admin/components/form/subform.ex:67
 #: lib/brando_admin/components/pages/page_vars.ex:57
 msgid "No associated entries"
 msgstr "Ingen tilknyttede innlegg"

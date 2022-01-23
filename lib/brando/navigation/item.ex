@@ -7,6 +7,8 @@ defmodule Brando.Navigation.Item do
     plural: "items",
     gettext_module: Brando.Gettext
 
+  import Brando.Gettext
+
   data_layer :embedded
   identifier "{{ entry.title }}"
 
@@ -20,5 +22,12 @@ defmodule Brando.Navigation.Item do
 
   relations do
     relation :items, :embeds_many, module: __MODULE__, on_replace: :delete
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("menu item")
+      translate :plural, t("menu items")
+    end
   end
 end

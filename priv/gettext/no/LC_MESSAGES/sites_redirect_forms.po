@@ -20,18 +20,14 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#: lib/brando/navigation/menu.ex:49
-msgid "Items"
-msgstr "Menypunkter"
+#: lib/brando/sites/seo.ex:75
+msgid "Code"
+msgstr "Kode"
 
-#: lib/brando/navigation/menu.ex:44
-msgid "Key"
-msgstr "Nøkkel"
+#: lib/brando/sites/seo.ex:76
+msgid "From"
+msgstr "Fra"
 
-#: lib/brando/navigation/menu.ex:42
-msgid "Language"
-msgstr "Språk"
-
-#: lib/brando/navigation/menu.ex:43
-msgid "Title"
-msgstr "Tittel"
+#: lib/brando/sites/seo.ex:77
+msgid "To"
+msgstr "Til"
