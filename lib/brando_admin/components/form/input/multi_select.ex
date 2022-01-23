@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use BrandoAdmin, :live_component
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Form.FieldBase
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
 
@@ -185,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def render(assigns) do
     ~H"""
-    <FieldBase.render
+    <Form.field_base
       form={@form}
       field={@field}
       label={@label}
@@ -360,7 +360,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           </div>
         </.live_component>
       </div>
-    </FieldBase.render>
+    </Form.field_base>
     """
   end
 

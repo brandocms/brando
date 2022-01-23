@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form.FieldBase
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
 
   import Brando.Gettext
@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     ~H"""
     <fieldset>
       <%= if @subform.cardinality == :one do %>
-        <FieldBase.render
+        <Form.field_base
           form={@form}
           field={@subform.field}
           label={@label}
@@ -53,9 +53,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
               <% end %>
             </div>
           <% end %>
-        </FieldBase.render>
+        </Form.field_base>
       <% else %>
-        <FieldBase.render
+        <Form.field_base
           form={@form}
           field={@subform.field}
           label={@label}
@@ -106,7 +106,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
             <%= gettext("Add entry") %>
           </button>
-        </FieldBase.render>
+        </Form.field_base>
       <% end %>
     </fieldset>
     """

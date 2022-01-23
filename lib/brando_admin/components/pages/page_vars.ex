@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.FieldBase
 
   # prop form, :form
   # prop subform, :form
@@ -28,7 +27,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <FieldBase.render
+      <Form.field_base
         form={@form}
         field={@subform.field}
         label={@label}
@@ -103,7 +102,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
             </Form.poly_inputs>
           <% end %>
         <% end %>
-      </FieldBase.render>
+      </Form.field_base>
     </fieldset>
     """
   end

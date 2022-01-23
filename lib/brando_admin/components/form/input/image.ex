@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   import Ecto.Changeset
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Form.FieldBase
+  alias BrandoAdmin.Components.Form
   alias Brando.Utils
 
   # prop form, :form
@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def render(assigns) do
     ~H"""
     <div>
-      <FieldBase.render
+      <Form.field_base
         form={@form}
         field={@field}
         label={@label}
@@ -96,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             <% end %>
           </div>
         </div>
-      </FieldBase.render>
+      </Form.field_base>
     </div>
     """
   end

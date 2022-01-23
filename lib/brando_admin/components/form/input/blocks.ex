@@ -8,7 +8,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   alias Brando.Content
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop form, :form
@@ -61,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def render(assigns) do
     ~H"""
     <div>
-      <FieldBase.render
+      <Form.field_base
         form={@form}
         field={@field}
         label={@label}
@@ -87,7 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           insert_datasource={JS.push("insert_datasource", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)} />
-      </FieldBase.render>
+      </Form.field_base>
     </div>
     """
   end

@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.FieldBase
 
   alias Brando.Images.GalleryImage
 
@@ -73,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   def render(assigns) do
     ~H"""
     <div>
-      <FieldBase.render
+      <Form.field_base
         form={@form}
         field={@field}
         label={@label}
@@ -137,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             </div>
           <% end %>
         </div>
-      </FieldBase.render>
+      </Form.field_base>
     </div>
     """
   end

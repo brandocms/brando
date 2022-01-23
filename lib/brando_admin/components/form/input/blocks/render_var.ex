@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Modal
 
@@ -200,7 +199,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <Input.rich_text form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "image" -> %>
-          <FieldBase.render
+          <Form.field_base
             form={@var}
             field={:value_id}
             label={@label}
@@ -224,7 +223,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <% end %>
               <.image_modal form={@var} image={@image} myself={@myself} />
             </div>
-          </FieldBase.render>
+          </Form.field_base>
       <% end %>
     </div>
     """

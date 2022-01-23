@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.FieldBase
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Content.List.Row
 
@@ -100,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def render(assigns) do
     ~H"""
     <div>
-      <FieldBase.render
+      <Form.field_base
         form={@form}
         field={@field}
         label={@label}
@@ -172,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <% end %>
           <% end %>
         </.live_component>
-      </FieldBase.render>
+      </Form.field_base>
     </div>
     """
   end
