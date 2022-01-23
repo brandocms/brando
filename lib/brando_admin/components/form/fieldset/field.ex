@@ -16,29 +16,11 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   # data placeholder, :string
 
   def render(assigns) do
-    translations =
-      case assigns.input.__struct__ do
-        Brando.Blueprint.Form.Subform ->
-          get_in(assigns.translations, [:fields, assigns.input.field]) || []
-
-        Brando.Blueprint.Form.Input ->
-          get_in(assigns.translations, [:fields, assigns.input.name]) || []
-      end
-
-    label = Keyword.get(translations, :label)
-    placeholder = Keyword.get(translations, :placeholder)
-
-    instructions =
-      case Keyword.get(translations, :instructions) do
-        nil -> nil
-        val -> raw(val)
-      end
-
     assigns =
       assigns
-      |> assign(:label, label)
-      |> assign(:instructions, instructions)
-      |> assign(:placeholder, placeholder)
+      |> assign(:label, nil)
+      |> assign(:instructions, nil)
+      |> assign(:placeholder, nil)
 
     ~H"""
     <%= if @input.__struct__ == Brando.Blueprint.Form.Subform do %>
