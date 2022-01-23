@@ -340,4 +340,18 @@ defmodule Brando.Pages.Page do
       """
     end
   end
+
+  factory %{
+    uri: "a-key",
+    language: "en",
+    title: "Page Title",
+    html: nil,
+    template: "default.html",
+    data: nil,
+    vars: [],
+    status: :published,
+    creator: nil,
+    parent_id: nil,
+    meta_image: nil
+  }
 end

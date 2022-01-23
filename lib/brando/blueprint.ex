@@ -160,12 +160,14 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
     Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false)
     Module.register_attribute(__CALLER__.module, :allow_mark_as_deleted, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :factory, accumulate: false)
 
     quote location: :keep do
       @data_layer :database
       @allow_mark_as_deleted false
       @primary_key {:id, :id, autogenerate: true}
       @translations %{}
+      @factory %{}
 
       if String.downcase(@domain) == String.downcase(@plural) do
         @table_name "#{@plural}"
@@ -441,6 +443,12 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro factory(map) do
+    quote do
+      @factory unquote(map)
+    end
+  end
+
   defmacro primary_key(:uuid) do
     quote do
       @primary_key {:id, :binary_id, autogenerate: true}
@@ -709,6 +717,10 @@ defmodule Brando.Blueprint do
 
       def __allow_mark_as_deleted__ do
         @allow_mark_as_deleted
+      end
+
+      def __factory__(attrs) do
+        Map.merge(@factory, attrs)
       end
 
       if @data_layer == :embedded do

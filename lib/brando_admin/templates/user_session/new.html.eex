@@ -18,28 +18,29 @@
       </div>
       <div class="login-form">
         <%= form_for @conn, Brando.helpers().admin_user_session_path(@conn, :create), [as: :user], fn f -> %>
+
+          <div class="title">
+            <%= Brando.config(:app_name) %>
+          </div>
+
           <%= if @error_message do %>
             <div class="alert alert-danger">
               <p><%= @error_message %></p>
             </div>
           <% end %>
 
-          <div class="title">
-            <%= Brando.config(:app_name) %>
-          </div>
-
           <div class="field-wrapper">
             <div class="label-wrapper">
               <%= label f, :email, gettext("Email"), class: "control-label" %>
             </div>
-            <%= email_input f, :email, required: true, class: "text" %>
+            <%= email_input f, :email, class: "text", data_testid: "email" %>
           </div>
 
           <div class="field-wrapper">
             <div class="label-wrapper">
               <%= label f, :password, gettext("Password"), class: "control-label" %>
             </div>
-            <%= password_input f, :password, required: true, class: "text" %>
+            <%= password_input f, :password, class: "text", data_testid: "password" %>
           </div>
 
           <div class="field-wrapper">
@@ -49,7 +50,7 @@
             </div>
           </div>
           <div>
-            <%= submit "Log in", class: "primary" %>
+            <%= submit "Log in", class: "primary", data_testid: "login-button" %>
           </div>
         <% end %>
       </div>

@@ -147,7 +147,7 @@ defmodule Brando.Blueprint.Form do
           Example:
 
               form do
-                redirect_on_save "/admin/dashboard"
+                redirect_on_save "/admin"
               end
           """
       end

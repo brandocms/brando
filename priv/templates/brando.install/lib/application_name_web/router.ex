@@ -7,6 +7,8 @@ defmodule <%= application_module %>Web.Router do
   import Plug.BasicAuth
   import BrandoAdmin.UserAuth
 
+  @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -35,6 +37,10 @@ defmodule <%= application_module %>Web.Router do
 
   pipeline :basic_httpauth do
     plug :basic_auth, username: "admin", password: "<%= Brando.Utils.random_string(10) %>"
+  end
+
+  if @sql_sandbox do
+    forward "/__e2e", Brando.Plug.E2ETest
   end
 
   scope "/__dashboard" do

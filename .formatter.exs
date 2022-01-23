@@ -37,6 +37,7 @@ locals_without_parens = [
   # blueprints
   application: 1,
   domain: 1,
+  factory: 1,
   schema: 1,
   singular: 1,
   plural: 1,

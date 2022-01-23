@@ -26,19 +26,28 @@ defmodule Mix.Tasks.Brando.Gen.E2e do
 
     files = [
       # E2E w/CYPRESS
-      {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
-      {:eex, "config/e2e.exs", "config/e2e.exs"},
-      {:eex, "test/e2e/test_helper.exs", "test/e2e/test_helper.exs"},
-      {:copy, "e2e/cypress.json", "e2e/cypress.json"},
-      {:copy, "e2e/package.json", "e2e/package.json"},
-      {:copy, "e2e/cypress/fixtures/avatar.jpg", "e2e/cypress/fixtures/avatar.jpg"},
-      {:copy, "e2e/cypress/support/index.js", "e2e/cypress/support/index.js"},
-      {:copy, "e2e/cypress/support/commands.js", "e2e/cypress/support/commands.js"},
-      {:copy, "e2e/cypress/integration/Brando/Brando.spec.js",
+      {:eex, "test_helper.exs", "test/e2e/test_helper.exs"},
+      {:copy, "cypress.json", "e2e/cypress.json"},
+      {:copy, "package.json", "e2e/package.json"},
+      {:copy, "cypress/fixtures/avatar.jpg", "e2e/cypress/fixtures/avatar.jpg"},
+      {:copy, "cypress/support/index.js", "e2e/cypress/support/index.js"},
+      {:copy, "cypress/support/commands.js", "e2e/cypress/support/commands.js"},
+      {:copy, "cypress/integration/Brando/Brando.spec.js",
        "e2e/cypress/integration/Brando/Brando.spec.js"}
     ]
 
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.e2e", "", binding, files)
+
+    Mix.shell().info("""
+    Add to your router:
+
+    @sql_sandbox Application.get_env(:<%= Atom.to_string(app) %>, :sql_sandbox) || false
+
+    if @sql_sandbox do
+      forward "/__e2e", Brando.Plug.E2ETest
+    end
+
+    """)
   end
 
   defp apps do

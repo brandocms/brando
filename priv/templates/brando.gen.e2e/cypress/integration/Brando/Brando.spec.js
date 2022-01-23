@@ -1,0 +1,1 @@
+import '../../../../assets/backend/node_modules/@brandocms/brandojs/e2e/specs/Brando.spec.js'

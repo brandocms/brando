@@ -47,7 +47,8 @@ defmodule Brando.FactoryMixin do
           vars: [],
           status: :published,
           creator: build(:user),
-          parent_id: nil
+          parent_id: nil,
+          meta_image: nil
         }
       end
 

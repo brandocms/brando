@@ -171,4 +171,28 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## catch all for non casted relations
   def run_cast_relation(_, changeset, _user), do: changeset
+
+  def load_relations(entry) do
+    relations = get_all_relations(entry.__struct__)
+    Brando.repo().preload(entry, relations)
+  end
+
+  def get_all_relations(schema) do
+    image_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :image))
+      |> Enum.map(& &1.name)
+
+    gallery_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :gallery))
+      |> Enum.map(&[{&1.name, [{:gallery_images, :image}]}])
+
+    rel_preloads =
+      schema.__relations__
+      |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
+      |> Enum.map(& &1.name)
+
+    Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads)
+  end
 end

@@ -161,4 +161,13 @@ defmodule Brando.Users.User do
       end
     end
   end
+
+  factory %{
+    name: "James Williamson",
+    email: "james@thestooges.com",
+    password: Bcrypt.hash_pwd_salt("admin"),
+    avatar: nil,
+    role: :superuser,
+    language: "en"
+  }
 end

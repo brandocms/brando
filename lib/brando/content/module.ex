@@ -127,4 +127,39 @@ defmodule Brando.Content.Module do
       translate :plural, t("modules")
     end
   end
+
+  factory %{
+    class: "header middle",
+    code: """
+    <article data-v="text center" data-moonwalk-section>
+      <div class="inner" data-moonwalk>
+        <div class="text">
+          {% ref refs.H2 %}
+        </div>
+      </div>
+    </article>
+    """,
+    deleted_at: nil,
+    help_text: "Help Text",
+    name: "Heading",
+    namespace: "general",
+    refs: [
+      %{
+        "data" => %{
+          "data" => %{
+            "class" => nil,
+            "id" => nil,
+            "level" => 2,
+            "text" => "Heading here"
+          },
+          "type" => "header"
+        },
+        "description" => "A heading",
+        "name" => "H2"
+      }
+    ],
+    vars: [],
+    wrapper: false,
+    uid: "abcdef"
+  }
 end

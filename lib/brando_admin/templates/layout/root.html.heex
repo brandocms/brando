@@ -19,7 +19,7 @@
       <script type="module" src="http://localhost:3333/src/main.js"></script>
     <% end %>
   </head>
-  <body id="app">
+  <body id="app" data-env={Brando.env()}>
     <div class="fader" id="fader">
       <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
       <div class="loading-container"></div>
