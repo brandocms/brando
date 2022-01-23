@@ -17,8 +17,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop placeholder, :string
 
   def update(assigns, socket) do
-    require Logger
-
     socket =
       socket
       |> assign(assigns)
