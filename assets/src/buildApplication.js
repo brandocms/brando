@@ -123,9 +123,11 @@ export default (hooks, enableDebug = true) => {
         NProgress.start()
 
         if ((detail.kind === 'initial' || detail.kind === 'redirect') && !app.reconnected) {
-          const $main = Dom.find('main .content')
-          if ($main) {
-            gsap.to($main, { opacity: 0 })
+          if (!PREFERS_REDUCED_MOTION) {
+            const $main = Dom.find('main .content')
+            if ($main) {
+              gsap.to($main, { opacity: 0 })
+            }
           }
         }
       })

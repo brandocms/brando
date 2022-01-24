@@ -168,6 +168,7 @@ defmodule Brando.Users.User do
     password: Bcrypt.hash_pwd_salt("admin"),
     avatar: nil,
     role: :superuser,
-    language: "en"
+    language: "en",
+    config: %{prefers_reduced_motion: true}
   }
 end

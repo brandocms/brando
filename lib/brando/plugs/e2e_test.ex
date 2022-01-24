@@ -45,11 +45,13 @@ defmodule Brando.Plug.E2ETest do
     # like this allows you to call your factory via your test API easily.
     with {:ok, schema_binary} <- Map.fetch(conn.body_params, "schema"),
          {:ok, attrs} <- Map.fetch(conn.body_params, "attributes"),
-         creator_id <- Map.get(conn.body_params, "creator_id") do
+         creator_id <- Map.get(conn.body_params, "creator_id"),
+         {:ok, fields} <- Map.fetch(conn.body_params, "fields") do
       schema = Module.concat([schema_binary])
       context = schema.__modules__().context
       singular = schema.__naming__().singular
       atom_attrs = Enum.map(attrs, fn {k, v} -> {String.to_atom(k), v} end) |> Enum.into(%{})
+      atom_fields = Enum.map(fields, &String.to_atom/1) ++ [:id]
 
       # merge the attrs into our factory data
       final_attrs = schema.__factory__(atom_attrs)
@@ -62,8 +64,8 @@ defmodule Brando.Plug.E2ETest do
         end
 
       {:ok, entry} = apply(context, :"create_#{singular}", [final_attrs, creator])
-      loaded_entry = Brando.Blueprint.Relations.load_relations(entry)
-      send_resp(conn, 200, Jason.encode!(loaded_entry))
+      partial_entry = Map.take(entry, atom_fields)
+      send_resp(conn, 200, Jason.encode!(partial_entry))
     else
       _ -> send_resp(conn, 401, "schema or attributes missing")
     end

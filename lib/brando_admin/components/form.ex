@@ -1260,6 +1260,7 @@ defmodule BrandoAdmin.Components.Form do
       disabled={@processing}
       data-processing={@processing}
       data-form-id={@form_id}
+      data-testid="submit"
       class={@class}
       phx-hook="Brando.Submit">
       <%= if @processing do %>

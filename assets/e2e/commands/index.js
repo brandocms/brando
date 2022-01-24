@@ -6,12 +6,13 @@ Cypress.Commands.add('checkindb', () => {
   cy.request('POST', '/__e2e/db/checkin').as('checkinDb')
 })
 
-Cypress.Commands.add('factorydb', (schema, attrs, currentUser) => {
+Cypress.Commands.add('factorydb', (schema, attrs, fields, creator) => {
   cy.log(`Creating a ${schema} via fullstack factory`)
   cy.request('POST', '/__e2e/db/factory', {
     schema: schema,
     attributes: attrs,
-    creator_id: currentUser
+    fields,
+    creator_id: creator
   }).as('factoryDb')
 })
 
@@ -20,6 +21,10 @@ Cypress.Commands.add('defaultlanguage', () => {
   cy.request('POST', '/__e2e/db/default_language').then(({ body }) => body).as('defaultLanguage')
 })
 
+Cypress.Commands.add('waitForLV', () => {
+  cy.log(`Waiting for LV connection`)
+  cy.get('[data-phx-main="true"].phx-connected')
+})
 
 Cypress.Commands.add('login', (email, password) => {
   cy.request('/admin/login')
@@ -57,7 +62,7 @@ Cypress.Commands.add('loginByCSRF', (csrfToken, email, password) => {
 
 Cypress.Commands.add('loginUser', () => {
   cy
-    .factorydb('Brando.Users.User', { name: 'Lou Reed', avatar: null, email: 'lou@reed.com' })
+    .factorydb('Brando.Users.User', { name: 'Lou Reed', avatar: null, email: 'lou@reed.com' }, ['name', 'email'])
     .as('currentUser')
     .then(response => {
       cy.login(response.body.email, 'admin')

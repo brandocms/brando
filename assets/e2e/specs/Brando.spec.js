@@ -80,49 +80,46 @@ describe.skip('Auth', () => {
 describe('Pages', () => {
   beforeEach(() => {
     cy.loginUser()
+    console.log(window.liveSocket)
   })
 
   it.only('can edit page', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        console.log('@currentUser', response)
-        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language }, response.body.id)
-        cy.factorydb('Brando.Content.Module', {})
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language }, [], response.body.id).then(page => {
+          cy.factorydb('Brando.Content.Module', {}, [], response.body.id)
 
-        cy.visit('/admin/pages')
-        cy.contains('Pages and sections')
+          cy.visit('/admin/pages')
+          cy.waitForLV()
+          cy.contains('Pages & sections')
 
-        cy.contains('Page title')
-        cy.contains('page-title')
+          cy.contains('Page title')
+          cy.contains('page-title')
 
-        cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]')
-          .click()
-        cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-content"]')
-          .contains('Edit page')
-          .click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-button"]`).click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-content"]`)
+            .contains('Edit page')
+            .click()
 
-        cy.location('pathname').should('match', /admin\/pages\/edit\/(\d+)/)
-        cy.contains('Edit page')
+          cy.location('pathname').should('match', /admin\/pages\/update\/(\d+)/)
+          cy.contains('Edit page')
 
-        cy.get('#page_uri_').type('-edit')
-        cy.get('#page_title_').type(' edit')
+          cy.get('#page_uri').type('-edit')
+          cy.get('#page_title').type(' edit')
 
-        cy.get('[data-testid="submit"]').click()
+          cy.get('#page-data-field-wrapper .block-plus').click()
+          
+          cy.get('#page-data-blocks-module-picker-body .module-button').contains('Heading').click()
+          cy.get('.header-block textarea').clear().click().type('This is a heading')
 
-        cy.contains('Please correct fields with errors')
+          cy.get('[data-testid="submit"]').click()
 
-        cy.get('.vex-dialog-button-primary').click()
-
-        cy.get('.villain-editor-plus-inactive > a').click()
-        cy.get('.villain-editor-plus-available-module').last().click()
-        cy.get('.villain-header-input').clear().click().type('This is a heading')
-
-        cy.get('[data-testid="submit"]').click()
-
-        cy.location('pathname').should('eq', '/admin/pages')
-        cy.contains('Page updated')
-        cy.contains('Page title edit')
-        cy.contains('page-title-edit')
+          cy.location('pathname').should('eq', '/admin/pages')
+          cy.contains(`updated [Page#${page.body.id}]`)
+          cy.contains('Page title edit')
+          cy.contains('page-title-edit')
+        })
+        
       })
     })
   })
