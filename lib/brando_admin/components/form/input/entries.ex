@@ -76,6 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %Brando.Content.Identifier{} = identifier -> identifier
         %Changeset{action: :replace} -> nil
         %Changeset{} = changeset -> Changeset.apply_changes(changeset)
+        _ -> nil
       end)
 
     Enum.reject(processed_identifiers, &(&1 == nil))
