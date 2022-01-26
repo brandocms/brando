@@ -80,10 +80,9 @@ describe.skip('Auth', () => {
 describe('Pages', () => {
   beforeEach(() => {
     cy.loginUser()
-    console.log(window.liveSocket)
   })
 
-  it.only('can edit page', () => {
+  it('can edit page', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
         cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language }, [], response.body.id).then(page => {
@@ -126,9 +125,9 @@ describe('Pages', () => {
 
   it('can list pages', () => {
     cy.get('@currentUser').then(response => {
-      cy.factorydb('page', { title: 'Page title', uri: 'page-title' })
+      cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', status: 'published' }, [], response.body.id)
       cy.visit('/admin/pages')
-      cy.contains('Pages and sections')
+      cy.contains('Pages & sections')
 
       cy.contains('Page title')
       cy.contains('page-title')
@@ -136,106 +135,143 @@ describe('Pages', () => {
   })
 
   it('can delete page', () => {
-    cy.defaultlanguage().then(language => {
-      cy.factorydb('page', { title: 'Page title', uri: 'page-title', language })
-    })
-
     cy.get('@currentUser').then(response => {
-      cy.visit('/admin/pages')
-      cy.contains('Pages and sections')
+      cy.defaultlanguage().then(language => {
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language: 'en', status: 'published' }, [], response.body.id).then(page => {
+          cy.visit('/admin/pages')
+          cy.waitForLV()
+          cy.contains('Pages & sections')
 
-      cy.contains('Page title')
-      cy.contains('page-title')
+          cy.contains('Page title')
+          cy.contains('page-title')
 
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]')
-        .click()
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-content"]')
-        .contains('Delete page')
-        .click()
-      cy.contains('Are you sure you want to delete this page?')
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-button"]`).click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-content"]`)
+            .contains('Delete page')
+            .click()
+          cy.contains('Are you sure')
 
-      cy.contains('OK').click()
-      cy.contains('page-title').should('not.exist')
+          cy.contains('OK').click()
+          cy.contains('page-title').should('not.exist')
+        })
+      })
     })
   })
 
-  it('can recreate page', () => {
-    cy.defaultlanguage().then(language => {
-      cy.factorydb('page', { title: 'Page title', uri: 'page-title', language })
-    })
+  it('can undelete page', () => {
     cy.get('@currentUser').then(response => {
-      cy.visit('/admin/pages')
-      cy.contains('Pages and sections')
+      cy.defaultlanguage().then(language => {
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language: 'en', status: 'published' }, [], response.body.id).then(page => {
+          cy.visit('/admin/pages')
+          cy.waitForLV()
+          cy.contains('Pages & sections')
 
-      cy.contains('Page title')
-      cy.contains('page-title')
+          cy.contains('Page title')
+          cy.contains('page-title')
 
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]').click()
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]')
-        .next()
-        .contains('Rerender page')
-        .click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-button"]`).click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-content"]`)
+            .contains('Delete page')
+            .click()
+          cy.contains('Are you sure')
 
-      cy.contains('Page rerendered')
+          cy.contains('OK').click()
+          cy.contains('page-title').should('not.exist')
+          
+          cy.get('.list-tools button.status').contains('Deleted').click()
+
+          cy.contains('Page title')
+
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-button"]`).click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-content"]`)
+            .contains('Undelete entry')
+            .click()
+          
+          cy.contains('page-title').should('not.exist')
+
+          cy.get('.list-tools button.status').contains('Published').click()
+          cy.contains('Page title')
+          cy.contains('page-title')
+        })
+      })
     })
   })
 
   it('can duplicate page', () => {
-    cy.defaultlanguage().then(language => {
-      cy.factorydb('page', { title: 'Page title', uri: 'page-title', language, data: [{ 'type': 'text', 'data': { 'text': 'test', 'type': 'paragraph' } }] })
-    })
-
     cy.get('@currentUser').then(response => {
-      cy.visit('/admin/pages')
-      cy.contains('Pages and sections')
+      cy.defaultlanguage().then(language => {
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language: 'en', status: 'published' }, [], response.body.id).then(page => {
+          cy.visit('/admin/pages')
+          cy.waitForLV()
+          cy.contains('Pages & sections')
 
-      cy.contains('Page title')
-      cy.contains('page-title')
+          cy.contains('Page title')
+          cy.contains('page-title')
 
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]').click()
-      cy.get('[data-testid="contentlist-row"][data-testidx="1"] [data-testid="circle-dropdown-button"]')
-        .next()
-        .contains('Duplicate page')
-        .click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-button"]`).click()
+          cy.get(`#list-row-${page.body.id} [data-testid="circle-dropdown-content"]`)
+            .contains('Duplicate page')
+            .click()
 
-      cy.contains('Page duplicated')
-      cy.contains('Page title_dupl')
-      cy.contains('page-title_dupl')
+          cy.contains('page-title_dupl').should('not.exist')
+
+          cy.get('.list-tools button.status').contains('Draft').click()
+          cy.contains('Page title_dupl')
+          cy.contains('page-title_dupl')
+        })
+      })
     })
   })
 
   it('can create page', () => {
-    cy.factorydb('module', {})
     cy.get('@currentUser').then(response => {
-      cy.visit('/admin/pages')
+      cy.defaultlanguage().then(language => {
+        cy.factorydb('Brando.Content.Module', {}, [], response.body.id)
 
-      cy.get('.dropdown > .button').click()
-      cy.contains('New page').click()
+        cy.visit('/admin/pages')
+        cy.waitForLV()
+        cy.contains('Pages & sections')
 
-      cy.get('#page_uri_').type('my-uri')
-      cy.get('#page_title_').type('My title')
+        cy.contains('Page title').should('not.exist')
+        cy.contains('page-title').should('not.exist')
 
-      cy.get('.villain-editor-plus-inactive > a').click()
-      cy.get('.villain-editor-plus-available-module').last().click()
-      cy.get('.villain-header-input').clear().click().type('This is a heading')
+        cy.get('a.primary').contains('Create page').click()
 
-      cy.get('[data-testid="meta-button"]').click()
-      cy.get('#page_metaTitle_').type('A META title')
-      cy.get('#page_metaDescription_').type('A META description')
-      cy.get('[data-testid="meta-drawer"] .rev-button').click()
-      cy.get('[data-testid="submit"]').click()
+        cy.location('pathname').should('match', /admin\/pages\/create/)
+        cy.contains('Create page')
 
-      cy.contains('Page created')
-      cy.location('pathname').should('eq', '/admin/pages')
-      cy.contains('my-uri')
-      cy.contains('My title')
+        cy.get('#page-status-field-base').contains('Published').click()
+
+        cy.get('#page_title').type('A brand new page')
+        cy.get('#page_uri').type('a-brand-new-page')
+        
+        cy.get('#page-language-field-base .button-edit').click()        
+        cy.get('#select-page-language-modal-body [data-label="English"]').click()
+
+        cy.get('.form-tab-customs [phx-value-name="Advanced"]').click()
+        cy.get('#page-template-field-base .button-edit').click()      
+        cy.get('#select-page-template-modal-body [data-label="default.html"]').click()
+        cy.get('.form-tab-customs [phx-value-name="Content"]').click()
+
+        cy.get('#page-data-field-wrapper .block-plus').click()
+
+        cy.get('#page-data-blocks-module-picker-body .module-button').contains('Heading').click()
+        cy.get('.header-block textarea').clear().click().type('This is a heading')
+
+        cy.get('[data-testid="submit"]').click()
+
+        cy.location('pathname').should('eq', '/admin/pages')
+        cy.contains(`created [Page#`)
+        cy.contains('A brand new page')
+        cy.contains('a-brand-new-page')
+      })
     })
   })
 
   it('can schedule future publishing', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { title: 'Page title', uri: 'page-title', language })
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language })
         cy.factorydb('module', {})
 
         cy.visit('/admin/pages/new')
@@ -275,7 +311,7 @@ describe('Pages', () => {
   it('can schedule past publishAt', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { title: 'Page title', uri: 'page-title', language })
+        cy.factorydb('Brando.Pages.Page', { title: 'Page title', uri: 'page-title', language })
         cy.factorydb('module', {})
 
         cy.visit('/admin/pages/new')
@@ -310,7 +346,7 @@ describe.skip('Fragments', () => {
   it('can delete fragment', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
+        cy.factorydb('Brando.Pages.Page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
           cy.factorydb('fragment', { language, title: 'A fine fragment', parent_key: 'about', page_id: resp.body.id, key: 'my-pf-key', creator_id: response.body.id, creator: null }).then(r => {
             cy.visit('/admin/pages')
             cy.contains('Page Title')
@@ -332,7 +368,7 @@ describe.skip('Fragments', () => {
   it('can recreate fragment', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
+        cy.factorydb('Brando.Pages.Page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
           cy.factorydb('fragment', { language, title: 'A fine fragment', parent_key: 'about', page_id: resp.body.id, key: 'my-pf-key', creator_id: response.body.id, creator: null }).then(r => {
             cy.visit('/admin/pages')
             cy.contains('Page Title')
@@ -353,7 +389,7 @@ describe.skip('Fragments', () => {
   it('can duplicate fragment', () => {
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
+        cy.factorydb('Brando.Pages.Page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
           cy.factorydb('fragment', { language, title: 'A fine fragment', parent_key: 'about', page_id: resp.body.id, key: 'my-pf-key', creator_id: response.body.id, creator: null, data: [] }).then(r => {
             cy.visit('/admin/pages')
             cy.contains('Page Title')
@@ -376,7 +412,7 @@ describe.skip('Fragments', () => {
     cy.factorydb('module', {})
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
+        cy.factorydb('Brando.Pages.Page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
           cy.factorydb('fragment', { language, title: 'A fine fragment', parent_key: 'about', page_id: resp.body.id, key: 'my-pf-key', creator_id: response.body.id, creator: null, data: [] }).then(r => {
             cy.visit('/admin/pages')
             cy.contains('Page Title')
@@ -411,7 +447,7 @@ describe.skip('Fragments', () => {
     cy.factorydb('module', {})
     cy.get('@currentUser').then(response => {
       cy.defaultlanguage().then(language => {
-        cy.factorydb('page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
+        cy.factorydb('Brando.Pages.Page', { uri: 'about', creator_id: response.body.id, creator: null, language, sequence: 99 }).then(resp => {
           cy.factorydb('fragment', { language, title: 'A fine fragment', parent_key: 'about', page_id: resp.body.id, key: 'my-pf-key', creator_id: response.body.id, creator: null, data: [] }).then(r => {
             cy.visit('/admin/pages')
             cy.contains('Page Title')
