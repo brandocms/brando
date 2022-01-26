@@ -169,6 +169,6 @@ defmodule Brando.Users.User do
     avatar: nil,
     role: :superuser,
     language: "en",
-    config: %{prefers_reduced_motion: true}
+    config: %{prefers_reduced_motion: true, content_language: "en"}
   }
 end
