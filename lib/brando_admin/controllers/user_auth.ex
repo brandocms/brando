@@ -31,8 +31,14 @@ defmodule BrandoAdmin.UserAuth do
     |> renew_session()
     |> put_session(:user_token, token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> write_last_login(user)
     |> maybe_write_remember_me_cookie(token, params)
     |> redirect(to: user_return_to || signed_in_path(conn))
+  end
+
+  defp write_last_login(conn, user) do
+    Brando.Users.set_last_login(user)
+    conn
   end
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
