@@ -92,6 +92,7 @@ defmodule Brando.Query do
 
       {:ok, results} = list_posts(%{status: :published, cache: true})
       {:ok, results} = list_posts(%{status: :published, cache: {:ttl, :timer.minutes(15)}})
+
   """
 
   import Ecto.Query
