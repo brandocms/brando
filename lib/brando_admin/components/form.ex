@@ -211,6 +211,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp check_live_preview(schema) do
+    Code.ensure_compiled!(Brando.live_preview())
+
     function_exported?(Brando.live_preview(), :__info__, 1) &&
       {:render, 3} in Brando.live_preview().__info__(:functions) &&
       Brando.live_preview().has_preview_target(schema)
