@@ -95,6 +95,8 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert header to HTML
       """
+      def header(%{text: nil}, _), do: ""
+
       def header(%{text: text, level: level, anchor: anchor}, _) do
         h = header(%{text: text, level: level}, [])
         ~s(<a name="#{anchor}"></a>#{h})
