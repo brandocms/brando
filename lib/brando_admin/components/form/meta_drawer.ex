@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id={@id} title={"Meta properties"} close={@close}>
+    <Content.drawer id={@id} title={gettext("Meta properties")} close={@close}>
       <:info>
         <p>
           <%= gettext ~s(
