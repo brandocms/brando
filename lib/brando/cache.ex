@@ -4,7 +4,7 @@ defmodule Brando.Cache do
   """
   @cache_module Application.get_env(:brando, :cache_module, Cachex)
 
-  @spec get(atom | binary) :: any
+  @spec get(any) :: any
   def get(key) do
     case get_from_cache(key) do
       {:ok, val} -> val
@@ -12,7 +12,7 @@ defmodule Brando.Cache do
     end
   end
 
-  @spec get(atom, atom) :: any
+  @spec get(any, atom) :: any
   def get(key, sub_key) do
     case get_from_cache(key) do
       {:ok, val} -> Map.get(val, sub_key, nil)
@@ -28,6 +28,10 @@ defmodule Brando.Cache do
 
   def put(key, val, ttl) do
     @cache_module.put(:cache, key, val, ttl: ttl)
+  end
+
+  def del(key) do
+    @cache_module.del(:cache, key)
   end
 
   defp get_from_cache(key) do
