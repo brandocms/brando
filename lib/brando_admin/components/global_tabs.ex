@@ -49,8 +49,9 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     ~H"""
     <.form
       for={@changeset}
-      phx-change={JS.push("validate", target: @target)}
-      phx-submit={JS.push("submit", target: @target)}
+      phx-target={@target}
+      phx-change="validate"
+      phx-submit="submit"
       let={f}>
       <%= hidden_input f, :id %>
       <%= hidden_input f, :language %>
