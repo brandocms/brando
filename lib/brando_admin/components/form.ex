@@ -592,7 +592,7 @@ defmodule BrandoAdmin.Components.Form do
         max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
 
         allow_upload(updated_socket, img_field.name,
-          accept: :any,
+          accept: ~w(.jpg .jpeg .png .gif .webp),
           max_file_size: max_size,
           auto_upload: true,
           progress: &__MODULE__.handle_image_progress/3
@@ -608,7 +608,7 @@ defmodule BrandoAdmin.Components.Form do
           # TODO: Read max_entries from gallery config!
           max_entries: max_entries,
           max_file_size: max_size,
-          accept: :any,
+          accept: ~w(.jpg .jpeg .png .gif .webp),
           auto_upload: true,
           progress: &BrandoAdmin.Components.Form.Input.Gallery.handle_gallery_progress/3
         )
