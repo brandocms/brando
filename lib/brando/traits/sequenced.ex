@@ -55,9 +55,14 @@ defmodule Brando.Trait.Sequenced do
     Datasource.update_datasource(module)
   end
 
-  def sequence(module, %{"ids" => keys}) do
+  def sequence(module, %{"ids" => keys} = params) do
+    offset =
+      params
+      |> Map.get("sortable_offset", "0")
+      |> String.to_integer()
+
     # standard list of ids
-    vals = Range.new(0, length(keys) - 1) |> Enum.to_list()
+    vals = Range.new(0 + offset, offset + length(keys) - 1) |> Enum.to_list()
     table = module.__schema__(:source)
 
     q =

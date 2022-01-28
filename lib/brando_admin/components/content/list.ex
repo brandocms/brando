@@ -522,6 +522,7 @@ defmodule BrandoAdmin.Components.Content.List do
       phx-hook="Brando.Sortable"
       data-sortable-id={"content_listing|#{@listing_name}"}
       data-sortable-handle=".sequence-handle"
+      data-sortable-offset={@pagination_meta.offset}
       data-sortable-selector=".list-row">
       <%= if Enum.empty?(@entries) do %>
         <%= render_slot(@empty) %>
