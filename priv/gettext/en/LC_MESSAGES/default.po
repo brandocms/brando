@@ -102,7 +102,7 @@ msgid "Edit profile"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/templates/user_session/new.html.eex:33
+#: lib/brando_admin/templates/user_session/new.html.eex:34
 msgid "Email"
 msgstr ""
 
@@ -112,7 +112,7 @@ msgid "Identity"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/templates/user_session/new.html.eex:48
+#: lib/brando_admin/templates/user_session/new.html.eex:49
 msgid "Keep me logged in for 60 days"
 msgstr ""
 
@@ -139,7 +139,7 @@ msgid "Pages & Sections"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/templates/user_session/new.html.eex:40
+#: lib/brando_admin/templates/user_session/new.html.eex:41
 msgid "Password"
 msgstr ""
 
@@ -210,7 +210,7 @@ msgid "Class"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:510
+#: lib/brando_admin/components/content/list.ex:550
 msgid "Clear selection"
 msgstr ""
 
@@ -252,7 +252,7 @@ msgid "Deactivated"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:576
+#: lib/brando_admin/components/content/list.ex:616
 #: lib/brando_admin/components/content/list/row.ex:432
 msgid "Deleted"
 msgstr ""
@@ -263,13 +263,13 @@ msgid "Developers have been notified about this error, but if you can provide ex
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:572
+#: lib/brando_admin/components/content/list.ex:612
 #: lib/brando_admin/components/content/list/row.ex:428
 msgid "Disabled"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:573
+#: lib/brando_admin/components/content/list.ex:613
 #: lib/brando_admin/components/content/list/row.ex:429
 #: lib/brando_admin/components/form/input.ex:433
 msgid "Draft"
@@ -291,18 +291,18 @@ msgid "Edit page"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:874
+#: lib/brando_admin/components/form.ex:879
 #: lib/brando_admin/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:875
+#: lib/brando_admin/components/form.ex:880
 msgid "Error while saving form. Please correct marked fields and resubmit"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:449
+#: lib/brando_admin/components/content/list.ex:489
 msgid "Filter"
 msgstr ""
 
@@ -345,22 +345,22 @@ msgid "Pages & sections"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:574
+#: lib/brando_admin/components/content/list.ex:614
 #: lib/brando_admin/components/content/list/row.ex:430
 #: lib/brando_admin/components/form/input.ex:434
 msgid "Pending"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:575
+#: lib/brando_admin/components/content/list.ex:615
 #: lib/brando_admin/components/content/list/row.ex:431
 #: lib/brando_admin/components/form/input.ex:435
 msgid "Published"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:405
-#: lib/brando_admin/live/content/modules_update_live.ex:99
+#: lib/brando_admin/components/form.ex:409
+#: lib/brando_admin/live/content/modules_update_live.ex:103
 msgid "Save (⌘S)"
 msgstr ""
 
@@ -387,17 +387,17 @@ msgid "Title"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:514
+#: lib/brando_admin/components/content/list.ex:554
 msgid "With"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:366
+#: lib/brando_admin/components/content/list.ex:381
 msgid "entries"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:516
+#: lib/brando_admin/components/content/list.ex:556
 msgid "selected, perform action"
 msgstr ""
 
@@ -413,7 +413,7 @@ msgid "Advanced"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:491
+#: lib/brando_admin/components/form.ex:496
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:174
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:192
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:266
@@ -433,7 +433,7 @@ msgid "Caches cleared!"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:483
+#: lib/brando_admin/components/form.ex:488
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:170
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:188
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:102
@@ -646,7 +646,7 @@ msgid "Manage and clear publishing queue"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/live/content/modules_update_live.ex:468
+#: lib/brando_admin/live/content/modules_update_live.ex:472
 msgid "Module updated"
 msgstr ""
 
@@ -664,7 +664,7 @@ msgid "No options found"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/entries.ex:111
+#: lib/brando_admin/components/form/input/entries.ex:112
 msgid "No selected entries"
 msgstr ""
 
@@ -720,7 +720,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/select.ex:275
-#: lib/brando_admin/components/global_tabs.ex:67
+#: lib/brando_admin/components/global_tabs.ex:68
 msgid "Save"
 msgstr ""
 
@@ -730,27 +730,27 @@ msgid "Scheduled Publishing"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:321
+#: lib/brando_admin/components/form.ex:324
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:14
 #: lib/brando_admin/menu.ex:270
 msgid "Scheduled publishing"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form/input/entries.ex:154
+#: lib/brando_admin/components/form/input/entries.ex:155
 msgid "Select content type"
 msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/datasource_block.ex:205
 #: lib/brando_admin/components/form/input/blocks/datasource_block.ex:212
-#: lib/brando_admin/components/form/input/entries.ex:150
-#: lib/brando_admin/components/form/input/entries.ex:153
+#: lib/brando_admin/components/form/input/entries.ex:151
+#: lib/brando_admin/components/form/input/entries.ex:154
 msgid "Select entries"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:523
+#: lib/brando_admin/components/form.ex:528
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:169
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:282
 msgid "Select image"
@@ -800,7 +800,7 @@ msgid "or get started with a prefab'ed template"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:368
+#: lib/brando_admin/components/content/list.ex:383
 msgid "showing"
 msgstr ""
 
@@ -845,7 +845,7 @@ msgid "Purge inactive versions"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:313
+#: lib/brando_admin/components/form.ex:316
 msgid "Revisions"
 msgstr ""
 
@@ -870,7 +870,7 @@ msgid "You may also store a new version of the entry without activating it. This
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:330
+#: lib/brando_admin/components/content/list.ex:344
 msgid "Active filters"
 msgstr ""
 
@@ -900,22 +900,22 @@ msgid "No image associated with field"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:478
+#: lib/brando_admin/components/form.ex:483
 msgid "Reset image field"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:470
+#: lib/brando_admin/components/form.ex:475
 msgid "Select existing image"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:527
+#: lib/brando_admin/components/form.ex:532
 msgid "Select similarly typed image from library"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:462
+#: lib/brando_admin/components/form.ex:467
 msgid "Upload image"
 msgstr ""
 
@@ -940,8 +940,8 @@ msgstr ""
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/svg_block.ex:59
 #: lib/brando_admin/components/form/module_props.ex:214
-#: lib/brando_admin/live/content/modules_update_live.ex:47
-#: lib/brando_admin/live/content/modules_update_live.ex:74
+#: lib/brando_admin/live/content/modules_update_live.ex:51
+#: lib/brando_admin/live/content/modules_update_live.ex:78
 msgid "Code"
 msgstr ""
 
@@ -957,7 +957,7 @@ msgid "Create menu"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:487
+#: lib/brando_admin/components/form.ex:492
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:265
 #: lib/brando_admin/components/form/module_props.ex:232
 msgid "Credits"
@@ -1162,8 +1162,8 @@ msgid "Selection"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/content/list.ex:122
-#: lib/brando_admin/components/content/list.ex:127
+#: lib/brando_admin/components/content/list.ex:130
+#: lib/brando_admin/components/content/list.ex:135
 msgid "Sequence updated"
 msgstr ""
 
@@ -1240,7 +1240,7 @@ msgid "Wrapper"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:431
+#: lib/brando_admin/components/form.ex:436
 msgid "+ Drop here to upload"
 msgstr ""
 
@@ -1271,7 +1271,7 @@ msgid "Entry ID"
 msgstr ""
 
 #, elixir-format
-#: lib/brando_admin/components/form.ex:414
+#: lib/brando_admin/components/form.ex:419
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:234
 msgid "Image"
 msgstr ""
@@ -1319,7 +1319,7 @@ msgstr ""
 
 #, elixir-format
 #: lib/brando_admin/components/form/input/blocks/datasource_block.ex:214
-#: lib/brando_admin/components/form/input/entries.ex:163
+#: lib/brando_admin/components/form/input/entries.ex:164
 msgid "Available entries"
 msgstr ""
 
@@ -1365,7 +1365,7 @@ msgid "Edit captions"
 msgstr ""
 
 #, elixir-format, ex-autogen, fuzzy
-#: lib/brando_admin/components/global_tabs.ex:120
+#: lib/brando_admin/components/global_tabs.ex:121
 msgid "Global set updated"
 msgstr ""
 
@@ -1434,7 +1434,7 @@ msgid "Entry revisions"
 msgstr ""
 
 #, elixir-format, ex-autogen
-#: lib/brando_admin/components/form.ex:770
+#: lib/brando_admin/components/form.ex:775
 msgid "Notice"
 msgstr ""
 
@@ -1444,11 +1444,26 @@ msgid "Set a future publishing date for this entry. Leave blank for immediate pu
 msgstr ""
 
 #, elixir-format, ex-autogen
-#: lib/brando_admin/components/form.ex:773
+#: lib/brando_admin/components/form.ex:778
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr ""
 
 #, elixir-format, ex-autogen
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:40
 msgid "A list of upcoming publisher queue jobs."
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/content/list.ex:407
+msgid "All"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/form/meta_drawer.ex:15
+msgid "Meta properties"
+msgstr ""
+
+#, elixir-format, ex-autogen
+#: lib/brando_admin/components/content/list.ex:385
+msgid "Per page:"
 msgstr ""

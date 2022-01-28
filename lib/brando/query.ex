@@ -536,6 +536,7 @@ defmodule Brando.Query do
       {:select, select}, q -> with_select(q, select)
       {:order, order}, q -> with_order(q, order)
       {:offset, offset}, q -> offset(q, ^offset)
+      {:limit, 0}, q -> exclude(q, :limit)
       {:limit, limit}, q -> limit(q, ^limit)
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
@@ -778,6 +779,22 @@ defmodule Brando.Query do
   end
 
   # only build pagination_meta if offset & limit is set
+  def maybe_build_pagination_meta(query, %{paginate: true, limit: 0}) do
+    total_entries = get_total_entries(query)
+
+    %{
+      total_entries: total_entries,
+      total_pages: 1,
+      current_page: 1,
+      previous_page: 1,
+      next_page: 1,
+      offset: 0,
+      next_offset: 0,
+      previous_offset: 0,
+      page_size: 0
+    }
+  end
+
   def maybe_build_pagination_meta(query, %{paginate: true, limit: page_size} = list_opts) do
     total_entries = get_total_entries(query)
     total_pages = total_pages(total_entries, page_size)

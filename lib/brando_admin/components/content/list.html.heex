@@ -40,7 +40,8 @@
 
     <.pagination
       pagination_meta={@entries.pagination_meta}
-      change_page={JS.push("change_page", target: @myself)} />
+      change_page={JS.push("change_page", target: @myself)}
+      change_limit={JS.push("change_limit", target: @myself)} />
   </article>
 
   <.selected_rows

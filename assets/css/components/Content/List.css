@@ -49,6 +49,23 @@
       & + button {
         margin-left: 5px;
       }
+
+      &.limit-button {
+        border: none !important;
+        color: var(--brando-color-dark);
+        width: auto !important;
+        height: auto !important;
+        background-color: transparent !important;
+        margin-left: 0 !important;
+        
+        &:hover {
+          color: var(--brando-color-dark);
+        }
+
+        &.active {
+          text-decoration: underline;
+        }
+      }
     }
   }
 

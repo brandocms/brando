@@ -102,6 +102,14 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, push_query_params(socket, %{"page" => page_number + 1})}
   end
 
+  def handle_event(
+        "change_limit",
+        %{"limit" => limit},
+        socket
+      ) do
+    {:noreply, push_query_params(socket, %{"limit" => limit})}
+  end
+
   def handle_event("select_row", %{"id" => id}, socket) do
     {:noreply, select_row(socket, String.to_integer(id))}
   end
@@ -241,6 +249,12 @@ defmodule BrandoAdmin.Components.Content.List do
         offset = Map.get(list_opts, :limit, 25) * page_number
         Map.put(new_list_opts, :offset, offset)
 
+      {"limit", "0"}, new_list_opts ->
+        Map.put(new_list_opts, :limit, 0)
+
+      {"limit", limit}, new_list_opts ->
+        Map.put(new_list_opts, :limit, String.to_integer(limit))
+
       {"order", order}, new_list_opts when is_binary(order) ->
         Map.put(new_list_opts, :order, order)
 
@@ -357,6 +371,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:current_page, current_page)
       |> assign(:total_entries, total_entries)
       |> assign(:total_pages, total_pages)
+      |> assign(:page_size, page_size)
       |> assign(:showing_start, page_size * current_page - page_size + 1)
       |> assign(:showing_end, min(page_size * current_page, total_entries))
 
@@ -365,11 +380,36 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="pagination-entries">
         &rarr; <%= @total_entries %> <%= gettext("entries") %>
         <%= if @total_entries > 0 do %>
-        | <%= gettext("showing") %> <%= @showing_start %>-<%= @showing_end %>
+        | <%= gettext("showing") %> <%= @showing_start %>-<%= @showing_end == 0 && @total_entries || @showing_end %>
         <% end %>
+        — <%= gettext("Per page:") %>
+        <button
+          type="button"
+          class={render_classes(["limit-button", active: @page_size == 25])}
+          phx-click={@change_limit}
+          phx-value-limit={25}>
+          25
+        </button>
+        /
+        <button
+          type="button"
+          class={render_classes(["limit-button", active: @page_size == 50])}
+          phx-click={@change_limit}
+          phx-value-limit={50}>
+          50
+        </button>
+        /
+        <button
+          type="button"
+          class={render_classes(["limit-button", active: @page_size == 0])}
+          phx-click={@change_limit}
+          phx-value-limit={0}>
+          <%= gettext("All") %>
+        </button>
       </div>
       <%= for p <- 0..@total_pages - 1 do %>
         <button
+          type="button"
           class={render_classes([active: p + 1 == @current_page])}
           phx-click={@change_page}
           phx-value-page={p}>
