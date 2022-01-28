@@ -163,12 +163,10 @@ export default (hooks, enableDebug = true) => {
       })
 
       app.lobbyChannel.on('presence_state', state => {
-        console.log('presence_state', state)
         app.presence.storeLobbyPresences(state)
       })
 
       app.lobbyChannel.on('presence_diff', diff => {
-        console.log('presence_diff', diff)
         app.presence.storeLobbyPresencesDiff(diff)
       })
 
