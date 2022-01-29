@@ -17,6 +17,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
       {"0 0 * * *", MyApp.Worker.RefreshFrontpage}
     ]
   ```
+* Added `Brando.Plug.Media`
 
 
 ## 0.51.0

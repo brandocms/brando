@@ -31,11 +31,7 @@ defmodule <%= application_module %>Web.Endpoint do
     cache_control_for_vsn_requests:
       (Brando.env() == :prod && "public, max-age=31536000") || false
 
-  plug Plug.Static,
-    at: "/media",
-    from: Brando.config(:media_path),
-    cache_control_for_etags: "public, max-age=31536000",
-    cache_control_for_vsn_requests: "public, max-age=31536000"
+  plug Brando.Plug.Media, at: "/media"
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

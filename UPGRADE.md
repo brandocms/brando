@@ -1,5 +1,8 @@
 ## 0.52.0-dev
 
+* Switch out `plug Plug.Static` for `/media` in your Endpoint with
+  `plug Brando.Plug.Media, at: "/media"`
+
 * Switch your backend gettext module in `gettext.ex` from 
   `YourApp.Backend.Gettext` to `YourAppAdmin.Gettext`
 
