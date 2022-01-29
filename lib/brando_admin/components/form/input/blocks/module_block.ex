@@ -424,7 +424,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:noreply, socket}
   end
 
-  @regex_strips ~r/((?:{%(?:-)? for (\w+) in [a-zA-Z0-9_.?|"-]+ (?:-)?%})(?:.*?)(?:{%(?:-)? endfor (?:-)?%}))|({%(?:-)? assign .*? (?:-)?%})|(({%(?:-)? if .* (?:-)?%}(?:.*?){%(?:-)? endif (?:-)?%}))|(({%(?:-)? unless .* (?:-)?%}(?:.*?){%(?:-)? endunless (?:-)?%}))/s
+  @regex_strips ~r/((?:{%(?:-)? for (\w+) in [a-zA-Z0-9_.?|"-]+ (?:-)?%})(?:.*?)(?:{%(?:-)? endfor (?:-)?%}))|(<img.*?src="{{(?:-)? .*? (?:-)?}}".*?>)|({%(?:-)? assign .*? (?:-)?%})|(({%(?:-)? if .* (?:-)?%}(?:.*?){%(?:-)? endif (?:-)?%}))|(({%(?:-)? unless .* (?:-)?%}(?:.*?){%(?:-)? endunless (?:-)?%}))|(data-moonwalk-run(?:="\w+")|data-moonwalk-run|data-moonwalk-section(?:="\w+")|data-moonwalk-section)/s
   @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
   @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/
 
@@ -459,7 +459,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     assign(socket, :splits, splits)
   end
 
-  defp strip_logic(module_code), do: Regex.replace(@regex_strips, module_code, "")
+  defp strip_logic(module_code),
+    do: Regex.replace(@regex_strips, module_code, "")
 
   defp render_picture_src("entry." <> var_path_string, assigns) do
     var_path =
