@@ -517,6 +517,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:images, fn ->
         {:ok, images} =
           Brando.Images.list_images(%{
+            select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn],
             filter: %{config_target: assigns.config_target},
             order: "desc id"
           })
