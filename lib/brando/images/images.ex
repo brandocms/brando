@@ -32,6 +32,9 @@ defmodule Brando.Images do
 
   filters Image do
     fn
+      {:ids, ids}, query ->
+        from t in query, where: t.id in ^ids
+
       {:config_target, nil}, query ->
         from(t in query)
 

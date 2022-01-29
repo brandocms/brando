@@ -25,6 +25,28 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     get_field(form.source, field)
   end
 
+  def preload(all_assigns) do
+    {image_ids, cmp_imgs} =
+      Enum.reduce(all_assigns, {[], []}, fn
+        %{id: id, var: %{data: %{type: "image", value_id: image_id}}}, {image_ids, cmp_imgs} ->
+          {[image_id | image_ids], [{id, image_id} | cmp_imgs]}
+
+        _, acc ->
+          acc
+      end)
+
+    {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
+    mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_ids = Map.new(cmp_imgs)
+
+    Enum.map(all_assigns, fn assigns ->
+      case Map.get(mapped_ids, assigns.id) do
+        nil -> assigns
+        key -> Map.put(assigns, :original_image, Map.get(mapped_images, key))
+      end
+    end)
+  end
+
   def mount(socket) do
     {:ok, assign(socket, visible: false)}
   end
@@ -57,7 +79,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     socket =
       if type == "image" do
         assign_new(socket, :image, fn ->
-          if value do
+          if assigns[:original_image] do
+            assigns[:original_image]
+          else
             case Brando.Images.get_image(value) do
               {:ok, image} -> image
               {:error, _} -> nil
