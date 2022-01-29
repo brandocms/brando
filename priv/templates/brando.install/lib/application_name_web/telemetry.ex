@@ -37,6 +37,10 @@ defmodule <%= application_module %>Web.Telemetry do
 
       # Brando
       summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),
+      summary("brando.run_changeset.duration",
+        unit: {:native, :millisecond},
+        tags: [:schema]
+      ),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),

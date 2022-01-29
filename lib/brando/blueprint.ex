@@ -859,7 +859,7 @@ defmodule Brando.Blueprint do
       |> maybe_mark_for_deletion(module)
 
     :telemetry.execute(
-      [:brando, :villain, :run_changeset],
+      [:brando, :run_changeset],
       %{
         duration: System.monotonic_time() - start
       },
