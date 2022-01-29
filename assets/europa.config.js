@@ -150,13 +150,13 @@ module.exports = {
           },
           
           label: {
-            iphone: '15px',
-            mobile: '15px',
-            ipad_portrait: '16px',
-            ipad_landscape: '16px',
-            desktop_md: '16px',
-            desktop_lg: '16px',
-            desktop_xl: '17px'
+            iphone: '14px',
+            mobile: '14px',
+            ipad_portrait: '15px',
+            ipad_landscape: '15px',
+            desktop_md: '15px',
+            desktop_lg: '15px',
+            desktop_xl: '16px'
           }
         },
 
