@@ -127,6 +127,11 @@
       font-weight: 500;
       position: relative;
 
+      .important-vars & {
+        @fontsize 14px >mobile;
+        @fontsize 12px $mobile;
+      }
+
       &:before {
         transition: opacity 0.5s ease;
         content: '';
