@@ -34,7 +34,7 @@ defmodule Mix.Tasks.Brando.Gen.Release do
       - your config files
       - your dockerfile
       - your fabfile
-      - your supervisor cfg
+      - your systemd cfg
 
     Be sure to commit your changes BEFORE running, then cherry pick these changes.
 
@@ -58,8 +58,8 @@ defmodule Mix.Tasks.Brando.Gen.Release do
       {:eex, "config/prod.exs", "config/prod.exs"},
       {:eex, "config/staging.exs", "config/staging.exs"},
       {:eex, "config/runtime.exs", "config/runtime.exs"},
-      {:eex, "etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
-      {:eex, "etc/supervisord/staging.conf", "etc/supervisord/staging.conf"}
+      {:eex, "etc/systemd/prod.service", "etc/systemd/prod.service"},
+      {:eex, "etc/systemd/staging.service", "etc/systemd/staging.service"}
     ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)

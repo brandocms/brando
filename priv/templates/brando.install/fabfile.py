@@ -233,7 +233,7 @@ def bootstrap_release():
 
     ensure_log_directory_exists()
 
-    supervisorcfg()
+    systemdcfg()
     nginxcfg()
     logrotatecfg()
 
@@ -664,32 +664,32 @@ def _warn(str):
 
 def restart():
     """
-    Restarts the server process through supervisorctl
+    Restarts the server process through systemd
     """
     require('hosts')
     with cd(env.path):
         print(yellow('==> restarting remote server process'))
-        sudo('supervisorctl restart %s' % env.procname)
+        sudo('systemctl restart %s.service' % env.procname)
 
 
 def stop():
     """
-    Stops the server process through supervisorctl
+    Stops the server process through systemd
     """
     require('hosts')
     with cd(env.path):
         print(yellow('==> stopping remote server process'))
-        sudo('supervisorctl stop %s' % env.procname)
+        sudo('systemctl stop %s.service' % env.procname)
 
 
 def start():
     """
-    Starts the server process through supervisorctl
+    Starts the server process through systemd
     """
     require('hosts')
     with cd(env.path):
         print(yellow('==> starting remote server process'))
-        sudo('supervisorctl start %s' % env.procname)
+        sudo('systemctl start %s.service' % env.procname)
 
 
 def _setperms(perms, path):
@@ -776,20 +776,19 @@ def _success():
     print(green('==> all tasks successfully finished!'))
 
 
-def supervisorcfg():
+def systemdcfg():
     """
-    Links our supervisor config file to the config.d dir
+    Links up our systemd config file
     """
     require('hosts')
-    print(yellow('==> linking supervisor config file to conf.d/'))
-    if not _exists('/etc/supervisor/conf.d/%s.conf' % (env.procname)):
-        sudo('ln -s %s/etc/supervisord/%s.conf /etc/supervisor/conf.d/%s.conf' % (env.path, env.flavor, env.procname))
+    print(yellow('==> linking up systemd config file'))
+    if not _exists('/lib/systemd/system/%s.service' % (env.procname)):
+        sudo('ln -s %s/etc/systemd/%s.service /lib/systemd/system/%s.service' % (env.path, env.flavor, env.procname))
     else:
-        print(red('==> supervisorcfg %s.conf already exists' % (env.procname)))
+        print(red('==> systemd %s.service already exists' % (env.procname)))
 
-    print(yellow('==> rereading and updating through supervisorctl'))
-    sudo('supervisorctl reread')
-    sudo('supervisorctl update')
+    print(yellow('==> enabling service'))
+    sudo('systemctl enable %s.service' % env.procname)
 
 
 def taillogs():

@@ -37,8 +37,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},
     {:eex, "etc/nginx/staging.conf", "etc/nginx/staging.conf"},
     {:eex, "etc/nginx/502.html", "etc/nginx/502.html"},
-    {:eex, "etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
-    {:eex, "etc/supervisord/staging.conf", "etc/supervisord/staging.conf"},
+    {:eex, "etc/systemd/prod.service", "etc/systemd/prod.service"},
+    {:eex, "etc/systemd/staging.service", "etc/systemd/staging.service"},
 
     # Main application file
     {:eex, "lib/application_name/application.ex", "lib/application_name/application.ex"},

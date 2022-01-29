@@ -40,7 +40,7 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-*Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+*Remember to switch out your ports and configure SSL in `etc/nginx/prod.conf`*
 
 ## Dependencies
 
