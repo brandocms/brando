@@ -1,4 +1,35 @@
 .brando-form {
+  .live-preview-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+  .live-preview {
+    overflow: hidden;
+    width: 0;
+    height: 100vh;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+
+    iframe {
+      border: none;
+      height: 100%;
+      transform-origin: top left;
+
+      &[data-live-preview-device="desktop"] {
+        width: 1440px;
+      }
+    }
+  }
+
   fieldset {
     border: none;
     width: 100%;

@@ -307,7 +307,10 @@ defmodule BrandoAdmin.Components.Form do
         data-moonwalk-run="brandoForm"
         phx-hook="Brando.Form">
 
-        <!-- TODO: extract to Form.Tabs. How do we handle the open_meta_drawers etc? :builtins slot? -->
+        <.live_preview
+          live_preview_active?={@live_preview_active?}
+          live_preview_cache_key={@live_preview_cache_key}
+        />
         <div class="form-tabs">
           <div class="form-tab-customs">
             <%= for tab <- @tabs do %>
@@ -948,6 +951,20 @@ defmodule BrandoAdmin.Components.Form do
 
   ##
   ## Function components
+
+  def live_preview(assigns) do
+    ~H"""
+    <%= if @live_preview_active? do %>
+      <div class="live-preview-wrapper" phx-update="ignore">
+        <div class="live-preview">
+          <iframe
+            data-live-preview-device="desktop"
+            src={"/__livepreview?key=#{@live_preview_cache_key}"}></iframe>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
 
   def field_base(assigns) do
     relation = Map.get(assigns, :relation, false)

@@ -1,3 +1,5 @@
+import { gsap } from '@brandocms/jupiter'
+
 export default (app) => ({
   mounted() {
     this.$form = this.el.querySelector('form')
@@ -22,14 +24,31 @@ export default (app) => ({
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
     })
 
-    this.handleEvent(`b:live_preview`, ({ cache_key: cacheKey }) => {
-      window.open(
-        '/__livepreview?key=' + cacheKey,
-        '_blank'
-      )
+    this.handleEvent(`b:live_preview`, () => {
+      const deviceWidth = 1440
+      const previewWidth = 600
+      const upFactor = deviceWidth / previewWidth
+      const downFactor = previewWidth / deviceWidth
+      // hide nav
+      app.navigation.fsToggle.classList.toggle('minimized')
+      app.navigation.setFullscreen(true)
+
+      setTimeout(() => {
+        // set widths
+        console.log('set widths')
+        const brandoForm = document.querySelector('.brando-form')
+        const livePreview = document.querySelector('.live-preview')
+        const iframe = document.querySelector('.live-preview iframe')
+        gsap.to(brandoForm, { width: `-=${previewWidth}` })
+        gsap.set(livePreview, { display: 'block', opacity: 0 })
+        gsap.set(livePreview, { width: previewWidth })
+        gsap.set(iframe, { scale: downFactor })
+        gsap.set(iframe, { height: window.innerHeight * upFactor })
+        gsap.to(livePreview, { opacity: 1, ease: 'none', delay: 1 })
+      }, 500)
     })
 
-    this.$input.dispatchEvent(new Event('input', { bubbles: true }))
+    // this.$input.dispatchEvent(new Event('input', { bubbles: true }))
   },
 
   destroyed() { 

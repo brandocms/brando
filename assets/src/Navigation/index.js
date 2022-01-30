@@ -4,6 +4,7 @@ export default class Navigation {
   constructor (app) {
     this.app = app
     this.fullscreen = false
+    this.fsToggle = Dom.find('.fullscreen-toggle')
 
     if (!Dom.find('#navigation')) {
       return
@@ -17,9 +18,8 @@ export default class Navigation {
   }
 
   setupFullscreenToggle () {
-    const fsToggle = Dom.find('.fullscreen-toggle')
-    fsToggle.addEventListener('click', e => {
-      fsToggle.classList.toggle('minimized')
+    this.fsToggle.addEventListener('click', e => {
+      this.fsToggle.classList.toggle('minimized')
       this.setFullscreen(!this.fullscreen)
     })
   }
