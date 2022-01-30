@@ -100,7 +100,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             </button>
           </div>
           <%= if @gallery_images == [] do %>
+          <small>
             <%= gettext "No associated gallery" %>
+          </small>
           <% else %>
             <div
               id={"sortable-gallery-images"}
@@ -242,12 +244,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     changeset = form.source
     gallery = get_field(changeset, field)
 
-    current_gallery_images =
-      Enum.map(
-        gallery.gallery_images,
-        &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
-      )
-
     new_gallery_images =
       Enum.filter(gallery_images, &(&1.image_id != String.to_integer(image_id)))
 
@@ -258,10 +254,16 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       selected_images: selected_images
     )
 
+    slimmed_gallery_images =
+      Enum.map(
+        new_gallery_images,
+        &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+      )
+
     new_gallery = %{
       id: gallery.id,
       config_target: gallery.config_target,
-      gallery_images: sequence(new_gallery_images)
+      gallery_images: sequence(slimmed_gallery_images)
     }
 
     updated_changeset = put_assoc(changeset, field, new_gallery)
@@ -372,7 +374,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "gallery:#{inspect(schema)}:#{key}"
 
-      {:ok, image} =
+      image =
         consume_uploaded_entry(
           socket,
           upload_entry,
