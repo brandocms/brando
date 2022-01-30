@@ -297,12 +297,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
         </div>
         <div class="panel">
-          <Form.image_picker
-            id={"image-picker-#{@form.id}"}
-            config_target={nil}
-            select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker-#{@form.id}")} />
           <div class="button-group-vertical">
-            <button type="button" class="secondary" phx-click={open_image_picker(@form.id, @myself)}>
+            <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
               <%= gettext("Select image") %>
             </button>
 
@@ -316,21 +312,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
-  def open_image_picker(var_id, target) do
-    %JS{}
-    |> JS.push("assign_images", target: target)
-    |> toggle_drawer("#image-picker-#{var_id}")
-  end
+  def handle_event("set_target", _, %{assigns: %{myself: myself}} = socket) do
+    send_update(
+      BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: "default",
+      event_target: myself,
+      multi: false,
+      selected_images: []
+    )
 
-  def handle_event("assign_images", _, socket) do
-    images =
-      if socket.assigns.images do
-        socket.assigns.images
-      else
-        Brando.Images.list_images(%{order: "desc inserted_at"}) |> elem(1)
-      end
-
-    {:noreply, assign(socket, :images, images)}
+    {:noreply, socket}
   end
 
   def handle_event(

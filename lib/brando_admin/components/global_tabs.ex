@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Brando.Gettext
   alias Brando.Sites
+  alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   def update(assigns, socket) do
@@ -15,6 +16,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   def render(assigns) do
     ~H"""
     <div class="global-tabs">
+      <.live_component module={ImagePicker} id="image-picker" />
       <div class="form-tabs" data-moonwalk-section>
         <div class="form-tab-customs" data-moonwalk="upDly">
           <%= for {global_set, index} <- Enum.with_index(@global_sets) do %>

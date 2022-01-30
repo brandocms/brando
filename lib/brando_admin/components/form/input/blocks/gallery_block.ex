@@ -142,7 +142,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <span phx-update="ignore">
             <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
           </span>
-          <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}><%= gettext "Select images" %></button>
+          <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}><%= gettext "Select images" %></button>
           <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}><%= gettext "Edit captions" %></button>
           <div
             id={"sortable-#{@block_data.id}-images"}
@@ -214,42 +214,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             </figure>
             <div class="instructions">
               <span><%= gettext("Click or drag images here &uarr; to upload") |> raw() %></span><br>
-              <button type="button" class="tiny" phx-click={JS.push("show_image_picker", target: @myself) |> show_modal("#block-#{@uid}-image-picker")}>pick existing images</button>
+              <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>pick existing images</button>
             </div>
           </div>
-
         <% end %>
-
-        <.live_component module={Modal}
-          title="Pick images"
-          center_header={true}
-          remember_scroll_position
-          id={"block-#{@uid}-image-picker"}>
-          <div class="buttons">
-            <button type="button" class="tiny" phx-click={JS.push("toggle_only_selected", target: @myself)}>
-              <%= if @show_only_selected? do %>
-                <%= gettext("Show all available and selected") %>
-              <% else %>
-                <%= gettext("Show only selected") %>
-              <% end %>
-            </button>
-          </div>
-          <div class="image-picker-images">
-            <%= for image <- @available_images do %>
-              <div
-                class={render_classes([
-                  "image-picker-image",
-                  selected: image.path in @selected_images_paths,
-                  hidden: @show_only_selected? && image.path not in @selected_images_paths
-                ])}
-                phx-click={JS.push("select_image", target: @myself)}
-                phx-value-id={image.id}
-                phx-value-selected={image.path in @selected_images_paths && "true" || "false"}>
-                <img src={"/media/#{image.sizes["thumb"]}"} />
-              </div>
-            <% end %>
-          </div>
-        </.live_component>
 
         <.live_component module={Modal}
           title="Edit captions"
@@ -420,6 +388,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     images = input_value(block_data, :images) ++ [picture_data_tpl]
 
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: Enum.map(images, & &1.path)
+    )
+
     changeset = base_form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -450,6 +423,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(id)
     images = Enum.reject(input_value(block_data, :images), &(&1.path == image.path))
 
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: Enum.map(images, & &1.path)
+    )
+
     changeset = base_form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -465,9 +443,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
-  def handle_event("show_image_picker", _, socket) do
-    {:ok, images} = Brando.Images.list_images()
-    {:noreply, assign(socket, :available_images, images)}
+  def handle_event(
+        "set_target",
+        _,
+        %{assigns: %{myself: myself, images: images}} = socket
+      ) do
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: "default",
+      event_target: myself,
+      multi: true,
+      selected_images: Enum.map(images, & &1.path)
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("show_captions", _, socket) do

@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -29,6 +30,43 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
+  end
+
+  def update(
+        %{action: :update_edit_image, image: image},
+        %{assigns: %{edit_image: edit_image}} = socket
+      ) do
+    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
+    image_changeset = Ecto.Changeset.change(image)
+
+    {:ok,
+     socket
+     |> assign(:edit_image, updated_edit_image)
+     |> assign(:image_changeset, image_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_image, edit_image: %{image: nil} = edit_image},
+        socket
+      ) do
+    image_changeset = Ecto.Changeset.change(%Brando.Images.Image{})
+
+    {:ok,
+     socket
+     |> assign(:edit_image, edit_image)
+     |> assign(:image_changeset, image_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_image, edit_image: %{image: image} = edit_image},
+        socket
+      ) do
+    image_changeset = Ecto.Changeset.change(image)
+
+    {:ok,
+     socket
+     |> assign(:edit_image, edit_image)
+     |> assign(:image_changeset, image_changeset)}
   end
 
   def update(
@@ -70,24 +108,6 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{updated_changeset: updated_changeset}, socket) do
     {:ok, assign(socket, :changeset, updated_changeset)}
-  end
-
-  def update(%{edit_image: %{image: nil} = edit_image}, socket) do
-    image_changeset = Ecto.Changeset.change(%Brando.Images.Image{})
-
-    {:ok,
-     socket
-     |> assign(:edit_image, edit_image)
-     |> assign(:image_changeset, image_changeset)}
-  end
-
-  def update(%{edit_image: %{image: image} = edit_image}, socket) do
-    image_changeset = Ecto.Changeset.change(image)
-
-    {:ok,
-     socket
-     |> assign(:edit_image, edit_image)
-     |> assign(:image_changeset, image_changeset)}
   end
 
   def update(
@@ -161,7 +181,9 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema)
       |> Map.put(:with_deleted, true)
 
-    assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
+    assign_new(socket, :entry, fn ->
+      apply(context, :"get_#{singular}!", [query_params])
+    end)
   end
 
   defp maybe_assign_uploads(socket) do
@@ -345,11 +367,7 @@ defmodule BrandoAdmin.Components.Form do
           </div>
         </div>
 
-        <.image_picker
-          id={"image-picker"}
-          config_target={{"image", @schema, Enum.join(@edit_image.path ++ [@edit_image.field], ".")}}
-          select_image={JS.push("select_image", target: @myself) |> toggle_drawer("#image-picker")} />
-
+        <.live_component module={ImagePicker} id="image-picker" />
         <.image_drawer {assigns} />
 
         <.form
@@ -423,7 +441,6 @@ defmodule BrandoAdmin.Components.Form do
           for={@image_changeset}
           let={image_form}
           phx-submit="save_image"
-          phx-change="validate_image"
           phx-target={@myself}>
           <div
             id="image-drawer-form-preview"
@@ -508,82 +525,6 @@ defmodule BrandoAdmin.Components.Form do
     |> toggle_drawer("#image-drawer")
   end
 
-  def image_picker(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:z_index, fn -> 1002 end)
-      |> assign_new(:deselect_image, fn -> nil end)
-      |> assign_new(:selected_images, fn -> [] end)
-      |> assign_new(:images, fn ->
-        {:ok, images} =
-          Brando.Images.list_images(%{
-            select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn],
-            filter: %{config_target: assigns.config_target},
-            order: "desc id"
-          })
-
-        images
-      end)
-
-    ~H"""
-    <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={@z_index} dark>
-      <:info>
-        <%= if @config_target do %>
-          <div class="mb-2">
-            <%= gettext "Select similarly typed image from library" %>
-          </div>
-        <% end %>
-        <div class="button-group-horizontal mb-1">
-          <button class="secondary" type="button" phx-click={show_grid(@id)}>
-            Grid
-          </button>
-          <button class="secondary" type="button" phx-click={show_list(@id)}>
-            List
-          </button>
-        </div>
-      </:info>
-      <div class="image-picker grid" id={"image-picker-drawer-#{@id}"}>
-        <%= for image <- @images do %>
-        <div
-          class={render_classes(["image-picker__image": true, selected: image.id in @selected_images])}
-          phx-click={(@deselect_image && image.id in @selected_images) && @deselect_image || @select_image}
-          phx-value-id={image.id}
-          phx-page-loading>
-          <img
-            width="25"
-            height="25"
-            src={"#{Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url())}"} />
-          <div class="image-picker__info">
-            <div class="image-picker__filename"><%= image.path %></div>
-            <div class="image-picker__dims">
-              Dimensions....: <%= image.width %>&times;<%= image.height %>
-            </div>
-            <div class="image-picker__formats">
-              Formats.......: <%= inspect image.formats %>
-            </div>
-            <div class="image-picker__processed">
-              Status........: <%= inspect image.status %>
-            </div>
-          </div>
-        </div>
-        <% end %>
-      </div>
-    </Content.drawer>
-    """
-  end
-
-  def show_grid(js \\ %JS{}, id) do
-    js
-    |> JS.add_class("grid", to: "#image-picker-drawer-#{id}")
-    |> JS.remove_class("list", to: "#image-picker-drawer-#{id}")
-  end
-
-  def show_list(js \\ %JS{}, id) do
-    js
-    |> JS.add_class("list", to: "#image-picker-drawer-#{id}")
-    |> JS.remove_class("grid", to: "#image-picker-drawer-#{id}")
-  end
-
   def allow_uploads(socket) do
     image_fields = socket.assigns.schema.__image_fields__()
     gallery_fields = socket.assigns.schema.__gallery_fields__()
@@ -650,22 +591,6 @@ defmodule BrandoAdmin.Components.Form do
      |> push_event("b:validate", %{target: "#{singular}[#{edit_image.relation_field}]", value: ""})}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => selected_image_id},
-        %{assigns: %{edit_image: edit_image}} = socket
-      ) do
-    {:ok, image} = Brando.Images.get_image(selected_image_id)
-
-    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
-    image_changeset = Ecto.Changeset.change(image)
-
-    {:noreply,
-     socket
-     |> assign(:edit_image, updated_edit_image)
-     |> assign(:image_changeset, image_changeset)}
-  end
-
   def handle_event("validate_image", _, socket) do
     {:noreply, socket}
   end
@@ -716,8 +641,12 @@ defmodule BrandoAdmin.Components.Form do
       cond do
         is_loaded_image(entrys_current_image) && entrys_current_image.id == image.id &&
             entrys_current_image.status == :processed ->
-          # the image has already been marked as processed, do not update the relation
-          entry
+          # the image has already been marked as processed, do not
+          # update the image but merge in title, credits and alt text
+          merged_image =
+            Map.merge(entrys_current_image, Map.take(updated_image, [:title, :credits, :alt]))
+
+          Map.put(entry_or_default, field, merged_image)
 
         true ->
           Map.put(entry_or_default, field, updated_image)

@@ -116,19 +116,29 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             field: field,
             relation_field: relation_field,
             image_id: image_id,
-            image: image
+            image: image,
+            myself: myself
           }
         } = socket
       ) do
     path =
-      Regex.scan(~r/\[(\w+)\]/, form.name, capture: :all_but_first)
+      ~r/\[(\w+)\]/
+      |> Regex.scan(form.name, capture: :all_but_first)
       |> Enum.map(&(List.first(&1) |> String.to_existing_atom()))
 
     module = form.source.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: {"image", form.data.__struct__, field},
+      event_target: myself,
+      multi: false,
+      selected_images: []
+    )
 
     send_update(BrandoAdmin.Components.Form,
-      id: form_id,
+      id: "#{module.__naming__().singular}_form",
+      action: :update_edit_image,
       edit_image: %{
         id: image_id,
         path: path,
@@ -136,6 +146,23 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         relation_field: relation_field,
         image: image
       }
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_image",
+        %{"id" => selected_image_id},
+        %{assigns: %{form: form}} = socket
+      ) do
+    {:ok, image} = Brando.Images.get_image(selected_image_id)
+    module = form.source.data.__struct__
+
+    send_update(BrandoAdmin.Components.Form,
+      id: "#{module.__naming__().singular}_form",
+      action: :update_edit_image,
+      image: image
     )
 
     {:noreply, socket}

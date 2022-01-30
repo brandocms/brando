@@ -3,6 +3,7 @@
 
   .gallery-image {
     @column 4/12;
+    cursor: move;
   }
 }
 

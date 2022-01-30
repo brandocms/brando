@@ -165,7 +165,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.text form={@block_data} field={:alt} label={gettext "Alt"} />
 
               <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker-blocks-#{@base_form.id}-#{@data_field}")}>
+                <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
                   <%= gettext("Select image") %>
                 </button>
 
@@ -270,12 +270,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event(
         "set_target",
         _,
-        socket
+        %{assigns: %{myself: myself}} = socket
       ) do
-    send_update(
-      BrandoAdmin.Components.Form.Input.Blocks,
-      id: "#{Enum.join([socket.assigns.base_form.id, socket.assigns.data_field], "-")}",
-      image_drawer_target: socket.assigns.myself
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: "default",
+      event_target: myself,
+      multi: false,
+      selected_images: []
     )
 
     {:noreply, socket}

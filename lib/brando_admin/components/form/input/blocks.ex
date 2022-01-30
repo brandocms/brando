@@ -65,11 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         field={@field}
         label={@label}
         instructions={@instructions}>
-        <Form.image_picker
-          id={"image-picker-blocks-#{@form.id}-#{@field}"}
-          config_target={"default"}
-          z_index={5000}
-          select_image={JS.push("select_image", target: @image_drawer_target) |> toggle_drawer("#image-picker-blocks-#{@form.id}-#{@field}")} />
+
         <.live_component
           module={Blocks.BlockRenderer}
           id={"#{@form.id}-#{@field}-blocks"}
