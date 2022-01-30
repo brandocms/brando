@@ -228,8 +228,11 @@ defmodule Brando.Query do
     singular_schema_atom = String.to_existing_atom(singular_schema)
 
     quote do
-      @spec unquote(:"get_#{singular_schema}")(integer | binary | map()) ::
+      @spec unquote(:"get_#{singular_schema}")(nil | integer | binary | map()) ::
               {:ok, any} | {:error, {unquote(singular_schema_atom), :not_found}}
+      def unquote(:"get_#{singular_schema}")(nil),
+        do: {:error, {unquote(singular_schema_atom), :not_found}}
+
       def unquote(:"get_#{singular_schema}")(id) when is_binary(id) or is_integer(id) do
         query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
 
