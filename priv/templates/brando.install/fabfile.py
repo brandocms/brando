@@ -28,6 +28,8 @@ PROJECT_MODULE = config.get('DEPLOYMENT', 'PROJECT_MODULE')
 PROD_URL = config.get('DEPLOYMENT', 'PROD_URL')
 DB_PASS = config.get('DEPLOYMENT', 'DB_PASS')
 
+DOCKER_HOST = config.get('DEPLOYMENT', 'DOCKER_HOST')
+
 SSH_USER = config.get('DEPLOYMENT', 'SSH_USER')
 SSH_PASS = config.get('DEPLOYMENT', 'SSH_PASS')
 SSH_HOST = config.get('DEPLOYMENT', 'SSH_HOST')
@@ -299,7 +301,8 @@ def build_release():
     """
     print(yellow('==> building local release with docker...'))
     print(red('(!) FLAVOR => %s' % env.flavor))
-    local('docker build -f %s -t twined/%s_%s .' % (env.dockerfile, env.project_name, env.flavor))
+    with prefix('export DOCKER_HOST=%s DOCKER_BUILDKIT=1' % DOCKER_HOST):
+        local('docker build -f %s -t twined/%s_%s .' % (env.dockerfile, env.project_name, env.flavor))
 
 
 def copy_release_from_docker(version):
@@ -308,15 +311,16 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    local('docker run --rm --entrypoint cat twined/%s_%s /opt/app/_build/%s/%s-%s.tar.gz > release-archives/%s_%s_%s.tar.gz' % (
-        env.project_name,
-        env.flavor,
-        env.mix_env,
-        env.project_name,
-        version,
-        env.project_name,
-        env.flavor,
-        version))
+    with prefix('export DOCKER_HOST=%s DOCKER_BUILDKIT=1' % DOCKER_HOST):
+        local('docker run --rm --entrypoint cat twined/%s_%s /opt/app/_build/%s/%s-%s.tar.gz > release-archives/%s_%s_%s.tar.gz' % (
+            env.project_name,
+            env.flavor,
+            env.mix_env,
+            env.project_name,
+            version,
+            env.project_name,
+            env.flavor,
+            version))
 
 
 def prune_dangling_docker_images():
@@ -324,7 +328,8 @@ def prune_dangling_docker_images():
     Delete dangling docker images
     """
     print(yellow('==> pruning dangling images'))
-    local('docker image prune --force')
+    with prefix('export DOCKER_HOST=%s DOCKER_BUILDKIT=1' % DOCKER_HOST):
+        local('docker image prune --force')
 
 def upload_release(version):
     """
