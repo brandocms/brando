@@ -5,7 +5,7 @@
 # - job: dependencies
 # -----------------------------------
 
-FROM --platform=linux/amd64 twined/fehn:3.4 as deps
+FROM --platform=linux/amd64 twined/fehn:3.5 as deps
 
 ARG MIX_ENV=prod
 ARG HEX_MIRROR_URL=https://repo.hex.pm
@@ -53,7 +53,7 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM --platform=linux/arm64 node:16 AS assets_backend
+FROM node:16 AS assets_backend
 WORKDIR /opt/app/assets/backend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
@@ -78,7 +78,7 @@ RUN yarn build
 # - job: assets frontend
 # -----------------------------------
 
-FROM --platform=linux/arm64 node:16 AS assets_frontend
+FROM node:16 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
