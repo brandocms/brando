@@ -1,5 +1,5 @@
 <div class="content-list-wrapper">
-  <article class="content-list" data-moonwalk-run="brandoList">
+  <article id={"listing-#{@listing.name}"} class="content-list" data-moonwalk-run="brandoList" phx-hook="Brando.Listing">
     <.tools
       schema={@schema}
       listing={@listing}

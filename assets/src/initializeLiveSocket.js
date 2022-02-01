@@ -1,4 +1,4 @@
-import { LiveSocket } from 'phoenix_live_view'
+import { LiveSocket } from './phoenix_live_view'
 import { Socket } from 'phoenix'
 import morphdomCallbacks from './morphdomCallbacks'
 
