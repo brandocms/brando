@@ -582,7 +582,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+      left_justify_meta>
       <Form.label
         form={@form}
         field={@field}
