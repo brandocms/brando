@@ -786,12 +786,8 @@ def systemdcfg():
     Links up our systemd config file
     """
     require('hosts')
-    print(yellow('==> linking up systemd config file'))
-    if not _exists('/lib/systemd/system/%s.service' % (env.procname)):
-        sudo('ln -s %s/etc/systemd/%s.service /lib/systemd/system/%s.service' % (env.path, env.flavor, env.procname))
-    else:
-        print(red('==> systemd %s.service already exists' % (env.procname)))
-
+    print(yellow('==> cp systemd config file'))
+    put('etc/systemd/%s.service' % env.flavor, '/lib/systemd/system/%s.service' % env.procname, use_sudo=True)
     print(yellow('==> enabling service'))
     sudo('systemctl enable %s.service' % env.procname)
 
