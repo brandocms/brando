@@ -977,6 +977,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:header, fn -> nil end)
       |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
+      |> assign_new(:left_justify_meta, fn -> nil end)
       |> assign(:relation, relation)
       |> assign(:failed, failed)
       |> assign(:hidden, hidden)
@@ -1009,7 +1010,7 @@ defmodule BrandoAdmin.Components.Form do
         <%= render_slot @inner_block %>
       </div>
       <%= if @instructions || @meta do %>
-        <div class="meta">
+        <div class={render_classes(["meta", left: @left_justify_meta])}>
           <%= if @instructions do %>
             <div class="help-text">
               ↳ <span><%= @instructions %></span>
