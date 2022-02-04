@@ -113,8 +113,11 @@ export default (hooks, enableDebug = true) => {
       app.presence = new Presence(app)
       app.toast = new Toast(app)
 
+      app.registerCallback(Events.APPLICATION_READY, () => {
+        app.liveSocket = initializeLiveSocket({ ...hooks, ...brandoHooks(app) }, enableDebug)
+      })
+
       window.addEventListener('phx:b:component:remount', () => {
-        console.log('remount!')
         app.components.forEach(cmp => cmp.remount())
       })
       
@@ -141,7 +144,7 @@ export default (hooks, enableDebug = true) => {
 
         if (detail.kind === 'initial' && !app.reconnected) {
           const $main = Dom.find('main .content')
-          app.moonwalk = new Moonwalk(app, configureMoonwalk(), $main)
+          app.moonwalk = new Moonwalk(app, configureMoonwalk(app), $main)
           app.navigation.checkFullscreen()
           gsap.to($main, { clearProps: 'opacity' })
           app.moonwalk.ready()
@@ -253,13 +256,7 @@ export default (hooks, enableDebug = true) => {
         console.debug('==> Joined lobby_channel')
       })
     })
-
-    app.registerCallback(Events.APPLICATION_READY, () => initializeLiveSocket({ ...hooks, ...brandoHooks(app) }, enableDebug))
   }
 
   return app
 }
-
-
-
-
