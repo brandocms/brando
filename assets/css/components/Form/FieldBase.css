@@ -172,6 +172,10 @@
     position: absolute;
     right: 0;
 
+    &.left {
+      left: 0;
+    }
+
     .help-text {
       @fontsize form.help;
       text-align: right;
