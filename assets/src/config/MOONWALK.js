@@ -1,6 +1,10 @@
 import { Dom, gsap } from '@brandocms/jupiter'
 
-export default () => ({
+function reset (app, el) {
+  app.liveSocket.execJS(el, '[["add_class",{"names":["moonwalked"],"time":0,"to":null,"transition":[[],[],[]]}]]')
+}
+
+export default app => ({
   rootMargin: '0% 0% -10% 0%',
   threshold: 0,
   initialDelay: 100,
@@ -73,6 +77,10 @@ export default () => ({
         timeline
           .to(paginationEls, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
           .to(paginationEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
+
+        timeline.call(() => {
+          reset(app, el)
+        })
       }
     },
 
@@ -91,6 +99,10 @@ export default () => ({
           .call(() => {
             gsap.set(inputEls, { clearProps: 'all' })
           })
+
+        timeline.call(() => {
+          reset(app, el)
+        })
       }
     },
 
@@ -111,6 +123,10 @@ export default () => ({
           .to(el, { delay: 0.5, scaleX: 1, ease: 'circ.in', duration: 0.5 })
           .to(els, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
           .to(els, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
+
+        timeline.call(() => {
+          reset(app, el)
+        })
       }
     }
   },
