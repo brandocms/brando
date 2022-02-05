@@ -18,14 +18,66 @@
     z-index: 99999;
     display: flex;
     flex-direction: column;
+    pointer-events: all;
+
+    > a {
+      z-index: 99;
+      pointer-events: all;
+    }
+
+    .live-preview-divider {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 5px;
+      background-color: var(--brando-color-dark);
+      cursor: col-resize;
+    }
+
+    .live-preview-targets {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      button {
+        border: none;
+        z-index: 99;
+        pointer-events: all;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        padding: 4px 10px;
+        margin: 0 7px;
+
+        &:hover {
+          background-color: ghostwhite;
+        }
+
+        span {
+          font-size: 11px;
+          text-align: center;
+        }
+      }
+    } 
 
     iframe {
       border: none;
       height: 100%;
       transform-origin: top left;
+      margin-left: 5px;
 
       &[data-live-preview-device="desktop"] {
         width: 1440px;
+      }
+
+      &[data-live-preview-device="tablet"] {
+        width: 768px;
+      }
+
+      &[data-live-preview-device="mobile"] {
+        width: 375px;
       }
     }
   }

@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
+     |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
   end
@@ -310,6 +311,8 @@ defmodule BrandoAdmin.Components.Form do
         <.live_preview
           live_preview_active?={@live_preview_active?}
           live_preview_cache_key={@live_preview_cache_key}
+          live_preview_target={@live_preview_target}
+          change_preview_target={JS.push("change_preview_target", target: @myself)}
         />
         <div class="form-tabs">
           <div class="form-tab-customs">
@@ -567,6 +570,10 @@ defmodule BrandoAdmin.Components.Form do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")
+  end
+
+  def handle_event("change_preview_target", %{"target" => target}, socket) do
+    {:noreply, assign(socket, :live_preview_target, target)}
   end
 
   def handle_event(
@@ -957,8 +964,26 @@ defmodule BrandoAdmin.Components.Form do
     <%= if @live_preview_active? do %>
       <div class="live-preview-wrapper" phx-update="ignore">
         <div class="live-preview">
+          <a href={"/__livepreview?key=#{@live_preview_cache_key}"} target="_blank">
+            <%= gettext("Open preview in new window") %>
+          </a>
+          <div class="live-preview-targets">
+            <button type="button" data-live-preview-target="desktop">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4 5v11h16V5H4zm-2-.993C2 3.451 2.455 3 2.992 3h18.016c.548 0 .992.449.992 1.007V18H2V4.007zM1 19h22v2H1v-2z"/></svg>
+              <span>1440px</span>
+            </button>
+            <button type="button" data-live-preview-target="tablet">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M6 4v16h12V4H6zM5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm7 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+              <span>768px</span>
+            </button>
+            <button type="button" data-live-preview-target="mobile">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 4v16h10V4H7zM6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm6 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+              <span>375px</span>
+            </button>
+          </div>
+          <div class="live-preview-divider"></div>
           <iframe
-            data-live-preview-device="desktop"
+            data-live-preview-device={@live_preview_target}
             src={"/__livepreview?key=#{@live_preview_cache_key}"}></iframe>
         </div>
       </div>
