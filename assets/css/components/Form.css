@@ -382,12 +382,14 @@
 
     > button {
       &:first-of-type {
-        border-radius: 18px 0 0 18px;
+        border-top-left-radius: 18px;
+        border-bottom-left-radius: 18px;
         padding-left: 15px;
       }
 
       &:last-of-type {
-        border-radius: 0 18px 18px 0;
+        border-top-right-radius: 18px;
+        border-bottom-right-radius: 18px;
         padding-right: 15px;
       }
 
