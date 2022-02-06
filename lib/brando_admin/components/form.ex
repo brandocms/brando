@@ -30,30 +30,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, false)
      |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_active?, false)
-     |> assign(:live_preview_cache_key, nil)
-     |> assign_new(:header, fn ->
-       IO.warn("""
-
-       No <:header> slot is defined for form component.
-       It is recommended to use this instead of a standalone `<Content.header>` component for better
-       integration with Live Previews!
-
-       Example:
-
-           <.live_component module={Form}
-             id="page_form"
-             entry_id={@entry_id}
-             current_user={@current_user}
-             schema={@schema}>
-             <:header>
-               <%= gettext("Edit page") %>
-             </:header>
-           </.live_component>
-
-       """)
-
-       nil
-     end)}
+     |> assign(:live_preview_cache_key, nil)}
   end
 
   def update(
@@ -173,6 +150,30 @@ defmodule BrandoAdmin.Components.Form do
          form ->
            form
        end
+     end)
+     |> assign_new(:header, fn ->
+       IO.warn("""
+
+       No <:header> slot is defined for form component with schema `#{inspect(assigns.schema)}`.
+
+       It is recommended to use this instead of a standalone `<Content.header>` component
+       for better integration with Live Previews!
+
+       Example:
+
+           <.live_component module={Form}
+             id="page_form"
+             entry_id={@entry_id}
+             current_user={@current_user}
+             schema={@schema}>
+             <:header>
+               <%= gettext("Edit page") %>
+             </:header>
+           </.live_component>
+
+       """)
+
+       nil
      end)
      |> assign_entry()
      |> assign_addon_statuses()
