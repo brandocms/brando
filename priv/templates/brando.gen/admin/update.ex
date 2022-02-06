@@ -13,7 +13,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
       current_user={@current_user}
       schema={@schema}>
       <:header>
-        <%= gettext("Update <%= singular %>") %>
+        <%%= gettext("Update <%= singular %>") %>
       </:header>
     </.live_component>
     """
