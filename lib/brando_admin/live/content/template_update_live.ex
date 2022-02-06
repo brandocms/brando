@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Content.TemplateUpdateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Content.Template
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 

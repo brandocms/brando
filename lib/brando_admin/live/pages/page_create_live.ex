@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Pages.PageCreateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Page
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 

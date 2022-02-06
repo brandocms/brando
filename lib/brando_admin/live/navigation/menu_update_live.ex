@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Navigation.MenuUpdateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Navigation.Menu
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 

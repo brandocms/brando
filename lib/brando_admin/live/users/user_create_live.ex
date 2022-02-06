@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Users.UserCreateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Users.User
-  alias BrandoAdmin.Components.Content
+  import Brando.Gettext
   alias BrandoAdmin.Components.Form
 
   def render(assigns) do

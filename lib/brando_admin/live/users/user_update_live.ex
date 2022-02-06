@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Users.UserUpdateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Users.User
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 

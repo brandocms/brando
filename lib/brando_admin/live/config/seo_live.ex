@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Sites.SEOLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.SEO
+  import Brando.Gettext
   alias Brando.Sites
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
 
   def mount(_params, %{"user_token" => token} = assigns, socket) do

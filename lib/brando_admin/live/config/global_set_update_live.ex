@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Sites.GlobalSetUpdateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalSet
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
