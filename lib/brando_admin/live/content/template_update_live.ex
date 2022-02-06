@@ -6,14 +6,15 @@ defmodule BrandoAdmin.Content.TemplateUpdateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Edit template")} />
-
     <.live_component module={Form}
       id="template_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Edit template") %>
+      </:header>
+    </.live_component>
     """
   end
 end

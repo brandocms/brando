@@ -5,15 +5,14 @@ defmodule BrandoAdmin.Users.UserCreateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title="Users"
-      subtitle="Create user" />
-
     <.live_component module={Form}
       id="user_form"
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Create user") %>
+      </:header>
+    </.live_component>
     """
   end
 end

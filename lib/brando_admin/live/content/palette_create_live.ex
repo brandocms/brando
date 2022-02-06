@@ -6,13 +6,14 @@ defmodule BrandoAdmin.Content.PaletteCreateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Create palette")} />
-
     <.live_component module={Form}
       id="palette_form"
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Create palette") %>
+      </:header>
+    </.live_component>
     """
   end
 end

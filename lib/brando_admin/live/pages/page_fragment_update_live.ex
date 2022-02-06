@@ -6,15 +6,15 @@ defmodule BrandoAdmin.Pages.PageFragmentUpdateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Edit fragment")} />
-
     <.live_component module={Form}
       id="fragment_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Edit fragment") %>
+      </:header>
+    </.live_component>
     """
   end
 end

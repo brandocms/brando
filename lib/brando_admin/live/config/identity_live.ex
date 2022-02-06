@@ -14,16 +14,15 @@ defmodule BrandoAdmin.Sites.IdentityLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title="Identity"
-      subtitle="Update identity" />
-
     <.live_component module={Form}
       id="identity_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Update identity") %>
+      </:header>
+    </.live_component>
     """
   end
 

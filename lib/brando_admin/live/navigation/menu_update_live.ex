@@ -6,14 +6,15 @@ defmodule BrandoAdmin.Navigation.MenuUpdateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Edit menu")} />
-
     <.live_component module={Form}
       id="menu_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Edit menu") %>
+      </:header>
+    </.live_component>
     """
   end
 end

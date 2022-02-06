@@ -6,14 +6,15 @@ defmodule BrandoAdmin.Pages.PageUpdateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Edit page")} />
-
     <.live_component module={Form}
       id="page_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}
-    />
+      schema={@schema}>
+      <:header>
+        <%= gettext("Edit page") %>
+      </:header>
+    </.live_component>
     """
   end
 end
