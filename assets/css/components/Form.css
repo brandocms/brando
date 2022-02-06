@@ -1,21 +1,33 @@
 .brando-form {
+  display: flex;
+  @responsive $mobile {
+    flex-direction: column;
+  }
+
+  .form-content {
+    flex-shrink: 1;
+    flex-grow: 1;
+
+    .form-header {
+      @space margin-top sm;
+      @space margin-bottom sm;
+    }
+  }
+
   .live-preview-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
+    position: relative;
+    margin-right: -25px;
+    margin-left: 15px;
     user-select: none;
   }
+  
   .live-preview {
-    overflow: hidden;
+    position: sticky;
+    top: 0px;
     width: 0;
+    overflow: hidden;
     height: 100vh;
-    position: fixed;
-    right: 0;
-    top: 0;
-    z-index: 99999;
+    z-index: 9;
     display: flex;
     flex-direction: column;
     pointer-events: all;
@@ -30,20 +42,34 @@
       left: 0;
       top: 0;
       height: 100%;
-      width: 5px;
-      background-color: var(--brando-color-dark);
+      width: 10px;
+      z-index: 10;
+      background-color: transparent;
       cursor: col-resize;
+      border-left: 1px solid var(--brando-color-dark);
     }
 
     .live-preview-targets {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
+      position: relative;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--brando-color-dark);
+
+      .live-preview-targets-buttons {
+        @space margin-top 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
       button {
         border: none;
         z-index: 99;
         pointer-events: all;
+        user-select: none;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -62,11 +88,14 @@
       }
     } 
 
+    .live-preview-iframe-wrapper {
+      border-left: 1px solid var(--brando-color-dark);
+    }
+
     iframe {
       border: none;
       height: 100%;
       transform-origin: top left;
-      margin-left: 5px;
 
       &[data-live-preview-device="desktop"] {
         width: 1440px;
@@ -109,7 +138,9 @@
   }
   
   .row {
-    @grid;
+    @responsive >=ipad_portrait {
+      @grid;
+    }
     
     grid-template-columns: repeat(16, 1fr);
     grid-template-rows: min-content;
@@ -120,18 +151,30 @@
 
     .half {
       grid-column: 1/span 8;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
     }
 
     .half + .half {
       grid-column: 9/span 8;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
     }
 
     .sized {
       grid-column: 1/span 12;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
     }
 
     .sized + .half {
       grid-column: 13/span 4;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
     }
 
     &.baseline {
@@ -298,10 +341,9 @@
   top: 5px;
   position: sticky;
   z-index: 99;
-  @space margin-x -10px;
-  @space padding-x 20px;
+  @space padding-x 15px;
 
-  @responsive <=ipad_portrait {
+  @responsive $mobile {
     flex-direction: column;
     align-items: flex-start;
 
@@ -372,6 +414,11 @@
 
     .tab-text {
       @space padding-left 10px;
+
+      @responsive <=ipad_landscape {
+        display: none;
+        padding-left: 0;
+      }
     }
 
     button {

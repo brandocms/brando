@@ -1,9 +1,7 @@
 #content-header {
-  @space margin-top sm;
-  @space padding-bottom xs;
-  @space margin-bottom sm;
+  @space margin-top xs;
+  @space margin-bottom xs;
   flex-direction: column;
-  border-bottom: 1px solid theme(colors.dark);
 
   .content {
     @row;
