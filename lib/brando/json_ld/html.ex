@@ -14,24 +14,29 @@ defmodule Brando.JSONLD.HTML do
   """
   def render_json_ld(%{conn: %{assigns: %{language: language} = conn}} = assigns) do
     cached_identity = Brando.Cache.Identity.get(language)
-    cached_identity_type = String.to_existing_atom(cached_identity.type)
-    cached_seo = Brando.Cache.SEO.get(language)
 
-    breadcrumbs = render_json_ld(:breadcrumbs, conn)
-    identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
-    entity = render_json_ld(:entity, conn)
+    if map_size(cached_identity) > 0 do
+      cached_identity_type = String.to_existing_atom(cached_identity.type)
+      cached_seo = Brando.Cache.SEO.get(language)
 
-    ~H"""
-    <%= if breadcrumbs != "" do %><script type="application/ld+json">
-      <%= breadcrumbs %>
-    </script><% end %>
-    <%= if identity != "" do %><script type="application/ld+json">
-      <%= identity %>
-    </script><% end %>
-    <%= if entity != "" do %><script type="application/ld+json">
-      <%= entity %>
-    </script><% end %>
-    """
+      breadcrumbs = render_json_ld(:breadcrumbs, conn)
+      identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
+      entity = render_json_ld(:entity, conn)
+
+      ~H"""
+      <%= if breadcrumbs != "" do %><script type="application/ld+json">
+        <%= breadcrumbs %>
+      </script><% end %>
+      <%= if identity != "" do %><script type="application/ld+json">
+        <%= identity %>
+      </script><% end %>
+      <%= if entity != "" do %><script type="application/ld+json">
+        <%= entity %>
+      </script><% end %>
+      """
+    else
+      ~H""
+    end
   end
 
   def render_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do

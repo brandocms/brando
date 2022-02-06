@@ -543,7 +543,7 @@ defmodule Brando.Utils do
   def get_page_title(%{assigns: %{language: language}}) do
     organization = Cache.Identity.get(language)
 
-    if organization do
+    if map_size(organization) > 0 do
       %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization
       render_title(title_prefix, title, title_postfix)
     else
