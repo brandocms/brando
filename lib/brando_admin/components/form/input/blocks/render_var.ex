@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <Input.toggle form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "color" -> %>
-          <Input.text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.color form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "datetime" -> %>
           <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />
