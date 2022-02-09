@@ -102,7 +102,7 @@ export default (app) => ({
   },
 
   spinPlus () {
-    gsap.to(this.plusTimeline, { timeScale: 0.009 })
+    gsap.to(this.plusTimeline, { timeScale: 1 })
   },
 
   stopPlus () {
