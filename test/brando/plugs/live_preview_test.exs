@@ -35,7 +35,7 @@ defmodule Brando.Plug.LivePreviewTest do
     capture_log(fn ->
       conn =
         :get
-        |> build_conn("__livepreview?key=LIVEPREVIEWKEY")
+        |> build_conn("/__livepreview?key=LIVEPREVIEWKEY")
         |> put_req_header("content-type", "application/json")
         |> Plug.Parsers.call(opts)
         |> LivePreview.call([])
@@ -56,7 +56,7 @@ defmodule Brando.Plug.LivePreviewTest do
 
       conn =
         :get
-        |> build_conn("__livepreview?key=LIVEPREVIEWKEY")
+        |> build_conn("/__livepreview?key=LIVEPREVIEWKEY")
         |> init_test_session(%{user_token: token})
         |> put_req_header("content-type", "application/json")
         |> Plug.Parsers.call(opts)
@@ -80,7 +80,7 @@ defmodule Brando.Plug.LivePreviewTest do
 
     conn =
       :get
-      |> build_conn("__livepreview?key=LIVEPREVIEWKEY")
+      |> build_conn("/__livepreview?key=LIVEPREVIEWKEY")
       |> init_test_session(%{user_token: token})
       |> put_req_header("content-type", "application/json")
       |> Plug.Parsers.call(opts)
