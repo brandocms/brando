@@ -745,7 +745,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{blocks: blocks, palette_id: palette_id}, opts) do
+      def container(%{blocks: blocks, palette_id: palette_id, target_id: target_id}, opts) do
         palettes = opts.palettes
 
         blocks_html =
@@ -758,17 +758,20 @@ defmodule Brando.Villain.Parser do
           |> Enum.reverse()
           |> Enum.join("")
 
+        target_id =
+          (target_id && " id=\"#{target_id}\" data-scrollspy-trigger=\"##{target_id}\"") || ""
+
         case Content.find_palette(palettes, palette_id) do
           {:ok, palette} ->
             """
-            <section b-section="#{palette.namespace}-#{palette.key}">
+            <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
               #{blocks_html}
             </section>
             """
 
           {:error, {:palette, :not_found, nil}} ->
             """
-            <section b-section>
+            <section b-section#{target_id}>
               #{blocks_html}
             </section>
             """
