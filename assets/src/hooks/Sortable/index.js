@@ -8,6 +8,7 @@ export default (app) => ({
     this.handle = this.el.dataset.sortableHandle
     this.sortableId = this.el.dataset.sortableId
     this.sortableParams = this.el.dataset.sortableParams    
+    this.sortableBinaryKeys = this.el.dataset.sortableBinaryKeys
     this.bindSortable()
   },
 
@@ -28,13 +29,22 @@ export default (app) => ({
 
   getOrder () {
     const items = this.el.querySelectorAll(this.sortableSelector)
-    this.currentOrder = Array.from(items).map(r => parseInt(r.dataset.id))
+    this.currentOrder = Array.from(items)
+    if (this.sortableBinaryKeys) {
+      this.currentOrder = this.currentOrder.map(r => parseInt(r.dataset.id))
+    }
     return []
   },
 
   setOrder (sortable) {
+    let sortedArray
     this.sortableOffset = this.el.dataset.sortableOffset || 0
-    const sortedArray = sortable.toArray().map(Number)
+    if (this.sortableBinaryKeys) {
+      sortedArray = sortable.toArray()
+    } else {
+      sortedArray = sortable.toArray().map(Number)
+    }
+
     if (!isEqual(this.currentOrder, sortedArray)) {
       if (this.target) {
         this.pushEventTo(this.target, 'sequenced', { 
