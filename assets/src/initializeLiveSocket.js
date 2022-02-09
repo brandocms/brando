@@ -7,8 +7,7 @@ export default (hooks, enableDebug) => {
   let liveSocket = new LiveSocket("/live", Socket, {
     hooks: hooks,
     params: { _csrf_token: csrfToken },
-    timeout: 70000,
-    dom: morphdomCallbacks
+    timeout: 70000
   })
 
   // connect if there are any LiveViews on the page
