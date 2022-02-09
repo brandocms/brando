@@ -164,6 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               opts={[options: @palette_options]}
             />
           <% end %>
+          <Input.text form={@block_data} field={:target_id} />
         </:config>
         <%= if !@selected_palette do %>
           <.live_component
