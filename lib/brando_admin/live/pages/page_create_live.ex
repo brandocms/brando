@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Pages.PageCreateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Page
-  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
@@ -8,7 +7,11 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:initial_params, %{parent_id: parent_id, language: language})}
+     |> assign(:initial_params, %{
+       parent_id: parent_id,
+       language: language,
+       template: "default.html"
+     })}
   end
 
   def mount(_, assigns, socket) do
@@ -20,14 +23,15 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Create page")} />
-
     <.live_component module={Form}
       id="page_form"
       current_user={@current_user}
       schema={@schema}
-      initial_params={@initial_params}
-    />
+      initial_params={@initial_params}>
+      <:header>
+        <%= gettext("Create page") %>
+      </:header>
+    </.live_component>
     """
   end
 end

@@ -10,6 +10,7 @@ import FocalPointHook from './hooks/FocalPoint'
 import FormHook from './hooks/Form'
 import LegacyImageUploadHook from './hooks/LegacyImageUpload'
 import ListingHook from './hooks/Listing'
+import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
@@ -38,6 +39,7 @@ export default app => {
     'Brando.Form': FormHook(app),
     'Brando.LegacyImageUpload': LegacyImageUploadHook(app),
     'Brando.Listing': ListingHook(app),
+    'Brando.LivePreview': LivePreviewHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),

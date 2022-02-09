@@ -1,9 +1,10 @@
+import { Dom, Events, gsap } from '@brandocms/jupiter'
+
 export default (app) => ({
-  mounted() {
+  mounted () {
     this.$form = this.el.querySelector('form')
     this.$input = this.$form.querySelector('input')
     this.paramName = this.$input.name.split('[')[0]
-
     this.submitListenerEvent = this.submitListener.bind(this)
     window.addEventListener('keydown', this.submitListenerEvent, false)
 
@@ -22,13 +23,7 @@ export default (app) => ({
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
     })
 
-    this.handleEvent(`b:live_preview`, ({ cache_key: cacheKey }) => {
-      window.open(
-        '/__livepreview?key=' + cacheKey,
-        '_blank'
-      )
-    })
-
+    // Run an initial validation
     this.$input.dispatchEvent(new Event('input', { bubbles: true }))
   },
 

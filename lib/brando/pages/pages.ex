@@ -292,9 +292,11 @@ defmodule Brando.Pages do
   def get_var(%Page{vars: vars}, var_key) do
     case Enum.find(vars, &(&1.key == var_key)) do
       nil -> nil
-      var -> render_var(var)
+      var -> Brando.Content.render_var(var)
     end
   end
+
+  def get_var(_, _), do: nil
 
   @doc """
   Checks if page has var
@@ -308,11 +310,6 @@ defmodule Brando.Pages do
       _ -> true
     end
   end
-
-  def render_var(%{type: "text", value: value}), do: value
-  def render_var(%{type: "boolean", value: value}), do: value || false
-  def render_var(%{type: "html", value: value}), do: value
-  def render_var(%{type: "color", value: value}), do: value
 
   @doc """
   Check all fields for references to `fragment`.

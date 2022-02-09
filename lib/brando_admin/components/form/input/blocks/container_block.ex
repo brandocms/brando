@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
-        bg_color={@selected_palette && "#{@first_color.hex_value}22"}>
+        bg_color={@selected_palette && "#{@first_color && @first_color.hex_value <> "22" || "transparent"}"}>
         <:description>
           <%= if @selected_palette do %>
             <%= @selected_palette.name %>
@@ -164,6 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               opts={[options: @palette_options]}
             />
           <% end %>
+          <Input.text form={@block_data} field={:target_id} />
         </:config>
         <%= if !@selected_palette do %>
           <.live_component

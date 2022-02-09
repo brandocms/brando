@@ -12,12 +12,15 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
     alias Brando.Content.Var
 
     trait Brando.Trait.CastPolymorphicEmbeds
+    trait Brando.Trait.EnsureUID
 
     @primary_key false
     data_layer :embedded
     identifier ""
 
     attributes do
+      attribute :uid, :string
+
       attribute :cols, {:array, Brando.PolymorphicEmbed},
         types: Var.types(),
         type_field: :type,

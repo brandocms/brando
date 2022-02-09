@@ -256,4 +256,10 @@ defmodule Brando.Content do
   def get_var_by_type(var_type) do
     Keyword.get(Var.types(), var_type)
   end
+
+  def render_var(%{type: "string", value: value}), do: value
+  def render_var(%{type: "text", value: value}), do: value
+  def render_var(%{type: "boolean", value: value}), do: value || false
+  def render_var(%{type: "html", value: value}), do: value
+  def render_var(%{type: "color", value: value}), do: value
 end

@@ -21,4 +21,8 @@ defmodule Brando.Content.Var.String do
     attribute :placeholder, :string
     attribute :instructions, :string
   end
+
+  defimpl String.Chars, for: __MODULE__ do
+    def to_string(%{value: value}), do: value
+  end
 end

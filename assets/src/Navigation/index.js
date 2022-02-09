@@ -4,6 +4,7 @@ export default class Navigation {
   constructor (app) {
     this.app = app
     this.fullscreen = false
+    this.fsToggle = Dom.find('.fullscreen-toggle')
 
     if (!Dom.find('#navigation')) {
       return
@@ -17,9 +18,8 @@ export default class Navigation {
   }
 
   setupFullscreenToggle () {
-    const fsToggle = Dom.find('.fullscreen-toggle')
-    fsToggle.addEventListener('click', e => {
-      fsToggle.classList.toggle('minimized')
+    this.fsToggle.addEventListener('click', e => {
+      this.fsToggle.classList.toggle('minimized')
       this.setFullscreen(!this.fullscreen)
     })
   }
@@ -139,12 +139,12 @@ export default class Navigation {
     this.fullscreen = value
 
     if (value) {
-      gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '-100' })
-      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft: 24 })
+      gsap.to(navigation, { ease: 'sine.inOut', duration: 0.35, xPercent: '-100' })
+      gsap.to(main, { ease: 'sine.inOut', duration: 0.35, marginLeft: 24 })
     } else {
       const marginLeft = this.getCSSVar(main, '--main-margin-left')
-      gsap.to(navigation, { ease: 'power2.in', duration: 0.35, xPercent: '0' })
-      gsap.to(main, { ease: 'power2.in', duration: 0.35, marginLeft, onComplete: () => {
+      gsap.to(navigation, { ease: 'sine.inOut', duration: 0.35, xPercent: '0' })
+      gsap.to(main, { ease: 'sine.inOut', duration: 0.35, marginLeft, onComplete: () => {
         gsap.set(main, { clearProps: 'margin-left'})
       } })
     }
