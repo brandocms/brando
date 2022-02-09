@@ -8,7 +8,7 @@ defmodule Brando.Trait.EnsureUID do
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
     case get_field(changeset, :uid) do
       nil -> put_change(changeset, :uid, Brando.Utils.generate_uid())
-      uid -> changeset
+      _ -> changeset
     end
   end
 end
