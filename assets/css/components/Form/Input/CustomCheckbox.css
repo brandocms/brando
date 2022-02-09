@@ -52,12 +52,6 @@
   input[type=checkbox]:checked + label::after {
     opacity: 1;
   }
-
-  /*focus styles—commented out for the tutorial, but you’ll need to add them for proper use
-  .wrapper input:focus + label::before {
-      box-shadow: 0 0 0 3px #ffbf47;
-    outline: 3px solid transparent;
-  }*/
 }
 
 .check-wrapper {
