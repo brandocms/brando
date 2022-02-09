@@ -35,16 +35,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           acc
       end)
 
-    {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
-    mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
-    mapped_ids = Map.new(cmp_imgs)
+    if image_ids == [] do
+      all_assigns
+    else
+      {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
+      mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
+      mapped_ids = Map.new(cmp_imgs)
 
-    Enum.map(all_assigns, fn assigns ->
-      case Map.get(mapped_ids, assigns.id) do
-        nil -> assigns
-        key -> Map.put(assigns, :original_image, Map.get(mapped_images, key))
-      end
-    end)
+      Enum.map(all_assigns, fn assigns ->
+        case Map.get(mapped_ids, assigns.id) do
+          nil -> assigns
+          key -> Map.put(assigns, :original_image, Map.get(mapped_images, key))
+        end
+      end)
+    end
   end
 
   def mount(socket) do
