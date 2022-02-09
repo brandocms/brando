@@ -7,7 +7,11 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:initial_params, %{parent_id: parent_id, language: language})}
+     |> assign(:initial_params, %{
+       parent_id: parent_id,
+       language: language,
+       template: "default.html"
+     })}
   end
 
   def mount(_, assigns, socket) do
