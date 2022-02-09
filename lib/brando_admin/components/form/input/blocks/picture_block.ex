@@ -42,7 +42,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(assigns, socket) do
-    extracted_path = v(assigns.block, :data).path
+    extracted_path =
+      case v(assigns.block, :data) do
+        nil -> nil
+        %{path: path} -> path
+      end
 
     block_data =
       assigns.block
