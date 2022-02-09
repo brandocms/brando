@@ -8,12 +8,13 @@ export default (app) => ({
   },
 
   mount () {
-    const props = this.el.getAttribute('data-props')
-    const parsedProps = props ? JSON.parse(props) : {}
+    const $input = Dom.find(this.el, '.tiptap-text')
 
     this._instance = new TipTap({
       target: Dom.find(this.el, '.tiptap-target'),
-      props: parsedProps,
+      props: {
+        content: $input.getAttribute('value')
+      },
     })
   },
 

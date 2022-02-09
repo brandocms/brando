@@ -26,10 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
      socket
      |> assign(assigns)
      |> assign(:uid, v(assigns.block, :uid))
-     |> assign(:text_type, v(assigns.block, :data).type)
-     |> assign_new(:initial_props, fn ->
-       Jason.encode!(%{content: v(assigns.block, :data).text})
-     end)}
+     |> assign(:text_type, v(assigns.block, :data).type)}
   end
 
   def render(assigns) do
@@ -75,8 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 id={"block-#{@uid}-rich-text"}
                 data-block-uid={@id}
                 phx-hook="Brando.TipTap"
-                data-name="TipTap"
-                data-props={@initial_props}>
+                data-name="TipTap">
                 <div
                   id={"block-#{@uid}-rich-text-target-wrapper"}
                   class="tiptap-target-wrapper"
@@ -86,10 +82,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                     class="tiptap-target">
                   </div>
                 </div>
+                <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750, id: "block-rich-text-hidden-input-text-#{@uid}" %>
+                <%= hidden_input block_data, :extensions, id: "block-rich-text-hidden-input-extensions-#{@uid}" %>
               </div>
             </div>
-            <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750, id: "block-rich-text-hidden-input-text-#{@uid}" %>
-            <%= hidden_input block_data, :extensions, id: "block-rich-text-hidden-input-extensions-#{@uid}" %>
           </div>
         <% end %>
       </.live_component>

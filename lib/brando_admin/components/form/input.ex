@@ -328,12 +328,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def rich_text(assigns) do
-    assigns =
-      assigns
-      |> prepare_input_component()
-      |> assign_new(:initial_props, fn ->
-        Jason.encode!(%{content: Ecto.Changeset.get_field(assigns.form.source, assigns.field)})
-      end)
+    assigns = prepare_input_component(assigns)
 
     ~H"""
     <Form.field_base
@@ -343,13 +338,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= hidden_input @form, @field, class: "tiptap-text", phx_debounce: 750 %>
       <div class="tiptap-wrapper" id={"#{@form.id}-#{@field}-rich-text-wrapper"}>
         <div
           id={"#{@form.id}-#{@field}-rich-text"}
           phx-hook="Brando.TipTap"
-          data-name="TipTap"
-          data-props={@initial_props}>
+          data-name="TipTap">
           <div
             id={"#{@form.id}-#{@field}-rich-text-target-wrapper"}
             class="tiptap-target-wrapper"
@@ -359,6 +352,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               class="tiptap-target">
             </div>
           </div>
+          <%= hidden_input @form, @field, class: "tiptap-text", phx_debounce: 750 %>
         </div>
       </div>
     </Form.field_base>
