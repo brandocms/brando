@@ -29,4 +29,12 @@ defmodule Brando.Content.Var.Html do
       |> Phoenix.HTML.Safe.to_iodata()
     end
   end
+
+  defimpl String.Chars, for: __MODULE__ do
+    def to_string(%{value: value}),
+      do:
+        value
+        |> Phoenix.HTML.raw()
+        |> Phoenix.HTML.Safe.to_iodata()
+  end
 end
