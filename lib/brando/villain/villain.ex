@@ -607,18 +607,21 @@ defmodule Brando.Villain do
       %{uid: ^uid}, acc ->
         [new_block | acc]
 
-      %{type: "module", data: %{refs: refs}} = module, acc ->
-        [
-          put_in(
-            module,
-            [
-              Access.key(:data),
-              Access.key(:refs)
-            ],
-            replace_block(refs, uid, new_block)
-          )
-          | acc
-        ]
+      %{type: "module", data: %{refs: refs, entries: entries}} = module, acc ->
+        refs_path = [Access.key(:data), Access.key(:refs)]
+        entries_path = [Access.key(:data), Access.key(:entries)]
+
+        replaced_refs_and_entries =
+          module
+          |> put_in(refs_path, replace_block(refs, uid, new_block))
+          |> put_in(entries_path, replace_block(entries, uid, new_block))
+
+        [replaced_refs_and_entries | acc]
+
+      %{type: "module_entry", data: %{refs: refs}} = module, acc ->
+        refs_path = [Access.key(:data), Access.key(:refs)]
+        replaced_refs = put_in(module, refs_path, replace_block(refs, uid, new_block))
+        [replaced_refs | acc]
 
       %{type: "container", data: %{blocks: blocks}} = container, acc ->
         [
