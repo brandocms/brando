@@ -296,6 +296,8 @@ defmodule Brando.Pages do
     end
   end
 
+  def get_var(_, _), do: nil
+
   @doc """
   Checks if page has var
   """
