@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
       schema={@schema}
       initial_params={@initial_params}>
       <:header>
-        <%= {gettext("Create page")} %>
+        <%= gettext("Create page") %>
       </:header>
     </.live_component>
     """
