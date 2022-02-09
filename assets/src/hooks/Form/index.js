@@ -23,7 +23,8 @@ export default (app) => ({
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
     })
 
-    // this.$input.dispatchEvent(new Event('input', { bubbles: true }))
+    // Run an initial validation
+    this.$input.dispatchEvent(new Event('input', { bubbles: true }))
   },
 
   destroyed() { 
