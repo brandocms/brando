@@ -149,27 +149,34 @@ defmodule Brando.Villain.Parser do
         content =
           entries
           |> Enum.with_index()
-          |> Enum.map(fn {entry, index} ->
-            vars = process_vars(entry.data.vars)
-            refs = process_refs(entry.data.refs)
+          |> Enum.map(fn
+            {%{hidden: true}, _} ->
+              ""
 
-            forloop = %{
-              "index" => index + 1,
-              "index0" => index,
-              "count" => Enum.count(entries)
-            }
+            {%{marked_as_deleted: true}, _} ->
+              ""
 
-            context =
-              base_context
-              |> add_vars_to_context(vars)
-              |> add_refs_to_context(refs)
-              |> add_admin_to_context(opts)
-              |> add_parser_to_context(__MODULE__)
-              |> add_module_id_to_context(id)
-              |> Context.assign("forloop", forloop)
+            {entry, index} ->
+              vars = process_vars(entry.data.vars)
+              refs = process_refs(entry.data.refs)
 
-            module.entry_template.code
-            |> Villain.parse_and_render(context)
+              forloop = %{
+                "index" => index + 1,
+                "index0" => index,
+                "count" => Enum.count(entries)
+              }
+
+              context =
+                base_context
+                |> add_vars_to_context(vars)
+                |> add_refs_to_context(refs)
+                |> add_admin_to_context(opts)
+                |> add_parser_to_context(__MODULE__)
+                |> add_module_id_to_context(id)
+                |> Context.assign("forloop", forloop)
+
+              module.entry_template.code
+              |> Villain.parse_and_render(context)
           end)
           |> Enum.join("\n")
 
