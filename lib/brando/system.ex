@@ -24,6 +24,7 @@ defmodule Brando.System do
     Logger.info("==> Brando >> Running system checks...")
     Brando.Cache.put(:warnings, [], :infinite)
     {:ok, {:module_config, :exists}} = check_module_config_exists()
+    {:ok, {:villain_filters, :exists}} = check_villain_filters_exists()
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:seo, :exists}} = check_seo_exists()
@@ -122,6 +123,26 @@ defmodule Brando.System do
           Generate with:
 
               mix brando.gen.authorization
+
+          """
+    end
+  end
+
+  defp check_villain_filters_exists do
+    case Code.ensure_loaded(Brando.filters()) do
+      {:module, _} ->
+        {:ok, {:villain_filters, :exists}}
+
+      {:error, _} ->
+        raise ConfigError,
+          message: """
+
+
+          Missing Villain filter module. Add:
+
+          defmodule #{Brando.filters()} do
+            use Brando.Villain.Filters
+          end
 
           """
     end

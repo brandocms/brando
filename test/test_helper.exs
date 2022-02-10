@@ -42,6 +42,10 @@ defmodule BrandoIntegrationAdmin.Gettext do
   use Gettext, otp_app: :brando, priv: "priv/gettext/backend"
 end
 
+defmodule BrandoIntegrationWeb.Villain.Filters do
+  use Brando.Villain.Filters
+end
+
 defmodule Brando.Villain.ParserTest.Parser do
   use Brando.Villain.Parser
 end

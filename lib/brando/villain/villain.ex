@@ -126,7 +126,7 @@ defmodule Brando.Villain do
   def create_context(vars) do
     Context.new(
       vars,
-      filter_module: Brando.Villain.Filters
+      filter_module: Brando.web_module(Villain.Filters)
     )
   end
 

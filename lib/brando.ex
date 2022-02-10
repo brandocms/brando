@@ -70,6 +70,11 @@ defmodule Brando do
   def authorization, do: app_module(Authorization)
 
   @doc """
+  Gets the parent app's filter module
+  """
+  def filters, do: web_module(Villain.Filters)
+
+  @doc """
   Gets the parent app's presence module
   """
   def presence, do: app_module(Presence)
