@@ -90,9 +90,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/templates/page/_logo.html.eex",
      "lib/application_name_web/templates/page/_logo.html.eex"},
 
-    # Default Villain parser
+    # Default Villain parser & filters
     {:eex, "lib/application_name_web/villain/parser.ex",
      "lib/application_name_web/villain/parser.ex"},
+    {:eex, "lib/application_name_web/villain/filters.ex",
+     "lib/application_name_web/villain/filters.ex"},
 
     # E2E test setup
     {:eex, "lib/application_name/factory.ex", "lib/application_name/factory.ex"},
