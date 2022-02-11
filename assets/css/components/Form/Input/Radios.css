@@ -13,7 +13,7 @@
   label {
     @fontsize 19px;
     display: flex;
-    align-items: baseline;
+    align-items: center;
   }
 
   &.status {
@@ -52,7 +52,7 @@
 
       span {
         display: inline-flex;
-        align-items: center;
+        align-items: baseline;
       }
     }
 
@@ -70,7 +70,6 @@
 
     svg {
       margin-right: 12px;
-      margin-top: -4px;
       circle {
         fill: theme(colors.blue);
         transition: fill 500ms ease;
@@ -98,8 +97,7 @@
       font-size: 15px;
       line-height: 1.8;
       border: 1px solid;
-      padding: 2px 14px;
-      padding-top: 5px;
+      padding: 3px 14px;
       border-radius: 30px;
 
       &.draft {
