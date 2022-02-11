@@ -477,10 +477,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     end
   end
 
-  defp render_picture_src(var_name, %{vars: vars} = assigns) do
+  defp render_picture_src(var_name, %{vars: vars}) do
     # FIXME
     #
-    # This is suboptimal. We preload all our image vars in the form, but when running
+    # This is suboptimal at best. We preload all our image vars in the form, but when running
     # the polymorphic changesets, it clobbers the image's `value` - resetting it.
     #
     # Everything here will hopefully improve when we can update poly changesets instead
@@ -490,7 +490,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       %Brando.Content.Var.Image{value_id: nil} ->
         ""
 
-      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} = var ->
+      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} ->
         case Brando.Cache.get("var_image_#{image_id}") do
           nil ->
             image = Brando.Images.get_image!(image_id)
@@ -502,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             media_path
         end
 
-      %Brando.Content.Var.Image{value: image, value_id: image_id} = var ->
+      %Brando.Content.Var.Image{value: image, value_id: image_id} ->
         media_path = Brando.Utils.media_url(image.path)
         Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
         media_path
