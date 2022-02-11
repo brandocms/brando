@@ -227,7 +227,6 @@ defmodule Brando.PolymorphicEmbed do
 
           module ->
             embed_changeset = changeset_fun.(struct(module), params)
-
             embed_changeset = %{embed_changeset | action: :insert}
 
             case embed_changeset do
