@@ -32,6 +32,9 @@ defmodule Brando.Blueprint.Assets do
                 end
             """
 
+        :default ->
+          default_config
+
         fun when is_function(fun) ->
           fun.()
 
