@@ -61,8 +61,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <Input.text form={@block_data} field={:class} label={gettext "Class"} />
         </:config>
         <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
-          <%= if v(@block_data, :code) do %>
+        <%= if v(@block_data, :code) do %>
+          <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
             <%= v(@block_data, :code) |> raw %>
+          </div>
           <% else %>
             <div class="empty">
               <figure>
