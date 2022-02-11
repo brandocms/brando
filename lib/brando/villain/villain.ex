@@ -646,6 +646,51 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Preload all image vars in blocks
+  """
+  def preload_vars(nil), do: nil
+
+  def preload_vars(blocks) do
+    Enum.reduce(blocks, [], fn
+      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}} = var, acc ->
+        [Brando.repo().preload(var, :value) | acc]
+
+      %{type: "module", data: %{vars: vars, entries: entries}} = module, acc ->
+        entries_path = [Access.key(:data), Access.key(:entries)]
+        vars_path = [Access.key(:data), Access.key(:vars)]
+
+        replaced_entries_and_vars =
+          module
+          |> put_in(vars_path, preload_vars(vars))
+          |> put_in(entries_path, preload_vars(entries))
+
+        [replaced_entries_and_vars | acc]
+
+      %{type: "module_entry", data: %{refs: refs}} = module, acc ->
+        refs_path = [Access.key(:data), Access.key(:refs)]
+        replaced_refs = put_in(module, refs_path, preload_vars(refs))
+        [replaced_refs | acc]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            preload_vars(blocks)
+          )
+          | acc
+        ]
+
+      block, acc ->
+        [block | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
   Scan recursively through `blocks` looking for `uid` and remove
   """
   def delete_block(blocks, uid) do

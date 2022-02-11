@@ -477,6 +477,44 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     end
   end
 
+  defp render_picture_src(var_name, %{vars: vars} = assigns) do
+    # FIXME
+    #
+    # This is suboptimal. We preload all our image vars in the form, but when running
+    # the polymorphic changesets, it clobbers the image's `value` - resetting it.
+    #
+    # Everything here will hopefully improve when we can update poly changesets instead
+    # of replacing/inserting new every time.
+
+    case Enum.find(vars, &(&1.key == var_name)) do
+      %Brando.Content.Var.Image{value_id: nil} ->
+        ""
+
+      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} = var ->
+        case Brando.Cache.get("var_image_#{image_id}") do
+          nil ->
+            image = Brando.Images.get_image!(image_id)
+            media_path = Brando.Utils.media_url(image.path)
+            Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+            media_path
+
+          media_path ->
+            media_path
+        end
+
+      %Brando.Content.Var.Image{value: image, value_id: image_id} = var ->
+        media_path = Brando.Utils.media_url(image.path)
+        Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+        media_path
+
+      %Brando.Images.Image{path: path} ->
+        Brando.Utils.media_url(path)
+
+      _ ->
+        ""
+    end
+  end
+
   defp render_variable("entry." <> var_path_string, assigns) do
     var_path =
       var_path_string
@@ -484,21 +522,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       |> Enum.map(&String.to_existing_atom/1)
 
     entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
-
-    # TODO: Find a way to preload any changed associations here? otherwise, if we for instance have
-    # an `entry.category_id` that changes, entry.category will still show the old relation.
-    # if we Brando.repo().preload(entry, [:category], force: true) it will be correct.
-    # However, it isn't very efficient to force a preload on every render_variable call!
-
-    # We could track all relations from the schema blueprint, store their ids and check, but .. ugh.
-    # If we assign the entry as rendered_entry every time, we at least won't have to preload
-    # on every render
-
-    # The best might be to not preload here, but preload directly from the input component
-    # that updates the relation. So if it is a select box, send_update to the form with
-    # the field we wish to reload?
-
-    # entry = Brando.repo().preload(entry, [:category], force: true)
     Brando.Utils.try_path(entry, var_path) |> raw()
   rescue
     ArgumentError ->

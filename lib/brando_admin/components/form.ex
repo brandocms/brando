@@ -209,7 +209,21 @@ defmodule BrandoAdmin.Components.Form do
       |> Map.put(:with_deleted, true)
 
     assign_new(socket, :entry, fn ->
-      apply(context, :"get_#{singular}!", [query_params])
+      context
+      |> apply(:"get_#{singular}!", [query_params])
+
+      # FIXME: When we have sorted out poly changesets clobbering the image var's
+      # `value` field, we can re-enable this. Currently it just adds a preload that
+      # is wasted since it gets destroyed on first "validate"
+      # |> scan_and_preload_block_vars(schema)
+    end)
+  end
+
+  defp scan_and_preload_block_vars(entry, schema) do
+    Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
+      blocks = Map.get(updated_entry, field)
+      updated_blocks = Brando.Villain.preload_vars(blocks)
+      Map.put(updated_entry, field, updated_blocks)
     end)
   end
 
