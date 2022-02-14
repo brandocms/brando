@@ -68,8 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </div>
               <div class="panel">
                 <%= hidden_input @block_data, :source %>
-                <%= hidden_input(@block_data, :width) %>
-                <%= hidden_input(@block_data, :height) %>
+
                 <%= hidden_input(@block_data, :thumbnail_url) %>
 
                 <Input.text form={@block_data} field={:remote_id} label={gettext "Remote ID"} />
@@ -86,6 +85,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
                 <Input.toggle form={@block_data} field={:autoplay} label={gettext "Autoplay"} />
                 <Input.toggle form={@block_data} field={:preload} label={gettext "Preload"} />
+
+                <Input.number form={@block_data} field={:width} label={gettext "Width"} />
+                <Input.number form={@block_data} field={:height} label={gettext "Height"} />
               </div>
             </div>
           <% else %>
