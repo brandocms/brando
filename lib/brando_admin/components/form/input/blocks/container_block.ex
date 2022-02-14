@@ -110,6 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
      socket
      |> assign(assigns)
      |> assign(:uid, v(block, :uid))
+     |> assign(:target_id, v(block_data, :target_id))
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms)
      |> assign(:block_data, block_data)
@@ -148,9 +149,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
                   data-popover={"#{color.name}"}></span>
               <% end %>
             </div>
+            <%= if @target_id do %>
+              <div class="container-target">#<%= @target_id %></div>
+            <% end %>
           <% else %>
             <%= gettext "No palette selected" %>
           <% end %>
+
         </:description>
         <:config>
           <%= if @selected_palette do %>
