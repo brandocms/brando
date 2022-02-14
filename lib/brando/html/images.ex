@@ -204,7 +204,7 @@ defmodule Brando.HTML.Images do
     do: String.replace(srcs, [".jpg", ".jpeg", ".png", ".avif", ".gif"], suffix)
 
   defp add_alt(attrs, image_struct) do
-    alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))
+    alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, "") || "")
     put_in(attrs, [:img, :alt], alt)
   end
 
