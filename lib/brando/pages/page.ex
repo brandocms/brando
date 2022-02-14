@@ -238,7 +238,7 @@ defmodule Brando.Pages.Page do
   end
 
   forms do
-    form default_params: %{status: :draft} do
+    form default_params: %{status: :draft, template: "default.html"} do
       tab t("Content") do
         fieldset size: :full do
           input :status, :status, label: t("Status")
