@@ -107,7 +107,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             <%= checkbox @block, :hidden %>
             <div class="slider round"></div>
           </Form.label>
-          <span class="block-type"><%= @type %></span> &rarr; <%= render_slot @description %>
+          <span class="block-type"><%= @type %></span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
         </div>
         <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot @inner_block %>

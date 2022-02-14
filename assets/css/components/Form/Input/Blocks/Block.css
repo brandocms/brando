@@ -313,14 +313,17 @@
       }
     }
 
+    .arrow {
+      @font main;
+      margin-right: 4px;
+    }
+
 
     .block-type {
-      @space margin-x 8px;
+      @space margin-left 8px;
+      @space margin-right 4px;
       display: block;
       font-weight: bold;
-      /* border: 1px solid var(--brando-color-dark);
-      border-radius: 10px;
-      padding: 2px 6px 1px; */
     }
   }
 
