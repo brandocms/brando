@@ -45,7 +45,7 @@ export default (app) => ({
   handleInput(url) {
     let match
     
-    if (url.startsWith('https://player.vimeo.com/external/')) {
+    if (url.startsWith('https://player.vimeo.com/external/') || url.startsWith('https://player.vimeo.com/progressive_redirect/')) {
       this.source = 'file'
       this.remoteId = url
     } else {
