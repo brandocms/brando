@@ -344,7 +344,7 @@ defmodule BrandoAdmin.Components.Form do
     <div>
       <div
         id={"#{@id}-el"}
-        class="brando-form b-rendered"
+        class="brando-form"
         data-moonwalk-run="brandoForm"
         phx-hook="Brando.Form">
 
