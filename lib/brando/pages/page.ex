@@ -25,7 +25,7 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.Meta
   trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
-  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Sequenced, append: true
   trait Brando.Trait.SoftDelete, obfuscated_fields: [:uri]
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
