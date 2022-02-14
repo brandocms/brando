@@ -129,6 +129,49 @@ p {
   }
 }
 
+.video-wrapper {
+  padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
+  video {
+    width: 100%;
+  }
+}
+
+/** Smart video **/
+[data-smart-video] {
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+
+  [data-cover] {
+    position: absolute;
+  }
+
+  video {
+    top: 0;
+    width: 100%;
+    position: absolute;
+    z-index: 3;
+  }
+}
+
+.no-js [data-smart-video] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/** Lazyload **/
+[data-ll-srcset] {
+  img {
+    opacity: 0;
+    will-change: opacity;
+
+    &[data-ll-loaded] {
+      transition: opacity 350ms ease-in;
+      opacity: 1;
+    }
+  }
+}
+
 .blink {
   animation: blink-animation 2.7s steps(200, start) infinite;
 }
