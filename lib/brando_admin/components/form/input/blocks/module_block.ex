@@ -144,11 +144,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @myself)}>
                   Fetch missing refs
                 </button>
-                <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
-                  Reset all variables
-                </button>
                 <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
                   Reset all block refs
+                </button>
+                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
+                  Fetch missing vars
+                </button>
+                <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
+                  Reset all variables
                 </button>
               </div>
             </div>
@@ -209,6 +212,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       </.live_component>
     </div>
     """
+  end
+
+  def handle_event(
+        "fetch_missing_vars",
+        _,
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field,
+            module_id: module_id
+          }
+        } = socket
+      ) do
+    {:ok, module} = Brando.Content.get_module(module_id)
+
+    changeset = base_form.source
+
+    current_vars = input_value(block_data, :vars)
+    current_var_keys = Enum.map(current_vars, & &1.key)
+
+    module_vars = module.vars
+    module_var_keys = Enum.map(module_vars, & &1.key)
+
+    missing_var_keys = module_var_keys -- current_var_keys
+    missing_vars = Enum.filter(module_vars, &(&1.key in missing_var_keys))
+
+    new_vars = current_vars ++ missing_vars
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{vars: new_vars}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event(
