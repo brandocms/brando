@@ -96,13 +96,8 @@ export default app => ({
           .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
           .to(inputEls, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
           .to(inputEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
-          .call(() => {
-            gsap.set(inputEls, { clearProps: 'all' })
-          })
-
-        timeline.call(() => {
-          reset(app, el)
-        })
+          .call(() => { gsap.set(inputEls, { clearProps: 'all' }) })
+          .call(() => { reset(app, el) })
       }
     },
 
