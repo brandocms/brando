@@ -498,6 +498,7 @@ defmodule BrandoAdmin.Components.Form do
           for={@image_changeset}
           let={image_form}
           phx-submit="save_image"
+          phx-change="validate_image"
           phx-target={@myself}>
           <div
             id="image-drawer-form-preview"
