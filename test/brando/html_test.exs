@@ -121,6 +121,11 @@ defmodule Brando.HTMLTest do
              "<div class=\"video-wrapper\" data-smart-video style=\"--aspect-ratio: 0.75\">\n  \n  \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"my_poster.jpg\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n</div>"
   end
 
+  def assert_attr(target, attr, value) do
+    assert Floki.attribute(target, attr) == value
+    target
+  end
+
   test "picture_tag" do
     user = Factory.build(:user)
     srcset = {Brando.Users.User, :avatar}
@@ -139,8 +144,63 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    [
+      {"figure", [{"data-orientation", "landscape"}],
+       [
+         {"picture", [{"class", "avatar"}, {"data-orientation", "landscape"}],
+          [
+            {"source",
+             [
+               {"srcset",
+                "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"},
+               {"type", "image/jpeg"}
+             ], []},
+            {"img",
+             [
+               {"class", "img-fluid"},
+               {"src", "/media/images/avatars/small/27i97a.jpeg"},
+               {"srcset",
+                "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"},
+               {"alt", ""}
+             ], []},
+            {"noscript", [], [{"img", [{"src", "/media/images/avatars/small/27i97a.jpeg"}], []}]}
+          ]}
+       ]}
+    ]
+
+    assert doc
+           |> Floki.find("figure")
+           |> assert_attr("data-orientation", ["landscape"])
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-orientation", ["landscape"])
+           |> assert_attr("class", ["avatar"])
+
+    assert doc
+           |> Floki.find("source")
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
+           |> assert_attr("type", ["image/jpeg"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("class", ["img-fluid"])
+           |> assert_attr("src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
+           |> assert_attr("alt", [""])
+
+    assert doc
+           |> Floki.find("noscript > img")
+           |> assert_attr("src", ["/media/images/avatars/small/27i97a.jpeg"])
 
     # ---
     opts = [

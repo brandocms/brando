@@ -37,7 +37,6 @@ defmodule Brando.Mixfile do
       # liveview
       {:phoenix_live_view, "~> 0.17.6"},
       {:phoenix_html, "~> 3.2"},
-      {:floki, ">= 0.27.0", only: :test},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 3.0"},
@@ -88,6 +87,7 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
       {:excoveralls, "~> 0.6", only: :test, runtime: false},
+      {:floki, "~> 0.32", only: :test},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs, runtime: false},
