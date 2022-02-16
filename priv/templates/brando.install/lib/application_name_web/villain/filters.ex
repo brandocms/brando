@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Villain.Filters do
+defmodule <%= application_module %>Web.Villain.Filters do
   @moduledoc """
   Default filters for Villain
 
