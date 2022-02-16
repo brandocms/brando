@@ -79,7 +79,7 @@ defmodule Brando.Sites do
       title: "Welcome!",
       title_postfix: "",
       logo: nil,
-      language: :en
+      language: Brando.config(:default_language)
     }
     |> Brando.repo().insert!
   end
@@ -176,7 +176,8 @@ defmodule Brando.Sites do
   @doc """
   Create default seo
   """
-  def create_default_seo, do: Brando.repo().insert!(%SEO{language: :en})
+  def create_default_seo,
+    do: Brando.repo().insert!(%SEO{language: Brando.config(:default_language)})
 
   #
   # Previews
