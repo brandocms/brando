@@ -140,7 +140,7 @@ defmodule Brando.System do
 
           Missing Villain filter module. Add:
 
-          defmodule #{Brando.filters()} do
+          defmodule #{inspect(Brando.filters())} do
             use Brando.Villain.Filters
           end
 
