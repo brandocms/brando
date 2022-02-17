@@ -38,17 +38,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   # slot default
 
-  # import Brando.Gettext
+  import Brando.Gettext
 
   def mount(socket) do
     {:ok,
      socket
+     |> assign_new(:inner_block, fn -> nil end)
      |> assign(:open, false)
      |> assign(:creating, false)
      |> assign(:filter_string, "")}
   end
 
   def update(assigns, socket) do
+    selected_options = get_selected_options(assigns.form, assigns.field)
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
@@ -56,11 +58,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
     entry_form = Keyword.get(assigns.opts, :form)
+    update_relation = Keyword.get(assigns.opts, :update_relation)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_selected_options()
+     |> prepare_input_component()
+     |> assign(:selected_options, selected_options)
      |> assign_input_options()
      |> assign_label()
      |> assign_labels()
@@ -68,35 +72,31 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
      |> assign(:changeset_fun, changeset_fun)
+     |> assign(:update_relation, update_relation)
      |> assign(:default, default)
      |> assign(:entry_form, entry_form)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
      |> assign_new(:modal_id, fn ->
-       "select-#{assigns.form.id}-#{assigns.input.name}-modal"
+       "select-#{assigns.id}-modal"
      end)}
   end
 
-  def assign_selected_options(%{assigns: %{form: form, input: %{name: name}}} = socket) do
-    assign_new(socket, :selected_options, fn ->
-      raw_value =
-        case input_value(form, name) do
-          nil -> []
-          "" -> []
-          %Ecto.Association.NotLoaded{} -> []
-          val -> val
-        end
+  defp get_selected_options(form, field) do
+    raw_values =
+      case input_value(form, field) do
+        "" -> []
+        nil -> []
+        %Ecto.Association.NotLoaded{} -> []
+        val -> val
+      end
 
-      selected_options =
-        Enum.map(raw_value, fn
-          %{id: id} ->
-            to_string(id)
+    Enum.map(raw_values, fn
+      %{id: id} ->
+        to_string(id)
 
-          val ->
-            val
-        end)
-
-      selected_options
+      val ->
+        val
     end)
   end
 
@@ -139,7 +139,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def assign_label(
         %{assigns: %{input_options: input_options, selected_options: selected_options}} = socket
       ) do
-    assign(socket, :label, get_label(input_options, selected_options))
+    assign(socket, :count_label, get_label(input_options, selected_options))
   end
 
   def assign_labels(
@@ -185,196 +185,198 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def render(assigns) do
     ~H"""
-    <Form.field_base
-      form={@form}
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}>
-      <%= if Enum.empty?(@selected_labels) do %>
-        <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: "" %>
-      <% else %>
-        <%= for opt <- @selected_options do %>
-          <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt %>
+    <div>
+      <Form.field_base
+        form={@form}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
+        <%= if Enum.empty?(@selected_labels) do %>
+          <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: "" %>
+        <% else %>
+          <%= for opt <- @selected_options do %>
+            <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt %>
+          <% end %>
         <% end %>
-      <% end %>
 
-      <%= if !Enum.empty?(@selected_labels) do %>
-        <div class="selected-labels">
-          <%= for lbl <- @selected_labels do %>
-            <div class="selected-label">
-              <svg
-                class="circle-filled"
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 12 12">
-                <circle
-                  r="6"
-                  cy="6"
-                  cx="6" />
-              </svg>
-              <div class="selected-label-text"><%= lbl %></div>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
-
-      <div class="multiselect">
-        <div>
-          <span>
-            <%= if @inner_block do %>
-              <%= render_slot @inner_block %>
-            <% else %>
-              <%= if @selected_options do %>
-                <%= @label |> raw %>
-              <% else %>
-                <%= gettext("No selection") %>
-              <% end %>
-            <% end %>
-          </span>
-        </div>
-        <button
-          type="button"
-          class="button-edit"
-          phx-click={show_modal("##{@modal_id}")}>
-          <%= if @open do %>
-            <%= gettext "Close" %>
-          <% else %>
-            <%= gettext "Select" %>
-          <% end %>
-        </button>
-        <.live_component module={Modal} title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
-          <:header>
-            <%= if @select_form && !@creating do %>
-              <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create {@singular}</button>
-            <% end %>
-          </:header>
-          <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
-            <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
-              <div class="field-wrapper">
-                <div class="label-wrapper">
-                  <label for="select-modal-search" class="control-label">
-                    <span><%= gettext "Filter options" %></span>
-                  </label>
-                </div>
-                <div class="field-base">
-                  <input class="text" name="select-modal-search" type="text" value={@filter_string}>
-                </div>
+        <%= if !Enum.empty?(@selected_labels) do %>
+          <div class="selected-labels">
+            <%= for lbl <- @selected_labels do %>
+              <div class="selected-label">
+                <svg
+                  class="circle-filled"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12">
+                  <circle
+                    r="6"
+                    cy="6"
+                    cx="6" />
+                </svg>
+                <div class="selected-label-text"><%= lbl %></div>
               </div>
-            </div>
-          <% end %>
-
-          <div class="select-modal-wrapper">
-            <%= if !@creating do %>
-              <div class="select-modal">
-                <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
-                  <h2 class="titlecase"><%= gettext "Available options" %></h2>
-                  <%= if Enum.empty?(@input_options) do %>
-                    <%= gettext "No options found" %>
-                  <% end %>
-                  <%= for opt <- @input_options do %>
-                    <button
-                      type="button"
-                      class={render_classes([
-                        "options-option",
-                        "option-selected": opt.value in @selected_options
-                      ])}
-                      data-label={opt.label}
-                      value={opt.value}
-                      phx-click={JS.push("select_option", target: @myself)}>
-                      <%= opt.label |> raw %>
-                    </button>
-                  <% end %>
-                </div>
-
-                <%= if @resetable do %>
-                  <div class="reset">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={JS.push("reset", target: @myself) |> hide_modal("##{@modal_id}")}>
-                      Reset value
-                    </button>
-                  </div>
-                <% end %>
-              </div>
-              <div class="selected-labels">
-                <h2 class="titlecase">Currently selected</h2>
-                <%= if Enum.empty?(@selected_labels) do %>
-                  None selected
-                <% else %>
-                  <%= for lbl <- @selected_labels do %>
-                    <div class="selected-label">
-                      <svg
-                        class="circle-filled"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12">
-                        <circle
-                          r="6"
-                          cy="6"
-                          cx="6" />
-                      </svg>
-                      <div class="selected-label-text"><%= lbl %></div>
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
-            <% else %>
-              <%= if @select_form do %>
-                <.form
-                  for={@select_changeset}
-                  phx-change={JS.push("validate_new_entry", target: @myself)}
-                  let={entry_form}>
-                  <%= for tab <- @select_form.tabs do %>
-                    <div
-                      class={render_classes(["form-tab", active: true])}
-                      data-tab-name={tab.name}>
-                      <div class="row">
-                        <%= for fieldset <- tab.fields do %>
-                          <Fieldset.render
-                            translations={@form_translations}
-                            form={entry_form}
-                            uploads={[]}
-                            fieldset={fieldset} />
-                        <% end %>
-                      </div>
-                    </div>
-                  <% end %>
-                  <button
-                    phx-click={JS.push("save_new_entry", target: @myself)}
-                    type="button" class="primary">
-                    Save
-                  </button>
-                  <button
-                    phx-click={JS.push("hide_form", target: @myself)}
-                    type="button" class="secondary">
-                    Cancel
-                  </button>
-                </.form>
-              <% end %>
             <% end %>
           </div>
-        </.live_component>
-      </div>
-    </Form.field_base>
+        <% end %>
+
+        <div class="multiselect">
+          <div>
+            <span>
+              <%= if @inner_block do %>
+                <%= render_slot @inner_block %>
+              <% else %>
+                <%= if @selected_options do %>
+                  <%= @count_label |> raw %>
+                <% else %>
+                  <%= gettext("No selection") %>
+                <% end %>
+              <% end %>
+            </span>
+          </div>
+          <button
+            type="button"
+            class="button-edit"
+            phx-click={show_modal("##{@modal_id}")}>
+            <%= if @open do %>
+              <%= gettext "Close" %>
+            <% else %>
+              <%= gettext "Select" %>
+            <% end %>
+          </button>
+          <.live_component module={Modal} title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
+            <:header>
+              <%= if @select_form && !@creating do %>
+                <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create <%= @singular %></button>
+              <% end %>
+            </:header>
+            <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
+              <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+                <div class="field-wrapper">
+                  <div class="label-wrapper">
+                    <label for="select-modal-search" class="control-label">
+                      <span><%= gettext "Filter options" %></span>
+                    </label>
+                  </div>
+                  <div class="field-base">
+                    <input class="text" name="select-modal-search" type="text" value={@filter_string}>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="select-modal-wrapper">
+              <%= if !@creating do %>
+                <div class="select-modal">
+                  <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
+                    <h2 class="titlecase"><%= gettext "Available options" %></h2>
+                    <%= if Enum.empty?(@input_options) do %>
+                      <%= gettext "No options found" %>
+                    <% end %>
+                    <%= for opt <- @input_options do %>
+                      <button
+                        type="button"
+                        class={render_classes([
+                          "options-option",
+                          "option-selected": opt.value in @selected_options
+                        ])}
+                        data-label={opt.label}
+                        value={opt.value}
+                        phx-click={JS.push("select_option", target: @myself)}>
+                        <%= opt.label |> raw %>
+                      </button>
+                    <% end %>
+                  </div>
+
+                  <%= if @resetable do %>
+                    <div class="reset">
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("reset", target: @myself) |> hide_modal("##{@modal_id}")}>
+                        <%= gettext "Reset value" %>
+                      </button>
+                    </div>
+                  <% end %>
+                </div>
+                <div class="selected-labels">
+                  <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
+                  <%= if Enum.empty?(@selected_labels) do %>
+                    <div class="empty-label"><%= gettext "None selected" %></div>
+                  <% else %>
+                    <%= for lbl <- @selected_labels do %>
+                      <div class="selected-label">
+                        <svg
+                          class="circle-filled"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12">
+                          <circle
+                            r="6"
+                            cy="6"
+                            cx="6" />
+                        </svg>
+                        <div class="selected-label-text"><%= lbl %></div>
+                      </div>
+                    <% end %>
+                  <% end %>
+                </div>
+              <% else %>
+                <%= if @select_form do %>
+                  <.form
+                    for={@select_changeset}
+                    phx-change={JS.push("validate_new_entry", target: @myself)}
+                    let={entry_form}>
+                    <%= for tab <- @select_form.tabs do %>
+                      <div
+                        class={render_classes(["form-tab", active: true])}
+                        data-tab-name={tab.name}>
+                        <div class="row">
+                          <%= for fieldset <- tab.fields do %>
+                            <Fieldset.render
+                              translations={@form_translations}
+                              form={entry_form}
+                              uploads={[]}
+                              fieldset={fieldset} />
+                          <% end %>
+                        </div>
+                      </div>
+                    <% end %>
+                    <button
+                      phx-click={JS.push("save_new_entry", target: @myself)}
+                      type="button" class="primary">
+                      Save
+                    </button>
+                    <button
+                      phx-click={JS.push("hide_form", target: @myself)}
+                      type="button" class="secondary">
+                      Cancel
+                    </button>
+                  </.form>
+                <% end %>
+              <% end %>
+            </div>
+          </.live_component>
+        </div>
+      </Form.field_base>
+    </div>
     """
   end
 
   defp get_label(_, []) do
-    "<None selected>"
+    gettext("<None selected>")
   end
 
   defp get_label(_, selected_options) do
-    "#{Enum.count(selected_options)} selected"
+    gettext("%{count} selected", count: Enum.count(selected_options))
   end
 
   defp get_label_for(input_options, selected_option) do
     case Enum.find(input_options, &(&1.value == selected_option)) do
-      nil -> "<No value>"
+      nil -> gettext("<No value>")
       %{label: label} -> label
     end
   end
@@ -466,7 +468,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply,
      socket
      |> assign(:selected_options, [])
-     |> assign(:label, label)}
+     |> assign(:count_label, label)}
   end
 
   def handle_event("show_form", _, socket) do
