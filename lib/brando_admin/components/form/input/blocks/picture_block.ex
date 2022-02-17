@@ -167,6 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             <div class="panel">
               <Input.rich_text form={@block_data} field={:title} label={gettext "Title"} />
               <Input.text form={@block_data} field={:alt} label={gettext "Alt"} />
+              <Input.text form={@block_data} field={:link} label={gettext "Link"} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
