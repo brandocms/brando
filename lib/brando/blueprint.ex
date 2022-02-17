@@ -32,8 +32,8 @@ defmodule Brando.Blueprint do
         plural: "project_workers"
 
       relations do
-        relation :project_id, :belongs_to, module: Project
-        relation :worker_id, :belongs_to, module: Worker
+        relation :project, :belongs_to, module: Project
+        relation :worker, :belongs_to, module: Worker
       end
 
     - then add the relation as a m2m:
@@ -46,7 +46,7 @@ defmodule Brando.Blueprint do
         plural: "projects"
 
       relations do
-        relation :projects_workers, :many_to_many, module: ProjectWorker, cast: true
+        relation :workers, :many_to_many, module: Worker, join_through: ProjectWorker, cast: true
       end
 
     # add `cast: :true` to :projects_workers opts if you need M2M casting
