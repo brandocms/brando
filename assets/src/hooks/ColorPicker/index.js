@@ -15,7 +15,7 @@ export default (app) => ({
     this.picker = new Picker({ parent: parent, popup: 'top', color: initialColor || '#000000', alpha: false })
 
     // You can do what you want with the chosen color using two callbacks: onChange and onDone.
-    this.picker.onChange = function (color) {
+    this.picker.onChange = color => {
       let processedColor = color.printHex(false)
       if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
         processedColor = processedColor.slice(0, -2)
