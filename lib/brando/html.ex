@@ -80,7 +80,7 @@ defmodule Brando.HTML do
       |> assign_new(:inner_block, fn -> [] end)
 
     ~H"""
-    <a href={@link} rel={@rel} target={@target}>
+    <a href={@url} rel={@rel} target={@target}>
       <%= render_slot(@inner_block) %>
     </a>
     """
