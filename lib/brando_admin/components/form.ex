@@ -999,7 +999,9 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     assign_new(socket, :changeset, fn ->
-      schema.changeset(entry, %{}, current_user, skip_villain: true)
+      entry
+      |> schema.changeset(%{}, current_user, skip_villain: true)
+      |> Map.put(:action, :validate)
     end)
   end
 
