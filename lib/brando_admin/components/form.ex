@@ -807,10 +807,7 @@ defmodule BrandoAdmin.Components.Form do
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
 
-    changeset =
-      entry_or_default
-      |> schema.changeset(entry_params, current_user, skip_villain: true)
-      |> Map.put(:action, :validate)
+    changeset = validate(schema, entry_or_default, entry_params, current_user)
 
     if live_preview_active? do
       Brando.LivePreview.update(schema, changeset, live_preview_cache_key)
@@ -872,6 +869,12 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:changeset, changeset)
          |> push_errors(changeset, form)}
     end
+  end
+
+  defp validate(schema, entry, params, user) do
+    entry
+    |> schema.changeset(params, user, skip_villain: true)
+    |> Map.put(:action, :validate)
   end
 
   defp is_loaded_image(nil), do: false
@@ -979,12 +982,10 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :changeset, fn ->
       # this is the initial assignment of changeset with an empty entry,
       # so we add default_params here
-      schema.changeset(
-        struct(schema),
-        default_params,
-        current_user,
-        skip_villain: true
-      )
+      schema
+      |> struct()
+      |> schema.changeset(default_params, current_user, skip_villain: true)
+      |> Map.put(:action, :validate)
     end)
   end
 
