@@ -13,7 +13,7 @@ export default (app) => ({
     this._instance = new TipTap({
       target: Dom.find(this.el, '.tiptap-target'),
       props: {
-        content: $input.getAttribute('value')
+        content: $input.getAttribute('value') || ''
       },
     })
   },
