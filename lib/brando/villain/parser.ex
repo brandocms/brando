@@ -322,11 +322,16 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert YouTube video to iframe html
       """
-      def video(%{remote_id: remote_id, source: :youtube}, _) do
-        params = "autoplay=1&controls=0&showinfo=0&rel=0"
-        ~s(<div class="video-wrapper">
-             <iframe width="420"
-                     height="315"
+      def video(%{remote_id: remote_id, source: :youtube, autoplay: autoplay} = data, _) do
+        width = Map.get(data, :width, 420)
+        height = Map.get(data, :height, 315)
+
+        aspect_ratio = height / width
+
+        params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
+        ~s(<div class="video-wrapper" style="--aspect-ratio: #{aspect_ratio}">
+             <iframe width="#{width}"
+                     height="#{height}"
                      src="//www.youtube.com/embed/#{remote_id}?#{params}"
                      frameborder="0"
                      allowfullscreen>
@@ -334,8 +339,13 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      def video(%{remote_id: remote_id, source: :vimeo}, _) do
-        ~s(<div class="video-wrapper">
+      def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
+        width = Map.get(data, :width, 500)
+        height = Map.get(data, :height, 281)
+
+        aspect_ratio = height / width
+
+        ~s(<div class="video-wrapper" style="--aspect-ratio: #{aspect_ratio}">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
                      height="281"
