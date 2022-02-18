@@ -231,7 +231,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     changeset = base_form.source
 
-    current_vars = input_value(block_data, :vars)
+    current_vars = input_value(block_data, :vars) || []
     current_var_keys = Enum.map(current_vars, & &1.key)
 
     module_vars = module.vars
