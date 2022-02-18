@@ -7,7 +7,7 @@ import {
 } from '@brandocms/jupiter'
 
 import { Socket } from 'phoenix'
-import NProgress from 'nprogress'
+import topbar from 'topbar'
 
 import Navigation from './Navigation'
 import Presence from './Presence'
@@ -120,10 +120,12 @@ export default (hooks, enableDebug = true) => {
       window.addEventListener('phx:b:component:remount', () => {
         app.components.forEach(cmp => cmp.remount())
       })
-      
-      // Show progress bar on live navigation and form submits
+
+      let topBarScheduled = undefined;
       window.addEventListener('phx:page-loading-start', ({ detail }) => {
-        NProgress.start()
+        if (!topBarScheduled) {
+          topBarScheduled = setTimeout(() => topbar.show(), 120)
+        }
 
         if ((detail.kind === 'initial' || detail.kind === 'redirect') && !app.reconnected) {
           if (!PREFERS_REDUCED_MOTION) {
@@ -136,7 +138,9 @@ export default (hooks, enableDebug = true) => {
       })
 
       window.addEventListener('phx:page-loading-stop', ({ detail }) => {
-        NProgress.done()
+        clearTimeout(topBarScheduled)
+        topBarScheduled = undefined
+        topbar.hide()
 
         if (detail.kind === 'redirect' && app.reconnected) {
           app.reconnected = false
@@ -149,7 +153,7 @@ export default (hooks, enableDebug = true) => {
           gsap.to($main, { clearProps: 'opacity' })
           app.moonwalk.ready()
         }
-      })
+      })      
 
       const $progressWrapper = Dom.find('.progress-wrapper')
       const $progress = Dom.find($progressWrapper, '.progress')
