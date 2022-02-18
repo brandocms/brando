@@ -2,6 +2,19 @@ defmodule Brando.Blueprint.Listings do
   @moduledoc """
   # Listings
 
+  ### Field types
+
+  - `:image` - Display an image in the listing
+
+    For example, to display the entry's `cover` image over 2 columns, with a `padded`
+    class and using the image's `small` size key:
+
+    ```
+    field :cover, :image, columns: 2, class: "padded", size: "small"
+    ```
+
+    If no `size` is supplied, it will fall back to `thumb`.
+
   ### Custom query params
 
   To set preloads or ordering for your listing you can call
