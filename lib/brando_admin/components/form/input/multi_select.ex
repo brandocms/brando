@@ -92,6 +92,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       end
 
     Enum.map(raw_values, fn
+      %Ecto.Changeset{} = changeset ->
+        changeset
+        |> Ecto.Changeset.apply_changes()
+        |> Map.get(:id)
+        |> to_string()
+
       %{id: id} ->
         to_string(id)
 
