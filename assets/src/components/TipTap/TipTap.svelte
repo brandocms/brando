@@ -4,6 +4,7 @@
   import StarterKit from '@tiptap/starter-kit'
   import Typography from '@tiptap/extension-typography'
   import Subscript from '@tiptap/extension-subscript'
+  import Superscript from '@tiptap/extension-superscript'
   import Link from './extensions/Link'
   import Button from './extensions/Button'
   import PreventDrop from './extensions/PreventDrop'
@@ -83,6 +84,7 @@
           openOnClick: false
         }),
         Subscript,
+        Superscript,
         Button,
         Focus.configure({
           className: 'has-focus',
@@ -216,6 +218,14 @@
       type="button"
       title="Subscript">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 6v13H9V6H3V4h14v2h-6zm8.55 10.58a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 14a2 2 0 0 1 1.373 3.454L18.744 19H21v1h-4v-1l2.55-2.42z"/></svg>
+    </button>
+    <button 
+      on:click={() => editor.chain().focus().toggleSuperscript().run()}
+      class="menu-item"
+      class:active={editor.isActive('superscript')}
+      type="button"
+      title="Superscript">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 7v13H9V7H3V5h12v2h-4zm8.55-.42a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 4a2 2 0 0 1 1.373 3.454L18.744 9H21v1h-4V9l2.55-2.42z"/></svg>
     </button>
   </div>
   {/if}
