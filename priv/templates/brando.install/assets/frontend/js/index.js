@@ -10,10 +10,12 @@ import {
   Application,
   Cookies,
   Events,
+  Lazyload,
   Links,
   MobileMenu,
   Moonwalk,
   FixedHeader,
+  Typography,
   gsap
 } from '@brandocms/jupiter'
 
@@ -46,10 +48,12 @@ app.registerCallback(Events.APPLICATION_READY, () => {
 })
 
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
+  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
   app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
   app.header = new FixedHeader(app, configureHeader(app))
   app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
   app.cookies = new Cookies(app)
+  app.typo = new Typography()
 })
 
 app.registerCallback(Events.APPLICATION_REVEALED, () => {
