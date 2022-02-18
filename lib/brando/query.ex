@@ -8,7 +8,7 @@ defmodule Brando.Query do
       mutation :create, Post
       mutation :update, Post
       mutation :delete, Post
-      mutation :duplicate, {Post, change_fields: [:title], delete_fields: [:comments]}
+      mutation :duplicate, {Post, change_fields: [:title], delete_fields: [:comments], merge_fields: %{contributors: []}}
       ```
 
   You can pass a function to execute after the mutation is finished:

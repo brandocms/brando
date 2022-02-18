@@ -153,6 +153,7 @@ defmodule Brando.Query.Mutations do
           |> maybe_delete_fields(opts)
           |> maybe_set_status()
           |> Utils.map_from_struct()
+          |> maybe_merge_fields(opts)
           |> drop_id()
 
         apply(context, :"create_#{name}", [params, user])
@@ -186,6 +187,16 @@ defmodule Brando.Query.Mutations do
   end
 
   defp maybe_delete_fields(entry, _), do: entry
+
+  defp maybe_merge_fields(entry, %{merge_fields: merge_fields}) do
+    unless is_map(merge_fields) do
+      raise ArgumentError, message: "merge_fields must be a list"
+    end
+
+    Map.merge(entry, merge_fields)
+  end
+
+  defp maybe_merge_fields(entry, _), do: entry
 
   defp set_action(changeset, action), do: %{changeset | action: action}
 
