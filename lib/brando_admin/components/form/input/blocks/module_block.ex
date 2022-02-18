@@ -258,7 +258,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       updated_changeset: updated_changeset
     )
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :important_vars, Enum.filter(new_vars, &(&1.important == true)))}
   end
 
   def handle_event(
@@ -293,7 +293,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       updated_changeset: updated_changeset
     )
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :important_vars, Enum.filter(module.vars, &(&1.important == true)))}
   end
 
   def handle_event(
