@@ -672,7 +672,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-handle=".sort-handle">
             <Form.poly_inputs form={@form} for={:vars} let={%{form: var, index: idx}}>
               <li class="var padded sort-handle draggable" data-id={idx}>
-                <.live_component module={Modal} title="Edit var" id={"#{@form.id}-#{@key}-var-#{idx}"}>
+                <.live_component module={Modal} title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{idx}"}>
                   <.live_component module={RenderVar}
                     id={"#{@form.id}-#{@key}-render-var-#{idx}"}
                     var={var}

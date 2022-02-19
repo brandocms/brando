@@ -176,6 +176,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   placeholder={@placeholder}
                   instructions={@instructions}
                   myself={@myself} />
+
+                <%= case @type do %>
+                  <% "color" -> %>
+                    <Input.toggle form={@var} field={:picker} label={gettext "Allow picking custom colors"} />
+                    <Input.toggle form={@var} field={:opacity} label={gettext "Allow setting opacity"} />
+
+                  <% _ -> %>
+
+                <% end %>
               </div>
             </div>
           <% else %>
@@ -218,7 +227,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <Input.toggle form={@var} field={:value} label={@label} instructions={@instructions} />
 
         <% "color" -> %>
-          <Input.color form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.color
+            form={@var}
+            field={:value}
+            label={@label}
+            placeholder={@placeholder}
+            instructions={@instructions}
+            opts={[
+              opacity: input_value(@var, :opacity),
+              picker: input_value(@var, :picker),
+            ]}
+          />
 
         <% "datetime" -> %>
           <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />

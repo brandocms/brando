@@ -20,5 +20,7 @@ defmodule Brando.Content.Var.Color do
     attribute :important, :boolean, default: false
     attribute :placeholder, :string
     attribute :instructions, :string
+    attribute :picker, :boolean, default: true
+    attribute :opacity, :boolean, default: false
   end
 end

@@ -2,6 +2,10 @@
   position: relative;
   cursor: pointer;
 
+  .picker_hue, .picker_sl, .picker_alpha {
+    display: none;
+  }
+
   .circle-and-hex {
     display: flex;
     align-items: center;
@@ -15,5 +19,17 @@
       @fontsize 16px;
       margin-left: 15px;
     }
+  }
+}
+
+[data-picker] .picker {
+  .picker_hue, .picker_sl {
+    display: block;
+  }
+}
+
+[data-opacity] .picker {
+  .picker_alpha {
+    display: block;
   }
 }

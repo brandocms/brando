@@ -75,7 +75,11 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def color(assigns) do
-    assigns = prepare_input_component(assigns)
+    assigns =
+      assigns
+      |> prepare_input_component()
+      |> assign(:opacity, Keyword.get(assigns.opts, :opacity, false))
+      |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
 
     ~H"""
     <Form.field_base
@@ -89,9 +93,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@form.id}-#{@field}-color-picker"}
         phx-hook="Brando.ColorPicker"
         data-input={"##{@form.id}_#{@field}"}
-        data-color={input_value(@form, @field) || gettext("No color selected")}>
+        data-color={input_value(@form, @field) || gettext("No color selected")}
+        data-opacity={@opacity}
+        data-picker={@picker}>
         <div class="picker">
-
           <%= hidden_input @form, @field, phx_debounce: @debounce %>
           <div phx-update="ignore" class="picker-target">
             <div class="circle-and-hex">
