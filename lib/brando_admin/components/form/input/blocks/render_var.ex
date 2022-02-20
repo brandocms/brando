@@ -181,6 +181,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   <% "color" -> %>
                     <Input.toggle form={@var} field={:picker} label={gettext "Allow picking custom colors"} />
                     <Input.toggle form={@var} field={:opacity} label={gettext "Allow setting opacity"} />
+                    <Input.number form={@var} field={:palette_id} label={gettext "ID of palette to choose colors from"} />
 
                   <% _ -> %>
 
@@ -189,12 +190,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </div>
           <% else %>
             <div id={"#{@var.id}-value"}>
-              <%= hidden_input @var, :key %>
-              <%= hidden_input @var, :label %>
-              <%= hidden_input @var, :type %>
-              <%= hidden_input @var, :important %>
-              <%= hidden_input @var, :instructions %>
-              <%= hidden_input @var, :placeholder %>
+              <Input.input type={:hidden} form={@var} field={:key} />
+              <Input.input type={:hidden} form={@var} field={:label} />
+              <Input.input type={:hidden} form={@var} field={:type} />
+              <Input.input type={:hidden} form={@var} field={:important} />
+              <Input.input type={:hidden} form={@var} field={:instructions} />
+              <Input.input type={:hidden} form={@var} field={:placeholder} />
 
               <.render_value_inputs
                 type={@type}
@@ -236,6 +237,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             opts={[
               opacity: input_value(@var, :opacity),
               picker: input_value(@var, :picker),
+              palette_id: input_value(@var, :palette_id),
             ]}
           />
 

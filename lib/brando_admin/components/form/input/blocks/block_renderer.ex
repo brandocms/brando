@@ -42,7 +42,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
      |> assign_new(:templates, fn -> nil end)
      |> assign_new(:type, fn -> "root" end)
      |> assign_new(:hide_sections, fn -> false end)
-     |> assign(block_count: block_count)}
+     |> assign(:block_count, block_count)
+     |> assign(:indexed_block_forms, Enum.with_index(assigns.block_forms))}
   end
 
   def render(assigns) do
@@ -79,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
         </div>
       <% end %>
 
-      <%= for {block_form, index} <- Enum.with_index(@block_forms) do %>
+      <%= for {block_form, index} <- @indexed_block_forms do %>
         <Blocks.DynamicBlock.render
           uploads={@uploads}
           index={index}

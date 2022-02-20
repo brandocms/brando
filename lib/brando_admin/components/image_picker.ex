@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             <img
               width="25"
               height="25"
-              src={"#{Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url())}"} />
+              src={Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url())} />
             <div class="image-picker__info">
               <div class="image-picker__filename"><%= image.path %></div>
               <div class="image-picker__dims">

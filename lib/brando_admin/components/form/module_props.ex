@@ -194,7 +194,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 <.live_component module={Modal} title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"} wide>
                   <div class="panels">
                     <%= for ref_data <- inputs_for_block(ref, :data) do %>
-                      <%= hidden_input(ref_data, :type, value: input_value(ref_data, :type)) %>
+                      <Input.input type={:hidden} form={ref_data} field={:type} value={input_value(ref_data, :type)} />
                       <div class="panel">
                         <h2 class="titlecase">Block template</h2>
                         <%= case input_value(ref_data, :type) do %>
@@ -224,7 +224,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                           <% "picture" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
-                              <%= hidden_input(block_data, :cdn) %>
+                              <Input.input type={:hidden} form={block_data} field={:cdn} />
                               <Input.toggle form={block_data} field={:lazyload} label={gettext "Lazyload"} />
                               <Input.toggle form={block_data} field={:moonwalk} label={gettext "Moonwalk"} />
                               <Input.text form={block_data} field={:title} label={gettext "Title/Caption"} />
@@ -346,8 +346,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   %{label: "File", value: "file"}
                                 ]]}
                               />
-                              <%= hidden_input(block_data, :width) %>
-                              <%= hidden_input(block_data, :height) %>
+                              <Input.input type={:hidden} form={block_data} field={:width} />
+                              <Input.input type={:hidden} form={block_data} field={:height} />
                               <Input.text form={block_data} field={:remote_id} label={gettext "Remote ID"} />
                               <Input.text form={block_data} field={:poster} label={gettext "Poster"} />
                               <Input.text form={block_data} field={:cover} label={gettext "Cover"} />
@@ -538,9 +538,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                           "col-var-form": true,
                                           hidden: input_value(var, :key) not in @open_col_vars
                                         ])}>
-                                          <%= hidden_input var, :key %>
-                                          <%= hidden_input var, :type %>
-                                          <%= hidden_input var, :important %>
+                                          <Input.input type={:hidden} form={var} field={:key} />
+                                          <Input.input type={:hidden} form={var} field={:type} />
+                                          <Input.input type={:hidden} form={var} field={:important} />
                                           <Input.text form={var} field={:label} label={gettext "Label"} />
                                           <Input.text form={var} field={:instructions} label={gettext "Instructions"} />
                                           <Input.text form={var} field={:placeholder} label={gettext "Placeholder"} />
@@ -587,10 +587,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                       <div class="panel">
                         <h2 class="titlecase">Ref config — <%= input_value(ref_data, :type) %></h2>
-
                         <Input.text form={ref} field={:name} label={gettext "Name"} />
                         <Input.text form={ref} field={:description} label={gettext "Description"} />
-                        <%= hidden_input(ref_data, :uid, value: input_value(ref_data, :uid) || Brando.Utils.generate_uid()) %>
+                        <Input.input type={:hidden} form={ref_data} field={:uid} value={input_value(ref_data, :uid) || Brando.Utils.generate_uid()} />
                       </div>
                     <% end %>
                   </div>

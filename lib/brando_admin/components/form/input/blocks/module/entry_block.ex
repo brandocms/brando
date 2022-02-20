@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Villain
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
@@ -135,9 +136,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                 <%= raw split %>
             <% end %>
           <% end %>
-          <%= hidden_input @block_data, :module_id %>
-          <%= hidden_input @block_data, :sequence %>
-          <%= hidden_input @block_data, :multi %>
+          <Input.input type={:hidden} form={@block_data} field={:module_id} />
+          <Input.input type={:hidden} form={@block_data} field={:sequence} />
+          <Input.input type={:hidden} form={@block_data} field={:multi} />
         </div>
       </.live_component>
     </div>

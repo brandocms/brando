@@ -82,8 +82,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                     class="tiptap-target">
                   </div>
                 </div>
-                <%= hidden_input block_data, :text, class: "tiptap-text", phx_debounce: 750, id: "block-rich-text-hidden-input-text-#{@uid}" %>
-                <%= hidden_input block_data, :extensions, id: "block-rich-text-hidden-input-extensions-#{@uid}" %>
+                <Input.input
+                  type={:hidden}
+                  form={block_data}
+                  field={:text}
+                  class="tiptap-text"
+                  phx_debounce={750}
+                  id={"block-rich-text-hidden-input-text-#{@uid}"} />
+                <Input.input
+                  type={:hidden}
+                  form={block_data}
+                  field={:extensions}
+                  phx_debounce={750}
+                  id={"block-rich-text-hidden-input-extensions-#{@uid}"} />
               </div>
             </div>
           </div>

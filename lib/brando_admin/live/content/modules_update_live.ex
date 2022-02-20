@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                   <Input.code form={entry} field={:code} label={gettext "Code"} />
                 </div>
 
-                <%= hidden_input entry, :id %>
+                <Input.input type={:hidden} form={entry} field={:id} />
 
                 <.live_component
                   module={ModuleProps}

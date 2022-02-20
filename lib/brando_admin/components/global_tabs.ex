@@ -3,13 +3,15 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Brando.Gettext
   alias Brando.Sites
-  alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.ImagePicker
 
   def update(assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:indexed_global_sets, Enum.with_index(assigns.global_sets))
      |> load_global_sets()}
   end
 
@@ -19,7 +21,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <.live_component module={ImagePicker} id="image-picker" />
       <div class="form-tabs" data-moonwalk-section>
         <div class="form-tab-customs" data-moonwalk="upDly">
-          <%= for {global_set, index} <- Enum.with_index(@global_sets) do %>
+          <%= for {global_set, index} <- @indexed_global_sets do %>
             <button
               id={"set-#{global_set.key}-#{global_set.language}"}
               type="button"
@@ -29,7 +31,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         </div>
       </div>
 
-      <%= for {global_set, index} <- Enum.with_index(@global_sets) do %>
+      <%= for {global_set, index} <- @indexed_global_sets do %>
         <%= if index == @active_tab do %>
           <div id={"set-#{index}"}>
             <.set_form global_set={global_set} index={index} target={@myself} />
@@ -55,10 +57,10 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       phx-change="validate"
       phx-submit="submit"
       let={f}>
-      <%= hidden_input f, :id %>
-      <%= hidden_input f, :language %>
-      <%= hidden_input f, :label %>
-      <%= hidden_input f, :key %>
+      <Input.input type={:hidden} form={f} field={:id} />
+      <Input.input type={:hidden} form={f} field={:language} />
+      <Input.input type={:hidden} form={f} field={:label} />
+      <Input.input type={:hidden} form={f} field={:key} />
 
       <%= for var <- inputs_for_poly(f, :globals, []) do %>
         <.live_component module={RenderVar}

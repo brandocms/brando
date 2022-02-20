@@ -21,6 +21,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
       socket
       |> assign(assigns)
       |> prepare_subform_component()
+      |> assign(
+        :indexed_sub_form_fields,
+        Enum.with_index(inputs_for(assigns.form, assigns.subform.field))
+      )
 
     {:ok, socket}
   end
@@ -66,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
               <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
             <% end %>
-            <%= for {sub_form, index} <- Enum.with_index(inputs_for(@form, @subform.field)) do %>
+            <%= for {sub_form, index} <- @indexed_sub_form_fields do %>
               <div
                 class={render_classes(["subform-entry", inline: @subform.style == :inline])}
                 data-id={index}>

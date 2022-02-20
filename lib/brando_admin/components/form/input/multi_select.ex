@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Modal
 
   # prop form, :form
@@ -200,10 +201,22 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         class={@class}
         compact={@compact}>
         <%= if Enum.empty?(@selected_labels) do %>
-          <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-empty", name: "#{@form.name}[#{@field}]", value: "" %>
+          <Input.input
+            type={:hidden}
+            form={@form}
+            field={@field}
+            id={"#{@form.name}-#{@field}-empty"}
+            name={"#{@form.name}[#{@field}]"}
+            value={""} />
         <% else %>
           <%= for opt <- @selected_options do %>
-            <%= hidden_input @form, @field, id: "#{@form.name}-#{@field}-#{opt}", name: "#{@form.name}[#{@field}][]", value: opt %>
+            <Input.input
+              type={:hidden}
+              form={@form}
+              field={@field}
+              id={"#{@form.name}-#{@field}-#{String.replace(opt, ~r/\W/u, "_")}"}
+              name={"#{@form.name}[#{@field}][]"}
+              value={opt} />
           <% end %>
         <% end %>
 

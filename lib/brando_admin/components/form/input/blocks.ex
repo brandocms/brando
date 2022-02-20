@@ -34,16 +34,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def update(assigns, socket) do
-    # TODO: when using input_value here, we sometimes end up with the whole block field as a params map %{"0" => ...}
+    # TODO: when using input_value here, we sometimes end up
+    # with the whole block field as a params map %{"0" => ...}
     blocks = Utils.iv(assigns.form, assigns.field) || []
     block_forms = inputs_for_blocks(assigns.form, assigns.field) || []
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:image_drawer_target, fn ->
-       socket.assigns.myself
-     end)
+     |> assign_new(:image_drawer_target, fn -> socket.assigns.myself end)
      |> assign_new(:templates, fn ->
        if template_namespace = assigns.opts[:template_namespace] do
          {:ok, templates} = Content.list_templates(%{filter: %{namespace: template_namespace}})

@@ -59,8 +59,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
               phx_debounce: 750,
               rows: 1
             %>
-            <%= hidden_input block_data, :class %>
-            <%= hidden_input block_data, :placeholder %>
+            <Input.input type={:hidden} form={block_data} field={:class} />
+            <Input.input type={:hidden} form={block_data} field={:placeholder} />
           </div>
         <% end %>
       </.live_component>

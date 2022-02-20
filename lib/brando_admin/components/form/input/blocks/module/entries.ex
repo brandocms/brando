@@ -19,7 +19,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:entry_forms, inputs_for_blocks(assigns.block_data, :entries))}
+     |> assign(
+       :indexed_entry_forms,
+       Enum.with_index(inputs_for_blocks(assigns.block_data, :entries))
+     )
+     |> assign(:entry_count, Enum.count(assigns.block_data.data.entries))}
   end
 
   def render(assigns) do
@@ -29,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">
-      <%= for {entry_form, idx} <- Enum.with_index(@entry_forms) do %>
+      <%= for {entry_form, idx} <- @indexed_entry_forms do %>
         <.live_component module={EntryBlock}
           id={v(entry_form, :uid)}
           block={entry_form}
@@ -38,13 +42,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           entry_template={@entry_template}
           belongs_to="module_entry"
           index={idx}
-          block_count={Enum.count(@entry_forms)}
+          block_count={@entry_count}
           insert_block=""
           duplicate_block=""
         />
       <% end %>
 
-      <button class="add-module-entry" type="button" phx-click={JS.push("add_entry", target: @myself)} phx-page-loading>
+      <button
+        type="button"
+        class="add-module-entry"
+        phx-click={JS.push("add_entry", target: @myself)}
+        phx-page-loading>
         <%= gettext "Add" %> [<%= @entry_template.name %>]
       </button>
     </div>

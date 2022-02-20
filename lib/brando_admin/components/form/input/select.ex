@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Modal
 
   # prop form, :form
@@ -177,7 +178,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}>
 
-        <%= hidden_input @form, @field, value: @selected_option %>
+        <Input.input type={:hidden} form={@form} field={@field} value={@selected_option} />
 
         <div class="multiselect">
           <div>

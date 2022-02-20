@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Content.List.Row
 
@@ -117,14 +118,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             form={@form}
             for={@field}
             let={%{form: identifier_form}}>
-            <%= hidden_input identifier_form, :id %>
-            <%= hidden_input identifier_form, :schema %>
-            <%= hidden_input identifier_form, :status %>
-            <%= hidden_input identifier_form, :title %>
-            <%= hidden_input identifier_form, :cover %>
-            <%= hidden_input identifier_form, :type %>
-            <%= hidden_input identifier_form, :absolute_url %>
-            <%= hidden_input identifier_form, :updated_at %>
+            <Input.input type={:hidden} form={identifier_form} field={:id} />
+            <Input.input type={:hidden} form={identifier_form} field={:schema} />
+            <Input.input type={:hidden} form={identifier_form} field={:status} />
+            <Input.input type={:hidden} form={identifier_form} field={:title} />
+            <Input.input type={:hidden} form={identifier_form} field={:cover} />
+            <Input.input type={:hidden} form={identifier_form} field={:type} />
+            <Input.input type={:hidden} form={identifier_form} field={:absolute_url} />
+            <Input.input type={:hidden} form={identifier_form} field={:updated_at} />
           </Form.inputs>
         <% end %>
 

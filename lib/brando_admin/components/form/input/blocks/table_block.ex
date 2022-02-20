@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
@@ -59,8 +60,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <:description></:description>
         <:config>
         </:config>
-        <%= hidden_input @block_data, :key %>
-        <%= hidden_input @block_data, :instructions %>
+        <Input.input type={:hidden} form={@block_data} field={:key} />
+        <Input.input type={:hidden} form={@block_data} field={:instructions} />
         <%= if input_value(@block_data, :instructions) do %>
           <div class="table-instructions">
             <%= input_value(@block_data, :instructions) %>
@@ -119,13 +120,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <!-- template row -->
         <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
           <Form.poly_inputs form={tpl_row} for={:cols} let={%{form: var}}>
-            <%= hidden_input var, :key %>
-            <%= hidden_input var, :type %>
-            <%= hidden_input var, :important %>
-            <%= hidden_input var, :label %>
-            <%= hidden_input var, :instructions %>
-            <%= hidden_input var, :placeholder %>
-            <%= hidden_input var, :value %>
+            <Input.input type={:hidden} form={var} field={:key} />
+            <Input.input type={:hidden} form={var} field={:type} />
+            <Input.input type={:hidden} form={var} field={:important} />
+            <Input.input type={:hidden} form={var} field={:label} />
+            <Input.input type={:hidden} form={var} field={:instructions} />
+            <Input.input type={:hidden} form={var} field={:placeholder} />
+            <Input.input type={:hidden} form={var} field={:value} />
           </Form.poly_inputs>
         <% end %>
         <!-- end template -->

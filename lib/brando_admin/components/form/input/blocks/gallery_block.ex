@@ -63,6 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:images, images)
+     |> assign(:indexed_images, Enum.with_index(images))
      |> assign(:upload_formats, upload_formats)
      |> assign(:display, v(block_data, :display))
      |> assign(:selected_images_paths, selected_images_paths)
@@ -108,19 +109,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         </div>
 
         <%= for image <- inputs_for(@block_data, :images) do %>
-          <%= hidden_input image, :placeholder %>
-          <%= hidden_input image, :cdn %>
-          <%= hidden_input image, :dominant_color %>
-          <%= hidden_input image, :height %>
-          <%= hidden_input image, :width %>
-          <%= hidden_input image, :path %>
+          <Input.input type={:hidden} form={image} field={:placeholder} />
+          <Input.input type={:hidden} form={image} field={:cdn} />
+          <Input.input type={:hidden} form={image} field={:dominant_color} />
+          <Input.input type={:hidden} form={image} field={:height} />
+          <Input.input type={:hidden} form={image} field={:width} />
+          <Input.input type={:hidden} form={image} field={:path} />
 
           <Form.inputs
             form={image}
             for={:focal}
             let={%{form: focal_form}}>
-            <%= hidden_input focal_form, :x %>
-            <%= hidden_input focal_form, :y %>
+            <Input.input type={:hidden} form={focal_form} field={:x} />
+            <Input.input type={:hidden} form={focal_form} field={:y} />
           </Form.inputs>
 
           <Form.map_inputs
@@ -156,7 +157,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".preview">
             <%= if @display == :grid do %>
-              <%= for {img, idx} <- Enum.with_index(@images) do %>
+              <%= for {img, idx} <- @indexed_images do %>
                 <div
                   class={render_classes([
                     "preview",
@@ -239,7 +240,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         </.live_component>
 
         <:config>
-          <%= hidden_input(@block_data, :type) %>
+          <Input.input type={:hidden} form={@block_data} field={:type} />
           <Input.radios
             form={@block_data}
             field={:display}

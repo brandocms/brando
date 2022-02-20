@@ -67,21 +67,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
               </div>
               <div class="panel">
-                <%= hidden_input @block_data, :source %>
+                <Input.input type={:hidden} form={@block_data} field={:source} />
 
-                <%= hidden_input(@block_data, :thumbnail_url) %>
+                <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} />
 
                 <Input.text form={@block_data} field={:remote_id} label={gettext "Remote ID"} />
                 <Input.text form={@block_data} field={:title} label={gettext "Title"} />
                 <Input.text form={@block_data} field={:poster} label={gettext "Poster"} />
                 <%= if v(@block_data, :cover) in ["false", "svg"] do %>
-                  <%= hidden_input(@block_data, :cover) %>
+                  <Input.input type={:hidden} form={@block_data} field={:cover} />
                 <% else %>
                   <Input.text form={@block_data} field={:cover} label={gettext "Cover"} />
                 <% end %>
 
-                <%= hidden_input(@block_data, :opacity) %>
-                <%= hidden_input(@block_data, :play_button) %>
+                <Input.input type={:hidden} form={@block_data} field={:opacity} />
+                <Input.input type={:hidden} form={@block_data} field={:play_button} />
 
                 <Input.toggle form={@block_data} field={:autoplay} label={gettext "Autoplay"} />
                 <Input.toggle form={@block_data} field={:preload} label={gettext "Preload"} />
@@ -91,19 +91,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </div>
             </div>
           <% else %>
-            <%= hidden_input(@block_data, :url) %>
-            <%= hidden_input(@block_data, :source) %>
-            <%= hidden_input(@block_data, :width) %>
-            <%= hidden_input(@block_data, :height) %>
-            <%= hidden_input(@block_data, :remote_id) %>
-            <%= hidden_input(@block_data, :thumbnail_url) %>
-            <%= hidden_input(@block_data, :title) %>
-            <%= hidden_input(@block_data, :poster) %>
-            <%= hidden_input(@block_data, :cover) %>
-            <%= hidden_input(@block_data, :opacity) %>
-            <%= hidden_input(@block_data, :autoplay) %>
-            <%= hidden_input(@block_data, :preload) %>
-            <%= hidden_input(@block_data, :play_button) %>
+            <Input.input type={:hidden} form={@block_data} field={:url} />
+            <Input.input type={:hidden} form={@block_data} field={:source} />
+            <Input.input type={:hidden} form={@block_data} field={:width} />
+            <Input.input type={:hidden} form={@block_data} field={:height} />
+            <Input.input type={:hidden} form={@block_data} field={:remote_id} />
+            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} />
+            <Input.input type={:hidden} form={@block_data} field={:title} />
+            <Input.input type={:hidden} form={@block_data} field={:poster} />
+            <Input.input type={:hidden} form={@block_data} field={:cover} />
+            <Input.input type={:hidden} form={@block_data} field={:opacity} />
+            <Input.input type={:hidden} form={@block_data} field={:autoplay} />
+            <Input.input type={:hidden} form={@block_data} field={:preload} />
+            <Input.input type={:hidden} form={@block_data} field={:play_button} />
 
             <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
               <%= gettext("Enter the video's URL:") %>

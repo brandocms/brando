@@ -416,7 +416,12 @@ defmodule BrandoAdmin.Components.Form do
           </div>
 
           <.live_component module={ImagePicker} id="image-picker" />
-          <.image_drawer {assigns} />
+          <.image_drawer
+            image_changeset={@image_changeset}
+            myself={@myself}
+            uploads={@uploads}
+            edit_image={@edit_image}
+          />
 
           <.form
             id={"#{@id}_form"}
@@ -450,24 +455,14 @@ defmodule BrandoAdmin.Components.Form do
                 close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
             <% end %>
 
-            <%= for {tab, _tab_idx} <- Enum.with_index(@form.tabs) do %>
-              <div
-                class={render_classes(["form-tab", active: @active_tab == tab.name])}
-                data-tab-name={tab.name}>
-                <div class="row">
-                  <%= for {fieldset, fs_idx} <- Enum.with_index(tab.fields) do %>
-                    <Fieldset.render
-                      id={"#{f.id}-fieldset-#{tab.name}-#{fs_idx}"}
-                      translations={@schema.__translations__}
-                      relations={@schema.__relations__}
-                      form={f}
-                      fieldset={fieldset}
-                      uploads={@uploads}
-                      current_user={@current_user} />
-                  <% end %>
-                </div>
-              </div>
-            <% end %>
+            <.form_tabs
+              tabs={@form.tabs}
+              active_tab={@active_tab}
+              current_user={@current_user}
+              uploads={@uploads}
+              form={f}
+              schema={@schema}
+            />
 
             <.submit_button
               processing={@processing}
@@ -483,15 +478,55 @@ defmodule BrandoAdmin.Components.Form do
           live_preview_target={@live_preview_target}
           change_preview_target={JS.push("change_preview_target", target: @myself)}
         />
-
       </div>
     </div>
     """
   end
 
+  def form_tabs(assigns) do
+    ~H"""
+    <%= for tab <- @tabs do %>
+      <div
+        class={render_classes(["form-tab", active: @active_tab == tab.name])}
+        data-tab-name={tab.name}>
+        <div class="row">
+          <.tab_fields
+            tab={tab}
+            current_user={@current_user}
+            uploads={@uploads}
+            schema={@schema}
+            form={@form} />
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  def tab_fields(assigns) do
+    assigns = assign(assigns, :indexed_fields, Enum.with_index(assigns.tab.fields))
+
+    ~H"""
+    <%= for {fieldset, idx} <- @indexed_fields do %>
+      <Fieldset.render
+        id={"#{@form.id}-fieldset-#{@tab.name}-#{idx}"}
+        translations={@schema.__translations__}
+        relations={@schema.__relations__}
+        form={@form}
+        fieldset={fieldset}
+        uploads={@uploads}
+        current_user={@current_user} />
+    <% end %>
+    """
+  end
+
   def image_drawer(assigns) do
     ~H"""
-    <Content.drawer id={"image-drawer"} title={gettext "Image"} close={close_image()} z={1001} narrow>
+    <Content.drawer
+      id={"image-drawer"}
+      title={gettext "Image"}
+      close={close_image()}
+      z={1001}
+      narrow>
       <%= if @image_changeset do %>
         <.form
           id="image-drawer-form"
@@ -1198,10 +1233,19 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def inputs(assigns) do
-    assigns = assign_new(assigns, :opts, fn -> [] end)
+    assigns =
+      assigns
+      |> assign_new(:opts, fn -> [] end)
+
+    assigns =
+      assigns
+      |> assign(
+        :indexed_inputs,
+        Enum.with_index(inputs_for(assigns.form, assigns.for, assigns.opts))
+      )
 
     ~H"""
-    <%= for {form, index} <- Enum.with_index(inputs_for(@form, @for, @opts)) do %>
+    <%= for {form, index} <- @indexed_inputs do %>
       <%= render_slot(@inner_block, %{form: form, index: index}) %>
     <% end %>
     """
@@ -1257,8 +1301,15 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:input_value, input_value(assigns.form, assigns.for))
       |> assign_new(:opts, fn -> [] end)
 
+    assigns =
+      assigns
+      |> assign(
+        :indexed_inputs,
+        Enum.with_index(inputs_for_poly(assigns.form, assigns.for, assigns.opts))
+      )
+
     ~H"""
-    <%= for {f, index} <- Enum.with_index(inputs_for_poly(@form, @for, @opts)) do %>
+    <%= for {f, index} <- @indexed_inputs do %>
       <%= render_slot @inner_block, %{
         form: f,
         index: index
@@ -1268,11 +1319,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def array_inputs(assigns) do
-    assigns = assign(assigns, :input_value, input_value(assigns.form, assigns.for))
+    assigns =
+      assigns
+      |> assign(:input_value, input_value(assigns.form, assigns.for))
+      |> assign(
+        :indexed_inputs,
+        Enum.with_index(input_value(assigns.form, assigns.for) || [])
+      )
 
     ~H"""
     <%= if @input_value do %>
-      <%= for {array_value, array_index} <- Enum.with_index(@input_value) do %>
+      <%= for {array_value, array_index} <- @indexed_inputs do %>
         <%= render_slot @inner_block, %{
           name: "#{@form.name}[#{@for}][]",
           index: array_index,
@@ -1284,10 +1341,14 @@ defmodule BrandoAdmin.Components.Form do
 
   def array_inputs_from_data(assigns) do
     checked_values = input_value(assigns.form, assigns.for) || []
-    assigns = assign(assigns, :checked_values, Enum.map(checked_values, &to_string(&1)))
+
+    assigns =
+      assigns
+      |> assign(:checked_values, Enum.map(checked_values, &to_string(&1)))
+      |> assign(:indexed_options, Enum.with_index(assigns.options))
 
     ~H"""
-    <%= for {option, idx} <- Enum.with_index(@options) do %>
+    <%= for {option, idx} <- @indexed_options do %>
       <%= render_slot @inner_block, %{
         name: "#{@form.name}[#{@for}][]",
         id: "#{@form.id}-#{@for}-#{idx}",

@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   use BrandoAdmin, :component
   use Phoenix.HTML
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
@@ -65,8 +66,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block={@ref_block}
           base_form={@base_form}
           uploads={@uploads} />
-        <%= hidden_input @ref_form, :description %>
-        <%= hidden_input @ref_form, :name %>
+        <Input.input type={:hidden} form={@ref_form} field={:description} />
+        <Input.input type={:hidden} form={@ref_form} field={:name} />
       </section>
     <% else %>
       <section class="alert danger">

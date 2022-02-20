@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :any
@@ -91,11 +92,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         </:footer>
       </.live_component>
 
-      <%= hidden_input @block, :uid %>
-      <%= hidden_input @block, :type %>
+      <Input.input type={:hidden} form={@block} field={:uid} />
+      <Input.input type={:hidden} form={@block} field={:type} />
 
       <div
-        id={@uid}
+        id={"block-#{@uid}"}
         data-block-uid={@uid}
         data-block-type={@type}
         style={"background-color: #{@bg_color}"}

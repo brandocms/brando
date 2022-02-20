@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input
 
   alias Brando.Images.GalleryImage
 
@@ -70,21 +71,21 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         <div class="gallery-input">
           <%= if @gallery_images != [] do %>
             <%= for gallery_form <- inputs_for(@form, @field) do %>
-              <%= hidden_input gallery_form, :id %>
-              <%= hidden_input gallery_form, :config_target %>
+              <Input.input type={:hidden} form={gallery_form} field={:id} />
+              <Input.input type={:hidden} form={gallery_form} field={:config_target} />
 
               <%= for gallery_image <- inputs_for(gallery_form, :gallery_images) do %>
                 <%= if input_value(gallery_image, :id) do %>
-                  <%= hidden_input gallery_image, :id %>
+                  <Input.input type={:hidden} form={gallery_image} field={:id} />
                 <% end %>
-                <%= hidden_input gallery_image, :image_id %>
-                <%= hidden_input gallery_image, :gallery_id %>
-                <%= hidden_input gallery_image, :creator_id %>
-                <%= hidden_input gallery_image, :sequence %>
+                <Input.input type={:hidden} form={gallery_image} field={:image_id} />
+                <Input.input type={:hidden} form={gallery_image} field={:gallery_id} />
+                <Input.input type={:hidden} form={gallery_image} field={:creator_id} />
+                <Input.input type={:hidden} form={gallery_image} field={:sequence} />
               <% end %>
             <% end %>
           <% else %>
-            <%= hidden_input @form, @field, value: "" %>
+            <Input.input type={:hidden} form={@form} field={@field} value={""} />
           <% end %>
 
           <div class="actions">

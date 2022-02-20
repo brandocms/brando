@@ -181,27 +181,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </div>
           </div>
 
-          <%= hidden_input @block_data, :placeholder %>
-          <%= hidden_input @block_data, :cdn %>
-          <%= hidden_input @block_data, :moonwalk %>
-          <%= hidden_input @block_data, :lazyload %>
-          <%= hidden_input @block_data, :credits %>
-          <%= hidden_input @block_data, :dominant_color %>
-          <%= hidden_input @block_data, :height %>
-          <%= hidden_input @block_data, :width %>
+          <Input.input type={:hidden} form={@block_data} field={:placeholder} />
+          <Input.input type={:hidden} form={@block_data} field={:cdn} />
+          <Input.input type={:hidden} form={@block_data} field={:moonwalk} />
+          <Input.input type={:hidden} form={@block_data} field={:lazyload} />
+          <Input.input type={:hidden} form={@block_data} field={:credits} />
+          <Input.input type={:hidden} form={@block_data} field={:dominant_color} />
+          <Input.input type={:hidden} form={@block_data} field={:height} />
+          <Input.input type={:hidden} form={@block_data} field={:width} />
 
           <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
-            <%= hidden_input @block_data, :path, value: @extracted_path %>
-            <% else %>
-            <%= hidden_input @block_data, :path %>
+            <Input.input type={:hidden} form={@block_data} field={:path} value={@extracted_path} />
+          <% else %>
+            <Input.input type={:hidden} form={@block_data} field={:path} />
           <% end %>
 
           <Form.inputs
             form={@block_data}
             for={:focal}
             let={%{form: focal_form}}>
-            <%= hidden_input focal_form, :x %>
-            <%= hidden_input focal_form, :y %>
+            <Input.input type={:hidden} form={focal_form} field={:x} />
+            <Input.input type={:hidden} form={focal_form} field={:y} />
           </Form.inputs>
 
           <Form.map_inputs

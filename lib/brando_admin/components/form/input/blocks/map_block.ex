@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
 
   import Brando.Gettext
 
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
   # prop base_form, :any
@@ -55,8 +56,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
         wide_config>
         <:description><%= v(@block_data, :source) %></:description>
         <:config>
-          <%= hidden_input @block_data, :embed_url %>
-          <%= hidden_input @block_data, :source %>
+          <Input.input type={:hidden} form={@block_data} field={:embed_url} />
+          <Input.input type={:hidden} form={@block_data} field={:source} />
 
           <div id={"block-#{@uid}-mapUrl"} phx-hook="Brando.MapURLParser" phx-update="ignore" data-target={@myself}>
             <%= gettext("Enter the map's embed URL:") %>
