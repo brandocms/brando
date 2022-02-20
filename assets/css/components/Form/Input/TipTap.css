@@ -73,6 +73,10 @@
     @fontsize base;
     margin-bottom: 22px;
 
+    .modal-body & {
+      @fontsize 16px;
+    }
+
     &:last-of-type {
       margin-bottom: 0;
     }
