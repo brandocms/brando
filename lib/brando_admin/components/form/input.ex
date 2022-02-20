@@ -419,10 +419,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         :type
       ])
 
-    assigns =
-      assigns
-      |> assign(:name, input_name(assigns.form, assigns.field))
-      |> assign(:extra, extra)
+    assigns = assign(assigns, :extra, extra)
 
     assigns =
       if assigns[:value] do
