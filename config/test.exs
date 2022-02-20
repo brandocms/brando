@@ -15,6 +15,12 @@ config :brando, BrandoIntegration.Repo,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
 
+config :brando, BrandoIntegration.DummyRepo,
+  url: "ecto://postgres:postgres@localhost/brando_test_dummy",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  ownership_pool: DBConnection.Poolboy,
+  pool_overflow: 0
+
 config :brando, Brando.Images,
   processor_module: Brando.Images.Processor.Dummy,
   default_config: %{
