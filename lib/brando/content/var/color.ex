@@ -22,5 +22,6 @@ defmodule Brando.Content.Var.Color do
     attribute :instructions, :string
     attribute :picker, :boolean, default: true
     attribute :opacity, :boolean, default: false
+    attribute :palette_id, :integer
   end
 end

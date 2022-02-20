@@ -80,6 +80,20 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_input_component()
       |> assign(:opacity, Keyword.get(assigns.opts, :opacity, false))
       |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
+      |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
+
+    assigns =
+      assign_new(assigns, :palette_colors, fn ->
+        if assigns.palette_id do
+          case Brando.Content.get_palette(assigns.palette_id) do
+            {:ok, palette} ->
+              palette.colors
+              |> Enum.map(& &1.hex_value)
+              |> Enum.uniq()
+              |> Enum.join(",")
+          end
+        end
+      end)
 
     ~H"""
     <Form.field_base
@@ -95,9 +109,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-input={"##{@form.id}_#{@field}"}
         data-color={input_value(@form, @field) || gettext("No color selected")}
         data-opacity={@opacity}
-        data-picker={@picker}>
+        data-picker={@picker}
+        data-palette={@palette_colors}>
         <div class="picker">
-          <%= hidden_input @form, @field, phx_debounce: @debounce %>
+          <.input type={:hidden} form={@form} field={@field} phx_debounce={@debounce} />
           <div phx-update="ignore" class="picker-target">
             <div class="circle-and-hex">
               <span class="circle tiny"></span>

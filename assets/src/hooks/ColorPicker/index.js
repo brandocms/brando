@@ -30,6 +30,10 @@ export default (app) => ({
     const initialColor = this.el.dataset.color
     const opacity = this.el.hasAttribute('data-opacity')
     const inputTarget = Dom.find(this.el.dataset.input)
+    const paletteColors = this.el.hasAttribute('data-palette') ? this.el.dataset.palette.split(',') : []
+
+
+    this.lastColor = initialColor
 
     this.circle = this.el.querySelector('.circle')
     this.colorHex = this.el.querySelector('.color-hex')
@@ -37,6 +41,8 @@ export default (app) => ({
     this.setColor(initialColor)
 
     const parent = this.el.querySelector('.picker-target')
+    const that = this
+
     this.picker = new Picker({ 
       parent: parent, 
       popup: 'top', 
@@ -48,37 +54,62 @@ export default (app) => ({
         if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
           processedColor = processedColor.slice(0, -2)
         }
+
         this.circle.style.background = processedColor
         this.colorHex.innerHTML = processedColor
-        inputTarget.value = processedColor      
-        inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
+        inputTarget.value = processedColor  
+        
+        // has the color actually changed?
+        if (this.lastColor !== processedColor) {
+          inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+
+        this.lastColor = processedColor
       }, 200),
 
-      template: (() => {/*#####
+      onOpen: function () {
+          this._colorToSplotch = {}
+          this._domPalette = this.domElement.querySelectorAll('.picker_palette')[0]
+          this._domPalette.innerHTML = ''
+          this._colorToSplotch = {}
+          for(let i = 0; i < paletteColors.length; i += 1){
+            const splotch = document.createElement('div')
+            splotch.classList.add('picker_splotch')
+            const c = new (this.color.constructor)(paletteColors[i])
+            this._colorToSplotch[c.hslaString] = splotch
+            splotch.addEventListener('click', function(c, e){
+              this._setColor(c.hslaString)
+            }.bind(this, c))
+            splotch.style.backgroundColor = c.hslaString
+            this._domPalette.appendChild(splotch)
+          }
+      },
+
+      template: `
       <div class="picker_wrapper" tabindex="-1">
-          <div class="picker_arrow"></div>
-          <div class="picker_hue picker_slider">
-            <div class="picker_selector"></div>
-          </div>
-          <div class="picker_sl">
-            <div class="picker_selector"></div>
-          </div>
-          <div class="picker_alpha picker_slider">
-            <div class="picker_selector"></div>
-          </div>
-          <div class="picker_palette"> <!-- THIS IS THE NEW THING -->
-          </div>
-          <div class="picker_editor">
-            <input aria-label="Type a color name or hex value"/>
-          </div>
-          <div class="picker_sample"></div>
-          <div class="picker_done">
-            <button>Ok</button>
-          </div>
-          <div class="picker_cancel">
-            <button>Cancel</button>
-          </div>
-      </div>#####*/}).toString().split(/#####/)[1]
+        <div class="picker_arrow"></div>
+        <div class="picker_hue picker_slider">
+          <div class="picker_selector"></div>
+        </div>
+        <div class="picker_sl">
+          <div class="picker_selector"></div>
+        </div>
+        <div class="picker_alpha picker_slider">
+          <div class="picker_selector"></div>
+        </div>
+        <div class="picker_palette"></div>
+        <div class="picker_editor">
+          <input aria-label="Type a color name or hex value"/>
+        </div>
+        <div class="picker_sample"></div>
+        <div class="picker_done">
+          <button>Ok</button>
+        </div>
+        <div class="picker_cancel">
+          <button>Cancel</button>
+        </div>
+      </div>
+      `
     })
   },
 

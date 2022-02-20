@@ -33,3 +33,32 @@
     display: block;
   }
 }
+
+.picker_wrapper .picker_palette {
+  width: 100%;
+  order: 1;
+  display: flex;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+
+.picker_wrapper .picker_splotch {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+
+  margin-right: 5px;
+
+  &:last-of-type {
+    margin-right: 0;
+  }
+}
+
+.picker_wrapper .picker_splotch:hover {
+  cursor: pointer;
+}
+
+.picker_wrapper .picker_splotch.picker_splotch_active {
+  border: 2px dotted yellow;
+}
