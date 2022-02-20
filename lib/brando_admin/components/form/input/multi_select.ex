@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               type={:hidden}
               form={@form}
               field={@field}
-              id={"#{@form.name}-#{@field}-#{String.replace(opt, ~r/\W/u, "_")}"}
+              id={"#{@form.name}-#{@field}-#{maybe_slug(opt)}"}
               name={"#{@form.name}[#{@field}][]"}
               value={opt} />
           <% end %>
@@ -384,6 +384,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     </div>
     """
   end
+
+  defp maybe_slug(opt) when is_integer(opt), do: opt
+  defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 
   defp get_label(_, []) do
     gettext("<None selected>")
