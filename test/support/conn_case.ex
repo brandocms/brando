@@ -28,6 +28,7 @@ defmodule Brando.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import Brando.Test.Support
 
       # Alias the data repository and import query/schema functions
       alias BrandoIntegration.Repo

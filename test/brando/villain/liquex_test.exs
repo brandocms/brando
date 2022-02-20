@@ -153,7 +153,19 @@ defmodule Brando.Villain.LiquexTest do
     context = Brando.Villain.get_base_context(user)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
 
-    assert Enum.join(result) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image data-src=\"images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      result
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("height", ["200"])
+           |> assert_attr("width", ["300"])
+           |> assert_attr("alt", [""])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+
+    assert doc
+           |> Floki.find("figure")
+           |> assert_attr("data-orientation", ["landscape"])
   end
 end
