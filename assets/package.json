@@ -12,10 +12,10 @@
     "@codemirror/basic-setup": "^0.19.1",
     "@codemirror/lang-html": "^0.19.4",
     "@codemirror/lang-markdown": "^0.19.6",
-    "@fontsource/jetbrains-mono": "^4.5.2",
+    "@fontsource/jetbrains-mono": "^4.5.3",
     "@shopify/draggable": "^1.0.0-beta.12",
     "@tiptap/core": "^2.0.0-beta.174",
-    "@tiptap/extension-character-count": "^2.0.0-beta.24",
+    "@tiptap/extension-character-count": "^2.0.0-beta.25",
     "@tiptap/extension-focus": "^2.0.0-beta.40",
     "@tiptap/extension-link": "^2.0.0-beta.36",
     "@tiptap/extension-subscript": "^2.0.0-beta.10",
@@ -48,7 +48,7 @@
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.37",
     "autoprefixer": "^10.4.2",
     "svelte": "^3.46.4",
-    "svelte-preprocess": "^4.10.2",
-    "vite": "^2.8.0"
+    "svelte-preprocess": "^4.10.3",
+    "vite": "^2.8.4"
   }
 }

@@ -327,10 +327,10 @@
   dependencies:
     "@types/hammerjs" "^2.0.36"
 
-"@fontsource/jetbrains-mono@^4.5.2":
-  version "4.5.2"
-  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-4.5.2.tgz#f30181e875f78f39c60b3ba54937220bc95494e6"
-  integrity sha512-qjxgC4d4ghgxfcvauRzm+/lXes3Awgb3TfWSrK5U0/nCtOsLgz3XrmfMewP5ztBkBYa0YDNs+avbF0vNeS6R6w==
+"@fontsource/jetbrains-mono@^4.5.3":
+  version "4.5.3"
+  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-4.5.3.tgz#2e909e7d831398f2cdd7c1c2be72b1b29fa80357"
+  integrity sha512-R+dpCzt9b7O6ldKFXLvjZNQ2F+5i2/ctRgauRGvEj/3zBQVmnrjPeqPndYsZ1vz6Jg0K8TOS9JeMQavjoBHPwA==
 
 "@lezer/common@^0.15.0", "@lezer/common@^0.15.5":
   version "0.15.7"
@@ -441,10 +441,13 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-bullet-list/-/extension-bullet-list-2.0.0-beta.26.tgz#b42126d2d984c04041b14037e8d3ec1bcf16e7ec"
   integrity sha512-1n5HV8gY1tLjPk4x48nva6SZlFHoPlRfF6pqSu9JcJxPO7FUSPxUokuz4swYNe0LRrtykfyNz44dUcxKVhoFow==
 
-"@tiptap/extension-character-count@^2.0.0-beta.24":
-  version "2.0.0-beta.24"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-character-count/-/extension-character-count-2.0.0-beta.24.tgz#8b5dba59be75343b0d660c59656acbb0a0eb4c4b"
-  integrity sha512-zMe+iNmHypvGQop5yV6xLetXvgEx7oMXJUvX+WwvtjZwx+/jJKLOzsR5EVt0vY/T5P5VCC8hkTseQhgrv4p72w==
+"@tiptap/extension-character-count@^2.0.0-beta.25":
+  version "2.0.0-beta.25"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-character-count/-/extension-character-count-2.0.0-beta.25.tgz#6da586e3820b91dcd6173098d81d8261fd5b9fe2"
+  integrity sha512-TvTC5Mqq0HK5wts49Eb0YXN+1Q49Vyv9Awr3b63GP/6r4VKd8+wC96xGOnWtjzDclSiYKQz1Gsv8yeOWhMRqpA==
+  dependencies:
+    prosemirror-model "^1.16.1"
+    prosemirror-state "^1.3.4"
 
 "@tiptap/extension-code-block@^2.0.0-beta.37":
   version "2.0.0-beta.37"
@@ -1203,10 +1206,10 @@ ms@2.1.2:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.2.tgz#d09d1f357b443f493382a8eb3ccd183872ae6009"
   integrity sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
 
-nanoid@^3.1.30:
-  version "3.1.30"
-  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.1.30.tgz#63f93cc548d2a113dc5dfbc63bfa09e2b9b64362"
-  integrity sha512-zJpuPDwOv8D2zq2WRoMe1HsfZthVewpel9CAvTfc/2mBD1uUT/agc5f7GHGWXlYkFvi1mVxe4IjvP2HNrop7nQ==
+nanoid@^3.2.0:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.1.tgz#6347a18cac88af88f58af0b3594b723d5e99bb35"
+  integrity sha512-n6Vs/3KGyxPQd6uO0eH4Bv0ojGSUvuLlIHtC3Y0kEO23YRge8H9x1GCzLn28YX0H66pMkxuaeESFq4tKISKwdw==
 
 node-releases@^2.0.1:
   version "2.0.1"
@@ -1359,14 +1362,14 @@ postcss@^7.0.17, postcss@^7.0.2, postcss@^7.0.30, postcss@^7.0.32, postcss@^7.0.
     picocolors "^0.2.1"
     source-map "^0.6.1"
 
-postcss@^8.4.5:
-  version "8.4.5"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.5.tgz#bae665764dfd4c6fcc24dc0fdf7e7aa00cc77f95"
-  integrity sha512-jBDboWM8qpaqwkMwItqTQTiFikhs/67OYVvblFFTM7MrZjt6yMKd6r2kgXizEbTTljacm4NldIlZnhbjr84QYg==
+postcss@^8.4.6:
+  version "8.4.6"
+  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.6.tgz#c5ff3c3c457a23864f32cb45ac9b741498a09ae1"
+  integrity sha512-OovjwIzs9Te46vlEx7+uXB0PLijpwjXGKXjVGGPIGubGpq7uh5Xgf6D6FiJ/SzJMBosHDp6a2hiXOS97iBXcaA==
   dependencies:
-    nanoid "^3.1.30"
+    nanoid "^3.2.0"
     picocolors "^1.0.0"
-    source-map-js "^1.0.1"
+    source-map-js "^1.0.2"
 
 prosemirror-commands@^1.2.1:
   version "1.2.1"
@@ -1534,10 +1537,10 @@ sortablejs@^1.14.0:
   resolved "https://registry.yarnpkg.com/sortablejs/-/sortablejs-1.14.0.tgz#6d2e17ccbdb25f464734df621d4f35d4ab35b3d8"
   integrity sha512-pBXvQCs5/33fdN1/39pPL0NZF20LeRbLQ5jtnheIPN9JQAaufGjKdWduZn4U7wCtVuzKhmRkI0DFYHYRbB2H1w==
 
-source-map-js@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.0.1.tgz#a1741c131e3c77d048252adfa24e23b908670caf"
-  integrity sha512-4+TN2b3tqOCd/kaGRJ/sTYA0tR0mdXx26ipdolxcwtJVqEnqNYvlCAt1q3ypy4QMlYus+Zh34RNtYLoq2oQ4IA==
+source-map-js@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.0.2.tgz#adbc361d9c62df380125e7f161f71c826f1e490c"
+  integrity sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==
 
 source-map@^0.6.1:
   version "0.6.1"
@@ -1578,10 +1581,10 @@ svelte-hmr@^0.14.9:
   resolved "https://registry.yarnpkg.com/svelte-hmr/-/svelte-hmr-0.14.9.tgz#35f277efc789e1a6230185717347cddb2f8e9833"
   integrity sha512-bKE9+4qb4sAnA+TKHiYurUl970rjA0XmlP9TEP7K/ncyWz3m81kA4HOgmlZK/7irGK7gzZlaPDI3cmf8fp/+tg==
 
-svelte-preprocess@^4.10.2:
-  version "4.10.2"
-  resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-4.10.2.tgz#2405689e57161916947b8360679051a56eddd5c6"
-  integrity sha512-aPpkCreSo8EL/y8kJSa1trhiX0oyAtTjlNNM7BNjRAsMJ8Yy2LtqHt0zyd4pQPXt+D4PzbO3qTjjio3kwOxDlA==
+svelte-preprocess@^4.10.3:
+  version "4.10.3"
+  resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-4.10.3.tgz#9aac89a8abc3889fa5740fb34f7dd74f3c578e13"
+  integrity sha512-ttw17lJfb/dx2ZJT9sesaXT5l7mPQ9Apx1H496Kli3Hkk7orIRGpOw6rCPkRNzr6ueVPqb4vzodS5x7sBFhKHw==
   dependencies:
     "@types/pug" "^2.0.4"
     "@types/sass" "^1.16.0"
@@ -1643,13 +1646,13 @@ vex-js@^4.1.0:
     es6-object-assign "1.1.0"
     vex-dialog "1.1.0"
 
-vite@^2.8.0:
-  version "2.8.0"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-2.8.0.tgz#0646ab9eee805fb24b667889644ac04bc516d0d3"
-  integrity sha512-ed5rjyeysttuPJX/aKSA0gTB/8ZKLM5xF6FtEuKy1B9DiQbDNFMVMQxnb9JesgBPUMMIJxC8w5KZ/KNWLKFXoA==
+vite@^2.8.4:
+  version "2.8.4"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-2.8.4.tgz#4e52a534289b7b4e94e646df2fc5556ceaa7336b"
+  integrity sha512-GwtOkkaT2LDI82uWZKcrpRQxP5tymLnC7hVHHqNkhFNknYr0hJUlDLfhVRgngJvAy3RwypkDCWtTKn1BjO96Dw==
   dependencies:
     esbuild "^0.14.14"
-    postcss "^8.4.5"
+    postcss "^8.4.6"
     resolve "^1.22.0"
     rollup "^2.59.0"
   optionalDependencies:
