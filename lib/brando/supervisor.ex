@@ -38,7 +38,7 @@ defmodule Brando.Supervisor do
                {"0 4 * * *", Brando.Worker.RevisionPurger}
              ] ++ extra_oban_cron_jobs(),
            timezone: "Etc/UTC"},
-          Oban.Plugins.Pruner
+          {Oban.Plugins.Pruner, max_age: 300}
         ]
       ]
   end
