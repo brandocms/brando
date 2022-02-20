@@ -13,6 +13,16 @@ defmodule Brando.Blueprint.Form do
         points when presented with a blank editor
 
 
+  ### `color`: Color picker
+
+  #### Options
+
+      - `opacity`: `bool` — Allow setting opacity
+      - `picker`: `bool` — Allow picking custom colors. You could set this to false
+         and use a `palette_id` to only allow picking from a locked set of colors
+      - `palette_id`: `int` — Allow to pick from colors in this palette
+
+
   ### `slug`: Slug field
 
   #### Options
