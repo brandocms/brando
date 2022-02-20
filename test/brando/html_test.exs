@@ -149,30 +149,6 @@ defmodule Brando.HTMLTest do
       |> rendered_to_string()
       |> Floki.parse_document!()
 
-    [
-      {"figure", [{"data-orientation", "landscape"}],
-       [
-         {"picture", [{"class", "avatar"}, {"data-orientation", "landscape"}],
-          [
-            {"source",
-             [
-               {"srcset",
-                "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"},
-               {"type", "image/jpeg"}
-             ], []},
-            {"img",
-             [
-               {"class", "img-fluid"},
-               {"src", "/media/images/avatars/small/27i97a.jpeg"},
-               {"srcset",
-                "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"},
-               {"alt", ""}
-             ], []},
-            {"noscript", [], [{"img", [{"src", "/media/images/avatars/small/27i97a.jpeg"}], []}]}
-          ]}
-       ]}
-    ]
-
     assert doc
            |> Floki.find("figure")
            |> assert_attr("data-orientation", ["landscape"])
@@ -215,8 +191,28 @@ defmodule Brando.HTMLTest do
     <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    [source_webp, source_jpeg] = Floki.find(doc, "source")
+
+    assert source_webp
+           |> assert_attr("type", ["image/webp"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w"
+           ])
+
+    assert source_jpeg
+           |> assert_attr("type", ["image/jpeg"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("src", ["/media/images/avatars/small/27i97a.jpeg"])
 
     # ---
     opts = [
@@ -231,8 +227,34 @@ defmodule Brando.HTMLTest do
     <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp, :avif])} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.avif 300w, /media/images/avatars/medium/27i97a.avif 500w, /media/images/avatars/large/27i97a.avif 700w\" type=\"image/avif\"><source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    [source_avif, source_webp, source_jpeg] = Floki.find(doc, "source")
+
+    assert source_avif
+           |> assert_attr("type", ["image/avif"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.avif 300w, /media/images/avatars/medium/27i97a.avif 500w, /media/images/avatars/large/27i97a.avif 700w"
+           ])
+
+    assert source_webp
+           |> assert_attr("type", ["image/webp"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w"
+           ])
+
+    assert source_jpeg
+           |> assert_attr("type", ["image/jpeg"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("src", ["/media/images/avatars/small/27i97a.jpeg"])
 
     # ---
     opts = [
@@ -248,8 +270,12 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n    <figcaption>Title!</figcaption>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert Floki.find(doc, "figcaption") == [{"figcaption", [], ["Title!"]}]
 
     # ---
     opts = [
@@ -266,8 +292,20 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("height", ["200"])
+           |> assert_attr("width", ["300"])
+           |> assert_attr("alt", [""])
+
+    assert doc
+           |> Floki.find("figure")
+           |> assert_attr("data-orientation", ["landscape"])
 
     # ---
     opts = [
@@ -284,8 +322,20 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"200\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("height", ["200"])
+           |> assert_attr("width", ["200"])
+           |> assert_attr("alt", [""])
+
+    assert doc
+           |> Floki.find("figure")
+           |> assert_attr("data-orientation", ["landscape"])
 
     # ---
     opts = [
@@ -303,8 +353,15 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"200\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n  \n</a>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("a")
+           |> assert_attr("href", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-lightbox", ["/media/images/avatars/small/27i97a.jpeg"])
 
     # ---
     opts = [
@@ -324,8 +381,28 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n  \n</a>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("a")
+           |> assert_attr("href", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-lightbox", ["/media/images/avatars/small/27i97a.jpeg"])
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
 
     # ---
     opts = [
@@ -345,8 +422,42 @@ defmodule Brando.HTMLTest do
     <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <a href=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\">\n  \n    <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\" type=\"image/webp\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n  \n</a>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("a")
+           |> assert_attr("href", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-lightbox", ["/media/images/avatars/small/27i97a.jpeg"])
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
+
+    [source_webp, source_jpeg] = Floki.find(doc, "source")
+
+    assert source_webp
+           |> assert_attr("type", ["image/webp"])
+           |> assert_attr("data-srcset", [
+             "/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w"
+           ])
+
+    assert source_jpeg
+           |> assert_attr("type", ["image/jpeg"])
+           |> assert_attr("data-srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
 
     # ---
     opts = [
@@ -363,8 +474,21 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"/media/images/avatars/micro/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder srcset=\"/media/images/avatars/micro/27i97a.jpeg 300w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("src", ["/media/images/avatars/micro/27i97a.jpeg"])
 
     # ---
     opts = [
@@ -381,8 +505,23 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
 
     # ---
     opts = [
@@ -399,25 +538,29 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-placeholder=\"dominant_color\" data-orientation=\"landscape\">\n  <picture class=\"avatar\" style=\"background-color: #deadb33f\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
 
-    # ---
-    opts = [
-      srcset: srcset,
-      prefix: media_url(),
-      key: :small,
-      picture_class: "avatar",
-      img_class: "img-fluid",
-      lazyload: true
-    ]
+    assert doc
+           |> Floki.find("figure")
+           |> assert_attr("data-placeholder", ["dominant_color"])
 
-    comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
-    """
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("class", ["avatar"])
+           |> assert_attr("style", ["background-color: #deadb33f"])
+           |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset>\n    \n    <source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img data-ll-srcset-image class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" height=\"200\" width=\"300\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-ll-placeholder>\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
+           |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+           ])
 
     # ---
     media_queries = [
@@ -437,8 +580,22 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    <source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\">\n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    [source_mq, source_jpeg] = Floki.find(doc, "source")
+
+    assert source_mq
+           |> assert_attr("media", ["(min-width: 0px) and (max-width: 760px)"])
+           |> assert_attr("srcset", ["/media/images/avatars/mobile/27i97a.jpeg 700w"])
+
+    assert source_jpeg
+           |> assert_attr("type", ["image/jpeg"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
 
     # ---
     opts = [
@@ -457,23 +614,38 @@ defmodule Brando.HTMLTest do
     <.picture src={user.avatar} opts={opts} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-test-params=\"hepp\" data-test data-orientation=\"landscape\">\n    <source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\">\n    <source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\">\n    <img class=\"img-fluid\" data-test2-params=\"hepp\" data-test2 src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" alt=\"hepp!\">\n    <noscript>\n  <img alt=\"hepp!\" src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
 
-    # ---
-    opts = [
-      key: :small,
-      prefix: media_url(),
-      picture_class: "avatar",
-      img_class: "img-fluid"
-    ]
+    [source_mq, source_jpeg] = Floki.find(doc, "source")
 
-    comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
-    """
+    assert source_mq
+           |> assert_attr("media", ["(min-width: 0px) and (max-width: 760px)"])
+           |> assert_attr("srcset", ["/media/images/avatars/mobile/27i97a.jpeg 700w"])
 
-    assert rendered_to_string(comp) ==
-             "\n  <figure data-orientation=\"landscape\">\n  <picture class=\"avatar\" data-orientation=\"landscape\">\n    \n    \n    <img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\">\n    <noscript>\n  <img src=\"/media/images/avatars/small/27i97a.jpeg\">\n</noscript>\n  </picture>\n  \n</figure>\n"
+    assert source_jpeg
+           |> assert_attr("type", ["image/jpeg"])
+           |> assert_attr("srcset", [
+             "/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w"
+           ])
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-test-params", ["hepp"])
+           |> assert_attr("data-test", ["data-test"])
+           |> assert_attr("data-orientation", ["landscape"])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-test2-params", ["hepp"])
+           |> assert_attr("data-test2", ["data-test2"])
+           |> assert_attr("alt", ["hepp!"])
+
+    assert doc
+           |> Floki.find("noscript > img")
+           |> assert_attr("alt", ["hepp!"])
   end
 
   test "svg_fallback" do
