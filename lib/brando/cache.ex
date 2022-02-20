@@ -2,7 +2,7 @@ defmodule Brando.Cache do
   @moduledoc """
   Interface for the main cache module
   """
-  @cache_module Application.get_env(:brando, :cache_module, Cachex)
+  @cache_module Application.compile_env(:brando, :cache_module, Cachex)
 
   @spec get(any) :: any
   def get(key) do
