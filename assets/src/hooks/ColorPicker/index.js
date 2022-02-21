@@ -14,6 +14,12 @@ export default (app) => ({
 
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-opacity') {
           this.initialize()
+          return
+        }
+
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-palette') {
+          this.initialize()
+          return
         }
       })
     })
@@ -31,7 +37,6 @@ export default (app) => ({
     const opacity = this.el.hasAttribute('data-opacity')
     const inputTarget = Dom.find(this.el.dataset.input)
     const paletteColors = this.el.hasAttribute('data-palette') ? this.el.dataset.palette.split(',') : []
-
 
     this.lastColor = initialColor
 
