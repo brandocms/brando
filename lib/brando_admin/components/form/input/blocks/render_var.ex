@@ -238,8 +238,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               opacity: input_value(@var, :opacity),
               picker: input_value(@var, :picker),
               palette_id: input_value(@var, :palette_id),
-            ]}
-          />
+            ]} />
+          <Input.input type={:hidden} form={@var} field={:picker} />
+          <Input.input type={:hidden} form={@var} field={:opacity} />
+          <Input.input type={:hidden} form={@var} field={:palette_id} />
 
         <% "datetime" -> %>
           <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />
