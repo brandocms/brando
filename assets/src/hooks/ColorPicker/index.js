@@ -65,7 +65,7 @@ export default (app) => ({
         inputTarget.value = processedColor  
         
         // has the color actually changed?
-        if (this.lastColor !== processedColor) {
+        if (this.lastColor.toLowerCase() !== processedColor) {
           inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
         }
 
