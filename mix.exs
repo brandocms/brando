@@ -41,7 +41,7 @@ defmodule Brando.Mixfile do
       {:dataloader, "~> 1.0"},
 
       # hashing/passwords
-      {:bcrypt_elixir, "~> 2.0"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:comeonin, "~> 5.0"},
 
       # tokens/auth
