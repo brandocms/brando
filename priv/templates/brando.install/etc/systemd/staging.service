@@ -13,7 +13,7 @@ Environment=PLUG_TMPDIR=/tmp/<%= application_name %>
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/<%= application_name %>
 WorkingDirectory=/sites/prod/<%= application_name %>
-ExecStart=/sites/prod/<%= application_name %>/bin/<%= application_name %> foreground
+ExecStart=/sites/prod/<%= application_name %>/bin/<%= application_name %> start
 ExecStop=/sites/prod/<%= application_name %>/bin/<%= application_name %> stop
 [Install]
 WantedBy=multi-user.target
