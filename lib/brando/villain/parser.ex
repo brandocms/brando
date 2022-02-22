@@ -475,20 +475,31 @@ defmodule Brando.Villain.Parser do
 
         items =
           Enum.map_join(images, "\n", fn img ->
-            orientation = (img["width"] > img["height"] && "landscape") || "portrait"
-            caption = img["title"] || nil
+            title = Map.get(img, :title, nil)
+            credits = Map.get(img, :credits, nil)
+            alt = Map.get(img, :alt, nil)
+            width = Map.get(img, :width, nil)
+            height = Map.get(img, :height, nil)
+            placeholder = Map.get(data, :placeholder, :svg)
+
+            placeholder =
+              (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
+
+            orientation = (img.width > img.height && "landscape") || "portrait"
+            caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
             assigns = %{
               src: img,
-              orientation: orientation,
+              link: "",
               caption: caption,
+              orientation: orientation,
               opts: [
                 key: :xlarge,
                 caption: caption,
-                alt: img["title"] || "Ill.",
+                alt: alt,
                 width: true,
                 height: true,
-                placeholder: :svg,
+                placeholder: placeholder,
                 sizes: "auto",
                 srcset: default_srcset,
                 lazyload: true,
