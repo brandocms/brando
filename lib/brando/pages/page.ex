@@ -230,6 +230,7 @@ defmodule Brando.Pages.Page do
 
       actions([
         [label: t("Edit sub page"), event: "edit_subpage"],
+        [label: t("Duplicate sub page"), event: "duplicate_entry"],
         [
           label: t("Delete sub page"),
           event: "delete_entry",
