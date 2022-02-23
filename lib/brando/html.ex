@@ -492,17 +492,9 @@ defmodule Brando.HTML do
 
   def render_classes(list) do
     Enum.reduce(list, [], fn
-      {c, cd}, acc ->
-        if cd do
-          acc ++ (c |> to_string() |> List.wrap())
-        else
-          acc
-        end
-
-      c, acc ->
-        acc ++ (c |> to_string() |> List.wrap())
+      {k, v}, acc -> (v && acc ++ (k |> to_string() |> List.wrap())) || acc
+      k, acc -> acc ++ (k |> to_string() |> List.wrap())
     end)
-    |> Enum.join(" ")
   end
 
   defdelegate global(lang, category, key), to: Brando.Sites, as: :render_global
