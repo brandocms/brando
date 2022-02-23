@@ -58,8 +58,8 @@ defmodule Brando.Trait.Sequenced do
   def sequence(module, %{"ids" => keys} = params) do
     offset =
       params
-      |> Map.get("sortable_offset", "0")
-      |> String.to_integer()
+      |> Map.get("sortable_offset", 0)
+      |> maybe_convert_to_integer()
 
     # standard list of ids
     vals = Range.new(0 + offset, offset + length(keys) - 1) |> Enum.to_list()
@@ -112,5 +112,14 @@ defmodule Brando.Trait.Sequenced do
       [] -> 0
       [seq] -> seq + 1
     end
+  end
+
+  defp maybe_convert_to_integer(sortable_offset) when is_binary(sortable_offset) do
+    {integer, _} = Integer.parse(sortable_offset)
+    integer
+  end
+
+  defp maybe_convert_to_integer(sortable_offset) when is_integer(sortable_offset) do
+    sortable_offset
   end
 end
