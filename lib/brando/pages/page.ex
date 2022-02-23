@@ -196,6 +196,7 @@ defmodule Brando.Pages.Page do
 
       actions([
         [label: t("Edit fragment"), event: "edit_fragment"],
+        [label: t("Duplicate fragment"), event: "duplicate_fragment"],
         [
           label: t("Delete fragment"),
           event: "delete_fragment",

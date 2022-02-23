@@ -65,6 +65,23 @@ defmodule BrandoAdmin.Pages.PageListLive do
   end
 
   def handle_event(
+        "duplicate_fragment",
+        %{"id" => entry_id},
+        %{assigns: %{current_user: user}} = socket
+      ) do
+    case Pages.duplicate_fragment(entry_id, user) do
+      {:ok, _} ->
+        send(self(), {:toast, gettext("Fragment duplicated")})
+        BrandoAdmin.LiveView.Listing.update_list_entries(Pages.Page)
+
+      {:error, _error} ->
+        send(self(), {:toast, gettext("Error duplicating fragment")})
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
         "delete_fragment",
         %{"id" => entry_id},
         %{assigns: %{current_user: user}} = socket
