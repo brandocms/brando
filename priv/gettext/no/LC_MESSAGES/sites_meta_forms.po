@@ -20,12 +20,12 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:127
 msgid "Key"
 msgstr "Nøkkel"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:128
 msgid "Value"
 msgstr "Verdi"

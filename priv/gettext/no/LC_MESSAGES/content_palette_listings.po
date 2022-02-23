@@ -20,32 +20,32 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:82
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:74
 msgid "Color"
 msgstr "Farge"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:80
 msgid "Delete palette"
 msgstr "Slett palett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:84
 msgid "Duplicate palette"
 msgstr "Dupliser palett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:78
 msgid "Edit palette"
 msgstr "Oppdater palett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:73
 msgid "Name"
 msgstr "Navn"

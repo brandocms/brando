@@ -11,12 +11,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:122
 msgid "palette"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:123
 msgid "palettes"
 msgstr ""

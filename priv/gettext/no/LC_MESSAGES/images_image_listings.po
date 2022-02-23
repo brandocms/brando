@@ -20,27 +20,27 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:79
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:77
 msgid "Delete image"
 msgstr "Slett bilde"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:84
 msgid "Delete images"
 msgstr "Slett bilder"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:75
 msgid "Duplicate image"
 msgstr "Dupliser bilde"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:49
 msgid "Path"
 msgstr "Filbane"

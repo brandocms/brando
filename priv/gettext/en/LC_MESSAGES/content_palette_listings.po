@@ -11,32 +11,32 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:82
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:74
 msgid "Color"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:80
 msgid "Delete palette"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:84
 msgid "Duplicate palette"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:78
 msgid "Edit palette"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:73
 msgid "Name"
 msgstr ""

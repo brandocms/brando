@@ -10,27 +10,27 @@
 msgid ""
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:79
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:77
 msgid "Delete image"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:84
 msgid "Delete images"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:75
 msgid "Duplicate image"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:49
 msgid "Path"
 msgstr ""

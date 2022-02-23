@@ -11,12 +11,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:62
 msgid "fragment"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:63
 msgid "fragments"
 msgstr ""

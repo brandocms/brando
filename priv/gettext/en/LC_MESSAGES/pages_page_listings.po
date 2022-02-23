@@ -11,69 +11,79 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:134
-#: lib/brando/pages/page.ex:201
-#: lib/brando/pages/page.ex:234
+#: lib/brando/pages/page.ex:203
+#: lib/brando/pages/page.ex:237
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:138
 msgid "Create fragment"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:137
 msgid "Create subpage"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/pages/page.ex:199
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:201
 msgid "Delete fragment"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:132
 msgid "Delete page"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:142
 msgid "Delete pages"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/pages/page.ex:232
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:235
 msgid "Delete sub page"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:136
 msgid "Duplicate page"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/pages/page.ex:197
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:198
 msgid "Edit fragment"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:130
 msgid "Edit page"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/pages/page.ex:230
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:232
 msgid "Edit sub page"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:126
 msgid "Title"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/page.ex:125
 msgid "URI"
+msgstr ""
+
+#, elixir-autogen, elixir-format, fuzzy
+#: lib/brando/pages/page.ex:199
+msgid "Duplicate fragment"
+msgstr ""
+
+#, elixir-autogen, elixir-format, fuzzy
+#: lib/brando/pages/page.ex:233
+msgid "Duplicate sub page"
 msgstr ""

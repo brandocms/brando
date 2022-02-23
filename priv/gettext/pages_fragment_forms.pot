@@ -10,42 +10,42 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:92
 msgid "Content"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:82
 msgid "Key"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:77
 msgid "Parent key"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:73
 msgid "Title"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:99
 msgid "Wrapper"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:101
 msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:83
 msgid "key"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:78
 msgid "parent_key"
 msgstr ""

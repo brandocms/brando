@@ -10,27 +10,27 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:33
 msgid "Content"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:42
 msgid "Globals"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:37
 msgid "Key"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:36
 msgid "Label"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:35
 msgid "Language"
 msgstr ""

@@ -20,32 +20,32 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:63
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:61
 msgid "Delete set"
 msgstr "Slett sett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:65
 msgid "Duplicate set"
 msgstr "Dupliser sett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:59
 msgid "Edit set"
 msgstr "Oppdater sett"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:55
 msgid "Label"
 msgstr "Merkelapp"
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:91
 msgid "variables in set"
 msgstr "variabler i settet"

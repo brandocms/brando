@@ -11,42 +11,42 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:82
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:85
 msgid "Create menu item"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:80
 msgid "Delete menu"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:89
 msgid "Delete menus"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:84
 msgid "Duplicate menu"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:78
 msgid "Edit menu"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:74
 msgid "Title"
 msgstr ""
 
-#, elixir-format, ex-autogen
-#: lib/brando/navigation/menu.ex:104
+#, elixir-autogen, elixir-format
+#: lib/brando/navigation/menu.ex:119
 msgid "menu items"
 msgstr ""

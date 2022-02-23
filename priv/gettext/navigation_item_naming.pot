@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/item.ex:29
 msgid "menu item"
 msgstr ""
 
-#, elixir-format, ex-autogen
+#, elixir-autogen, elixir-format
 #: lib/brando/navigation/item.ex:30
 msgid "menu items"
 msgstr ""

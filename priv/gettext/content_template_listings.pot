@@ -10,32 +10,32 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:49
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:47
 msgid "Delete template"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:51
 msgid "Duplicate template"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:45
 msgid "Edit template"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:40
 msgid "Name"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:41
 msgid "Namespace"
 msgstr ""

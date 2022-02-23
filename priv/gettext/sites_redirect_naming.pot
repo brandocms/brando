@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/redirect.ex:23
 msgid "redirect"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/sites/redirect.ex:24
 msgid "redirects"
 msgstr ""

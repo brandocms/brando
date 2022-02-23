@@ -20,67 +20,67 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:269
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:272
 msgid "Advanced"
 msgstr "Avansert"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:265
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:268
 msgid "Blocks"
 msgstr "Blokker"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:276
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:279
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:242
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:245
 msgid "Content"
 msgstr "Innhold"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:272
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:275
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:256
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:259
 msgid "Language"
 msgstr "Språk"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:281
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:284
 msgid "Page variables"
 msgstr "Sidevariabler"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:244
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:247
 msgid "Status"
 msgstr "Status"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:275
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:278
 msgid "Template"
 msgstr "Mal"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:248
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:251
 msgid "Title"
 msgstr "Tittel"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:249
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:252
 msgid "URI"
 msgstr "URI"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:261
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:264
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#, elixir-format
-#: lib/brando/pages/page.ex:273
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:276
 msgid "Page is loaded at root address"
 msgstr "Siden lastes inn på rotadressen"

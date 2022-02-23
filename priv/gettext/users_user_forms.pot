@@ -10,27 +10,27 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:146
 msgid "Admin"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:136
 msgid "Content"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:147
 msgid "Editor"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:145
 msgid "Superuser"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:148
 msgid "User"
 msgstr ""

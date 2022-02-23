@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:62
 msgid "fragment"
 msgstr ""
 
-#, elixir-format
+#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:63
 msgid "fragments"
 msgstr ""
