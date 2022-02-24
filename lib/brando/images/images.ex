@@ -123,6 +123,11 @@ defmodule Brando.Images do
     get_config_for(%{config_target: config_target})
   end
 
+  def get_processed_formats(path, nil) do
+    original_type = Images.Utils.image_type(path)
+    List.wrap(original_type)
+  end
+
   def get_processed_formats(path, formats) do
     original_type = Images.Utils.image_type(path)
     Enum.map(formats, &((&1 == :original && original_type) || &1))

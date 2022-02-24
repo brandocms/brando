@@ -30,7 +30,7 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
           image.image["formats"]
         else
           image.image["path"]
-          |> Brando.Images.get_processed_formats(cfg.formats)
+          |> Brando.Images.get_processed_formats(Brando.Utils.try_path(cfg, [:formats]))
           |> Enum.map(&to_string/1)
         end
 
