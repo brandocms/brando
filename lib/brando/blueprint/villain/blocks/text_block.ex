@@ -7,13 +7,12 @@ defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
 
     embedded_schema do
       field :text, :string
-      field :type, Ecto.Enum, values: [:paragraph, :lede], default: :paragraph
+      field :type, Ecto.Enum, values: [:paragraph, :lede, :lead], default: :paragraph
       field :extensions, {:array, :string}
     end
 
     def changeset(struct, params \\ %{}) do
-      struct
-      |> cast(params, ~w(text type extensions)a)
+      cast(struct, params, ~w(text type extensions)a)
     end
   end
 
