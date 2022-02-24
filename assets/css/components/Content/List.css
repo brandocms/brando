@@ -321,6 +321,11 @@
       padding-left: 1vw;
     }
 
+    .main-content .svg svg {
+      width: 100%;
+      height: 100%;
+    }
+
     .main-content > div:first-of-type {
       padding-left: 1vw;
     }
