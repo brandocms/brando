@@ -11,7 +11,6 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:indexed_global_sets, Enum.with_index(assigns.global_sets))
      |> load_global_sets()}
   end
 
@@ -19,8 +18,8 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     ~H"""
     <div class="global-tabs">
       <.live_component module={ImagePicker} id="image-picker" />
-      <div class="form-tabs" data-moonwalk-section>
-        <div class="form-tab-customs" data-moonwalk="upDly">
+      <div class="form-tabs">
+        <div class="form-tab-customs">
           <%= for {global_set, index} <- @indexed_global_sets do %>
             <button
               id={"set-#{global_set.key}-#{global_set.language}"}
@@ -141,6 +140,10 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     {:ok, global_sets} =
       Sites.list_global_sets(%{filter: %{language: language}, order: "asc label"})
 
-    assign(socket, :global_sets, global_sets)
+    indexed_global_sets = Enum.with_index(global_sets)
+
+    socket
+    |> assign(:global_sets, global_sets)
+    |> assign(:indexed_global_sets, indexed_global_sets)
   end
 end
