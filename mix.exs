@@ -73,7 +73,7 @@ defmodule Brando.Mixfile do
       # Misc
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.19"},
-      {:earmark, "1.4.4"},
+      {:earmark, "1.4.19"},
       {:jason, "~> 1.0"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
