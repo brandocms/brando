@@ -18,4 +18,8 @@ defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "text"
+
+  def protected_attrs do
+    [:text]
+  end
 end

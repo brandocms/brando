@@ -167,6 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 ]]} />
 
                 <.render_value_inputs
+                  edit
                   type={@type}
                   var={@var}
                   image={@image}
@@ -215,6 +216,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def render_value_inputs(assigns) do
+    assigns = assign_new(assigns, :edit, fn -> false end)
+
     ~H"""
     <div class="brando-input">
       <%= case @type do %>
@@ -239,9 +242,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               picker: input_value(@var, :picker),
               palette_id: input_value(@var, :palette_id),
             ]} />
-          <Input.input type={:hidden} form={@var} field={:picker} />
-          <Input.input type={:hidden} form={@var} field={:opacity} />
-          <Input.input type={:hidden} form={@var} field={:palette_id} />
+          <%= unless @edit do %>
+            <Input.input type={:hidden} form={@var} field={:picker} />
+            <Input.input type={:hidden} form={@var} field={:opacity} />
+            <Input.input type={:hidden} form={@var} field={:palette_id} />
+          <% end %>
 
         <% "datetime" -> %>
           <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />

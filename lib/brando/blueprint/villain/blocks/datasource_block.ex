@@ -38,4 +38,8 @@ defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "datasource"
+
+  def protected_attrs do
+    []
+  end
 end

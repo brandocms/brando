@@ -269,7 +269,9 @@ defmodule Brando.Villain do
   """
   @spec rerender_html_from_ids({Module, atom, atom}, [integer | binary]) :: nil | [any()]
   def rerender_html_from_ids(_, []), do: nil
-  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
+
+  def rerender_html_from_ids(args, ids, updated_module_id \\ nil),
+    do: for(id <- ids, do: rerender_html_from_id(args, id, updated_module_id))
 
   @doc """
   Rerender HTML from an ID
@@ -280,14 +282,14 @@ defmodule Brando.Villain do
 
   Will try to rerender html for page with id: 1.
 
-  We treat page fragments special, since they need to propogate to other referencing
+  We treat page fragments special, since they need to propagate to other referencing
   pages and fragments
   """
   @spec rerender_html_from_id(
           {schema :: module, data_field :: atom, html_field :: atom},
           integer | binary
         ) :: {:ok, map} | {:error, changeset}
-  def rerender_html_from_id({schema, data_field, html_field}, id) do
+  def rerender_html_from_id({schema, data_field, html_field}, id, updated_module_id \\ nil) do
     ctx = schema.__modules__().context
     singular = schema.__naming__().singular
 
@@ -299,12 +301,27 @@ defmodule Brando.Villain do
       end
 
     {:ok, record} = apply(ctx, :"get_#{singular}", [get_opts])
+    {:ok, modules} = Content.list_modules(@module_cache_ttl)
 
-    parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
+    data = Map.get(record, data_field)
+
+    updated_data =
+      if updated_module_id do
+        module = Enum.find(modules, &(&1.id == updated_module_id))
+        Brando.Villain.reapply_module(module, data)
+      else
+        data
+      end
+
+    parsed_data = Brando.Villain.parse(updated_data, record)
 
     changeset =
       record
       |> Changeset.change()
+      |> Changeset.put_change(
+        data_field,
+        updated_data
+      )
       |> Changeset.put_change(
         html_field,
         parsed_data
@@ -369,7 +386,7 @@ defmodule Brando.Villain do
         Enum.reduce(fields, [], fn
           {:villain, data_field, html_field}, acc ->
             ids = list_ids_with_module(schema, data_field, module_id)
-            [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+            [acc | rerender_html_from_ids({schema, data_field, html_field}, ids, module_id)]
 
           data_field, acc ->
             html_field = get_html_field(schema, data_field)
@@ -379,7 +396,14 @@ defmodule Brando.Villain do
                 acc
 
               ids ->
-                [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+                [
+                  acc
+                  | rerender_html_from_ids(
+                      {schema, data_field.name, html_field.name},
+                      ids,
+                      module_id
+                    )
+                ]
             end
         end)
       end
@@ -852,6 +876,81 @@ defmodule Brando.Villain do
             find_and_reject_deleted(data)
           )
       end
+    end)
+  end
+
+  def reapply_module(%{id: module_id} = module, data) do
+    Enum.reduce(data, [], fn
+      %{type: "module", data: %{module_id: ^module_id}} = module_block, acc ->
+        reapplied_data = reapply_module_data(module, module_block.data)
+        [Map.put(module_block, :data, reapplied_data) | acc]
+
+      %{type: "module"} = module_block, acc ->
+        [module_block | acc]
+
+      %{type: "container", data: %{blocks: blocks}} = container, acc ->
+        [
+          put_in(
+            container,
+            [
+              Access.key(:data),
+              Access.key(:blocks)
+            ],
+            reapply_module(module, blocks)
+          )
+          | acc
+        ]
+    end)
+    |> Enum.reverse()
+  end
+
+  def reapply_module_data(module, original_block) do
+    # find missing refs
+    current_refs = original_block.refs || []
+    current_ref_names = Enum.map(current_refs, & &1.name)
+
+    module_refs = module.refs || []
+    module_ref_names = Enum.map(module_refs, & &1.name)
+
+    missing_ref_names = module_ref_names -- current_ref_names
+    missing_refs = Enum.filter(module_refs, &(&1.name in missing_ref_names))
+
+    new_refs = current_refs ++ missing_refs
+
+    # find missing vars
+    current_vars = original_block.vars || []
+    current_var_keys = Enum.map(current_vars, & &1.key)
+
+    module_vars = module.vars || []
+    module_var_keys = Enum.map(module_vars, & &1.key)
+
+    missing_var_keys = module_var_keys -- current_var_keys
+    missing_vars = Enum.filter(module_vars, &(&1.key in missing_var_keys))
+
+    new_vars = current_vars ++ missing_vars
+
+    reapplied_refs = reapply_refs(module_refs, new_refs)
+    reapplied_vars = reapply_vars(module_vars, new_vars)
+
+    original_block
+    |> put_in([Access.key(:refs)], reapplied_refs)
+    |> put_in([Access.key(:vars)], reapplied_vars)
+  end
+
+  def reapply_refs(module_refs, refs) do
+    Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
+      ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+      block_module.apply_ref(ref_src.data.__struct__, ref_src, ref)
+    end)
+  end
+
+  def reapply_vars(module_vars, vars) do
+    Enum.map(vars, fn %{key: var_key, __struct__: _var_module} = var ->
+      var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
+      protected_attrs = [:value, :value_id]
+      overwritten_attrs = Map.keys(var_src) -- protected_attrs
+      new_attrs = Map.take(var_src, overwritten_attrs)
+      Map.merge(var, new_attrs)
     end)
   end
 

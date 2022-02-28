@@ -493,6 +493,7 @@ defmodule Brando.HTML do
   def render_classes(list) do
     Enum.reduce(list, [], fn
       {k, v}, acc -> (v && acc ++ (k |> to_string() |> List.wrap())) || acc
+      nil, acc -> acc
       k, acc -> acc ++ (k |> to_string() |> List.wrap())
     end)
   end

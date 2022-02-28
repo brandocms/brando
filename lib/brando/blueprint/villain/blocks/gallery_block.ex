@@ -41,4 +41,8 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "gallery"
+
+  def protected_attrs do
+    [:images]
+  end
 end

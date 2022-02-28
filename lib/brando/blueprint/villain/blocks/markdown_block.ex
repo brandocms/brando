@@ -19,4 +19,8 @@ defmodule Brando.Blueprint.Villain.Blocks.MarkdownBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "markdown"
+
+  def protected_attrs do
+    [:text]
+  end
 end
