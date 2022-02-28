@@ -19,4 +19,8 @@ defmodule Brando.Blueprint.Villain.Blocks.HtmlBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "html"
+
+  def protected_attrs do
+    [:text]
+  end
 end

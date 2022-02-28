@@ -23,4 +23,8 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "header"
+
+  def protected_attrs do
+    [:text]
+  end
 end

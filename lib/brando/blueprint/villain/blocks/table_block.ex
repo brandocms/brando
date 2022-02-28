@@ -62,4 +62,8 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "table"
+
+  def protected_attrs do
+    [:rows]
+  end
 end

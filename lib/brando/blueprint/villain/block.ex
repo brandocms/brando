@@ -2,13 +2,16 @@ defmodule Brando.Blueprint.Villain.Block do
   @moduledoc """
   Use to set module as a Villain block
   """
+  @callback protected_attrs() :: [atom()]
+  @callback apply_ref(module(), map(), map()) :: map()
+
   defmacro __using__(opts) do
     type = Keyword.fetch!(opts, :type)
 
     quote do
       use Ecto.Schema
       import Ecto.Changeset
-
+      @behaviour Brando.Blueprint.Villain.Block
       @primary_key false
 
       embedded_schema do
@@ -42,6 +45,19 @@ defmodule Brando.Blueprint.Villain.Block do
       defp maybe_mark_for_deletion(changeset), do: changeset
 
       def __block_type__, do: unquote(type)
+
+      def protected_attrs, do: []
+      defoverridable protected_attrs: 0
+
+      def apply_ref(src_type, ref_src, ref_target) do
+        protected_attrs = __MODULE__.protected_attrs()
+        overwritten_attrs = Map.keys(ref_src.data.data) -- protected_attrs
+        new_attrs = Map.take(ref_src.data.data, overwritten_attrs)
+        new_data = Map.merge(ref_target.data.data, new_attrs)
+        put_in(ref_target, [Access.key(:data), Access.key(:data)], new_data)
+      end
+
+      defoverridable apply_ref: 3
     end
   end
 end

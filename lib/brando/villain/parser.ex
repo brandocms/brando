@@ -204,15 +204,15 @@ defmodule Brando.Villain.Parser do
         |> Villain.parse_and_render(context)
       end
 
-      def module(%{module_id: id, refs: refs, vars: vars} = block, opts) do
+      def module(%{module_id: id} = block, opts) do
         base_context = opts.context
         modules = opts.modules
 
         {:ok, module} = Content.find_module(modules, id)
 
         base_context = opts.context
-        processed_vars = process_vars(vars)
-        processed_refs = process_refs(refs)
+        processed_vars = process_vars(block.vars)
+        processed_refs = process_refs(block.refs)
 
         context =
           base_context

@@ -215,7 +215,8 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [],
       namespace: "all",
-      class: "css class"
+      class: "css class",
+      vars: nil
     }
 
     {:ok, tp1} = Brando.Content.create_module(module_params, user)
@@ -253,12 +254,114 @@ defmodule Brando.VillainTest do
     assert updated_page.html == "-- this is some NEW code [[Some text!]] --"
   end
 
-  test "update module inside container", %{user: user} do
+  test "update module ref will update entries using ref", %{user: user} do
     module_params = %{
-      code: "-- this is some code {{ testvar }} --",
+      code: "{% ref refs.lede %}",
       name: "Name",
       help_text: "Help text",
-      refs: [],
+      refs: [
+        %{
+          data: %{
+            uid: "1wUr4ZLoOx53fqIslbP1dg",
+            type: "text",
+            hidden: false,
+            data: %{
+              text: "<p>A REF!</p>",
+              extensions: nil,
+              type: "lede"
+            }
+          },
+          description: nil,
+          name: "lede"
+        }
+      ],
+      namespace: "all",
+      class: "css class",
+      vars: nil
+    }
+
+    {:ok, tp1} = Brando.Content.create_module(module_params, user)
+
+    data = %{
+      data: %{
+        deleted_at: nil,
+        module_id: tp1.id,
+        multi: false,
+        refs: [
+          %{
+            data: %{
+              uid: "1wUr4ZLoOx53fqIslbP1dg",
+              type: "text",
+              hidden: false,
+              data: %{
+                text: "<p>A REF!</p>",
+                extensions: nil,
+                type: "lede"
+              }
+            },
+            description: nil,
+            name: "lede"
+          }
+        ],
+        sequence: 0,
+        vars: []
+      },
+      type: "module"
+    }
+
+    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+
+    assert page.html == "<div class=\"lede\"><p>A REF!</p></div>"
+
+    {:ok, _updated_module} =
+      Brando.Content.update_module(
+        tp1.id,
+        %{
+          refs: [
+            %{
+              data: %{
+                uid: "1wUr4ZLoOx53fqIslbP1dg",
+                type: "text",
+                hidden: false,
+                data: %{
+                  text: "<p>A REFZZZ!</p>",
+                  extensions: nil,
+                  type: "paragraph"
+                }
+              },
+              description: nil,
+              name: "lede"
+            }
+          ]
+        },
+        user
+      )
+
+    {:ok, updated_page} = Brando.Pages.get_page(page.id)
+    assert updated_page.html == "<div class=\"paragraph\"><p>A REF!</p></div>"
+  end
+
+  test "update module inside container", %{user: user} do
+    module_params = %{
+      code: "-- this is some code {{ testvar }} -- {% ref refs.lede %}",
+      name: "Name",
+      help_text: "Help text",
+      refs: [
+        %{
+          data: %{
+            uid: "1wUr4ZLoOx53fqIslbP1dg",
+            type: "text",
+            hidden: false,
+            data: %{
+              text: "<p>Lede</p>",
+              extensions: nil,
+              type: "lede"
+            }
+          },
+          description: nil,
+          name: "lede"
+        }
+      ],
       vars: [],
       namespace: "all",
       class: "css class"
@@ -291,7 +394,22 @@ defmodule Brando.VillainTest do
               data: %{
                 module_id: tp1.id,
                 multi: false,
-                refs: [],
+                refs: [
+                  %{
+                    data: %{
+                      uid: "1wUr4ZLoOx53fqIslbP1dg",
+                      type: "text",
+                      hidden: false,
+                      data: %{
+                        text: "<p>A REF!</p>",
+                        extensions: nil,
+                        type: "paragraph"
+                      }
+                    },
+                    description: nil,
+                    name: "lede"
+                  }
+                ],
                 sequence: 0,
                 vars: [
                   %{
@@ -312,7 +430,7 @@ defmodule Brando.VillainTest do
     {:ok, page} = Brando.Pages.create_page(params, user)
 
     assert page.html ==
-             "<section b-section=\"general-green\">\n  -- this is some code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n</section>\n"
 
     data = [
       %{
@@ -326,7 +444,22 @@ defmodule Brando.VillainTest do
                 deleted_at: nil,
                 module_id: tp1.id,
                 multi: false,
-                refs: [],
+                refs: [
+                  %{
+                    data: %{
+                      uid: "1wUr4ZLoOx53fqIslbP1dg",
+                      type: "text",
+                      hidden: false,
+                      data: %{
+                        text: "<p>A REF!</p>",
+                        extensions: nil,
+                        type: "paragraph"
+                      }
+                    },
+                    description: nil,
+                    name: "lede"
+                  }
+                ],
                 sequence: 0,
                 vars: [
                   %{
@@ -347,11 +480,27 @@ defmodule Brando.VillainTest do
     {:ok, page2} = Brando.Pages.create_page(params, user)
 
     assert page2.html ==
-             "<section b-section=\"general-green\">\n  -- this is some code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n</section>\n"
 
     tp2 =
       tp1
-      |> Map.put(:code, "-- this is some NEW code {{ testvar }} --")
+      |> Map.put(:code, "-- this is some NEW code {{ testvar }} -- {% ref refs.lede %}")
+      |> Map.put(:refs, [
+        %{
+          data: %{
+            uid: "1wUr4ZLoOx53fqIslbP1dg",
+            type: "text",
+            hidden: false,
+            data: %{
+              text: "<p>A REFZZZ!</p>",
+              extensions: nil,
+              type: "lede"
+            }
+          },
+          description: nil,
+          name: "lede"
+        }
+      ])
       |> Map.from_struct()
       |> Brando.Utils.stringify_keys()
 
@@ -360,7 +509,7 @@ defmodule Brando.VillainTest do
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
     assert updated_page.html ==
-             "<section b-section=\"general-green\">\n  -- this is some NEW code Some text! --\n</section>\n"
+             "<section b-section=\"general-green\">\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n</section>\n"
   end
 
   test "access refs in context", %{user: user} do

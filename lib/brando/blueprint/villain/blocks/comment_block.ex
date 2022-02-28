@@ -19,4 +19,8 @@ defmodule Brando.Blueprint.Villain.Blocks.CommentBlock do
 
   use Brando.Blueprint.Villain.Block,
     type: "comment"
+
+  def protected_attrs do
+    [:text]
+  end
 end
