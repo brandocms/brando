@@ -394,7 +394,9 @@ defmodule Brando.HTMLTest do
            |> Floki.find("picture > img")
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
-           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
            |> assert_attr("src", [
              "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
@@ -435,7 +437,9 @@ defmodule Brando.HTMLTest do
            |> Floki.find("picture > img")
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
-           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
            |> assert_attr("src", [
              "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
@@ -513,14 +517,16 @@ defmodule Brando.HTMLTest do
            |> Floki.find("picture > img")
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
-           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
+           ])
            |> assert_attr("src", [
              "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E"
            ])
 
     # ---
     opts = [
-      srcset: srcset,
+      srcset: {Brando.BlueprintTest.Project, :cover, :cropped},
       prefix: media_url(),
       key: :small,
       picture_class: "avatar",
@@ -529,8 +535,37 @@ defmodule Brando.HTMLTest do
       lazyload: true
     ]
 
+    project_cover = %Brando.Images.Image{
+      alt: nil,
+      cdn: false,
+      config_target: "image:Brando.BlueprintTest.Project:cover",
+      credits: nil,
+      deleted_at: nil,
+      dominant_color: "#080808",
+      focal: %Brando.Images.Focal{x: 50, y: 50},
+      formats: [:jpg],
+      height: 2000,
+      id: 30,
+      inserted_at: ~N[2022-02-28 16:41:22],
+      path: "projects/covers/1qn45539cgnh.png",
+      sizes: %{
+        "large" => "projects/covers/large/1qn45539cgnh.jpg",
+        "medium" => "projects/covers/medium/1qn45539cgnh.jpg",
+        "micro" => "projects/covers/micro/1qn45539cgnh.jpg",
+        "small" => "projects/covers/small/1qn45539cgnh.jpg",
+        "thumb" => "projects/covers/thumb/1qn45539cgnh.jpg",
+        "xlarge" => "projects/covers/xlarge/1qn45539cgnh.jpg",
+        "crop_small" => "projects/covers/crop_small/1qn45539cgnh.jpg",
+        "crop_medium" => "projects/covers/crop_medium/1qn45539cgnh.jpg"
+      },
+      status: :processed,
+      title: nil,
+      updated_at: ~N[2022-02-28 16:41:24],
+      width: 2000
+    }
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={project_cover} opts={opts} />
     """
 
     doc =
@@ -545,16 +580,18 @@ defmodule Brando.HTMLTest do
     assert doc
            |> Floki.find("picture")
            |> assert_attr("class", ["avatar"])
-           |> assert_attr("style", ["background-color: #deadb33f"])
+           |> assert_attr("style", ["background-color: #080808"])
            |> assert_attr("data-ll-srcset", ["data-ll-srcset"])
 
     assert doc
            |> Floki.find("picture > img")
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
-           |> assert_attr("data-src", ["/media/images/avatars/small/27i97a.jpeg"])
+           |> assert_attr("data-src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%272000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+           ])
            |> assert_attr("src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%272000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
            ])
 
     # ---

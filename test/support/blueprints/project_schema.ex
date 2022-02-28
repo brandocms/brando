@@ -22,13 +22,22 @@ defmodule Brando.BlueprintTest.Project do
       "small" => %{"size" => "300x300", "quality" => 65, "crop" => true},
       "medium" => %{"size" => "500x500", "quality" => 65, "crop" => true},
       "large" => %{"size" => "700x700", "quality" => 65, "crop" => true},
-      "xlarge" => %{"size" => "900x900", "quality" => 65, "crop" => true}
+      "xlarge" => %{"size" => "900x900", "quality" => 65, "crop" => true},
+      "crop_small" => %{"size" => "300x300", "quality" => 65, "crop" => true},
+      "crop_medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}
     },
-    srcset: [
-      {"small", "300w"},
-      {"medium", "500w"},
-      {"large", "700w"}
-    ]
+    srcset: %{
+      default: [
+        {"small", "300w"},
+        {"medium", "500w"},
+        {"large", "700w"},
+        {"xlarge", "900w"}
+      ],
+      cropped: [
+        {"crop_small", "300w"},
+        {"crop_medium", "500w"}
+      ]
+    }
   ]
 
   trait Brando.Trait.Creator

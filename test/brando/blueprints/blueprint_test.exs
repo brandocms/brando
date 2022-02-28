@@ -82,10 +82,11 @@ defmodule Brando.Blueprint.BlueprintTest do
              %Asset{
                name: :cover,
                opts: %{
-                 module: Brando.Images.Image,
                  cfg: %Brando.Type.ImageConfig{
                    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
                    default_size: "medium",
+                   formats: [:original],
+                   overwrite: false,
                    random_filename: true,
                    size_limit: 10_240_000,
                    sizes: %{
@@ -94,11 +95,22 @@ defmodule Brando.Blueprint.BlueprintTest do
                      "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
                      "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
                      "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
+                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"},
+                     "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+                     "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"}
                    },
-                   srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
+                   srcset: %{
+                     cropped: [{"crop_small", "300w"}, {"crop_medium", "500w"}],
+                     default: [
+                       {"small", "300w"},
+                       {"medium", "500w"},
+                       {"large", "700w"},
+                       {"xlarge", "900w"}
+                     ]
+                   },
                    upload_path: "images/avatars"
-                 }
+                 },
+                 module: Brando.Images.Image
                },
                type: :image
              }
@@ -111,6 +123,8 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert cfg == %Brando.Type.ImageConfig{
              allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
              default_size: "medium",
+             formats: [:original],
+             overwrite: false,
              random_filename: true,
              size_limit: 10_240_000,
              sizes: %{
@@ -119,9 +133,22 @@ defmodule Brando.Blueprint.BlueprintTest do
                "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
                "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
                "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-               "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
+               "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"},
+               "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+               "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"}
              },
-             srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
+             srcset: %{
+               cropped: [
+                 {"crop_small", "300w"},
+                 {"crop_medium", "500w"}
+               ],
+               default: [
+                 {"small", "300w"},
+                 {"medium", "500w"},
+                 {"large", "700w"},
+                 {"xlarge", "900w"}
+               ]
+             },
              upload_path: "images/avatars"
            }
   end

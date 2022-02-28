@@ -100,7 +100,7 @@ defmodule Brando.HTML.Images do
 
     assigns = assign(assigns, :attrs, attrs)
 
-    lightbox_src = Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src)
+    lightbox_src = Map.get(attrs, :src)
     lightbox_srcset = Keyword.get(attrs.img, :data_srcset)
 
     ~H"""
@@ -356,7 +356,7 @@ defmodule Brando.HTML.Images do
 
     attrs
     |> put_in([:img, :src], fallback)
-    |> put_in([:img, :data_src], src)
+    |> put_in([:img, :data_src], (placeholder == :micro && src) || fallback)
     |> put_in([:noscript_img, :src], src)
     |> Map.put(:src, src)
   end
@@ -369,6 +369,7 @@ defmodule Brando.HTML.Images do
     |> put_in([:img, :src], src)
     |> put_in([:img, :data_src], false)
     |> put_in([:noscript_img, :src], src)
+    |> Map.put(:src, src)
   end
 
   defp add_dominant_color(attrs, image_struct) do
