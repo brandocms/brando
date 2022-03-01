@@ -85,6 +85,7 @@ defmodule Brando.HTML.Images do
 
     attrs =
       initial_map
+      |> add_original_type(image_struct)
       |> add_lazyload()
       |> add_sizes()
       |> add_type(image_struct)
@@ -258,6 +259,10 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :sizes], sizes)
   end
 
+  def add_original_type(attrs, %{path: path}) do
+    Map.put(attrs, :type, Brando.Images.Utils.image_type(path))
+  end
+
   defp add_type(attrs, %{sizes: nil}), do: attrs
   defp add_type(attrs, %{sizes: sizes}) when sizes == %{}, do: attrs
 
@@ -279,6 +284,10 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_type(attrs, _), do: attrs
+
+  defp add_srcset(%{type: :svg} = attrs, _) do
+    Map.put(attrs, :cropped_ratio, false)
+  end
 
   defp add_srcset(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
@@ -336,6 +345,38 @@ defmodule Brando.HTML.Images do
       mqs ->
         put_in(attrs, [:mq_sources], mqs)
     end
+  end
+
+  defp add_src(%{type: :svg, lazyload: true} = attrs, image_struct) do
+    placeholder = Keyword.get(attrs.opts, :placeholder, false)
+
+    src = Utils.img_url(image_struct, :original, attrs.opts)
+
+    fallback =
+      case placeholder do
+        :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
+        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
+        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
+        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
+        false -> false
+        _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
+      end
+
+    attrs
+    |> put_in([:img, :src], fallback)
+    |> put_in([:img, :data_src], src)
+    |> put_in([:noscript_img, :src], src)
+    |> Map.put(:src, src)
+  end
+
+  defp add_src(%{type: :svg, lazyload: false} = attrs, image_struct) do
+    src = Utils.img_url(image_struct, :original, attrs.opts)
+
+    attrs
+    |> put_in([:img, :src], src)
+    |> put_in([:img, :data_src], false)
+    |> put_in([:noscript_img, :src], src)
+    |> Map.put(:src, src)
   end
 
   defp add_src(%{lazyload: true} = attrs, image_struct) do
