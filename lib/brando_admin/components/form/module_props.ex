@@ -388,6 +388,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "picture" in input_value(block_data, :available_blocks) do %>
                                 <h2>Picture block template</h2>
                                 <%= for tpl_data <- inputs_for(block_data, :template_picture) do %>
+                                  <Input.toggle form={tpl_data} field={:lazyload} label={gettext "Lazyload"} />
+                                  <Input.toggle form={tpl_data} field={:moonwalk} label={gettext "Moonwalk"} />
                                   <Input.text form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
                                   <Input.text form={tpl_data} field={:img_class} label={gettext "Image class"} />
                                   <.live_component
