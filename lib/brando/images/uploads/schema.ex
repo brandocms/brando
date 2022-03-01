@@ -28,13 +28,13 @@ defmodule Brando.Images.Uploads.Schema do
     end
   end
 
-  def build_meta(%{"image" => %Plug.Upload{path: path}, "config_target" => config_target}) do
-    {:ok, %{path: path, config_target: config_target}}
-  end
-
   def build_upload_entry(%{
         "image" => %Plug.Upload{filename: filename, content_type: content_type}
       }) do
     {:ok, %{client_name: filename, client_type: content_type}}
+  end
+
+  def build_meta(%{"image" => %Plug.Upload{path: path}, "config_target" => config_target}) do
+    {:ok, %{path: path, config_target: config_target}}
   end
 end
