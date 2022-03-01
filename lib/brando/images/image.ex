@@ -25,7 +25,10 @@ defmodule Brando.Images.Image do
     attribute :title, :text
     attribute :credits, :text
     attribute :alt, :text
-    attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif]
+
+    attribute :formats, {:array, Ecto.Enum},
+      values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+
     attribute :path, :text, required: true
     attribute :width, :integer
     attribute :height, :integer
