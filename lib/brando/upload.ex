@@ -44,6 +44,10 @@ defmodule Brando.Upload do
     end
   end
 
+  def process_upload(%{status: :processed} = image, _, _) do
+    {:ok, image}
+  end
+
   def process_upload(%{id: image_id} = image, cfg, user) do
     with {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
@@ -60,8 +64,25 @@ defmodule Brando.Upload do
 
   Image or file
   """
-  def handle_upload_type(%{meta: meta} = upload, user) do
-    media_path = upload.meta.media_path
+  def handle_upload_type(%{upload_entry: %{client_type: "image/svg+xml"}} = upload, user) do
+    svg_size = Brando.Images.Utils.svg_size(upload.meta.uploaded_file)
+
+    image_params = %{
+      config_target: upload.meta.config_target,
+      path: upload.meta.media_path,
+      width: svg_size.width,
+      height: svg_size.height,
+      dominant_color: nil,
+      focal: %{x: 50, y: 50},
+      sizes: %{},
+      status: :processed
+    }
+
+    Images.create_image(image_params, user)
+  end
+
+  def handle_upload_type(%{meta: meta}, user) do
+    media_path = meta.media_path
 
     media_path
     |> Images.Utils.media_path()
