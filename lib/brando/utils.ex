@@ -685,6 +685,31 @@ defmodule Brando.Utils do
       "" <> add_cache_string(opts)
   end
 
+  def img_url(image_field, :largest, opts) do
+    {:ok, cfg} = Brando.Images.get_config_for(image_field)
+
+    {largest_key, _largest_size} =
+      cfg.sizes
+      |> Enum.map(fn {k, %{"size" => size}} -> {k, Integer.parse(size) |> elem(0)} end)
+      |> Enum.sort(&(elem(&1, 1) >= elem(&2, 1)))
+      |> List.first()
+
+    img_url(image_field, largest_key, opts)
+  end
+
+  def img_url(image_field, :smallest, opts) do
+    {:ok, cfg} = Brando.Images.get_config_for(image_field)
+
+    {smallest, _smallest_size} =
+      cfg.sizes
+      |> Map.drop(["thumb", "micro"])
+      |> Enum.map(fn {k, %{"size" => size}} -> {k, Integer.parse(size) |> elem(0)} end)
+      |> Enum.sort(&(elem(&1, 1) <= elem(&2, 1)))
+      |> List.first()
+
+    img_url(image_field, smallest, opts)
+  end
+
   def img_url(image_field, "original", opts) do
     img_url(image_field, :original, opts)
   end

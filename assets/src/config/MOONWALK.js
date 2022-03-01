@@ -55,16 +55,16 @@ export default app => ({
         gsap.set(paginationEls, { opacity: 0, x: -15 })
 
         timeline
-          .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
-          .to(toolsWrapper, { opacity: 1, duration: 0.5, ease: 'none' })
-          .to(toolEls, { y: 0, duration: 0.5, ease: 'power3.out', stagger: 0.1 }, '<0.2')
-          .to(toolEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.1 }, '<')
+          .to(el, { opacity: 1, duration: 0.3, ease: 'none' })
+          .to(toolsWrapper, { opacity: 1, duration: 0.3, ease: 'none' })
+          .to(toolEls, { y: 0, duration: 0.3, ease: 'power3.out', stagger: 0.1 }, '<0.2')
+          .to(toolEls, { opacity: 1, duration: 0.3, ease: 'none', stagger: 0.1 }, '<')
           
         if (listRows.length) {
           timeline
-            .to(listRows, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
+            .to(listRows, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 }, '<0.2')
             .to(listRows, {
-              opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06, onComplete: () => {
+              opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06, onComplete: () => {
                 gsap.set(listRows, { clearProps: 'all' })
               }
             }, '<')
@@ -75,8 +75,8 @@ export default app => ({
         }
 
         timeline
-          .to(paginationEls, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
-          .to(paginationEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
+          .to(paginationEls, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 })
+          .to(paginationEls, { opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06 }, '<')
 
         timeline.call(() => {
           reset(app, el)
@@ -93,9 +93,9 @@ export default app => ({
         gsap.set(inputEls, { opacity: 0, x: -15 })
 
         timeline
-          .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
-          .to(inputEls, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 }, '<0.2')
-          .to(inputEls, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
+          .to(el, { opacity: 1, duration: 0.25, ease: 'none' })
+          .to(inputEls, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 }, '<0.2')
+          .to(inputEls, { opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06 }, '<')
           .call(() => { gsap.set(inputEls, { clearProps: 'all' }) })
           .call(() => { reset(app, el) })
       }
@@ -115,9 +115,9 @@ export default app => ({
         gsap.set(els, { opacity: 0, x: -15 })
 
         timeline
-          .to(el, { delay: 0.5, scaleX: 1, ease: 'circ.in', duration: 0.5 })
-          .to(els, { x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.06 })
-          .to(els, { opacity: 1, duration: 0.5, ease: 'none', stagger: 0.06 }, '<')
+          .to(el, { delay: 0.5, scaleX: 1, ease: 'circ.in', duration: 0.25 })
+          .to(els, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 })
+          .to(els, { opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06 }, '<')
 
         timeline.call(() => {
           reset(app, el)

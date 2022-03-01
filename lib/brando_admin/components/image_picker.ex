@@ -77,10 +77,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             phx-value-id={image.id}
             phx-value-selected={image.path in @selected_images && "true" || "false"}
             phx-page-loading>
-            <img
-              width="25"
-              height="25"
-              src={Brando.Utils.img_url(image, :small, prefix: Brando.Utils.media_url())} />
+            <Content.image image={image} size={:smallest} />
             <div class="image-picker__info">
               <div class="image-picker__filename"><%= image.path %></div>
               <div class="image-picker__dims">

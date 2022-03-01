@@ -19,7 +19,7 @@
       <section class="button">
         <section class="avatar-wrapper">
           <div class="avatar">
-            <img src="<%= Brando.Utils.img_url(@current_user.avatar, :thumb, prefix: Brando.Utils.media_url(), default: "/images/admin/avatar.svg") %>" />
+            <Content.image image={@current_user.avatar} size={:thumb} />
           </div>
         </section>
         <section class="content">
@@ -79,8 +79,8 @@
             <dl>
               <dt>
                 <%= if item.url do %>
-                  <a href="<%= item.url %>"
-                     class="<%= Brando.HTML.active(@conn, "#{item.url}") %>"
+                  <a href={item.url}
+                     class={Brando.HTML.active(@conn, "#{item.url}")}
                      data-phx-link="redirect"
                      data-phx-link-state="push">
                      <%= item.name %>
@@ -95,8 +95,8 @@
                   <ul>
                     <%= for sub_item <- item.items do %>
                     <li>
-                      <a href="<%= sub_item.url %>"
-                         class="<%= Brando.HTML.active(@conn, "#{item.url}") %>"
+                      <a href={sub_item.url}
+                         class={Brando.HTML.active(@conn, "#{item.url}")}
                          data-phx-link="redirect"
                          data-phx-link-state="push">
                         <%= sub_item.name %>

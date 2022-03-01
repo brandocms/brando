@@ -627,7 +627,7 @@ defmodule BrandoAdmin.Components.Form do
         max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
 
         allow_upload(updated_socket, img_field.name,
-          accept: ~w(.jpg .jpeg .png .gif .webp),
+          accept: ~w(.jpg .jpeg .png .gif .webp .svg),
           max_file_size: max_size,
           auto_upload: true,
           progress: &__MODULE__.handle_image_progress/3
@@ -643,7 +643,7 @@ defmodule BrandoAdmin.Components.Form do
           # TODO: Read max_entries from gallery config!
           max_entries: max_entries,
           max_file_size: max_size,
-          accept: ~w(.jpg .jpeg .png .gif .webp),
+          accept: ~w(.jpg .jpeg .png .gif .webp .svg),
           auto_upload: true,
           progress: &BrandoAdmin.Components.Form.Input.Gallery.handle_gallery_progress/3
         )
@@ -973,32 +973,46 @@ defmodule BrandoAdmin.Components.Form do
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "image:#{inspect(schema)}:#{key}"
 
-      image =
-        consume_uploaded_entry(
-          socket,
-          upload_entry,
-          fn meta ->
-            Brando.Upload.handle_upload(
-              Map.put(meta, :config_target, config_target),
-              upload_entry,
-              cfg,
-              current_user
+      case consume_uploaded_entry(
+             socket,
+             upload_entry,
+             fn meta ->
+               Brando.Upload.handle_upload(
+                 Map.put(meta, :config_target, config_target),
+                 upload_entry,
+                 cfg,
+                 current_user
+               )
+             end
+           ) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
             )
+
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+
+        image ->
+          # Subscribe parent live view to changes to this image
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+
+          if image.status !== :processed do
+            Brando.Images.Processing.queue_processing(image, current_user)
           end
-        )
 
-      # Subscribe parent live view to changes to this image
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
-      Brando.Images.Processing.queue_processing(image, current_user)
+          image_changeset = Ecto.Changeset.change(image)
+          edit_image = Map.merge(edit_image, %{id: image.id, image: image})
 
-      image_changeset = Ecto.Changeset.change(image)
-      edit_image = Map.merge(edit_image, %{id: image.id, image: image})
-
-      {:noreply,
-       socket
-       |> update_changeset(relation_key, image.id)
-       |> assign(:edit_image, edit_image)
-       |> assign(:image_changeset, image_changeset)}
+          {:noreply,
+           socket
+           |> update_changeset(relation_key, image.id)
+           |> assign(:edit_image, edit_image)
+           |> assign(:image_changeset, image_changeset)}
+      end
     else
       {:noreply, socket}
     end

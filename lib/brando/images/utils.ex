@@ -8,6 +8,7 @@ defmodule Brando.Images.Utils do
 
   alias Brando.Image
   import Brando.Utils
+  import SweetXml
 
   @doc """
   Goes through `image` then passes to `delete_media/2` for removal
@@ -120,6 +121,39 @@ defmodule Brando.Images.Utils do
     |> Path.extname()
     |> String.downcase()
     |> do_image_type()
+  end
+
+  def svg_size(file) do
+    doc = File.read!(file)
+
+    doc
+    |> xpath(~x"//svg", width: ~x"./@width", height: ~x"./@height", viewbox: ~x"./@viewBox")
+    |> Enum.map(fn {k, v} -> {k, to_string(v)} end)
+    |> Enum.into(%{})
+    |> parse_svg_size()
+  end
+
+  defp parse_svg_size(%{width: "", height: "", viewbox: ""}) do
+    %{width: 300, height: 150}
+  end
+
+  defp parse_svg_size(%{width: "", height: "", viewbox: viewbox}) do
+    try do
+      [_, _, parsed_width, parsed_height] = String.split(viewbox, " ")
+      %{width: parsed_width, height: parsed_height}
+    rescue
+      MatchError ->
+        %{width: 300, height: 150}
+    end
+  end
+
+  defp parse_svg_size(%{width: width, height: height}) do
+    with {parsed_width, _} <- Integer.parse(width),
+         {parsed_height, _} <- Integer.parse(height) do
+      %{width: parsed_width, height: parsed_height}
+    else
+      :error -> %{width: 300, height: 150}
+    end
   end
 
   defp do_image_type(".jpg"), do: :jpg

@@ -28,6 +28,8 @@ if (PREFERS_REDUCED_MOTION) {
 
 const IS_LOGIN = Dom.find('.auth-login')
 
+topbar.config({ barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' }, shadowColor: 'rgba(0, 0, 0, .2)' })
+
 export default (hooks, enableDebug = true) => {
   let app
   if (IS_LOGIN) {
@@ -124,7 +126,7 @@ export default (hooks, enableDebug = true) => {
       let topBarScheduled = undefined;
       window.addEventListener('phx:page-loading-start', ({ detail }) => {
         if (!topBarScheduled) {
-          topBarScheduled = setTimeout(() => topbar.show(), 120)
+          topBarScheduled = setTimeout(() => topbar.show(), 200)
         }
 
         if ((detail.kind === 'initial' || detail.kind === 'redirect') && !app.reconnected) {

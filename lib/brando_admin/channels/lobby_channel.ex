@@ -21,15 +21,26 @@ defmodule Brando.LobbyChannel do
     users =
       Enum.map(
         users,
-        &%{
-          name: &1.name,
-          id: &1.id,
-          avatar:
-            Brando.Utils.img_url(&1.avatar, :medium,
-              prefix: "/media",
-              default: "/images/admin/avatar.svg"
-            )
-        }
+        fn user ->
+          avatar =
+            if user.avatar && Brando.Images.Utils.image_type(user.avatar.path) == :svg do
+              Brando.Utils.img_url(user.avatar, :original,
+                prefix: "/media",
+                default: "/images/admin/avatar.svg"
+              )
+            else
+              Brando.Utils.img_url(user.avatar, :smallest,
+                prefix: "/media",
+                default: "/images/admin/avatar.svg"
+              )
+            end
+
+          %{
+            name: user.name,
+            id: user.id,
+            avatar: avatar
+          }
+        end
       )
 
     send(self(), :after_join)

@@ -23,7 +23,10 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
 
       attribute :title, :text
       attribute :credits, :text
-      attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif]
+
+      attribute :formats, {:array, Ecto.Enum},
+        values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+
       attribute :alt, :text
       attribute :path, :text
       attribute :width, :integer
