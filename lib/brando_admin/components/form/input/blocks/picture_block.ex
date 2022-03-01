@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias Brando.Utils
   alias Brando.Villain
 
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
@@ -100,7 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         <input class="file-input" type="file" />
         <%= if @extracted_path do %>
           <div class="preview" phx-click={show_modal("#block-#{@uid}_config")}>
-            <img src={"/media/#{@extracted_path}"} />
+            <Content.image image={@image} size={:largest} />
             <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
               <div id={"block-#{@uid}-figcaption-title"}>
                 <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
@@ -136,10 +137,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <div class="panels">
             <div class="panel">
               <%= if @extracted_path do %>
-                <img
-                  width={"#{@image.width}"}
-                  height={"#{@image.height}"}
-                  src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"} />
+                <Content.image image={@image} size={:largest} />
 
                 <div class="image-info">
                   Path: <%= @image.path %><br>

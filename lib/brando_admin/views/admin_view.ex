@@ -3,4 +3,5 @@ defmodule BrandoAdmin.AdminView do
   Main view for Brando admin.
   """
   use BrandoAdmin, :view
+  alias BrandoAdmin.Components.Content
 end

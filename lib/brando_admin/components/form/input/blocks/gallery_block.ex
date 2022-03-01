@@ -2,10 +2,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
+
   alias Brando.Blueprint.Villain.Blocks
   alias Brando.Blueprint.Villain.Blocks.GalleryBlock
   alias Brando.Utils
   alias Brando.Villain
+
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
@@ -165,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     "draggable"
                   ])}
                   data-id={idx}>
-                  <img src={"/media/#{img.path}"} />
+                  <Content.image image={img} size={:thumb} />
                   <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
                     <div>
                       <span><%= gettext("Caption") %></span>
@@ -182,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               <%= for img <- @images do %>
                 <div class="preview">
                   <figure>
-                    <img src={"/media/#{img.path}"} />
+                    <Content.image image={img} size={:smallest} />
                   </figure>
                   <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
                     <div>
@@ -224,10 +227,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           title="Edit captions"
           id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <%= for image <- inputs_for(@block_data, :images) do %>
+            <%= for image <- @images do %>
               <div class="caption-row">
                 <figure>
-                  <img src={"/media/#{input_value(image, :path)}"} />
+                  <Content.image image={image} size={:thumb} />
                 </figure>
                 <div>
                   <Input.rich_text form={image} field={:title} label={gettext "Title"} />
