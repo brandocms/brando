@@ -269,7 +269,7 @@ defmodule Brando.Datasource do
   """
   def get_list(module_binary, query, arg) do
     module = Module.concat([module_binary])
-    module.__datasource__(:list, String.to_existing_atom(query)).(module_binary, arg)
+    module.__datasource__(:list, String.to_atom(query)).(module_binary, arg)
   end
 
   @doc """
@@ -279,7 +279,7 @@ defmodule Brando.Datasource do
     module = Module.concat([module_binary])
 
     available_entries =
-      module.__datasource__(:list_selection, String.to_existing_atom(query)).(module_binary, arg)
+      module.__datasource__(:list_selection, String.to_atom(query)).(module_binary, arg)
 
     case available_entries do
       {:ok, [%{label: _} | _] = options} ->
@@ -299,7 +299,7 @@ defmodule Brando.Datasource do
 
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
-    module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
+    module.__datasource__(:get_selection, String.to_atom(query)).(module_binary, ids)
   end
 
   @doc """
@@ -307,7 +307,7 @@ defmodule Brando.Datasource do
   """
   def get_single(module_binary, query, arg) do
     module = Module.concat([module_binary])
-    module.__datasource__(:single, String.to_existing_atom(query)).(module_binary, arg)
+    module.__datasource__(:single, String.to_atom(query)).(module_binary, arg)
   end
 
   @doc """
