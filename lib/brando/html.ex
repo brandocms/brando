@@ -490,6 +490,8 @@ defmodule Brando.HTML do
     module.__absolute_url__(entry)
   end
 
+  def absolute_url(_), do: ""
+
   def render_classes(list) do
     Enum.reduce(list, [], fn
       {k, v}, acc -> (v && acc ++ (k |> to_string() |> List.wrap())) || acc
