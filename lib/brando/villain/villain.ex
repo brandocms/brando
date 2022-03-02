@@ -44,7 +44,10 @@ defmodule Brando.Villain do
       |> maybe_nil_fields(opts_map)
       |> maybe_put_timestamps()
 
-    context = Brando.Villain.get_base_context(entry)
+    context =
+      entry
+      |> Brando.Villain.get_base_context()
+      |> add_url_to_context(entry)
 
     opts_map =
       opts_map
@@ -69,6 +72,10 @@ defmodule Brando.Villain do
     })
 
     output
+  end
+
+  defp add_url_to_context(ctx, entry) do
+    add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))
   end
 
   defp parse_node(parser, data_node, opts_map) do
