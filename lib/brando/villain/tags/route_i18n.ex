@@ -33,7 +33,9 @@ defmodule Brando.Villain.Tags.RouteI18n do
     evaled_args = Enum.map(args, &Liquex.Argument.eval(&1, context))
 
     evaled_args =
-      if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args
+      if function == "page_path" and action == "show",
+        do: Enum.map(evaled_args, &String.split(&1, "/")),
+        else: evaled_args
 
     rendered_route =
       I18n.Helpers.localized_path(
