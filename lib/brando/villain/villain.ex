@@ -907,6 +907,9 @@ defmodule Brando.Villain do
           )
           | acc
         ]
+
+      block, acc ->
+        [block | acc]
     end)
     |> Enum.reverse()
   end
