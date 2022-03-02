@@ -40,6 +40,6 @@ defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
     type: "datasource"
 
   def protected_attrs do
-    []
+    [:ids, :module_id, :description, :limit, :arg, :query, :type, :module]
   end
 end
