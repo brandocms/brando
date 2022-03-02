@@ -1013,4 +1013,16 @@ defmodule Brando.Villain.Filters do
     |> Brando.HTML.render_markdown()
     |> Phoenix.HTML.safe_to_string()
   end
+
+  @doc """
+  Checks if `url` matches the current entry's `url`
+  """
+  def active(url, ctx) do
+    if absolute_url = Map.get(ctx.variables, "url") do
+      url = (String.starts_with?(url, "/") && url) || "/#{url}"
+      (url == absolute_url && "active") || ""
+    else
+      ""
+    end
+  end
 end
