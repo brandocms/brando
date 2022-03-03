@@ -411,6 +411,15 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  def hidden(assigns) do
+    ~H"""
+    <.input
+      type={:hidden}
+      form={@form}
+      field={@field} />
+    """
+  end
+
   def input(assigns) do
     extra =
       assigns_to_attributes(assigns, [
