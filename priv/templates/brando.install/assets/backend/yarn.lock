@@ -394,10 +394,10 @@
   resolved "https://registry.yarnpkg.com/@shopify/draggable/-/draggable-1.0.0-beta.12.tgz#483c7f691e8918868ec0c95eabcb83e244c2b49d"
   integrity sha512-Un/Dn61sv2er9yjDXLGWMauCOWBb0BMbm0yzmmrD+oUX2/x50yhNJASTsCRdndUCpWlqYfZH8jEfaOgTPsKc/g==
 
-"@sveltejs/vite-plugin-svelte@1.0.0-next.37":
-  version "1.0.0-next.37"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.37.tgz#bb553425a3f9b780221134b04b9ace4165279d3c"
-  integrity sha512-EdSXw2rXeOahNrQfMJVZxa/NxZxW1a0TiBI3s+pVxnxU14hEQtnkLtdbTFhnceu22gJpNPFSIJRcIwRBBDQIeA==
+"@sveltejs/vite-plugin-svelte@1.0.0-next.39":
+  version "1.0.0-next.39"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.39.tgz#b9437de18d13a475f76cf603511174cdf905b8d4"
+  integrity sha512-gnvvcAW2LK+KnUn8lKb2ypcXKwSp2K57mem5C4VNKfjxdRpM6+XwNavWwVf6otnDhz3qPYl/TKKW6/dRr6eeAw==
   dependencies:
     "@rollup/pluginutils" "^4.1.2"
     debug "^4.3.3"
