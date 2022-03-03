@@ -1225,7 +1225,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <div class="brando-input">
+      <div class="brando-input" data-component={@type}>
         <%= component(@component_target, assigns) %>
       </div>
     <% else %>
