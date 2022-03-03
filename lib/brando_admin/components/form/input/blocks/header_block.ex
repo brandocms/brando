@@ -57,6 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
               class: "h#{v(block_data, :level)}",
               data_autosize: true,
               phx_debounce: 750,
+              phx_update: "ignore",
               rows: 1
             %>
             <Input.input type={:hidden} form={block_data} field={:class} />
