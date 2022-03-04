@@ -118,7 +118,12 @@ defmodule Brando.Villain.Parser do
           end
 
         header_size = "h#{level}"
-        "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
+
+        if link = Map.get(data, :link) do
+          ~s(<a href="#{link}"><#{header_size}#{classes}#{id}>#{nl2br(text)}</#{header_size}></a>)
+        else
+          "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
+        end
       end
 
       def header(%{text: text}, _), do: "<h1>" <> nl2br(text) <> "</h1>"

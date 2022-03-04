@@ -202,6 +202,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.text form={block_data} field={:level} label={gettext "Level"} />
                               <Input.text form={block_data} field={:text} label={gettext "Text"} />
+                              <Input.text form={block_data} field={:id} label={gettext "ID"} />
+                              <Input.text form={block_data} field={:link} label={gettext "Link"} />
+
                             <% end %>
 
                           <% "svg" -> %>

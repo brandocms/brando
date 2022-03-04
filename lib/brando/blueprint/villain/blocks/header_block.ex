@@ -16,6 +16,7 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
       attribute :class, :text
       attribute :text, :text
       attribute :level, :integer
+      attribute :link, :text
       attribute :placeholder, :text
       attribute :id, :text
     end

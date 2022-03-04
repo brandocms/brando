@@ -48,6 +48,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
                 %{label: "H5", value: 5},
                 %{label: "H6", value: 6},
               ]]} />
+
+            <Input.text
+              form={block_data}
+              field={:id}
+              label="ID" />
+
+            <Input.text
+              form={block_data}
+              field={:link}
+              label="Link" />
           <% end %>
         </:config>
         <%= for block_data <- inputs_for(@block, :data) do %>
