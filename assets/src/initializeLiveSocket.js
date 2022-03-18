@@ -1,6 +1,5 @@
 import { LiveSocket } from 'phoenix_live_view'
 import { Socket } from 'phoenix'
-import morphdomCallbacks from './morphdomCallbacks'
 
 export default (hooks, enableDebug) => {
   let csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content")
