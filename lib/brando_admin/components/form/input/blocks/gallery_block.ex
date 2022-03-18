@@ -227,10 +227,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           title="Edit captions"
           id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <%= for image <- @images do %>
+            <%= for image <- inputs_for(@block_data, :images) do %>
               <div class="caption-row">
                 <figure>
-                  <Content.image image={image} size={:thumb} />
+                  <Content.image image={image.data} size={:thumb} />
                 </figure>
                 <div>
                   <Input.rich_text form={image} field={:title} label={gettext "Title"} />
