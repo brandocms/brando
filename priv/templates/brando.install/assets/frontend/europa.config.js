@@ -1,4 +1,5 @@
 module.exports = {
+  setMaxForVw: true,
   theme: {
     breakpoints: {
       iphone: '0',
@@ -73,7 +74,7 @@ module.exports = {
         ipad_landscape: '100%',
         desktop_md: '100%',
         desktop_lg: '100%',
-        desktop_xl: '100%'
+        desktop_xl: '1920px'
       },
 
       padding: {
@@ -128,12 +129,12 @@ module.exports = {
         /* this is per SIZE followed by per BREAKPOINT */
         base: {
           iphone: '16px',
-          mobile: 'between(18px-24px)',
-          ipad_portrait: 'between(20px-24px)',
-          ipad_landscape: 'between(20px-22px)',
-          desktop_md: 'between(22px-24px)',
-          desktop_lg: 'between(24px-28px)',
-          desktop_xl: '30px'
+          mobile: '4.25vw',
+          ipad_portrait: '2.1vw',
+          ipad_landscape: '1.6vw',
+          desktop_md: '1.5vw',
+          desktop_lg: '1.5vw',
+          desktop_xl: '1.5vw'
         },
 
         xl: {
@@ -191,13 +192,13 @@ module.exports = {
 
     spacing: {
       block: {
-        iphone: '18px',
-        mobile: 'between(20px-30px)',
-        ipad_portrait: 'between(30px-35px)',
-        ipad_landscape: 'between(35px-45px)',
-        desktop_md: 'between(50px-58px)',
-        desktop_lg: 'between(58px-66px)',
-        desktop_xl: '66px'
+        iphone: '14vw',
+        mobile: '12vw',
+        ipad_portrait: '8vw',
+        ipad_landscape: '8vw',
+        desktop_md: '8vw',
+        desktop_lg: '8vw',
+        desktop_xl: '8vw'
       },
 
       xs: {
