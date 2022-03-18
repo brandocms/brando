@@ -34,13 +34,21 @@ export default Mark.create({
       target: {
         default: this.options.HTMLAttributes.target,
         renderHTML: attributes => {
-          if (attributes.href.startsWith('/')) {
+          if (!attributes.href) {
             return {
               target: null,
               rel: null
             }
           }
-          if (attributes.href.startsWith('#')) {
+          const href = attributes.href.toString()
+
+          if (href.startsWith('/')) {
+            return {
+              target: null,
+              rel: null
+            }
+          }
+          if (href.startsWith('#')) {
             return {
               target: null,
               rel: null
