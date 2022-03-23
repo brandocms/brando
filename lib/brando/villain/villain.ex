@@ -950,6 +950,11 @@ defmodule Brando.Villain do
   def reapply_refs(module_refs, refs) do
     Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
       ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+
+      if ref_src == nil do
+        raise "Ref #{ref_name} not found in module refs!"
+      end
+
       block_module.apply_ref(ref_src.data.__struct__, ref_src, ref)
     end)
   end
