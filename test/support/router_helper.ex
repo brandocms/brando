@@ -1,3 +1,25 @@
+defmodule BrandoIntegrationWeb.Projects.ProjectListLive do
+  use BrandoAdmin.LiveView.Listing, schema: Brando.BlueprintTest.Project
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <Content.header
+      title="Projects"
+      subtitle="Overview" />
+
+    <.live_component module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default} />
+    """
+  end
+end
+
 defmodule BrandoIntegration.LockdownController do
   use Phoenix.Controller,
     namespace: Brando
@@ -95,6 +117,7 @@ defmodule BrandoIntegrationWeb.Router do
   end
 
   admin_routes do
+    live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
   end
 
   scope "/coming-soon" do
