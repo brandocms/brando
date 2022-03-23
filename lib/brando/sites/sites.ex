@@ -66,7 +66,10 @@ defmodule Brando.Sites do
   Create default identity
   """
   def create_default_identity do
-    %Identity{
+    language_cfg = Brando.config(:default_language)
+    language = (is_binary(language_cfg) && String.to_atom(language_cfg)) || language_cfg
+
+    default_identity = %Identity{
       name: "Organization name",
       alternate_name: "Short form",
       email: "mail@domain.tld",
@@ -79,9 +82,10 @@ defmodule Brando.Sites do
       title: "Welcome!",
       title_postfix: "",
       logo: nil,
-      language: Brando.config(:default_language)
+      language: language
     }
-    |> Brando.repo().insert!
+
+    Brando.repo().insert!(default_identity)
   end
 
   @doc """
@@ -176,8 +180,11 @@ defmodule Brando.Sites do
   @doc """
   Create default seo
   """
-  def create_default_seo,
-    do: Brando.repo().insert!(%SEO{language: Brando.config(:default_language)})
+  def create_default_seo do
+    language_cfg = Brando.config(:default_language)
+    language = (is_binary(language_cfg) && String.to_atom(language_cfg)) || language_cfg
+    Brando.repo().insert!(%SEO{language: language})
+  end
 
   #
   # Previews
