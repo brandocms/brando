@@ -114,7 +114,9 @@ defmodule Brando.Assets.Vite do
 
           res =
             if critical_css_file do
-              critical_css(Brando.env(), critical_css_file)
+              Brando.env()
+              |> critical_css(critical_css_file)
+              |> Phoenix.HTML.raw()
             else
               "/* no critical css */"
             end
