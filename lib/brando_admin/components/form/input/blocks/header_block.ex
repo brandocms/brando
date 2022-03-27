@@ -18,12 +18,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
   def update(assigns, socket) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:level, v(assigns.block, :level))
+     |> assign(:level, v(block_data, :level))
      |> assign(:uid, v(assigns.block, :uid))
-     |> assign(:block_data, List.first(inputs_for(assigns.block, :data)))}
+     |> assign(:block_data, block_data)}
   end
 
   def render(assigns) do
@@ -68,7 +70,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
             label="Link" />
         </:config>
         <div class="header-block">
-          <Input.textarea
+          <Input.input
+            type={:textarea}
             form={@block_data}
             field={:text}
             id={"block-#{@uid}-textarea"}
