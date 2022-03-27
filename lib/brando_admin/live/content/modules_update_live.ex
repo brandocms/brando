@@ -51,8 +51,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             <Input.code form={form} field={:code} label={gettext "Code"} />
           </div>
 
-          <.live_component
-            module={ModuleProps}
+          <.live_component module={ModuleProps}
             id="module-props"
             form={form}
             create_ref={JS.push("create_ref")}
@@ -80,8 +79,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
                 <Input.input type={:hidden} form={entry} field={:id} />
 
-                <.live_component
-                  module={ModuleProps}
+                <.live_component module={ModuleProps}
                   id={"entry-module-props-#{entry.id}"}
                   form={entry}
                   entry_form

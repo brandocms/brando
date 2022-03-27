@@ -236,8 +236,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text form={block_data} field={:link} label={gettext "Link"} />
                               <Input.text form={block_data} field={:picture_class} label={gettext "Picture class(es)"} />
                               <Input.text form={block_data} field={:img_class} label={gettext "Img class(es)"} />
-                              <.live_component
-                                module={Input.Select}
+                              <.live_component module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
                                 form={block_data}
                                 field={:placeholder}
@@ -395,8 +394,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.toggle form={tpl_data} field={:moonwalk} label={gettext "Moonwalk"} />
                                   <Input.text form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
                                   <Input.text form={tpl_data} field={:img_class} label={gettext "Image class"} />
-                                  <.live_component
-                                    module={Input.Select}
+                                  <.live_component module={Input.Select}
                                     id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
                                     form={tpl_data}
                                     field={:placeholder}

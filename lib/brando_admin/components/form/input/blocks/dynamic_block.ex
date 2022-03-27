@@ -59,8 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
       end
 
     ~H"""
-    <.live_component
-      module={@block_module}
+    <.live_component module={@block_module}
       id={@block_id || @random_id}
       block={@block}
       is_ref?={@is_ref?}

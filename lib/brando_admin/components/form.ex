@@ -545,8 +545,7 @@ defmodule BrandoAdmin.Components.Form do
                 <div class="drop-indicator">
                   <div><%= gettext "+ Drop here to upload" %></div>
                 </div>
-                <.live_component
-                  module={FocalPoint}
+                <.live_component module={FocalPoint}
                   id={"image-drawer-focal-#{@edit_image.id}"}
                   image={@edit_image}
                   form={image_form} />
@@ -1230,8 +1229,7 @@ defmodule BrandoAdmin.Components.Form do
       </div>
     <% else %>
       <div class="brando-input">
-        <.live_component
-          module={@component_target}
+        <.live_component module={@component_target}
           id={@component_id}
           form={@form}
           field={@field}

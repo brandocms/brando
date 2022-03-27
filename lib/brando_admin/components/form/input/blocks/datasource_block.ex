@@ -128,8 +128,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component
-        module={Block}
+      <.live_component module={Block}
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -149,8 +148,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
             %{label: gettext("Selection"), value: :selection},
           ]]} />
           <Input.radios form={@block_data} field={:query} label={gettext "Query"} opts={[options: @available_queries]} />
-          <.live_component
-            module={Input.Select}
+          <.live_component module={Input.Select}
             id={"#{@block_data.id}-modules"}
             form={@block_data}
             field={:module_id}

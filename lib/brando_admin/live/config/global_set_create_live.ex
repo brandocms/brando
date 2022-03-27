@@ -5,8 +5,7 @@ defmodule BrandoAdmin.Sites.GlobalSetCreateLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Form}
+    <.live_component module={Form}
       id="global_set_form"
       current_user={@current_user}
       schema={@schema}

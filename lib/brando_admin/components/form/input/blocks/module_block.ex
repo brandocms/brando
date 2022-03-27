@@ -180,8 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
               <% {:content, _} -> %>
                 <%= if @module_multi do %>
-                  <.live_component
-                    module={Module.Entries}
+                  <.live_component module={Module.Entries}
                     id={"block-#{@uid}-entries"}
                     uid={@uid}
                     entry_template={@entry_template}

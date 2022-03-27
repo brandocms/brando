@@ -54,8 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type={@type}>
 
-      <.live_component
-        module={Blocks.ModulePicker}
+      <.live_component module={Blocks.ModulePicker}
         id={"#{@id}-module-picker"}
         insert_block={@insert_block}
         insert_section={@insert_section}

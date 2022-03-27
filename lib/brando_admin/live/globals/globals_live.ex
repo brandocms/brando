@@ -18,8 +18,7 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
       title={gettext("Globals")}
       subtitle={gettext("Overview")} />
 
-    <.live_component
-      module={GlobalTabs}
+    <.live_component module={GlobalTabs}
       id={"global_tabs"}
       active_tab={@active_tab}
       current_user={@current_user}>

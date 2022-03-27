@@ -204,8 +204,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <%= gettext "Select" %>
             <% end %>
           </button>
-          <.live_component
-            module={Modal}
+          <.live_component module={Modal}
             id={@modal_id}
             title={gettext "Select option"}
             narrow={@narrow}

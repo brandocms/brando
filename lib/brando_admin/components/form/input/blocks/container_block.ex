@@ -127,8 +127,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <.live_component
-        module={Blocks.Block}
+      <.live_component module={Blocks.Block}
         id={"block-#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -160,8 +159,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         <:config>
           <%= if @selected_palette do %>
             <div class="instructions mb-1"><%= gettext "Select a new palette" %>:</div>
-            <.live_component
-              module={Input.Select}
+            <.live_component module={Input.Select}
               id={"#{@block_data.id}-palette-select"}
               form={@block_data}
               field={:palette_id}
@@ -172,8 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           <Input.text form={@block_data} field={:target_id} />
         </:config>
         <%= if !@selected_palette do %>
-          <.live_component
-            module={Input.Select}
+          <.live_component module={Input.Select}
             id={"#{@block_data.id}-palette-select"}
             form={@block_data}
             field={:palette_id}
@@ -182,8 +179,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           />
         <% end %>
 
-        <.live_component
-          module={Blocks.BlockRenderer}
+        <.live_component module={Blocks.BlockRenderer}
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
           blocks={@blocks}

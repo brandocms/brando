@@ -39,8 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HtmlBlock do
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component
-      module={Block}
+      <.live_component module={Block}
         id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}

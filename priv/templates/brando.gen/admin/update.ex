@@ -6,8 +6,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Form}
+    <.live_component module={Form}
       id="<%= singular %>_form"
       entry_id={@entry_id}
       current_user={@current_user}

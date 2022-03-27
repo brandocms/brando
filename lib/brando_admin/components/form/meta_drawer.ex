@@ -33,8 +33,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       </div>
 
       <div class="brando-input">
-        <.live_component
-          module={Input.Image}
+        <.live_component module={Input.Image}
           id={"#{@form.id}-meta-image"}
           field={:meta_image}
           uploads={@uploads}

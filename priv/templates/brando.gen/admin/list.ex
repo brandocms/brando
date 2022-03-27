@@ -11,8 +11,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
       <%%= live_patch gettext("Create new"), class: "primary", to: "/admin/<%= snake_domain %>/<%= plural %>/create" %>
     </Content.header>
 
-    <.live_component
-      module={Content.List}
+    <.live_component module={Content.List}
       id={"content_listing_#{@schema}_default"}
       schema={@schema}
       current_user={@current_user}
