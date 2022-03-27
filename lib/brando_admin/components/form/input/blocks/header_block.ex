@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
      |> assign(assigns)
      |> assign(:level, v(assigns.block, :level))
      |> assign(:uid, v(assigns.block, :uid))
-     |> assign(:block_data, inputs_for(assigns.block, :data))}
+     |> assign(:block_data, List.first(inputs_for(assigns.block, :data)))}
   end
 
   def render(assigns) do
