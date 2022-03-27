@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </Form.label>
           <span class="block-type"><%= @type %></span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
         </div>
-        <div class="block-content" id={"block-#{@uid}-block-content"}>
+        <div class="block-content" id={"block-#{@uid}-block-content"} phx-update={(@marked_as_deleted || @hidden) && "ignore" || "replace"}>
           <%= render_slot @inner_block %>
         </div>
         <%= if @render do %>
