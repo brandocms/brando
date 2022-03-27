@@ -17,14 +17,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
 
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:level, v(assigns.block, :level))
+     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:block_data, inputs_for(assigns.block, :data))}
+  end
+
   def render(assigns) do
     ~H"""
     <div
-      id={"#{v(@block, :uid)}-wrapper"}
+      id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
-      data-block-uid={v(@block, :uid)}>
+      data-block-uid={@uid}>
       <.live_component module={Block}
-        id={"#{v(@block, :uid)}-base"}
+        id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -33,47 +42,44 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description>(H<%= v(@block, :data).level %>)</:description>
+        <:description>(H<%= @level %>)</:description>
         <:config>
-          <%= for block_data <- inputs_for(@block, :data) do %>
-            <Input.radios
-              form={block_data}
-              field={:level}
-              label="Level"
-              opts={[options: [
-                %{label: "H1", value: 1},
-                %{label: "H2", value: 2},
-                %{label: "H3", value: 3},
-                %{label: "H4", value: 4},
-                %{label: "H5", value: 5},
-                %{label: "H6", value: 6},
-              ]]} />
+          <Input.radios
+            form={@block_data}
+            field={:level}
+            label="Level"
+            opts={[options: [
+              %{label: "H1", value: 1},
+              %{label: "H2", value: 2},
+              %{label: "H3", value: 3},
+              %{label: "H4", value: 4},
+              %{label: "H5", value: 5},
+              %{label: "H6", value: 6},
+            ]]} />
 
-            <Input.text
-              form={block_data}
-              field={:id}
-              label="ID" />
+          <Input.text
+            form={@block_data}
+            field={:id}
+            label="ID" />
 
-            <Input.text
-              form={block_data}
-              field={:link}
-              label="Link" />
-          <% end %>
+          <Input.text
+            form={@block_data}
+            field={:link}
+            label="Link" />
         </:config>
-        <%= for block_data <- inputs_for(@block, :data) do %>
-          <div class="header-block">
-            <%= textarea block_data, :text,
-              id: "#{v(@block, :uid)}-textarea",
-              class: "h#{v(block_data, :level)}",
-              data_autosize: true,
-              phx_debounce: 750,
-              phx_update: "ignore",
-              rows: 1
-            %>
-            <Input.input type={:hidden} form={block_data} field={:class} />
-            <Input.input type={:hidden} form={block_data} field={:placeholder} />
-          </div>
-        <% end %>
+        <div class="header-block">
+          <Input.textarea
+            form={@block_data}
+            field={:text}
+            id={"block-#{@uid}-textarea"}
+            class={"h#{@level}"}
+            data_autosize={true}
+            phx_debounce={750}
+            phx_update={"ignore"}
+            rows={1} />
+          <Input.input type={:hidden} form={@block_data} field={:class} />
+          <Input.input type={:hidden} form={@block_data} field={:placeholder} />
+        </div>
       </.live_component>
     </div>
     """
