@@ -420,6 +420,42 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  def input(%{type: :textarea} = assigns) do
+    extra =
+      assigns_to_attributes(assigns, [
+        :form,
+        :field,
+        :type
+      ])
+
+    assigns = assign(assigns, :extra, extra)
+
+    assigns =
+      if assigns[:value] do
+        assigns
+      else
+        assign(assigns, :value, maybe_html_escape(input_value(assigns.form, assigns.field)))
+      end
+
+    assigns =
+      if assigns[:id] do
+        assigns
+      else
+        assign(assigns, :id, input_id(assigns.form, assigns.field))
+      end
+
+    assigns =
+      if assigns[:name] do
+        assigns
+      else
+        assign(assigns, :name, input_name(assigns.form, assigns.field))
+      end
+
+    ~H"""
+    <textarea type={@type} name={@name} id={@id} {@extra}><%= @value %></textarea>
+    """
+  end
+
   def input(assigns) do
     extra =
       assigns_to_attributes(assigns, [
