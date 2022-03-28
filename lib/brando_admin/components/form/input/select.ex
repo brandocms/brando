@@ -2,10 +2,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   use BrandoAdmin, :live_component
   import Brando.Gettext
 
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Modal
 
   # prop form, :form
   # prop field, :atom
@@ -204,7 +204,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <%= gettext "Select" %>
             <% end %>
           </button>
-          <.live_component module={Modal}
+          <Content.modal
             id={@modal_id}
             title={gettext "Select option"}
             narrow={@narrow}
@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <% end %>
               </div>
             <% end %>
-          </.live_component>
+          </Content.modal>
         </div>
       </Form.field_base>
     </div>

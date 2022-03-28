@@ -5,11 +5,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   alias Brando.Blueprint.Identifier
   alias Brando.Datasource
   alias Brando.Villain
+
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Modal
 
   # prop base_form, :any
   # prop block, :any
@@ -207,7 +208,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
           </div>
         </div>
 
-        <.live_component module={Modal} title={gettext("Select entries")} id={"select-entries-#{@uid}"} narrow>
+        <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} narrow>
           <%= if !Enum.empty?(@available_entries) do %>
             <h2 class="titlecase"><%= gettext("Available entries") %></h2>
             <%= for {identifier, idx} <- Enum.with_index(@available_entries) do %>
@@ -219,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
               />
             <% end %>
           <% end %>
-        </.live_component>
+        </Content.modal>
       </.live_component>
     </div>
     """

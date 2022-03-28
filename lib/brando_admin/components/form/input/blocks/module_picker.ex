@@ -3,8 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   use Phoenix.HTML
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Modal
-  alias Brando.Content
+  alias BrandoAdmin.Components.Content
 
   # prop insert_block, :event, required: true
   # prop insert_section, :event, required: true
@@ -20,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   end
 
   def update(assigns, socket) do
-    {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
 
     {:ok,
      socket
@@ -35,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <.live_component module={Modal} title={gettext "Add content block"} id={@id} medium>
+      <Content.modal title={gettext "Add content block"} id={@id} medium>
         <div class="button-group-horizontal">
           <%= if !@hide_sections do %>
             <button
@@ -113,7 +112,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
             <% end %>
           <% end %>
         </div>
-      </.live_component>
+      </Content.modal>
     </div>
     """
   end

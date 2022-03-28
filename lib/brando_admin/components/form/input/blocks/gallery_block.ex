@@ -12,7 +12,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
-  alias BrandoAdmin.Components.Modal
 
   # prop uploads, :any
   # prop base_form, :any
@@ -222,7 +221,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           </div>
         <% end %>
 
-        <.live_component module={Modal}
+        <Content.modal
           title="Edit captions"
           id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
@@ -239,7 +238,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               </div>
             <% end %>
           </div>
-        </.live_component>
+        </Content.modal>
 
         <:config>
           <Input.input type={:hidden} form={@block_data} field={:type} />

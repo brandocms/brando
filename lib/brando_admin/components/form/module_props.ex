@@ -3,10 +3,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   use Phoenix.HTML
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Modal
 
   # prop form, :form, required: true
   # prop key, :string, default: "default"
@@ -52,11 +52,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           </div>
         <% end %>
 
-        <.live_component module={Modal} title="Edit icon" id={"#{@form.id}-#{@key}-icon"}>
+        <Content.modal title="Edit icon" id={"#{@form.id}-#{@key}-icon"}>
           <Input.code id={"#{@form.id}-svg"} form={@form} field={:svg} label={gettext "SVG"} />
-        </.live_component>
+        </Content.modal>
 
-        <.live_component module={Modal} title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
+        <Content.modal title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
           <div class="button-group">
             <button
               type="button"
@@ -157,7 +157,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Datasource
             </button>
           </div>
-        </.live_component>
+        </Content.modal>
 
         <div class="refs">
           <h2>
@@ -191,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   </div>
                 <% end %>
 
-                <.live_component module={Modal} title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"} wide>
+                <Content.modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{idx}"} wide>
                   <div class="panels">
                     <%= for ref_data <- inputs_for_block(ref, :data) do %>
                       <Input.input type={:hidden} form={ref_data} field={:type} value={input_value(ref_data, :type)} />
@@ -596,13 +596,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       </div>
                     <% end %>
                   </div>
-                </.live_component>
+                </Content.modal>
               </li>
             </Form.inputs>
           </ul>
         </div>
 
-        <.live_component module={Modal} title={gettext "Create var"} id={"#{@form.id}-#{@key}-create-var"} narrow>
+        <Content.modal title={gettext "Create var"} id={"#{@form.id}-#{@key}-create-var"} narrow>
           <div class="button-group">
             <button
               type="button"
@@ -654,7 +654,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               Image
             </button>
           </div>
-        </.live_component>
+        </Content.modal>
 
         <div class="vars">
           <h2>
@@ -674,13 +674,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-handle=".sort-handle">
             <Form.poly_inputs form={@form} for={:vars} let={%{form: var, index: idx}}>
               <li class="var padded sort-handle draggable" data-id={idx}>
-                <.live_component module={Modal} title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{idx}"}>
+                <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{idx}"}>
                   <.live_component module={RenderVar}
                     id={"#{@form.id}-#{@key}-render-var-#{idx}"}
                     var={var}
                     render={:all}
                     edit />
-                </.live_component>
+                </Content.modal>
                 <span class="text-mono"><%= input_value(var, :type) %> - &lcub;&lcub; <%= input_value(var, :key) %> &rcub;&rcub;</span>
                 <div class="actions">
                   <button

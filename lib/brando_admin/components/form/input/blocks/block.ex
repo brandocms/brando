@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
 
   import Brando.Gettext
 
-  alias BrandoAdmin.Components.Modal
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           click={@insert_block} />
       <% end %>
 
-      <.live_component module={Modal} title={gettext "Configure"} id={"block-#{@uid}_config"} wide={@wide_config}>
+      <Content.modal title={gettext "Configure"} id={"block-#{@uid}_config"} wide={@wide_config}>
         <%= if @config do %>
           <%= render_slot @config %>
         <% end %>
@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             <%= render_slot @config_footer %>
           <% end %>
         </:footer>
-      </.live_component>
+      </Content.modal>
 
       <Input.input type={:hidden} form={@block} field={:uid} />
       <Input.input type={:hidden} form={@block} field={:type} />

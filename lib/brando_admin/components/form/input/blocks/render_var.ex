@@ -5,9 +5,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   import Ecto.Changeset
 
   alias Brando.Utils
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Modal
 
   # prop var, :any
   # prop render, :atom, values: [:all, :only_important, :only_regular], default: :all
@@ -287,7 +287,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def image_modal(assigns) do
     ~H"""
-    <.live_component module={Modal} title={gettext "Image"} id={"var-#{@form.id}-image-config"}>
+    <Content.modal title={gettext "Image"} id={"var-#{@form.id}-image-config"}>
       <div class="panels">
         <div class="panel">
           <%= if @image && @image.path do %>
@@ -340,7 +340,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           </div>
         </div>
       </div>
-    </.live_component>
+    </Content.modal>
     """
   end
 

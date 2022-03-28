@@ -2,10 +2,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use BrandoAdmin, :live_component
   import Brando.Gettext
 
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Modal
 
   # prop form, :form
   # prop field, :atom
@@ -265,7 +265,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= gettext "Select" %>
             <% end %>
           </button>
-          <.live_component module={Modal} title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
+          <Content.modal title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
             <:header>
               <%= if @select_form && !@creating do %>
                 <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create <%= @singular %></button>
@@ -378,7 +378,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <% end %>
               <% end %>
             </div>
-          </.live_component>
+          </Content.modal>
         </div>
       </Form.field_base>
     </div>

@@ -5,9 +5,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   import Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Components.Content.List.Row
 
   alias Ecto.Changeset
@@ -152,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <%= gettext("Select entries") %>
         </button>
 
-        <.live_component module={Modal} title={gettext("Select entries")} id={"#{@form.id}-#{@field}-select-entries"} narrow>
+        <Content.modal title={gettext("Select entries")} id={"#{@form.id}-#{@field}-select-entries"} narrow>
           <h2 class="titlecase"><%= gettext("Select content type") %></h2>
           <div class="button-group-vertical">
           <%= for {label, schema, _} <- @available_schemas do %>
@@ -172,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
               />
             <% end %>
           <% end %>
-        </.live_component>
+        </Content.modal>
       </Form.field_base>
     </div>
     """
