@@ -127,7 +127,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <.live_component module={Blocks.Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

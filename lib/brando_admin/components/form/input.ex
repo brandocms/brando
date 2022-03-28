@@ -420,6 +420,39 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  def input(%{type: :checkbox} = assigns) do
+    extra =
+      assigns_to_attributes(assigns, [
+        :form,
+        :field,
+        :type
+      ])
+
+    assigns = assign(assigns, :extra, extra)
+
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> maybe_html_escape(input_value(assigns.form, assigns.field)) end)
+      |> assign_new(:id, fn -> input_id(assigns.form, assigns.field) end)
+      |> assign_new(:name, fn -> input_name(assigns.form, assigns.field) end)
+      |> assign_new(:checked_value, fn -> maybe_html_escape(true) end)
+      |> assign_new(:unchecked_value, fn -> maybe_html_escape(false) end)
+      |> assign_new(:hidden_input, fn -> true end)
+
+    assigns = assign(assigns, :checked, assigns.value == assigns.checked_value)
+
+    if assigns.hidden_input do
+      ~H"""
+      <input type={:hidden} name={@name} value={@unchecked_value} {@extra}>
+      <input type={@type} name={@name} id={@id} value={@checked_value} checked={@checked} {@extra}>
+      """
+    else
+      ~H"""
+      <input type={@type} name={@name} id={@id} value={@checked_value} {@extra}>
+      """
+    end
+  end
+
   def input(%{type: :textarea} = assigns) do
     extra =
       assigns_to_attributes(assigns, [

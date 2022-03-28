@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
   use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :form
   # prop base_form, :form
@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component module={Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownBlock do
         <div class="markdown-block">
           <Input.code id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
         </div>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

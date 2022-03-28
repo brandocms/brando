@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Blocks.Module
 
   # prop block, :any
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <.live_component module={Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <Input.input type={:hidden} form={@block_data} field={:sequence} />
           <Input.input type={:hidden} form={@block_data} field={:multi} />
         </div>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :form
   # prop base_form, :form
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component module={Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -128,7 +128,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             </div>
           </div>
         </div>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

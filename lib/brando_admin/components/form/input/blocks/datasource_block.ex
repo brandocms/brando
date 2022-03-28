@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Entries
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop base_form, :any
   # prop block, :any
@@ -129,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
       id={"#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component module={Block}
+      <Blocks.block
         id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
             <% end %>
           <% end %>
         </Content.modal>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

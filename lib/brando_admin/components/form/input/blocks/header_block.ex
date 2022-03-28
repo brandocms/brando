@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
   use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :any
   # prop base_form, :any
@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component module={Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.HeaderBlock do
           <Input.input type={:hidden} form={@block_data} field={:class} />
           <Input.input type={:hidden} form={@block_data} field={:placeholder} />
         </div>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end

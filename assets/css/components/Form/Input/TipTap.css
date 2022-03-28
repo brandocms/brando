@@ -114,16 +114,19 @@
   }
 
   h2 {
-    @fontsize lg(1.5);
+    @fontsize lg(1);
     line-height: 1.05;
     font-weight: 500;
-    margin-top: 30px;
     margin-bottom: 15px;
 
     a {
       border-bottom: 2px solid theme(colors.peachDarkest);
       padding-bottom: 1px;
     }
+  }
+
+  ul + h2, p + h2, li + h2 {
+    margin-top: 45px;
   }
 
   h3 {

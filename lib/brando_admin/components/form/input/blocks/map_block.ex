@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop base_form, :any
   # prop data_field, :atom
@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
       class="map-block"
       data-block-index={@index}
       data-block-uid={@uid}>
-      <.live_component module={Block}
+      <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </div>
           </div>
         <% end %>
-      </.live_component>
+      </Blocks.block>
     </div>
     """
   end
