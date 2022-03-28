@@ -720,7 +720,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         <%= if @inner_block do %>
           <%= render_slot @inner_block %>
         <% else %>
-          <%= checkbox @form, @field %>
+          <.input type={:checkbox} form={@form} field={@field} />
         <% end %>
         <div class="slider round"></div>
       </Form.label>
