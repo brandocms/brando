@@ -717,6 +717,10 @@ defmodule BrandoAdmin.Components.Form do
       image
       |> Brando.Images.Image.changeset(image_params, current_user)
       |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Images.Image,
+        current_user
+      )
 
     {:ok, updated_image} = Brando.Images.update_image(validated_changeset, current_user)
 
@@ -870,6 +874,10 @@ defmodule BrandoAdmin.Components.Form do
       entry_or_default
       |> schema.changeset(entry_params, current_user)
       |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        schema,
+        current_user
+      )
 
     # clear out deleted villain blocks
     # one day i will figure out why this is neccessary...
