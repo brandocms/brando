@@ -41,10 +41,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div
-        class={render_classes(["check-wrapper", small: @compact])}>
-        <%= checkbox @form, @field %>
-        <%= label @form, @field, @text, class: "control-label#{if @compact, do: " small", else: ""}" %>
+      <div class={render_classes(["check-wrapper", small: @compact])}>
+        <.input type={:checkbox} form={@form} field={@field} />
+        <Form.label form={@form} field={@field} class={render_classes(["control-label", small: @compact])}><%= @text %></Form.label>
       </div>
     </Form.field_base>
     """
@@ -65,7 +64,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@form.id}-#{@field}-code"}
         class="code-editor"
         phx-hook="Brando.CodeEditor">
-        <%= textarea @form, @field, phx_debounce: 750 %>
+        <.input type={:textarea}
+          form={@form}
+          field={@field}
+          phx_debounce={750} />
         <div phx-update="ignore">
           <div class="editor"></div>
         </div>
@@ -686,14 +688,15 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= textarea @form, @field,
-        class: "text",
-        placeholder: @placeholder,
-        rows: @rows,
-        disabled: @disabled,
-        phx_debounce: @debounce,
-        id: make_uid(@form, @field, @uid)
-      %>
+      <.input type={:textarea}
+        form={@form}
+        field={@field}
+        class="text"
+        placeholder={@placeholder}
+        rows={@rows}
+        disabled={@disabled}
+        phx_debounce={@debounce}
+        id={make_uid(@form, @field, @uid)} />
     </Form.field_base>
     """
   end
