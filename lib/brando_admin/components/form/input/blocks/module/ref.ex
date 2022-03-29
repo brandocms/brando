@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
     ~H"""
     <%= if @ref do %>
       <section b-ref={@ref.name}>
-        <Blocks.DynamicBlock.render
+        <Blocks.dynamic_block
           id={@ref_uid}
           is_ref?={true}
           data_field={@data_field}

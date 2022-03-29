@@ -397,6 +397,341 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     """
   end
 
+  def dynamic_block(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:insert_block, fn -> nil end)
+      |> assign_new(:duplicate_block, fn -> nil end)
+      |> assign_new(:belongs_to, fn -> nil end)
+      |> assign_new(:is_ref?, fn -> false end)
+      |> assign_new(:opts, fn -> [] end)
+      |> assign_new(:ref_name, fn -> nil end)
+      |> assign_new(:ref_description, fn -> nil end)
+      |> assign_new(:block_id, fn -> input_value(assigns.block, :uid) end)
+      |> assign_new(:component_target, fn ->
+        type_atom = input_value(assigns.block, :type) |> String.to_existing_atom()
+
+        block_type =
+          (type_atom
+           |> to_string
+           |> Recase.to_pascal()) <> "Block"
+
+        block_module = Module.concat([Blocks, block_type])
+
+        case Code.ensure_compiled(block_module) do
+          {:module, _} -> block_module
+          _ -> Function.capture(__MODULE__, type_atom, 1)
+        end
+      end)
+
+    assigns =
+      if is_nil(input_value(assigns.block, :uid)) do
+        random_id = Brando.Utils.random_string(13) |> String.upcase()
+
+        block =
+          put_in(
+            assigns.block,
+            [Access.key(:source), Access.key(:data), Access.key(:uid)],
+            random_id
+          )
+
+        assigns
+        |> assign(:random_id, random_id)
+        |> assign(:block, block)
+      else
+        assigns
+      end
+
+    ~H"""
+    <%= if is_function(@component_target) do %>
+      <%= component(@component_target, assigns) %>
+    <% else %>
+      <.live_component module={@component_target}
+        id={@block_id || @random_id}
+        block={@block}
+        is_ref?={@is_ref?}
+        base_form={@base_form}
+        data_field={@data_field}
+        index={@index}
+        opts={@opts}
+        belongs_to={@belongs_to}
+        ref_name={@ref_name}
+        ref_description={@ref_description}
+        block_count={@block_count}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}
+        uploads={@uploads} />
+    <% end %>
+    """
+  end
+
+  def text(assigns) do
+    assigns =
+      assigns
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:text_type, input_value(assigns.block, :data).type)
+
+    ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% else %>
+            <%= @text_type %>
+          <% end %>
+        </:description>
+        <:config>
+          <%= for block_data <- inputs_for(@block, :data) do %>
+            <Input.radios
+              form={block_data}
+              field={:type}
+              label="Type"
+              opts={[options: [
+                %{label: "Paragraph", value: "paragraph"},
+                %{label: "Lede", value: "lede"},
+              ]]} />
+          <% end %>
+        </:config>
+        <%= for block_data <- inputs_for(@block, :data) do %>
+          <div class={render_classes(["text-block", @text_type])}>
+            <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
+              <div
+                id={"block-#{@uid}-rich-text"}
+                data-block-uid={@id}
+                phx-hook="Brando.TipTap"
+                data-name="TipTap">
+                <div
+                  id={"block-#{@uid}-rich-text-target-wrapper"}
+                  class="tiptap-target-wrapper"
+                  phx-update="ignore">
+                  <div
+                    id={"block-#{@uid}-rich-text-target"}
+                    class="tiptap-target">
+                  </div>
+                </div>
+                <Input.input
+                  type={:hidden}
+                  form={block_data}
+                  field={:text}
+                  class="tiptap-text"
+                  phx_debounce={750}
+                  id={"block-rich-text-hidden-input-text-#{@uid}"} />
+                <Input.input
+                  type={:hidden}
+                  form={block_data}
+                  field={:extensions}
+                  phx_debounce={750}
+                  id={"block-rich-text-hidden-input-extensions-#{@uid}"} />
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </Blocks.block>
+    </div>
+    """
+  end
+
+  def comment(assigns) do
+    assigns = assign(assigns, :block_data, List.first(inputs_for(assigns.block, :data)))
+
+    text =
+      case input_value(assigns.block_data, :text) do
+        nil -> nil
+        text -> text |> Brando.HTML.nl2br() |> raw
+      end
+
+    assigns =
+      assigns
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:text, text)
+
+    ~H"""
+    <div
+      class="comment-block"
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>
+          <%= gettext("Not shown...") %>
+        </:description>
+        <:config>
+          <div id={"block-#{@uid}-conf-textarea"}>
+            <Input.textarea form={@block_data} field={:text} uid={@uid} />
+          </div>
+        </:config>
+        <div id={"block-#{@uid}-comment"}>
+          <%= if @text do %>
+            <%= @text %>
+          <% end %>
+        </div>
+      </Blocks.block>
+    </div>
+    """
+  end
+
+  def header(assigns) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+
+    assigns =
+      assigns
+      |> assign(:level, input_value(block_data, :level))
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:block_data, block_data)
+
+    ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>(H<%= @level %>)</:description>
+        <:config>
+          <Input.radios
+            form={@block_data}
+            field={:level}
+            label="Level"
+            opts={[options: [
+              %{label: "H1", value: 1},
+              %{label: "H2", value: 2},
+              %{label: "H3", value: 3},
+              %{label: "H4", value: 4},
+              %{label: "H5", value: 5},
+              %{label: "H6", value: 6},
+            ]]} />
+
+          <Input.text
+            form={@block_data}
+            field={:id}
+            label="ID" />
+
+          <Input.text
+            form={@block_data}
+            field={:link}
+            label="Link" />
+        </:config>
+        <div class="header-block">
+          <Input.input
+            type={:textarea}
+            form={@block_data}
+            field={:text}
+            id={"block-#{@uid}-textarea"}
+            class={"h#{@level}"}
+            data_autosize={true}
+            phx_debounce={750}
+            phx_update={"ignore"}
+            rows={1} />
+          <Input.input type={:hidden} form={@block_data} field={:class} />
+          <Input.input type={:hidden} form={@block_data} field={:placeholder} />
+        </div>
+      </Blocks.block>
+    </div>
+    """
+  end
+
+  def html(assigns) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+
+    assigns =
+      assigns
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:block_data, block_data)
+
+    ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% end %>
+        </:description>
+        <div class="html-block">
+          <Input.code id={"block-#{@uid}-html-text"} form={@block_data} field={:text} label={gettext "Text"} />
+        </div>
+      </Blocks.block>
+    </div>
+    """
+  end
+
+  def markdown(assigns) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+
+    assigns =
+      assigns
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:block_data, block_data)
+
+    ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% end %>
+        </:description>
+        <div class="markdown-block">
+          <Input.code id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
+        </div>
+      </Blocks.block>
+    </div>
+    """
+  end
+
   defp last_block?(%{index: index, block_count: block_count}) when index + 1 == block_count do
     true
   end

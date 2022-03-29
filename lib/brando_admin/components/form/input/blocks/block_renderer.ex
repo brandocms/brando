@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       <% end %>
 
       <%= for {block_form, index} <- @indexed_block_forms do %>
-        <Blocks.DynamicBlock.render
+        <Blocks.dynamic_block
           uploads={@uploads}
           index={index}
           data_field={@data_field}
