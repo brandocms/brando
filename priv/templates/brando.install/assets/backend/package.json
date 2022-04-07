@@ -14,7 +14,7 @@
     "@brandocms/europacss": "^0.7.0",
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.37",
     "autoprefixer": "^10.4.2",
-    "svelte": "^3.46.4",
+    "svelte": "^3.46.6",
     "svelte-preprocess": "^4.10.3",
     "vite": "^2.8.4"
   }
