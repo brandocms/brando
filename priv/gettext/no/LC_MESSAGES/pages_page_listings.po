@@ -20,63 +20,79 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#: lib/brando/pages/page.ex:134 lib/brando/pages/page.ex:203
-#: lib/brando/pages/page.ex:237
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:133
+#: lib/brando/pages/page.ex:202
+#: lib/brando/pages/page.ex:236
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/pages/page.ex:138
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:137
 msgid "Create fragment"
 msgstr "Opprett fragment"
 
-#: lib/brando/pages/page.ex:137
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:136
 msgid "Create subpage"
 msgstr "Opprett underside"
 
-#: lib/brando/pages/page.ex:201
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:200
 msgid "Delete fragment"
 msgstr "Slett sidefragment"
 
-#: lib/brando/pages/page.ex:132
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:131
 msgid "Delete page"
 msgstr "Slett side"
 
-#: lib/brando/pages/page.ex:142
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:141
 msgid "Delete pages"
 msgstr "Slett sider"
 
-#: lib/brando/pages/page.ex:235
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:234
 msgid "Delete sub page"
 msgstr "Slett underside"
 
-#: lib/brando/pages/page.ex:136
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:135
 msgid "Duplicate page"
 msgstr "Dupliser side"
 
-#: lib/brando/pages/page.ex:198
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:197
 msgid "Edit fragment"
 msgstr "Rediger fragment"
 
-#: lib/brando/pages/page.ex:130
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:129
 msgid "Edit page"
 msgstr "Rediger side"
 
-#: lib/brando/pages/page.ex:232
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:231
 msgid "Edit sub page"
 msgstr "Rediger underside"
 
-#: lib/brando/pages/page.ex:126
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:125
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:125
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:124
 msgid "URI"
 msgstr "URI"
 
-#: lib/brando/pages/page.ex:199
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:198
 msgid "Duplicate fragment"
 msgstr "Dupliser fragment"
 
-#: lib/brando/pages/page.ex:233
+#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:232
 msgid "Duplicate sub page"
 msgstr "Dupliser underside"

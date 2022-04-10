@@ -102,7 +102,6 @@ defmodule Brando.Pages.Page do
   listings do
     listing do
       listing_query %{
-        status: :published,
         filter: %{parents: true},
         preload: [
           fragments: %{

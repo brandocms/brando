@@ -302,6 +302,13 @@ defmodule Brando.Blueprint do
   defmacro build_assets(assets) do
     quote do
       Enum.map(unquote(assets), fn
+        %Asset{type: :file, name: name} ->
+          Ecto.Schema.belongs_to(
+            name,
+            Brando.Files.File,
+            on_replace: :update
+          )
+
         %Asset{type: :image, name: name} ->
           Ecto.Schema.belongs_to(
             name,
@@ -329,14 +336,6 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             name,
             Brando.Videos.Video,
-            on_replace: :delete
-          )
-
-        %Asset{type: :file, name: name} ->
-          # files are embedded
-          Ecto.Schema.embeds_one(
-            name,
-            Brando.Files.File,
             on_replace: :delete
           )
 
@@ -401,11 +400,12 @@ defmodule Brando.Blueprint do
 
   def get_castable_asset_fields(rels) do
     rels
-    |> Enum.filter(&(&1.type in [:image, :gallery]))
+    |> Enum.filter(&(&1.type in [:file, :image, :gallery]))
     |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
+  def get_relation_key(%{type: :file, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :gallery, name: name}), do: :"#{name}_id"
 

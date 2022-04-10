@@ -57,10 +57,42 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, :file, opts) do
+    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Files.File})
+    default_config = %{}
+
+    cfg =
+      case Map.get(opts_map, :cfg) do
+        nil ->
+          raise Brando.Exception.BlueprintError,
+            message: """
+            Missing :cfg key for file asset `#{inspect(name)}`
+
+                assets do
+                  asset #{inspect(name)}, :file, cfg: [...]
+                end
+            """
+
+        :default ->
+          default_config
+
+        fun when is_function(fun) ->
+          fun.()
+
+        map when is_map(map) ->
+          map = Brando.Utils.deep_merge(default_config, map)
+          struct(Brando.Type.FileConfig, map)
+
+        kwlist when is_list(kwlist) ->
+          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          struct(Brando.Type.FileConfig, kwlist)
+      end
+
+    opts_map = Map.put(opts_map, :cfg, cfg)
+
     %Asset{
       name: name,
       type: :file,
-      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.Files.File})
+      opts: opts_map
     }
   end
 
@@ -163,13 +195,19 @@ defmodule Brando.Blueprint.Assets do
   end
 
   ##
+  ## file is belongs_to File
+  def run_cast_asset(%{type: :file, name: _name, opts: _opts}, changeset, _user) do
+    changeset
+  end
+
+  ##
   ## embeds_one
   def run_cast_asset(
         %{type: type, name: name, opts: opts},
         changeset,
         _user
       )
-      when type in [:file, :video] do
+      when type in [:video] do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do

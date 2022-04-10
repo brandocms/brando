@@ -956,6 +956,10 @@ defmodule Brando.Villain.Filters do
     |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  def filesize(size, _) do
+    Brando.Utils.human_size(size)
+  end
+
   @doc """
   Get entry publication date by publish_at OR inserted_at
   """

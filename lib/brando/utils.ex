@@ -4,6 +4,7 @@ defmodule Brando.Utils do
   """
 
   alias Brando.Cache
+  alias Brando.Files
 
   @type changeset :: Ecto.Changeset.t()
   @type conn :: Plug.Conn.t()
@@ -629,17 +630,6 @@ defmodule Brando.Utils do
   def app_name, do: Brando.config(:app_name)
 
   @doc """
-  Grabs `path` from the file field struct
-  """
-  def file_url(file_field, opts \\ [])
-  def file_url(nil, _), do: nil
-
-  def file_url(file_field, opts) do
-    prefix = Keyword.get(opts, :prefix, nil)
-    (prefix && Path.join([prefix, file_field.path])) || file_field.path
-  end
-
-  @doc """
   Create a cache string and return
   """
   def add_cache_string(opts) do
@@ -752,6 +742,16 @@ defmodule Brando.Utils do
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
     url <> add_cache_string(opts)
   end
+
+  def file_url(%Files.File{} = file) do
+    {:ok, config} = Files.get_config_for(file.config_target)
+
+    config.upload_path
+    |> Path.join(file.filename)
+    |> media_url()
+  end
+
+  def file_url(_), do: ""
 
   defp extract_size_dir(image_field, size) do
     if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do

@@ -113,6 +113,21 @@ defmodule Brando.Blueprint.BlueprintTest do
                  module: Brando.Images.Image
                },
                type: :image
+             },
+             %Brando.Blueprint.Asset{
+               name: :pdf,
+               opts: %{
+                 cfg: %Brando.Type.FileConfig{
+                   accept: :any,
+                   allowed_mimetypes: ["application/pdf"],
+                   overwrite: false,
+                   random_filename: false,
+                   size_limit: 10_240_000,
+                   upload_path: "files/projects"
+                 },
+                 module: Brando.Files.File
+               },
+               type: :file
              }
            ]
   end
@@ -182,6 +197,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              :inserted_at,
              :updated_at,
              :cover_id,
+             :pdf_id,
              :properties,
              :creator_id
            ]

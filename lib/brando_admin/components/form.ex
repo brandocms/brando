@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
@@ -23,6 +24,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
+     |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
+     |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:has_meta?, false)
@@ -33,6 +36,45 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_cache_key, nil)}
   end
 
+  # edit_file
+  def update(
+        %{action: :update_edit_file, file: file},
+        %{assigns: %{edit_file: edit_file}} = socket
+      ) do
+    updated_edit_file = Map.merge(edit_file, %{file: file, id: file.id})
+    file_changeset = Ecto.Changeset.change(file)
+
+    {:ok,
+     socket
+     |> assign(:edit_file, updated_edit_file)
+     |> assign(:file_changeset, file_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_file, edit_file: %{file: nil} = edit_file},
+        socket
+      ) do
+    file_changeset = Ecto.Changeset.change(%Brando.Files.File{})
+
+    {:ok,
+     socket
+     |> assign(:edit_file, edit_file)
+     |> assign(:file_changeset, file_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_file, edit_file: %{file: file} = edit_file},
+        socket
+      ) do
+    file_changeset = Ecto.Changeset.change(file)
+
+    {:ok,
+     socket
+     |> assign(:edit_file, edit_file)
+     |> assign(:file_changeset, file_changeset)}
+  end
+
+  # edit_image
   def update(
         %{action: :update_edit_image, image: image},
         %{assigns: %{edit_image: edit_image}} = socket
@@ -240,6 +282,11 @@ defmodule BrandoAdmin.Components.Form do
   defp add_preloads(query_params, schema) do
     default_preloads = Map.get(query_params, :preload, [])
 
+    file_preloads =
+      schema.__assets__
+      |> Enum.filter(&(&1.type == :file))
+      |> Enum.map(& &1.name)
+
     image_preloads =
       schema.__assets__
       |> Enum.filter(&(&1.type == :image))
@@ -255,7 +302,10 @@ defmodule BrandoAdmin.Components.Form do
       |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
       |> Enum.map(& &1.name)
 
-    preloads = Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads ++ default_preloads)
+    preloads =
+      Enum.uniq(
+        file_preloads ++ gallery_preloads ++ image_preloads ++ rel_preloads ++ default_preloads
+      )
 
     Map.put(
       query_params,
@@ -415,7 +465,16 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
 
+          <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
+
+          <.file_drawer
+            file_changeset={@file_changeset}
+            myself={@myself}
+            uploads={@uploads}
+            edit_file={@edit_file}
+          />
+
           <.image_drawer
             image_changeset={@image_changeset}
             myself={@myself}
@@ -519,6 +578,82 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def file_drawer(assigns) do
+    ~H"""
+    <Content.drawer
+      id={"file-drawer"}
+      title={gettext "File"}
+      close={close_file()}
+      z={1001}
+      narrow>
+      <%= if @file_changeset do %>
+        <.form
+          id="file-drawer-form"
+          for={@file_changeset}
+          let={file_form}
+          phx-submit="save_file"
+          phx-change="validate_file"
+          phx-target={@myself}>
+          <div
+            id="file-drawer-form-preview"
+            phx-hook="Brando.DragDrop"
+            class="file-drawer-preview"
+            phx-drop-target={@uploads[@edit_file.field].ref}>
+            <%= if @edit_file.file do %>
+              <figure class="grid-overlay">
+                <div class="drop-indicator">
+                  <div><%= gettext "+ Drop here to upload" %></div>
+                </div>
+              </figure>
+            <% else %>
+              <div class="img-placeholder">
+                <div class="placeholder-wrapper">
+                  <div class="svg-wrapper">
+                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                      <circle cx="8" cy="9" r="2"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="button-group vertical">
+            <div class="file-input-button">
+              <span class="label">
+                <%= gettext "Upload file" %>
+              </span>
+              <%= live_file_input @uploads[@edit_file.field] %>
+            </div>
+            <button
+              class="secondary"
+              type="button"
+              phx-click={toggle_drawer("#file-picker")}>
+              <%= gettext "Select existing file" %>
+            </button>
+
+            <button
+              class="secondary"
+              type="button"
+              phx-page-loading
+              phx-click={reset_file_field(@myself)}>
+              <%= gettext "Reset file field" %>
+            </button>
+          </div>
+          <%= if @edit_file.file do %>
+            <div class="brando-input">
+              <Input.text field={:title} form={file_form} label={gettext "Title"} />
+            </div>
+          <% end %>
+        </.form>
+      <% end %>
+    </Content.drawer>
+    """
+  end
+
   def image_drawer(assigns) do
     ~H"""
     <Content.drawer
@@ -611,6 +746,12 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def reset_file_field(js \\ %JS{}, target) do
+    js
+    |> JS.push("reset_file_field", target: target)
+    |> toggle_drawer("#file-drawer")
+  end
+
   def reset_image_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_image_field", target: target)
@@ -620,6 +761,7 @@ defmodule BrandoAdmin.Components.Form do
   def allow_uploads(socket) do
     image_fields = socket.assigns.schema.__image_fields__()
     gallery_fields = socket.assigns.schema.__gallery_fields__()
+    file_fields = socket.assigns.schema.__file_fields__()
 
     socket_with_image_uploads =
       Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
@@ -648,8 +790,27 @@ defmodule BrandoAdmin.Components.Form do
         )
       end)
 
+    socket_with_file_uploads =
+      Enum.reduce(file_fields, socket_with_gallery_uploads, fn file_field, updated_socket ->
+        max_size = Brando.Utils.try_path(file_field, [:opts, :cfg, :size_limit]) || 4_000_000
+        accept = Brando.Utils.try_path(file_field, [:opts, :cfg, :accept]) || :any
+
+        allow_upload(updated_socket, file_field.name,
+          accept: accept,
+          max_file_size: max_size,
+          auto_upload: true,
+          progress: &__MODULE__.handle_file_progress/3
+        )
+      end)
+
     # fallback to nil if no uploads
-    assign_new(socket_with_gallery_uploads, :uploads, fn -> nil end)
+    assign_new(socket_with_file_uploads, :uploads, fn -> nil end)
+  end
+
+  def close_file(js \\ %JS{}) do
+    js
+    |> JS.dispatch("submit", to: "#file-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> toggle_drawer("#file-drawer")
   end
 
   def close_image(js \\ %JS{}) do
@@ -660,6 +821,31 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("change_preview_target", %{"target" => target}, socket) do
     {:noreply, assign(socket, :live_preview_target, target)}
+  end
+
+  def handle_event(
+        "reset_file_field",
+        _,
+        %{
+          assigns: %{
+            changeset: changeset,
+            edit_file: edit_file,
+            entry: entry,
+            singular: singular
+          }
+        } = socket
+      ) do
+    full_path = edit_file.path ++ [edit_file.relation_field]
+    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
+    updated_edit_file = Map.put(edit_file, :file, nil)
+
+    {:noreply,
+     socket
+     |> assign(:entry, Map.put(entry, edit_file.field, nil))
+     |> assign(:file_changeset, nil)
+     |> assign(:edit_file, updated_edit_file)
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{target: "#{singular}[#{edit_file.relation_field}]", value: ""})}
   end
 
   def handle_event(
@@ -685,6 +871,73 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, updated_edit_image)
      |> assign(:changeset, updated_changeset)
      |> push_event("b:validate", %{target: "#{singular}[#{edit_image.relation_field}]", value: ""})}
+  end
+
+  def handle_event("validate_file", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_file",
+        %{"file" => file_params},
+        %{
+          assigns: %{
+            changeset: changeset,
+            entry: entry,
+            schema: schema,
+            singular: singular,
+            edit_file:
+              %{
+                file: file,
+                path: path,
+                field: field,
+                relation_field: relation_field
+              } = edit_file,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+
+    validated_changeset =
+      file
+      |> Brando.Files.File.changeset(file_params, current_user)
+      |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Files.File,
+        current_user
+      )
+
+    {:ok, updated_file} = Brando.Files.update_file(validated_changeset, current_user)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Images.Image,
+      updated_file,
+      validated_changeset,
+      current_user
+    )
+
+    edit_file = Map.put(edit_file, :file, updated_file)
+    full_path = path ++ [relation_field]
+
+    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> file.id end)
+    updated_entry = Map.put(entry_or_default, field, updated_file)
+
+    {:noreply,
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:changeset, updated_changeset)
+     |> assign(:file_changeset, validated_changeset)
+     |> assign(:edit_file, edit_file)
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{edit_file.relation_field}]",
+       value: file.id
+     })}
+  end
+
+  # without file in params
+  def handle_event("save_file", _, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("validate_image", _, socket) do
@@ -1019,6 +1272,60 @@ defmodule BrandoAdmin.Components.Form do
            |> update_changeset(relation_key, image.id)
            |> assign(:edit_image, edit_image)
            |> assign(:image_changeset, image_changeset)}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_file_progress(
+        key,
+        upload_entry,
+        %{
+          assigns: %{
+            schema: schema,
+            edit_file: edit_file,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    if upload_entry.done? do
+      relation_key = String.to_existing_atom("#{key}_id")
+      %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "file:#{inspect(schema)}:#{key}"
+
+      case consume_uploaded_entry(
+             socket,
+             upload_entry,
+             fn meta ->
+               Brando.Upload.handle_upload(
+                 Map.put(meta, :config_target, config_target),
+                 upload_entry,
+                 cfg,
+                 current_user
+               )
+             end
+           ) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+            )
+
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+
+        file ->
+          file_changeset = Ecto.Changeset.change(file)
+          edit_file = Map.merge(edit_file, %{id: file.id, file: file})
+
+          {:noreply,
+           socket
+           |> update_changeset(relation_key, file.id)
+           |> assign(:edit_file, edit_file)
+           |> assign(:file_changeset, file_changeset)}
       end
     else
       {:noreply, socket}

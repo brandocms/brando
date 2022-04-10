@@ -1,0 +1,55 @@
+.file-preview-empty, .file-preview {
+  @fontsize sm;  
+  align-items: center;
+
+  .file-info {
+    @space padding-left 20px;
+  }
+
+  .title {
+    @fontsize 13px/13px;
+    @space margin-top 5px;
+  }
+
+  img {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    min-width: auto;
+  }
+
+  .img-placeholder {
+    background-color: var(--brando-color-input);
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    min-width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .shaded & {
+      @color bg white;
+    }
+  }
+
+  .btn-small {
+    @fontsize sm;
+    display: block;
+    width: fit-content;
+    border: 1px solid;
+    padding: 9px 20px;
+    margin-top: 10px;
+    border-radius: 25px;
+    transition: background-color 250ms ease, color 250ms ease;
+
+    &:hover {
+      background-color: var(--brando-color-dark);
+      color: var(--brando-color-peach);
+    }
+  }
+}
+
+.file-preview {
+  display: flex;
+}

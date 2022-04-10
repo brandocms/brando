@@ -101,7 +101,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <% end %>
         </:description>
 
-        <div phx-update="ignore">
+        <div
+          id={"block-#{@uid}-base-f-in"}
+          phx-update="ignore">
           <input
             name={"block-#{@uid}-f-in"}
             class="file-input"
@@ -141,7 +143,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         <% end %>
 
         <%= if @has_images? do %>
-          <span phx-update="ignore">
+          <span
+            id={"block-#{@uid}-base-file-upload-btn"}
+            phx-update="ignore">
             <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
           </span>
           <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}><%= gettext "Select images" %></button>

@@ -1294,10 +1294,10 @@ phoenix_html@^3.2.0:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-3.2.0.tgz#4a30e5c331a72abababa1f3b81a9fe2c0e5a43d7"
   integrity sha512-zv7PIZk0MPkF0ax8n465Q6w86+sGAy5cTem6KcbkUbdgxGc0y3WZmzkM2bSlYdSGbLEZfjXxos1G72xXsha6xA==
 
-phoenix_live_view@^0.17.7:
-  version "0.17.7"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.17.7.tgz#e996c9b22676b1323d1d74b46d2ca7c6d559fc6e"
-  integrity sha512-lmt3+f8re24uPVEumfM/QNELePEiOxF5YcZzva+gCEL0VfcSfp8JoLuaEoKCJ7RarltpIjFKOhdzwZKfBo1d0A==
+phoenix_live_view@^0.17.9:
+  version "0.17.9"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.17.9.tgz#5d32d11f3c0c762725b4d4513aa2f68d03aa546e"
+  integrity sha512-bCA7+1T3IrUsPgvkQn/GFjppuvKlnZFzOi8bo1vRS/fz57Yky1MMaOux3mDv4LCBWRiXBN6Zycp0/6wDTvL8dg==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1323,7 +1323,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:

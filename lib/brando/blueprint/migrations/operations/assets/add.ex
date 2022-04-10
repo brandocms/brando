@@ -14,18 +14,18 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
   end
 
   def up(%{
-        asset: %{type: :gallery, name: name}
+        asset: %{type: :file, name: name}
       }) do
     """
-    add #{inspect(name)}_id, references(:images_galleries, on_delete: :nilify_all)
+    add #{inspect(name)}_id, references(:files, on_delete: :nilify_all)
     """
   end
 
   def up(%{
-        asset: %{type: :file, name: name}
+        asset: %{type: :gallery, name: name}
       }) do
     """
-    add #{inspect(name)}, :jsonb
+    add #{inspect(name)}_id, references(:images_galleries, on_delete: :nilify_all)
     """
   end
 
@@ -53,7 +53,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
         asset: %{type: :file, name: name}
       }) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 

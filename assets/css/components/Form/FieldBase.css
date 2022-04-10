@@ -90,7 +90,7 @@
 
   .shaded & {
     &:last-of-type {
-      margin-bottom: 13px;
+      margin-bottom: 20px;
     }
   }
 

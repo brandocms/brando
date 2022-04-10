@@ -22,6 +22,7 @@ defmodule Brando.Upload do
   import Brando.Gettext
   import Brando.Utils
 
+  alias Brando.Files
   alias Brando.Images
   alias Brando.Type.FileConfig
 
@@ -81,6 +82,19 @@ defmodule Brando.Upload do
     Images.create_image(image_params, user)
   end
 
+  def handle_upload_type(%{cfg: %FileConfig{}} = upload, user) do
+    file_params = %{
+      title: upload.upload_entry.client_name,
+      mime_type: upload.upload_entry.client_type,
+      filesize: upload.upload_entry.client_size,
+      filename: upload.meta.filename,
+      config_target: upload.meta.config_target,
+      cdn: false
+    }
+
+    Files.create_file(file_params, user)
+  end
+
   def handle_upload_type(%{meta: meta}, user) do
     media_path = meta.media_path
 
@@ -107,10 +121,6 @@ defmodule Brando.Upload do
       {:error, _} ->
         {:error, {:handle_upload_type, "Fastimage.size() failed."}}
     end
-  end
-
-  def handle_upload_type(%{cfg: %FileConfig{}} = _upload, _user) do
-    {:ok, nil}
   end
 
   @doc """

@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
       <input type="hidden" name={"#{@form.name}[focal][x]"} value={@x} />
       <input type="hidden" name={"#{@form.name}[focal][y]"} value={@y} />
 
-      <div phx-update="ignore">
+      <div phx-update="ignore" id={"#{@form.id}-#{@image.image.id}-image-focal-point-pin"}>
         <div class="focus-point-pin"></div>
       </div>
     </div>

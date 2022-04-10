@@ -11,66 +11,66 @@ msgid ""
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:272
+#: lib/brando/pages/page.ex:271
 msgid "Advanced"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:268
+#: lib/brando/pages/page.ex:267
 msgid "Blocks"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:279
+#: lib/brando/pages/page.ex:278
 msgid "CSS classes"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:245
+#: lib/brando/pages/page.ex:244
 msgid "Content"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:275
+#: lib/brando/pages/page.ex:274
 msgid "Homepage"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:259
+#: lib/brando/pages/page.ex:258
 msgid "Language"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:284
+#: lib/brando/pages/page.ex:283
 msgid "Page variables"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:247
+#: lib/brando/pages/page.ex:246
 msgid "Status"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:278
+#: lib/brando/pages/page.ex:277
 msgid "Template"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:251
+#: lib/brando/pages/page.ex:250
 msgid "Title"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:252
+#: lib/brando/pages/page.ex:251
 msgid "URI"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:264
+#: lib/brando/pages/page.ex:263
 msgid "Parent page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:276
+#: lib/brando/pages/page.ex:275
 msgid "Page is loaded at root address"
 msgstr ""

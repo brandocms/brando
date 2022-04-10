@@ -61,6 +61,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users)
     end
 
+    create table(:files) do
+      add :title, :text
+      add :mime_type, :text
+      add :filesize, :integer
+      add :filename, :text
+      add :config_target, :text
+      add :cdn, :boolean
+      add :deleted_at, :utc_datetime
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+
     create table(:users_tokens) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
       add :token, :binary, null: false
@@ -200,8 +212,10 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :bio_data, :jsonb
       add :bio_html, :text
       add :cover_id, references(:images)
+      add :pdf_id, references(:files)
       add :properties, :map
       add :creator_id, references(:users, on_delete: :nilify_all)
+
       sequenced()
       soft_delete()
       timestamps()

@@ -11,78 +11,78 @@ msgid ""
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:134
-#: lib/brando/pages/page.ex:203
-#: lib/brando/pages/page.ex:237
+#: lib/brando/pages/page.ex:133
+#: lib/brando/pages/page.ex:202
+#: lib/brando/pages/page.ex:236
 msgid "Are you sure?"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:138
+#: lib/brando/pages/page.ex:137
 msgid "Create fragment"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:137
+#: lib/brando/pages/page.ex:136
 msgid "Create subpage"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:201
+#: lib/brando/pages/page.ex:200
 msgid "Delete fragment"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:132
+#: lib/brando/pages/page.ex:131
 msgid "Delete page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:141
 msgid "Delete pages"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:235
+#: lib/brando/pages/page.ex:234
 msgid "Delete sub page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:136
+#: lib/brando/pages/page.ex:135
 msgid "Duplicate page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:198
+#: lib/brando/pages/page.ex:197
 msgid "Edit fragment"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:130
+#: lib/brando/pages/page.ex:129
 msgid "Edit page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:232
+#: lib/brando/pages/page.ex:231
 msgid "Edit sub page"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:126
+#: lib/brando/pages/page.ex:125
 msgid "Title"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:125
+#: lib/brando/pages/page.ex:124
 msgid "URI"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:199
+#: lib/brando/pages/page.ex:198
 msgid "Duplicate fragment"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/page.ex:233
+#: lib/brando/pages/page.ex:232
 msgid "Duplicate sub page"
 msgstr ""

@@ -40,6 +40,14 @@ defmodule Brando.BlueprintTest.Project do
     }
   ]
 
+  @file_cfg %{
+    allowed_mimetypes: ["application/pdf"],
+    upload_path: Path.join("files", "projects"),
+    random_filename: false,
+    overwrite: false,
+    size_limit: 10_240_000
+  }
+
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Sequenced
@@ -56,6 +64,7 @@ defmodule Brando.BlueprintTest.Project do
 
   assets do
     asset :cover, :image, cfg: @image_cfg
+    asset :pdf, :file, cfg: @file_cfg
   end
 
   listings do

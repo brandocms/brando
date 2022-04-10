@@ -6,8 +6,9 @@ defmodule Brando.UtilsTest do
   import Brando.Utils
   import ExUnit.CaptureIO
 
-  alias Brando.UtilsTest.TestStruct
   alias Brando.Factory
+  alias Brando.Files
+  alias Brando.UtilsTest.TestStruct
 
   defmodule TestStruct do
     defstruct a: "a", b: "b"
@@ -118,8 +119,12 @@ defmodule Brando.UtilsTest do
   end
 
   test "file_url" do
-    assert file_url(%{path: "some/path.jpg"}, prefix: "media") == "media/some/path.jpg"
-    assert file_url(%{path: "some/path.jpg"}) == "some/path.jpg"
+    assert file_url(%Files.File{
+             filename: "some/path.jpg",
+             config_target: "file:Brando.BlueprintTest.Project:pdf"
+           }) == "/media/files/projects/some/path.jpg"
+
+    assert file_url("test") == ""
   end
 
   test "add_cache_string" do

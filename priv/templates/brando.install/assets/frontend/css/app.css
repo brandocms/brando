@@ -131,8 +131,16 @@ p {
 
 .video-wrapper {
   padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
-  video {
+  video, iframe {
     width: 100%;
+  }
+
+  iframe {
+    top: 0;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    z-index: 3;
   }
 }
 

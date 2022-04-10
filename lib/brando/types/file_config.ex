@@ -8,7 +8,8 @@ defmodule Brando.Type.FileConfig do
   @type t :: %__MODULE__{}
 
   @derive Jason.Encoder
-  defstruct allowed_mimetypes: ["application/pdf", "text/plain"],
+  defstruct accept: :any,
+            allowed_mimetypes: ["application/pdf", "text/plain"],
             upload_path: Path.join("files", "default"),
             random_filename: false,
             overwrite: false,

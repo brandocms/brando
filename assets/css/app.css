@@ -28,6 +28,7 @@
 @import './components/Form/Input/ColorPicker.css';
 @import './components/Form/Input/CustomCheckbox.css';
 @import './components/Form/Input/Datetime.css';
+@import './components/Form/Input/File.css';
 @import './components/Form/Input/Gallery.css';
 @import './components/Form/Input/Image.css';
 @import './components/Form/Input/Radios.css';

@@ -115,6 +115,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.Content.Module,
                Brando.Content.Palette,
                Brando.Content.Template,
+               Brando.Files.File,
                Brando.Images.Gallery,
                Brando.Images.Image,
                Brando.MigrationTest.Person,

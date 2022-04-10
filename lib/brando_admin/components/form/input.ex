@@ -68,7 +68,9 @@ defmodule BrandoAdmin.Components.Form.Input do
           form={@form}
           field={@field}
           phx_debounce={750} />
-        <div phx-update="ignore">
+        <div
+          id={"#{@form.id}-#{@field}-code-editor"}
+          phx-update="ignore">
           <div class="editor"></div>
         </div>
       </div>
@@ -115,7 +117,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-palette={@palette_colors}>
         <div class="picker">
           <.input type={:hidden} form={@form} field={@field} phx_debounce={@debounce} />
-          <div phx-update="ignore" class="picker-target">
+          <div
+            id={"#{@form.id}-#{@field}-color-picker-target"}
+            phx-update="ignore"
+            class="picker-target">
             <div class="circle-and-hex">
               <span class="circle tiny"></span>
               <span class="color-hex"></span>
@@ -155,7 +160,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@form.id}-#{@field}-datepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DatePicker">
-          <div phx-update="ignore">
+          <div
+            id={"#{@form.id}-#{@field}-datepicker-flatpickr"}
+            phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
@@ -191,7 +198,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
         data-locale={@locale}>
-          <div phx-update="ignore">
+          <div
+            id={"#{@form.id}-#{@field}-datetimepicker-flatpickr"}
+            phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
