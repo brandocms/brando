@@ -23,7 +23,7 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
-"@babel/standalone@^7.17.8":
+"@babel/standalone@^7.17.9":
   version "7.17.9"
   resolved "https://registry.yarnpkg.com/@babel/standalone/-/standalone-7.17.9.tgz#208298055c70531a81759435e443586754d693f9"
   integrity sha512-9wL9AtDlga8avxUrBvQJmhUtJWrelsUL0uV+TcP+49Sb6Pj8/bNIzQzU4dDp0NAPOvnZR/7msFIKsKoCl/W1/w==
@@ -166,12 +166,12 @@
   resolved "https://registry.yarnpkg.com/@types/parse-json/-/parse-json-4.0.0.tgz#2f8bb441434d163b35fb8ffdccd7138927ffb8c0"
   integrity sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==
 
-"@vitejs/plugin-legacy@^1.8.0":
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.8.0.tgz#6521e6de924641094aad5d804eaef3ac7db71284"
-  integrity sha512-S3+uL1zp8GLUbmJAQk2wQbZLTyISKRFSMBwCFI3XQVRD3OZshqkiPyOKdRiSPlP9HoGz+q90kk+1qPm1tJRqCg==
+"@vitejs/plugin-legacy@^1.8.1":
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.8.1.tgz#9431a983f950b4343d5b80a1916f25cc03d6b9c4"
+  integrity sha512-kmBWKq7EeNvzS4AqPBqUKdoWG/NYQXh7StUFMWR3D21aN5Mfmar7CTO2a7K+bBxJH/vAL9gnnueA0wb7cycCmQ==
   dependencies:
-    "@babel/standalone" "^7.17.8"
+    "@babel/standalone" "^7.17.9"
     core-js "^3.21.1"
     magic-string "^0.26.1"
     regenerator-runtime "^0.13.9"
@@ -1331,8 +1331,9 @@ postcss-font-variant@^5.0.0:
   resolved "https://registry.yarnpkg.com/postcss-font-variant/-/postcss-font-variant-5.0.0.tgz#efd59b4b7ea8bb06127f2d031bfbb7f24d32fa66"
   integrity sha512-1fmkBaCALD72CK2a9i468mA/+tr9/1cBxRRMXOUaZqO43oWPR5imcyPjXwuv7PXbCid4ndlP5zWhidQVVa3hmA==
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
