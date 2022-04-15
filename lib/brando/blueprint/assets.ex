@@ -97,10 +97,42 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, :video, opts) do
+    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Videos.Video})
+    default_config = %{}
+
+    cfg =
+      case Map.get(opts_map, :cfg) do
+        nil ->
+          raise Brando.Exception.BlueprintError,
+            message: """
+            Missing :cfg key for video asset `#{inspect(name)}`
+
+                assets do
+                  asset #{inspect(name)}, :video, cfg: [...]
+                end
+            """
+
+        :default ->
+          default_config
+
+        fun when is_function(fun) ->
+          fun.()
+
+        map when is_map(map) ->
+          map = Brando.Utils.deep_merge(default_config, map)
+          struct(Brando.Type.VideoConfig, map)
+
+        kwlist when is_list(kwlist) ->
+          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          struct(Brando.Type.VideoConfig, kwlist)
+      end
+
+    opts_map = Map.put(opts_map, :cfg, cfg)
+
     %Asset{
       name: name,
       type: :video,
-      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.Videos.Video})
+      opts: opts_map
     }
   end
 
@@ -201,26 +233,9 @@ defmodule Brando.Blueprint.Assets do
   end
 
   ##
-  ## embeds_one
-  def run_cast_asset(
-        %{type: type, name: name, opts: opts},
-        changeset,
-        _user
-      )
-      when type in [:video] do
-    case Map.get(changeset.params, to_string(name)) do
-      "" ->
-        if Map.get(opts, :required) do
-          changeset
-          |> put_embed(name, nil)
-          |> add_error(name, "can't be blank")
-        else
-          put_embed(changeset, name, nil)
-        end
-
-      _ ->
-        cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
-    end
+  ## video is belongs_to Video
+  def run_cast_asset(%{type: :video, name: _name, opts: _opts}, changeset, _user) do
+    changeset
   end
 
   ##

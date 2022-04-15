@@ -309,6 +309,13 @@ defmodule Brando.Blueprint do
             on_replace: :update
           )
 
+        %Asset{type: :video, name: name} ->
+          Ecto.Schema.belongs_to(
+            name,
+            Brando.Videos.Video,
+            on_replace: :update
+          )
+
         %Asset{type: :image, name: name} ->
           Ecto.Schema.belongs_to(
             name,
@@ -329,14 +336,6 @@ defmodule Brando.Blueprint do
             Brando.Images.GalleryImage,
             preload_order: [asc: :sequence],
             on_replace: :delete_if_exists
-          )
-
-        %Asset{type: :video, name: name} ->
-          # videoes are embedded
-          Ecto.Schema.embeds_one(
-            name,
-            Brando.Videos.Video,
-            on_replace: :delete
           )
 
         asset ->
@@ -400,13 +399,14 @@ defmodule Brando.Blueprint do
 
   def get_castable_asset_fields(rels) do
     rels
-    |> Enum.filter(&(&1.type in [:file, :image, :gallery]))
+    |> Enum.filter(&(&1.type in [:file, :image, :video, :gallery]))
     |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :file, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
+  def get_relation_key(%{type: :video, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :gallery, name: name}), do: :"#{name}_id"
 
   def run_translations(module, translations, ctx \\ nil) do
