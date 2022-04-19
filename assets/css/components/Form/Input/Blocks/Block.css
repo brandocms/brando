@@ -57,7 +57,7 @@
     display: none;
   }
 
-  &.hidden-block, &.collapsed {
+  &.disabled, &.collapsed {
     .block {
       min-height: 49px;
       padding: 0;
