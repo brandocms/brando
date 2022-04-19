@@ -13,6 +13,8 @@
   import { alertPrompt } from '../../alerts'
 
   export let content
+  export let extensions
+  
   let element
   let editor
   let tiptapInput
@@ -20,6 +22,28 @@
   const updateInput = () => {
     tiptapInput.value = editor.getHTML()
     tiptapInput.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  const processExtensions = () => {
+    let allExtensions = [
+      'p',
+      'h1',
+      'h2',
+      'h3',
+      'list',
+      'link',
+      'button',
+      'bold',
+      'italic',
+      'sub',
+      'sup'
+    ]
+
+    if (extensions) {
+      return allExtensions
+    } else {
+      return allExtensions
+    }
   }
 
   const toggleLink = () => {
@@ -70,6 +94,8 @@
     if (!element.parentNode.parentNode) {
       return
     }
+
+    extensions = processExtensions()
     
     tiptapInput = element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector('.tiptap-text')
 

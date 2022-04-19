@@ -222,7 +222,29 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Input.text form={block_data} field={:text} label={gettext "Text"} />
                               <Input.text form={block_data} field={:type} label={gettext "Type"} />
-                              <Input.text form={block_data} field={:extensions} label={gettext "Extensions"} />
+                              <.live_component module={Input.MultiSelect}
+                                id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-extensions"}
+                                form={block_data}
+                                label={gettext "Extensions"}
+                                field={:extensions}
+                                opts={[options: [
+                                  %{label: "All", value: nil},
+                                  %{label: "Paragraph", value: "p"},
+                                  %{label: "H1", value: "h1"},
+                                  %{label: "H2", value: "h2"},
+                                  %{label: "H3", value: "h3"},
+                                  %{label: "List", value: "list"},
+                                  %{label: "Link", value: "link"},
+                                  %{label: "Button", value: "button"},
+                                  %{label: "Bold", value: "bold"},
+                                  %{label: "Italic", value: "italic"},
+                                  %{label: "Subscript", value: "sub"},
+                                  %{label: "Superscript", value: "sup"}
+                                ]]}
+                              />
+                              <br>
+
+                              <%= input_value(block_data, :extensions) %>
                             <% end %>
 
                           <% "picture" -> %>
