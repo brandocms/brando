@@ -14,9 +14,9 @@ export default (app) => ({
     }    
 
     fors.forEach(f => {
-      const el = Dom.find(`#${f}`)      
-      el.addEventListener('input', e => {
-        const vals = fors.map(f => Dom.find(`#${f}`).value).join('-')   
+      const el = Dom.find(`[name="${f}"]`)      
+      el.addEventListener('input', () => {
+        const vals = fors.map(f => Dom.find(`[name="${f}"]`).value).join('-')   
         if (type === 'standard') {
           this.el.value = slugify(vals, { lower: true, strict: true })
         } else {
