@@ -66,8 +66,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block={@ref_block}
           base_form={@base_form}
           uploads={@uploads} />
-        <Input.input type={:hidden} form={@ref_form} field={:description} />
-        <Input.input type={:hidden} form={@ref_form} field={:name} />
+        <Input.input type={:hidden} form={@ref_form} field={:description} uid={@ref_uid} id_prefix="ref" />
+        <Input.input type={:hidden} form={@ref_form} field={:name} uid={@ref_uid} id_prefix="ref" />
       </section>
     <% else %>
       <section class="alert danger">

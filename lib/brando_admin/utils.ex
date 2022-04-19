@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:uid, fn -> nil end)
+      |> assign_new(:id_prefix, fn -> "" end)
 
     assign_opts = assigns[:opts] || []
 
@@ -37,6 +38,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:uid, fn -> nil end)
+      |> assign_new(:id_prefix, fn -> "" end)
 
     assign_opts = assigns[:opts] || []
 
@@ -62,6 +64,7 @@ defmodule BrandoAdmin.Utils do
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:uid, fn -> nil end)
+      |> assign_new(:id_prefix, fn -> "" end)
 
     assign(assigns,
       class: assigns.opts[:class],

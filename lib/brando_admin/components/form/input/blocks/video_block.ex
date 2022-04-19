@@ -66,43 +66,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
               </div>
               <div class="panel">
-                <Input.input type={:hidden} form={@block_data} field={:source} />
-
-                <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} />
-
-                <Input.text form={@block_data} field={:remote_id} label={gettext "Remote ID"} />
-                <Input.text form={@block_data} field={:title} label={gettext "Title"} />
-                <Input.text form={@block_data} field={:poster} label={gettext "Poster"} />
+                <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
+                <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
+                <Input.text form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" label={gettext "Remote ID"} />
+                <Input.text form={@block_data} field={:title} uid={@uid} id_prefix="block_data" label={gettext "Title"} />
+                <Input.text form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" label={gettext "Poster"} />
                 <%= if v(@block_data, :cover) in ["false", "svg"] do %>
-                  <Input.input type={:hidden} form={@block_data} field={:cover} />
+                  <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
                 <% else %>
-                  <Input.text form={@block_data} field={:cover} label={gettext "Cover"} />
+                  <Input.text form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" label={gettext "Cover"} />
                 <% end %>
 
-                <Input.input type={:hidden} form={@block_data} field={:opacity} />
-                <Input.input type={:hidden} form={@block_data} field={:play_button} />
+                <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
+                <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
 
-                <Input.toggle form={@block_data} field={:autoplay} label={gettext "Autoplay"} />
-                <Input.toggle form={@block_data} field={:preload} label={gettext "Preload"} />
+                <Input.toggle form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" label={gettext "Autoplay"} />
+                <Input.toggle form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" label={gettext "Preload"} />
 
-                <Input.number form={@block_data} field={:width} label={gettext "Width"} />
-                <Input.number form={@block_data} field={:height} label={gettext "Height"} />
+                <Input.number form={@block_data} field={:width} uid={@uid} id_prefix="block_data" label={gettext "Width"} />
+                <Input.number form={@block_data} field={:height} uid={@uid} id_prefix="block_data" label={gettext "Height"} />
               </div>
             </div>
           <% else %>
-            <Input.input type={:hidden} form={@block_data} field={:url} />
-            <Input.input type={:hidden} form={@block_data} field={:source} />
-            <Input.input type={:hidden} form={@block_data} field={:width} />
-            <Input.input type={:hidden} form={@block_data} field={:height} />
-            <Input.input type={:hidden} form={@block_data} field={:remote_id} />
-            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} />
-            <Input.input type={:hidden} form={@block_data} field={:title} />
-            <Input.input type={:hidden} form={@block_data} field={:poster} />
-            <Input.input type={:hidden} form={@block_data} field={:cover} />
-            <Input.input type={:hidden} form={@block_data} field={:opacity} />
-            <Input.input type={:hidden} form={@block_data} field={:autoplay} />
-            <Input.input type={:hidden} form={@block_data} field={:preload} />
-            <Input.input type={:hidden} form={@block_data} field={:play_button} />
+            <Input.input type={:hidden} form={@block_data} field={:url} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:width} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:height} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:title} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
 
             <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
               <%= gettext("Enter the video's URL:") %>

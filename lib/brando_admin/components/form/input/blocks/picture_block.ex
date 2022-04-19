@@ -162,9 +162,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <% end %>
             </div>
             <div class="panel">
-              <Input.rich_text form={@block_data} field={:title} label={gettext "Title"} />
-              <Input.text form={@block_data} field={:alt} label={gettext "Alt"} />
-              <Input.text form={@block_data} field={:link} label={gettext "Link"} />
+              <Input.rich_text form={@block_data} field={:title} uid={@uid} id_prefix={"block_data"} label={gettext "Title"} />
+              <Input.text form={@block_data} field={:alt} uid={@uid} id_prefix={"block_data"} label={gettext "Alt"} />
+              <Input.text form={@block_data} field={:link} uid={@uid} id_prefix={"block_data"} label={gettext "Link"} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
@@ -178,27 +178,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </div>
           </div>
 
-          <Input.input type={:hidden} form={@block_data} field={:placeholder} />
-          <Input.input type={:hidden} form={@block_data} field={:cdn} />
-          <Input.input type={:hidden} form={@block_data} field={:moonwalk} />
-          <Input.input type={:hidden} form={@block_data} field={:lazyload} />
-          <Input.input type={:hidden} form={@block_data} field={:credits} />
-          <Input.input type={:hidden} form={@block_data} field={:dominant_color} />
-          <Input.input type={:hidden} form={@block_data} field={:height} />
-          <Input.input type={:hidden} form={@block_data} field={:width} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:placeholder} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:cdn} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:moonwalk} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:lazyload} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:credits} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:dominant_color} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:height} />
+          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:width} />
 
           <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
-            <Input.input type={:hidden} form={@block_data} field={:path} value={@extracted_path} />
+            <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} value={@extracted_path} />
           <% else %>
-            <Input.input type={:hidden} form={@block_data} field={:path} />
+            <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} />
           <% end %>
 
           <Form.inputs
             form={@block_data}
             for={:focal}
             let={%{form: focal_form}}>
-            <Input.input type={:hidden} form={focal_form} field={:x} />
-            <Input.input type={:hidden} form={focal_form} field={:y} />
+            <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:x} />
+            <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:y} />
           </Form.inputs>
 
           <Form.map_inputs

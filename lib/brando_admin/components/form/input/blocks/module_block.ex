@@ -87,9 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:entry_template, module.entry_template)
         |> assign(:refs, refs)
         |> assign(:vars, vars)
-        |> assign_new(:important_vars, fn ->
-          Enum.filter(vars, &(&1.important == true))
-        end)
+        |> assign_new(:important_vars, fn -> Enum.filter(vars, &(&1.important == true)) end)
     end
   end
 
@@ -206,9 +204,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <%= raw split %>
             <% end %>
           <% end %>
-          <Input.input type={:hidden} form={@block_data} field={:module_id} />
-          <Input.input type={:hidden} form={@block_data} field={:sequence} />
-          <Input.input type={:hidden} form={@block_data} field={:multi} />
+          <Input.input type={:hidden} form={@block_data} field={:module_id} uid={@uid} id_prefix="module_data" />
+          <Input.input type={:hidden} form={@block_data} field={:sequence} uid={@uid} id_prefix="module_data" />
+          <Input.input type={:hidden} form={@block_data} field={:multi} uid={@uid} id_prefix="module_data" />
         </div>
       </Blocks.block>
     </div>

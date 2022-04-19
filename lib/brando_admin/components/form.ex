@@ -1432,6 +1432,8 @@ defmodule BrandoAdmin.Components.Form do
 
     assigns =
       assigns
+      |> assign_new(:uid, fn -> nil end)
+      |> assign_new(:id_prefix, fn -> "" end)
       |> assign_new(:header, fn -> nil end)
       |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
@@ -1441,13 +1443,22 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:hidden, hidden)
       |> assign(:label, label)
 
+    f_id =
+      if assigns[:uid] do
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+      else
+        "#{assigns.form.id}_#{assigns.field}"
+      end
+
+    assigns = assign(assigns, :f_id, f_id)
+
     ~H"""
     <div
       class={render_classes(["field-wrapper", @class])}
-      id={"#{@form.id}-#{@field}-field-wrapper"}>
+      id={"#{@f_id}-field-wrapper"}>
       <div class={render_classes(["label-wrapper", hidden: @hidden])}>
         <label
-          for={input_id(@form, @field)}
+          for={"#{@f_id}"}
           class={render_classes(["control-label", failed: @failed])}>
           <span><%= @label %></span>
         </label>
@@ -1456,6 +1467,8 @@ defmodule BrandoAdmin.Components.Form do
             form={@form}
             field={@field}
             relation={@relation}
+            id_prefix={@id_prefix}
+            uid={@uid}
           />
         <% end %>
         <%= if @header do %>
@@ -1464,7 +1477,7 @@ defmodule BrandoAdmin.Components.Form do
           </div>
         <% end %>
       </div>
-      <div class="field-base" id={"#{@form.id}-#{@field}-field-base"}>
+      <div class="field-base" id={"#{@f_id}-field-base"}>
         <%= render_slot @inner_block %>
       </div>
       <%= if @instructions || @meta do %>
@@ -1727,12 +1740,21 @@ defmodule BrandoAdmin.Components.Form do
         assigns
       end
 
+    f_id =
+      if assigns[:uid] do
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+      else
+        "#{assigns.form.id}_#{assigns.field}"
+      end
+
+    assigns = assign(assigns, :f_id, f_id)
+
     ~H"""
     <%= for error <- Keyword.get_values(@form.errors, @field) do %>
     <span
-      id={"#{@form.id}-#{@field}-error"}
+      id={"#{@f_id}-error"}
       class="field-error"
-      phx-feedback-for={@feedback_for || input_id(@form, @field)}>
+      phx-feedback-for={@feedback_for || @f_id}>
       <%= @translate_fn.(error) %>
     </span>
     <% end %>
@@ -1741,12 +1763,21 @@ defmodule BrandoAdmin.Components.Form do
 
   def label(assigns) do
     assigns =
-      assign_new(assigns, :input_id, fn ->
-        Phoenix.HTML.Form.input_id(assigns.form, assigns.field)
-      end)
+      assigns
+      |> assign_new(:click, fn -> nil end)
+      |> assign_new(:id_prefix, fn -> "" end)
+
+    f_id =
+      if assigns[:uid] do
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+      else
+        "#{assigns.form.id}_#{assigns.field}"
+      end
+
+    assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <label class={render_classes(List.wrap(@class))} for={@input_id}>
+    <label class={render_classes(List.wrap(@class))} for={@f_id} phx-click={@click}>
       <%= render_slot @inner_block %>
     </label>
     """

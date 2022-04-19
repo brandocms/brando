@@ -178,7 +178,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}>
 
-        <Input.input type={:hidden} form={@form} field={@field} value={@selected_option} />
+        <Input.input type={:hidden} form={@form} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
 
         <div class="multiselect">
           <div>
@@ -281,7 +281,16 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     </button>
                   </.form>
                 <% end %>
-
+              </div>
+            <% end %>
+            <:footer>
+              <div class="flex-h">
+                <button
+                  type="button"
+                  class="primary"
+                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                  OK
+                </button>
                 <%= if @resetable do %>
                   <div class="reset">
                     <button
@@ -293,7 +302,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   </div>
                 <% end %>
               </div>
-            <% end %>
+            </:footer>
           </Content.modal>
         </div>
       </Form.field_base>

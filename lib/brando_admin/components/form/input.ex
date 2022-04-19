@@ -436,7 +436,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns_to_attributes(assigns, [
         :form,
         :field,
-        :type
+        :type,
+        :uid,
+        :id_prefix
       ])
 
     assigns = assign(assigns, :extra, extra)
@@ -449,27 +451,36 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:checked_value, fn -> maybe_html_escape(true) end)
       |> assign_new(:unchecked_value, fn -> maybe_html_escape(false) end)
       |> assign_new(:hidden_input, fn -> true end)
+      |> process_input_id()
 
     assigns = assign(assigns, :checked, assigns.value == assigns.checked_value)
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@name} value={@unchecked_value} {@extra}>
-      <input type={@type} name={@name} id={@id} value={@checked_value} checked={@checked} {@extra}>
+      <input type={:hidden} name={@name} id={"#{@id}-unchecked"} value={@unchecked_value} {@extra}>
+      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} checked={@checked} {@extra}>
       """
     else
       ~H"""
-      <input type={@type} name={@name} id={@id} value={@checked_value} {@extra}>
+      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} {@extra}>
       """
     end
   end
+
+  defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns) do
+    assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field}")
+  end
+
+  defp process_input_id(assigns), do: assigns
 
   def input(%{type: :textarea} = assigns) do
     extra =
       assigns_to_attributes(assigns, [
         :form,
         :field,
-        :type
+        :type,
+        :uid,
+        :id_prefix
       ])
 
     assigns = assign(assigns, :extra, extra)
@@ -494,6 +505,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       else
         assign(assigns, :name, input_name(assigns.form, assigns.field))
       end
+
+    assigns = process_input_id(assigns)
 
     ~H"""
     <textarea type={@type} name={@name} id={@id} {@extra}><%= @value %></textarea>
@@ -505,7 +518,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns_to_attributes(assigns, [
         :form,
         :field,
-        :type
+        :type,
+        :uid,
+        :id_prefix
       ])
 
     assigns = assign(assigns, :extra, extra)
@@ -530,6 +545,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       else
         assign(assigns, :name, input_name(assigns.form, assigns.field))
       end
+
+    assigns = process_input_id(assigns)
 
     ~H"""
     <input type={@type} name={@name} id={@id} value={@value} {@extra}>
@@ -552,13 +569,13 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   defp prepare_slug_for(form, slug_for) when is_list(slug_for) do
     Enum.reduce(slug_for, [], fn sf, acc ->
-      acc ++ List.wrap("#{form.id}_#{sf}")
+      acc ++ List.wrap("#{form.name}[#{sf}]")
     end)
     |> Enum.join(",")
   end
 
   defp prepare_slug_for(form, slug_for) do
-    "#{form.id}_#{slug_for}"
+    "#{form.name}[#{slug_for}]"
   end
 
   def status(assigns) do

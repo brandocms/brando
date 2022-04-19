@@ -270,6 +270,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:description, fn -> nil end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:render, fn -> nil end)
+      |> assign_new(:initial_classes, fn ->
+        %{
+          collapsed: input_value(assigns.block, :collapsed),
+          disabled: input_value(assigns.block, :hidden)
+        }
+      end)
       |> assign(:bg_color, assigns[:bg_color])
       |> assign(:last_block?, last_block?(assigns))
       |> assign(:uid, uid)
@@ -280,12 +286,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     ~H"""
     <div
+      id={"base-block-#{@uid}"}
       data-block-uid={@uid}
       class={render_classes([
         "base-block",
-        "hidden-block": @hidden,
-        collapsed: @collapsed,
-        deleted: @marked_as_deleted
+        collapsed: @initial_classes.collapsed,
+        disabled: @initial_classes.disabled
       ])}>
       <%= if !@is_ref? and !@is_entry? do %>
         <Blocks.Plus.render
@@ -307,8 +313,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:footer>
       </Content.modal>
 
-      <Input.input type={:hidden} form={@block} field={:uid} />
-      <Input.input type={:hidden} form={@block} field={:type} />
+      <Input.input type={:hidden} form={@block} field={:uid} uid={@uid} id_prefix="base_block" />
+      <Input.input type={:hidden} form={@block} field={:type} uid={@uid} id_prefix="base_block" />
 
       <div
         id={"block-#{@uid}"}
@@ -319,13 +325,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         phx-hook="Brando.Block">
 
         <div class="block-description" id={"block-#{@uid}-block-description"}>
-          <Form.label form={@block} field={:hidden} class="switch small inverse">
-            <Input.input type={:checkbox} form={@block} field={:hidden} />
+          <Form.label
+            form={@block}
+            field={:hidden}
+            class="switch small inverse"
+            uid={@uid}
+            id_prefix="base_block"
+            click={@hidden && JS.remove_class("disabled", to: "#base-block-#{@uid}") || JS.add_class("disabled", to: "#base-block-#{@uid}")}>
+            <Input.input type={:checkbox} form={@block} field={:hidden} uid={@uid} id_prefix="base_block" />
             <div class="slider round"></div>
           </Form.label>
           <span class="block-type"><%= @type %></span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
         </div>
-        <div class="block-content" id={"block-#{@uid}-block-content"} phx-update={(@marked_as_deleted || @hidden) && "ignore" || "replace"}>
+        <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot @inner_block %>
         </div>
         <%= if @render do %>
@@ -374,22 +386,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <Form.label
             form={@block}
             field={:marked_as_deleted}
-            class="block-action toggler">
+            class="block-action toggler"
+            uid={@uid}
+            id_prefix="base_block"
+            click={@marked_as_deleted && JS.remove_class("deleted", to: "#base-block-#{@uid}") || JS.add_class("deleted", to: "#base-block-#{@uid}")}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
-            <Input.input type={:checkbox} form={@block} field={:marked_as_deleted} />
+            <Input.input type={:checkbox} form={@block} field={:marked_as_deleted} uid={@uid} id_prefix="base_block" />
           </Form.label>
           <% end %>
           <Form.label
             form={@block}
             field={:collapsed}
             class="block-action toggler"
+            click={@collapsed && JS.remove_class("collapsed", to: "#base-block-#{@uid}") || JS.add_class("collapsed", to: "#base-block-#{@uid}")}
+            uid={@uid}
+            id_prefix="base_block"
             phx-page-loading>
             <%= if @collapsed do %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M9.342 18.782l-1.931-.518.787-2.939a10.988 10.988 0 0 1-3.237-1.872l-2.153 2.154-1.415-1.415 2.154-2.153a10.957 10.957 0 0 1-2.371-5.07l1.968-.359C3.903 10.812 7.579 14 12 14c4.42 0 8.097-3.188 8.856-7.39l1.968.358a10.957 10.957 0 0 1-2.37 5.071l2.153 2.153-1.415 1.415-2.153-2.154a10.988 10.988 0 0 1-3.237 1.872l.787 2.94-1.931.517-.788-2.94a11.072 11.072 0 0 1-3.74 0l-.788 2.94z"/></svg>
             <% else %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
             <% end %>
-            <Input.input type={:checkbox} form={@block} field={:collapsed} />
+            <Input.input type={:checkbox} form={@block} field={:collapsed} uid={@uid} id_prefix="base_block" />
           </Form.label>
         </div>
       </div>
@@ -468,8 +486,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def text(assigns) do
     assigns =
       assigns
+      |> assign(:text_block_data, List.first(inputs_for(assigns.block, :data)))
       |> assign(:uid, input_value(assigns.block, :uid))
       |> assign(:text_type, input_value(assigns.block, :data).type)
+      |> assign(:extensions, input_value(assigns.block, :data).extensions)
 
     ~H"""
     <div
@@ -494,51 +514,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <% end %>
         </:description>
         <:config>
-          <%= for block_data <- inputs_for(@block, :data) do %>
-            <Input.radios
-              form={block_data}
-              field={:type}
-              label="Type"
-              opts={[options: [
-                %{label: "Paragraph", value: "paragraph"},
-                %{label: "Lede", value: "lede"},
-              ]]} />
-          <% end %>
+          <Input.radios
+            form={@text_block_data}
+            field={:type}
+            label="Type"
+            uid={@uid}
+            id_prefix="block_data"
+            opts={[options: [
+              %{label: "Paragraph", value: "paragraph"},
+              %{label: "Lede", value: "lede"},
+            ]]} />
         </:config>
-        <%= for block_data <- inputs_for(@block, :data) do %>
-          <div class={render_classes(["text-block", @text_type])}>
-            <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
+        <div class={render_classes(["text-block", @text_type])}>
+          <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
+            <div
+              id={"block-#{@uid}-rich-text"}
+              data-block-uid={@id}
+              data-tiptap-extensions={@extensions}
+              phx-hook="Brando.TipTap"
+              data-name="TipTap">
               <div
-                id={"block-#{@uid}-rich-text"}
-                data-block-uid={@id}
-                phx-hook="Brando.TipTap"
-                data-name="TipTap">
+                id={"block-#{@uid}-rich-text-target-wrapper"}
+                class="tiptap-target-wrapper"
+                phx-update="ignore">
                 <div
-                  id={"block-#{@uid}-rich-text-target-wrapper"}
-                  class="tiptap-target-wrapper"
-                  phx-update="ignore">
-                  <div
-                    id={"block-#{@uid}-rich-text-target"}
-                    class="tiptap-target">
-                  </div>
+                  id={"block-#{@uid}-rich-text-target"}
+                  class="tiptap-target">
                 </div>
-                <Input.input
-                  type={:hidden}
-                  form={block_data}
-                  field={:text}
-                  class="tiptap-text"
-                  phx_debounce={750}
-                  id={"block-rich-text-hidden-input-text-#{@uid}"} />
-                <Input.input
-                  type={:hidden}
-                  form={block_data}
-                  field={:extensions}
-                  phx_debounce={750}
-                  id={"block-rich-text-hidden-input-extensions-#{@uid}"} />
               </div>
+              <Input.input
+                type={:hidden}
+                form={@text_block_data}
+                field={:text}
+                uid={@uid}
+                id_prefix="block_data"
+                class="tiptap-text"
+                phx_debounce={750} />
+              <Input.input
+                type={:hidden}
+                form={@text_block_data}
+                field={:extensions}
+                uid={@uid}
+                id_prefix="block_data"
+                phx_debounce={750} />
             </div>
           </div>
-        <% end %>
+        </div>
       </Blocks.block>
     </div>
     """
@@ -579,7 +600,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <:config>
           <div id={"block-#{@uid}-conf-textarea"}>
-            <Input.textarea form={@block_data} field={:text} uid={@uid} />
+            <Input.textarea form={@block_data} field={:text} uid={@uid} id_prefix="block_data" />
           </div>
         </:config>
         <div id={"block-#{@uid}-comment"}>
@@ -622,6 +643,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             form={@block_data}
             field={:level}
             label="Level"
+            uid={@uid}
+            id_prefix="block_data"
+            id={"block-#{@uid}-data-level"}
             opts={[options: [
               %{label: "H1", value: 1},
               %{label: "H2", value: 2},
@@ -634,11 +658,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <Input.text
             form={@block_data}
             field={:id}
+            uid={@uid}
+            id_prefix="block_data"
             label="ID" />
 
           <Input.text
             form={@block_data}
             field={:link}
+            uid={@uid}
+            id_prefix="block_data"
             label="Link" />
         </:config>
         <div class="header-block">
@@ -646,14 +674,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             type={:textarea}
             form={@block_data}
             field={:text}
-            id={"block-#{@uid}-textarea"}
+            uid={@uid}
+            id_prefix="block_data"
             class={"h#{@level}"}
             data_autosize={true}
             phx_debounce={750}
             phx_update={"ignore"}
             rows={1} />
-          <Input.input type={:hidden} form={@block_data} field={:class} />
-          <Input.input type={:hidden} form={@block_data} field={:placeholder} />
+          <Input.input type={:hidden} form={@block_data} field={:class} uid={@uid} id_prefix="block_data" />
+          <Input.input type={:hidden} form={@block_data} field={:placeholder} uid={@uid} id_prefix="block_data" />
         </div>
       </Blocks.block>
     </div>
@@ -689,7 +718,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <% end %>
         </:description>
         <div class="html-block">
-          <Input.code id={"block-#{@uid}-html-text"} form={@block_data} field={:text} label={gettext "Text"} />
+          <Input.code
+            form={@block_data}
+            field={:text}
+            uid={@uid}
+            id_prefix="block_data"
+            label={gettext "Text"}
+          />
         </div>
       </Blocks.block>
     </div>
@@ -725,7 +760,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <% end %>
         </:description>
         <div class="markdown-block">
-          <Input.code id={"block-#{@uid}-markdown-text"} form={@block_data} field={:text} label={gettext "Text"} />
+          <Input.code
+            form={@block_data}
+            field={:text}
+            uid={@uid}
+            id_prefix="block_data"
+            label={gettext "Text"}
+          />
         </div>
       </Blocks.block>
     </div>

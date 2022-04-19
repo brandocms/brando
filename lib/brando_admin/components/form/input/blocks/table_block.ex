@@ -57,10 +57,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         duplicate_block={@duplicate_block}
         wide_config>
         <:description></:description>
-        <:config>
-        </:config>
-        <Input.input type={:hidden} form={@block_data} field={:key} />
-        <Input.input type={:hidden} form={@block_data} field={:instructions} />
+        <:config></:config>
+        <Input.input type={:hidden} form={@block_data} field={:key} uid={@uid} id_prefix="block_data" />
+        <Input.input type={:hidden} form={@block_data} field={:instructions} uid={@uid} id_prefix="block_data" />
         <%= if input_value(@block_data, :instructions) do %>
           <div class="table-instructions">
             <%= input_value(@block_data, :instructions) %>
@@ -117,6 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <% end %>
 
         <!-- template row -->
+        <%# TODO: key this with @id_prefix and @uid %>
         <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
           <Form.poly_inputs form={tpl_row} for={:cols} let={%{form: var}}>
             <Input.input type={:hidden} form={var} field={:key} />
