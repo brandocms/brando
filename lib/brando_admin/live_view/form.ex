@@ -141,6 +141,11 @@ defmodule BrandoAdmin.LiveView.Form do
            gettext("Content language is now %{language}", language: String.upcase(language))}
         )
 
+        send(
+          self(),
+          {:content_language, language}
+        )
+
         {:halt, assign(socket, :current_user, updated_current_user)}
 
       _, socket ->
