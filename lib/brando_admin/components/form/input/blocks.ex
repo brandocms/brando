@@ -443,8 +443,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       end)
 
     assigns =
-      if is_nil(input_value(assigns.block, :uid)) do
-        random_id = Brando.Utils.random_string(13) |> String.upcase()
+      if is_nil(assigns.block_id) do
+        random_id = Brando.Utils.generate_uid()
 
         block =
           put_in(
@@ -454,7 +454,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           )
 
         assigns
-        |> assign(:random_id, random_id)
+        |> assign(:block_id, random_id)
         |> assign(:block, block)
       else
         assigns
@@ -465,7 +465,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       <%= component(@component_target, assigns) %>
     <% else %>
       <.live_component module={@component_target}
-        id={@block_id || @random_id}
+        id={@block_id}
         block={@block}
         is_ref?={@is_ref?}
         base_form={@base_form}
