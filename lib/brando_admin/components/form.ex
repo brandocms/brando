@@ -175,6 +175,39 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, false)}
   end
 
+  def update(
+        %{action: :refresh_entry},
+        %{
+          assigns: %{
+            schema: schema,
+            entry_id: entry_id,
+            singular: singular,
+            context: context,
+            form: form,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    query_params =
+      entry_id
+      |> form.query.()
+      |> add_preloads(schema)
+      |> Map.put(:with_deleted, true)
+
+    updated_entry = apply(context, :"get_#{singular}!", [query_params])
+
+    updated_changeset =
+      updated_entry
+      |> schema.changeset(%{}, current_user, skip_villain: true)
+      |> Map.put(:action, :validate)
+
+    {:ok,
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:changeset, updated_changeset)
+     |> force_svelte_remounts()}
+  end
+
   def update(assigns, socket) do
     form_name = assigns[:name] || :default
 
