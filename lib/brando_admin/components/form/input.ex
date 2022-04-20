@@ -467,12 +467,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
-  defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns) do
-    assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field}")
-  end
-
-  defp process_input_id(assigns), do: assigns
-
   def input(%{type: :textarea} = assigns) do
     extra =
       assigns_to_attributes(assigns, [
@@ -552,6 +546,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     <input type={@type} name={@name} id={@id} value={@value} {@extra}>
     """
   end
+
+  defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns),
+    do: assigns
+
+  defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
+    do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field}")
+
+  defp process_input_id(assigns), do: assigns
 
   defp maybe_html_escape(nil), do: nil
   defp maybe_html_escape(value), do: html_escape(value)
