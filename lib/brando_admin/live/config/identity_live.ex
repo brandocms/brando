@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Sites.IdentityLive do
       current_user={@current_user}
       schema={@schema}>
       <:header>
-        <%= gettext("Update identity") %>
+        <%= gettext("Update identity") %> (<code><%= @current_user.config.content_language %></code>)
       </:header>
     </.live_component>
     """
@@ -47,5 +47,15 @@ defmodule BrandoAdmin.Sites.IdentityLive do
         {:ok, identity} = Sites.update_identity(identity, %{language: content_language}, :system)
         assign(socket, :entry_id, identity.id)
     end
+  end
+
+  def handle_info({:content_language, _language}, socket) do
+    send_update_after(
+      BrandoAdmin.Components.Form,
+      [id: "identity_form", action: :refresh_entry],
+      500
+    )
+
+    {:noreply, assign_entry_id(socket)}
   end
 end

@@ -48,4 +48,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
         assign(socket, :entry_id, seo.id)
     end
   end
+
+  def handle_info({:content_language, _language}, socket) do
+    send_update_after(
+      BrandoAdmin.Components.Form,
+      [id: "seo_form", action: :refresh_entry],
+      500
+    )
+
+    {:noreply, assign_entry_id(socket)}
+  end
 end
