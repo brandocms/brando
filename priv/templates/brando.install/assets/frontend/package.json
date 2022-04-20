@@ -9,14 +9,14 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.10.1",
-    "@vitejs/plugin-legacy": "^1.8.0",
+    "@vitejs/plugin-legacy": "^1.8.1",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.4.12",
     "postcss-import": "^14.1.0",
     "postcss-preset-env": "^7.4.3",
     "postcss-reporter": "^7.0.5",
-    "stylelint": "^14.6.1",
-    "vite": "^2.9.1"
+    "stylelint": "^14.7.1",
+    "vite": "^2.9.5"
   },
   "dependencies": {
     "@brandocms/jupiter": "^3.42.0",
