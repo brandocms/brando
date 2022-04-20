@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
+  import Ecto.Changeset
 
   # prop module_refs, :list, required: true
   # prop module_ref_name, :string, required: true
@@ -28,14 +29,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
       {ref_form, ref_index} ->
         ref_block = inputs_for_block(ref_form, :data) |> List.first()
 
-        assigns
-        |> assign(:block_count, Enum.count(refs))
-        |> assign(:ref_index, ref_index)
-        |> assign(:ref_form, ref_form)
-        |> assign(:ref_block, ref_block)
-        |> assign(:ref_uid, v(ref_block, :uid))
-        |> assign(:ref, ref_form.data)
-        |> assign(:ref_name, ref)
+        assigns =
+          assigns
+          |> assign(:block_count, Enum.count(refs))
+          |> assign(:ref_index, ref_index)
+          |> assign(:ref_form, ref_form)
+          |> assign(:ref_block, ref_block)
+          |> assign(:ref, ref_form.data)
+          |> assign(:ref_name, ref)
+
+        assign(
+          assigns,
+          :ref_uid,
+          get_field(ref_block.source, :uid) || Brando.Utils.generate_uid()
+        )
 
       nil ->
         assigns
@@ -57,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
       <section b-ref={@ref.name}>
         <Blocks.dynamic_block
           id={@ref_uid}
+          block_id={@ref_uid}
           is_ref?={true}
           data_field={@data_field}
           ref_name={@ref.name}
