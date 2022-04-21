@@ -529,7 +529,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
             <div
               id={"block-#{@uid}-rich-text"}
-              data-block-uid={@id}
+              data-block-uid={@uid}
               data-tiptap-extensions={@extensions}
               phx-hook="Brando.TipTap"
               data-name="TipTap">
