@@ -133,6 +133,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
       options_fun when is_function(options_fun) ->
         options_fun.(form, opts)
+
+      options ->
+        options
     end
     |> Enum.map(&ensure_string_values/1)
   end
