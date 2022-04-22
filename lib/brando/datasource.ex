@@ -14,6 +14,12 @@ defmodule Brando.Datasource do
 
         list :all_posts, fn _, _ -> Posts.list_posts() end
 
+  You can also supply a callback with a 3-arity function to get the currently set language (if any)
+
+        list :localized_posts, fn _, language, _arg ->
+          Posts.list_posts(%{filter: %{language: language}})
+        end
+
 
   ### Selection
 
@@ -267,9 +273,16 @@ defmodule Brando.Datasource do
   @doc """
   Grab list of entries from database
   """
-  def get_list(module_binary, query, arg) do
+  def get_list(module_binary, query, arg, language) do
     module = Module.concat([module_binary])
-    module.__datasource__(:list, String.to_atom(query)).(module_binary, arg)
+
+    case :erlang.fun_info(module.__datasource__(:list, String.to_atom(query)))[:arity] do
+      2 ->
+        module.__datasource__(:list, String.to_atom(query)).(module_binary, arg)
+
+      3 ->
+        module.__datasource__(:list, String.to_atom(query)).(module_binary, language, arg)
+    end
   end
 
   @doc """
