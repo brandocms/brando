@@ -10,6 +10,7 @@ defmodule Brando.Villain.LiquexParser do
       Tags.RouteI18n,
       Tags.Fragment,
       Tags.Hide,
-      Tags.EndHide
+      Tags.EndHide,
+      Tags.T
     ]
 end
