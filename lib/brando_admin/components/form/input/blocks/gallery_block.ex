@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use Phoenix.HTML
   import Brando.Gettext
 
-  alias Brando.Blueprint.Villain.Blocks
   alias Brando.Blueprint.Villain.Blocks.GalleryBlock
+  alias Brando.Blueprint.Villain.Blocks.PictureBlock
   alias Brando.Utils
   alias Brando.Villain
 
@@ -219,7 +219,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               </svg>
             </figure>
             <div class="instructions">
-              <span><%= gettext("Click or drag images here &uarr; to upload") |> raw() %></span><br>
+              <span
+                id={"block-#{@uid}-base-file-upload-btn"}
+                phx-update="ignore">
+                <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
+              </span>
               <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>pick existing images</button>
             </div>
           </div>
@@ -332,7 +336,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image))
+    picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
     images = input_value(block_data, :images) ++ [picture_data_tpl]
 
@@ -390,7 +394,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(Blocks.PictureBlock.Data, Map.from_struct(image))
+    picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
     images = input_value(block_data, :images) ++ [picture_data_tpl]
 
