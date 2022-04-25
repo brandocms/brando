@@ -407,8 +407,8 @@ defmodule BrandoAdmin.Components.Form do
 
   def nil_relations(entry, schema) do
     relations =
-      schema.__relations__()
-      |> Enum.filter(&(&1.type == :belongs_to))
+      (schema.__relations__() ++ schema.__assets__())
+      |> Enum.filter(&(&1.type in [:belongs_to, :image, :file, :video]))
       |> Enum.map(& &1.name)
 
     Brando.repo().preload(entry, relations)
