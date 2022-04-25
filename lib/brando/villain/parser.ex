@@ -246,7 +246,9 @@ defmodule Brando.Villain.Parser do
         src_module_id = Map.get(data, :module_id, nil)
         src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
-        with {:ok, entries} <- Datasource.get_list(module, query, arg) do
+        language = Map.get(opts.context.variables, "language")
+
+        with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
           render_datasource_entries(src, entries, opts)
         end
       end
