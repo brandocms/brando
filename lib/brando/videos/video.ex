@@ -1,6 +1,6 @@
 defmodule Brando.Videos.Video do
   @moduledoc """
-  Embedded video
+  Video
   """
   use Brando.Blueprint,
     application: "Brando",
@@ -11,13 +11,17 @@ defmodule Brando.Videos.Video do
     gettext_module: Brando.Gettext
 
   attributes do
-    attribute :url, :text, required: true
-    attribute :source, :enum, values: [:youtube, :vimeo, :file]
+    attribute :url, :text
+    attribute :source, :enum, values: [:youtube, :vimeo, :file, :remote_file]
     attribute :filename, :text
     attribute :remote_id, :text
     attribute :width, :integer
     attribute :height, :integer
     attribute :thumbnail_url, :text
+
+    attribute :autoplay, :boolean
+    attribute :preload, :boolean
+    attribute :loop, :boolean
   end
 
   @derive {Jason.Encoder,
