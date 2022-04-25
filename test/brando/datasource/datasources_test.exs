@@ -96,8 +96,8 @@ defmodule Brando.DatasourcesTest do
         {:ok, [%{id: 1, name: "1"}, %{id: 2, name: "2"}, %{id: 3, name: "3"}]}
       end)
 
-      list(:all_more, fn _, arg ->
-        {:ok, arg}
+      list(:all_more, fn _, lang, arg ->
+        {:ok, arg, lang}
       end)
 
       single(:single, fn module, _ ->
@@ -161,8 +161,10 @@ defmodule Brando.DatasourcesTest do
   end
 
   test "get_list" do
-    assert Brando.Datasource.get_list(TestDatasource, "all", nil) == {:ok, TestDatasource}
-    assert Brando.Datasource.get_list(TestDatasource, "all_more", "argument") == {:ok, "argument"}
+    assert Brando.Datasource.get_list(TestDatasource, "all", nil, "en") == {:ok, TestDatasource}
+
+    assert Brando.Datasource.get_list(TestDatasource, "all_more", "argument", "en") ==
+             {:ok, "argument", "en"}
   end
 
   test "get_single" do
