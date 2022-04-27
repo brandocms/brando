@@ -82,13 +82,29 @@ defmodule Brando.HTML.Video do
     autoplay = Keyword.get(opts, :autoplay, false)
     aspect_ratio = build_aspect_ratio_style_string(width, height)
 
+    assigns =
+      assigns
+      |> assign(:aspect_ratio, aspect_ratio)
+      |> assign(:autoplay, autoplay)
+      |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
+      |> assign_new(:cover, fn ->
+        nil
+      end)
+
     ~H"""
     <div
       class="video-wrapper"
       data-smart-video
-      style={aspect_ratio}>
+      style={@aspect_ratio}>
       <%= get_play_button(play_button) %>
-      <%= get_video_cover(cover, width, height, opacity) %>
+      <%= if @video_cover do %>
+        <%= @video_cover %>
+      <% end %>
+      <%= if @cover do %>
+        <div data-cover>
+          <%= render_slot(@cover) %>
+        </div>
+      <% end %>
       <video
         width={width}
         height={height}
@@ -96,7 +112,7 @@ defmodule Brando.HTML.Video do
         tabindex="0"
         role="presentation"
         preload={"#{preload || "none"}"}
-        autoplay={autoplay}
+        autoplay={@autoplay}
         muted
         loop
         playsinline
@@ -136,8 +152,8 @@ defmodule Brando.HTML.Video do
     end
   end
 
-  defp get_video_cover("false", _, _, _), do: ""
-  defp get_video_cover(false, _, _, _), do: ""
+  defp get_video_cover("false", _, _, _), do: nil
+  defp get_video_cover(false, _, _, _), do: nil
   defp get_video_cover(url, _, _, _), do: url
 
   defp get_play_button(false), do: "" |> Phoenix.HTML.raw()
@@ -148,6 +164,17 @@ defmodule Brando.HTML.Video do
       <div class="video-play-button-wrapper">
         <button class="video-play-button">
           <div class="video-play-button-inside"></div>
+        </button>
+      </div>
+      """
+      |> Phoenix.HTML.raw()
+
+  defp get_play_button(text),
+    do:
+      """
+      <div class="video-play-button-wrapper">
+        <button class="video-play-button">
+          <div class="video-play-button-inside">#{text}</div>
         </button>
       </div>
       """
