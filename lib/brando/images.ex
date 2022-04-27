@@ -42,6 +42,9 @@ defmodule Brando.Images do
         target_string = "default"
         from t in query, where: t.config_target == ^target_string
 
+      {:config_target, target_string}, query when is_binary(target_string) ->
+        from t in query, where: t.config_target == ^target_string
+
       {:config_target, {type, schema, field}}, query ->
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
@@ -98,7 +101,7 @@ defmodule Brando.Images do
   end
 
   def get_config_for(%{config_target: nil}) do
-    Brando.config(Brando.Images)[:default_config]
+    struct(Brando.Type.ImageConfig, Brando.config(Brando.Images)[:default_config])
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
@@ -113,7 +116,7 @@ defmodule Brando.Images do
           |> Map.get(:cfg)
 
         ["default"] ->
-          Brando.config(Brando.Images)[:default_config]
+          struct(Brando.Type.ImageConfig, Brando.config(Brando.Images)[:default_config])
       end
 
     {:ok, config}
