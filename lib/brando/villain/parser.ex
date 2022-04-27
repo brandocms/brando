@@ -498,6 +498,12 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
+            alt =
+              cond do
+                alt -> alt
+                true -> ""
+              end
+
             assigns = %{
               src: img,
               link: "",
@@ -553,6 +559,12 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
+            alt =
+              cond do
+                alt -> alt
+                true -> ""
+              end
+
             assigns = %{
               src: img,
               link: "",
@@ -603,6 +615,12 @@ defmodule Brando.Villain.Parser do
 
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
+
+            alt =
+              cond do
+                alt -> alt
+                true -> ""
+              end
 
             assigns = %{
               src: img,
