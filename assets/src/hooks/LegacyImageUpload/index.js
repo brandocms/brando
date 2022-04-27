@@ -1,4 +1,5 @@
 import { Dom, gsap } from '@brandocms/jupiter'
+import { alertError } from '../../alerts'
 
 const IDLE = 0
 const UPLOADING = 1
@@ -144,6 +145,7 @@ export default (app) => ({
           this.setStatusText()
           this.stopPlus()
           console.error('error uploading', { error: data.error })
+          alertError('Error uploading', data.error)
           reject()
         }
       } catch (e) {
@@ -151,6 +153,7 @@ export default (app) => ({
         this.setStatusText()
         this.stopPlus()
         console.error('error uploading', { error: e })
+        alertError('Error uploading', data.error)
         reject()
       }
     })
