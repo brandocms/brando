@@ -27,8 +27,19 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
 
     payload =
       case Schema.handle_upload(params, cfg, user) do
-        {:error, err} ->
-          %{status: 500, error: err}
+        {:error, changeset} ->
+          traversed_errors =
+            Ecto.Changeset.traverse_errors(changeset, fn
+              {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
+              msg -> msg
+            end)
+
+          error_msg = """
+          Error occured while uploading!<br><br>
+          #{inspect(traversed_errors, pretty: true)}
+          """
+
+          %{status: 500, error: error_msg}
 
         {:ok, image} ->
           sizes_map = sizes_with_media_url(image)
