@@ -56,7 +56,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              %Attribute{name: :title, opts: %{}, type: :string},
              %Attribute{
                name: :slug,
-               opts: %{from: :title, required: true},
+               opts: %{required: true},
                type: :slug
              },
              %Attribute{name: :deleted_at, opts: %{}, type: :datetime},
@@ -72,7 +72,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "attribute_opts" do
     attr_opts = Brando.BlueprintTest.Project.__attribute_opts__(:slug)
-    assert attr_opts == %{from: :title, required: true}
+    assert attr_opts == %{required: true}
   end
 
   test "assets" do

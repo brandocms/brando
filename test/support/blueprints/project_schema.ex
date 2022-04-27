@@ -55,7 +55,7 @@ defmodule Brando.BlueprintTest.Project do
 
   attributes do
     attribute :title, :string
-    attribute :slug, :slug, from: :title, required: true
+    attribute :slug, :slug, required: true
   end
 
   relations do

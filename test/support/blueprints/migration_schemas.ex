@@ -6,21 +6,21 @@ defmodule Brando.MigrationTest.Project do
     singular: "project",
     plural: "projects"
 
-  trait(Brando.Trait.Creator)
-  trait(Brando.Trait.SoftDelete)
-  trait(Brando.Trait.Sequenced)
-  trait(Brando.Trait.Timestamped)
-  trait(Brando.Trait.Translatable)
+  trait Brando.Trait.Creator
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   attributes do
-    attribute(:title, :string)
-    attribute(:status, :status, required: true)
-    attribute(:slug, :slug, from: :title, required: true, unique: [prevent_collision: :language])
-    attribute(:data, :villain)
+    attribute :title, :string
+    attribute :status, :status, required: true
+    attribute :slug, :slug, required: true, unique: [prevent_collision: :language]
+    attribute :data, :villain
   end
 
   assets do
-    asset(:cover, :image,
+    asset :cover, :image,
       cfg: [
         allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
         upload_path: Path.join("images", "avatars"),
@@ -29,11 +29,10 @@ defmodule Brando.MigrationTest.Project do
         sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
         srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
       ]
-    )
   end
 
   relations do
-    relation(:properties, :embeds_many, module: Brando.MigrationTest.Property)
+    relation :properties, :embeds_many, module: Brando.MigrationTest.Property
   end
 end
 
@@ -45,24 +44,24 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
     singular: "project",
     plural: "projects"
 
-  trait(Brando.Trait.Creator)
-  trait(Brando.Trait.Meta)
-  trait(Brando.Trait.Sequenced)
-  trait(Brando.Trait.Timestamped)
-  trait(Brando.Trait.Translatable)
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Meta
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   attributes do
-    attribute(:title, :string)
-    attribute(:status, :status, required: true)
-    attribute(:slug, :slug, from: :title, required: true, unique: [prevent_collision: :language])
-    attribute(:summary, :text)
-    attribute(:unique_hash, :text, unique: true)
+    attribute :title, :string
+    attribute :status, :status, required: true
+    attribute :slug, :slug, required: true, unique: [prevent_collision: :language]
+    attribute :summary, :text
+    attribute :unique_hash, :text, unique: true
 
-    attribute(:data, :villain)
+    attribute :data, :villain
   end
 
   assets do
-    asset(:cover, :image,
+    asset :cover, :image,
       cfg: [
         allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
         default_size: "medium",
@@ -72,9 +71,8 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
         sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
         srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
       ]
-    )
 
-    asset(:photos, :gallery,
+    asset :photos, :gallery,
       cfg: [
         allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
         default_size: "medium",
@@ -84,12 +82,11 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
         sizes: %{"micro" => %{"size" => "25", "quality" => 10, "crop" => false}},
         srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
       ]
-    )
   end
 
   relations do
-    relation(:properties, :embeds_many, module: Brando.MigrationTest.Property)
-    relation(:more_properties, :embeds_many, module: Brando.MigrationTest.Property)
+    relation :properties, :embeds_many, module: Brando.MigrationTest.Property
+    relation :more_properties, :embeds_many, module: Brando.MigrationTest.Property
   end
 end
 
@@ -101,14 +98,14 @@ defmodule Brando.MigrationTest.ProjectUpdate2 do
     singular: "project",
     plural: "projects"
 
-  trait(Brando.Trait.Sequenced)
-  trait(Brando.Trait.Timestamped)
-  trait(Brando.Trait.Translatable)
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   attributes do
-    attribute(:summary, :text)
-    attribute(:unique_hash, :text, unique: true)
-    attribute(:data, :villain)
+    attribute :summary, :text
+    attribute :unique_hash, :text, unique: true
+    attribute :data, :villain
   end
 end
 
@@ -120,11 +117,11 @@ defmodule Brando.MigrationTest.Property do
     singular: "property",
     plural: "properties"
 
-  data_layer(:embedded)
+  data_layer :embedded
 
   attributes do
-    attribute(:key, :string)
-    attribute(:value, :string)
+    attribute :key, :string
+    attribute :value, :string
   end
 end
 
@@ -136,15 +133,15 @@ defmodule Brando.MigrationTest.Profile do
     singular: "profiles",
     plural: "profile"
 
-  trait(Brando.Trait.Creator)
-  trait(Brando.Trait.SoftDelete)
-  trait(Brando.Trait.Sequenced)
-  trait(Brando.Trait.Timestamped)
+  trait Brando.Trait.Creator
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
 
-  primary_key(:uuid)
+  primary_key :uuid
 
   attributes do
-    attribute(:status, :string)
+    attribute :status, :string
   end
 end
 
@@ -156,20 +153,20 @@ defmodule Brando.MigrationTest.Person do
     singular: "person",
     plural: "persons"
 
-  trait(Brando.Trait.Creator)
-  trait(Brando.Trait.SoftDelete)
-  trait(Brando.Trait.Sequenced)
-  trait(Brando.Trait.Timestamped)
-  trait(Brando.Trait.Translatable)
+  trait Brando.Trait.Creator
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
-  primary_key(:uuid)
+  primary_key :uuid
 
   attributes do
-    attribute(:name, :string)
-    attribute(:email, :string, required: true)
+    attribute :name, :string
+    attribute :email, :string, required: true
   end
 
   relations do
-    relation(:profile, :belongs_to, module: Brando.MigrationTest.Profile, type: :binary_id)
+    relation :profile, :belongs_to, module: Brando.MigrationTest.Profile, type: :binary_id
   end
 end

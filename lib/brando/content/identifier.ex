@@ -12,7 +12,7 @@ defmodule Brando.Content.Identifier do
 
   @derive {Jason.Encoder, only: @fields}
   embedded_schema do
-    field :id, :id, required: true
+    field :id, :id
     field :title, :string
     field :type, :string
     field :status, Brando.Type.Status

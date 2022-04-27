@@ -23,7 +23,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(:has_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:embeds_one, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:embeds_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
-  def to_ecto_opts(_type, opts), do: Map.to_list(opts)
+  def to_ecto_opts(_type, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
 
   @strip_changeset_opts [:cast, :module]
   def to_changeset_opts(:belongs_to, opts),
