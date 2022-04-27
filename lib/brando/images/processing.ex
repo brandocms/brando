@@ -121,4 +121,35 @@ defmodule Brando.Images.Processing do
 
     {:ok, Enum.map(updated_images, & &1.id)}
   end
+
+  def recreate_sizes_for_image_field("default", user) do
+    {:ok, images} = Brando.Images.list_images(%{filter: %{config_target: "default"}})
+    {:ok, cfg} = Brando.Images.get_config_for(%{config_target: "default"})
+
+    operations =
+      Enum.flat_map(images, fn image ->
+        Images.Utils.delete_sized_images(image)
+
+        {:ok, operations} =
+          Operations.create(
+            image,
+            cfg,
+            user
+          )
+
+        operations
+      end)
+
+    {:ok, operation_results} = Operations.perform(operations, user)
+
+    updated_images =
+      for {image_id, result} <- operation_results do
+        images
+        |> Enum.find(&(&1.id == image_id))
+        |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
+        |> Brando.repo().update!
+      end
+
+    {:ok, Enum.map(updated_images, & &1.id)}
+  end
 end
