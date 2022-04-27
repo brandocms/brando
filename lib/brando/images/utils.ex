@@ -140,7 +140,7 @@ defmodule Brando.Images.Utils do
   defp parse_svg_size(%{width: "", height: "", viewbox: viewbox}) do
     try do
       [_, _, parsed_width, parsed_height] = String.split(viewbox, " ")
-      %{width: parsed_width, height: parsed_height}
+      parse_svg_size_dims(parsed_width, parsed_height)
     rescue
       MatchError ->
         %{width: 300, height: 150}
@@ -148,6 +148,10 @@ defmodule Brando.Images.Utils do
   end
 
   defp parse_svg_size(%{width: width, height: height}) do
+    parse_svg_size_dims(width, height)
+  end
+
+  defp parse_svg_size_dims(width, height) do
     with {parsed_width, _} <- Integer.parse(width),
          {parsed_height, _} <- Integer.parse(height) do
       %{width: parsed_width, height: parsed_height}
