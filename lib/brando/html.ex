@@ -41,7 +41,7 @@ defmodule Brando.HTML do
 
   # TODO: Drop before 1.0
   @deprecated "Use heex component `<.video video={src} opts={opts} />` instead"
-  def video_tag(video, opts \\ []) do
+  def video_tag(video, opts) do
     assigns = %{video: video, opts: opts}
 
     ~H"""

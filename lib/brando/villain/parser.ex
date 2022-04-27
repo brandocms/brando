@@ -366,18 +366,21 @@ defmodule Brando.Villain.Parser do
 
       # Convert file video to html
       def video(%{remote_id: src, source: :file} = data, _) do
-        opts = [
-          width: data.width,
-          height: data.height,
-          cover: :svg,
-          autoplay: data.autoplay || nil,
-          poster: data.poster || nil,
-          preload: data.preload || true,
-          opacity: data.opacity || 0.1
-        ]
+        assigns = %{
+          video: src,
+          opts: [
+            width: data.width,
+            height: data.height,
+            cover: :svg,
+            autoplay: data.autoplay || nil,
+            poster: data.poster || nil,
+            preload: data.preload || true,
+            opacity: data.opacity || 0.1
+          ]
+        }
 
-        %{video: src, opts: opts}
-        |> video()
+        assigns
+        |> Brando.Villain.Parser.video_tag()
         |> Phoenix.LiveViewTest.rendered_to_string()
       end
 
@@ -928,6 +931,12 @@ defmodule Brando.Villain.Parser do
         <% end %>
       </div>
     <% end %>
+    """
+  end
+
+  def video_tag(assigns) do
+    ~H"""
+    <.video video={@video} opts={@opts} />
     """
   end
 
