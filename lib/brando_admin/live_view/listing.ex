@@ -159,7 +159,19 @@ defmodule BrandoAdmin.LiveView.Listing do
             send(self(), {:toast, "#{String.capitalize(singular)} duplicated"})
             update_list_entries(schema)
 
-          {:error, _error} ->
+          {:error, changeset} ->
+            require Logger
+
+            Logger.error("""
+            (!) Error duplicating #{String.capitalize(singular)}
+
+            Errors:
+            #{inspect(changeset.errors, pretty: true)}
+
+            Changes with errors:
+            #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
+            """)
+
             send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
         end
 
