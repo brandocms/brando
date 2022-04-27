@@ -84,7 +84,7 @@ defmodule Brando.Files do
   end
 
   def get_config_for(%{config_target: nil}) do
-    Brando.config(Brando.Files)[:default_config]
+    struct(Brando.Type.FileConfig, Brando.config(Brando.Files)[:default_config])
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
@@ -99,7 +99,7 @@ defmodule Brando.Files do
           |> Map.get(:cfg)
 
         ["default"] ->
-          Brando.config(Brando.Files)[:default_config]
+          struct(Brando.Type.FileConfig, Brando.config(Brando.Files)[:default_config])
       end
 
     {:ok, config}
