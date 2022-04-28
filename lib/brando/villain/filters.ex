@@ -916,7 +916,9 @@ defmodule Brando.Villain.Filters do
   @doc """
   Get srcset picture of image
 
-  {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
+      {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
+      {{ entry.cover|srcset:"Attivo.Team.Employee:cover.listing_crop" }}
+
   """
   def srcset(%struct_type{} = img, srcset, _)
       when struct_type in [Brando.Images.Image] do
@@ -937,16 +939,12 @@ defmodule Brando.Villain.Filters do
   end
 
   def srcset(img, srcset, _) do
-    [module_string, field_string] = String.split(srcset, ":")
-    module = Module.concat([module_string])
-    field = String.to_existing_atom(field_string)
-
     assigns = %{
       src: img,
       opts: [
         placeholder: :svg,
         lazyload: true,
-        srcset: {module, field}
+        srcset: srcset
       ]
     }
 
