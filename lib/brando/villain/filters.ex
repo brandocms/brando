@@ -928,7 +928,8 @@ defmodule Brando.Villain.Filters do
         placeholder: :svg,
         lazyload: true,
         srcset: srcset,
-        prefix: Brando.Utils.media_url()
+        prefix: Brando.Utils.media_url(),
+        cache: img.updated_at
       ]
     }
 
