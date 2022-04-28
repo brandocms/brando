@@ -56,6 +56,10 @@ defmodule Brando.Plug.LivePreview do
               transition: none !important;
               clip-path: none !important;
             }
+            html.is-updated-live-preview [data-smart-video] {
+              opacity: 1 !important;
+              visibility: visible !important;
+            }
           </style>
           """
 
