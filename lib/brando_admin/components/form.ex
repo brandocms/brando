@@ -1038,6 +1038,10 @@ defmodule BrandoAdmin.Components.Form do
           Map.put(entry_or_default, field, updated_image)
       end
 
+    # Subscribe parent live view to changes to this image
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+
+    # this is only for fresh uploads.
     if updated_image.status !== :processed do
       Brando.Images.Processing.queue_processing(updated_image, current_user)
     end
@@ -1294,9 +1298,6 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
 
         image ->
-          # Subscribe parent live view to changes to this image
-          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
-
           image_changeset = Ecto.Changeset.change(image)
           edit_image = Map.merge(edit_image, %{id: image.id, image: image})
 

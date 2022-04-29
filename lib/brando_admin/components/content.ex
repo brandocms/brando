@@ -74,7 +74,8 @@ defmodule BrandoAdmin.Components.Content do
         Brando.Utils.img_url(
           assigns.image,
           (type == :svg && :original) || assigns.size,
-          prefix: Brando.Utils.media_url()
+          prefix: Brando.Utils.media_url(),
+          cache: Map.get(assigns.image, :updated_at)
         )
       end
 
