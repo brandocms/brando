@@ -423,26 +423,29 @@ defmodule Brando.Query do
   end
 
   def with_order(query, order_string) when is_binary(order_string) do
-    order_list =
-      order_string
-      |> String.split(",")
-      |> Enum.map(fn e ->
-        String.trim(e)
-        |> String.split(" ")
-        |> Enum.map(fn val ->
-          case String.split(val, ".") do
-            [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
-            [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
-            [val] -> String.to_atom(val)
-          end
-        end)
-        |> List.to_tuple()
-      end)
-
+    order_list = order_string_to_list(order_string)
     with_order(query, order_list)
   end
 
   def with_order(query, order), do: with_order(query, [order])
+
+  def order_string_to_list(order_string) do
+    order_string
+    |> String.split(",")
+    |> Enum.map(fn e ->
+      String.trim(e)
+      |> String.split(" ")
+      |> Enum.map(fn val ->
+        case String.split(val, ".") do
+          [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
+          [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
+          [val] -> String.to_atom(val)
+        end
+      end)
+      |> List.to_tuple()
+    end)
+  end
+
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
   def with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
   def with_select(query, fields), do: from(q in query, select: map(q, ^fields))
