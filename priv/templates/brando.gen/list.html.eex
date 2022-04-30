@@ -5,8 +5,4 @@
   </p>
 </div>
 
-<div class="<%= plural %>">
-  <div class="inner">
-    <%%= render_many @<%= plural %>, @view_module, "__<%= singular %>.html", Map.merge(assigns, %{as: :entry}) %>
-  </div>
-</div>
+<.list_<%= plural %> <%= plural %>={@<%= plural %>} conn={@conn} />
