@@ -1026,7 +1026,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_entry =
       cond do
         is_loaded_image(entrys_current_image) && entrys_current_image.id == image.id &&
-            entrys_current_image.status == :processed ->
+            updated_image.status == :processed ->
           # the image has already been marked as processed, do not
           # update the image but merge in title, credits and alt text
           merged_image =
