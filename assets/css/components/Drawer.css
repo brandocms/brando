@@ -19,6 +19,28 @@
   }
 }
 
+.image-drawer-preview {
+  position: relative;
+
+  .processing {
+    font-family: 'Mono';
+    font-size: 12px;
+    text-align: center;
+    position: absolute;
+    z-index: 9;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    progress {
+      margin-top: 5px;
+    }
+  }
+}
+
 .drawer {
   height: 100vh;
   z-index: 999;

@@ -753,7 +753,7 @@ msgstr "Inget bilde knyttet til feltet"
 
 #: lib/brando_admin/components/form.ex:727
 msgid "Reset image field"
-msgstr "Tilbakestill bildefelt"
+msgstr "Nullstill bildefelt"
 
 #: lib/brando_admin/components/form.ex:719
 msgid "Select existing image"

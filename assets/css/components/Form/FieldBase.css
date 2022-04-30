@@ -170,15 +170,11 @@
     justify-content: space-between;
     margin-top: 3px;
     position: absolute;
-    right: 0;
-
-    &.left {
-      left: 0;
-    }
+    left: 0;
 
     .help-text {
       @fontsize form.help;
-      text-align: right;
+      text-align: left;
     }
 
     .extra {

@@ -513,6 +513,7 @@ defmodule BrandoAdmin.Components.Form do
             myself={@myself}
             uploads={@uploads}
             edit_image={@edit_image}
+            processing={@processing}
           />
 
           <.form
@@ -708,6 +709,14 @@ defmodule BrandoAdmin.Components.Form do
             phx-hook="Brando.DragDrop"
             class="image-drawer-preview"
             phx-drop-target={@uploads[@edit_image.field].ref}>
+            <%= if @processing do %>
+              <div class="processing">
+                <div>
+                  <%= gettext "Uploading" %><br>
+                  <progress value={@processing} max="100"><%= @processing %>%</progress>
+                </div>
+              </div>
+            <% end %>
             <%= if @edit_image.image do %>
               <figure class="grid-overlay">
                 <div class="drop-indicator">
@@ -1269,7 +1278,10 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    socket = assign(socket, :processing, upload_entry.progress)
+
     if upload_entry.done? do
+      socket = assign(socket, :processing, false)
       relation_key = String.to_existing_atom("#{key}_id")
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "image:#{inspect(schema)}:#{key}"
