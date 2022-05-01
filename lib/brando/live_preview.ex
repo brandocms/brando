@@ -146,6 +146,7 @@ defmodule Brando.LivePreview do
           |> Plug.Session.call(session_opts)
           |> Plug.Conn.assign(:language, to_string(var!(language)))
           |> Brando.router().browser([])
+          |> Brando.Plug.HTML.put_section(section)
           |> Brando.Plug.HTML.put_css_classes(css_classes)
 
         render_assigns =
