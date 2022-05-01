@@ -1,6 +1,6 @@
 /**
  * BRANDO APPLICATION FRONTEND
- * (c) 2021
+ * (c) 2022
  */
 
 /**
