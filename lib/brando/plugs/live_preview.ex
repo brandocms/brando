@@ -24,8 +24,6 @@ defmodule Brando.Plug.LivePreview do
         #! GRAB THE COMPLETE HTML FROM ETS AND TAG ON THE JAVASCRIPT PORTION.
         #! CONSECUTIVE UPDATES WILL ONLY TARGET <MAIN>
 
-        require Logger
-
         conn_copy =
           conn
           |> Plug.Conn.fetch_session()
