@@ -58,6 +58,7 @@ defmodule Brando.LivePreview do
     - `view_template` - The template we want to use for rendering
     - `template_prop` - What we are refering to entry as
     - `template_section` - Run this with `put_section` on conn
+    - `template_css_classes` - Run this with `put_css_classes` on conn
 
   """
   defmacro preview_target(schema_module, do: block) do
@@ -78,6 +79,8 @@ defmodule Brando.LivePreview do
         var!(entry) = entry
         var!(extra_vars) = []
 
+        var!(language) = Map.get(var!(entry), :language, Brando.config(:default_language))
+
         unquote(block)
         processed_opts = var!(opts)
 
@@ -93,6 +96,13 @@ defmodule Brando.LivePreview do
             processed_opts[:template_section].(var!(entry))
           else
             processed_opts[:template_section]
+          end
+
+        css_classes =
+          if is_function(processed_opts[:template_css_classes]) do
+            processed_opts[:template_css_classes].(var!(entry))
+          else
+            processed_opts[:template_css_classes]
           end
 
         # preloads
@@ -123,24 +133,30 @@ defmodule Brando.LivePreview do
             Map.put(updated_entry, html_attr.name, parsed_villain)
           end)
 
-        language = Map.get(var!(entry), :language, Brando.config(:default_language))
+        session_opts =
+          Plug.Session.init(
+            store: :cookie,
+            key: "_live_preview_key",
+            signing_salt: "0f0f0f0"
+          )
 
         # build conn
         conn =
-          Phoenix.ConnTest.build_conn()
-          |> Plug.Test.init_test_session(%{})
-          |> Phoenix.Controller.fetch_flash()
-          |> Brando.Plug.HTML.put_section(section)
-          |> Plug.Conn.assign(:language, to_string(language))
+          Phoenix.ConnTest.build_conn(:get, "/#{var!(language)}/__LIVE_PREVIEW")
+          |> Plug.Session.call(session_opts)
+          |> Plug.Conn.assign(:language, to_string(var!(language)))
+          |> Brando.router().browser([])
+          |> Brando.Plug.HTML.put_css_classes(css_classes)
 
         render_assigns =
-          ([
-             {:conn, conn},
-             {:section, section},
-             {:LIVE_PREVIEW, true},
-             {:language, to_string(language)},
-             {atom_prop, var!(entry)}
-           ] ++ unquote(Macro.var(:extra_vars, nil)))
+          (Map.to_list(conn.assigns) ++
+             [
+               {:conn, conn},
+               {:section, section},
+               {:LIVE_PREVIEW, true},
+               {:language, to_string(var!(language))},
+               {atom_prop, var!(entry)}
+             ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
         inner = Phoenix.View.render(processed_opts[:view_module], template, render_assigns)
@@ -208,17 +224,43 @@ defmodule Brando.LivePreview do
     end
   end
 
+  defmacro template_css_classes(template_css_classes) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :template_css_classes, unquote(template_css_classes))
+    end
+  end
+
   defmacro template_prop(template_prop) do
     quote do
       var!(opts) = Keyword.put(var!(opts), :template_prop, unquote(template_prop))
     end
   end
 
+  @doc """
+  Assign variables to be used in the live preview.
+
+  Normally you would set the same assigns you do in your controller.
+
+  ## Example
+
+      assign :latest_articles, fn _, language ->
+        # language is either the language found in the `entry` or the default site language
+        MyApp.Articles.list_articles!(%{
+          filter: %{featured: false, language: language},
+          preload: [:category],
+          order: "asc sequence,
+          limit: 4
+        })
+      end
+  """
   defmacro assign(var_name, var_value) do
     quote do
       cached_var =
         Brando.LivePreview.get_var(unquote(Macro.var(:cache_key, nil)), unquote(var_name), fn ->
-          unquote(var_value).(var!(entry))
+          case :erlang.fun_info(unquote(var_value))[:arity] do
+            1 -> unquote(var_value).(var!(entry))
+            2 -> unquote(var_value).(var!(entry), var!(language))
+          end
         end)
 
       var!(extra_vars) = [{unquote(var_name), cached_var} | unquote(Macro.var(:extra_vars, nil))]
@@ -264,7 +306,7 @@ defmodule Brando.LivePreview do
 
           if err.term.__struct__ == Ecto.Association.NotLoaded do
             {:error,
-             "LivePreview is missing preload for #{inspect(err.term.__field__)}<br><br>Add `schema_preloads: [#{inspect(err.term.__field__)}]` to your `preview_target`"}
+             "LivePreview is missing preload for #{inspect(err.term.__field__)}<br><br>Add `schema_preloads [#{inspect(err.term.__field__)}]` to your `preview_target`"}
           else
             {:error, "#{inspect(err, pretty: true)}"}
           end
