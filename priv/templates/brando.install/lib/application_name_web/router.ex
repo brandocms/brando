@@ -7,7 +7,7 @@ defmodule <%= application_module %>Web.Router do
   import Plug.BasicAuth
   import BrandoAdmin.UserAuth
 
-  @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
+  @sql_sandbox Application.compile_env(:<%= application_name %>, :sql_sandbox) || false
 
   pipeline :browser do
     plug :accepts, ["html"]
