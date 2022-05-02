@@ -10,7 +10,8 @@ defmodule Brando.Villain.Tags.RouteI18n do
 
   alias Brando.I18n
 
-  # {% route_i18n entry.language page_path show { entry.uri } %}
+  # {% route_i18n entry.language page_path list %}
+  # {% route_i18n entry.language page_path detail { entry.uri } %}
 
   @impl true
   def parse() do
