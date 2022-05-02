@@ -47,19 +47,21 @@ defmodule Brando.Trait.Villain do
   Generate HTML
   """
   @impl true
-  def changeset_mutator(module, _config, changeset, _user, skip_villain: true) do
-    cast_poly(changeset, module.__villain_fields__())
-  end
+  def changeset_mutator(module, _config, changeset, _user, opts) do
+    case Keyword.get(opts, :skip_villain) do
+      true ->
+        cast_poly(changeset, module.__villain_fields__())
 
-  def changeset_mutator(module, _config, changeset, _user, _opts) do
-    case cast_poly(changeset, module.__villain_fields__()) do
-      %{valid?: true} = casted_changeset ->
-        Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-          Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-        end)
+      _ ->
+        case cast_poly(changeset, module.__villain_fields__()) do
+          %{valid?: true} = casted_changeset ->
+            Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+              Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+            end)
 
-      casted_changeset ->
-        casted_changeset
+          casted_changeset ->
+            casted_changeset
+        end
     end
   end
 
