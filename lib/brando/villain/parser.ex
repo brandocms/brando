@@ -350,7 +350,12 @@ defmodule Brando.Villain.Parser do
         width = Map.get(data, :width, 500)
         height = Map.get(data, :height, 281)
 
-        aspect_ratio = height / width
+        aspect_ratio =
+          if height && width do
+            height / width
+          else
+            0.5625
+          end
 
         ~s(<div class="video-wrapper" style="--aspect-ratio: #{aspect_ratio}">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
