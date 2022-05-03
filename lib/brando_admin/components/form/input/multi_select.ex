@@ -493,7 +493,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply,
      socket
      |> assign(:selected_options, [])
-     |> assign(:count_label, label)}
+     |> assign(:count_label, label)
+     |> assign_labels()
+     |> assign_label()}
   end
 
   def handle_event("show_form", _, socket) do
