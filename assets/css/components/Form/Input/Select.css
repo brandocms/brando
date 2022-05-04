@@ -38,12 +38,35 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
     &-text {
       @fontsize sm;
-    }
+      display: flex;
+      align-items: center;
 
-    svg {
-      margin-right: 8px;
-      circle {
-        fill: var(--brando-color-dark);
+      svg {
+        margin-right: 9px;
+
+        circle {
+          fill: theme(colors.status.published);
+
+          &.draft {
+            fill: theme(colors.status.draft);
+          }
+
+          &.pending {
+            fill: theme(colors.status.pending);
+          }
+
+          &.published {
+            fill: theme(colors.status.published);
+          }
+
+          &.disabled {
+            fill: theme(colors.status.disabled);
+          }
+
+          &.deleted {
+            fill: #111;
+          }
+        }
       }
     }
   }
@@ -70,6 +93,34 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     &:hover {
       background-color: var(--brando-color-dark); 
       color: var(--brando-color-input);
+    }
+  }
+
+  svg {
+    margin-right: 9px;
+
+    circle {
+      fill: theme(colors.status.published);
+
+      &.draft {
+        fill: theme(colors.status.draft);
+      }
+
+      &.pending {
+        fill: theme(colors.status.pending);
+      }
+
+      &.published {
+        fill: theme(colors.status.published);
+      }
+
+      &.disabled {
+        fill: theme(colors.status.disabled);
+      }
+
+      &.deleted {
+        fill: #111;
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use BrandoAdmin, :live_component
   import Brando.Gettext
+  import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -27,7 +28,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # data input_options, :list
   # data select_form, :form
   # data select_changeset, :any
-  # data selected_labels, :list
   # data filter_string, :string
   # data modal_id, :string
   # data singular, :string
@@ -68,7 +68,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:selected_options, selected_options)
      |> assign_input_options()
      |> assign_label()
-     |> assign_labels()
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
@@ -152,16 +151,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assign(socket, :count_label, get_label(input_options, selected_options))
   end
 
-  def assign_labels(
-        %{assigns: %{input_options: input_options, selected_options: selected_options}} = socket
-      ) do
-    assign(
-      socket,
-      :selected_labels,
-      Enum.map(selected_options, &get_label_for(input_options, &1))
-    )
-  end
-
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
     select_form = target_module.__form__(form_name)
     form_translations = target_module.__translations__()
@@ -203,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         instructions={@instructions}
         class={@class}
         compact={@compact}>
-        <%= if Enum.empty?(@selected_labels) do %>
+        <%= if Enum.empty?(@selected_options) do %>
           <Input.input
             type={:hidden}
             form={@form}
@@ -223,24 +212,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <% end %>
         <% end %>
 
-        <%= if !Enum.empty?(@selected_labels) do %>
+        <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
-            <%= for lbl <- @selected_labels do %>
-              <div class="selected-label">
-                <svg
-                  class="circle-filled"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12">
-                  <circle
-                    r="6"
-                    cy="6"
-                    cx="6" />
-                </svg>
-                <div class="selected-label-text"><%= lbl %></div>
-              </div>
-            <% end %>
+            <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
+              <.get_label opt={opt} />
+            </.labels>
           </div>
         <% end %>
 
@@ -250,7 +226,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= if @inner_block do %>
                 <%= render_slot @inner_block %>
               <% else %>
-                <%= if @selected_options do %>
+                <%= if @selected_options != [] do %>
                   <%= @count_label |> raw %>
                 <% else %>
                   <%= gettext("No selection") %>
@@ -302,12 +278,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                         type="button"
                         class={render_classes([
                           "options-option",
-                          "option-selected": opt.value in @selected_options
+                          "option-selected": is_selected?(opt, @selected_options)
                         ])}
-                        data-label={opt.label}
-                        value={opt.value}
+                        value={get_value(opt)}
                         phx-click={JS.push("select_option", target: @myself)}>
-                        <%= opt.label |> raw %>
+                        <.get_label opt={opt} />
                       </button>
                     <% end %>
                   </div>
@@ -317,7 +292,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       <button
                         type="button"
                         class="secondary"
-                        phx-click={JS.push("reset", target: @myself) |> hide_modal("##{@modal_id}")}>
+                        phx-click={JS.push("reset", target: @myself)}>
                         <%= gettext "Reset value" %>
                       </button>
                     </div>
@@ -325,26 +300,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 </div>
                 <div class="selected-labels">
                   <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
-                  <%= if Enum.empty?(@selected_labels) do %>
-                    <div class="empty-label"><%= gettext "None selected" %></div>
-                  <% else %>
-                    <%= for lbl <- @selected_labels do %>
-                      <div class="selected-label">
-                        <svg
-                          class="circle-filled"
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 12 12">
-                          <circle
-                            r="6"
-                            cy="6"
-                            cx="6" />
-                        </svg>
-                        <div class="selected-label-text"><%= lbl %></div>
-                      </div>
-                    <% end %>
-                  <% end %>
+                  <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
+                    <.get_label opt={opt} />
+                  </.labels>
                 </div>
               <% else %>
                 <%= if @select_form do %>
@@ -388,6 +346,61 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
+  def labels(assigns) do
+    ~H"""
+    <%= if Enum.empty?(@selected_options) do %>
+      <div class="empty-label"><%= gettext "None selected" %></div>
+    <% else %>
+      <%= for opt <- @selected_options do %>
+        <div class="selected-label">
+          <div class="selected-label-text">
+            <%= render_slot(@inner_block, get_opt(opt, @input_options)) %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+    """
+  end
+
+  defp get_opt(opt, opts) do
+    Enum.find(opts, fn
+      %{value: value} -> to_string(value) == opt
+      %{id: value} -> to_string(value) == opt
+    end)
+  end
+
+  defp is_selected?(%{value: value}, opts) do
+    value in opts
+  end
+
+  defp is_selected?(%{id: id}, opts) do
+    to_string(id) in opts
+  end
+
+  defp get_value(%{value: value}), do: value
+  defp get_value(%{id: value}), do: value
+
+  defp get_label(%{opt: %{label: _}} = assigns) do
+    ~H"""
+    — <%= @opt.label %>
+    """
+  end
+
+  defp get_label(%{opt: nil} = assigns) do
+    ~H"""
+    <%= gettext "Missing option" %>
+    """
+  end
+
+  defp get_label(%{opt: entry} = assigns) do
+    identifier = entry.__struct__.__identifier__(entry)
+    assigns = assign(assigns, :identifier, identifier)
+
+    ~H"""
+    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    """
+  end
+
   defp maybe_slug(opt) when is_integer(opt), do: opt
   defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 
@@ -397,13 +410,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_label(_, selected_options) do
     gettext("%{count} selected", count: Enum.count(selected_options))
-  end
-
-  defp get_label_for(input_options, selected_option) do
-    case Enum.find(input_options, &(&1.value == selected_option)) do
-      nil -> gettext("<No value>")
-      %{label: label} -> label
-    end
   end
 
   def handle_event(
@@ -483,7 +489,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply,
      socket
      |> assign(:selected_options, selected_options)
-     |> assign_labels()
      |> assign_label()}
   end
 
@@ -494,7 +499,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(:selected_options, [])
      |> assign(:count_label, label)
-     |> assign_labels()
      |> assign_label()}
   end
 
