@@ -1028,4 +1028,12 @@ defmodule Brando.Villain.Filters do
       ""
     end
   end
+
+  def slugify(nil, _) do
+    ""
+  end
+
+  def slugify(str, _) when is_binary(str) do
+    Brando.Utils.slugify(str)
+  end
 end
