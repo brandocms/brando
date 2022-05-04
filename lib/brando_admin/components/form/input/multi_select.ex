@@ -52,6 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def update(assigns, socket) do
     selected_options = get_selected_options(assigns.form, assigns.field)
+
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
@@ -107,7 +108,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
+    assign_new(socket, :input_options, fn ->
+      get_input_options(form, opts)
+    end)
   end
 
   def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
@@ -286,17 +289,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       </button>
                     <% end %>
                   </div>
-
-                  <%= if @resetable do %>
-                    <div class="reset">
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("reset", target: @myself)}>
-                        <%= gettext "Reset value" %>
-                      </button>
-                    </div>
-                  <% end %>
                 </div>
                 <div class="selected-labels">
                   <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
@@ -339,6 +331,26 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <% end %>
               <% end %>
             </div>
+            <:footer>
+              <div class="flex-h">
+                <button
+                  type="button"
+                  class="primary"
+                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                  OK
+                </button>
+                <%= if @resetable do %>
+                  <div class="reset">
+                    <button
+                      type="button"
+                      class="secondary"
+                      phx-click={JS.push("reset", target: @myself)}>
+                      <%= gettext("Reset value") %>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+            </:footer>
           </Content.modal>
         </div>
       </Form.field_base>
