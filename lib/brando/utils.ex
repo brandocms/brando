@@ -1006,4 +1006,31 @@ defmodule Brando.Utils do
   def iv(%{source: %{data: data}}, field) do
     Map.get(data, field)
   end
+
+  @doc """
+  Shortens a string down to the number of characters passed as an argument. If
+  the specified number of characters is less than the length of the string, an
+  ellipsis (…) is appended to the string and is included in the character
+  count.
+  ## Examples
+      iex> truncate("Ground control to Major Tom.", 20)
+      "Ground control to..."
+      iex> truncate("Ground control to Major Tom.", 25, ", and so on")
+      "Ground control, and so on"
+      iex> truncate("Ground control to Major Tom.", 20, "")
+      "Ground control to Ma"
+  """
+  def truncate(value, length, ellipsis \\ "...") do
+    value = to_string(value)
+
+    if String.length(value) <= length do
+      value
+    else
+      String.slice(
+        value,
+        0,
+        length - String.length(ellipsis)
+      ) <> ellipsis
+    end
+  end
 end
