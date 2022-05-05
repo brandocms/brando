@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       <div class="circle-stack mr-1">
         #{colors}
       </div>
-      - #{palette.name}
+      #{palette.namespace} - #{palette.name}
       """
 
       %{label: label, value: palette.id}
