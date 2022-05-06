@@ -928,6 +928,10 @@ h3 {
 .circle-stack {
   display: flex;
 
+  &.mr-1 {
+    margin-right: 15px;
+  }
+
   &:hover .circle {
     margin-left: 5px;
   }

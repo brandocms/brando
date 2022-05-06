@@ -70,8 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       label = """
       <div class="circle-stack mr-1">
         #{colors}
-      </div>
-      #{palette.namespace} - #{palette.name}
+      </div><span class="text-mono">[#{palette.namespace}] #{palette.name}</span>
       """
 
       %{label: label, value: palette.id}
