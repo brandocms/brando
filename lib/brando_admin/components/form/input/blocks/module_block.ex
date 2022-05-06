@@ -185,6 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                     block_data={@block_data}
                     data_field={@data_field}
                     base_form={@base_form}
+                    module_id={@module_id}
                   />
                 <% else %>
                   <%= "{{ content }}" %>

@@ -41,6 +41,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           data_field={@data_field}
           entry_template={@entry_template}
           belongs_to="module_entry"
+          module_id={@module_id}
           index={idx}
           block_count={@entry_count}
           insert_block=""

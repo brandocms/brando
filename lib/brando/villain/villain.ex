@@ -764,10 +764,37 @@ defmodule Brando.Villain do
   @doc """
   Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
   """
-  def merge_block(blocks, uid, merge_data) do
+  def merge_block(blocks, uid, merge_data, merge_entry? \\ false) do
     Enum.reduce(blocks || [], [], fn
       %{uid: ^uid} = block, acc ->
         [Utils.deep_merge(block, merge_data) | acc]
+
+      %{type: "module", data: %{refs: refs, entries: entries, multi: true}} = module, acc ->
+        if merge_entry? do
+          [
+            put_in(
+              module,
+              [
+                Access.key(:data),
+                Access.key(:entries)
+              ],
+              merge_block(entries, uid, merge_data)
+            )
+            | acc
+          ]
+        else
+          [
+            put_in(
+              module,
+              [
+                Access.key(:data),
+                Access.key(:refs)
+              ],
+              merge_block(refs, uid, merge_data, merge_entry?)
+            )
+            | acc
+          ]
+        end
 
       %{type: "module", data: %{refs: refs}} = module, acc ->
         [
@@ -777,7 +804,7 @@ defmodule Brando.Villain do
               Access.key(:data),
               Access.key(:refs)
             ],
-            merge_block(refs, uid, merge_data)
+            merge_block(refs, uid, merge_data, merge_entry?)
           )
           | acc
         ]
@@ -790,13 +817,16 @@ defmodule Brando.Villain do
               Access.key(:data),
               Access.key(:blocks)
             ],
-            merge_block(blocks, uid, merge_data)
+            merge_block(blocks, uid, merge_data, merge_entry?)
           )
           | acc
         ]
 
       %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} = ref, acc ->
         [%{ref | data: Utils.deep_merge(block, merge_data)} | acc]
+
+      %Brando.Content.Module.Entry{data: %{uid: ^uid} = block} = entry, acc ->
+        [%{entry | data: Utils.deep_merge(block, merge_data)} | acc]
 
       block, acc ->
         [block | acc]
@@ -847,9 +877,15 @@ defmodule Brando.Villain do
     Changeset.put_change(changeset, data_field, updated_blocks)
   end
 
-  def update_block_in_changeset(changeset, data_field, block_uid, merge_data) do
+  def update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        merge_data,
+        merge_entry? \\ false
+      ) do
     blocks = Changeset.get_field(changeset, data_field)
-    updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data)
+    updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data, merge_entry?)
     Changeset.put_change(changeset, data_field, updated_blocks)
   end
 
