@@ -130,11 +130,6 @@ defmodule Brando.Content do
           where: fragment("?::jsonb @> ?::jsonb", field(q, :colors), ^[%{hex_value: color}])
 
       {:namespace, namespace}, query ->
-        query =
-          from(t in query,
-            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-          )
-
         namespace =
           (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
 
