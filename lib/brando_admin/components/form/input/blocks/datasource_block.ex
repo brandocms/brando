@@ -32,11 +32,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
   def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+    description = v(block_data, :description)
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign_new(:available_entries, fn -> [] end)
-     |> assign(:block_data, List.first(inputs_for(assigns.block, :data)))
+     |> assign(:block_data, block_data)
+     |> assign(:description, description)
      |> assign(:uid, v(assigns.block, :uid))
      |> assign_available_sources()
      |> assign_available_queries()
@@ -139,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DatasourceBlock do
         belongs_to={@belongs_to}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description><%= v(@block, :data).description %></:description>
+        <:description><%= @description %></:description>
         <:config>
           <Input.text form={@block_data} field={:description} label={gettext "Description"} />
           <Input.radios form={@block_data} field={:module} label={gettext "Module"} opts={[options: @available_sources]} />
