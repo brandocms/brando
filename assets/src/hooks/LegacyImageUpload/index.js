@@ -27,10 +27,12 @@ export default (app) => ({
     this.csrfToken = Dom.find('meta[name="csrf-token"]').content
     this.pluses = Dom.all(this.el, '.upload-canvas .plus')
 
-    this.plusTimeline = gsap.timeline({ repeat: -1 })
-    this.plusTimeline.to(this.pluses, { duration: 3, rotate: 360, ease: 'none', transformOrigin: '50% 50%' })
-    this.plusTimeline.timeScale(0)
-    
+    if (this.pluses.length) {
+      this.plusTimeline = gsap.timeline({ repeat: -1 })
+      this.plusTimeline.to(this.pluses, { duration: 3, rotate: 360, ease: 'none', transformOrigin: '50% 50%' })
+      this.plusTimeline.timeScale(0)
+    }
+
     this.$fileInput = Dom.find(this.el, '.file-input')
 
     this.$uploadButton = Dom.find(this.el, 'button.file-upload')
