@@ -292,6 +292,10 @@
     text-transform: uppercase;
     align-items: center;
 
+    strong {
+      color: var(--brando-color-blue);
+    }
+
     .circle-stack {
       @space margin-left 5px;
 

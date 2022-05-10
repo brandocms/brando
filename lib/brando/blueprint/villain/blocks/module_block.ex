@@ -49,6 +49,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
 
   attributes do
     attribute :uid, :string
+    attribute :description, :string
     attribute :type, :string, required: true
     attribute :hidden, :boolean, default: false
     attribute :collapsed, :boolean, default: false
