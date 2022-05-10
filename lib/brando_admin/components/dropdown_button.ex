@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Button do
         <%= if @confirm do %>
           <button
             type="button"
-            id={"dropdown-button-#{@event_name}"}
+            id={"dropdown-button-#{@event_name}-#{@value}"}
             phx-hook="Brando.ConfirmClick"
             phx-confirm-click-message={@confirm}
             phx-confirm-click={@event}
@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Button do
         <% else %>
           <button
             type="button"
-            id={"dropdown-button-#{@event_name}"}
+            id={"dropdown-button-#{@event_name}-#{@value}"}
             phx-click={@event}
             value={@value}
             phx-page-loading={@loading}>
