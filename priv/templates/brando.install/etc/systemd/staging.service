@@ -5,15 +5,16 @@ After=network.target
 Type=simple
 User=<%= application_name %>
 Group=<%= application_name %>
-Restart=on-failure
+Restart=no
 Environment=MIX_ENV=staging
 Environment=LANG=en_US.UTF-8
 Environment=LC_ALL=en_US.UTF-8
 Environment=PLUG_TMPDIR=/tmp/<%= application_name %>
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/<%= application_name %>
-WorkingDirectory=/sites/prod/<%= application_name %>
-ExecStart=/sites/prod/<%= application_name %>/bin/<%= application_name %> start
-ExecStop=/sites/prod/<%= application_name %>/bin/<%= application_name %> stop
+WorkingDirectory=/sites/staging/<%= application_name %>
+ExecStart=/sites/staging/<%= application_name %>/bin/<%= application_name %> start
+ExecStop=/sites/staging/<%= application_name %>/bin/<%= application_name %> stop
+StandardOutput=append:/sites/staging/<%= application_name %>/log/<%= application_name %>_staging.log
 [Install]
 WantedBy=multi-user.target

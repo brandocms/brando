@@ -5,7 +5,7 @@ After=network.target
 Type=simple
 User=<%= application_name %>
 Group=<%= application_name %>
-Restart=no
+Restart=on-failure
 Environment=MIX_ENV=prod
 Environment=LANG=en_US.UTF-8
 Environment=LC_ALL=en_US.UTF-8
