@@ -103,6 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                 <Form.poly_inputs form={row} for={:cols} let={%{form: var, index: index}}>
                   <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
                 </Form.poly_inputs>
+                <Input.input type={:hidden} form={row} field={:uid} uid={input_value(row, :uid)} id_prefix="table_block_row" />
               </div>
               <div class="insert-row">
                 <button
@@ -171,7 +172,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
     # replace block
     changeset = form.source
     rows = input_value(block_data, :rows)
-    new_row = input_value(block_data, :template_row)
+
+    new_row =
+      block_data
+      |> input_value(:template_row)
+      |> Map.put(:uid, Brando.Utils.generate_uid())
+
     idx = Enum.find_index(rows, &(&1.uid == after_uid)) || 0
     new_rows = List.insert_at(rows, idx + 1, new_row)
 
