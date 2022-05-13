@@ -240,14 +240,18 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <button
             type="button"
             class="button-edit"
-            phx-click={show_modal("##{@modal_id}")}>
+            phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}>
             <%= if @open do %>
               <%= gettext "Close" %>
             <% else %>
               <%= gettext "Select" %>
             <% end %>
           </button>
-          <Content.modal title={gettext "Select options"} id={@modal_id} narrow={@narrow}>
+          <Content.modal
+            title={gettext "Select options"}
+            id={@modal_id}
+            narrow={@narrow}
+            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
             <:header>
               <%= if @select_form && !@creating do %>
                 <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create <%= @singular %></button>
@@ -422,6 +426,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_label(_, selected_options) do
     gettext("%{count} selected", count: Enum.count(selected_options))
+  end
+
+  def handle_event("toggle_modal", _, socket) do
+    {:noreply, assign(socket, :open, !socket.assigns.open)}
   end
 
   def handle_event(
