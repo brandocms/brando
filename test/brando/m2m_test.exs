@@ -24,18 +24,22 @@ defmodule Brando.M2MTest do
     def changeset(struct, params \\ %{}) do
       struct
       |> cast(params, ~w())
-      |> Brando.M2M.cast_collection(:tags, Brando.repo(), Tag)
+      |> Brando.M2M.cast_collection(:tags, Brando.repo(), Tag, false)
     end
 
     def custom_function_changeset(struct, params \\ %{}) do
       struct
       |> cast(params, ~w())
-      |> Brando.M2M.cast_collection(:tags, fn ids ->
-        # Convert Strings back to Integers for demonstration
-        ids = Enum.map(ids, &String.to_integer/1)
+      |> Brando.M2M.cast_collection(
+        :tags,
+        fn ids ->
+          # Convert Strings back to Integers for demonstration
+          ids = Enum.map(ids, &String.to_integer/1)
 
-        Brando.repo().all(from t in Tag, where: t.id in ^ids)
-      end)
+          Brando.repo().all(from t in Tag, where: t.id in ^ids)
+        end,
+        false
+      )
     end
   end
 

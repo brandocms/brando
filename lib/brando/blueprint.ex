@@ -382,6 +382,7 @@ defmodule Brando.Blueprint do
   def get_required_relations(rels) do
     rels
     |> Enum.filter(&Map.get(&1.opts, :required))
+    |> Enum.filter(&(&1.type == :belongs_to))
     |> Enum.map(&get_relation_key/1)
   end
 
@@ -408,6 +409,7 @@ defmodule Brando.Blueprint do
   def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :video, name: name}), do: :"#{name}_id"
   def get_relation_key(%{type: :gallery, name: name}), do: :"#{name}_id"
+  def get_relation_key(%{type: :many_to_many, name: name}), do: name
 
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)

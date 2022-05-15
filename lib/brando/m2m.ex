@@ -12,7 +12,7 @@ defmodule Brando.M2M do
       end
   """
 
-  import Ecto.Changeset, only: [put_assoc: 3, change: 1]
+  import Ecto.Changeset, only: [cast_assoc: 3, put_assoc: 3, change: 1]
   import Ecto.Query
 
   @doc ~S"""
@@ -23,11 +23,11 @@ defmodule Brando.M2M do
       def changeset(struct, params \\ %{}) do
         struct
         |> cast(params, ~w())
-        |> Brando.M2M.cast_collection(:tags, App.Repo, App.Tag)
+        |> Brando.M2M.cast_collection(:tags, App.Repo, App.Tag, false)
       end
   """
-  def cast_collection(set, assoc, repo, mod) do
-    perform_cast(set, assoc, &all(&1, repo, mod))
+  def cast_collection(set, assoc, repo, mod, required) do
+    perform_cast(set, assoc, &all(&1, repo, mod), required)
   end
 
   @doc ~S"""
@@ -45,18 +45,18 @@ defmodule Brando.M2M do
           # Convert Strings back to Integers
           ids = Enum.map(ids, &String.to_integer/1)
           App.Repo.all(from t in App.Tag, where: t.id in ^ids)
-        end)
+        end, false),
       end
   """
-  def cast_collection(set, assoc, lookup_fn) when is_function(lookup_fn) do
-    perform_cast(set, assoc, lookup_fn)
+  def cast_collection(set, assoc, lookup_fn, required) when is_function(lookup_fn) do
+    perform_cast(set, assoc, lookup_fn, required)
   end
 
   defp all(ids, repo, mod) do
     repo.all(from m in mod, where: m.id in ^ids)
   end
 
-  defp perform_cast(set, assoc, lookup_fn) do
+  defp perform_cast(set, assoc, lookup_fn, required) do
     case Map.fetch(set.params, to_string(assoc)) do
       {:ok, ids} ->
         changes =
@@ -69,7 +69,7 @@ defmodule Brando.M2M do
         put_assoc(set, assoc, changes)
 
       :error ->
-        set
+        (required && cast_assoc(set, assoc, required: true)) || set
     end
   end
 end
