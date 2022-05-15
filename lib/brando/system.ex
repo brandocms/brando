@@ -33,8 +33,38 @@ defmodule Brando.System do
     {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, {:env, :exists}} = check_env()
+    {:ok, {:presence, :exists}} = check_presence_exists()
 
     Logger.info("==> Brando >> System checks complete!")
+  end
+
+  defp check_presence_exists do
+    case Code.ensure_loaded(Brando.presence()) do
+      {:module, _} ->
+        if {:__brando_presence__, 0} in Brando.presence().__info__(:functions) do
+          {:ok, {:presence, :exists}}
+        else
+          raise ConfigError,
+            message: """
+            Presence module missing __brando_presence__/0
+
+            This means that it is not using `BrandoAdmin.Presence`.
+
+            In your `#{inspect(Brando.presence())}` module:
+
+              use BrandoAdmin.Presence,
+                otp_app: #{inspect(Brando.otp_app())},
+                pubsub_server: #{inspect(Brando.pubsub())},
+                presence: __MODULE__
+            """
+        end
+
+      {:error, _} ->
+        raise ConfigError,
+          message: """
+          Presence module not found!
+          """
+    end
   end
 
   defp check_env do
