@@ -429,7 +429,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def handle_event("toggle_modal", _, socket) do
-    {:noreply, assign(socket, :open, !socket.assigns.open)}
+    socket = assign(socket, :open, !socket.assigns.open)
+    socket = (socket.assigns.open && socket) || push_event(socket, "b:validate", %{})
+
+    {:noreply, socket}
   end
 
   def handle_event(
