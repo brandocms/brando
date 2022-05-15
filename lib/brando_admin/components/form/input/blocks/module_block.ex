@@ -73,7 +73,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           |> inputs_for(:data)
           |> List.first()
 
-        refs = Enum.with_index(inputs_for(block_data, :refs))
+        refs_forms = Enum.with_index(inputs_for(block_data, :refs))
+        refs = v(block_data, :refs) || []
         vars = v(block_data, :vars) || []
         uid = v(block, :uid)
         description = v(block, :description)
@@ -89,6 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_code, module.code)
         |> assign(:module_multi, input_value(block_data, :multi))
         |> assign(:entry_template, module.entry_template)
+        |> assign(:refs_forms, refs_forms)
         |> assign(:refs, refs)
         |> assign(:vars, vars)
         |> assign_new(:important_vars, fn -> Enum.filter(vars, &(&1.important == true)) end)
@@ -131,7 +133,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             </div>
             <div class="panel">
               <h2 class="titlecase">Vars</h2>
-              <%= for var <- v(@block_data, :vars) || [] do %>
+              <%= for var <- @vars do %>
                 <div class="var">
                   <div class="key"><%= var.key %></div>
                   <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
@@ -139,7 +141,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <% end %>
 
               <h2 class="titlecase">Refs</h2>
-              <%= for ref <- v(@block_data, :refs) || [] do %>
+              <%= for ref <- @refs do %>
                 <div class="ref">
                   <div class="key"><%= ref.name %></div>
                   <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
@@ -178,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
-                  module_refs={@refs}
+                  module_refs={@refs_forms}
                   module_ref_name={ref}
                   base_form={@base_form} />
 
