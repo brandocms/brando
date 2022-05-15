@@ -48,6 +48,7 @@ defmodule Brando.Content.Module.Entry do
   attributes do
     attribute :uid, :string
     attribute :type, :string, required: true
+    attribute :description, :string
     attribute :hidden, :boolean, default: false
     attribute :collapsed, :boolean, default: false
   end

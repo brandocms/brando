@@ -54,16 +54,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       |> inputs_for(:data)
       |> List.first()
 
-    refs = Enum.with_index(inputs_for(block_data, :refs))
+    refs_forms = Enum.with_index(inputs_for(block_data, :refs))
+    refs = v(block_data, :refs) || []
     vars = v(block_data, :vars) || []
+    description = v(block, :description)
 
     socket
     |> assign(:uid, v(block, :uid) || Brando.Utils.generate_uid())
+    |> assign(:description, description)
     |> assign(:block_data, block_data)
+    |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data, :vars)))
     |> assign(:module_name, entry_template.name)
     |> assign(:module_class, entry_template.class)
     |> assign(:module_code, entry_template.code)
     |> assign(:module_multi, true)
+    |> assign(:refs_forms, refs_forms)
     |> assign(:refs, refs)
     |> assign(:vars, vars)
     |> assign_new(:important_vars, fn -> Enum.filter(vars, &(&1.important == true)) end)
@@ -86,23 +91,47 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         is_entry?={true}
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
-        <:description><%= @module_name %></:description>
+        <:description><%= if @description do %><strong><%= @description %></strong>&nbsp;| <% end %><%= @module_name %></:description>
         <:config>
-          <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-            <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
-          <% end %>
+          <div class="panels">
+            <div class="panel">
+              <Input.text form={@block} field={:description} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <%= for {var, index} <- @indexed_vars do %>
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+              <% end %>
+            </div>
+            <div class="panel">
+              <h2 class="titlecase">Vars</h2>
+              <%= for var <- @vars do %>
+                <div class="var">
+                  <div class="key"><%= var.key %></div>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
+                </div>
+              <% end %>
 
-          <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
-            Reinitialize variables
-          </button>
+              <h2 class="titlecase">Refs</h2>
+              <%= for ref <- @refs do %>
+                <div class="ref">
+                  <div class="key"><%= ref.name %></div>
+                  <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
+                </div>
+              <% end %>
+              <h2 class="titlecase"><%= gettext "Advanced" %></h2>
+              <div class="button-group-vertical">
+                <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
+                  Reinitialize variables
+                </button>
 
-          <button type="button" class="secondary" phx-click={JS.push("reinit_refs", target: @myself)}>
-            Reset block refs
-          </button>
+                <button type="button" class="secondary" phx-click={JS.push("reinit_refs", target: @myself)}>
+                  Reset block refs
+                </button>
 
-          <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
-            Fetch missing vars
-          </button>
+                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
+                  Fetch missing vars
+                </button>
+              </div>
+            </div>
+          </div>
         </:config>
 
         <div class="module-block" b-editor-tpl={@module_class}>
@@ -120,7 +149,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                 <Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
-                  module_refs={@refs}
+                  module_refs={@refs_forms}
                   module_ref_name={ref}
                   base_form={@base_form} />
 
