@@ -1,5 +1,6 @@
 import { gsap, Dom } from '@brandocms/jupiter'
 import { Presence as PhoenixPresence } from 'phoenix'
+import IdleJs from 'idle-js'
 
 export default class Presence {
   constructor (app) {
@@ -32,7 +33,11 @@ export default class Presence {
       }
 
       if (this.lobbyPresences[user.id]) {
-        $user.dataset.userStatus = 'online'
+        if (this.lobbyPresences[user.id].metas[0].active) {
+          $user.dataset.userStatus = 'online'
+        } else {
+          $user.dataset.userStatus = 'idle'
+        }
       } else {
         $user.dataset.userStatus = 'offline'
       }
@@ -67,6 +72,31 @@ export default class Presence {
       setTimeout(() => {
         gsap.to($users, { yPercent: 0, rotate: 0, ease: 'circ.out', stagger: 0.3 })
       }, 3000)
+    }
+  }
+
+  trackIdle () {
+    /**
+     * Add idle checker
+    */
+
+    this.idle = new IdleJs({
+      idle: 30000, // idle time in ms
+      events: ['mousemove', 'keydown', 'mousedown', 'touchstart'], // events that will trigger the idle resetter
+      onIdle: () => { this.setActive(false) },
+      onActive: () => { this.setActive(true) },
+      onHide: () => { this.setActive(false) },
+      onShow: () => { this.setActive(true) },
+      keepTracking: true,
+      startAtIdle: false
+    })
+
+    this.idle.start()
+  }
+
+  setActive (status) {
+    if (this.app.lobbyChannel) {
+      this.app.lobbyChannel.push('user:state', { active: status })
     }
   }
 }

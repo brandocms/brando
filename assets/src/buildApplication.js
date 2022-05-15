@@ -259,6 +259,7 @@ export default (hooks, enableDebug = true) => {
 
       app.lobbyChannel.join().receive('ok', payload => {
         app.presence.setUsers(payload.users)
+        app.presence.trackIdle()
         console.debug('==> Joined lobby_channel')
       })
     })

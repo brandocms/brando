@@ -47,6 +47,15 @@ defmodule Brando.LobbyChannel do
     {:ok, %{users: users}, socket}
   end
 
+  def handle_in("user:state", %{"active" => active}, socket) do
+    Brando.presence().update(socket, socket.assigns.user_id, %{
+      online_at: inspect(System.system_time(:second)),
+      active: active
+    })
+
+    {:reply, :ok, socket}
+  end
+
   def handle_info(:after_join, socket) do
     {:ok, _} =
       Brando.presence().track(socket, socket.assigns.user_id, %{
