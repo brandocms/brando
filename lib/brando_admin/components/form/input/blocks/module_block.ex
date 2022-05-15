@@ -145,18 +145,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                   <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
                 </div>
               <% end %>
+              <h2 class="titlecase"><%= gettext "Advanced" %></h2>
               <div class="button-group-vertical">
                 <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @myself)}>
-                  Fetch missing refs
+                  <%= gettext "Fetch missing refs" %>
                 </button>
                 <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
-                  Reset all block refs
+                  <%= gettext "Reset all block refs" %>
                 </button>
                 <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
-                  Fetch missing vars
+                  <%= gettext "Fetch missing vars" %>
                 </button>
                 <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
-                  Reset all variables
+                  <%= gettext "Reset all variables" %>
                 </button>
               </div>
             </div>

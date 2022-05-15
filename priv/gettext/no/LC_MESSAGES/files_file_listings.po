@@ -20,22 +20,27 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
+#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:69
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
+#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:67
 msgid "Delete file"
 msgstr "Slett fil"
 
+#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:74
 msgid "Delete files"
 msgstr "Slett filer"
 
+#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:65
 msgid "Duplicate file"
 msgstr "Dupliser fil"
 
+#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:38
 msgid "Filename"
 msgstr "Filnavn"
