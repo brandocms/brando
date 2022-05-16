@@ -51,8 +51,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def update(assigns, socket) do
-    selected_options = get_selected_options(assigns.form, assigns.field)
-
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
@@ -66,7 +64,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign(:selected_options, selected_options)
+     |> assign_new(:selected_options, fn ->
+       get_selected_options(assigns.form, assigns.field)
+     end)
      |> assign_input_options()
      |> assign_label()
      |> assign(:narrow, narrow)
