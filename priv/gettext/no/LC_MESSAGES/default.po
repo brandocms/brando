@@ -248,10 +248,6 @@ msgstr "Oppdater side"
 msgid "Error"
 msgstr "Feil"
 
-#: lib/brando_admin/components/form.ex:1231
-msgid "Error while saving form. Please correct marked fields and resubmit"
-msgstr "Feil ved lagring av skjema. Vennligst rett markerte felter og prøv igjen"
-
 #: lib/brando_admin/components/content/list.ex:489
 msgid "Filter"
 msgstr "Filter"
@@ -342,7 +338,8 @@ msgstr "valgt, utfør følgende"
 msgid "Add row"
 msgstr "Legg til rad"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:148
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:119
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:150
 #: lib/brando_admin/components/pages/page_vars.ex:37
 msgid "Advanced"
 msgstr "Avansert"
@@ -472,8 +469,8 @@ msgstr "Oppdater palett"
 msgid "Edit template"
 msgstr "Oppdater mal"
 
-#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:128
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:201
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:157
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:203
 msgid "Edit the entry directly to affect this variable [%{var_name}]"
 msgstr "Oppdater innleggsskjemaet direkte for å endre variablen [%{var_name}]"
 
@@ -580,8 +577,10 @@ msgstr "Bilde"
 msgid "Refresh job queue"
 msgstr "Oppdater jobbkø"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:137
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:145
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:108
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:116
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:139
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:147
 msgid "Reset"
 msgstr "Nullstill"
 
@@ -1270,7 +1269,7 @@ msgstr "ID for palett å velge farger fra"
 msgid "None selected"
 msgstr "Ingen valgt"
 
-#: lib/brando_admin/components/form.ex:1445
+#: lib/brando_admin/components/form.ex:1467
 msgid "Open preview in new window"
 msgstr "Åpne forhåndsvisning i nytt vindu"
 
@@ -1298,8 +1297,8 @@ msgstr "Ressurser — Filer"
 msgid "Edit file"
 msgstr "Rediger fil"
 
-#: lib/brando_admin/components/form.ex:1302
-#: lib/brando_admin/components/form.ex:1356
+#: lib/brando_admin/components/form.ex:1324
+#: lib/brando_admin/components/form.ex:1378
 msgid "Error uploading"
 msgstr "Feil ved opplasting av fil"
 
@@ -1335,11 +1334,11 @@ msgstr "Velg fil"
 msgid "Select similarly typed file from library"
 msgstr "Velg fra lignende filtype i filbiblioteket"
 
-#: lib/brando_admin/components/form.ex:1359
+#: lib/brando_admin/components/form.ex:1381
 msgid "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr "Tjeneren avviste filtype [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
 
-#: lib/brando_admin/components/form.ex:1305
+#: lib/brando_admin/components/form.ex:1327
 msgid "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr "Tjeneren avviste filtype [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
 
@@ -1347,19 +1346,21 @@ msgstr "Tjeneren avviste filtype [%{rejected_type}].<br><br>Tillatte typer er:<b
 msgid "Upload file"
 msgstr "Last opp fil"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:126
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:128
 msgid "Block description"
 msgstr "Beskrivelse av blokk"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:151
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:153
 msgid "Fetch missing refs"
 msgstr "Hent manglende ref.blokker"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:157
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:159
 msgid "Fetch missing vars"
 msgstr "Hent manglende variabler"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:126
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:128
 msgid "Helpful for collapsed blocks"
 msgstr "Nyttig for skjulte blokker"
 
@@ -1367,14 +1368,18 @@ msgstr "Nyttig for skjulte blokker"
 msgid "Missing option"
 msgstr "Alternativ mangler"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:154
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:156
 msgid "Reset all block refs"
 msgstr "Tilbakestill alle ref.blokker"
 
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:160
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:162
 msgid "Reset all variables"
 msgstr "Tilbakestill alle variabler"
 
 #: lib/brando_admin/components/form.ex:715
 msgid "Uploading"
 msgstr "Laster opp"
+
+#: lib/brando_admin/components/form.ex:1233
+msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
+msgstr "Feil ved lagring av skjema. Vennligst rett markerte felter og prøv igjen<br><br>Felter merket ugyldige:"

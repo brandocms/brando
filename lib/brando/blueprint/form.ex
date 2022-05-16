@@ -483,13 +483,33 @@ defmodule Brando.Blueprint.Form do
     |> List.first()
   end
 
+  def get_field(field, %__MODULE__{tabs: tabs}) do
+    for tab <- tabs,
+        %__MODULE__.Fieldset{fields: inputs} <- tab.fields do
+      find_field_normalized(inputs, field)
+    end
+    |> Enum.reject(&is_nil(&1))
+    |> List.first()
+  end
+
   def default_query(id), do: %{matches: %{id: id}}
 
   defp find_field(inputs, field) do
     Enum.find(inputs, fn
       %{name: name, type: :image} -> "#{name}_id" == to_string(field)
+      %{name: name, type: :file} -> "#{name}_id" == to_string(field)
       %{name: name} -> name == field
       %{field: subform_field} -> subform_field == field
+    end)
+  end
+
+  defp find_field_normalized(inputs, field) do
+    Enum.find(inputs, fn
+      %{name: name} ->
+        to_string(name) == String.replace(to_string(field), "_id", "")
+
+      %{field: subform_field} ->
+        to_string(subform_field) == String.replace(to_string(field), "_id", "")
     end)
   end
 end

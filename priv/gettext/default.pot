@@ -296,11 +296,6 @@ msgid "Error"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form.ex:1231
-msgid "Error while saving form. Please correct marked fields and resubmit"
-msgstr ""
-
-#, elixir-autogen, elixir-format
 #: lib/brando_admin/components/content/list.ex:489
 msgid "Filter"
 msgstr ""
@@ -409,7 +404,8 @@ msgid "Add row"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:148
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:119
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:150
 #: lib/brando_admin/components/pages/page_vars.ex:37
 msgid "Advanced"
 msgstr ""
@@ -566,8 +562,8 @@ msgid "Edit template"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:128
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:201
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:157
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:203
 msgid "Edit the entry directly to affect this variable [%{var_name}]"
 msgstr ""
 
@@ -699,8 +695,10 @@ msgid "Refresh job queue"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:137
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:145
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:108
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:116
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:139
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:147
 msgid "Reset"
 msgstr ""
 
@@ -1523,7 +1521,7 @@ msgid "None selected"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form.ex:1445
+#: lib/brando_admin/components/form.ex:1467
 msgid "Open preview in new window"
 msgstr ""
 
@@ -1558,8 +1556,8 @@ msgid "Edit file"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form.ex:1302
-#: lib/brando_admin/components/form.ex:1356
+#: lib/brando_admin/components/form.ex:1324
+#: lib/brando_admin/components/form.ex:1378
 msgid "Error uploading"
 msgstr ""
 
@@ -1604,12 +1602,12 @@ msgid "Select similarly typed file from library"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form.ex:1359
+#: lib/brando_admin/components/form.ex:1381
 msgid "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form.ex:1305
+#: lib/brando_admin/components/form.ex:1327
 msgid "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
 
@@ -1619,22 +1617,24 @@ msgid "Upload file"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:126
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:128
 msgid "Block description"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:151
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:153
 msgid "Fetch missing refs"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:157
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:159
 msgid "Fetch missing vars"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:126
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:128
 msgid "Helpful for collapsed blocks"
 msgstr ""
 
@@ -1644,16 +1644,21 @@ msgid "Missing option"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:154
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:156
 msgid "Reset all block refs"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:160
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:162
 msgid "Reset all variables"
 msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form.ex:715
 msgid "Uploading"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando_admin/components/form.ex:1233
+msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr ""

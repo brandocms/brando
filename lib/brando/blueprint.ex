@@ -386,8 +386,8 @@ defmodule Brando.Blueprint do
     |> Enum.map(&get_relation_key/1)
   end
 
-  def get_required_assets(rels) do
-    rels
+  def get_required_assets(assets) do
+    assets
     |> Enum.filter(&Map.get(&1.opts, :required))
     |> Enum.map(&get_relation_key/1)
   end

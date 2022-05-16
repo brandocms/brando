@@ -1212,7 +1212,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:changeset, changeset)
-         |> push_errors(changeset, form)}
+         |> push_errors(changeset, form, schema)}
     end
   end
 
@@ -1226,9 +1226,13 @@ defmodule BrandoAdmin.Components.Form do
   defp is_loaded_image(%Ecto.Association.NotLoaded{}), do: false
   defp is_loaded_image(%Brando.Images.Image{}), do: true
 
-  defp push_errors(socket, changeset, form) do
+  defp push_errors(socket, changeset, form, schema) do
     error_title = gettext("Error")
-    error_notice = gettext("Error while saving form. Please correct marked fields and resubmit")
+
+    error_notice =
+      gettext(
+        "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
+      )
 
     traversed_errors =
       traverse_errors(changeset, fn
@@ -1243,11 +1247,16 @@ defmodule BrandoAdmin.Components.Form do
       |> List.first()
       |> Brando.Blueprint.Form.get_tab_for_field(form)
 
+    translated_error_keys = translate_error_keys(error_keys, form, schema)
+
+    error_list =
+      for key <- translated_error_keys do
+        "<li class=\"text-mono\">#{key}</li>"
+      end
+
     error_msg = """
-    #{error_notice}<br>
-    <br>
-    Fields marked invalid:<br><br>
-    #{inspect(error_keys, pretty: true)}
+    #{error_notice}<br><br>
+    <ul class="error-keys">#{error_list}</ul>
     """
 
     require Logger
@@ -1265,6 +1274,38 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
+  end
+
+  defp translate_error_keys(error_keys, form, schema) do
+    gettext_module = schema.__modules__().gettext
+
+    gettext_domain =
+      String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}_forms")
+
+    for error_key <- error_keys do
+      case Brando.Blueprint.Form.get_field(error_key, form) do
+        nil ->
+          require Logger
+
+          Logger.error("""
+          (!) Could not get field `#{inspect(error_key)}` from form:
+
+          #{inspect(form, pretty: true)}
+          """)
+
+          String.capitalize(to_string(error_key))
+
+        field ->
+          msgid =
+            if field.__struct__ == Brando.Blueprint.Form.Subform do
+              field.label
+            else
+              Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
+            end
+
+          Gettext.dgettext(gettext_module, gettext_domain, msgid)
+      end
+    end
   end
 
   def handle_image_progress(
