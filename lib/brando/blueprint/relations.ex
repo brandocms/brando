@@ -144,8 +144,15 @@ defmodule Brando.Blueprint.Relations do
       ) do
     # A hack to remove an embeds_one, specifically an image
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, nil)
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+      "" ->
+        if Map.get(opts, :required) do
+          cast_embed(changeset, name, required: true)
+        else
+          put_embed(changeset, name, nil)
+        end
+
+      _ ->
+        cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
     end
   end
 
@@ -157,8 +164,15 @@ defmodule Brando.Blueprint.Relations do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, [])
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+      "" ->
+        if Map.get(opts, :required) do
+          cast_embed(changeset, name, required: true)
+        else
+          put_embed(changeset, name, [])
+        end
+
+      _ ->
+        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
     end
   end
 
@@ -170,8 +184,15 @@ defmodule Brando.Blueprint.Relations do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, [])
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+      "" ->
+        if Map.get(opts, :required) do
+          cast_embed(changeset, name, required: true)
+        else
+          put_embed(changeset, name, [])
+        end
+
+      _ ->
+        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
     end
   end
 
