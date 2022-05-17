@@ -5,7 +5,7 @@ import IdleJs from 'idle-js'
 export default class Presence {
   constructor (app) {
     this.app = app
-    this.lobbyPresences = {}    
+    this.lobbyPresences = {}
   }
 
   setUsers (users) {
@@ -33,6 +33,7 @@ export default class Presence {
       }
 
       if (this.lobbyPresences[user.id]) {
+        $user.dataset.userUrl = this.lobbyPresences[user.id].metas[0].url
         if (this.lobbyPresences[user.id].metas[0].active) {
           $user.dataset.userStatus = 'online'
         } else {
@@ -56,6 +57,7 @@ export default class Presence {
         let userEl = document.createRange().createContextualFragment(`
             <a
               data-idx="${u.id}"
+              data-user-url=""
               data-user-status="offline"
               class="user-presence">
               <div class="avatar">
@@ -97,6 +99,12 @@ export default class Presence {
   setActive (status) {
     if (this.app.lobbyChannel) {
       this.app.lobbyChannel.push('user:state', { active: status })
+    }
+  }
+
+  setUrl (url) {
+    if (this.app.lobbyChannel) {
+      this.app.lobbyChannel.push('user:state', { url })
     }
   }
 }

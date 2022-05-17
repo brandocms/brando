@@ -154,6 +154,7 @@ export default (hooks, enableDebug = true) => {
           app.navigation.checkFullscreen()
           gsap.to($main, { clearProps: 'opacity' })
           app.moonwalk.ready()
+          app.presence.setUrl(detail.to)
         }
       })      
 

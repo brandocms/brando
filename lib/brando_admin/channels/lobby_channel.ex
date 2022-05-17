@@ -48,10 +48,19 @@ defmodule Brando.LobbyChannel do
   end
 
   def handle_in("user:state", %{"active" => active}, socket) do
-    Brando.presence().update(socket, socket.assigns.user_id, %{
-      online_at: inspect(System.system_time(:second)),
-      active: active
-    })
+    Brando.presence().update(socket, socket.assigns.user_id, fn state ->
+      %{state | online_at: inspect(System.system_time(:second)), active: active}
+    end)
+
+    {:reply, :ok, socket}
+  end
+
+  def handle_in("user:state", %{"url" => url}, socket) do
+    uri = URI.parse(url)
+
+    Brando.presence().update(socket, socket.assigns.user_id, fn state ->
+      %{state | online_at: inspect(System.system_time(:second)), url: uri.path}
+    end)
 
     {:reply, :ok, socket}
   end
@@ -60,7 +69,8 @@ defmodule Brando.LobbyChannel do
     {:ok, _} =
       Brando.presence().track(socket, socket.assigns.user_id, %{
         online_at: inspect(System.system_time(:second)),
-        active: true
+        active: true,
+        url: nil
       })
 
     push(socket, "presence_state", Brando.presence().list(socket))
