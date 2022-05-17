@@ -86,6 +86,17 @@
       display: none;
     }
   }
+
+  button.btn-palette {
+    border: none;
+    text-transform: uppercase;
+    color: var(--brando-color-blue);
+    border-bottom: 1px solid transparent;
+
+    &:hover {
+      border-bottom: 1px solid var(--brando-color-blue);
+    }
+  }
 }
 
 .block {

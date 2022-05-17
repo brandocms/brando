@@ -138,7 +138,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         bg_color={@selected_palette && "#{@first_color && @first_color.hex_value <> "22" || "transparent"}"}>
         <:description>
           <%= if @selected_palette do %>
-            <%= @selected_palette.name %>
+            <button
+              type="button"
+              class="btn-palette"
+              phx-click={show_modal("#block-#{@uid}_config")}>
+              <%= @selected_palette.name %>
+            </button>
             <div class="circle-stack">
               <%= for color <- Enum.reverse(@selected_palette.colors) do %>
                 <span
@@ -153,7 +158,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           <% else %>
             <%= gettext "No palette selected" %>
           <% end %>
-
         </:description>
         <:config>
           <%= if @selected_palette do %>
