@@ -117,7 +117,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     {index, ""} = Integer.parse(index_binary)
 
-    new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
+    new_data =
+      changeset
+      |> get_blocks_data()
+      |> List.insert_at(index, new_block)
+
     updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
@@ -147,7 +151,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     {index, ""} = Integer.parse(index_binary)
 
-    new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
+    new_data =
+      changeset
+      |> get_blocks_data()
+      |> List.insert_at(index, new_block)
+
     updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
@@ -191,7 +199,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     {index, ""} = Integer.parse(index_binary)
 
-    new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
+    new_data =
+      changeset
+      |> get_blocks_data()
+      |> List.insert_at(index, new_block)
+
     updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
@@ -222,6 +234,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> replace_uids()
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
+
     updated_changeset = put_change(changeset, data_field, new_data)
 
     send_update(BrandoAdmin.Components.Form,
@@ -331,7 +344,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             class="switch small inverse"
             uid={@uid}
             id_prefix="base_block"
-            click={@hidden && JS.remove_class("disabled", to: "#base-block-#{@uid}") || JS.add_class("disabled", to: "#base-block-#{@uid}")}>
+            click={toggle_block(@hidden, @uid)}>
             <Input.input type={:checkbox} form={@block} field={:hidden} uid={@uid} id_prefix="base_block" />
             <div class="slider round"></div>
           </Form.label>
@@ -389,7 +402,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             class="block-action toggler"
             uid={@uid}
             id_prefix="base_block"
-            click={@marked_as_deleted && JS.remove_class("deleted", to: "#base-block-#{@uid}") || JS.add_class("deleted", to: "#base-block-#{@uid}")}>
+            click={toggle_deleted(@marked_as_deleted, @uid)}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
             <Input.input type={:checkbox} form={@block} field={:marked_as_deleted} uid={@uid} id_prefix="base_block" />
           </Form.label>
@@ -398,7 +411,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             form={@block}
             field={:collapsed}
             class="block-action toggler"
-            click={@collapsed && JS.remove_class("collapsed", to: "#base-block-#{@uid}") || JS.add_class("collapsed", to: "#base-block-#{@uid}")}
+            click={toggle_collapsed(@collapsed, @uid)}
             uid={@uid}
             id_prefix="base_block"
             phx-page-loading>
@@ -413,6 +426,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       </div>
     </div>
     """
+  end
+
+  defp toggle_block(hidden, uid) do
+    (hidden && JS.remove_class("disabled", to: "#base-block-#{uid}")) ||
+      JS.add_class("disabled", to: "#base-block-#{uid}")
+  end
+
+  defp toggle_deleted(marked_as_deleted, uid) do
+    (marked_as_deleted && JS.remove_class("deleted", to: "#base-block-#{uid}")) ||
+      JS.add_class("deleted", to: "#base-block-#{uid}")
+  end
+
+  defp toggle_collapsed(collapsed, uid) do
+    (collapsed && JS.remove_class("collapsed", to: "#base-block-#{uid}")) ||
+      JS.add_class("collapsed", to: "#base-block-#{uid}")
   end
 
   def dynamic_block(assigns) do
