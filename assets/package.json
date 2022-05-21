@@ -1,6 +1,6 @@
 {
   "name": "@brandocms/brandojs",
-  "version": "0.51.0",
+  "version": "0.52.0",
   "main": "src/index.js",
   "scripts": {
     "dev": "vite",
