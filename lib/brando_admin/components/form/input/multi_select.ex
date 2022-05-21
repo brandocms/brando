@@ -64,9 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign_new(:selected_options, fn ->
-       get_selected_options(assigns.form, assigns.field)
-     end)
+     |> assign_new(:selected_options, fn -> get_selected_options(assigns.form, assigns.field) end)
      |> assign_input_options()
      |> assign_label()
      |> assign(:narrow, narrow)
@@ -218,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
             <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
-              <.get_label opt={opt} />
+              <.get_label opt={opt} target={@myself} deletable />
             </.labels>
           </div>
         <% end %>
@@ -297,7 +295,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <div class="selected-labels">
                   <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
                   <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
-                    <.get_label opt={opt} />
+                    <.get_label opt={opt} target={@myself} deletable />
                   </.labels>
                 </div>
               <% else %>
@@ -397,6 +395,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp get_value(%{id: value}), do: value
 
   defp get_label(%{opt: %{label: _}} = assigns) do
+    assigns = assign_new(assigns, :deletable, fn -> false end)
+
     ~H"""
     — <%= @opt.label %>
     """
@@ -410,10 +410,23 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_label(%{opt: entry} = assigns) do
     identifier = entry.__struct__.__identifier__(entry)
-    assigns = assign(assigns, :identifier, identifier)
+
+    assigns =
+      assigns
+      |> assign(:identifier, identifier)
+      |> assign_new(:deletable, fn -> false end)
+      |> assign_new(:target, fn -> nil end)
 
     ~H"""
     <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <%= if @deletable do %>
+      <button class="delete tiny" type="button" value={entry.id} phx-click={JS.push("select_option", target: @target)}>
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+        </svg>
+      </button>
+    <% end %>
     """
   end
 

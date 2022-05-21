@@ -3,6 +3,29 @@ a.primary {
   font-weight: 400;
 }
 
+button.delete.tiny {
+  margin-left: 8px;
+  border: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--brando-color-peach);
+
+  &:hover {
+    svg {
+      line {
+        stroke: var(--brando-color-peach);
+      }
+    }
+  }
+  
+  svg {
+    width: 6px;
+    height: 6px;
+    margin-left: -1px;
+  }
+}
+
 button.primary, a.primary {
   font-size: 18px;
   color: theme(colors.peach);
