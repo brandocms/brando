@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
             <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
-              <.get_label opt={opt} target={@myself} deletable />
+              <.get_label opt={opt} />
             </.labels>
           </div>
         <% end %>
