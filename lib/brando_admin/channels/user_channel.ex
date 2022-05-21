@@ -17,8 +17,13 @@ defmodule Brando.UserChannel do
   def join("user:" <> user_id, _params, socket) do
     assigned_user_id = socket.assigns.user_id
 
+    vsn =
+      Brando.otp_app()
+      |> Application.spec(:vsn)
+      |> to_string()
+
     if assigned_user_id == String.to_integer(user_id) do
-      {:ok, %{}, socket}
+      {:ok, %{vsn: vsn}, socket}
     else
       :error
     end

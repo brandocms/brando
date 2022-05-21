@@ -19,6 +19,8 @@ import initializeLiveSocket from './initializeLiveSocket'
 import configureFader from './config/FADER'
 import configureMoonwalk from './config/MOONWALK'
 
+import { alertError } from './alerts'
+
 const prmEl = Dom.find('meta[name="prefers_reduced_motion"]')
 const PREFERS_REDUCED_MOTION = prmEl ? (prmEl.getAttribute('content') === 'true' ? true : false) : false
 
@@ -254,7 +256,17 @@ export default (hooks, enableDebug = true) => {
         gsap.to($progressWrapper, { height: getHeights() })
       })
 
-      app.userChannel.join().receive('ok', () => {
+      app.userChannel.join().receive('ok', params => {
+        if (app.vsn) {
+          // we've connected before. see if versions match!
+          if (app.vsn !== vsn) {
+            // new version, alert user
+            alertError('👀', 'The application was updated while you were logged in. It is recommended to refresh the page, but make sure you have saved your work first.')
+          }
+        } else {
+          app.vsn = params.vsn
+        }
+
         console.debug('==> Joined user_channel')
       })
 
