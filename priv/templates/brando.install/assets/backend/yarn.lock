@@ -49,20 +49,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.42.3":
-  version "3.42.4"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.42.4.tgz#030e8d3f86f13f8ad67913b8f04bb905642a52cc"
-  integrity sha512-gKktFLmlFuT93H/6glX/jrpir4bXtzvRWx7e4hshueH4YN3difGZzxyfnGyCP3hszmvJAkMJIrV7ql+67Glkvw==
-  dependencies:
-    "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^3.1.5"
-    gsap "3.6.1"
-    lodash.defaultsdeep "^4.6.1"
-
-"@brandocms/jupiter@^3.44.0":
-  version "3.44.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.44.0.tgz#508c612c14470f87d1196272fcb25f4dc132f855"
-  integrity sha512-LSkuGfhi7Z1jfRzEKMG8LWzjHB9nfiRItKoLflUk+tPMveIPV1HaA+h4OyTZFBGSwDR6iYkIiADtPibjBNK66Q==
+"@brandocms/jupiter@^3.42.3", "@brandocms/jupiter@^3.45.0":
+  version "3.45.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.45.0.tgz#119afc43638f90fba3f0bc7fb59f62b0d3608ccd"
+  integrity sha512-zo0uHuXbZlz58cATre/QhyekbW0Fl7RgQ73s3lL3Ezjvd2vAyJ5sxMzuDO6iuYevtA4Qk4WCxIOmWzWxUXBVXQ==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -732,11 +722,6 @@ balanced-match@^1.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
-body-scroll-lock@^3.1.5:
-  version "3.1.5"
-  resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-3.1.5.tgz#c1392d9217ed2c3e237fee1e910f6cdd80b7aaec"
-  integrity sha512-Yi1Xaml0EvNA0OYWxXiYNqY24AfWkbA6w5vxE7GWxtKfzIbZM+Qw+aSmkgsbWzbHiy/RCSkUZBplVxTA+E4jJg==
-
 body-scroll-lock@^4.0.0-beta.0:
   version "4.0.0-beta.0"
   resolved "https://registry.yarnpkg.com/body-scroll-lock/-/body-scroll-lock-4.0.0-beta.0.tgz#4f78789d10e6388115c0460cd6d7d4dd2bbc4f7e"
@@ -1041,11 +1026,6 @@ graceful-fs@^4.1.3:
   version "4.2.8"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.8.tgz#e412b8d33f5e006593cbd3cee6df9f2cebbe802a"
   integrity sha512-qkIilPUYcNhJpd33n0GBXTB1MMPp14TxEsEs0pTrsSVucApsYzW5V+Q8Qxhik6KU3evy+qkAAowTByymK0avdg==
-
-gsap@3.6.1:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.6.1.tgz#618f2338044d2b78b8cbced8ea8bf246d1cf6407"
-  integrity sha512-hCkjk7UVbeEmlpFbiy7lIsh742bwVlMhdCnnQ1CvVOAdURyPX8hXjFZGh/0YzUyAcWPyJPE0/paMhSYtLhGlfA==
 
 gsap@3.8.0, gsap@^3.8.0:
   version "3.8.0"
