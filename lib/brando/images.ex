@@ -147,4 +147,32 @@ defmodule Brando.Images do
     Logger.error(inspect(formats, pretty: true))
     Logger.error(inspect(sizes, pretty: true))
   end
+
+  def duplicate_image(image_id, user) do
+    original_image = get_image!(image_id)
+
+    src_file =
+      :media_path
+      |> Brando.config()
+      |> Path.join(original_image.path)
+
+    new_file = Brando.Utils.unique_filename(original_image.path)
+
+    dest_file =
+      :media_path
+      |> Brando.config()
+      |> Path.join(new_file)
+
+    with :ok <- File.cp(src_file, dest_file) do
+      new_image_params =
+        original_image
+        |> Brando.Utils.map_from_struct()
+        |> Map.drop([:id, :inserted_at, :updated_at])
+        |> Map.put(:path, new_file)
+        |> Map.put(:sizes, %{})
+        |> Map.put(:status, :unprocessed)
+
+      create_image(new_image_params, user)
+    end
+  end
 end

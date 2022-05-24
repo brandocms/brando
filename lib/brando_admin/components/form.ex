@@ -731,6 +731,7 @@ defmodule BrandoAdmin.Components.Form do
                   height={@edit_image.image.height}
                   src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
               </figure>
+              <figcaption class="tiny"><%= @edit_image.image.path %></figcaption>
             <% else %>
               <div class="img-placeholder">
                 <div class="placeholder-wrapper">
@@ -761,6 +762,16 @@ defmodule BrandoAdmin.Components.Form do
               <%= gettext "Select existing image" %>
             </button>
 
+            <%= if @edit_image.image do %>
+              <button
+                class="secondary"
+                type="button"
+                phx-click={duplicate_image(@edit_image, @myself)}
+                phx-page-loading>
+                <%= gettext "Duplicate image" %>
+              </button>
+            <% end %>
+
             <button
               class="secondary"
               type="button"
@@ -788,6 +799,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def duplicate_image(js \\ %JS{}, edit_image, target) do
+    js
+    |> JS.push("duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
+  end
+
   def reset_file_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_file_field", target: target)
@@ -797,6 +813,18 @@ defmodule BrandoAdmin.Components.Form do
   def reset_image_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_image_field", target: target)
+    |> toggle_drawer("#image-drawer")
+  end
+
+  def close_file(js \\ %JS{}) do
+    js
+    |> JS.dispatch("submit", to: "#file-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> toggle_drawer("#file-drawer")
+  end
+
+  def close_image(js \\ %JS{}) do
+    js
+    |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")
   end
 
@@ -849,16 +877,22 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket_with_file_uploads, :uploads, fn -> nil end)
   end
 
-  def close_file(js \\ %JS{}) do
-    js
-    |> JS.dispatch("submit", to: "#file-drawer-form", detail: %{bubbles: true, cancelable: true})
-    |> toggle_drawer("#file-drawer")
-  end
+  def handle_event(
+        "duplicate_image",
+        %{"image_id" => image_id},
+        %{assigns: %{singular: singular, current_user: current_user}} = socket
+      ) do
+    {:ok, image} = Brando.Images.duplicate_image(image_id, current_user)
 
-  def close_image(js \\ %JS{}) do
-    js
-    |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
-    |> toggle_drawer("#image-drawer")
+    send_update(__MODULE__,
+      id: "#{singular}_form",
+      action: :update_edit_image,
+      image: image
+    )
+
+    send(self(), {:toast, gettext("Image duplicated")})
+
+    {:noreply, socket}
   end
 
   def handle_event("change_preview_target", %{"target" => target}, socket) do

@@ -19,6 +19,12 @@
   }
 }
 
+figcaption.tiny {
+  margin-top: 3px;
+  font-size: 8px;
+  font-family: 'Mono';
+}
+
 .image-drawer-preview {
   position: relative;
 
