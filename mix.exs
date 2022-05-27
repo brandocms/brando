@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.52.0-dev"
+  @version "0.52.0"
   @description "Brando CMS"
 
   def project do
@@ -28,7 +28,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.6.9"},
+      {:phoenix, "~> 1.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
       {:ecto, "~> 3.8"},

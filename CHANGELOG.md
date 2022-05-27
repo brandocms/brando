@@ -1,6 +1,6 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.52.0-dev
+## 0.52.0
 
 * First LV version
 * Config: Add `admin_module: MyAppAdmin` to your `config/brando.exs`
