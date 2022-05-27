@@ -87,11 +87,27 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Module
+  mutation :create, Module do
+    fn entry ->
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:modules",
+        {entry, [:module, :created]}
+      )
+
+      {:ok, entry}
+    end
+  end
 
   mutation :update, Module do
     fn entry ->
       Villain.update_module_in_fields(entry.id)
+
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:modules",
+        {entry, [:module, :updated]}
+      )
 
       {:ok, entry}
     end

@@ -21,6 +21,10 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
 
   def mount(socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules", link: true)
+    end
+
     {:ok,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})

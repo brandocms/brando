@@ -37,19 +37,54 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     {:ok, assign(socket, insert_index: 0)}
   end
 
+  def update(%{action: :refresh_palettes}, socket) do
+    {:ok, refresh_palettes(socket)}
+  end
+
+  def update(%{block: block} = assigns, socket) do
+    block_data =
+      block
+      |> inputs_for(:data)
+      |> List.first()
+
+    blocks = v(block_data, :blocks)
+    block_forms = inputs_for_blocks(block_data, :blocks) || []
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:uid, v(block, :uid))
+     |> assign(:target_id, v(block_data, :target_id))
+     |> assign(:blocks, blocks || [])
+     |> assign(:block_forms, block_forms)
+     |> assign(:block_data, block_data)
+     |> assign_available_palettes()
+     |> assign_palette_options()
+     |> assign_selected_palette()}
+  end
+
   def assign_available_palettes(socket) do
     assign_new(socket, :available_palettes, fn ->
       palette_namespace = Keyword.get(socket.assigns.opts, :palette_namespace, "all")
-
-      {:ok, available_palettes} =
-        Content.list_palettes(%{
-          filter: %{namespace: palette_namespace},
-          order: "asc namespace, asc sequence, desc inserted_at",
-          cache: {:ttl, :infinite}
-        })
-
-      available_palettes
+      get_available_palettes(palette_namespace)
     end)
+  end
+
+  defp get_available_palettes(palette_namespace) do
+    Content.list_palettes!(%{
+      filter: %{namespace: palette_namespace},
+      order: "asc namespace, asc sequence, desc inserted_at",
+      cache: {:ttl, :infinite}
+    })
+  end
+
+  defp refresh_palettes(socket) do
+    palette_namespace = Keyword.get(socket.assigns.opts, :palette_namespace, "all")
+    available_palettes = get_available_palettes(palette_namespace)
+
+    socket
+    |> assign(:available_palettes, available_palettes)
+    |> assign(:palette_options, prepare_palettes(available_palettes))
   end
 
   def assign_palette_options(%{assigns: %{available_palettes: available_palettes}} = socket) do
@@ -87,35 +122,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         %{assigns: %{available_palettes: available_palettes, block_data: block_data}} = socket
       ) do
     selected_palette = get_palette(v(block_data, :palette_id), available_palettes)
+    first_color = List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
 
     socket
     |> assign(:selected_palette, selected_palette)
-    |> assign(
-      :first_color,
-      List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
-    )
-  end
-
-  def update(%{block: block} = assigns, socket) do
-    block_data =
-      block
-      |> inputs_for(:data)
-      |> List.first()
-
-    blocks = v(block_data, :blocks)
-    block_forms = inputs_for_blocks(block_data, :blocks) || []
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:uid, v(block, :uid))
-     |> assign(:target_id, v(block_data, :target_id))
-     |> assign(:blocks, blocks || [])
-     |> assign(:block_forms, block_forms)
-     |> assign(:block_data, block_data)
-     |> assign_available_palettes()
-     |> assign_palette_options()
-     |> assign_selected_palette()}
+    |> assign(:first_color, first_color)
   end
 
   def render(assigns) do

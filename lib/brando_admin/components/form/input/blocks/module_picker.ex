@@ -18,6 +18,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
     {:ok, assign(socket, active_namespace: nil)}
   end
 
+  def update(%{action: :refresh_modules}, socket) do
+    {:ok, assign_modules(socket)}
+  end
+
   def update(assigns, socket) do
     {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
 
@@ -29,6 +33,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
        |> Brando.Utils.split_by(:namespace)
        |> Enum.map(&__MODULE__.sort_namespace/1)
      end)}
+  end
+
+  def assign_modules(socket) do
+    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+
+    modules_by_namespace =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    assign(socket, :modules_by_namespace, modules_by_namespace)
   end
 
   def render(assigns) do

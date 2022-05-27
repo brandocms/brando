@@ -1,17 +1,16 @@
 ## 0.52.0-dev
 
+* Pull in new `mix.exs` and rename to your application's names
+  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/mix.exs
+
+* `mix deps.get` -- you might need to unlock some deps, i.e: `mix deps.unlock phoenix_ecto`
+
 * Switch your backend gettext module in `gettext.ex` from 
   `YourApp.Backend.Gettext` to `YourAppAdmin.Gettext`
 
 * Say bye to your Vue backend. Pull in the new backend with
   `$ mv assets/backend assets/backend_old`
   `$ mix brando.gen.backend`
-
-* Update your `mix.exs` deps. See https://github.com/brandocms/brando/blob/master/mix.exs
-
-* Clean deps and pull in new ones:
-  `$ rm -rf deps _build`
-  `$ mix deps.get` -- might just nuke `mix.lock` first.
 
 * Replace `use Brando.I18n.Helpers` with `import Brando.I18n.Helpers`
 
@@ -31,13 +30,7 @@
 * Pull down a new `endpoint.ex` from:
   https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web/endpoint.ex
 
-* Switch out your admin socket in `endpoint.ex`:
-  ```
-  socket "/admin/socket", BrandoAdmin.AdminSocket,
-    websocket: true,
-    longpoll: true
-  ```
-  and delete the admin channel (or the whole dir, if you don't have anything of your own there):
+* Delete the admin channel (or the whole dir, if you don't have anything of your own there):
   `$ rm -rf lib/my_app_web/channels`
 
 * Delete your old session controller:

@@ -137,6 +137,23 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
+  defp handle_info({_module, [:module, action]}, socket)
+       when action in [:created, :updated] do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+
+    for %{name: field} <- schema.__villain_fields__() do
+      target_id = "#{singular}_form_form-#{field}-blocks-module-picker"
+
+      send_update(BrandoAdmin.Components.Form.Input.Blocks.ModulePicker,
+        id: target_id,
+        action: :refresh_modules
+      )
+    end
+
+    {:halt, socket}
+  end
+
   defp handle_info({:toast, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.Toast.send_to(current_user, message)
     {:halt, socket}
@@ -161,7 +178,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
     send(self(), {:toast, toast_message})
     # send a message that the language has switched. we use this
-    # for special view like identity_live and seo_live
+    # for special views like identity_live and seo_live
     send(self(), {:content_language, language})
 
     {:halt, assign(socket, :current_user, updated_current_user)}
