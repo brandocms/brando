@@ -951,13 +951,14 @@ defmodule Brando.Villain do
   end
 
   def reapply_module_data(module, original_block) do
-    # find missing refs
-    current_refs = original_block.refs || []
-    current_ref_names = Enum.map(current_refs, & &1.name)
-
     module_refs = module.refs || []
     module_ref_names = Enum.map(module_refs, & &1.name)
 
+    # drop old refs
+    current_refs = Enum.filter(original_block.refs, &(&1.name in module_ref_names)) || []
+    current_ref_names = Enum.map(current_refs, & &1.name)
+
+    # find missing refs
     missing_ref_names = module_ref_names -- current_ref_names
     missing_refs = Enum.filter(module_refs, &(&1.name in missing_ref_names))
 
@@ -975,27 +976,34 @@ defmodule Brando.Villain do
 
     new_vars = current_vars ++ missing_vars
 
-    reapplied_refs = reapply_refs(module_refs, new_refs)
-    reapplied_vars = reapply_vars(module_vars, new_vars)
+    reapplied_refs = reapply_refs(module, module_refs, new_refs)
+    reapplied_vars = reapply_vars(module, module_vars, new_vars)
 
     original_block
     |> put_in([Access.key(:refs)], reapplied_refs)
     |> put_in([Access.key(:vars)], reapplied_vars)
   end
 
-  def reapply_refs(module_refs, refs) do
+  def reapply_refs(module, module_refs, refs) do
     Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
       ref_src = Enum.find(module_refs, &(&1.name == ref_name))
 
       if ref_src == nil do
-        raise "Ref #{ref_name} not found in module refs!"
+        raise """
+
+        Ref #{ref_name} not found in module refs!
+
+        Module: ##{module.id} [#{module.namespace}] #{module.name}
+
+        #{inspect(module, pretty: true)}
+        """
       end
 
       block_module.apply_ref(ref_src.data.__struct__, ref_src, ref)
     end)
   end
 
-  def reapply_vars(module_vars, vars) do
+  def reapply_vars(_module, module_vars, vars) do
     Enum.map(vars, fn %{key: var_key, __struct__: _var_module} = var ->
       var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
       protected_attrs = [:value, :value_id]
