@@ -15,7 +15,7 @@ main {
   }
 
   > .progress {
-    @container;
+    @space container;
     z-index: 999999;
     color: theme(colors.peach);
     background-color: #000080e6;

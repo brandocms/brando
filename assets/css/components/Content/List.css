@@ -214,7 +214,7 @@
     }
 
     .selected {
-      @container;
+      @space container;
       background-color: var(--brando-color-dark);
       color: var(--brando-color-peach);
       display: flex;

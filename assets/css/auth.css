@@ -1,5 +1,5 @@
 .login {
-  @container;
+  @space container;
   height: 100vh;
   position: relative;
   background-color: theme(colors.peachLighter);

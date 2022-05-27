@@ -9,7 +9,7 @@ main {
 }
 
 [b-tpl="example"] {
-  @container;
+  @space container;
 
   .inner {
     @column 8/12 >=ipad_portrait;
@@ -29,7 +29,7 @@ main {
 }
 
 footer {
-  @container;
+  @space container;
   @space margin-top block;
   @space padding-bottom block;
 
