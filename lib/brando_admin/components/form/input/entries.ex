@@ -285,6 +285,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
     assigns =
       assigns
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
       |> assign_new(:select, fn -> false end)
       |> assign_new(:remove, fn -> false end)
       |> assign_new(:selected_identifiers, fn -> [] end)
@@ -305,7 +306,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <section class="cover-wrapper">
         <div class="cover">
-          <img src={@identifier.cover || "/images/admin/avatar.svg"}>
+          <img src={@has_cover? && @identifier.cover || "/images/admin/avatar.svg"}>
         </div>
       </section>
       <section class="content">
