@@ -24,10 +24,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.44.0":
-  version "3.44.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.44.0.tgz#508c612c14470f87d1196272fcb25f4dc132f855"
-  integrity sha512-LSkuGfhi7Z1jfRzEKMG8LWzjHB9nfiRItKoLflUk+tPMveIPV1HaA+h4OyTZFBGSwDR6iYkIiADtPibjBNK66Q==
+"@brandocms/jupiter@^3.45.0":
+  version "3.45.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.45.0.tgz#119afc43638f90fba3f0bc7fb59f62b0d3608ccd"
+  integrity sha512-zo0uHuXbZlz58cATre/QhyekbW0Fl7RgQ73s3lL3Ezjvd2vAyJ5sxMzuDO6iuYevtA4Qk4WCxIOmWzWxUXBVXQ==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -102,10 +102,10 @@
     "@codemirror/view" "^0.20.0"
     "@lezer/javascript" "^0.16.0"
 
-"@codemirror/lang-markdown@^0.20.0":
-  version "0.20.0"
-  resolved "https://registry.yarnpkg.com/@codemirror/lang-markdown/-/lang-markdown-0.20.0.tgz#527554ccfc328a583d81c3d92b1098d4e5b7fba7"
-  integrity sha512-r345c4CJ9BgoC6W3aSS97fTsRQnLFZPm/Q1ssRyens0ubcVf3i/nWvmg1rlDDIZ7ljyLt5K863aLrko00S6BaA==
+"@codemirror/lang-markdown@^0.20.1":
+  version "0.20.1"
+  resolved "https://registry.yarnpkg.com/@codemirror/lang-markdown/-/lang-markdown-0.20.1.tgz#62cb43e44439d84664c0103fad7e934c85a3197f"
+  integrity sha512-m9pAxcreEf5X2S6l+1a07rvac117DHCmOPRPp0/jih1Byif33LkLrSRObrNym/QyeTMEoE6dwLEutYisGrGaUg==
   dependencies:
     "@codemirror/lang-html" "^0.20.0"
     "@codemirror/language" "^0.20.0"
@@ -243,16 +243,16 @@
   resolved "https://registry.yarnpkg.com/@sphinxxxx/color-conversion/-/color-conversion-2.2.2.tgz#03ecc29279e3c0c832f6185a5bfa3497858ac8ca"
   integrity sha512-XExJS3cLqgrmNBIP3bBw6+1oQ1ksGjFh0+oClDKFYpCCqx/hlqwWO5KO/S63fzUo67SxI9dMrF0y5T/Ey7h8Zw==
 
-"@sveltejs/vite-plugin-svelte@1.0.0-next.44":
-  version "1.0.0-next.44"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.44.tgz#619a16a2f352452e4a45ebcef34d54616a31596c"
-  integrity sha512-n+sssEWbzykPS447FmnNyU5GxEhrBPDVd0lxNZnxRGz9P6651LjjwAnISKr3CKgT9v8IybP8VD0n2i5XzbqExg==
+"@sveltejs/vite-plugin-svelte@1.0.0-next.45":
+  version "1.0.0-next.45"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.45.tgz#de3a205a20f93c9b94c5a9bc272fd2db61efba62"
+  integrity sha512-WLschM2qpa4lSpKR4zTVDJ2AW48u3Gjs3BX5s6aZvLRC3bjBjKcOcGmOG9pLu07C869wdMwZFZ+GroVcx7ZKpw==
   dependencies:
     "@rollup/pluginutils" "^4.2.1"
     debug "^4.3.4"
     deepmerge "^4.2.2"
     kleur "^4.1.4"
-    magic-string "^0.26.1"
+    magic-string "^0.26.2"
     svelte-hmr "^0.14.11"
 
 "@tiptap/core@^2.0.0-beta.176":
@@ -1039,10 +1039,10 @@ magic-string@^0.25.7:
   dependencies:
     sourcemap-codec "^1.4.4"
 
-magic-string@^0.26.1:
-  version "0.26.1"
-  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.26.1.tgz#ba9b651354fa9512474199acecf9c6dbe93f97fd"
-  integrity sha512-ndThHmvgtieXe8J/VGPjG+Apu7v7ItcD5mhEIvOscWjPF/ccOiLxHaSuCAS2G+3x4GKsAbT8u7zdyamupui8Tg==
+magic-string@^0.26.2:
+  version "0.26.2"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.26.2.tgz#5331700e4158cd6befda738bb6b0c7b93c0d4432"
+  integrity sha512-NzzlXpclt5zAbmo6h6jNc8zl2gNRGHvmsZW4IvZhTC4W7k4OlLP+S5YLussa/r3ixNT66KOQfNORlXHSOy/X4A==
   dependencies:
     sourcemap-codec "^1.4.8"
 
@@ -1137,10 +1137,10 @@ phoenix_html@^3.2.0:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-3.2.0.tgz#4a30e5c331a72abababa1f3b81a9fe2c0e5a43d7"
   integrity sha512-zv7PIZk0MPkF0ax8n465Q6w86+sGAy5cTem6KcbkUbdgxGc0y3WZmzkM2bSlYdSGbLEZfjXxos1G72xXsha6xA==
 
-phoenix_live_view@^0.17.9:
-  version "0.17.9"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.17.9.tgz#5d32d11f3c0c762725b4d4513aa2f68d03aa546e"
-  integrity sha512-bCA7+1T3IrUsPgvkQn/GFjppuvKlnZFzOi8bo1vRS/fz57Yky1MMaOux3mDv4LCBWRiXBN6Zycp0/6wDTvL8dg==
+phoenix_live_view@^0.17.10:
+  version "0.17.10"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.17.10.tgz#ea8f849d9b49dd00f2f9a1468038d225c184279a"
+  integrity sha512-oHSoH0IdJ1I5uAYjH2A1KlBmwra6LgcUrHlAP3EEorrZyMpbhBJjNNhXxhBu6dmcxqnaAbwsIXMQRLi6KjJZIg==
 
 picocolors@^0.2.1:
   version "0.2.1"
