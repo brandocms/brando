@@ -115,7 +115,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(filename :: binary) :: atom | no_return()
+  @spec image_type(filename :: binary) :: atom | {:error, binary}
   def image_type(filename) do
     filename
     |> Path.extname()
@@ -172,7 +172,7 @@ defmodule Brando.Images.Utils do
   defp do_image_type(".crw"), do: :crw
   defp do_image_type(".webp"), do: :webp
   defp do_image_type(".avif"), do: :avif
-  defp do_image_type(ext), do: raise("Unknown image type #{ext}")
+  defp do_image_type(ext), do: {:error, ext}
 
   @doc """
   Return joined path of `file` and the :media_path config option
