@@ -71,6 +71,10 @@ defmodule Brando.HTML.Images do
     picture(assigns)
   end
 
+  def picture(%{src: %{path: ""}} = assigns) do
+    ~H""
+  end
+
   def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
       when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
@@ -259,8 +263,22 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :sizes], sizes)
   end
 
-  def add_original_type(attrs, %{path: path}) do
-    Map.put(attrs, :type, Brando.Images.Utils.image_type(path))
+  def add_original_type(attrs, %{path: path} = img) do
+    case Brando.Images.Utils.image_type(path) do
+      {:error, ext} ->
+        raise """
+
+        Unknown image type [#{ext}]
+
+        #{inspect(attrs, pretty: true)}
+
+        #{inspect(img, pretty: true)}
+
+        """
+
+      type ->
+        Map.put(attrs, :type, type)
+    end
   end
 
   defp add_type(attrs, %{sizes: nil}), do: attrs
