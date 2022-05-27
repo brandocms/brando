@@ -512,12 +512,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def text(assigns) do
+    extensions =
+      case input_value(assigns.block, :data).extensions do
+        nil -> "all"
+        extensions when is_list(extensions) -> Enum.join(extensions, "|")
+        extensions -> extensions
+      end
+
     assigns =
       assigns
       |> assign(:text_block_data, List.first(inputs_for(assigns.block, :data)))
       |> assign(:uid, input_value(assigns.block, :uid))
       |> assign(:text_type, input_value(assigns.block, :data).type)
-      |> assign(:extensions, input_value(assigns.block, :data).extensions)
+      |> assign(:extensions, extensions)
 
     ~H"""
     <div
@@ -552,6 +559,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
               %{label: "Paragraph", value: "paragraph"},
               %{label: "Lede", value: "lede"},
             ]]} />
+
+          <Form.array_inputs
+            let={%{value: array_value, name: array_name}}
+            form={@text_block_data}
+            for={:extensions}>
+            <input type="hidden" name={array_name} value={array_value} />
+          </Form.array_inputs>
         </:config>
         <div class={render_classes(["text-block", @text_type])}>
           <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
@@ -577,13 +591,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
                 uid={@uid}
                 id_prefix="block_data"
                 class="tiptap-text"
-                phx_debounce={750} />
-              <Input.input
-                type={:hidden}
-                form={@text_block_data}
-                field={:extensions}
-                uid={@uid}
-                id_prefix="block_data"
                 phx_debounce={750} />
             </div>
           </div>
