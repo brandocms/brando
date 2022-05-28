@@ -142,8 +142,7 @@ defmodule Brando.Content do
         from(q in query, where: ilike(q.key, ^"%#{key}%"))
 
       {:color, color}, query ->
-        from q in query,
-          where: fragment("?::jsonb @> ?::jsonb", field(q, :colors), ^[%{hex_value: color}])
+        from q in query, where: jsonb_contains(q, :colors, [%{hex_value: color}])
 
       {:namespace, namespace}, query ->
         namespace =

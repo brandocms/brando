@@ -122,6 +122,7 @@ defmodule Brando.Datasource do
   """
   alias Brando.Villain
   alias Brando.Blueprint.Identifier
+  import Brando.Query.Helpers
   import Ecto.Query
 
   @doc """
@@ -409,10 +410,10 @@ defmodule Brando.Datasource do
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_refed_t)
+        where: jsonb_contains(s, data_field, t),
+        or_where: jsonb_contains(s, data_field, contained_t),
+        or_where: jsonb_contains(s, data_field, refed_t),
+        or_where: jsonb_contains(s, data_field, contained_refed_t)
     )
   end
 
@@ -452,10 +453,10 @@ defmodule Brando.Datasource do
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_refed_t)
+        where: jsonb_contains(s, data_field, t),
+        or_where: jsonb_contains(s, data_field, contained_t),
+        or_where: jsonb_contains(s, data_field, refed_t),
+        or_where: jsonb_contains(s, data_field, contained_refed_t)
     )
   end
 

@@ -3,6 +3,7 @@ defmodule Brando.Villain do
   use Brando.Query
 
   import Ecto.Query
+  import Brando.Query.Helpers
 
   alias Brando.Cache
   alias Brando.Content
@@ -442,7 +443,7 @@ defmodule Brando.Villain do
     Brando.repo().all(
       from(s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+        where: jsonb_contains(s, data_field, t)
       )
     )
   end
@@ -495,18 +496,12 @@ defmodule Brando.Villain do
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t),
-        or_where:
-          fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^moduled_datasourced_t),
-        or_where:
-          fragment(
-            "?::jsonb @> ?::jsonb",
-            field(s, ^data_field),
-            ^contained_moduled_datasourced_t
-          )
+        where: jsonb_contains(s, data_field, t),
+        or_where: jsonb_contains(s, data_field, contained_t),
+        or_where: jsonb_contains(s, data_field, datasourced_t),
+        or_where: jsonb_contains(s, data_field, contained_datasourced_t),
+        or_where: jsonb_contains(s, data_field, moduled_datasourced_t),
+        or_where: jsonb_contains(s, data_field, contained_moduled_datasourced_t)
     )
   end
 

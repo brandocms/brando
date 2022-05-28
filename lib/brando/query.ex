@@ -110,6 +110,7 @@ defmodule Brando.Query do
   defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
+      import Brando.Query.Helpers
     end
   end
 
