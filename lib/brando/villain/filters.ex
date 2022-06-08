@@ -978,6 +978,17 @@ defmodule Brando.Villain.Filters do
     schema.__absolute_url__(entry)
   end
 
+  @doc """
+  Prefix media url to file/image
+  """
+  def media_url(%Brando.Files.File{} = file, _) do
+    Utils.file_url(file)
+  end
+
+  def media_url(%Brando.Images.Image{} = img, _) do
+    Brando.Utils.img_url(img, :original, prefix: Brando.Utils.media_url())
+  end
+
   def schema(%{__struct__: schema}, _) do
     to_string(schema)
   end
