@@ -7,7 +7,7 @@ var parser = new DOMParser();
 previewSocket.connect();
 var channel = previewSocket.channel("live_preview:" + livePreviewKey)
 
-function forceLazyloadAll () {
+function forceLazyloadAllImages () {
   document.querySelectorAll('[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])').forEach(llImage => {
     llImage.src = llImage.dataset.src;
     if (llImage.dataset.srcset) {
@@ -15,6 +15,13 @@ function forceLazyloadAll () {
     }
     llImage.src = llImage.dataset.src;
     llImage.dataset.llLoaded = '';
+  })
+}
+
+function forceLazyloadAllVideos () {
+  document.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(llVideo => {
+    llVideo.src = llVideo.dataset.src;
+    llVideo.dataset.booted = '';
   })
 }
 
@@ -42,6 +49,7 @@ channel.on('update', function (payload) {
     childrenOnly: true
   });
 
-  forceLazyloadAll()
+  forceLazyloadAllImages();
+  forceLazyloadAllVideos();
 });
 channel.join();
