@@ -336,7 +336,7 @@ defmodule Brando.Villain.Parser do
         aspect_ratio = height / width
 
         params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
-        ~s(<div class="video-wrapper" style="--aspect-ratio: #{aspect_ratio}">
+        ~s(<div class="video-wrapper video-embed" style="--aspect-ratio: #{aspect_ratio}">
              <iframe width="#{width}"
                      height="#{height}"
                      src="//www.youtube.com/embed/#{remote_id}?#{params}"
@@ -357,7 +357,7 @@ defmodule Brando.Villain.Parser do
             0.5625
           end
 
-        ~s(<div class="video-wrapper" style="--aspect-ratio: #{aspect_ratio}">
+        ~s(<div class="video-wrapper video-embed" style="--aspect-ratio: #{aspect_ratio}">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
                      height="281"

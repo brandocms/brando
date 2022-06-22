@@ -93,7 +93,7 @@ defmodule Brando.HTML.Video do
 
     ~H"""
     <div
-      class="video-wrapper"
+      class="video-wrapper video-file"
       data-smart-video
       style={@aspect_ratio}>
       <%= get_play_button(play_button) %>
