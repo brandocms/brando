@@ -130,17 +130,27 @@ p {
 }
 
 .video-wrapper {
-  padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
-  video, iframe {
-    width: 100%;
+  &.video-embed {
+    padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
+
+    video {
+      top: 0;
+      width: 100%;
+      position: absolute;
+      z-index: 1;
+    }
+
+    iframe {
+      top: 0;
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      z-index: 3;
+    }
   }
 
-  iframe {
-    top: 0;
-    height: 100%;
+  video {
     width: 100%;
-    position: absolute;
-    z-index: 3;
   }
 }
 
@@ -152,12 +162,31 @@ p {
 
   [data-cover] {
     position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    height: 100%;
+    width: 100%;
+
+    figure {
+      height: 100%;
+      width: 100%;
+
+      picture {
+        height: 100%;
+        width: 100%;
+
+        img {
+          height: 100%;
+          width: 100%;
+          object-fit: cover;
+        }
+      }
+    }
   }
 
   video {
-    top: 0;
     width: 100%;
-    position: absolute;
     z-index: 3;
   }
 }
