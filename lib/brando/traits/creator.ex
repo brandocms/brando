@@ -16,14 +16,13 @@ defmodule Brando.Trait.Creator do
   Add creator to changeset
   """
   @changeset_phase :before_validate_required
-  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, :system), do: cs
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, :system, _), do: cs
 
-  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user) when is_map(user),
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user, _) when is_map(user),
     do: Changeset.put_change(cs, :creator_id, user.id)
 
-  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user_id),
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user_id, _),
     do: Changeset.put_change(cs, :creator_id, user_id)
 
-  def changeset_mutator(_, _, changeset, _), do: changeset
+  def changeset_mutator(_, _, changeset, _, _), do: changeset
 end

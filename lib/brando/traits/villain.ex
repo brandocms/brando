@@ -44,8 +44,7 @@ defmodule Brando.Trait.Villain do
   @doc """
   Add creator to changeset
   """
-  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(module, _config, %{valid?: true} = changeset, _user) do
+  def changeset_mutator(module, _config, %{valid?: true} = changeset, _user, _) do
     Enum.reduce(module.__villain_fields__(), changeset, fn vf, mutated_changeset ->
       Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
     end)

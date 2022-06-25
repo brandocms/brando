@@ -5,7 +5,7 @@ defmodule Brando.Trait.Villain.PreventCircularReferences do
   use Brando.Trait
   import Brando.Gettext
 
-  def changeset_mutator(_module, _config, changeset, _user) do
+  def changeset_mutator(_module, _config, changeset, _user, _) do
     case Ecto.Changeset.get_change(changeset, :data) do
       nil ->
         changeset

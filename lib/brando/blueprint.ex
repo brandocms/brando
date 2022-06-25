@@ -554,7 +554,7 @@ defmodule Brando.Blueprint do
         castable_relations,
         all_required_attrs,
         all_optional_attrs,
-        extra
+        opts
       ) do
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
@@ -562,10 +562,15 @@ defmodule Brando.Blueprint do
     schema
     |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs ++ castable_relations)
     |> Relations.run_cast_relations(all_relations, user)
+    |> Trait.run_trait_before_save_callbacks(
+      schema.__struct__,
+      user
+    )
     |> Trait.run_changeset_mutators(
       module,
       traits_before_validate_required,
-      user
+      user,
+      opts
     )
     |> Changeset.validate_required(all_required_attrs)
     |> Unique.run_unique_attribute_constraints(module, all_attributes)
@@ -576,12 +581,13 @@ defmodule Brando.Blueprint do
       module,
       all_attributes,
       user,
-      Keyword.get(extra, :image_db_config)
+      Keyword.get(opts, :image_db_config)
     )
     |> Trait.run_changeset_mutators(
       module,
       traits_after_validate_required,
-      user
+      user,
+      opts
     )
     |> maybe_mark_for_deletion(module, params)
   end
