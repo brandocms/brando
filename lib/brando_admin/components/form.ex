@@ -609,14 +609,20 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {fieldset, idx} <- @indexed_fields do %>
-      <Fieldset.render
-        id={"#{@form.id}-fieldset-#{@tab.name}-#{idx}"}
-        translations={@schema.__translations__}
-        relations={@schema.__relations__}
-        form={@form}
-        fieldset={fieldset}
-        uploads={@uploads}
-        current_user={@current_user} />
+      <%= if fieldset.__struct__ == Brando.Blueprint.Form.Alert do %>
+        <.alert type={fieldset.type}>
+          <%= raw(g(@form.source.data.__struct__, fieldset.content)) %>
+        </.alert>
+      <% else %>
+        <Fieldset.render
+          id={"#{@form.id}-fieldset-#{@tab.name}-#{idx}"}
+          translations={@schema.__translations__}
+          relations={@schema.__relations__}
+          form={@form}
+          fieldset={fieldset}
+          uploads={@uploads}
+          current_user={@current_user} />
+      <% end %>
     <% end %>
     """
   end
