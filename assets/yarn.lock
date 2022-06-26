@@ -100,6 +100,19 @@
     "@lezer/common" "^1.0.0"
     "@lezer/html" "^1.0.0"
 
+"@codemirror/lang-html@^6.1.0":
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/@codemirror/lang-html/-/lang-html-6.1.0.tgz#5152a24c4febc265b4aad0bfcbc39bd805952d63"
+  integrity sha512-gA7NmJxqvnhwza05CvR7W/39Ap9r/4Vs9uiC0IeFYo1hSlJzc/8N6Evviz6vTW1x8SpHcRYyqKOf6rpl6LfWtg==
+  dependencies:
+    "@codemirror/autocomplete" "^6.0.0"
+    "@codemirror/lang-css" "^6.0.0"
+    "@codemirror/lang-javascript" "^6.0.0"
+    "@codemirror/language" "^6.0.0"
+    "@codemirror/state" "^6.0.0"
+    "@lezer/common" "^1.0.0"
+    "@lezer/html" "^1.0.0"
+
 "@codemirror/lang-javascript@^6.0.0":
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/@codemirror/lang-javascript/-/lang-javascript-6.0.0.tgz#ae23b623456d333ca175f7f9801824426a113aed"
@@ -1090,7 +1103,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:

@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "@brandocms/brandojs": {
-      "signature": "d9ce1b25dc839df186f993604882e25f",
+      "signature": "3e1a59d454deeca3f7a1540471d1585f",
       "file": true,
       "replaced": "file:../../../../brando"
     }
