@@ -2,6 +2,29 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* Add `alert` and `after_save` to forms:
+
+```elixir
+forms do
+  form :password,
+    after_save: &__MODULE__.update_password_config/1 do
+    tab t("Content") do
+      alert :info,
+            t(
+              "The administrator has set a mandatory password change on first login for this website."
+            )
+
+      fieldset size: :half do
+        input :password, :password, label: t("Password"), confirmation: true
+      end
+    end
+  end
+end
+```
+* Add `confirmation: <bool>` to password inputs
+* Implement forced password change if user has `reset_password_on_first_login` as true in config.
+  Run `mix brando.upgrade` to bring in a migration that sets this to false for existing users.
+
 
 ## 0.52.0
 
