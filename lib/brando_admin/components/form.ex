@@ -256,6 +256,7 @@ defmodule BrandoAdmin.Components.Form do
 
        nil
      end)
+     |> assign_new(:instructions, fn -> [] end)
      |> assign_entry()
      |> assign_addon_statuses()
      |> assign_default_params()
@@ -434,13 +435,17 @@ defmodule BrandoAdmin.Components.Form do
         class="brando-form"
         data-moonwalk-run="brandoForm"
         phx-hook="Brando.Form">
-
         <div class="form-content">
           <%= if @header do %>
             <div class="form-header">
               <h1>
                 <%= render_slot(@header) %>
               </h1>
+            </div>
+          <% end %>
+          <%= if @instructions do %>
+            <div class="form-instructions">
+              <%= render_slot(@instructions) %>
             </div>
           <% end %>
           <div class="form-tabs">
@@ -1165,8 +1170,8 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("select_tab", %{"name" => tab}, socket) do
-    {:noreply, assign(socket, :active_tab, tab)}
+  def handle_event("select_tab", %{"name" => tab_name}, socket) do
+    {:noreply, assign(socket, :active_tab, tab_name)}
   end
 
   def handle_event(
@@ -1240,6 +1245,7 @@ defmodule BrandoAdmin.Components.Form do
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
+        maybe_run_form_after_save(form, entry)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
         {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))}
 
@@ -1252,6 +1258,12 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:changeset, changeset)
          |> push_errors(changeset, form, schema)}
     end
+  end
+
+  defp maybe_run_form_after_save(%{after_save: nil}, _), do: nil
+
+  defp maybe_run_form_after_save(%{after_save: after_save}, entry) do
+    after_save.(entry)
   end
 
   defp validate(schema, entry, params, user) do
@@ -1309,7 +1321,7 @@ defmodule BrandoAdmin.Components.Form do
     """)
 
     socket
-    |> assign(:active_tab, tab_with_first_error)
+    |> assign(:active_tab, tab_with_first_error.name)
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
   end

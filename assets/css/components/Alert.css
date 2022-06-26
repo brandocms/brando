@@ -1,0 +1,19 @@
+.alert {
+  @display flex;
+  background-color: #e3fbff;
+  margin-bottom: 2vw;
+  padding: 1.2vw;
+  gap: 1.2vw;
+  align-items: baseline;
+  border-radius: 0.9vw;
+
+  .form-tab .row & {
+    width: 100%;
+    flex-basis: 100%;
+    grid-column: 1/span 16;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}

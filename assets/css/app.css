@@ -8,8 +8,8 @@
 @import './fonts.css';
 @import './transitions.css';
 @import './auth.css';
+@import './components/Alert.css';
 @import './components/Button.css';
-@import './components/Var.css';
 @import './components/ChildrenButton.css';
 @import './components/CircleDropdown.css';
 @import './components/CircleFlag.css';
@@ -58,6 +58,8 @@
 @import './components/SideBar/NavigationMenuSection.css';
 @import './components/SideBar/NavigationMenuSectionItem.css';
 @import './components/Toast.css';
+@import './components/Var.css';
+
 @import './views/assets/Images.css';
 @import './views/config/Cache.css';
 @import './views/config/Globals.css';

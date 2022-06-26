@@ -67,6 +67,8 @@ locals_without_parens = [
   assets: 1,
   asset: 2,
   asset: 3,
+  alert: 1,
+  alert: 2,
   input: 1,
   input: 2,
   input: 3,
