@@ -16,7 +16,11 @@ defmodule BrandoIntegration.UserTest do
     old_pass = updated_user.password
 
     assert {:ok, updated_password_user} =
-             Users.update_user(updated_user.id, %{"password" => "newpass"}, :system)
+             Users.update_user(
+               updated_user.id,
+               %{"password" => Bcrypt.hash_pwd_salt("newpass")},
+               :system
+             )
 
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"

@@ -1321,7 +1321,7 @@ defmodule BrandoAdmin.Components.Form do
     """)
 
     socket
-    |> assign(:active_tab, tab_with_first_error.name)
+    |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg})
     |> push_event("b:scroll_to_first_error", %{})
   end

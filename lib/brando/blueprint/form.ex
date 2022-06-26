@@ -520,7 +520,7 @@ defmodule Brando.Blueprint.Form do
       |> Enum.filter(&is_binary(&1))
       |> List.first()
 
-    tab || List.first(tabs)
+    tab || tabs |> List.first() |> Map.get(:name)
   end
 
   def get_field(field, %__MODULE__{tabs: tabs}) do

@@ -84,11 +84,11 @@ defmodule Brando.Blueprint.FormTest do
     assert Brando.Blueprint.Form.get_tab_for_field(:data, Brando.BlueprintTest.Project.__form__()) ==
              "Properties"
 
+    # get the first one if we don't find the tab
     assert Brando.Blueprint.Form.get_tab_for_field(
              :non_existing,
              Brando.BlueprintTest.Project.__form__()
-           ) ==
-             nil
+           ) == "Content"
   end
 
   test "forms" do
