@@ -11,26 +11,63 @@ msgid ""
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/users/user.ex:146
+#: lib/brando/users/user.ex:160
 msgid "Admin"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/users/user.ex:136
+#: lib/brando/users/user.ex:137
+#: lib/brando/users/user.ex:150
 msgid "Content"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/users/user.ex:147
+#: lib/brando/users/user.ex:161
 msgid "Editor"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/users/user.ex:145
+#: lib/brando/users/user.ex:159
 msgid "Superuser"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/users/user.ex:148
+#: lib/brando/users/user.ex:162
 msgid "User"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:167
+msgid "Avatar"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:153
+msgid "Email"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:155
+msgid "Language"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:152
+msgid "Name"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:144
+#: lib/brando/users/user.ex:154
+msgid "Password"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:139
+msgid "The administrator has set a mandatory password change on first login for this website."
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando/users/user.ex:169
+msgid "Config"
 msgstr ""

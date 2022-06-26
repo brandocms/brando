@@ -12,26 +12,11 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:78
-msgid "Are you sure?"
+#: lib/brando/users/user_config.ex:28
+msgid "user config"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:76
-msgid "Delete file"
-msgstr ""
-
-#, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:83
-msgid "Delete files"
-msgstr ""
-
-#, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:74
-msgid "Duplicate file"
-msgstr ""
-
-#, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:38
-msgid "Filename"
+#: lib/brando/users/user_config.ex:29
+msgid "user configs"
 msgstr ""

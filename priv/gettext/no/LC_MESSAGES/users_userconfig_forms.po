@@ -18,29 +18,19 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2;\n"
-"X-Generator: Poedit 3.0.1\n"
+"X-Generator: Poedit 3.1\n"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:78
-msgid "Are you sure?"
-msgstr "Er du sikker?"
+#: lib/brando/users/user.ex:177
+msgid "Prefers reduced motion"
+msgstr "Foretrekker redusert bevegelse"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:76
-msgid "Delete file"
-msgstr "Slett fil"
+#: lib/brando/users/user.ex:171
+msgid "Reset password on first login"
+msgstr "Tilbakestill passord ved første pålogging"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:83
-msgid "Delete files"
-msgstr "Slett filer"
-
-#, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:74
-msgid "Duplicate file"
-msgstr "Dupliser fil"
-
-#, elixir-autogen, elixir-format
-#: lib/brando/files/file.ex:38
-msgid "Filename"
-msgstr "Filnavn"
+#: lib/brando/users/user.ex:174
+msgid "Show mutation notifications"
+msgstr "Vis mutasjonsvarsler"

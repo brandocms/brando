@@ -119,6 +119,7 @@ defmodule Brando.Router do
             live "/", UserListLive
             live "/create", UserCreateLive
             live "/update/:entry_id", UserUpdateLive
+            live "/password/:entry_id", UserUpdatePasswordLive
           end
 
           # app routes

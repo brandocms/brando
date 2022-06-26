@@ -10,19 +10,13 @@ defmodule Brando.Trait.Password do
   @type config :: list()
 
   @doc """
-  Update password if changed
+  Hash and salt password if changed.
   """
-  def changeset_mutator(_module, _config, %{valid?: true} = changeset, _user, _) do
-    maybe_update_password(changeset)
-  end
-
-  def changeset_mutator(_, _, changeset, _, _), do: maybe_update_password(changeset)
-
-  defp maybe_update_password(%{changes: %{password: password}} = changeset) do
+  def before_save(%{changes: %{password: password}} = changeset, _user) do
     put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
   end
 
-  defp maybe_update_password(changeset) do
+  def before_save(changeset, _user) do
     changeset
   end
 end

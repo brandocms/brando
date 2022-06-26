@@ -57,7 +57,7 @@ defmodule Brando.Users.User do
     attribute :language, :language, languages: Brando.config(:admin_languages)
 
     attribute :password, :string,
-      constraints: [min_length: 6],
+      constraints: [min_length: 6, confirmation: true],
       required: true
   end
 
@@ -132,13 +132,27 @@ defmodule Brando.Users.User do
   end
 
   forms do
+    form :password,
+      after_save: &__MODULE__.update_password_config/1 do
+      tab t("Content") do
+        alert :info,
+              t(
+                "The administrator has set a mandatory password change on first login for this website."
+              )
+
+        fieldset size: :half do
+          input :password, :password, label: t("Password"), confirmation: true
+        end
+      end
+    end
+
     form do
       tab t("Content") do
         fieldset size: :half do
-          input :name, :text
-          input :email, :email
-          input :password, :password
-          input :language, :radios, options: :admin_languages
+          input :name, :text, label: t("Name")
+          input :email, :email, label: t("Email")
+          input :password, :password, label: t("Password")
+          input :language, :radios, options: :admin_languages, label: t("Language")
 
           input :role, :radios,
             options: [
@@ -150,12 +164,17 @@ defmodule Brando.Users.User do
         end
 
         fieldset size: :half do
-          input :avatar, :image
+          input :avatar, :image, label: t("Avatar")
 
-          inputs_for :config do
-            input :reset_password_on_first_login, :toggle
-            input :show_mutation_notifications, :toggle
-            input :prefers_reduced_motion, :toggle
+          inputs_for :config, label: t("Config") do
+            input :reset_password_on_first_login, :toggle,
+              label: t("Reset password on first login", Brando.Users.UserConfig)
+
+            input :show_mutation_notifications, :toggle,
+              label: t("Show mutation notifications", Brando.Users.UserConfig)
+
+            input :prefers_reduced_motion, :toggle,
+              label: t("Prefers reduced motion", Brando.Users.UserConfig)
           end
         end
       end
@@ -171,4 +190,12 @@ defmodule Brando.Users.User do
     language: "en",
     config: %{prefers_reduced_motion: true, content_language: "en"}
   }
+
+  def update_password_config(entry) do
+    Brando.Users.update_user(
+      entry.id,
+      %{config: %{reset_password_on_first_login: false}},
+      entry
+    )
+  end
 end

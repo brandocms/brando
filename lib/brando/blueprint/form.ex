@@ -46,6 +46,7 @@ defmodule Brando.Blueprint.Form do
 
   defstruct name: :default,
             query: &__MODULE__.default_query/1,
+            after_save: nil,
             default_params: %{},
             tabs: [],
             redirect_on_save: nil
@@ -97,6 +98,7 @@ defmodule Brando.Blueprint.Form do
 
   defp form(_caller, name, opts, block) do
     default_params = Keyword.get(opts, :default_params, %{})
+    after_save = Keyword.get(opts, :after_save, nil)
 
     quote generated: true, location: :keep do
       Module.put_attribute(__MODULE__, :brando_macro_context, :form)
@@ -111,13 +113,15 @@ defmodule Brando.Blueprint.Form do
       unquote(block)
 
       default_params = unquote(Macro.escape(default_params))
+      after_save = unquote(after_save)
 
       named_form = %Brando.Blueprint.Form{
         name: unquote(name),
         tabs: Enum.reverse(var!(b_form)),
         default_params: default_params,
         redirect_on_save: var!(b_redirect_on_save),
-        query: var!(b_query)
+        query: var!(b_query),
+        after_save: after_save
       }
 
       Module.put_attribute(__MODULE__, :forms, named_form)
@@ -433,6 +437,32 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  defmacro alert(type, do: content) do
+    quote location: :keep, bind_quoted: [content: content, type: type] do
+      if @brando_macro_context not in [:tab] do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          alert must be nested under a tab -- #{inspect(@brando_macro_context)}
+          """
+      end
+
+      var!(b_tab) = List.wrap(build_alert(type, content)) ++ var!(b_tab)
+    end
+  end
+
+  defmacro alert(type, content) do
+    quote location: :keep, bind_quoted: [content: content, type: type] do
+      if @brando_macro_context not in [:tab] do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          alert must be nested under a tab -- #{inspect(@brando_macro_context)}
+          """
+      end
+
+      var!(b_tab) = List.wrap(build_alert(type, content)) ++ var!(b_tab)
+    end
+  end
+
   def build_tab(name, fields) do
     %__MODULE__.Tab{name: name, fields: fields}
   end
@@ -474,13 +504,23 @@ defmodule Brando.Blueprint.Form do
     }
   end
 
+  def build_alert(type, content) do
+    %__MODULE__.Alert{
+      type: type,
+      content: content
+    }
+  end
+
   def get_tab_for_field(field, %__MODULE__{tabs: tabs}) do
-    for tab <- tabs,
-        %__MODULE__.Fieldset{fields: inputs} <- tab.fields do
-      find_field(inputs, field) && tab.name
-    end
-    |> Enum.filter(&is_binary(&1))
-    |> List.first()
+    tab =
+      for tab <- tabs,
+          %__MODULE__.Fieldset{fields: inputs} <- tab.fields do
+        find_field(inputs, field) && tab.name
+      end
+      |> Enum.filter(&is_binary(&1))
+      |> List.first()
+
+    tab || List.first(tabs)
   end
 
   def get_field(field, %__MODULE__{tabs: tabs}) do

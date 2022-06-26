@@ -33,8 +33,14 @@ defmodule BrandoAdmin.UserAuth do
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
     |> write_last_login(user)
     |> maybe_write_remember_me_cookie(token, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(to: set_initial_password(conn, user) || user_return_to || signed_in_path(conn))
   end
+
+  defp set_initial_password(conn, %{config: %{reset_password_on_first_login: true}} = user) do
+    Brando.routes().admin_live_path(conn, BrandoAdmin.Users.UserUpdatePasswordLive, user.id)
+  end
+
+  defp set_initial_password(_, _), do: nil
 
   defp write_last_login(conn, user) do
     Brando.Users.set_last_login(user)

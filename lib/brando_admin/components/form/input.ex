@@ -255,10 +255,15 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def password(assigns) do
+    value = input_value(assigns.form, assigns.field)
+    confirmation_value = input_value(assigns.form, :"#{assigns.field}_confirmation") || value
+
     assigns =
       assigns
       |> prepare_input_component()
-      |> assign(:value, input_value(assigns.form, assigns.field))
+      |> assign(:value, value)
+      |> assign(:confirmation, Keyword.get(assigns.opts, :confirmation))
+      |> assign(:confirmation_value, confirmation_value)
 
     ~H"""
     <Form.field_base
@@ -275,6 +280,22 @@ defmodule BrandoAdmin.Components.Form.Input do
         value: @value,
         class: "text#{@monospace && " monospace" || ""}" %>
     </Form.field_base>
+    <%= if @confirmation do %>
+      <Form.field_base
+        form={@form}
+        field={:"#{@field}_confirmation"}
+        label={"#{@label} [#{gettext("confirm")}]"}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}>
+        <%= password_input @form, :"#{@field}_confirmation",
+          placeholder: @placeholder,
+          disabled: @disabled,
+          phx_debounce: @debounce,
+          value: @confirmation_value,
+          class: "text#{@monospace && " monospace" || ""}" %>
+      </Form.field_base>
+    <% end %>
     """
   end
 

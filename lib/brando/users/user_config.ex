@@ -7,7 +7,10 @@ defmodule Brando.Users.UserConfig do
     domain: "Users",
     schema: "UserConfig",
     singular: "user_config",
-    plural: "user_configs"
+    plural: "user_configs",
+    gettext_module: Brando.Gettext
+
+  import Brando.Gettext
 
   @primary_key false
   data_layer :embedded
@@ -18,5 +21,12 @@ defmodule Brando.Users.UserConfig do
     attribute :show_mutation_notifications, :boolean, default: true
     attribute :show_onboarding, :boolean, default: false
     attribute :prefers_reduced_motion, :boolean, default: false
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("user config")
+      translate :plural, t("user configs")
+    end
   end
 end
