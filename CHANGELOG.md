@@ -24,6 +24,16 @@ end
 * Add `confirmation: <bool>` to password inputs
 * Implement forced password change if user has `reset_password_on_first_login` as true in config.
   Run `mix brando.upgrade` to bring in a migration that sets this to false for existing users.
+* Show media url in file assets listing
+* Update villain module list when modules are added/deleted/updated
+* `@identity` now refers to the current language identity, instead of a map of all languages
+* Update relation(s) in multi select so they are available for live preview
+* Allow uploading SVGs to image fields / picture blocks
+* Set img `data-src` as transparent svg when we have `dominant_color`/`svg` placeholder
+* Show live preview as shrinked webpage in iframe
+* Reapply module ref on update
+* Support showing entry URL for slug field with `show_url: true`. 
+* Improve pagination limits for listings
 
 
 ## 0.52.0
