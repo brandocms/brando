@@ -2,6 +2,15 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* The tiptap dependency weirdness has returned... Add this dependency resolution
+to your `assets/backend/package.json`:
+
+```
+"resolutions": {
+  "@codemirror/state": "6.0.0"
+}
+```
+
 * Add `alert` and `after_save` to forms:
 
 ```elixir

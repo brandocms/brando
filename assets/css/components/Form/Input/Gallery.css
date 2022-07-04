@@ -4,6 +4,15 @@
   .gallery-image {
     @column 4/12;
     cursor: move;
+
+    .img-placeholder {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      aspect-ratio: 1;
+      justify-content: center;
+      background-color: white;
+    }
   }
 }
 

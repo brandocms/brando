@@ -299,13 +299,13 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp scan_and_preload_block_vars(entry, schema) do
-    Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
-      blocks = Map.get(updated_entry, field)
-      updated_blocks = Brando.Villain.preload_vars(blocks)
-      Map.put(updated_entry, field, updated_blocks)
-    end)
-  end
+  # defp scan_and_preload_block_vars(entry, schema) do
+  #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
+  #     blocks = Map.get(updated_entry, field)
+  #     updated_blocks = Brando.Villain.preload_vars(blocks)
+  #     Map.put(updated_entry, field, updated_blocks)
+  #   end)
+  # end
 
   defp maybe_assign_uploads(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
@@ -871,7 +871,7 @@ defmodule BrandoAdmin.Components.Form do
           max_file_size: max_size,
           accept: ~w(.jpg .jpeg .png .gif .webp .svg),
           auto_upload: true,
-          progress: &BrandoAdmin.Components.Form.Input.Gallery.handle_gallery_progress/3
+          progress: &__MODULE__.handle_gallery_progress/3
         )
       end)
 
@@ -1419,6 +1419,108 @@ defmodule BrandoAdmin.Components.Form do
     else
       {:noreply, socket}
     end
+  end
+
+  def handle_gallery_progress(
+        key,
+        upload_entry,
+        %{
+          assigns: %{
+            current_user: current_user,
+            schema: schema,
+            changeset: changeset
+          }
+        } = socket
+      ) do
+    if upload_entry.done? do
+      %{cfg: cfg} = schema.__asset_opts__(key)
+      config_target = "gallery:#{inspect(schema)}:#{key}"
+
+      image =
+        consume_uploaded_entry(
+          socket,
+          upload_entry,
+          fn meta ->
+            Brando.Upload.handle_upload(
+              Map.put(meta, :config_target, config_target),
+              upload_entry,
+              cfg,
+              current_user
+            )
+          end
+        )
+
+      # Subscribe parent live view to changes to this image
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+      Brando.Images.Processing.queue_processing(image, current_user)
+
+      gallery = get_field(changeset, key)
+
+      current_gallery_images =
+        if gallery do
+          Enum.map(
+            gallery.gallery_images || [],
+            &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+          )
+        else
+          []
+        end
+
+      new_gallery_image = %{
+        image_id: image.id,
+        creator_id: current_user.id,
+        gallery_id: gallery && gallery.id,
+        image: image
+      }
+
+      new_gallery_images = current_gallery_images ++ List.wrap(new_gallery_image)
+
+      new_gallery =
+        if gallery do
+          %{
+            id: gallery.id,
+            config_target: gallery.config_target,
+            gallery_images: sequence(new_gallery_images)
+          }
+        else
+          %{
+            config_target: "gallery:#{inspect(schema)}:#{key}",
+            gallery_images: sequence(new_gallery_images)
+          }
+        end
+
+      selection =
+        ((gallery && gallery.gallery_images) || []) ++
+          List.wrap(%Brando.Images.GalleryImage{image_id: image.id, image: image})
+
+      selected_images = Enum.map(selection, & &1.image.path)
+
+      send_update(BrandoAdmin.Components.ImagePicker,
+        id: "image-picker",
+        selected_images: selected_images
+      )
+
+      updated_changeset = put_assoc(changeset, key, new_gallery)
+
+      module = changeset.data.__struct__
+      form_id = "#{module.__naming__().singular}_form_form-#{key}"
+
+      send_update(BrandoAdmin.Components.Form.Input.Gallery,
+        id: form_id,
+        new_image: %{image_id: image.id, image: image},
+        selected_images: selected_images
+      )
+
+      {:noreply, assign(socket, :changeset, updated_changeset)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp sequence(gallery_images) do
+    gallery_images
+    |> Enum.with_index()
+    |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
   def handle_file_progress(
