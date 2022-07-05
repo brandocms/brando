@@ -10,13 +10,13 @@ to your `assets/backend/package.json`:
   "@codemirror/state": "6.0.0"
 }
 ```
-
+* Automatically add uploaded gallery images to gallery
 * Add `alert` and `after_save` to forms:
 
 ```elixir
 forms do
   form :password,
-    after_save: &__MODULE__.update_password_config/1 do
+    after_save: &__MODULE__.update_password_config/1,
     tab t("Content") do
       alert :info,
             t(
@@ -28,6 +28,14 @@ forms do
       end
     end
   end
+end
+
+def update_password_config(entry) do
+  Brando.Users.update_user(
+    entry.id,
+    %{config: %{reset_password_on_first_login: false}},
+    entry
+  )
 end
 ```
 * Add `confirmation: <bool>` to password inputs
