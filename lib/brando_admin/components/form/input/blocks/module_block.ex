@@ -141,23 +141,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     |> assign(:indexed_available_entries, Enum.with_index(available_entries))
   end
 
-  def assign_selected_entries(%{assigns: assigns} = socket) do
-    case assigns.module_datasource_type do
-      :selection ->
-        module = assigns.module_datasource_module
-        query = assigns.module_datasource_query
-        ids = assigns.datasource_selected_ids
+  def assign_selected_entries(
+        %{assigns: %{module_datasource_type: :selection} = assigns} = socket
+      ) do
+    module = assigns.module_datasource_module
+    query = assigns.module_datasource_query
+    ids = assigns.datasource_selected_ids
 
-        assign_new(socket, :selected_entries, fn ->
-          {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
-          {:ok, identifiers} = Identifier.identifiers_for(selected_entries)
-          identifiers
-        end)
-
-      _ ->
-        assign(socket, :selected_entries, [])
-    end
+    assign_new(socket, :selected_entries, fn ->
+      {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
+      {:ok, identifiers} = Identifier.identifiers_for(selected_entries)
+      identifiers
+    end)
   end
+
+  def assign_selected_entries(socket), do: assign(socket, :selected_entries, [])
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
