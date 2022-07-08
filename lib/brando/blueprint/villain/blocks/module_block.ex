@@ -21,6 +21,8 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       attribute :module_id, :integer, required: true
       attribute :sequence, :integer
       attribute :multi, :boolean, default: false
+      attribute :datasource, :boolean, default: false
+      attribute :datasource_selected_ids, {:array, :id}
 
       attribute :vars, {:array, Brando.PolymorphicEmbed},
         types: Var.types(),

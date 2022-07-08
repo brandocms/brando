@@ -5,7 +5,9 @@ export default (app) => ({
   },
 
   updated() {
-    this.el.scrollTop = this.scrollTop
+    window.requestAnimationFrame(() => {
+      this.el.scrollTop = this.scrollTop
+    })
   },
 
   destroyed() {

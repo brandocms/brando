@@ -8,15 +8,15 @@ defmodule Brando.Datasource do
 
   #### Example
 
-        list :all_posts_from_year, fn module, arg ->
-          {:ok, Repo.all(from t in module, where: t.year == ^arg)}
+        list :all_posts_from_year, fn module, _language, %{"year" => year} ->
+          {:ok, Repo.all(from t in module, where: t.year == ^year)}
         end
 
-        list :all_posts, fn _, _ -> Posts.list_posts() end
+        list :all_posts, fn _, _, _ -> Posts.list_posts() end
 
   You can also supply a callback with a 3-arity function to get the currently set language (if any)
 
-        list :localized_posts, fn _, language, _arg ->
+        list :localized_posts, fn _module, language, _vars ->
           Posts.list_posts(%{filter: %{language: language}})
         end
 
@@ -49,18 +49,18 @@ defmodule Brando.Datasource do
       use Brando.Datasource
 
       datasources do
-        list :all_posts_from_year, fn module, arg ->
-          {:ok, Repo.all(from t in module, where: t.year == ^arg)}
+        list :all_posts_from_year, fn module, _language, %{"year" => year} ->
+          {:ok, Repo.all(from t in module, where: t.year == ^year)}
         end
 
-        list :all_posts, fn _, _ -> Posts.list_posts() end
+        list :all_posts, fn _, _, _ -> Posts.list_posts() end
 
         selection
           :featured,
-            fn _, arg ->
-              {:ok, posts} = Posts.list_posts(%{filter: %{language: arg}})
+            fn _module, language, _vars ->
+              {:ok, posts} = Posts.list_posts(%{filter: %{language: language}})
             end,
-            fn _, ids ->
+            fn _module, ids ->
               results =
                 from t in Post,
                   where: t.id in ^ids,
@@ -83,15 +83,15 @@ defmodule Brando.Datasource do
 
   The `Area` has this datasource:
 
-      list :all_areas_with_grants, fn _, _ ->
+      list :all_areas_with_grants, fn _module, _language, _vars ->
         grantee_query = from(t in Areas.Grantee, where: t.status == :published, order_by: t.name)
         opts = %{order: [{:asc, :name}], status: :published, preload: [{:grantees, grantee_query}]}
         Areas.list_areas(opts)
       end
 
-  On a page we have a `DatasourceBlock` that grabs `:all_areas_with_grants`. When deleting or
-  updating a grant, this Datasource will not be updated since the datasource is listening for
-  `Area` changes, which are not triggered.
+  On a page we have a `ModuleBlock` with a datasource that grabs `:all_areas_with_grants`.
+  When deleting or updating a grant, this module will not be updated since the datasource
+  is listening for `Area` changes, which are not triggered.
 
   To solve, we can add it as a callback to each mutation for `Grantee`:
 
@@ -122,8 +122,6 @@ defmodule Brando.Datasource do
   """
   alias Brando.Villain
   alias Brando.Blueprint.Identifier
-  import Brando.Query.Helpers
-  import Ecto.Query
 
   @doc """
   List all registered data sources
@@ -186,29 +184,18 @@ defmodule Brando.Datasource do
   end
 
   defmacro list(key, fun) do
-    quote do
-      Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
+    {_, _, [{_, _, [args, _]}]} = fun
 
-      def __datasource__(:list, unquote(key)) do
-        case unquote(fun) do
-          {:ok, []} -> {:error, :no_entries}
-          result -> result
-        end
-      end
+    if Enum.count(args) == 2 do
+      raise "datasource :list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
     end
-  end
 
-  @deprecated """
-  Use Datasource.list/2 instead.
-  """
-  defmacro many(key, fun) do
     quote do
       Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
 
       def __datasource__(:list, unquote(key)) do
         case unquote(fun) do
           {:ok, []} -> {:error, :no_entries}
-          {:ok, nil} -> {:error, :no_entries}
           result -> result
         end
       end
@@ -229,6 +216,12 @@ defmodule Brando.Datasource do
   end
 
   defmacro selection(key, list_fun, get_fun) do
+    {_, _, [{_, _, [list_args, _]}]} = list_fun
+
+    if Enum.count(list_args) == 2 do
+      raise "datasource :selection list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+    end
+
     quote do
       Module.put_attribute(__MODULE__, :datasources_selection, unquote(key))
 
@@ -274,26 +267,23 @@ defmodule Brando.Datasource do
   @doc """
   Grab list of entries from database
   """
-  def get_list(module_binary, query, arg, language) do
+  def get_list(module_binary, query, vars, language) do
     module = Module.concat([module_binary])
-
-    case :erlang.fun_info(module.__datasource__(:list, String.to_atom(query)))[:arity] do
-      2 ->
-        module.__datasource__(:list, String.to_atom(query)).(module_binary, arg)
-
-      3 ->
-        module.__datasource__(:list, String.to_atom(query)).(module_binary, language, arg)
-    end
+    module.__datasource__(:list, String.to_atom(query)).(module_binary, language, vars)
   end
 
   @doc """
   List available entries in selection from database
   """
-  def list_selection(module_binary, query, arg) do
+  def list_selection(module_binary, query, language, vars) do
     module = Module.concat([module_binary])
 
     available_entries =
-      module.__datasource__(:list_selection, String.to_atom(query)).(module_binary, arg)
+      module.__datasource__(:list_selection, String.to_atom(query)).(
+        module_binary,
+        language,
+        vars
+      )
 
     case available_entries do
       {:ok, [%{label: _} | _] = options} ->
@@ -353,7 +343,7 @@ defmodule Brando.Datasource do
   end
 
   defp process_field(schema, datasource_module, data_field, html_field) do
-    ids = list_ids_with_datasource(schema, datasource_module, data_field)
+    ids = list_ids_with_datamodule(schema, datasource_module, data_field)
 
     unless Enum.empty?(ids) do
       Villain.rerender_html_from_ids({schema, data_field, html_field}, ids)
@@ -364,110 +354,49 @@ defmodule Brando.Datasource do
   List ids of `schema` records that has a datasource matching schema OR
   a module containing a datasource matching schema.
   """
-  def list_ids_with_datasource(schema, datasource, data_field \\ :data)
+  def list_ids_with_datamodule(schema, datasource, data_field \\ :data)
 
-  def list_ids_with_datasource(
+  def list_ids_with_datamodule(
         schema,
         {datasource_module, datasource_type, datasource_query},
         data_field
       ) do
-    ds_block = %{
-      type: "datasource",
-      data: %{
-        module: to_string(datasource_module),
-        type: datasource_type,
-        query: datasource_query
-      }
-    }
+    # find all content modules with this datasource
+    {:ok, modules} =
+      Brando.Content.list_modules(%{
+        filter: %{
+          datasource: true,
+          datasource_module: to_string(datasource_module),
+          datasource_type: datasource_type,
+          datasource_query: datasource_query
+        },
+        select: [:id]
+      })
 
-    t = [
-      ds_block
-    ]
+    module_ids = Enum.map(modules, & &1.id)
 
-    refed_t = [
-      %{
-        type: "module",
-        data: %{refs: [%{data: ds_block}]}
-      }
-    ]
-
-    contained_t = [
-      %{
-        type: "container",
-        data: %{blocks: [ds_block]}
-      }
-    ]
-
-    contained_refed_t = [
-      %{
-        type: "container",
-        data: %{
-          blocks: refed_t
-        }
-      }
-    ]
-
-    Brando.repo().all(
-      from s in schema,
-        select: s.id,
-        where: jsonb_contains(s, data_field, t),
-        or_where: jsonb_contains(s, data_field, contained_t),
-        or_where: jsonb_contains(s, data_field, refed_t),
-        or_where: jsonb_contains(s, data_field, contained_refed_t)
-    )
+    Brando.Villain.list_ids_with_modules(schema, data_field, module_ids)
   end
 
-  def list_ids_with_datasource(schema, datasource_module, data_field) do
-    ds_block = %{
-      type: "datasource",
-      data: %{module: to_string(datasource_module)}
-    }
+  def list_ids_with_datamodule(schema, datasource_module, data_field) do
+    # find all content modules with this datasource
+    {:ok, modules} =
+      Brando.Content.list_modules(%{
+        filter: %{
+          datasource: true,
+          datasource_module: to_string(datasource_module)
+        },
+        select: [:id]
+      })
 
-    t = [
-      ds_block
-    ]
+    module_ids = Enum.map(modules, & &1.id)
 
-    refed_t = [
-      %{
-        type: "module",
-        data: %{refs: [%{data: ds_block}]}
-      }
-    ]
-
-    contained_t = [
-      %{
-        type: "container",
-        data: %{blocks: [ds_block]}
-      }
-    ]
-
-    contained_refed_t = [
-      %{
-        type: "container",
-        data: %{
-          blocks: refed_t
-        }
-      }
-    ]
-
-    Brando.repo().all(
-      from s in schema,
-        select: s.id,
-        where: jsonb_contains(s, data_field, t),
-        or_where: jsonb_contains(s, data_field, contained_t),
-        or_where: jsonb_contains(s, data_field, refed_t),
-        or_where: jsonb_contains(s, data_field, contained_refed_t)
-    )
+    Brando.Villain.list_ids_with_modules(schema, data_field, module_ids)
   end
 
   @doc """
   Check if `schema` is a datasource
   """
-  def is_datasource({schema, _, _}) do
-    {:__datasource__, 2} in schema.__info__(:functions)
-  end
-
-  def is_datasource(schema) do
-    {:__datasource__, 2} in schema.__info__(:functions)
-  end
+  def is_datasource({schema, _, _}), do: {:__datasource__, 2} in schema.__info__(:functions)
+  def is_datasource(schema), do: {:__datasource__, 2} in schema.__info__(:functions)
 end

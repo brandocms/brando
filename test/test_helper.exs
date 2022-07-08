@@ -190,10 +190,10 @@ defmodule BrandoIntegration.ModuleWithDatasource do
   end
 
   datasources do
-    list :all, fn _, _ -> {:ok, [1, 2, 3]} end
+    list :all, fn _, _, _ -> {:ok, [1, 2, 3]} end
 
     selection :featured,
-              fn _, _ ->
+              fn _, _, _ ->
                 {:ok, [%{id: 1, label: "label 1"}, %{id: 2, label: "label 2"}]}
               end,
               fn _, _ ->

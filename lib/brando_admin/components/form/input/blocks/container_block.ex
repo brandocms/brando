@@ -206,7 +206,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           insert_index={@insert_index}
           insert_block={JS.push("insert_block", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
           insert_section={JS.push("insert_section", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
-          insert_datasource={JS.push("insert_datasource", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
@@ -291,47 +290,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         refs: refs_with_generated_uids
       },
       uid: generated_uid
-    }
-
-    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
-    sub_blocks = original_block.data.blocks || []
-    {index, ""} = Integer.parse(index_binary)
-    new_blocks = List.insert_at(sub_blocks, index, new_block)
-
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
-        data: %{blocks: new_blocks}
-      })
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
-
-    selector = "[data-block-uid=\"#{new_block.uid}\"]"
-
-    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
-  end
-
-  def handle_event(
-        "insert_datasource",
-        %{"index" => index_binary},
-        %{
-          assigns: %{
-            base_form: form,
-            uid: block_uid,
-            data_field: data_field
-          }
-        } = socket
-      ) do
-    changeset = form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    new_block = %Brando.Blueprint.Villain.Blocks.DatasourceBlock{
-      type: "datasource",
-      data: %Brando.Blueprint.Villain.Blocks.DatasourceBlock.Data{},
-      uid: Brando.Utils.generate_uid()
     }
 
     original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)

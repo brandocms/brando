@@ -167,6 +167,10 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :multi, :boolean
       add :wrapper, :boolean
       add :entry_template, :jsonb
+      add :datasource, :boolean
+      add :datasource_module, :string
+      add :datasource_type, :string
+      add :datasource_query, :string
       sequenced()
       timestamps()
       soft_delete()

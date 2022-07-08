@@ -140,7 +140,7 @@ export default class Navigation {
 
     if (value) {
       gsap.to(navigation, { ease: 'sine.inOut', duration: 0.35, xPercent: '-100' })
-      gsap.to(main, { ease: 'sine.inOut', duration: 0.35, marginLeft: 24 })
+      gsap.to(main, { ease: 'sine.inOut', duration: 0.35, marginLeft: 24, width: '100%' })
     } else {
       const marginLeft = this.getCSSVar(main, '--main-margin-left')
       gsap.to(navigation, { ease: 'sine.inOut', duration: 0.35, xPercent: '0' })

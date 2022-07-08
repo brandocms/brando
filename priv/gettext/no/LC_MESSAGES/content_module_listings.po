@@ -21,36 +21,36 @@ msgstr ""
 "X-Generator: Poedit 3.0.1\n"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:88
+#: lib/brando/content/module.ex:93
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:80
+#: lib/brando/content/module.ex:85
 msgid "Class"
 msgstr "Klasse"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:86
+#: lib/brando/content/module.ex:91
 msgid "Delete module"
 msgstr "Slett modul"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:90
+#: lib/brando/content/module.ex:95
 msgid "Duplicate module"
 msgstr "Dupliser modul"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:84
+#: lib/brando/content/module.ex:89
 msgid "Edit module"
 msgstr "Oppdater modul"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:78
+#: lib/brando/content/module.ex:83
 msgid "Name"
 msgstr "Navn"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:79
+#: lib/brando/content/module.ex:84
 msgid "Namespace"
 msgstr "Navneområde"

@@ -65,6 +65,18 @@ defmodule Brando.Content do
           _ ->
             from(t in query, where: t.namespace == ^namespace)
         end
+
+      {:datasource, datasource}, query ->
+        from q in query, where: q.datasource == ^datasource
+
+      {:datasource_module, datasource_module}, query ->
+        from q in query, where: q.datasource_module == ^datasource_module
+
+      {:datasource_type, datasource_type}, query ->
+        from q in query, where: q.datasource_type == ^datasource_type
+
+      {:datasource_query, datasource_query}, query ->
+        from q in query, where: q.datasource_query == ^datasource_query
     end
   end
 

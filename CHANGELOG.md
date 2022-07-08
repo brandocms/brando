@@ -10,6 +10,10 @@ to your `assets/backend/package.json`:
   "@codemirror/state": "6.0.0"
 }
 ```
+* Remove datasource block and introduce module blocks with datasource instead.
+  Run `mix brando.upgrade && mix ecto.migrate` to convert your existing datasource
+  blocks to module blocks.
+* Fix max width for #content
 * Automatically add uploaded gallery images to gallery
 * Add `alert` and `after_save` to forms:
 

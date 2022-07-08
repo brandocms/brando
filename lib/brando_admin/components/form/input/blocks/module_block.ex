@@ -5,12 +5,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  alias Brando.Content
+  alias Brando.Blueprint.Identifier
   alias Brando.Villain
+  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Input.Blocks.Module
 
   # prop block, :any
   # prop base_form, :any
@@ -40,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   defp get_module(id) do
-    {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
 
     case Enum.find(modules, &(&1.id == id)) do
       nil -> nil
@@ -56,10 +58,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:available_entries, fn -> [] end)
+     |> assign_new(:indexed_available_entries, fn -> [] end)
      |> assign_new(:entry, fn -> Ecto.Changeset.apply_changes(assigns.base_form.source) end)
      |> assign_new(:module_id, fn -> v(assigns.block, :data).module_id end)
      |> assign_module_data()
-     |> parse_module_code()}
+     |> parse_module_code()
+     |> assign_selected_entries()}
   end
 
   defp assign_module_data(%{assigns: %{block: block, module_id: module_id}} = socket) do
@@ -79,6 +84,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         uid = v(block, :uid)
         description = v(block, :description)
 
+        module_datasource_module =
+          if module.datasource and module.datasource_module do
+            module = Module.concat(List.wrap(module.datasource_module))
+            domain = module.__naming__().domain
+            schema = module.__naming__().schema
+
+            gettext_module = module.__modules__().gettext
+            gettext_domain = String.downcase("#{domain}_#{schema}_naming")
+            msgid = Brando.Utils.humanize(module.__naming__().singular, :downcase)
+
+            String.capitalize(Gettext.dgettext(gettext_module, gettext_domain, msgid))
+          else
+            ""
+          end
+
         socket
         |> assign(:uid, uid)
         |> assign(:description, description)
@@ -89,11 +109,53 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_code, module.code)
         |> assign(:module_code, module.code)
         |> assign(:module_multi, input_value(block_data, :multi))
+        |> assign(:module_datasource, module.datasource)
+        |> assign(:module_datasource_module, module.datasource_module)
+        |> assign(:module_datasource_module_label, module_datasource_module)
+        |> assign(:module_datasource_type, module.datasource_type)
+        |> assign(:module_datasource_query, module.datasource_query)
+        |> assign(:datasource_selected_ids, input_value(block_data, :datasource_selected_ids))
         |> assign(:entry_template, module.entry_template)
         |> assign(:refs_forms, refs_forms)
         |> assign(:refs, refs)
         |> assign(:vars, vars)
         |> assign_new(:important_vars, fn -> Enum.filter(vars, &(&1.important == true)) end)
+    end
+  end
+
+  def assign_available_entries(%{assigns: assigns} = socket) do
+    module = assigns.module_datasource_module
+    query = assigns.module_datasource_query
+    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
+
+    {:ok, available_entries} =
+      Brando.Datasource.list_selection(
+        module,
+        query,
+        Map.get(entry, :language),
+        assigns.vars
+      )
+
+    socket
+    |> assign(:available_entries, available_entries)
+    |> assign(:indexed_available_entries, Enum.with_index(available_entries))
+  end
+
+  def assign_selected_entries(%{assigns: assigns} = socket) do
+    case assigns.module_datasource_type do
+      :selection ->
+        module = assigns.module_datasource_module
+        query = assigns.module_datasource_query
+        ids = assigns.datasource_selected_ids
+
+        assign_new(socket, :selected_entries, fn ->
+          {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
+          {:ok, identifiers} = Identifier.identifiers_for(selected_entries)
+          identifiers
+        end)
+
+      _ ->
+        assign(socket, :selected_entries, [])
     end
   end
 
@@ -121,7 +183,57 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         block={@block}
         belongs_to={@belongs_to}
         insert_block={@insert_block}
-        duplicate_block={@duplicate_block}>
+        duplicate_block={@duplicate_block}
+        is_datasource?={@module_datasource}>
+        <:type><%= if @module_datasource do %>datamodule<% else %>module<% end %></:type>
+        <:datasource>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z"/></svg><%= @module_datasource_module_label %> | <%= @module_datasource_type %> | <%= @module_datasource_query %>
+          <%= if @module_datasource_type == :selection do %>
+            <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} remember_scroll_position>
+              <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+              <%= for {identifier, idx} <- @indexed_available_entries do %>
+                <Entries.identifier
+                  identifier={identifier}
+                  select={JS.push("select_identifier", target: @myself)}
+                  selected_identifiers={@selected_entries}
+                  param={idx}
+                />
+              <% end %>
+            </Content.modal>
+
+            <div class="module-datasource-selected">
+              <Form.array_inputs
+                let={%{value: array_value, name: array_name}}
+                form={@block_data}
+                for={:datasource_selected_ids}>
+                <input type="hidden" name={array_name} value={array_value} />
+              </Form.array_inputs>
+
+              <div
+                id={"sortable-#{@uid}-identifiers"}
+                class="selected-entries"
+                phx-hook="Brando.Sortable"
+                data-target={@myself}
+                data-sortable-id={"sortable-#{@uid}-identifiers"}
+                data-sortable-handle=".sort-handle"
+                data-sortable-selector=".identifier">
+                <%= for {identifier, idx} <- Enum.with_index(@selected_entries) do %>
+                  <Entries.identifier
+                    identifier={identifier}
+                    remove={JS.push("remove_identifier", target: @myself)}
+                    param={idx} />
+                <% end %>
+              </div>
+
+              <button
+                class="tiny select-button"
+                type="button"
+                phx-click={JS.push("select_entries", target: @myself) |> show_modal("#select-entries-#{@uid}")}>
+                <%= gettext "Select entries" %>
+              </button>
+            </div>
+          <% end %>
+        </:datasource>
         <:description><%= if @description do %><strong><%= @description %></strong>&nbsp;| <% end %><%= @module_name %></:description>
         <:config>
           <div class="panels">
@@ -177,7 +289,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           <%= for split <- @splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <Module.Ref.render
+                <Blocks.Module.Ref.render
                   data_field={@data_field}
                   uploads={@uploads}
                   module_refs={@refs_forms}
@@ -186,7 +298,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
               <% {:content, _} -> %>
                 <%= if @module_multi do %>
-                  <.live_component module={Module.Entries}
+                  <.live_component module={Blocks.Module.Entries}
                     id={"block-#{@uid}-entries"}
                     uid={@uid}
                     entry_template={@entry_template}
@@ -220,6 +332,83 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       </Blocks.block>
     </div>
     """
+  end
+
+  def handle_event("select_entries", _, socket) do
+    {:noreply, assign_available_entries(socket)}
+  end
+
+  def handle_event(
+        "select_identifier",
+        %{"param" => idx},
+        %{assigns: %{available_entries: available_entries, selected_entries: selected_entries}} =
+          socket
+      ) do
+    picked_entry = Enum.at(available_entries, String.to_integer(idx))
+
+    # deselect if already selected
+    selected_entries =
+      if Enum.find(selected_entries, &(&1 == picked_entry)) do
+        Enum.filter(selected_entries, &(&1 != picked_entry))
+      else
+        selected_entries ++ List.wrap(picked_entry)
+      end
+
+    {:noreply,
+     socket
+     |> assign(:selected_entries, selected_entries)
+     |> update_ids(:add, picked_entry)
+     |> push_event("b:validate", %{})}
+  end
+
+  def handle_event(
+        "remove_identifier",
+        %{"param" => idx},
+        %{assigns: %{selected_entries: selected_entries}} = socket
+      ) do
+    picked_entry = Enum.at(selected_entries, String.to_integer(idx))
+    new_entries = selected_entries |> Enum.filter(&(&1 != picked_entry))
+
+    {:noreply,
+     socket
+     |> assign(:selected_entries, new_entries)
+     |> update_ids(:remove, picked_entry)
+     |> push_event("b:validate", %{})}
+  end
+
+  def handle_event(
+        "sequenced",
+        %{"ids" => ordered_ids},
+        %{
+          assigns: %{
+            base_form: form,
+            uid: uid,
+            block: block,
+            data_field: data_field,
+            selected_entries: selected_entries
+          }
+        } = socket
+      ) do
+    changeset = form.source
+    current_data = input_value(block, :data)
+    new_data = Map.put(current_data, :datasource_selected_ids, ordered_ids)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset,
+      force_validation: true
+    )
+
+    updated_entries =
+      Enum.map(ordered_ids, fn id -> Enum.find(selected_entries, &(&1.id == id)) end)
+
+    {:noreply, assign(socket, :selected_entries, updated_entries)}
   end
 
   def handle_event(
@@ -482,16 +671,66 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:noreply, socket}
   end
 
+  defp update_ids(
+         %{
+           assigns: %{
+             base_form: form,
+             uid: uid,
+             block: block,
+             data_field: data_field
+           }
+         } = socket,
+         action,
+         entry
+       ) do
+    # replace block
+    changeset = form.source
+    current_data = input_value(block, :data)
+
+    new_data =
+      if action == :add do
+        Map.put(
+          current_data,
+          :datasource_selected_ids,
+          (current_data.datasource_selected_ids || []) ++ List.wrap(entry.id)
+        )
+      else
+        Map.put(
+          current_data,
+          :datasource_selected_ids,
+          Enum.filter(current_data.datasource_selected_ids || [], &(&1 != entry.id))
+        )
+      end
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    socket
+  end
+
   @regex_strips ~r/(({% hide %}(?:.*?){% endhide %}))|((?:{%(?:-)? for (\w+) in [a-zA-Z0-9_.?|"-]+ (?:-)?%})(?:.*?)(?:{%(?:-)? endfor (?:-)?%}))|(<img.*?src="{{(?:-)? .*? (?:-)?}}".*?>)|({%(?:-)? assign .*? (?:-)?%})|(((?:{%(?:-)? if .*? (?:-)?%})(?:.*?)(?:{%(?:-)? endif (?:-)?%})))|(((?:{%(?:-)? unless .*? (?:-)?%})(?:.*?)(?:{%(?:-)? endunless (?:-)?%})))|(data-moonwalk-run(?:="\w+")|data-moonwalk-run|data-moonwalk-section(?:="\w+")|data-moonwalk-section|href(?:="[a-zA-Z0-9{}._\s]+")|id(?:="{{[a-zA-Z0-9{}._\s]+}}"))/s
   @regex_splits ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
   @regex_chunks ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/
 
   defp parse_module_code(%{assigns: %{module_not_found: true}} = socket), do: socket
 
-  defp parse_module_code(%{assigns: %{module_code: module_code}} = socket) do
+  defp parse_module_code(%{assigns: %{module_code: module_code} = assigns} = socket) do
+    module_code =
+      module_code
+      |> strip_logic()
+      |> emphasize_datasources(assigns)
+
     splits =
       @regex_splits
-      |> Regex.split(strip_logic(module_code), include_captures: true)
+      |> Regex.split(module_code, include_captures: true)
       |> Enum.map(fn chunk ->
         case Regex.run(@regex_chunks, chunk, capture: :all_names) do
           nil ->
@@ -515,6 +754,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       end)
 
     assign(socket, :splits, splits)
+  end
+
+  defp emphasize_datasources(code, assigns) do
+    Regex.replace(
+      ~r/(({% datasource %}(?:.*?){% enddatasource %}))/s,
+      code,
+      """
+      <div class="brando-datasource-placeholder">
+         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z"/></svg>
+         <div class="text-mono">#{assigns.module_datasource_module_label} | #{assigns.module_datasource_type} | #{assigns.module_datasource_query}</div>
+         #{gettext("Content from datasource will be inserted here")}
+      </div>
+      """
+    )
   end
 
   # defp strip_l(tpl) do

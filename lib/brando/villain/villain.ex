@@ -449,8 +449,38 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  List ids of `schema` records that has `module_ids` in `data_field`
+  Also check inside containers.
+  """
+  def list_ids_with_modules(schema, data_field, module_ids) when is_list(module_ids) do
+    query =
+      from s in schema,
+        select: s.id
+
+    query =
+      Enum.reduce(module_ids, query, fn module_id, updated_query ->
+        t = [
+          %{type: "module", data: %{module_id: module_id}}
+        ]
+
+        contained_t = [
+          %{
+            type: "container",
+            data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}
+          }
+        ]
+
+        from s in updated_query,
+          or_where: jsonb_contains(s, data_field, t),
+          or_where: jsonb_contains(s, data_field, contained_t)
+      end)
+
+    Brando.repo().all(query)
+  end
+
+  @doc """
   List ids of `schema` records that has `module_id` in `data_field`
-  Also check inside containers and datasources
+  Also check inside containers.
   """
   def list_ids_with_module(schema, data_field, module_id) do
     t = [
@@ -461,47 +491,11 @@ defmodule Brando.Villain do
       %{type: "container", data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}}
     ]
 
-    datasourced_t = [
-      %{type: "datasource", data: %{module_id: module_id}}
-    ]
-
-    contained_datasourced_t = [
-      %{
-        type: "container",
-        data: %{blocks: [%{type: "datasource", data: %{module_id: module_id}}]}
-      }
-    ]
-
-    moduled_datasourced_t = [
-      %{
-        type: "module",
-        data: %{refs: [%{data: %{type: "datasource", data: %{module_id: module_id}}}]}
-      }
-    ]
-
-    contained_moduled_datasourced_t = [
-      %{
-        type: "container",
-        data: %{
-          blocks: [
-            %{
-              type: "module",
-              data: %{refs: [%{data: %{type: "datasource", data: %{module_id: module_id}}}]}
-            }
-          ]
-        }
-      }
-    ]
-
     Brando.repo().all(
       from s in schema,
         select: s.id,
         where: jsonb_contains(s, data_field, t),
-        or_where: jsonb_contains(s, data_field, contained_t),
-        or_where: jsonb_contains(s, data_field, datasourced_t),
-        or_where: jsonb_contains(s, data_field, contained_datasourced_t),
-        or_where: jsonb_contains(s, data_field, moduled_datasourced_t),
-        or_where: jsonb_contains(s, data_field, contained_moduled_datasourced_t)
+        or_where: jsonb_contains(s, data_field, contained_t)
     )
   end
 
@@ -890,7 +884,9 @@ defmodule Brando.Villain do
     Changeset.put_change(changeset, data_field, updated_blocks)
   end
 
-  def add_uid_to_refs(refs) do
+  def add_uid_to_refs(nil), do: nil
+
+  def add_uid_to_refs(refs) when is_list(refs) do
     {_, refs_with_generated_uids} =
       get_and_update_in(
         refs,

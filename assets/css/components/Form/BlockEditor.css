@@ -79,7 +79,7 @@
         
       }
 
-      .refs, .vars {
+      .refs, .vars, .datasource {
         @space margin-top 20px;
         
         .button-group {

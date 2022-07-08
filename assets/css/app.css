@@ -37,7 +37,6 @@
 @import './components/Form/Input/TipTap.css';
 @import './components/Form/Input/Blocks/Block.css';
 @import './components/Form/Input/Blocks/Blocks.css';
-@import './components/Form/Input/Blocks/DatasourceBlock.css';
 @import './components/Form/Input/Blocks/GalleryBlock.css';
 @import './components/Form/Input/Blocks/HeaderBlock.css';
 @import './components/Form/Input/Blocks/MapBlock.css';
@@ -518,7 +517,7 @@ body {
     @responsive iphone { --main-margin-left: 0 }
 
     margin-left: var(--main-margin-left);
-    width: 100%;
+    width: calc(100% - var(--main-margin-left));
   }
 }
 

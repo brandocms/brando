@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
+    assign(socket, :input_options, get_input_options(form, opts))
   end
 
   def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do

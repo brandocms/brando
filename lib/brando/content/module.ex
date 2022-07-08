@@ -56,6 +56,11 @@ defmodule Brando.Content.Module do
     attribute :svg, :text
     attribute :wrapper, :boolean
 
+    attribute :datasource, :boolean, default: false
+    attribute :datasource_module, :string
+    attribute :datasource_type, Ecto.Enum, values: [:list, :single, :selection]
+    attribute :datasource_query, :string
+
     attribute :vars, {:array, Brando.PolymorphicEmbed},
       types: Var.types(),
       type_field: :type,

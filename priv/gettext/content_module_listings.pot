@@ -11,36 +11,36 @@ msgid ""
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:88
+#: lib/brando/content/module.ex:93
 msgid "Are you sure?"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:80
+#: lib/brando/content/module.ex:85
 msgid "Class"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:86
+#: lib/brando/content/module.ex:91
 msgid "Delete module"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:90
+#: lib/brando/content/module.ex:95
 msgid "Duplicate module"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:84
+#: lib/brando/content/module.ex:89
 msgid "Edit module"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:78
+#: lib/brando/content/module.ex:83
 msgid "Name"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando/content/module.ex:79
+#: lib/brando/content/module.ex:84
 msgid "Namespace"
 msgstr ""

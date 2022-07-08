@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   use Phoenix.HTML
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
+  alias Brando.Datasource
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -26,9 +27,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   def mount(socket) do
     {:ok,
      socket
-     |> assign(open_col_vars: [])
+     |> assign(open_col_vars: [], datasource: false)
      |> assign_new(:entry_form, fn -> false end)
-     |> assign_new(:key, fn -> "default" end)}
+     |> assign_new(:key, fn -> "default" end)
+     |> assign_available_sources()}
+  end
+
+  def update(assigns, socket) do
+    datasource = input_value(assigns.form, :datasource)
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:datasource, datasource)
+     |> assign_available_queries()}
   end
 
   def render(assigns) do
@@ -147,14 +159,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               phx-value-type="comment"
               class="secondary">
               Comment
-            </button>
-
-            <button
-              type="button"
-              phx-click={@create_ref |> hide_modal("##{@form.id}-#{@key}-create-ref") |> show_modal("##{@form.id}-#{@key}-ref-0")}
-              phx-value-type="datasource"
-              class="secondary">
-              Datasource
             </button>
           </div>
         </Content.modal>
@@ -719,9 +723,79 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             </Form.poly_inputs>
           </ul>
         </div>
+
+        <div class="datasource">
+          <Input.toggle form={@form} field={:datasource} label={gettext "Datasource"} />
+
+          <%= if @datasource in [true, "true"] do %>
+            <.live_component module={Input.Select}
+              id={"#{@form.id}-datasource-module"}
+              form={@form}
+              field={:datasource_module}
+              opts={[options: @available_sources]}
+            />
+
+            <Input.radios form={@form} field={:datasource_type} label={gettext "Type"} opts={[options: [
+              %{label: gettext("List"), value: :list},
+              %{label: gettext("Single"), value: :single},
+              %{label: gettext("Selection"), value: :selection},
+            ]]} />
+
+            <.live_component module={Input.Select}
+              id={"#{@form.id}-datasource-query"}
+              form={@form}
+              field={:datasource_query}
+              opts={[options: @available_queries]}
+            />
+          <% end %>
+        </div>
       </div>
     </div>
     """
+  end
+
+  def assign_available_sources(socket) do
+    {:ok, available_sources} = Datasource.list_datasources()
+
+    available_sources =
+      Enum.map(
+        available_sources,
+        fn module_bin ->
+          module = Module.concat(List.wrap(module_bin))
+          domain = module.__naming__().domain
+          schema = module.__naming__().schema
+
+          gettext_module = module.__modules__().gettext
+          gettext_domain = String.downcase("#{domain}_#{schema}_naming")
+          msgid = Brando.Utils.humanize(module.__naming__().singular, :downcase)
+
+          %{
+            label: String.capitalize(Gettext.dgettext(gettext_module, gettext_domain, msgid)),
+            value: module_bin
+          }
+        end
+      )
+
+    assign(socket, :available_sources, available_sources)
+  end
+
+  def assign_available_queries(%{assigns: %{form: form}} = socket) do
+    module = input_value(form, :datasource_module)
+    type = input_value(form, :datasource_type)
+    type = (is_binary(type) && String.to_existing_atom(type)) || type
+
+    if module && type do
+      {:ok, all_available_queries} = Datasource.list_datasource_keys(module)
+
+      all_available_queries_by_type = Map.get(all_available_queries, type, [])
+
+      available_queries_as_options =
+        Enum.map(all_available_queries_by_type, &%{label: to_string(&1), value: &1})
+
+      assign(socket, :available_queries, available_queries_as_options)
+    else
+      assign(socket, :available_queries, [])
+    end
   end
 
   def handle_event(

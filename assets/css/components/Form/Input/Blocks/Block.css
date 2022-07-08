@@ -66,6 +66,10 @@
     .block-content {
       display: none;
     }
+
+    .block-datasource {
+      display: none;
+    }
   }
 
   &.multi {
@@ -282,6 +286,34 @@
         width: 100%;
         max-width: 100%;
         flex-basis: 100%;
+      }
+    }
+  }
+
+  .block-datasource {
+    @font mono;
+    font-size: 10px;
+    margin-bottom: 17px;
+
+    svg {
+      margin-right: 8px;
+      width: 10px;
+      display: inline-block;
+      margin-top: -3px;
+
+      path {
+        &:nth-of-type(2) {
+          stroke: var(--brando-color-blue);
+        }
+      }
+    }
+
+    .module-datasource-selected {
+      margin-top: 18px;
+      margin-bottom: 18px;
+      
+      .selected-entries {
+        margin-bottom: 18px;
       }
     }
   }

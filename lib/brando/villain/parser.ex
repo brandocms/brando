@@ -226,6 +226,7 @@ defmodule Brando.Villain.Parser do
           |> add_admin_to_context(opts)
           |> add_parser_to_context(__MODULE__)
           |> add_module_id_to_context(id)
+          |> add_entries_to_context(module, block)
 
         module.code
         |> Villain.parse_and_render(context)
@@ -233,44 +234,84 @@ defmodule Brando.Villain.Parser do
 
       defoverridable module: 2
 
-      def datasource(
-            %{
-              module: module,
-              type: :list,
-              query: query,
-              code: code
-            } = data,
-            opts
-          ) do
-        arg = Map.get(data, :arg, nil)
-        src_module_id = Map.get(data, :module_id, nil)
-        src = (src_module_id && {:module, src_module_id}) || {:code, code}
-
-        language = Map.get(opts.context.variables, "language")
-
-        with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
-          render_datasource_entries(src, entries, opts)
-        end
+      defp add_entries_to_context(
+             context,
+             %{
+               datasource: true,
+               datasource_type: :list,
+               datasource_module: module,
+               datasource_query: query
+             },
+             %{vars: vars} = block
+           ) do
+        language = Map.get(context.variables, "language")
+        {:ok, entries} = Datasource.get_list(module, query, map_vars(vars), language)
+        Context.assign(context, :entries, entries)
       end
 
-      def datasource(
-            %{
-              module: module,
-              type: :selection,
-              query: query,
-              code: code,
-              ids: ids
-            } = data,
-            opts
-          ) do
-        arg = Map.get(data, :arg, nil)
-        src_module_id = Map.get(data, :module_id, nil)
-        src = (src_module_id && {:module, src_module_id}) || {:code, code}
-
-        with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
-          render_datasource_entries(src, entries, opts)
-        end
+      defp add_entries_to_context(
+             context,
+             %{
+               datasource: true,
+               datasource_type: :selection,
+               datasource_module: module,
+               datasource_query: query
+             },
+             %{datasource_selected_ids: ids, vars: vars} = block
+           ) do
+        {:ok, entries} = Datasource.get_selection(module, query, ids)
+        Context.assign(context, :entries, entries)
       end
+
+      defp add_entries_to_context(context, _, _), do: context
+
+      defp map_vars(nil), do: %{}
+
+      defp map_vars(vars) do
+        Enum.reduce(vars, %{}, fn
+          var, acc ->
+            Map.put(acc, var.key, var.value)
+        end)
+      end
+
+      # def datasource(
+      #       %{
+      #         module: module,
+      #         type: :list,
+      #         query: query,
+      #         code: code
+      #       } = data,
+      #       opts
+      #     ) do
+      #   arg = Map.get(data, :arg, nil)
+      #   src_module_id = Map.get(data, :module_id, nil)
+      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
+
+      #   language = Map.get(opts.context.variables, "language")
+
+      #   with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
+      #     render_datasource_entries(src, entries, opts)
+      #   end
+      # end
+
+      # def datasource(
+      #       %{
+      #         module: module,
+      #         type: :selection,
+      #         query: query,
+      #         code: code,
+      #         ids: ids
+      #       } = data,
+      #       opts
+      #     ) do
+      #   arg = Map.get(data, :arg, nil)
+      #   src_module_id = Map.get(data, :module_id, nil)
+      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
+
+      #   with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
+      #     render_datasource_entries(src, entries, opts)
+      #   end
+      # end
 
       def datasource(_, _), do: ""
 

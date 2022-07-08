@@ -5,7 +5,6 @@ defmodule Brando.Blueprint.Villain.Blocks do
     [
       comment: Blocks.CommentBlock,
       container: Blocks.ContainerBlock,
-      datasource: Blocks.DatasourceBlock,
       gallery: Blocks.GalleryBlock,
       header: Blocks.HeaderBlock,
       html: Blocks.HtmlBlock,

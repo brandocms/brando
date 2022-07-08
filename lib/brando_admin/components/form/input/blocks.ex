@@ -81,7 +81,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           opts={@opts}
           insert_block={JS.push("insert_block", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          insert_datasource={JS.push("insert_datasource", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)} />
       </Form.field_base>
@@ -112,40 +111,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         palette_id: nil,
         blocks: []
       },
-      uid: Brando.Utils.generate_uid()
-    }
-
-    {index, ""} = Integer.parse(index_binary)
-
-    new_data =
-      changeset
-      |> get_blocks_data()
-      |> List.insert_at(index, new_block)
-
-    updated_changeset = put_change(changeset, :data, new_data)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
-
-    selector = "[data-block-uid=\"#{new_block.uid}\"]"
-
-    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
-  end
-
-  def handle_event(
-        "insert_datasource",
-        %{"index" => index_binary},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    new_block = %Brando.Blueprint.Villain.Blocks.DatasourceBlock{
-      type: "datasource",
-      data: %Brando.Blueprint.Villain.Blocks.DatasourceBlock.Data{},
       uid: Brando.Utils.generate_uid()
     }
 
@@ -271,7 +236,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   ## Function components
   def block(assigns) do
     uid = input_value(assigns.block, :uid) || Brando.Utils.generate_uid()
-    type = input_value(assigns.block, :type) || (assigns.is_entry? && "entry")
 
     assigns =
       assigns
@@ -281,6 +245,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:config, fn -> nil end)
       |> assign_new(:config_footer, fn -> nil end)
       |> assign_new(:description, fn -> nil end)
+      |> assign_new(:type, fn -> nil end)
+      |> assign_new(:is_datasource?, fn -> false end)
+      |> assign_new(:datasource, fn -> nil end)
+      |> assign_new(:block_type, fn ->
+        input_value(assigns.block, :type) || (assigns.is_entry? && "entry")
+      end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:render, fn -> nil end)
       |> assign_new(:initial_classes, fn ->
@@ -292,7 +262,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign(:bg_color, assigns[:bg_color])
       |> assign(:last_block?, last_block?(assigns))
       |> assign(:uid, uid)
-      |> assign(:type, type)
       |> assign(:hidden, input_value(assigns.block, :hidden))
       |> assign(:collapsed, input_value(assigns.block, :collapsed))
       |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))
@@ -332,7 +301,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       <div
         id={"block-#{@uid}"}
         data-block-uid={@uid}
-        data-block-type={@type}
+        data-block-type={@block_type}
         style={"background-color: #{@bg_color}"}
         class={render_classes(["block", ref_block: @is_ref?])}
         phx-hook="Brando.Block">
@@ -348,8 +317,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             <Input.input type={:checkbox} form={@block} field={:hidden} uid={@uid} id_prefix="base_block" />
             <div class="slider round"></div>
           </Form.label>
-          <span class="block-type"><%= @type %></span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
+          <span class="block-type">
+            <%= if @type do %><%= render_slot @type %><% else %><%= @block_type %><% end %>
+          </span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
         </div>
+        <%= if @is_datasource? do %>
+          <div class="block-datasource" id={"block-#{@uid}-block-datasource"}>
+            <%= render_slot(@datasource) %>
+          </div>
+        <% end %>
         <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot @inner_block %>
         </div>
@@ -388,7 +364,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             type="button"
             class="block-action config"
             phx-click={show_modal("#block-#{@uid}_config")}>
-            <%= if @type == "module" do %>
+            <%= if @block_type == "module" do %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8.595 12.812a3.51 3.51 0 0 1 0-1.623l-.992-.573 1-1.732.992.573A3.496 3.496 0 0 1 11 8.645V7.5h2v1.145c.532.158 1.012.44 1.405.812l.992-.573 1 1.732-.992.573a3.51 3.51 0 0 1 0 1.622l.992.573-1 1.732-.992-.573a3.496 3.496 0 0 1-1.405.812V16.5h-2v-1.145a3.496 3.496 0 0 1-1.405-.812l-.992.573-1-1.732.992-.572zM12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM15 4H5v16h14V8h-4V4zM3 2.992C3 2.444 3.447 2 3.999 2H16l5 5v13.993A1 1 0 0 1 20.007 22H3.993A1 1 0 0 1 3 21.008V2.992z"/></svg>
             <% else %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8.686 4l2.607-2.607a1 1 0 0 1 1.414 0L15.314 4H19a1 1 0 0 1 1 1v3.686l2.607 2.607a1 1 0 0 1 0 1.414L20 15.314V19a1 1 0 0 1-1 1h-3.686l-2.607 2.607a1 1 0 0 1-1.414 0L8.686 20H5a1 1 0 0 1-1-1v-3.686l-2.607-2.607a1 1 0 0 1 0-1.414L4 8.686V5a1 1 0 0 1 1-1h3.686zM6 6v3.515L3.515 12 6 14.485V18h3.515L12 20.485 14.485 18H18v-3.515L20.485 12 18 9.515V6h-3.515L12 3.515 9.515 6H6zm6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>

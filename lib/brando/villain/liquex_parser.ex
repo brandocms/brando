@@ -1,16 +1,16 @@
 defmodule Brando.Villain.LiquexParser do
-  alias Brando.Villain.Tags
-
   use Liquex.Parser,
     tags: [
-      Tags.HeadlessRef,
-      Tags.Ref,
-      Tags.Picture,
-      Tags.Route,
-      Tags.RouteI18n,
-      Tags.Fragment,
-      Tags.Hide,
-      Tags.EndHide,
-      Tags.T
+      Brando.Villain.Tags.HeadlessRef,
+      Brando.Villain.Tags.Ref,
+      Brando.Villain.Tags.Picture,
+      Brando.Villain.Tags.Route,
+      Brando.Villain.Tags.RouteI18n,
+      Brando.Villain.Tags.Fragment,
+      Brando.Villain.Tags.Hide,
+      Brando.Villain.Tags.EndHide,
+      Brando.Villain.Tags.T,
+      Brando.Villain.Tags.Datasource,
+      Brando.Villain.Tags.EndDatasource
     ]
 end
