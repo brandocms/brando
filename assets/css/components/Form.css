@@ -7,6 +7,7 @@
   .form-content {
     flex-shrink: 1;
     flex-grow: 1;
+    width: 100%;
 
     .form-header {
       @space margin-top sm;
@@ -142,7 +143,7 @@
       @grid;
     }
     
-    grid-template-columns: repeat(16, 1fr);
+    grid-template-columns: repeat(16, minmax(0px, 1fr));
     grid-template-rows: min-content;
 
     .full {
