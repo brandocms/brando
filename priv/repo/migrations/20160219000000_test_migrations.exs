@@ -144,7 +144,9 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:wrapper, :text)
       add(:data, :jsonb)
       add(:html, :text)
+      add(:status, :integer)
       add(:sequence, :integer)
+      add :publish_at, :utc_datetime
       add(:creator_id, references(:users))
       add(:page_id, references(:pages))
       soft_delete()

@@ -129,6 +129,7 @@ defmodule Brando.VillainTest do
 
   test "search_villains_for_text", %{user: user} do
     params = %{
+      status: "published",
       parent_key: "parent_key",
       key: "key",
       language: "en",
@@ -171,6 +172,7 @@ defmodule Brando.VillainTest do
       parent_key: "parent_key",
       key: "key",
       language: "en",
+      status: "published",
       creator_id: user.id,
       data: [
         %{

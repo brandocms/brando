@@ -131,6 +131,7 @@ defmodule Brando.Factory do
     %Fragment{
       parent_key: "index",
       key: "header",
+      status: :published,
       language: "en",
       data: [],
       html: "fragment content!",
