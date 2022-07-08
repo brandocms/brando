@@ -290,6 +290,17 @@ figcaption.tiny {
             color: #052753;
             border-color: #052753;
           }
+
+          .datepicker-and-button {
+            .input {
+              color: #052753;
+              border: 1px solid #052753;
+            }
+
+            button {
+              border: 1px solid #052753 !important;
+            }
+          }
         }
 
         svg {
@@ -331,7 +342,7 @@ figcaption.tiny {
         border: 1px solid azure;
         padding: 3px 10px;
         font-size: 13px;
-        transition: color 250ms ease, background-color 250ms ease;
+        transition: color 250ms ease, background-color 250ms ease;        
 
         &.revision-publish_at {
           white-space: normal !important;
