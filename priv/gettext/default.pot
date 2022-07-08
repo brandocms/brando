@@ -405,7 +405,7 @@ msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:119
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:262
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:260
 #: lib/brando_admin/components/pages/page_vars.ex:37
 msgid "Advanced"
 msgstr ""
@@ -519,7 +519,7 @@ msgid "Delete images"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:68
+#: lib/brando_admin/live/config/scheduled_publishing_live.ex:69
 msgid "Delete job"
 msgstr ""
 
@@ -564,7 +564,7 @@ msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:157
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:315
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:313
 msgid "Edit the entry directly to affect this variable [%{var_name}]"
 msgstr ""
 
@@ -624,7 +624,7 @@ msgid "Inspect and clear caches"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:92
+#: lib/brando_admin/live/config/scheduled_publishing_live.ex:93
 msgid "Job queue refreshed"
 msgstr ""
 
@@ -691,15 +691,15 @@ msgid "Picture"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/live/config/scheduled_publishing_live.ex:76
+#: lib/brando_admin/live/config/scheduled_publishing_live.ex:77
 msgid "Refresh job queue"
 msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:108
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:116
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:251
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:259
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:249
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:257
 msgid "Reset"
 msgstr ""
 
@@ -739,8 +739,8 @@ msgid "Select content type"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:192
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:232
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:190
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:230
 #: lib/brando_admin/components/form/input/entries.ex:152
 #: lib/brando_admin/components/form/input/entries.ex:155
 msgid "Select entries"
@@ -797,7 +797,7 @@ msgid "\n      Meta information for search engines. Try to keep the title tag be
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:149
+#: lib/brando_admin/components/form/revisions_drawer.ex:150
 msgid "Activate revision"
 msgstr ""
 
@@ -807,7 +807,7 @@ msgid "Add content block"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:172
+#: lib/brando_admin/components/form/revisions_drawer.ex:181
 msgid "Delete version"
 msgstr ""
 
@@ -817,12 +817,12 @@ msgid "Insert section"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:163
+#: lib/brando_admin/components/form/revisions_drawer.ex:164
 msgid "Protect version"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:113
+#: lib/brando_admin/components/form/revisions_drawer.ex:114
 msgid "Purge inactive versions"
 msgstr ""
 
@@ -832,22 +832,22 @@ msgid "Revisions"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:102
+#: lib/brando_admin/components/form/revisions_drawer.ex:103
 msgid "Save version without activating"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:92
+#: lib/brando_admin/components/form/revisions_drawer.ex:93
 msgid "This is a list of this entry's revisions. Click a row to preview."
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:156
+#: lib/brando_admin/components/form/revisions_drawer.ex:157
 msgid "Unprotect version"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:95
+#: lib/brando_admin/components/form/revisions_drawer.ex:96
 msgid "You may also store a new version of the entry without activating it. This might be useful for scheduling content publishing, or sharing previews of unpublished entries."
 msgstr ""
 
@@ -1109,6 +1109,7 @@ msgid "Preload"
 msgstr ""
 
 #, elixir-autogen, elixir-format
+#: lib/brando_admin/components/form/revisions_drawer.ex:251
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:20
 msgid "Publish at"
 msgstr ""
@@ -1289,7 +1290,7 @@ msgid "Create new"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:193
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:191
 #: lib/brando_admin/components/form/input/entries.ex:165
 msgid "Available entries"
 msgstr ""
@@ -1403,7 +1404,7 @@ msgid "undeleted"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/revisions_drawer.ex:89
+#: lib/brando_admin/components/form/revisions_drawer.ex:90
 msgid "Entry revisions"
 msgstr ""
 
@@ -1600,23 +1601,23 @@ msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:240
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:238
 msgid "Block description"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:265
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:263
 msgid "Fetch missing refs"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:271
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:269
 msgid "Fetch missing vars"
 msgstr ""
 
 #, elixir-autogen, elixir-format
 #: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:240
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:238
 msgid "Helpful for collapsed blocks"
 msgstr ""
 
@@ -1626,12 +1627,12 @@ msgid "Missing option"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:268
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:266
 msgid "Reset all block refs"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:274
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:272
 msgid "Reset all variables"
 msgstr ""
 
@@ -1666,6 +1667,26 @@ msgid "confirm"
 msgstr ""
 
 #, elixir-autogen, elixir-format
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:767
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:765
 msgid "Content from datasource will be inserted here"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando_admin/live/config/scheduled_publishing_live.ex:100
+msgid "Job deleted"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando_admin/components/form/revisions_drawer.ex:267
+msgid "Schedule"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando_admin/components/form/revisions_drawer.ex:172
+msgid "Schedule version"
+msgstr ""
+
+#, elixir-autogen, elixir-format
+#: lib/brando_admin/components/form/revisions_drawer.ex:349
+msgid "Scheduled revision for publishing"
 msgstr ""

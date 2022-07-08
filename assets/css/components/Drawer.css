@@ -333,6 +333,35 @@ figcaption.tiny {
         font-size: 13px;
         transition: color 250ms ease, background-color 250ms ease;
 
+        &.revision-publish_at {
+          white-space: normal !important;
+
+          .datepicker-and-button {
+            display: flex;
+            width: 100%;
+
+            .datetime-wrapper {
+              width: 70%;
+            }
+
+            .input {
+              font-size: 13px;
+            }
+
+            button {
+              border: 1px solid aliceblue;
+              margin-left: -1px;
+              flex-grow: 1;
+            }
+          }
+
+          label {
+            padding-top: 10px;
+            display: block;
+            padding-bottom: 12px;
+          }
+        }
+
         &.fit {
           white-space: nowrap;
           min-width: 34px;

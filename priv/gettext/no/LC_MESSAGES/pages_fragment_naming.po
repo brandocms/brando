@@ -21,11 +21,11 @@ msgstr ""
 "X-Generator: Poedit 3.0\n"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/fragment.ex:62
+#: lib/brando/pages/fragment.ex:65
 msgid "fragment"
 msgstr "fragment"
 
 #, elixir-autogen, elixir-format
-#: lib/brando/pages/fragment.ex:63
+#: lib/brando/pages/fragment.ex:66
 msgid "fragments"
 msgstr "fragmenter"

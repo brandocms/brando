@@ -16,6 +16,7 @@ import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
 import SelectFilterHook from './hooks/SelectFilter'
 import RememberScrollPositionHook from './hooks/RememberScrollPosition'
+import SchedulerHook from './hooks/Scheduler'
 import SlugHook from './hooks/Slug'
 import SortableHook from './hooks/Sortable'
 import SortableBlocksHook from './hooks/SortableBlocks'
@@ -45,6 +46,7 @@ export default app => {
     'Brando.ModulePicker': ModulePickerHook(app),
     'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.RememberScrollPosition': RememberScrollPositionHook(app),
+    'Brando.Scheduler': SchedulerHook(app),
     'Brando.Slug': SlugHook(app),
     'Brando.Sortable': SortableHook(app),
     'Brando.SortableBlocks': SortableBlocksHook(app),

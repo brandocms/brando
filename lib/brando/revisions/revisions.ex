@@ -276,7 +276,7 @@ defmodule Brando.Revisions do
     new_params = Utils.map_from_struct(new_entry)
 
     base_entry
-    |> entry_schema.changeset(new_params, user, skip_villain: true)
+    |> entry_schema.changeset(new_params, user, skip_villain: false)
     |> Query.update()
     |> case do
       {:ok, new_entry} ->

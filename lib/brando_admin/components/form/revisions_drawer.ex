@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:show_publish_at, fn -> nil end)
      |> assign_revisions()
      |> assign_active_revision()
      |> assign_form_id()}
@@ -163,6 +164,14 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         <%= gettext "Protect version" %>
                       </Button.dropdown>
                     <% end %>
+                    <%= unless revision.active do %>
+                      <Button.dropdown
+                        event={JS.push("show_publish_at", target: @myself)}
+                        value={revision.revision}
+                        loading>
+                        <%= gettext "Schedule version" %>
+                      </Button.dropdown>
+                    <% end %>
                     <%= if !revision.protected && !revision.active do %>
                       <Button.dropdown
                         confirm="Are you sure you want to delete this?"
@@ -232,11 +241,39 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   -->
                 </td>
               </tr>
+              <%= if @show_publish_at == revision.revision do %>
+                <tr
+                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}>
+                  <td colspan="3"></td>
+                  <td colspan="3" class="revision-publish_at">
+                    <div class="field-wrapper">
+                      <label>
+                        <%= gettext("Publish at") %>
+                      </label>
+                      <div class="datepicker-and-button">
+                        <div
+                          id={"revision-#{revision.revision}-datetimepicker"}
+                          class="datetime-wrapper"
+                          phx-hook="Brando.Scheduler"
+                          data-locale={Gettext.get_locale()}
+                          data-revision={revision.revision}>
+                            <div
+                              id={"revision-#{revision.revision}-datetimepicker-flatpickr"}
+                              phx-update="ignore">
+                              <input type={:hidden} class="flatpickr" />
+                            </div>
+                        </div>
+                        <button type="button">
+                          <%= gettext("Schedule") %>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
               <%= if revision.description do %>
                 <tr
-                  :key="`${revision.entryName}_${revision.entryId}_${revision.revision}_description`"
-                  :class="{ active: $parent.activeRevision.revision === revision.revision }"
-                  class="revisions-line">
+                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}>
                   <td colspan="3"></td>
                   <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
                 </tr>
@@ -286,6 +323,39 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     {:noreply,
      socket
      |> assign_refreshed_revisions()}
+  end
+
+  def handle_event(
+        "schedule",
+        %{"revision" => revision, "publish_at" => publish_at},
+        %{
+          assigns: %{
+            current_user: current_user,
+            entry_id: entry_id,
+            form: %{source: changeset}
+          }
+        } = socket
+      ) do
+    schema = changeset.data.__struct__
+
+    Brando.Publisher.schedule_revision(
+      Module.concat([schema]),
+      entry_id,
+      revision,
+      publish_at,
+      current_user
+    )
+
+    send(self(), {:toast, gettext("Scheduled revision for publishing")})
+
+    {:noreply,
+     socket
+     |> assign(:show_publish_at, nil)
+     |> assign_refreshed_revisions()}
+  end
+
+  def handle_event("show_publish_at", %{"value" => selected_revision_id}, socket) do
+    {:noreply, assign(socket, :show_publish_at, String.to_integer(selected_revision_id))}
   end
 
   def handle_event(

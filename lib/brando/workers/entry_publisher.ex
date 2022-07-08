@@ -28,6 +28,8 @@ defmodule Brando.Worker.EntryPublisher do
       |> List.last()
       |> String.downcase()
 
+    schema = Module.concat(List.wrap(schema))
+
     case Revisions.set_entry_to_revision(schema, id, revision, user) do
       {:ok, new_entry} ->
         Logger.info("""

@@ -47,9 +47,7 @@ defmodule Brando.Publisher do
     end
   end
 
-  def schedule_publishing(entry, _, _) do
-    {:ok, entry}
-  end
+  def schedule_publishing(entry, _, _), do: {:ok, entry}
 
   def schedule_revision(schema, id, revision, publish_at, user) do
     {:ok, publish_at, _} = DateTime.from_iso8601(publish_at)

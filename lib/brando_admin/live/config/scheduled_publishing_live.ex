@@ -55,6 +55,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                   cy="7.5"
                   cx="7.5" />
               </svg>
+              #<%= job.id %>
             </td>
             <td>
               <strong><%= job.meta["identifier"]["title"] %></strong><br>
@@ -64,7 +65,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <%= format_datetime(job.scheduled_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
             </td>
             <td class="fit">
-              <button type="button" class="primary small" phx-click={JS.push("delete_job")}>
+              <button type="button" class="primary small" phx-click={JS.push("delete_job", value: %{id: job.id})}>
                 <%= gettext("Delete job") %>
               </button>
             </td>
@@ -90,6 +91,13 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
 
   def handle_event("refresh_jobs", _, socket) do
     send(self(), {:toast, gettext("Job queue refreshed")})
+
+    {:noreply, socket |> assign_jobs()}
+  end
+
+  def handle_event("delete_job", %{"id" => job_id}, socket) do
+    Publisher.delete_job(job_id)
+    send(self(), {:toast, gettext("Job deleted")})
 
     {:noreply, socket |> assign_jobs()}
   end
