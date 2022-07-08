@@ -17,8 +17,9 @@ defmodule Brando.Pages.Fragment do
   alias Brando.Pages
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.ScheduledPublishing
   trait Brando.Trait.Sequenced
+  trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Villain
