@@ -17,9 +17,11 @@ defmodule Brando.Pages.Fragment do
   alias Brando.Pages
 
   trait Brando.Trait.Creator
+  trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Villain
@@ -70,6 +72,10 @@ defmodule Brando.Pages.Fragment do
       redirect_on_save &__MODULE__.redirect/3
 
       tab "Content" do
+        fieldset size: :full do
+          input :status, :status, label: t("Status")
+        end
+
         fieldset size: :half do
           input :title, :text, label: t("Title")
 
