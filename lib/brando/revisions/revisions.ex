@@ -148,13 +148,13 @@ defmodule Brando.Revisions do
   end
 
   @doc """
-  Purge all revisions older than 14 days, which are not protected or active
+  Purge all revisions older than 30 days, which are not protected or active
   """
   def purge_revisions do
     query =
       from r in Revision,
         where:
-          fragment("? < current_timestamp - interval '14 day'", r.inserted_at) and
+          fragment("? < current_timestamp - interval '30 day'", r.inserted_at) and
             r.protected == false and
             r.active == false
 
