@@ -185,23 +185,36 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  defp process_actions(actions, language, entry_id) do
+    Enum.map(actions, fn
+      %{event: event} = action when is_binary(event) ->
+        %{action | event: JS.push(event, value: %{language: language, id: entry_id})}
+
+      action ->
+        action
+    end)
+  end
+
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
+
+    processed_actions = process_actions(assigns.listing.actions, language, assigns.entry.id)
 
     assigns =
       assigns
       |> assign(:language, language)
       |> assign(:no_actions, Enum.empty?(assigns.listing.actions))
+      |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
 
     ~H"""
     <%= unless @no_actions do %>
       <CircleDropdown.render id={@id}>
-        <%= for %{event: event, label: label} = action <- @listing.actions do %>
+        <%= for %{event: event, label: label} = action <- @processed_actions do %>
           <li>
             <%= if action[:confirm] do %>
               <button
-                id={"action_#{@listing.name}_#{event}_#{@entry.id}"}
+                id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
                 phx-hook="Brando.ConfirmClick"
                 phx-confirm-click-message={action[:confirm]}
                 phx-confirm-click={event}
@@ -211,7 +224,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
               </button>
             <% else %>
               <button
-                id={"action_#{@listing.name}_#{event}_#{@entry.id}"}
+                id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
                 phx-value-id={@entry.id}
                 phx-value-language={@language}
                 phx-click={event}>

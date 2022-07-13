@@ -109,8 +109,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               id={"revisions-drawer-confirm-purge"}
               phx-hook="Brando.ConfirmClick"
               phx-confirm-click-message={"Are you sure you want to purge unprotected and non active revisions of this entry?"}
-              phx-confirm-click="purge_inactive_revisions"
-              phx-target={@myself}>
+              phx-confirm-click={JS.push("purge_inactive_revisions", target: @myself)}>
               <%= gettext "Purge inactive versions" %>
             </button>
           </div>
@@ -145,20 +144,20 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     id={"revision-dropdown-#{revision.revision}"}>
                     <Button.dropdown
                       confirm="Are you sure you want to activate this version?"
-                      event={JS.push("activate_revision", target: @myself)}
-                      value={revision.revision}>
+                      value={revision.revision}
+                      event={JS.push("activate_revision", target: @myself, value: %{value: revision.revision})}>
                       <%= gettext "Activate revision" %>
                     </Button.dropdown>
                     <%= if revision.protected do %>
                       <Button.dropdown
-                        event={JS.push("unprotect_revision", target: @myself)}
+                        event={JS.push("unprotect_revision", target: @myself, value: %{value: revision.revision})}
                         value={revision.revision}
                         loading>
                         <%= gettext "Unprotect version" %>
                       </Button.dropdown>
                     <% else %>
                       <Button.dropdown
-                        event={JS.push("protect_revision", target: @myself)}
+                        event={JS.push("protect_revision", target: @myself, value: %{value: revision.revision})}
                         value={revision.revision}
                         loading>
                         <%= gettext "Protect version" %>
@@ -166,7 +165,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <% end %>
                     <%= unless revision.active do %>
                       <Button.dropdown
-                        event={JS.push("show_publish_at", target: @myself)}
+                        event={JS.push("show_publish_at", target: @myself, value: %{value: revision.revision})}
                         value={revision.revision}
                         loading>
                         <%= gettext "Schedule version" %>
@@ -175,7 +174,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <%= if !revision.protected && !revision.active do %>
                       <Button.dropdown
                         confirm="Are you sure you want to delete this?"
-                        event={JS.push("delete_revision", target: @myself)}
+                        event={JS.push("delete_revision", target: @myself, value: %{value: revision.revision})}
                         value={revision.revision}
                         loading>
                         <%= gettext "Delete version" %>
@@ -183,30 +182,6 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <% end %>
                   </CircleDropdown.render>
                   <!--
-                  <CircleDropdown>
-                    <li v-if="!revision.active">
-                      <button
-                        type="button"
-                        @click="openPublishModal(revision)">
-                        {{ $t('schedule-revision') }}
-                      </button>
-                      <KModal
-                        v-if="showPublishModal && revision === modalRevision"
-                        :ref="`publishModal${revision.revision}`"
-                        v-shortkey="['esc', 'enter']"
-                        :ok-text="$t('close')"
-                        @shortkey.native="schedulePublishing(revision)"
-                        @ok="schedulePublishing(revision)">
-                        <template #header>
-                          {{ $t('schedule-revision') }}
-                        </template>
-                        <KInputDatetime
-                          v-model="publishAt"
-                          name="publishAt"
-                          :label="$t('publishAt-label')"
-                          :help-text="$t('publishAt-helpText')" />
-                      </KModal>
-                    </li>
                     <li>
                       <button
                         type="button"
@@ -355,7 +330,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   def handle_event("show_publish_at", %{"value" => selected_revision_id}, socket) do
-    {:noreply, assign(socket, :show_publish_at, String.to_integer(selected_revision_id))}
+    {:noreply, assign(socket, :show_publish_at, selected_revision_id)}
   end
 
   def handle_event(
@@ -420,7 +395,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
     {:noreply,
      socket
-     |> assign(:active_revision, String.to_integer(selected_revision_id))
+     |> assign(:active_revision, selected_revision_id)
      |> assign_refreshed_revisions()}
   end
 end
