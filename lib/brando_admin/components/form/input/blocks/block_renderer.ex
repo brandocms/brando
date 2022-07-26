@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
      socket
      |> assign(assigns)
      |> assign_new(:opts, fn -> [] end)
-     |> assign_new(:templates, fn -> nil end)
+     |> assign_new(:templates, fn -> [] end)
      |> assign_new(:type, fn -> "root" end)
      |> assign_new(:hide_sections, fn -> false end)
      |> assign(:block_count, block_count)
@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext "Click the plus to start adding content blocks" %>
-          <%= if @templates do %>
+          <%= if @templates != [] do %>
             <br><%= gettext "or get started with a prefab'ed template" %>:<br>
             <div class="blocks-templates">
               <%= for template <- @templates do %>
