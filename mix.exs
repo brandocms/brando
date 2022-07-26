@@ -11,7 +11,6 @@ defmodule Brando.Mixfile do
       elixir: "~> 1.10",
       deps: deps(),
       package: package(),
-      compilers: [:gettext] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
       description: @description,
@@ -72,7 +71,7 @@ defmodule Brando.Mixfile do
 
       # Misc
       {:httpoison, "~> 1.0"},
-      {:gettext, "~> 0.19"},
+      {:gettext, "~> 0.20"},
       {:earmark, "1.4.4"},
       {:jason, "~> 1.0"},
       {:slugger, "~> 0.2"},
