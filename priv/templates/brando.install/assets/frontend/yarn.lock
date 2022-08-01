@@ -449,10 +449,10 @@ css-unit-converter@^1.1.1:
   resolved "https://registry.yarnpkg.com/css-unit-converter/-/css-unit-converter-1.1.2.tgz#4c77f5a1954e6dbff60695ecb214e3270436ab21"
   integrity sha512-IiJwMC8rdZE0+xiEZHeru6YoONC4rfPMqGm2W85jMIbkFvv5nFTwJVFHam2eFrN6txmoUYFAFXiv8ICVeTO0MA==
 
-css-vars-ponyfill@^2.4.7:
-  version "2.4.7"
-  resolved "https://registry.yarnpkg.com/css-vars-ponyfill/-/css-vars-ponyfill-2.4.7.tgz#df6fb2928e5ff013eb67e968761f8ed3d440b1e3"
-  integrity sha512-KhG3AbiZrUpIvAQ9Oc/iBqCitmXg6MajFqNRQd9nHvlwOo8p54HTq5DFCIaAUwMGRyttJ+mBmZCRSHJpe6J9cg==
+css-vars-ponyfill@^2.4.8:
+  version "2.4.8"
+  resolved "https://registry.yarnpkg.com/css-vars-ponyfill/-/css-vars-ponyfill-2.4.8.tgz#5e34912730b9ea272197e44f33cd8679907dc72c"
+  integrity sha512-4/j4AX4htytYHWyHVZ2BFQ+NoCGZEcOH2h4/2mmgE4SkrFg4Xq6tGYR77DtvvUIDsaXuJN+sj41bbgauA0Gfmg==
   dependencies:
     balanced-match "^1.0.2"
     get-css-data "^2.0.2"
