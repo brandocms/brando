@@ -318,6 +318,50 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  @doc """
+  Renders a sub form
+
+  ## Example
+
+  Regular inline form set:
+
+      fieldset size: :full do
+        inputs_for :items, [
+          label: t("Items"),
+          style: :inline,
+          cardinality: :many,
+          size: :full,
+          default: %Item{}
+        ] do
+          input :status, :status, compact: true, label: :hidden
+          input :title, :text, label: t("Title", Item)
+          input :key, :text, monospace: true, label: t("Key", Item)
+          input :url, :text, monospace: true, label: t("URL", Item)
+          input :open_in_new_window, :toggle, label: t("New window?", Item)
+        end
+      end
+
+  Custom component:
+
+      inputs_for :vars,
+        {:component, BrandoAdmin.Components.Pages.PageVars},
+        label: t("Page variables")
+
+  Image transformer: (TODO)
+
+  This creates a "dropbox" where you can drop or pick a bunch of images which
+  then will be transformed into subforms with all the fields specified.
+
+      inputs_for :clients,
+        cardinality: :many,
+        style: {:transformer, :avatar},
+        default: %Client{} do
+        input :avatar, :image
+        input :name, :text, placeholder: "Client Name"
+        input :phone, :text, placeholder: "+47 900 00 000"
+        input :email, :text, placeholder: "my@email.co"
+      end
+  """
   defmacro inputs_for(field, {:component, component}) do
     do_inputs_for(field, component, [])
   end
