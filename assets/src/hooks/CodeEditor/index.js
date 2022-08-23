@@ -1,5 +1,7 @@
 import { Dom } from '@brandocms/jupiter'
-import { EditorState, EditorView, basicSetup } from '@codemirror/basic-setup'
+
+import { EditorView, basicSetup } from 'codemirror'
+import { EditorState } from '@codemirror/state'
 import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { html } from '@codemirror/lang-html'
