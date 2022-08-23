@@ -70,7 +70,7 @@ export default (app) => ({
         }
 
         this.lastColor = processedColor
-      }, 200),
+      }, 800),
 
       onOpen: function () {
           this._colorToSplotch = {}
