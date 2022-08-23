@@ -429,7 +429,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     current_vars = input_value(block_data, :vars) || []
     current_var_keys = Enum.map(current_vars, & &1.key)
 
-    module_vars = module.vars
+    module_vars = module.vars || []
     module_var_keys = Enum.map(module_vars, & &1.key)
 
     missing_var_keys = module_var_keys -- current_var_keys
