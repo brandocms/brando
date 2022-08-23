@@ -1,4 +1,14 @@
-## 0.52.0-dev
+## 0.53.0-dev
+
+* If you upgrade to Vite 3, they suddenly output `admin/main.css` instead of `admin/admin.css`.
+  To fix, edit your `assets/backend/package.json` and replace `[name]` with `admin`:
+
+        entryFileNames: `assets/admin/admin.js`,
+        chunkFileNames: `assets/admin/__[name].js`,
+        assetFileNames: `assets/admin/admin.[ext]`
+
+
+## 0.52.0
 
 * Pull in new `mix.exs` and rename to your application's names
   https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/mix.exs
