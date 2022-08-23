@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-picker={@picker}
         data-palette={@palette_colors}>
         <div class="picker">
-          <.input type={:hidden} form={@form} field={@field} phx_debounce={@debounce} />
+          <.input type={:hidden} form={@form} field={@field} />
           <div
             id={"#{@form.id}-#{@field}-color-picker-target"}
             phx-update="ignore"
