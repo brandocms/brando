@@ -234,21 +234,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
             base_form: base_form,
             uid: block_uid,
             block_data: block_data,
-            data_field: data_field
+            data_field: data_field,
+            module_id: module_id
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
     {:ok, module} = Brando.Content.get_module(module_id)
 
+    entry_template = module.entry_template
     changeset = base_form.source
+    module_vars = entry_template.vars
 
     updated_changeset =
       Villain.update_block_in_changeset(
         changeset,
         data_field,
         block_uid,
-        %{data: %{vars: module.vars}}
+        %{data: %{vars: module_vars}},
+        true
       )
 
     schema = changeset.data.__struct__
@@ -259,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       updated_changeset: updated_changeset
     )
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :important_vars, Enum.filter(module_vars, &(&1.important == true)))}
   end
 
   def handle_event(
