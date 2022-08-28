@@ -233,7 +233,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           assigns: %{
             base_form: base_form,
             uid: block_uid,
-            block_data: block_data,
             data_field: data_field,
             module_id: module_id
           }
