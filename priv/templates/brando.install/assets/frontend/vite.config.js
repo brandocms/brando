@@ -1,6 +1,24 @@
 import { defineConfig } from 'vite'
 import legacy from '@vitejs/plugin-legacy'
 
+function HMREuropa() {
+  return {
+    name: 'custom-hmr',
+    enforce: 'post',
+    // HMR
+    handleHotUpdate({ file, server }) {
+      if (file.endsWith('europa.config.js')) {
+        console.log('europa.config.js updated. reloading...');
+
+        server.ws.send({
+          type: 'full-reload',
+          path: '*'
+        });
+      }
+    },
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
@@ -31,6 +49,7 @@ export default defineConfig({
   },
 
   plugins: [
+    HMREuropa(),
     legacy({
       // The browsers that must be supported by your legacy bundle.
       // https://babeljs.io/docs/en/babel-preset-env#targets
