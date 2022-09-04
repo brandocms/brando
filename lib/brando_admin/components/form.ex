@@ -503,19 +503,19 @@ defmodule BrandoAdmin.Components.Form do
               <% end %>
               <div class="split-dropdown">
                 <button
-                  phx-click={JS.push("push_submit_event", target: @myself)}
+                  phx-click={JS.push("push_submit_redirect", target: @myself)}
                   type="button">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
                 </button>
                 <SplitDropdown.render id={"save-dropdown"}>
                   <Button.dropdown
                     value={false}
-                    event={JS.push("push_submit_and_redirect_event", target: @myself)}>
+                    event={JS.push("push_submit_redirect", target: @myself)}>
                     <%= gettext "Save" %><span class="shortcut">⇧⌘S</span>
                   </Button.dropdown>
                   <Button.dropdown
                     value={false}
-                    event={JS.push("push_submit_event", target: @myself, value: %{value: false})}>
+                    event={JS.push("push_submit", target: @myself, value: %{value: false})}>
                     <%= gettext "Save and continue editing" %><span class="shortcut">⌘S</span>
                   </Button.dropdown>
                 </SplitDropdown.render>
@@ -1168,11 +1168,11 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("push_submit_and_redirect_event", _, socket) do
+  def handle_event("push_submit_redirect", _, socket) do
     {:noreply, push_event(socket, "b:submit", %{})}
   end
 
-  def handle_event("push_submit_event", _, socket) do
+  def handle_event("push_submit", _, socket) do
     {:noreply,
      socket
      |> assign(:save_without_redirect, true)
