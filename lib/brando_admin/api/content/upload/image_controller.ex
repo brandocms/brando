@@ -41,6 +41,15 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
 
           %{status: 500, error: error_msg}
 
+        {:error, :content_type, attemped_mime, allowed_mime} ->
+          error_msg = """
+          Trying to upload unsupported type [#{attemped_mime}]!<br><br>
+          Allowed types are:<br><br>
+          #{inspect(allowed_mime, pretty: true)}
+          """
+
+          %{status: 500, error: error_msg}
+
         {:ok, image} ->
           sizes_map = sizes_with_media_url(image)
 

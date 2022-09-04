@@ -155,7 +155,7 @@ export default (app) => ({
         this.setStatusText()
         this.stopPlus()
         console.error('error uploading', { error: e })
-        alertError('Error uploading', data.error)
+        alertError('Error uploading', e)
         reject()
       }
     })
