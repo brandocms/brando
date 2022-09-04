@@ -2,17 +2,19 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
-* The tiptap dependency weirdness has returned... Add this dependency resolution
-to your `assets/backend/package.json`:
-
+* BREAKING: `@identity` now refers to the current language identity, instead 
+  of a map of all languages
+* BREAKING: The tiptap dependency weirdness has returned... Add this dependency 
+  resolution to your `assets/backend/package.json`:
 ```
 "resolutions": {
   "@codemirror/state": "6.0.0"
 }
 ```
-* Remove datasource block and introduce module blocks with datasource instead.
-  Run `mix brando.upgrade && mix ecto.migrate` to convert your existing datasource
-  blocks to module blocks.
+* BREAKING: Remove datasource block and introduce module blocks with 
+  datasource instead. Run `mix brando.upgrade && mix ecto.migrate` 
+  to convert your existing datasource blocks to module blocks.
+* Add split dropdown button to form tabs for more advanced save options
 * Add scheduled publishing for revisions
 * Fix max width for #content
 * Automatically add uploaded gallery images to gallery
@@ -48,7 +50,6 @@ end
   Run `mix brando.upgrade` to bring in a migration that sets this to false for existing users.
 * Show media url in file assets listing
 * Update villain module list when modules are added/deleted/updated
-* `@identity` now refers to the current language identity, instead of a map of all languages
 * Update relation(s) in multi select so they are available for live preview
 * Allow uploading SVGs to image fields / picture blocks
 * Set img `data-src` as transparent svg when we have `dominant_color`/`svg` placeholder
