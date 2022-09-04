@@ -1697,3 +1697,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Save and continue editing"
 msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:146
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to activate this version?"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:176
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete this?"
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:111
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to purge unprotected and non active revisions of this entry?"
+msgstr ""

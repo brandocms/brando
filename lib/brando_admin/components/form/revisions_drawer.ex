@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               class="secondary"
               id={"revisions-drawer-confirm-purge"}
               phx-hook="Brando.ConfirmClick"
-              phx-confirm-click-message={"Are you sure you want to purge unprotected and non active revisions of this entry?"}
+              phx-confirm-click-message={gettext("Are you sure you want to purge unprotected and non active revisions of this entry?")}
               phx-confirm-click={JS.push("purge_inactive_revisions", target: @myself)}>
               <%= gettext "Purge inactive versions" %>
             </button>
@@ -143,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   <CircleDropdown.render
                     id={"revision-dropdown-#{revision.revision}"}>
                     <Button.dropdown
-                      confirm="Are you sure you want to activate this version?"
+                      confirm={gettext("Are you sure you want to activate this version?")}
                       value={revision.revision}
                       event={JS.push("activate_revision", target: @myself, value: %{value: revision.revision})}>
                       <%= gettext "Activate revision" %>
@@ -173,7 +173,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     <% end %>
                     <%= if !revision.protected && !revision.active do %>
                       <Button.dropdown
-                        confirm="Are you sure you want to delete this?"
+                        confirm={gettext("Are you sure you want to delete this?")}
                         event={JS.push("delete_revision", target: @myself, value: %{value: revision.revision})}
                         value={revision.revision}
                         loading>

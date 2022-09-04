@@ -1409,3 +1409,15 @@ msgstr "Planlagt versjon for publisering"
 #: lib/brando_admin/components/form.ex:519
 msgid "Save and continue editing"
 msgstr "Lagre og redigér videre"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:146
+msgid "Are you sure you want to activate this version?"
+msgstr "Er du sikker på at du vil aktivere denne versjonen?"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:176
+msgid "Are you sure you want to delete this?"
+msgstr "Er du sikker på at du vil slette dette?"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:111
+msgid "Are you sure you want to purge unprotected and non active revisions of this entry?"
+msgstr "Er du sikker på at du vil renske ut ubeskyttede og inaktive versjoner av denne oppføringen?"
