@@ -11,47 +11,47 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:99
+#, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:89
+#, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:84
+#, elixir-autogen, elixir-format
 msgid "Parent key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:80
+#, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:106
+#, elixir-autogen, elixir-format
 msgid "Wrapper"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:108
+#, elixir-autogen, elixir-format
 msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:90
+#, elixir-autogen, elixir-format
 msgid "key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:85
+#, elixir-autogen, elixir-format
 msgid "parent_key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/pages/fragment.ex:76
+#, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""

@@ -88,7 +88,7 @@ export default app => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
-        const inputEls = Dom.all(el, '.form-tabs, .form-tabs button, .subform, .shaded, .brando-input')
+        const inputEls = Dom.all(el, '.form-tabs, .form-tabs button, .form-tabs .split-dropdown, .subform, .shaded, .brando-input')
 
         gsap.set(inputEls, { opacity: 0, x: -15 })
 

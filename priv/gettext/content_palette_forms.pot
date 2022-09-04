@@ -10,7 +10,7 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/palette.ex:41
+#, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""

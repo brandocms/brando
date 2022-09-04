@@ -10,22 +10,22 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:57
+#, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:59
+#, elixir-autogen, elixir-format
 msgid "New window?"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:56
+#, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:58
+#, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""

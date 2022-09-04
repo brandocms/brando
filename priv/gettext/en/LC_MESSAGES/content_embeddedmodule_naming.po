@@ -11,12 +11,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/module/embedded_module.ex:54
+#, elixir-autogen, elixir-format
 msgid "embedded module"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/module/embedded_module.ex:55
+#, elixir-autogen, elixir-format
 msgid "embedded modules"
 msgstr ""

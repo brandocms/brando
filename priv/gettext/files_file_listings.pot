@@ -10,27 +10,27 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:78
+#, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:76
+#, elixir-autogen, elixir-format
 msgid "Delete file"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:83
+#, elixir-autogen, elixir-format
 msgid "Delete files"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:74
+#, elixir-autogen, elixir-format
 msgid "Duplicate file"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/files/file.ex:38
+#, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr ""

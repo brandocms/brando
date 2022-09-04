@@ -20,102 +20,102 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:78
+#, elixir-autogen, elixir-format
 msgid "A shortform version of the name"
 msgstr "En kortformversjon av navnet"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:87
+#, elixir-autogen, elixir-format
 msgid "Address line 1"
 msgstr "Adresselinje 1"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:88
+#, elixir-autogen, elixir-format
 msgid "Address line 2"
 msgstr "Adresselinje 2"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:89
+#, elixir-autogen, elixir-format
 msgid "Address line 3"
 msgstr "Adresselinje 3"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:77
+#, elixir-autogen, elixir-format
 msgid "Alternate name"
 msgstr "Alternativt navn"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:94
+#, elixir-autogen, elixir-format
 msgid "City"
 msgstr "Sted"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:95
+#, elixir-autogen, elixir-format
 msgid "Country"
 msgstr "Land"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:82
+#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Epost"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:110
+#, elixir-autogen, elixir-format
 msgid "Links"
 msgstr "Lenker"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:105
+#, elixir-autogen, elixir-format
 msgid "Logo"
 msgstr "Logo"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:122
+#, elixir-autogen, elixir-format
 msgid "Meta properties"
 msgstr "Meta egenskaper"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:74
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:83
+#, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr "Telefon"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:100
+#, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:101
+#, elixir-autogen, elixir-format
 msgid "Title (postfix)"
 msgstr "Tittel (postfix)"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:99
+#, elixir-autogen, elixir-format
 msgid "Title (prefix)"
 msgstr "Tittel (prefiks)"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:70
+#, elixir-autogen, elixir-format
 msgid "Type"
 msgstr "Type"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:93
+#, elixir-autogen, elixir-format
 msgid "Zip code"
 msgstr "Postnummer"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:68
+#, elixir-autogen, elixir-format
 msgid "Corporation"
 msgstr "Bedrift"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:67
+#, elixir-autogen, elixir-format
 msgid "Organization"
 msgstr "Organisasjon"

@@ -20,17 +20,17 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.1\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:177
+#, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
 msgstr "Foretrekker redusert bevegelse"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:171
+#, elixir-autogen, elixir-format
 msgid "Reset password on first login"
 msgstr "Tilbakestill passord ved første pålogging"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/users/user.ex:174
+#, elixir-autogen, elixir-format
 msgid "Show mutation notifications"
 msgstr "Vis mutasjonsvarsler"

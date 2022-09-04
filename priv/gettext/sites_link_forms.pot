@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:115
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:116
+#, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""

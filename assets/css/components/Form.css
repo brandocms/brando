@@ -381,17 +381,22 @@
   .form-tab-builtins {
     display: flex;
 
-    > button {
-      &:first-of-type {
+    > * {
+      &:first-child {
         border-top-left-radius: 18px;
         border-bottom-left-radius: 18px;
         padding-left: 15px;
       }
 
-      &:last-of-type {
+      &:last-child {
         border-top-right-radius: 18px;
         border-bottom-right-radius: 18px;
         padding-right: 15px;
+
+        .split-dropdown-button {
+          border-top-right-radius: 18px;
+          border-bottom-right-radius: 18px;
+        }
       }
 
       &.active {
@@ -415,6 +420,52 @@
       }
     }
 
+    .split-dropdown {
+      padding: 0;
+
+      &:hover {
+        background-color: transparent;
+      }
+
+      .shortcut {
+        font-size: 11px;
+        border: 1px solid black;
+        margin-left: 6px;
+        background-color: white;
+        border-radius: 6px;
+        padding: 2px;
+      }
+
+      > button, .split-dropdown-wrapper > button {
+        font-size: 15px;
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 12px 8px;
+        background-color: transparent;
+        border: none;
+
+        &:hover {
+          background-color: var(--brando-color-white);
+        }
+
+        &:first-child {
+          margin-left: 0;
+        }
+
+        svg {
+          margin-top: 1px;
+        }
+      }
+
+      > button {
+        border-right: 1px solid var(--brando-color-dark);
+      }
+
+      .split-dropdown-button {
+        border-right: none;
+      }
+    }
+
     .tab-text {
       @space padding-left 10px;
 
@@ -424,7 +475,7 @@
       }
     }
 
-    button {
+    > * {
       font-size: 15px;
       display: inline-flex;
       align-items: center;
@@ -437,7 +488,7 @@
         background-color: var(--brando-color-white);
       }
 
-      &:first-of-type {
+      &:first-child {
         margin-left: 0;
       }
 

@@ -11,12 +11,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:127
+#, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/identity.ex:128
+#, elixir-autogen, elixir-format
 msgid "Value"
 msgstr ""

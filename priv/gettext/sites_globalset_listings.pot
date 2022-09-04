@@ -10,32 +10,32 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:63
+#, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:61
+#, elixir-autogen, elixir-format
 msgid "Delete set"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:65
+#, elixir-autogen, elixir-format
 msgid "Duplicate set"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:59
+#, elixir-autogen, elixir-format
 msgid "Edit set"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:55
+#, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:91
+#, elixir-autogen, elixir-format
 msgid "variables in set"
 msgstr ""

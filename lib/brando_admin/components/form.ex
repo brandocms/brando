@@ -9,6 +9,8 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.Villain
 
+  alias BrandoAdmin.Components.Button
+  alias BrandoAdmin.Components.SplitDropdown
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
@@ -35,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
+     |> assign(:save_without_redirect, false)
      |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
@@ -498,12 +501,25 @@ defmodule BrandoAdmin.Components.Form do
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
                 </button>
               <% end %>
-              <button
-                phx-click={JS.push("push_submit_event", target: @myself)}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
-                <span class="tab-text">(⌘S)</span>
-              </button>
+              <div class="split-dropdown">
+                <button
+                  phx-click={JS.push("push_submit_event", target: @myself)}
+                  type="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
+                </button>
+                <SplitDropdown.render id={"save-dropdown"}>
+                  <Button.dropdown
+                    value={false}
+                    event={JS.push("push_submit_and_redirect_event", target: @myself)}>
+                    <%= gettext "Save" %><span class="shortcut">⇧⌘S</span>
+                  </Button.dropdown>
+                  <Button.dropdown
+                    value={false}
+                    event={JS.push("push_submit_event", target: @myself, value: %{value: false})}>
+                    <%= gettext "Save and continue editing" %><span class="shortcut">⌘S</span>
+                  </Button.dropdown>
+                </SplitDropdown.render>
+              </div>
             </div>
           </div>
 
@@ -1152,8 +1168,15 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("push_submit_event", _, socket) do
+  def handle_event("push_submit_and_redirect_event", _, socket) do
     {:noreply, push_event(socket, "b:submit", %{})}
+  end
+
+  def handle_event("push_submit", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:save_without_redirect, true)
+     |> push_event("b:submit", %{})}
   end
 
   def handle_event("toggle_revisions_drawer_status", _, socket) do
@@ -1206,6 +1229,10 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
+  def handle_event("save_without_redirect", _, socket) do
+    {:noreply, assign(socket, :save_without_redirect, true)}
+  end
+
   def handle_event(
         "save",
         params,
@@ -1215,7 +1242,8 @@ defmodule BrandoAdmin.Components.Form do
             entry: entry,
             current_user: current_user,
             singular: singular,
-            form: form
+            form: form,
+            save_without_redirect: save_without_redirect
           }
         } = socket
       ) do
@@ -1253,7 +1281,12 @@ defmodule BrandoAdmin.Components.Form do
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
         maybe_run_form_after_save(form, entry)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
-        {:noreply, push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))}
+
+        maybe_redirected_socket =
+          (save_without_redirect && socket) ||
+            push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+
+        {:noreply, assign(maybe_redirected_socket, :save_without_redirect, false)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger

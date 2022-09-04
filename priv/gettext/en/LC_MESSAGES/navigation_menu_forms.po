@@ -11,22 +11,22 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:49
+#, elixir-autogen, elixir-format
 msgid "Items"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:44
+#, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:42
+#, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/navigation/menu.ex:43
+#, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""

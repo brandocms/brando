@@ -11,32 +11,32 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:49
+#, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:47
+#, elixir-autogen, elixir-format
 msgid "Delete template"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:51
+#, elixir-autogen, elixir-format
 msgid "Duplicate template"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:45
+#, elixir-autogen, elixir-format
 msgid "Edit template"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:40
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:41
+#, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr ""

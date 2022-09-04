@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/redirect.ex:23
+#, elixir-autogen, elixir-format
 msgid "redirect"
 msgstr "videresending"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/redirect.ex:24
+#, elixir-autogen, elixir-format
 msgid "redirects"
 msgstr "videresendinger"

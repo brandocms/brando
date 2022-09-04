@@ -1,0 +1,40 @@
+.split-dropdown-wrapper {
+  .dropdown-content {
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark); 
+    position: absolute;
+    width: 250px;
+    border: 1px solid var(--brando-color-dark);
+    z-index: 2;
+    top: 50px;
+    right: 0;
+
+    &.over {
+      top: auto;
+      bottom: 50px;
+    }
+
+    li {
+      a, button {
+        display: block;
+        padding: 15px;
+        text-align: right;
+        line-height: 1;
+        float: right;
+        width: 100%;
+        font-size: 15px;
+        border: none;
+
+        &:hover {
+          background-color: var(--brando-color-white); 
+        }
+      }
+    }
+  }
+
+  &.wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+}

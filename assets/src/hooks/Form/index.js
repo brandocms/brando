@@ -29,8 +29,15 @@ export default (app) => ({
   },
 
   submitListener (ev) {
-    if (ev.metaKey && ev.key === 's') {
+    if (ev.metaKey && ev.shiftKey && ev.key.toLowerCase() === 's') {
       ev.preventDefault();
+      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      return
+    }
+    
+    if (ev.metaKey && ev.key === 's') {
+      ev.preventDefault()
+      this.pushEventTo(this.el, 'save_without_redirect', { save_without_redirect: true })
       this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     }
   }

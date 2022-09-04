@@ -11,41 +11,41 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:64
+#, elixir-autogen, elixir-format
 msgid "Base URL"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:57
 #: lib/brando/sites/seo.ex:58
+#, elixir-autogen, elixir-format
 msgid "Fallback META description"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:61
 #: lib/brando/sites/seo.ex:62
+#, elixir-autogen, elixir-format
 msgid "Fallback META image"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:53
 #: lib/brando/sites/seo.ex:54
+#, elixir-autogen, elixir-format
 msgid "Fallback META title"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:70
+#, elixir-autogen, elixir-format
 msgid "Redirects"
 msgstr ""
 
+#: lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:65
 #, elixir-autogen, elixir-format
-#: lib/brando/sites/seo.ex:65
-#: lib/brando/sites/seo.ex:65
 msgid "Robots"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:64
+#, elixir-autogen, elixir-format
 msgid "https://yoursite.com"
 msgstr ""

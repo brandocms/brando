@@ -11,12 +11,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/users/user_config.ex:28
+#, elixir-autogen, elixir-format
 msgid "user config"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/users/user_config.ex:29
+#, elixir-autogen, elixir-format
 msgid "user configs"
 msgstr ""

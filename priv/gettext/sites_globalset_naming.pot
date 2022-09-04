@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:100
+#, elixir-autogen, elixir-format
 msgid "global set"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/global_set.ex:101
+#, elixir-autogen, elixir-format
 msgid "global sets"
 msgstr ""

@@ -20,8 +20,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/sites/seo.ex:86
 #: lib/brando/sites/seo.ex:87
+#, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr "SEO"

@@ -11,27 +11,27 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:82
+#, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:80
+#, elixir-autogen, elixir-format
 msgid "Delete image"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:87
+#, elixir-autogen, elixir-format
 msgid "Delete images"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:78
+#, elixir-autogen, elixir-format
 msgid "Duplicate image"
 msgstr ""
 
-#, elixir-autogen, elixir-format
 #: lib/brando/images/image.ex:52
+#, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""

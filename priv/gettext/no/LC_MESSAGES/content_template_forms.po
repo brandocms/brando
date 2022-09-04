@@ -20,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.0.1\n"
 
-#, elixir-autogen, elixir-format
 #: lib/brando/content/template.ex:80
+#, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
