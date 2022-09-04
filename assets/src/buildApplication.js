@@ -259,7 +259,7 @@ export default (hooks, enableDebug = true) => {
       app.userChannel.join().receive('ok', params => {
         if (app.vsn) {
           // we've connected before. see if versions match!
-          if (app.vsn !== vsn) {
+          if (app.vsn !== params.vsn) {
             // new version, alert user
             alertError('👀', 'The application was updated while you were logged in. It is recommended to refresh the page, but make sure you have saved your work first.')
           }
