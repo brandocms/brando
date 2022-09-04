@@ -1172,7 +1172,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_event(socket, "b:submit", %{})}
   end
 
-  def handle_event("push_submit", _, socket) do
+  def handle_event("push_submit_event", _, socket) do
     {:noreply,
      socket
      |> assign(:save_without_redirect, true)
