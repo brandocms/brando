@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",
-    "@brandocms/jupiter": "^3.45.0"
+    "@brandocms/jupiter": "^3.46.2"
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.10.1",
