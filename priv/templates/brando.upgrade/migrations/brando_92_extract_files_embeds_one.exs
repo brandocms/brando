@@ -7,24 +7,31 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
 
     for blueprint <- blueprints,
         %{type: :file, name: field_name} <- blueprint.__assets__() do
-      file_field_query =
-        from(t in blueprint.__schema__(:source),
-          select: %{
-            id: t.id,
-            file: field(t, ^field_name),
-            inserted_at: t.inserted_at,
-            updated_at: t.updated_at
-          }
+      # Lookup if we have the old format `field_name` in the fields
+      %{columns: existing_columns} =
+        Ecto.Adapters.SQL.query!(
+          Brando.repo(),
+          "select * from #{blueprint.__schema__(:source)} where false;"
         )
 
-      file_field_query =
-        if blueprint.has_trait(Brando.Trait.Creator) do
-          from(t in file_field_query, select_merge: %{creator_id: t.creator_id})
-        else
-          file_field_query
-        end
+      if to_string(field_name) in existing_columns do
+        file_field_query =
+          from(t in blueprint.__schema__(:source),
+            select: %{
+              id: t.id,
+              file: field(t, ^field_name),
+              inserted_at: t.inserted_at,
+              updated_at: t.updated_at
+            }
+          )
 
-      try do
+        file_field_query =
+          if blueprint.has_trait(Brando.Trait.Creator) do
+            from(t in file_field_query, select_merge: %{creator_id: t.creator_id})
+          else
+            file_field_query
+          end
+
         file_fields =
           file_field_query
           |> Brando.repo().all()
@@ -69,10 +76,6 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
         alter table(blueprint.__schema__(:source)) do
           remove field_name
         end
-      rescue
-        _ in Postgrex.Error ->
-          require Logger
-          Logger.error("== No old style file field found in #{inspect(blueprint)}")
       end
     end
   end
