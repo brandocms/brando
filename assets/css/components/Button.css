@@ -78,6 +78,7 @@ button.primary, a.primary {
 
   .processing {
     display: flex;
+    align-items: center;
 
     svg {
       @space margin-right 10px;
