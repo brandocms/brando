@@ -12,7 +12,7 @@
     "@vitejs/plugin-legacy": "^1.8.2",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.4.14",
-    "postcss-import": "^14.1.0",
+    "postcss-import": "^15.0.0",
     "postcss-preset-env": "^7.7.2",
     "postcss-reporter": "^7.0.5",
     "stylelint": "^14.9.1",
