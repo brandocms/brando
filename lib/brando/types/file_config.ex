@@ -12,6 +12,7 @@ defmodule Brando.Type.FileConfig do
             allowed_mimetypes: ["application/pdf", "text/plain"],
             upload_path: Path.join("files", "default"),
             random_filename: false,
+            force_filename: nil,
             overwrite: false,
             size_limit: 10_240_000
 

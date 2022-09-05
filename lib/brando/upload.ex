@@ -168,6 +168,19 @@ defmodule Brando.Upload do
     {:error, :empty_filename}
   end
 
+  defp get_valid_filename(
+         %__MODULE__{
+           upload_entry: %{client_name: _},
+           cfg: %{force_filename: forced_filename, overwrite: true}
+         } = upload
+       )
+       when is_binary(forced_filename) do
+    new_meta = Map.merge(upload.meta, %{filename: forced_filename})
+    upload = put_in(upload.meta, new_meta)
+
+    {:ok, upload}
+  end
+
   defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
     upload =
       case Map.get(cfg, :random_filename, false) do
