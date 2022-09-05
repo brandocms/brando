@@ -531,6 +531,7 @@ defmodule BrandoAdmin.Components.Form do
             myself={@myself}
             uploads={@uploads}
             edit_file={@edit_file}
+            processing={@processing}
           />
 
           <.image_drawer
@@ -664,26 +665,22 @@ defmodule BrandoAdmin.Components.Form do
             phx-hook="Brando.DragDrop"
             class="file-drawer-preview"
             phx-drop-target={@uploads[@edit_file.field].ref}>
-            <%= if @edit_file.file do %>
-              <figure class="grid-overlay">
-                <div class="drop-indicator">
-                  <div><%= gettext "+ Drop here to upload" %></div>
-                </div>
-              </figure>
-            <% else %>
-              <div class="img-placeholder">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                      <circle cx="8" cy="9" r="2"/>
-                    </svg>
-                  </div>
+            <%= if @processing do %>
+              <div class="processing">
+                <div>
+                  <%= gettext "Uploading" %><br>
+                  <progress value={@processing} max="100"><%= @processing %>%</progress>
                 </div>
               </div>
             <% end %>
+
+            <div class="img-placeholder">
+              <div class="placeholder-wrapper">
+                <div class="svg-wrapper">
+                  <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z"/></svg>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="button-group vertical">
@@ -1567,7 +1564,10 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    socket = assign(socket, :processing, upload_entry.progress)
+
     if upload_entry.done? do
+      socket = assign(socket, :processing, false)
       relation_key = String.to_existing_atom("#{key}_id")
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "file:#{inspect(schema)}:#{key}"

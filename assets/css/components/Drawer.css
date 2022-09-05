@@ -25,9 +25,11 @@ figcaption.tiny {
   font-family: 'Mono';
 }
 
-.image-drawer-preview {
+.image-drawer-preview, .file-drawer-preview {
   position: relative;
+}
 
+.image-drawer-preview, .file-drawer-preview {
   .processing {
     font-family: 'Mono';
     font-size: 12px;
