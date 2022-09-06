@@ -67,7 +67,7 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Liquid templates
-      {:liquex, "~> 0.7.0"},
+      {:liquex, "~> 0.8"},
 
       # Misc
       {:httpoison, "~> 1.0"},

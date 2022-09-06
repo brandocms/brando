@@ -53,9 +53,7 @@ defmodule RouterHelper do
     only: [
       fetch_query_params: 1,
       fetch_session: 1,
-      put_session: 3,
-      put_private: 3,
-      put_req_header: 3
+      put_private: 3
     ]
 
   alias Plug.Session

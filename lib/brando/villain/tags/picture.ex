@@ -6,9 +6,9 @@ defmodule Brando.Villain.Tags.Picture do
 
   import NimbleParsec
   alias Liquex.Parser.Argument
+  alias Liquex.Parser.Field
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
-  alias Liquex.Parser.Object
   import Phoenix.LiveView.Helpers
 
   @impl true
@@ -49,8 +49,52 @@ defmodule Brando.Villain.Tags.Picture do
     |> ignore(string("{ "))
     |> repeat(
       lookahead_not(string(" }"))
-      |> Object.arguments()
+      |> arguments()
     )
     |> ignore(string(" }"))
+  end
+
+  @spec arguments(NimbleParsec.t()) :: NimbleParsec.t()
+  defp arguments(combinator) do
+    combinator
+    |> choice([
+      Argument.argument()
+      |> lookahead_not(string(":"))
+      |> repeat(
+        ignore(Literal.whitespace())
+        |> ignore(string(","))
+        |> ignore(Literal.whitespace())
+        |> concat(Argument.argument())
+        |> lookahead_not(string(":"))
+      )
+      |> optional(
+        ignore(Literal.whitespace())
+        |> ignore(string(","))
+        |> ignore(Literal.whitespace())
+        |> keyword_fields()
+      ),
+      keyword_fields()
+    ])
+  end
+
+  @spec keyword_fields(NimbleParsec.t()) :: NimbleParsec.t()
+  defp keyword_fields(combinator \\ empty()) do
+    combinator
+    |> keyword_field()
+    |> repeat(
+      ignore(Literal.whitespace())
+      |> ignore(string(","))
+      |> ignore(Literal.whitespace())
+      |> keyword_field()
+    )
+  end
+
+  defp keyword_field(combinator) do
+    combinator
+    |> concat(Field.identifier())
+    |> ignore(string(":"))
+    |> ignore(Literal.whitespace())
+    |> concat(Argument.argument())
+    |> tag(:keyword)
   end
 end

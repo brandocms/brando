@@ -244,7 +244,7 @@ defmodule Brando.Villain.Parser do
              },
              %{vars: vars} = block
            ) do
-        language = Map.get(context.variables, "language")
+        language = Access.get(context, "language")
         {:ok, entries} = Datasource.get_list(module, query, map_vars(vars), language)
         Context.assign(context, :entries, entries)
       end
@@ -287,7 +287,7 @@ defmodule Brando.Villain.Parser do
       #   src_module_id = Map.get(data, :module_id, nil)
       #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
-      #   language = Map.get(opts.context.variables, "language")
+      #   language = Access.get(opts.context, "language")
 
       #   with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
       #     render_datasource_entries(src, entries, opts)

@@ -23,7 +23,7 @@ defmodule Brando.Villain.Tags.Ref do
   @impl true
   def render([ref: ref], context) do
     {:field, [_ | [{:key, ref_name}]]} = ref
-    brando_render_for_admin = Map.get(context, :brando_render_for_admin)
+    brando_render_for_admin = Access.get(context, :brando_render_for_admin)
     evaled_ref = Liquex.Argument.eval(ref, context)
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
@@ -37,9 +37,9 @@ defmodule Brando.Villain.Tags.Ref do
 
     rendered_ref =
       render_ref(
-        context.variables.brando_parser_module,
+        Access.get(context, :brando_parser_module),
         evaled_ref,
-        context.variables.brando_module_id,
+        Access.get(context, :brando_module_id),
         ref_name,
         brando_render_for_admin,
         opts_map

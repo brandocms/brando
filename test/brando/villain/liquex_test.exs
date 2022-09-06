@@ -58,8 +58,7 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {{:custom_tag, Brando.Villain.Tags.Route},
-              [function: "project_path", action: "index"]}
+             {{:tag, Brando.Villain.Tags.Route}, [function: "project_path", action: "index"]}
            ]
 
     # render it
@@ -76,7 +75,7 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {{:custom_tag, Brando.Villain.Tags.Route},
+             {{:tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
@@ -99,7 +98,7 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {:text, "the route is "},
-             {{:custom_tag, Brando.Villain.Tags.Route},
+             {{:tag, Brando.Villain.Tags.Route},
               [
                 function: "project_path",
                 action: "show",
@@ -123,7 +122,7 @@ defmodule Brando.Villain.LiquexTest do
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
     assert parsed_tpl == [
-             {{:custom_tag, Brando.Villain.Tags.Picture},
+             {{:tag, Brando.Villain.Tags.Picture},
               [source: {:field, [key: "entry", key: "cover"]}]}
            ]
 
@@ -137,7 +136,7 @@ defmodule Brando.Villain.LiquexTest do
 
     assert parsed_tpl == [
              {
-               {:custom_tag, Brando.Villain.Tags.Picture},
+               {:tag, Brando.Villain.Tags.Picture},
                [
                  source: {:field, [key: "entry", key: "avatar"]},
                  args: [

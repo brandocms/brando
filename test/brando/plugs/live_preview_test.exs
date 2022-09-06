@@ -64,8 +64,8 @@ defmodule Brando.Plug.LivePreviewTest do
 
       assert conn.halted == true
 
-      assert conn.resp_body ==
-               "LIVE PREVIEW FAILED\n\n%FunctionClauseError{\n  args: nil,\n  arity: 3,\n  clauses: nil,\n  function: :split,\n  kind: nil,\n  module: String\n}"
+      assert conn.resp_body =~
+               "LIVE PREVIEW FAILED\n\n%FunctionClauseError{"
     end)
   end
 
