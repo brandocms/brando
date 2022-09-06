@@ -57,7 +57,7 @@ defmodule Brando.Authorization do
         @authorization_module __MODULE__ |> Module.split() |> Enum.drop(-1) |> Module.concat()
 
         @spec can?(user, atom, any) :: {:ok, :authorized} | {:error, :unauthorized}
-        def can?(%Brando.Users.User{} = user, action, subject) do
+        def can?(%Brando.Users.User{} = user, action, subject) when is_map(subject) do
           rules = @authorization_module.__rules__(user.role)
 
           case Enum.reduce(

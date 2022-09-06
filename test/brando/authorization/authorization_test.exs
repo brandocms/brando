@@ -7,10 +7,10 @@ defmodule Brando.AuthorizationTest do
     alias Brando.Users.User
     alias Brando.Pages.Page
 
-    types [
+    types([
       {"User", Brando.Users.User},
       {"Page", Brando.Pages.Page}
-    ]
+    ])
 
     rules :superuser do
       can :manage, :all
@@ -81,7 +81,7 @@ defmodule Brando.AuthorizationTest do
 
     assert TestAuth.Can.can?(user, :read, superuser) === {:error, :unauthorized}
 
-    assert_raise ArgumentError, fn ->
+    assert_raise FunctionClauseError, fn ->
       TestAuth.Can.can?(user, :read, "MenuItem")
     end
   end
