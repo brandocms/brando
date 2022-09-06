@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext "Click the plus to start adding content blocks" %>
-          <%= if @templates != [] do %>
+          <%= if @templates && @templates != [] do %>
             <br><%= gettext "or get started with a prefab'ed template" %>:<br>
             <div class="blocks-templates">
               <%= for template <- @templates do %>
