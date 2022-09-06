@@ -1299,9 +1299,16 @@ defmodule BrandoAdmin.Components.Form do
 
         maybe_redirected_socket =
           case save_redirect_target do
-            :self -> socket
-            :listing -> push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
-            :new -> push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+            :self ->
+              id = "#{socket.assigns.id}-revisions-drawer"
+              send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+              socket
+
+            :listing ->
+              push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+
+            :new ->
+              push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
           end
 
         {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}

@@ -14,6 +14,13 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   # data revisions, :list
   # data active_revision, :any
 
+  def update(%{action: :refresh_revisions}, socket) do
+    {:ok,
+     socket
+     |> assign_refreshed_revisions()
+     |> assign_refreshed_active_revision()}
+  end
+
   def update(assigns, socket) do
     {:ok,
      socket
@@ -36,8 +43,12 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
     case Ecto.Changeset.get_field(form.source, :id) do
       nil ->
-        socket
-        |> assign(revisions: [], entry_id: nil, entry_type: entry_type)
+        assign(
+          socket,
+          revisions: [],
+          entry_id: nil,
+          entry_type: entry_type
+        )
 
       entry_id ->
         socket
@@ -82,6 +93,19 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           revision
       end
     end)
+  end
+
+  defp assign_refreshed_active_revision(%{assigns: %{revisions: revisions}} = socket) do
+    active_revision =
+      case Enum.find(revisions, & &1.active) do
+        nil ->
+          nil
+
+        %{revision: revision} ->
+          revision
+      end
+
+    assign(socket, :active_revision, active_revision)
   end
 
   def render(assigns) do
