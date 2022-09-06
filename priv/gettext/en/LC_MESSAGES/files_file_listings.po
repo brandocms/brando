@@ -21,11 +21,6 @@ msgstr ""
 msgid "Delete file"
 msgstr ""
 
-#: lib/brando/files/file.ex:83
-#, elixir-autogen, elixir-format
-msgid "Delete files"
-msgstr ""
-
 #: lib/brando/files/file.ex:74
 #, elixir-autogen, elixir-format
 msgid "Duplicate file"

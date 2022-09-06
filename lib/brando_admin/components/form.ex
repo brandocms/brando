@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
-     |> assign(:save_without_redirect, false)
+     |> assign(:save_redirect_target, :listing)
      |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
@@ -1177,7 +1177,14 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("push_submit", _, socket) do
     {:noreply,
      socket
-     |> assign(:save_without_redirect, true)
+     |> assign(:save_redirect_target, :self)
+     |> push_event("b:submit", %{})}
+  end
+
+  def handle_event("push_submit_new", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:save_redirect_target, :new)
      |> push_event("b:submit", %{})}
   end
 
@@ -1231,8 +1238,8 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
-  def handle_event("save_without_redirect", _, socket) do
-    {:noreply, assign(socket, :save_without_redirect, true)}
+  def handle_event("save_redirect_target", _, socket) do
+    {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
   def handle_event(
@@ -1245,7 +1252,7 @@ defmodule BrandoAdmin.Components.Form do
             current_user: current_user,
             singular: singular,
             form: form,
-            save_without_redirect: save_without_redirect
+            save_redirect_target: save_redirect_target
           }
         } = socket
       ) do
@@ -1278,6 +1285,12 @@ defmodule BrandoAdmin.Components.Form do
           Brando.routes().admin_live_path(socket, generated_list_view)
         end
 
+    # redirect to "create new"
+    redirect_new_fn = fn socket, _entry, _mutation_type ->
+      generated_create_view = schema.__modules__().admin_create_view
+      Brando.routes().admin_live_path(socket, generated_create_view)
+    end
+
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
@@ -1285,10 +1298,13 @@ defmodule BrandoAdmin.Components.Form do
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
         maybe_redirected_socket =
-          (save_without_redirect && socket) ||
-            push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+          case save_redirect_target do
+            :self -> socket
+            :listing -> push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+            :new -> push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+          end
 
-        {:noreply, assign(maybe_redirected_socket, :save_without_redirect, false)}
+        {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger

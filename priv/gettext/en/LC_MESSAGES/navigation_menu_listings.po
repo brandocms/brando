@@ -26,11 +26,6 @@ msgstr ""
 msgid "Delete menu"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:89
-#, elixir-autogen, elixir-format
-msgid "Delete menus"
-msgstr ""
-
 #: lib/brando/navigation/menu.ex:84
 #, elixir-autogen, elixir-format
 msgid "Duplicate menu"
@@ -46,7 +41,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:119
+#: lib/brando/navigation/menu.ex:115
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr ""

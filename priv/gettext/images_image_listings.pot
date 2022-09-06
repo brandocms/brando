@@ -20,11 +20,6 @@ msgstr ""
 msgid "Delete image"
 msgstr ""
 
-#: lib/brando/images/image.ex:87
-#, elixir-autogen, elixir-format
-msgid "Delete images"
-msgstr ""
-
 #: lib/brando/images/image.ex:78
 #, elixir-autogen, elixir-format
 msgid "Duplicate image"

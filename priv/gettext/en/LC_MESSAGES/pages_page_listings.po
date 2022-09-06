@@ -12,8 +12,8 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #: lib/brando/pages/page.ex:133
-#: lib/brando/pages/page.ex:202
-#: lib/brando/pages/page.ex:236
+#: lib/brando/pages/page.ex:198
+#: lib/brando/pages/page.ex:232
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
@@ -28,7 +28,7 @@ msgstr ""
 msgid "Create subpage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:200
+#: lib/brando/pages/page.ex:196
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr ""
@@ -38,12 +38,7 @@ msgstr ""
 msgid "Delete page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:141
-#, elixir-autogen, elixir-format
-msgid "Delete pages"
-msgstr ""
-
-#: lib/brando/pages/page.ex:234
+#: lib/brando/pages/page.ex:230
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr ""
@@ -53,7 +48,7 @@ msgstr ""
 msgid "Duplicate page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:197
+#: lib/brando/pages/page.ex:193
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr ""
@@ -63,7 +58,7 @@ msgstr ""
 msgid "Edit page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:231
+#: lib/brando/pages/page.ex:227
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr ""
@@ -78,12 +73,12 @@ msgstr ""
 msgid "URI"
 msgstr ""
 
-#: lib/brando/pages/page.ex:198
+#: lib/brando/pages/page.ex:194
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Duplicate fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:232
+#: lib/brando/pages/page.ex:228
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Duplicate sub page"
 msgstr ""

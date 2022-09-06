@@ -30,11 +30,6 @@ msgstr "Er du sikker?"
 msgid "Delete file"
 msgstr "Slett fil"
 
-#: lib/brando/files/file.ex:83
-#, elixir-autogen, elixir-format
-msgid "Delete files"
-msgstr "Slett filer"
-
 #: lib/brando/files/file.ex:74
 #, elixir-autogen, elixir-format
 msgid "Duplicate file"

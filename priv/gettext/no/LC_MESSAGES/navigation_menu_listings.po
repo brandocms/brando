@@ -35,11 +35,6 @@ msgstr "Opprett menypunkt"
 msgid "Delete menu"
 msgstr "Slett meny"
 
-#: lib/brando/navigation/menu.ex:89
-#, elixir-autogen, elixir-format
-msgid "Delete menus"
-msgstr "Slett menyer"
-
 #: lib/brando/navigation/menu.ex:84
 #, elixir-autogen, elixir-format
 msgid "Duplicate menu"
@@ -55,7 +50,7 @@ msgstr "Oppdater meny"
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/navigation/menu.ex:119
+#: lib/brando/navigation/menu.ex:115
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr "menypunkter"

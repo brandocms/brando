@@ -37,7 +37,7 @@ export default (app) => ({
     
     if (ev.metaKey && ev.key === 's') {
       ev.preventDefault()
-      this.pushEventTo(this.el, 'save_without_redirect', { save_without_redirect: true })
+      this.pushEventTo(this.el, 'save_redirect_target', { save_redirect_target: 'self' })
       this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     }
   }

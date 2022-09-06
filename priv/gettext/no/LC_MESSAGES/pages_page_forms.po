@@ -20,67 +20,67 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#: lib/brando/pages/page.ex:271
+#: lib/brando/pages/page.ex:267
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando/pages/page.ex:267
+#: lib/brando/pages/page.ex:263
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/pages/page.ex:278
+#: lib/brando/pages/page.ex:274
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#: lib/brando/pages/page.ex:244
+#: lib/brando/pages/page.ex:240
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/pages/page.ex:274
+#: lib/brando/pages/page.ex:270
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#: lib/brando/pages/page.ex:258
+#: lib/brando/pages/page.ex:254
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/pages/page.ex:283
+#: lib/brando/pages/page.ex:279
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr "Sidevariabler"
 
-#: lib/brando/pages/page.ex:246
+#: lib/brando/pages/page.ex:242
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Status"
 
-#: lib/brando/pages/page.ex:277
+#: lib/brando/pages/page.ex:273
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr "Mal"
 
-#: lib/brando/pages/page.ex:250
+#: lib/brando/pages/page.ex:246
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:251
+#: lib/brando/pages/page.ex:247
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr "URI"
 
-#: lib/brando/pages/page.ex:263
+#: lib/brando/pages/page.ex:259
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#: lib/brando/pages/page.ex:275
+#: lib/brando/pages/page.ex:271
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr "Siden lastes inn på rotadressen"
