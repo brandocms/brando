@@ -78,10 +78,6 @@ defmodule Brando.Files.File do
           confirm: t("Are you sure?")
         ]
       ])
-
-      selection_actions([
-        [label: t("Delete files"), event: "delete_selected"]
-      ])
     end
   end
 

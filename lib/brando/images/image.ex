@@ -82,10 +82,6 @@ defmodule Brando.Images.Image do
           confirm: t("Are you sure?")
         ]
       ])
-
-      selection_actions([
-        [label: t("Delete images"), event: "delete_selected"]
-      ])
     end
   end
 

@@ -137,10 +137,6 @@ defmodule Brando.Pages.Page do
         [label: t("Create fragment"), event: "create_fragment"]
       ])
 
-      selection_actions([
-        [label: t("Delete pages"), event: "delete_selected"]
-      ])
-
       field :language, :language, columns: 1
 
       template(

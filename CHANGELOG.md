@@ -2,6 +2,9 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: Add `delete_selected` as a default action for listing selections.
+  This means you should remove your own `delete_selected` from your listing's
+  `selection_actions`
 * BREAKING: `@identity` now refers to the current language identity, instead 
   of a map of all languages
 * BREAKING: The tiptap dependency weirdness has returned... Add this dependency 

@@ -386,6 +386,11 @@
         border-top-left-radius: 18px;
         border-bottom-left-radius: 18px;
         padding-left: 15px;
+
+        .split-dropdown-button {
+          border-top-right-radius: 18px;
+          border-bottom-right-radius: 18px;
+        }
       }
 
       &:last-child {

@@ -65,10 +65,6 @@ defmodule Brando.Images.Gallery do
           confirm: gettext("Are you sure?")
         ]
       ])
-
-      selection_actions([
-        [label: gettext("Delete images"), event: "delete_selected"]
-      ])
     end
   end
 

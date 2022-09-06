@@ -85,10 +85,6 @@ defmodule Brando.Navigation.Menu do
         [label: t("Create menu item"), event: "create_menu_item"]
       ])
 
-      selection_actions([
-        [label: t("Delete menus"), event: "delete_selected"]
-      ])
-
       field(:language, :language, columns: 1)
 
       template(

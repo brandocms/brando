@@ -573,6 +573,13 @@ defmodule BrandoAdmin.Components.Content.List do
             </svg>
           </button>
           <ul data-testid="circle-dropdown-content" class="dropdown-content hidden over" id="selected-actions-dropdown-content">
+            <li>
+              <button
+                phx-click="delete_selected"
+                phx-value-ids={@encoded_selected_rows}>
+                <%= gettext "Delete selected" %>
+              </button>
+            </li>
             <%= for %{event: event, label: label} <- @selection_actions do %>
               <li>
                 <button
