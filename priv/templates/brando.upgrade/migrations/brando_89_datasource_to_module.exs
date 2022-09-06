@@ -70,7 +70,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         _
       ) do
     {mod, refs} =
-      Enum.reduce(module_block["data"]["refs"], {module_block, []}, fn
+      Enum.reduce(module_block["data"]["refs"] || [], {module_block, []}, fn
         %{"data" => %{"type" => "datasource", "data" => ds_data}, "name" => ref_name},
         {updated_mod, updated_refs} ->
           ds_module_query =
