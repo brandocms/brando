@@ -212,6 +212,7 @@ defmodule BrandoAdmin.Components.Content.List do
     socket
     |> assign(:list_opts, list_opts)
     |> assign(:entries, entries)
+    |> assign(:content_language, content_language)
   end
 
   # TODO: Read paginate true/false from listing
@@ -534,11 +535,29 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
+  defp get_duplication_langs(_, false), do: []
+
+  defp get_duplication_langs(content_language, true) do
+    Brando.config(:languages)
+    |> Enum.map(& &1[:value])
+    |> Enum.reject(&(&1 == content_language))
+  end
+
   def selected_rows(assigns) do
+    ctx = assigns.schema.__modules__.context
+    singular = assigns.schema.__naming__.singular
+
+    has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
+    duplicate_langs? = assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn?
+
     assigns =
       assigns
       |> assign(:encoded_selected_rows, Jason.encode!(assigns.selected_rows))
       |> assign(:selected_rows_count, Enum.count(assigns.selected_rows))
+      |> assign(
+        :duplicate_langs,
+        get_duplication_langs(assigns.content_language, duplicate_langs?)
+      )
 
     ~H"""
     <div class={render_classes(["selected-rows", {:hidden, Enum.empty?(@selected_rows)}])}>
@@ -573,6 +592,16 @@ defmodule BrandoAdmin.Components.Content.List do
             </svg>
           </button>
           <ul data-testid="circle-dropdown-content" class="dropdown-content hidden over" id="selected-actions-dropdown-content">
+            <%= for lang <- @duplicate_langs do %>
+              <li>
+                <button
+                  phx-click="duplicate_selected_to_language"
+                  phx-value-language={lang}
+                  phx-value-ids={@encoded_selected_rows}>
+                  <%= gettext "Duplicate selected to" %> [<%= String.upcase(lang) %>]
+                </button>
+              </li>
+            <% end %>
             <li>
               <button
                 phx-click="delete_selected"

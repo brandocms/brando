@@ -150,6 +150,27 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         {:halt, socket}
 
+      "duplicate_selected_to_language",
+      %{"ids" => ids, "language" => language},
+      %{assigns: %{current_user: user, schema: schema}} = socket ->
+        ids = Jason.decode!(ids)
+
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+
+        for entry_id <- ids do
+          override_opts = [
+            change_fields: [{:language, language}],
+            delete_fields: []
+          ]
+
+          apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
+        end
+
+        update_list_entries(schema)
+
+        {:halt, socket}
+
       "duplicate_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
         singular = schema.__naming__().singular
         context = schema.__modules__().context

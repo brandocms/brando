@@ -146,10 +146,15 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def duplicate(context, _module, name, id, opts, user) do
+  def duplicate(context, _module, name, id, opts, override_opts, user) do
     case apply(context, :"get_#{name}", [id]) do
       {:ok, entry} ->
-        opts = Enum.into(opts, %{})
+        override_opts = Enum.into(override_opts, %{})
+
+        opts =
+          opts
+          |> Enum.into(%{})
+          |> Map.merge(override_opts)
 
         params =
           entry
@@ -174,9 +179,13 @@ defmodule Brando.Query.Mutations do
   defp maybe_set_status(entry), do: entry
 
   defp maybe_change_fields(entry, %{change_fields: change_fields}) do
-    Enum.reduce(change_fields, entry, fn f, updated_entry ->
-      default_value = Map.get(updated_entry, f)
-      Map.update(updated_entry, f, default_value, fn v -> "#{v}_dupl" end)
+    Enum.reduce(change_fields, entry, fn
+      {f, new_value}, updated_entry ->
+        Map.put(updated_entry, f, new_value)
+
+      f, updated_entry ->
+        default_value = Map.get(updated_entry, f)
+        Map.update(updated_entry, f, default_value, fn v -> "#{v}_dupl" end)
     end)
   end
 

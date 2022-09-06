@@ -515,8 +515,13 @@ defmodule BrandoAdmin.Components.Form do
                   </Button.dropdown>
                   <Button.dropdown
                     value={false}
-                    event={JS.push("push_submit", target: @myself, value: %{value: false})}>
+                    event={JS.push("push_submit", target: @myself)}>
                     <%= gettext "Save and continue editing" %><span class="shortcut">⌘S</span>
+                  </Button.dropdown>
+                  <Button.dropdown
+                    value={false}
+                    event={JS.push("push_submit_new", target: @myself)}>
+                    <%= gettext "Save and create new" %>
                   </Button.dropdown>
                 </SplitDropdown.render>
               </div>

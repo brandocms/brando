@@ -742,13 +742,14 @@ defmodule Brando.Query do
               Brando.Users.User.t() | :system
             ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"duplicate_#{singular_schema}")(id, user) do
+      def unquote(:"duplicate_#{singular_schema}")(id, user, override_opts \\ []) do
         Brando.Query.Mutations.duplicate(
           __MODULE__,
           unquote(module),
           unquote(singular_schema),
           id,
           unquote(opts),
+          override_opts,
           user
         )
       end
