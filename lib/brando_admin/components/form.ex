@@ -1790,7 +1790,7 @@ defmodule BrandoAdmin.Components.Form do
         <div class={render_classes(["meta", left: @left_justify_meta])}>
           <%= if @instructions do %>
             <div class="help-text">
-              ↳ <span><%= @instructions %></span>
+              ↳ <span><%= raw @instructions %></span>
             </div>
             <%= if @meta do %>
               <div class="extra">
