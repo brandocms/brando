@@ -1,5 +1,7 @@
 defmodule Brando.Villain.Tags.T do
-  @moduledoc false
+  @moduledoc """
+  {% t no 'Norsk' %}
+  """
   @behaviour Liquex.Tag
 
   import NimbleParsec
