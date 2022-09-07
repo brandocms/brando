@@ -302,6 +302,26 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  defp assign_refreshed_entry(
+         %{
+           assigns: %{
+             schema: schema,
+             entry_id: entry_id,
+             singular: singular,
+             context: context,
+             form: form
+           }
+         } = socket
+       ) do
+    query_params =
+      entry_id
+      |> form.query.()
+      |> add_preloads(schema)
+      |> Map.put(:with_deleted, true)
+
+    assign(socket, :entry, context |> apply(:"get_#{singular}!", [query_params]))
+  end
+
   # defp scan_and_preload_block_vars(entry, schema) do
   #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
   #     blocks = Map.get(updated_entry, field)
@@ -567,6 +587,7 @@ defmodule BrandoAdmin.Components.Form do
               <.live_component module={RevisionsDrawer}
                 id={"#{@id}-revisions-drawer"}
                 current_user={@current_user}
+                entry_id={@entry_id}
                 form={f}
                 status={@status_revisions}
                 close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
@@ -1189,7 +1210,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("toggle_revisions_drawer_status", _, socket) do
-    if Ecto.Changeset.get_field(socket.assigns.changeset, :id) do
+    if socket.assigns.entry_id do
       {:noreply,
        socket
        |> assign(
@@ -1302,7 +1323,11 @@ defmodule BrandoAdmin.Components.Form do
             :self ->
               id = "#{socket.assigns.id}-revisions-drawer"
               send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+
+              # update entry!
               socket
+              |> assign(:entry_id, entry.id)
+              |> assign_refreshed_entry()
 
             :listing ->
               push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
