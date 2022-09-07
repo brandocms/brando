@@ -38,10 +38,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     assign(socket, :form_id, form_id)
   end
 
-  defp assign_revisions(%{assigns: %{form: form}} = socket) do
+  defp assign_revisions(%{assigns: %{form: form, entry_id: entry_id}} = socket) do
     entry_type = form.source.data.__struct__
 
-    case Ecto.Changeset.get_field(form.source, :id) do
+    case entry_id do
       nil ->
         assign(
           socket,
@@ -66,6 +66,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         |> assign(:entry_id, entry_id)
         |> assign(:entry_type, entry_type)
     end
+  end
+
+  defp assign_refreshed_revisions(%{assigns: %{entry_id: nil}} = socket) do
+    socket
   end
 
   defp assign_refreshed_revisions(
