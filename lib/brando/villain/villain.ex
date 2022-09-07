@@ -308,42 +308,57 @@ defmodule Brando.Villain do
         %{matches: %{id: id}}
       end
 
-    {:ok, record} = apply(ctx, :"get_#{singular}", [get_opts])
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    case apply(ctx, :"get_#{singular}", [get_opts]) do
+      {:error, _} = err ->
+        require Logger
 
-    data = Map.get(record, data_field)
+        Logger.error("""
+        ==> Failed to rerender_html_from_id
 
-    updated_data =
-      if updated_module_id do
-        module = Enum.find(modules, &(&1.id == updated_module_id))
-        Brando.Villain.reapply_module(module, data)
-      else
-        data
-      end
+        #{inspect(err, pretty: true)}
 
-    parsed_data = Brando.Villain.parse(updated_data, record)
+        Schema..: #{inspect(schema, pretty: true)}
+        Id......: #{inspect(id, pretty: true)}
 
-    changeset =
-      record
-      |> Changeset.change()
-      |> Changeset.put_change(
-        data_field,
-        updated_data
-      )
-      |> Changeset.put_change(
-        html_field,
-        parsed_data
-      )
+        """)
 
-    case Brando.repo().update(changeset) do
-      {:ok, %Pages.Fragment{} = fragment} ->
-        Brando.Cache.Query.evict({:ok, fragment})
-        Pages.update_villains_referencing_fragment(fragment)
+      {:ok, record} ->
+        {:ok, modules} = Content.list_modules(@module_cache_ttl)
 
-      {:ok, result} ->
-        Brando.Cache.Query.evict({:ok, result})
+        data = Map.get(record, data_field)
 
-        {:ok, result}
+        updated_data =
+          if updated_module_id do
+            module = Enum.find(modules, &(&1.id == updated_module_id))
+            Brando.Villain.reapply_module(module, data)
+          else
+            data
+          end
+
+        parsed_data = Brando.Villain.parse(updated_data, record)
+
+        changeset =
+          record
+          |> Changeset.change()
+          |> Changeset.put_change(
+            data_field,
+            updated_data
+          )
+          |> Changeset.put_change(
+            html_field,
+            parsed_data
+          )
+
+        case Brando.repo().update(changeset) do
+          {:ok, %Pages.Fragment{} = fragment} ->
+            Brando.Cache.Query.evict({:ok, fragment})
+            Pages.update_villains_referencing_fragment(fragment)
+
+          {:ok, result} ->
+            Brando.Cache.Query.evict({:ok, result})
+
+            {:ok, result}
+        end
     end
   end
 
