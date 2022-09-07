@@ -20,6 +20,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       {:ok,
        socket
        |> assign(:socket_connected, true)
+       |> assign(:save_redirect_target, :listing)
        |> assign_entry(entry_id)
        |> assign_current_user(token)
        |> assign_changeset()
@@ -113,6 +114,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
      socket
      |> assign(:params, params)
      |> assign(:uri, uri)}
+  end
+
+  def handle_event("save_redirect_target", _, socket) do
+    {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
   ## Table events
