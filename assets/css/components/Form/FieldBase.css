@@ -90,7 +90,7 @@
 
   .shaded & {
     &:last-of-type {
-      margin-bottom: 20px;
+      margin-bottom: 2vw;
     }
   }
 
@@ -171,6 +171,10 @@
     margin-top: 3px;
     position: absolute;
     left: 0;
+
+    .shaded & {
+      position: relative;
+    }
 
     .help-text {
       @fontsize form.help;
