@@ -188,6 +188,8 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
     generated_uid = Brando.Utils.generate_uid()
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
 
+    vars_for_block = set_block_var(updated_vars, datasource_arg)
+
     # if module.wrapper is true, this is a multi block!
     %{
       type: "module",
@@ -196,7 +198,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         multi: module.wrapper,
         datasource: true,
         datasource_selected_ids: ids,
-        vars: module.vars,
+        vars: vars_for_block,
         refs: refs_with_generated_uids
       },
       uid: generated_uid
@@ -208,21 +210,36 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
     value
   end
 
+  defp set_block_var(vars, arg) do
+    case Enum.find(vars, &(&1["key"] == "arg")) do
+      nil ->
+        vars
+      _ ->
+        put_in(vars, [Access.filter(&(&1["key"] == "arg")), "value"], arg)
+    end
+  end
+
   defp update_vars_with_arg(nil, nil), do: []
   defp update_vars_with_arg(vars, nil), do: vars
 
   defp update_vars_with_arg(vars, arg) do
-    arg_var = %{
-      "important" => true,
-      "instructions" => nil,
-      "placeholder" => nil,
-      "key" => "arg",
-      "value" => arg,
-      "type" => "string",
-      "label" => "Arg"
-    }
+    case Enum.find(vars, &(&1["key"] == "arg")) do
+      nil ->
+        arg_var = %{
+          "important" => true,
+          "instructions" => nil,
+          "placeholder" => nil,
+          "key" => "arg",
+          "value" => arg,
+          "type" => "string",
+          "label" => "Arg"
+        }
 
-    [arg_var | vars]
+        [arg_var | vars]
+
+      _ ->
+        vars
+    end
   end
 
   defp update_vars_with_limit(nil, nil), do: []
