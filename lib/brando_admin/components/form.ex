@@ -612,7 +612,7 @@ defmodule BrandoAdmin.Components.Form do
             <.submit_button
               processing={@processing}
               form_id={@id}
-              label={gettext("Save (⌘S)")}
+              label={gettext("Save (⇧⌘S)")}
               class="primary submit-button" />
           </.form>
         </div>

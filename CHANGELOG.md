@@ -18,6 +18,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   datasource instead. Run `mix brando.upgrade && mix ecto.migrate` 
   to convert your existing datasource blocks to module blocks.
 * Add split dropdown button to form tabs for more advanced save options
+* Update revisions when saving entry without redirecting
 * Add scheduled publishing for revisions
 * Fix max width for #content
 * Automatically add uploaded gallery images to gallery

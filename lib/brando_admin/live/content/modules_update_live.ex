@@ -99,7 +99,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           <Form.submit_button
             processing={false}
             form_id={"module-form"}
-            label={gettext("Save (⌘S)")}
+            label={gettext("Save (⇧⌘S)")}
             class="primary submit-button" />
         </div>
       </.form>
