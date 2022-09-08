@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.FilePicker do
   use BrandoAdmin, :live_component
+  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   import Brando.Gettext
 
@@ -70,7 +71,8 @@ defmodule BrandoAdmin.Components.FilePicker do
             phx-value-selected={file.filename in @selected_files && "true" || "false"}
             phx-page-loading>
             <div class="file-picker__info">
-              <div class="file-picker__filename"><%= file.filename %> (<%= Brando.Utils.human_size(file.filesize) %>)</div>
+              <div class="file-picker__filename">#<%= file.id %> <%= Utils.file_url(file) %></div>
+              <div class="file-picker__size">(<%= Brando.Utils.human_size(file.filesize) %>)</div>
             </div>
           </div>
           <% end %>

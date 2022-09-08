@@ -743,11 +743,12 @@ defmodule Brando.Utils do
     url <> add_cache_string(opts)
   end
 
-  def file_url(%Files.File{} = file) do
-    {:ok, config} = Files.get_config_for(file.config_target)
+  def file_url(%{filename: filename, config_target: config_target})
+      when not is_nil(config_target) do
+    {:ok, config} = Files.get_config_for(config_target)
 
     config.upload_path
-    |> Path.join(file.filename)
+    |> Path.join(filename)
     |> media_url()
   end
 

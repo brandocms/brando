@@ -416,3 +416,24 @@ figcaption.tiny {
     }
   }
 }
+
+.file-picker__file {
+  font-family: 'Mono';
+  font-size: 14px;
+  border-top: 1px solid;
+  padding: 15px 10px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--brando-color-dark);
+  }
+
+  .file-picker__info {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  &:last-of-type {
+    border-bottom: 1px solid;
+  }
+}
