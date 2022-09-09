@@ -434,6 +434,23 @@ defmodule Brando.HTML do
   @doc """
   If you use Vite assets pipeline
   """
+  def include_assets(%{admin: true} = assigns) do
+    if Brando.env() == :prod do
+      ~H"""
+      <!-- admin prod assets -->
+      <%= Brando.Assets.Vite.Render.main_css(:admin) |> raw() %>
+      <%= Brando.Assets.Vite.Render.main_js(:admin) |> raw() %>
+      """
+    else
+      ~H"""
+      <!-- admin dev/test -->
+      <script type="module" src="http://localhost:3333/@vite/client"></script>
+      <script type="module" src="http://localhost:3333/src/main.js"></script>
+      <!-- end admin dev/test -->
+      """
+    end
+  end
+
   def include_assets(assigns) do
     if Brando.env() == :prod do
       ~H"""

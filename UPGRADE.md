@@ -1,11 +1,8 @@
 ## 0.53.0-dev
 
 * If you upgrade to Vite 3, they suddenly output `admin/main.css` instead of `admin/admin.css`.
-  To fix, edit your `assets/backend/package.json` and replace `[name]` with `admin`:
-
-        entryFileNames: `assets/admin/admin.js`,
-        chunkFileNames: `assets/admin/__[name].js`,
-        assetFileNames: `assets/admin/admin.[ext]`
+  To fix, edit your `assets/backend/vite.config.js` and replace `manifest: false` 
+  with `manifest: 'admin_manifest.json`.
 
 
 ## 0.52.0

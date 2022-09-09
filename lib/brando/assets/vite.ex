@@ -8,15 +8,12 @@ defmodule Brando.Assets.Vite do
 
     require Logger
 
-    @vite_manifest "priv/static/manifest.json"
-    @cache_key {:vite, "cache_manifest"}
-
-    def read() do
-      case :persistent_term.get(@cache_key, nil) do
+    def read(manifest_file, cache_key) do
+      case :persistent_term.get(cache_key, nil) do
         nil ->
           hmr? = Application.get_env(Brando.otp_app(), :hmr)
-          res = read(hmr?)
-          :persistent_term.put(@cache_key, res)
+          res = do_read(manifest_file, hmr?)
+          :persistent_term.put(cache_key, res)
           res
 
         res ->
@@ -28,9 +25,11 @@ defmodule Brando.Assets.Vite do
     # copy from
     - `defp cache_static_manifest(endpoint)`
     - https://github.com/phoenixframework/phoenix/blob/a206768ff4d02585cda81a2413e922e1dc19d556/lib/phoenix/endpoint/supervisor.ex#L411
+
+    Read when HMR = true
     """
-    def read(true) do
-      case File.read(@vite_manifest) do
+    def do_read(manifest_file, true) do
+      case File.read(manifest_file) do
         {:error, :enoent} ->
           %{}
 
@@ -39,8 +38,8 @@ defmodule Brando.Assets.Vite do
       end
     end
 
-    def read(_) do
-      outer = Application.app_dir(Brando.endpoint().config(:otp_app), @vite_manifest)
+    def do_read(manifest_file, false) do
+      outer = Application.app_dir(Brando.endpoint().config(:otp_app), manifest_file)
 
       if File.exists?(outer) do
         outer |> File.read!() |> Jason.decode!()
@@ -75,42 +74,59 @@ defmodule Brando.Assets.Vite do
     }
     `
     """
-    # specified in vite.config.js in build.rollupOptions.input
-    @entry_file "js/index.js"
-    @legacy_entry "js/index-legacy.js"
-    @legacy_polyfills "vite/legacy-polyfills"
-    @critical_css_file "js/critical.js"
-    @critical_css_cache_key {:vite, "critical_css"}
 
-    @spec read() :: map()
-    def read() do
-      ViteManifestReader.read()
+    def config(:app) do
+      %{
+        manifest_file: "priv/static/manifest.json",
+        manifest_cache_key: {:vite, "cache_manifest"},
+        entry_file: "js/index.js",
+        legacy_entry: "js/index-legacy.js",
+        legacy_polyfills: "vite/legacy-polyfills",
+        critical_css_file: "js/critical.js",
+        critical_css_cache_key: {:vite, "critical_css"}
+      }
     end
 
-    @spec main_js() :: binary()
-    def main_js() do
-      get_file(@entry_file)
+    def config(:admin) do
+      %{
+        manifest_file: "priv/static/admin_manifest.json",
+        manifest_cache_key: {:vite, "cache_admin_manifest"},
+        entry_file: "src/main.js"
+      }
     end
 
-    @spec legacy_entry() :: binary()
-    def legacy_entry() do
-      get_file(@legacy_entry)
+    @spec read(atom) :: map()
+    def read(scope) do
+      scope
+      |> config
+      |> Map.get(:manifest_file)
+      |> ViteManifestReader.read(config(scope).manifest_cache_key)
     end
 
-    @spec legacy_polyfills() :: binary()
-    def legacy_polyfills() do
-      get_file(@legacy_polyfills)
+    @spec main_js(atom) :: binary()
+    def main_js(scope) do
+      get_file(scope, config(scope).entry_file)
     end
 
-    @spec main_css() :: binary()
-    def main_css() do
-      get_css(@entry_file)
+    @spec legacy_entry(atom) :: binary()
+    def legacy_entry(scope) do
+      get_file(scope, config(scope).legacy_entry)
     end
 
-    def critical_css do
-      case :persistent_term.get(@critical_css_cache_key, nil) do
+    @spec legacy_polyfills(atom) :: binary()
+    def legacy_polyfills(scope) do
+      get_file(scope, config(scope).legacy_polyfills)
+    end
+
+    @spec main_css(atom) :: binary()
+    def main_css(scope) do
+      get_css(scope, config(scope).entry_file)
+    end
+
+    def critical_css(scope \\ :app) do
+      case :persistent_term.get(config(scope).critical_css_cache_key, nil) do
         nil ->
-          critical_css_file = get_in(read(), [@critical_css_file, "css"])
+          critical_css_file = get_in(read(scope), [config(scope).critical_css_file, "css"])
 
           res =
             if critical_css_file do
@@ -121,7 +137,7 @@ defmodule Brando.Assets.Vite do
               "/* no critical css */"
             end
 
-          :persistent_term.put(@critical_css_cache_key, res)
+          :persistent_term.put(config(scope).critical_css_cache_key, res)
           res
 
         res ->
@@ -153,26 +169,27 @@ defmodule Brando.Assets.Vite do
       end
     end
 
-    @spec vendor_js() :: binary()
-    def vendor_js() do
-      get_imports(@entry_file)
+    @spec vendor_js(atom) :: binary()
+    def vendor_js(scope) do
+      scope
+      |> get_imports(config(scope).entry_file)
       |> Enum.at(0)
     end
 
-    @spec get_file(binary()) :: binary()
-    def get_file(file) do
-      read() |> get_in([file, "file"]) |> prepend_slash()
+    @spec get_file(atom, binary()) :: binary()
+    def get_file(scope, file) do
+      read(scope) |> get_in([file, "file"]) |> prepend_slash()
     end
 
-    @spec get_css(binary()) :: binary()
-    def get_css(file) do
-      read() |> get_in([file, "css"]) |> prepend_slash()
+    @spec get_css(atom, binary()) :: binary()
+    def get_css(scope, file) do
+      read(scope) |> get_in([file, "css"]) |> prepend_slash()
     end
 
-    @spec get_imports(binary()) :: list(binary())
-    def get_imports(file) do
-      imports = get_in(read(), [file, "imports"]) || []
-      Enum.map(imports, &get_file/1)
+    @spec get_imports(atom, binary()) :: list(binary())
+    def get_imports(scope, file) do
+      imports = get_in(read(scope), [file, "imports"]) || []
+      Enum.map(imports, fn import_file -> get_file(scope, import_file) end)
     end
 
     @spec prepend_slash(binary()) :: binary()
@@ -194,8 +211,8 @@ defmodule Brando.Assets.Vite do
 
     def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
 
-    def main_css do
-      case Vite.Manifest.main_css() do
+    def main_css(scope \\ :app) do
+      case Vite.Manifest.main_css(scope) do
         nil ->
           ""
 
@@ -207,9 +224,9 @@ defmodule Brando.Assets.Vite do
       end
     end
 
-    def main_js do
-      js_file = Vite.Manifest.main_js()
-      vendor_file = Vite.Manifest.vendor_js()
+    def main_js(scope \\ :app) do
+      js_file = Vite.Manifest.main_js(scope)
+      vendor_file = Vite.Manifest.vendor_js(scope)
 
       digested_script =
         if js_file do
@@ -231,9 +248,9 @@ defmodule Brando.Assets.Vite do
       [digested_script, digested_vendor]
     end
 
-    def legacy_js do
-      legacy_entry = Vite.Manifest.legacy_entry()
-      legacy_polyfills = Vite.Manifest.legacy_polyfills()
+    def legacy_js(scope \\ :app) do
+      legacy_entry = Vite.Manifest.legacy_entry(scope)
+      legacy_polyfills = Vite.Manifest.legacy_polyfills(scope)
 
       digested_legacy_polyfills =
         if legacy_polyfills do

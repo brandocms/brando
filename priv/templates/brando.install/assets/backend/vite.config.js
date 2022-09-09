@@ -24,10 +24,9 @@ export default defineConfig({
         admin: "src/main.js"
       },
       output: {
-        manualChunks: () => 'everything.js',
-        entryFileNames: `assets/admin/admin.js`,
-        chunkFileNames: `assets/admin/__[name].js`,
-        assetFileNames: `assets/admin/admin.[ext]`
+        entryFileNames: `assets/admin/admin-[hash].js`,
+        chunkFileNames: `assets/admin/__[name]-[hash].js`,
+        assetFileNames: `assets/admin/admin-[hash].[ext]`
       },
     },
     terserOptions: {

@@ -17,6 +17,9 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BREAKING: Remove datasource block and introduce module blocks with 
   datasource instead. Run `mix brando.upgrade && mix ecto.migrate` 
   to convert your existing datasource blocks to module blocks.
+* BREAKING: Admin now reads JS and CSS from `priv/static/admin_manifest.json`.
+  Make sure to set this in `assets/backend/vite.config.js` to:
+  `manifest: 'admin_manifest.json`
 * Add split dropdown button to form tabs for more advanced save options
 * Update revisions when saving entry without redirecting
 * Add scheduled publishing for revisions
