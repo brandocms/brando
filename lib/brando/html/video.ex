@@ -118,6 +118,7 @@ defmodule Brando.HTML.Video do
         playsinline
         data-video
         poster={poster}
+        style={width && "--aspect-ratio-division: #{width}/#{height}"}
         data-src={preload && src}
         src={!preload && src}></video>
       <noscript>
