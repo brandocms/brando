@@ -418,9 +418,9 @@ defmodule Brando.Villain.Parser do
             width: data.width,
             height: data.height,
             cover: :svg,
-            autoplay: data.autoplay || nil,
+            autoplay: (data.autoplay == nil && false) || data.autoplay,
             poster: data.poster || nil,
-            preload: data.preload || true,
+            preload: (data.preload == nil && true) || data.preload,
             opacity: data.opacity || 0.1
           ]
         }
