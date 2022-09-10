@@ -62,8 +62,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign(:selected_option, selected_option)
      |> assign_input_options()
+     |> assign(:selected_option, selected_option)
      |> assign_label()
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(form, opts))
+    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
   end
 
   def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
@@ -318,6 +318,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def handle_event("toggle_modal", _, socket) do
+    socket = (!socket.assigns.open && update_input_options(socket)) || socket
     {:noreply, assign(socket, :open, !socket.assigns.open)}
   end
 
