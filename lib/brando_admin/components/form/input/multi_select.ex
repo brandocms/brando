@@ -443,7 +443,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("toggle_modal", _, socket) do
     socket = assign(socket, :open, !socket.assigns.open)
-    socket = (socket.assigns.open && socket) || push_event(socket, "b:validate", %{})
+
+    socket =
+      (socket.assigns.open && update_input_options(socket)) ||
+        push_event(socket, "b:validate", %{})
 
     {:noreply, socket}
   end
