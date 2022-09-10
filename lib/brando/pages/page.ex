@@ -310,14 +310,30 @@ defmodule Brando.Pages.Page do
     Enum.map(templates, &%{value: &1, label: &1})
   end
 
-  def get_parents(_, _) do
+  def get_parents(form, _) do
     {:ok, parents} = Pages.list_pages(%{filter: %{parents: true}})
 
+    filtered_parents =
+      parents
+      |> filter_self(Ecto.Changeset.get_field(form.source, :id))
+      |> filter_language(Ecto.Changeset.get_field(form.source, :language))
+
     Enum.map(
-      parents,
-      &%{value: to_string(&1.id), label: "[#{String.upcase(to_string(&1.language))}] #{&1.title}"}
+      filtered_parents,
+      &%{
+        value: to_string(&1.id),
+        label: "[#{String.upcase(to_string(&1.language))}] #{&1.title}"
+      }
     )
   end
+
+  defp filter_self(parents, id) when not is_nil(id), do: Enum.filter(parents, &(&1.id != id))
+  defp filter_self(parents, _), do: parents
+
+  defp filter_language(parents, language) when not is_nil(language),
+    do: Enum.filter(parents, &(&1.language == language))
+
+  defp filter_language(parents, _), do: parents
 
   defimpl Phoenix.HTML.Safe, for: __MODULE__ do
     def to_iodata(%{html: html}) do
