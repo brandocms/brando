@@ -352,26 +352,16 @@ defmodule Brando.LivePreview do
   @doc """
   Renders the entry, stores in DB and returns URL
   """
-  def share(schema, id, revision, key, prop, user) do
+  def share(schema_module, changeset, user) do
     preview_module = Brando.live_preview()
 
     if function_exported?(preview_module, :render, 3) do
-      schema_module = Module.concat([schema])
-      context = schema_module.__modules__().context
-      singular = schema_module.__naming__().singular
-
-      get_opts =
-        if revision do
-          %{matches: %{id: id}, revision: revision}
-        else
-          %{matches: %{id: id}}
-        end
-
-      {:ok, entry} = apply(context, :"get_#{singular}", [get_opts])
+      cache_key = build_cache_key(:erlang.system_time())
+      entry_struct = Ecto.Changeset.apply_changes(changeset)
 
       html =
         schema_module
-        |> preview_module.render(entry, key, prop, nil)
+        |> preview_module.render(entry_struct, cache_key)
         |> Utils.term_to_binary()
 
       preview_key = Utils.random_string(12)
