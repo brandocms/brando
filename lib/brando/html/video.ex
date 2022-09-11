@@ -96,15 +96,7 @@ defmodule Brando.HTML.Video do
       class="video-wrapper video-file"
       data-smart-video
       style={@aspect_ratio}>
-      <%= get_play_button(play_button) %>
-      <%= if @video_cover do %>
-        <%= @video_cover %>
-      <% end %>
-      <%= if @cover do %>
-        <div data-cover>
-          <%= render_slot(@cover) %>
-        </div>
-      <% end %>
+
       <video
         width={width}
         height={height}
@@ -134,6 +126,16 @@ defmodule Brando.HTML.Video do
           playsinline
           src={src}></video>
       </noscript>
+
+      <%= get_play_button(play_button) %>
+      <%= if @video_cover do %>
+        <%= @video_cover %>
+      <% end %>
+      <%= if @cover do %>
+        <div data-cover>
+          <%= render_slot(@cover) %>
+        </div>
+      <% end %>
     </div>
     """
   end
