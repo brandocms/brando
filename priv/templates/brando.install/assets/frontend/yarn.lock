@@ -28,16 +28,16 @@
   resolved "https://registry.yarnpkg.com/@babel/standalone/-/standalone-7.18.3.tgz#d995116ca62aec308b5d4ffbe2abbb7cefafee7a"
   integrity sha512-X9AHtVe0gu3eHY+kk1Bt5Xx+UuZKX/CDOGPuNSA1mT+kEdmY+/odYeTQ7G8bI/YxOTwwwk5T8aBpWBmt6KGl0Q==
 
-"@brandocms/europacss@^0.10.1":
-  version "0.10.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.10.1.tgz#c245dfe9e48b88d17318e58e4167b2ece8db0f1a"
-  integrity sha512-RcSY4vCANHGOvoGLKSe3XhPvsG2GyZb24yAB0iKJgGUsTK6bYi8oB5poOw5YP2vFWoU5xxC5eo5NUK/xhKwK8w==
+"@brandocms/europacss@^0.11.1":
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.11.1.tgz#09ea25930a53a803617f8065937d4ff8ce10df91"
+  integrity sha512-ppndE215XDWHjNHZHMiWoDcru5SSXSTc+LubQ3jG8HW6ocAujOTEN4GRu3R9Oz0QjlhIYR8EXX1se11HJtROuQ==
   dependencies:
     lodash "^4.17.21"
     normalize.css "^8.0.1"
     postcss "^7.0.30"
     postcss-extend-rule "^3.0.0"
-    postcss-functions twined/postcss-functions
+    postcss-functions "github:twined/postcss-functions"
     postcss-nested "^4.2.1"
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
@@ -346,7 +346,7 @@ caniuse-lite@^1.0.30001358:
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001359.tgz#a1c1cbe1c2da9e689638813618b4219acbd4925e"
   integrity sha512-Xln/BAsPzEuiVLgJ2/45IaqD9jShtk3Y33anKb4+yLwQzws3+v6odKfpgES/cDEaZMLzSChpIGdbOYtH9MyuHw==
 
-chalk@^2.0.0, chalk@^2.0.1, chalk@^2.4.1, chalk@^2.4.2:
+chalk@^2.0.0, chalk@^2.0.1, chalk@^2.4.1:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-2.4.2.tgz#cd42541677a54333cf541a49108c1432b44c9424"
   integrity sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==
@@ -1394,7 +1394,7 @@ postcss-font-variant@^5.0.0:
   resolved "https://registry.yarnpkg.com/postcss-font-variant/-/postcss-font-variant-5.0.0.tgz#efd59b4b7ea8bb06127f2d031bfbb7f24d32fa66"
   integrity sha512-1fmkBaCALD72CK2a9i468mA/+tr9/1cBxRRMXOUaZqO43oWPR5imcyPjXwuv7PXbCid4ndlP5zWhidQVVa3hmA==
 
-postcss-functions@twined/postcss-functions:
+"postcss-functions@github:twined/postcss-functions":
   version "4.0.0"
   uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
@@ -1642,16 +1642,7 @@ postcss-value-parser@^4.2.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz#723c09920836ba6d3e5af019f92bc0971c02e514"
   integrity sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==
 
-postcss@^7.0.0:
-  version "7.0.35"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-7.0.35.tgz#d2be00b998f7f211d8a276974079f2e92b970e24"
-  integrity sha512-3QT8bBJeX/S5zKTTjTCIjRF3If4avAT6kqxcASlTWEtAFCb9NH0OUxNDfgZSWdP5fJnBYCMEWkIFfWeugjzYMg==
-  dependencies:
-    chalk "^2.4.2"
-    source-map "^0.6.1"
-    supports-color "^6.1.0"
-
-postcss@^7.0.17, postcss@^7.0.2, postcss@^7.0.30, postcss@^7.0.32, postcss@^7.0.7:
+postcss@^7.0.0, postcss@^7.0.17, postcss@^7.0.2, postcss@^7.0.30, postcss@^7.0.32, postcss@^7.0.7:
   version "7.0.39"
   resolved "https://registry.yarnpkg.com/postcss/-/postcss-7.0.39.tgz#9624375d965630e2e1f2c02a935c82a59cb48309"
   integrity sha512-yioayjNbHn6z1/Bywyb2Y4s3yvDAeXGOyxqD+LnVOinq6Mdmd++SW2wUNVzavyyHxd6+DxzWGIuosg6P1Rj8uA==
@@ -1938,13 +1929,6 @@ supports-color@^5.3.0:
   version "5.5.0"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-5.5.0.tgz#e2e69a44ac8772f78a1ec0b35b689df6530efc8f"
   integrity sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==
-  dependencies:
-    has-flag "^3.0.0"
-
-supports-color@^6.1.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-6.1.0.tgz#0764abc69c63d5ac842dd4867e8d025e880df8f3"
-  integrity sha512-qe1jfm1Mg7Nq/NSh6XE24gPXROEVsWHxC1LIx//XNlD9iw7YZQGjZNjYN7xGaEG6iKdA8EtNFW6R0gjnVXp+wQ==
   dependencies:
     has-flag "^3.0.0"
 
