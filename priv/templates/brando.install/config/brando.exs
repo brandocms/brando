@@ -42,6 +42,9 @@ config :brando,
   media_path: Path.expand("./media"),
   media_url: "/media",
 
+  # if true, no text, but button is shown on autoplay: false
+  video_play_button_text: true,
+
   client_brand: nil,
 
   agency_brand: """
