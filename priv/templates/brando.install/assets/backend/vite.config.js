@@ -14,7 +14,7 @@ export default defineConfig({
     ]
   },
   build: {
-    manifest: false,
+    manifest: 'admin_manifest.json',
     emptyOutDir: false,
     target: "modules",
     outDir: "../../priv/static", // <- Phoenix expects our files here
