@@ -16,7 +16,7 @@ defmodule Brando.Villain.Tags.T do
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Field.identifier(), :language)
     |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(quoted_string(), :string)
+    |> unwrap_and_tag(Literal.quoted_string(), :string)
     |> ignore(Tag.close_tag())
   end
 
@@ -29,27 +29,5 @@ defmodule Brando.Villain.Tags.T do
     else
       {[], context}
     end
-  end
-
-  defp quoted_string do
-    single_quote_string =
-      ignore(utf8_char([?']))
-      |> repeat(
-        lookahead_not(ascii_char([?']))
-        |> choice([string(~s{\'}), utf8_char([])])
-      )
-      |> ignore(utf8_char([?']))
-      |> reduce({List, :to_string, []})
-
-    double_quote_string =
-      ignore(utf8_char([?"]))
-      |> repeat(
-        lookahead_not(ascii_char([?"]))
-        |> choice([string(~s{\"}), utf8_char([])])
-      )
-      |> ignore(utf8_char([?"]))
-      |> reduce({List, :to_string, []})
-
-    choice([single_quote_string, double_quote_string])
   end
 end
