@@ -103,13 +103,13 @@ defmodule Brando.HTML.Video do
         alt=""
         tabindex="0"
         role="presentation"
-        preload={"#{preload || "none"}"}
+        preload="auto"
         autoplay={@autoplay}
-        muted
+        muted={@autoplay}
         loop
         playsinline
         data-video
-        poster={poster}
+        poster={validate_poster(poster)}
         style={width && "--aspect-ratio-division: #{width}/#{height}"}
         data-src={preload && src}
         src={!preload && src}></video>
@@ -121,7 +121,7 @@ defmodule Brando.HTML.Video do
           tabindex="0"
           role="presentation"
           preload="metadata"
-          muted
+          muted={@autoplay}
           loop
           playsinline
           src={src}></video>
@@ -139,6 +139,10 @@ defmodule Brando.HTML.Video do
     </div>
     """
   end
+
+  defp validate_poster("/" <> _ = url), do: url
+  defp validate_poster("http" <> _ = url), do: url
+  defp validate_poster(_), do: false
 
   defp get_video_cover(:svg, width, height, opacity) do
     if width do
