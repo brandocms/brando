@@ -128,9 +128,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </div>
 
             <% :file -> %>
-              <video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src={v(@block_data, :remote_id)}>
-                <source src={v(@block_data, :remote_id)} type="video/mp4">
-              </video>
+              <div id={"block-#{@uid}-videoSize"}>
+                <video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src={v(@block_data, :remote_id)}>
+                  <source src={v(@block_data, :remote_id)} type="video/mp4">
+                </video>
+              </div>
           <% end %>
         <% else %>
           <div class="empty">
@@ -149,7 +151,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   def handle_event(
         "url",
-        %{"remoteId" => remote_id, "source" => source, "url" => url},
+        %{
+          "remoteId" => remote_id,
+          "source" => source,
+          "url" => url,
+          "width" => width,
+          "height" => height
+        },
         %{assigns: %{uid: uid, data_field: data_field, base_form: form}} = socket
       ) do
     # replace block
@@ -178,7 +186,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           })
 
         _ ->
-          new_data
+          Map.merge(new_data, %{
+            width: width,
+            height: height
+          })
       end
 
     updated_changeset =

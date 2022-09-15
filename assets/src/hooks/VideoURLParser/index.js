@@ -33,34 +33,73 @@ export default (app) => ({
     this.bindInput()
   },
 
-  bindInput() {
+  bindInput() {    
     this.$button = Dom.find(this.el, 'button')
     this.$input = Dom.find(this.el, 'input')
-    this.$button.addEventListener('click', () => {
-      this.handleInput(this.$input.value)
-      this.pushEventTo(this.target, 'url', { source: this.source, remoteId: this.remoteId, url: this.$input.value })
+    this.$button.addEventListener('click', async () => {
+      await this.handleInput(this.$input.value)
+      this.pushEventTo(this.target, 'url', { width: this.width || 0, height: this.height || 0, source: this.source, remoteId: this.remoteId, url: this.$input.value })
     })
   },
 
   handleInput(url) {
     let match
-    
-    if (url.startsWith('https://player.vimeo.com/external/') || url.startsWith('https://player.vimeo.com/progressive_redirect/')) {
-      this.source = 'file'
-      this.remoteId = url
-    } else {
-      for (const key of Object.keys(PROVIDERS)) {
-        const provider = PROVIDERS[key]
-        match = provider.regex.exec(url)
+    this.url = url
 
-        if (match !== null && match[1] !== undefined) {
-          this.source = key
-          this.remoteId = match[1]
-          break
+    return new Promise((resolve) => {
+      this.resolve = resolve
+      if (url.startsWith('https://player.vimeo.com/external/') || url.startsWith('https://player.vimeo.com/progressive_redirect/')) {
+        this.source = 'file'
+        this.remoteId = url
+        this.createVideoProxy()
+      } else {
+        for (const key of Object.keys(PROVIDERS)) {
+          const provider = PROVIDERS[key]
+          match = provider.regex.exec(url)
+
+          if (match !== null && match[1] !== undefined) {
+            this.source = key
+            this.remoteId = match[1]
+            this.resolve()
+            break
+          }
+        }
+        if (!{}.hasOwnProperty.call(PROVIDERS, this.source)) {
+          return false
         }
       }
-      if (!{}.hasOwnProperty.call(PROVIDERS, this.source)) {
-        return false
+    })
+  },
+
+  createVideoProxy () {
+    this.attempts = 0
+    this.videoElement = document.createElement('video')
+    this.videoElement.autoplay = true
+    this._boundReadyListener = this.readyListener.bind(this)
+    this.videoElement.addEventListener('loadeddata', this._boundReadyListener)
+    this.videoElement.muted = true
+    this.videoElement.src = this.url
+  },
+
+  readyListener () {
+    this.findVideoSize()
+  },
+
+  findVideoSize() {
+    if (this.videoElement.videoWidth > 0 && this.videoElement.videoHeight > 0) {
+      this.videoElement.removeEventListener('loadeddata', this._boundReadyListener)
+      this.width = this.videoElement.videoWidth
+      this.height = this.videoElement.videoHeight
+
+      this.videoElement.remove()
+      
+      this.resolve()
+    } else {
+      if (this.attempts < 10) {
+        this.attempts++;
+        setTimeout(this.findVideoSize, 400);
+      } else {
+        console.error('VideoURLParser: Could not find video dimensions')
       }
     }
   }
