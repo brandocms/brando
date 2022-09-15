@@ -421,7 +421,9 @@ defmodule Brando.Villain.Parser do
             autoplay: (data.autoplay == nil && false) || data.autoplay,
             poster: data.poster || nil,
             preload: (data.preload == nil && true) || data.preload,
-            opacity: data.opacity || 0.1
+            opacity: data.opacity || 0.1,
+            play_button:
+              data.autoplay == false && (Brando.config(:video_play_button_text) || true)
           ]
         }
 
