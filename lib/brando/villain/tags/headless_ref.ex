@@ -1,5 +1,23 @@
 defmodule Brando.Villain.Tags.HeadlessRef do
-  @moduledoc false
+  @moduledoc """
+  Headless refs are useful if you want to tackle the ref directly, without
+  going through the parser.
+
+  For example a table:
+
+      <div class="table">
+        {% headless_ref refs.table %}
+        {% hide %}
+          {% assign rows = refs.table | rows %}
+          {% for row in rows %}
+            {% for col in row.cols %}
+              {{ col.value }}
+            {% endfor %}
+          {% endfor %}
+        {% endhide %}
+      </div>
+
+  """
   @behaviour Liquex.Tag
 
   import NimbleParsec
