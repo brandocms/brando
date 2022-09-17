@@ -784,6 +784,57 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     """
   end
 
+  def input(assigns) do
+    block_data = List.first(inputs_for(assigns.block, :data))
+
+    assigns =
+      assigns
+      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:label, input_value(block_data, :label))
+      |> assign(:placeholder, input_value(block_data, :placeholder))
+      |> assign(:help_text, input_value(block_data, :help_text))
+      |> assign(:block_data, block_data)
+
+    ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      data-block-index={@index}
+      data-block-uid={@uid}>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        is_ref?={@is_ref?}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_block={@insert_block}
+        duplicate_block={@duplicate_block}>
+        <:description>
+          <%= if @ref_description do %>
+            <%= @ref_description %>
+          <% end %>
+        </:description>
+        <div class="alert">
+          <Input.text
+            form={@block_data}
+            field={:value}
+            uid={@uid}
+            id_prefix="block_data"
+            label={@label}
+            instructions={@help_text}
+            placeholder={@placeholder} />
+            <Input.hidden form={@block_data} field={:placeholder} />
+            <Input.hidden form={@block_data} field={:label} />
+            <Input.hidden form={@block_data} field={:type} />
+            <Input.hidden form={@block_data} field={:help_text} />
+        </div>
+      </Blocks.block>
+    </div>
+
+    """
+  end
+
   defp last_block?(%{index: index, block_count: block_count}) when index + 1 == block_count do
     true
   end
