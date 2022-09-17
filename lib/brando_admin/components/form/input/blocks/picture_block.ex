@@ -43,10 +43,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(assigns, socket) do
-    extracted_path =
+    {extracted_path, extracted_filename} =
       case v(assigns.block, :data) do
-        nil -> nil
-        %{path: path} -> path
+        nil -> {nil, nil}
+        %{path: nil} -> {nil, nil}
+        %{path: path} -> {path, Path.basename(path)}
       end
 
     block_data =
@@ -67,6 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(:image, v(assigns.block, :data))
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
+     |> assign(:extracted_filename, extracted_filename)
      |> assign(:uid, v(assigns.block, :uid))}
   end
 
@@ -94,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <%= if @ref_description do %>
             <%= @ref_description %>
           <% else %>
-            <%= @extracted_path %>
+            <%= @extracted_filename %>
           <% end %>
         </:description>
         <input class="file-input" type="file" />
