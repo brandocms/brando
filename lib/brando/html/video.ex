@@ -80,12 +80,14 @@ defmodule Brando.HTML.Video do
     poster = Keyword.get(opts, :poster, false)
     play_button = Keyword.get(opts, :play_button, false)
     autoplay = Keyword.get(opts, :autoplay, false)
+    controls = Keyword.get(opts, :controls, false)
     aspect_ratio = build_aspect_ratio_style_string(width, height)
 
     assigns =
       assigns
       |> assign(:aspect_ratio, aspect_ratio)
       |> assign(:autoplay, autoplay)
+      |> assign(:controls, controls)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
       |> assign_new(:cover, fn ->
         nil
@@ -108,6 +110,7 @@ defmodule Brando.HTML.Video do
         muted={@autoplay}
         loop
         playsinline
+        controls={@controls}
         data-video
         poster={validate_poster(poster)}
         style={width && "--aspect-ratio-division: #{width}/#{height}"}

@@ -4,6 +4,7 @@ defmodule Brando.VillainTest do
 
     def text(%{text: _, type: _}, _), do: "other parser"
     def render_caption(_), do: ""
+    def video_file_options(_), do: []
     def datatable(_, _), do: nil
     def datasource(_, _), do: nil
     def markdown(_, _), do: nil
