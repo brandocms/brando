@@ -6,7 +6,7 @@
     border-radius: 10px;
 
     .field-wrapper {
-      @space margin-bottom 1;
+      @space margin-bottom 2.5vw;
     }
 
     .tiptap-wrapper {

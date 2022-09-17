@@ -130,6 +130,7 @@
       .important-vars & {
         @fontsize 14px >mobile;
         @fontsize 12px $mobile;
+        @space margin-bottom 5px;
       }
 
       &:before {
