@@ -33,6 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      socket
      |> assign(assigns)
      |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:type, assigns.block.data.data.source)
      |> assign(:block_data, block_data)}
   end
 
@@ -54,7 +55,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
         wide_config>
-        <:description><%= v(@block_data, :url) %></:description>
+        <:description>
+          <%= if @type == :file do %>
+            <%= gettext "External file" %>
+          <% else %>
+            <%= @type %>: <%= v(@block_data, :remote_id) %>
+          <% end %>
+        </:description>
         <:config>
           <%= if v(@block_data, :remote_id) do %>
             <div class="panels">
