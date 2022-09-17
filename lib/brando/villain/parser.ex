@@ -60,6 +60,9 @@ defmodule Brando.Villain.Parser do
   @doc "Renders caption for picture block"
   @callback render_caption(data :: map) :: binary
 
+  @doc "Default options passed to <.video> component for :file type"
+  @callback video_file_options(data :: map) :: list
+
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Brando.Villain.Parser
@@ -91,6 +94,21 @@ defmodule Brando.Villain.Parser do
         do: "#{title} — #{credits}"
 
       defoverridable render_caption: 1
+
+      def video_file_options(data) do
+        [
+          width: data.width,
+          height: data.height,
+          cover: :svg,
+          autoplay: (data.autoplay == nil && false) || data.autoplay,
+          poster: data.poster || nil,
+          preload: (data.preload == nil && true) || data.preload,
+          opacity: data.opacity || 0.1,
+          play_button: data.autoplay == false && (Brando.config(:video_play_button_text) || true)
+        ]
+      end
+
+      defoverridable video_file_options: 1
 
       @doc """
       Convert header to HTML
@@ -414,17 +432,7 @@ defmodule Brando.Villain.Parser do
       def video(%{remote_id: src, source: :file} = data, _) do
         assigns = %{
           video: src,
-          opts: [
-            width: data.width,
-            height: data.height,
-            cover: :svg,
-            autoplay: (data.autoplay == nil && false) || data.autoplay,
-            poster: data.poster || nil,
-            preload: (data.preload == nil && true) || data.preload,
-            opacity: data.opacity || 0.1,
-            play_button:
-              data.autoplay == false && (Brando.config(:video_play_button_text) || true)
-          ]
+          opts: video_file_options(data)
         }
 
         assigns
