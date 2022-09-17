@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.AddStatusToImages do
   use Ecto.Migration
-  import Ecto.Query
 
   def change do
     alter table(:images) do

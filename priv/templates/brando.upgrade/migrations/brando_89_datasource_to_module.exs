@@ -43,7 +43,8 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
   def down do
   end
 
-  def replace_datasources(list, root \\ :root) when is_list(list) do
+  def replace_datasources(list, root \\ :root)
+  def replace_datasources(list, root) when is_list(list) do
     list
     |> Enum.reduce([], fn item, acc -> [replace_datasources(item, root) | acc] end)
     |> Enum.reverse()
@@ -147,8 +148,8 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               "limit" => datasource_limit,
               "arg" => datasource_arg,
               "ids" => ids
-            } = ds_data
-        } = ds_block,
+            }
+        },
         scope
       )
       when scope in [:root, :container] do
