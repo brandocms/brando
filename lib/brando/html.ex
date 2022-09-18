@@ -511,6 +511,12 @@ defmodule Brando.HTML do
     ~H||
   end
 
+  def render_data(assigns) do
+    ~H"""
+    <%= Brando.Villain.parse(@entry.data, @entry) |> raw %>
+    """
+  end
+
   def render_blocks(assigns) do
     ~H"""
     <%= @entry.html |> raw %>
