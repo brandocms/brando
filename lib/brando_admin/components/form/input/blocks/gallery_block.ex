@@ -184,8 +184,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 </div>
               <% end %>
             <% else %>
-              <%= for img <- @images do %>
-                <div class="preview">
+              <%= for {img, idx} <- @indexed_images do %>
+                <div class={render_classes([
+                    "preview",
+                    "sort-handle",
+                    "draggable"
+                  ])}
+                  data-id={idx}>
                   <figure>
                     <Content.image image={img} size={:smallest} />
                   </figure>

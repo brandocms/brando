@@ -47,6 +47,7 @@
       @space margin-bottom 1vw;
       background-color: var(--brando-color-peach);
       padding: 10px;
+      align-items: center;
 
       figure {
         @column 2/12;
@@ -55,6 +56,9 @@
       figcaption {
         @column 7/12;
         @fontsize sm;
+        border-left: 1px solid var(--brando-color-dark);
+        padding-left: 15px;
+        margin-left: 15px;
 
         display: block;
 
