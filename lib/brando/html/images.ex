@@ -37,6 +37,9 @@ defmodule Brando.HTML.Images do
       Or with a key:
       I.e `srcset: {Brando.Users.User, :avatar, :cropped_key}`
 
+      Or with a string:
+      I.e `srcset: "Brando.Users.User:avatar.cropped"`
+
       You can also reference a config struct:
       I.e `srcset: image_series.cfg`
 
@@ -745,18 +748,16 @@ defmodule Brando.HTML.Images do
   end
 
   defp check_cropped(%{sizes: sizes, srcset: srcset}, key) do
-    string_key = to_string(key)
+    cropped_srcset = Map.get(srcset, key)
 
-    if String.contains?(string_key, "crop") do
-      cropped_srcset = Map.get(srcset, key)
+    cfg_key_to_check =
+      cropped_srcset
+      |> List.last()
+      |> elem(0)
 
-      cfg_key_to_check =
-        cropped_srcset
-        |> List.last()
-        |> elem(0)
+    size = Map.get(sizes, cfg_key_to_check)
 
-      size = Map.get(sizes, cfg_key_to_check)
-
+    if Map.get(size, "crop") do
       calc_ratio(size)
     else
       false
