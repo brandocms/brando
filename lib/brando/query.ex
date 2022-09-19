@@ -281,6 +281,7 @@ defmodule Brando.Query do
                 |> unquote(block).()
                 |> limit(1)
                 |> Brando.repo().one()
+                |> Brando.Query.maybe_force_villain(args_without_cache)
                 |> case do
                   nil ->
                     {:error, {unquote(singular_schema_atom), :not_found}}
@@ -316,6 +317,7 @@ defmodule Brando.Query do
                 |> unquote(block).()
                 |> limit(1)
                 |> Brando.repo().one()
+                |> Brando.Query.maybe_force_villain(args_without_cache)
                 |> case do
                   nil -> {:error, {unquote(singular_schema_atom), :not_found}}
                   result -> {:ok, result}
@@ -577,6 +579,7 @@ defmodule Brando.Query do
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
       {:revision, revision}, _ -> get_revision(module, args, revision)
+      {:force_villain, _}, q -> q
       {:with_deleted, true}, q -> q
       {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
       {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
@@ -793,6 +796,30 @@ defmodule Brando.Query do
       end
     end
   end
+
+  @doc """
+  If force_villain: true, then parse entry's data fields and stick
+  them in the html fields.
+  """
+  def maybe_force_villain(nil, _), do: nil
+
+  def maybe_force_villain(entry, %{force_villain: true}) do
+    blueprint = entry.__struct__
+
+    Enum.reduce(blueprint.__villain_fields__, entry, fn v, updated_entry ->
+      %{name: html_field} = Brando.Villain.get_html_field(blueprint, %{name: v.name})
+
+      villain_data = Map.get(updated_entry, v.name)
+
+      Map.put(
+        updated_entry,
+        html_field,
+        Brando.Villain.parse(villain_data, updated_entry)
+      )
+    end)
+  end
+
+  def maybe_force_villain(entry, _), do: entry
 
   # only build pagination_meta if offset & limit is set
   def maybe_build_pagination_meta(query, %{paginate: true, limit: 0}) do
