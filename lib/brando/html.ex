@@ -56,7 +56,9 @@ defmodule Brando.HTML do
 
   ## Example
 
-      <.preload_fonts fonts={[{:woff2, "/fonts/my-font.woff2"}]} />
+      <.preload_fonts fonts={[
+        {:woff2, "/fonts/my-font.woff2?vsn=d"}
+      ]} />
 
   """
   def preload_fonts(assigns) do
