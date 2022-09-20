@@ -135,7 +135,7 @@ export default (hooks, enableDebug = true) => {
           if (!PREFERS_REDUCED_MOTION) {
             const $main = Dom.find('main .content')
             if ($main) {
-              gsap.to($main, { opacity: 0 })
+              gsap.to($main, { opacity: 0, duration: 0.25 })
             }
           }
         }
