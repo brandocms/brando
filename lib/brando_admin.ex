@@ -22,7 +22,7 @@ defmodule BrandoAdmin do
       use Brando.HTML
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
-      import Phoenix.LiveView.Helpers
+      import Phoenix.Component
       import Plug.Conn, only: [get_session: 2]
 
       # Import basic rendering functionality (render, render_layout, etc)

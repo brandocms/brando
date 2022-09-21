@@ -9,7 +9,7 @@ defmodule Brando.Villain.Tags.Picture do
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Object
   alias Liquex.Parser.Tag
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
 
   @impl true
   def parse() do

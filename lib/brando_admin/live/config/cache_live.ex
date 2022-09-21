@@ -3,8 +3,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
   use Phoenix.HTML
 
   import Brando.Gettext
-  import Phoenix.LiveView.Helpers
-
+  import Phoenix.Component
   alias BrandoAdmin.Components.Content
 
   def mount(_, %{"user_token" => token}, socket) do

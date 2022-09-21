@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   """
   import Phoenix.LiveView
+  import Phoenix.Component
   import Brando.Gettext
   alias Brando.Utils
 
@@ -17,7 +18,7 @@ defmodule BrandoAdmin.LiveView.Listing do
     quote do
       use BrandoAdmin, :live_view
       use Phoenix.HTML
-      import Phoenix.LiveView.Helpers
+      import Phoenix.Component
 
       on_mount({__MODULE__, :hooks})
 

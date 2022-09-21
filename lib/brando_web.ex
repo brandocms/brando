@@ -18,7 +18,7 @@ defmodule BrandoWeb do
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
-      import Phoenix.LiveView.Helpers
+      import Phoenix.Component
 
       import Plug.Conn, only: [get_session: 2]
 
