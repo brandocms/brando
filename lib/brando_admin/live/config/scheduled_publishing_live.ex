@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
 
   import Brando.Gettext
   import Brando.Utils.Datetime
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
 
   alias Brando.Publisher
   alias BrandoAdmin.Components.Content

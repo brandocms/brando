@@ -993,7 +993,7 @@ defmodule Brando.Villain.Parser do
     <%= if @src.path do %>
       <div class="picture-wrapper" data-orientation={@orientation}>
         <%= if @link != "" do %>
-          <.link url={@link} rel={@rel} target={@target}>
+          <.link href={@link} rel={@rel} target={@target}>
             <.picture
               src={@src}
               opts={@opts} />

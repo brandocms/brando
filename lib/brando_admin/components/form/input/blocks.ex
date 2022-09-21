@@ -2,9 +2,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
 
-  import Ecto.Changeset
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
+  import Ecto.Changeset
+  import Phoenix.LiveView.HTMLEngine
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
@@ -466,7 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <%= component(@component_target, assigns) %>
+      <%= component(@component_target, assigns, {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}) %>
     <% else %>
       <.live_component module={@component_target}
         id={@block_id}

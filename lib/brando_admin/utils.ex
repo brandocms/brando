@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Utils do
   use BrandoAdmin.Translator, "forms"
-  import Phoenix.LiveView
+  import Phoenix.Component
   alias Phoenix.LiveView.JS
 
   def prepare_subform_component(%{assigns: assigns} = socket) do

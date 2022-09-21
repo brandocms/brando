@@ -29,12 +29,12 @@ defmodule Brando.Mixfile do
     [
       {:phoenix, "~> 1.6"},
       {:phoenix_ecto, "~> 4.0"},
-      {:postgrex, "~> 0.14"},
+      {:postgrex, "~> 0.16"},
       {:ecto, "~> 3.8"},
       {:ecto_sql, "~> 3.8"},
 
       # liveview
-      {:phoenix_live_view, "~> 0.17.9"},
+      {:phoenix_live_view, "~> 0.18.0"},
       {:phoenix_html, "~> 3.2"},
 
       # hashing/passwords

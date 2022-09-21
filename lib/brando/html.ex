@@ -74,19 +74,19 @@ defmodule Brando.HTML do
     ~H|<%= if palettes_css != "" do %><style><%= palettes_css %></style><% end %>|
   end
 
-  def link(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:rel, fn -> nil end)
-      |> assign_new(:target, fn -> nil end)
-      |> assign_new(:inner_block, fn -> [] end)
+  # def link(assigns) do
+  #   assigns =
+  #     assigns
+  #     |> assign_new(:rel, fn -> nil end)
+  #     |> assign_new(:target, fn -> nil end)
+  #     |> assign_new(:inner_block, fn -> [] end)
 
-    ~H"""
-    <a href={@url} rel={@rel} target={@target}>
-      <%= render_slot(@inner_block) %>
-    </a>
-    """
-  end
+  #   ~H"""
+  #   <a href={@url} rel={@rel} target={@target}>
+  #     <%= render_slot(@inner_block) %>
+  #   </a>
+  #   """
+  # end
 
   @doc """
   Replace $csrftoken in `html` with .. csrf token!

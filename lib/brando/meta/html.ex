@@ -3,7 +3,7 @@ defmodule Brando.Meta.HTML do
   HTML functions for dealing with meta
   """
   import Brando.Plug.HTML
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
   alias Brando.Cache
 
   @type conn :: Plug.Conn.t()

@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Ecto.Changeset
   import Phoenix.HTML.Form
+  import Phoenix.LiveView.HTMLEngine
 
   alias Brando.Villain
 
@@ -1902,7 +1903,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= if is_function(@component_target) do %>
       <div class="brando-input" data-component={@type}>
-        <%= component(@component_target, assigns) %>
+        <%= component(@component_target, assigns, {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}) %>
       </div>
     <% else %>
       <div class="brando-input">

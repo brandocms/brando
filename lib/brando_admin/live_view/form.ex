@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   """
   import Phoenix.LiveView
+  import Phoenix.Component
   import Brando.Gettext
   alias Brando.Utils
 

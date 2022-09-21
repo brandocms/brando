@@ -8,7 +8,7 @@ defmodule Brando.Villain.Tags.Inspect do
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
 
   @impl true
   def parse() do

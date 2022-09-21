@@ -1,7 +1,7 @@
 defmodule Brando.MetaRenderTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
   import Phoenix.LiveViewTest
   import Brando.HTML
   alias Brando.Factory

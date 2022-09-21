@@ -5,7 +5,7 @@ defmodule Brando.JSONLD.HTML do
 
   alias Brando.JSONLD
   import Phoenix.HTML
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
 
   @type conn :: Plug.Conn.t()
 
@@ -23,15 +23,21 @@ defmodule Brando.JSONLD.HTML do
       identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
       entity = render_json_ld(:entity, conn)
 
+      assigns =
+        assigns
+        |> assign(:breadcrumbs, breadcrumbs)
+        |> assign(:identity, identity)
+        |> assign(:entity, entity)
+
       ~H"""
       <%= if breadcrumbs != "" do %><script type="application/ld+json">
-        <%= breadcrumbs %>
+        <%= @breadcrumbs %>
       </script><% end %>
       <%= if identity != "" do %><script type="application/ld+json">
-        <%= identity %>
+        <%= @identity %>
       </script><% end %>
       <%= if entity != "" do %><script type="application/ld+json">
-        <%= entity %>
+        <%= @entity %>
       </script><% end %>
       """
     else

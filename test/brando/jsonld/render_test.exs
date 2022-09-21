@@ -1,7 +1,7 @@
 defmodule Brando.JSONLDRenderTest do
   use ExUnit.Case
   use Brando.ConnCase, async: false
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
   import Phoenix.LiveViewTest
   import Brando.HTML
 

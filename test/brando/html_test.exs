@@ -6,7 +6,7 @@ defmodule Brando.HTMLTest do
   import Brando.Utils, only: [media_url: 0]
   import Phoenix.HTML, only: [safe_to_string: 1]
   import Phoenix.LiveViewTest
-  import Phoenix.LiveView.Helpers
+  import Phoenix.Component
   alias Brando.Factory
 
   doctest Brando.HTML
