@@ -615,10 +615,10 @@ defmodule Brando.HTML.Images do
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end
 
-    list =
+    {cropped_ratio, list} =
       case cfg.srcset do
-        %{default: list} -> list
-        list when is_list(list) -> list
+        %{default: list} -> {check_cropped(cfg, :default), list}
+        list when is_list(list) -> {false, list}
       end
 
     srcset_values =
@@ -634,7 +634,7 @@ defmodule Brando.HTML.Images do
         "#{path} #{v}"
       end
 
-    {false, Enum.join(srcset_values, ", ")}
+    {cropped_ratio, Enum.join(srcset_values, ", ")}
   end
 
   # this is for srcsets with keys:
