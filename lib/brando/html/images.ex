@@ -499,20 +499,14 @@ defmodule Brando.HTML.Images do
 
     width =
       case img_width do
-        nil ->
-          false
-
-        width ->
-          width
+        nil -> false
+        width -> width
       end
 
     height =
       case img_height do
-        nil ->
-          false
-
-        _ ->
-          round(width / cropped_ratio)
+        nil -> false
+        _ -> round(width / cropped_ratio)
       end
 
     orientation = Brando.Images.get_image_orientation(width, height)
