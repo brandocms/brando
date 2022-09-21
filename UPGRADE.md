@@ -1,8 +1,21 @@
 ## 0.53.0-dev
 
+* Switch out `import Phoenix.LiveView.Helpers` with `import Phoenix.Component`
+
+* Upgrade deps:
+  ```
+  {:phoenix_live_view, "~> 0.18"},
+  {:phoenix_live_dashboard, github: "phoenixframework/phoenix_live_dashboard"},
+  ```
+
 * If you upgrade to Vite 3, they suddenly output `admin/main.css` instead of `admin/admin.css`.
   To fix, edit your `assets/backend/vite.config.js` and replace `manifest: false` 
-  with `manifest: 'admin_manifest.json`.
+  with `manifest: 'admin_manifest.json`. You can also add in a hash since we now use a manifest:
+  ```
+  entryFileNames: `assets/admin/admin-[hash].js`,
+  chunkFileNames: `assets/admin/__[name]-[hash].js`,
+  assetFileNames: `assets/admin/admin-[hash].[ext]`
+  ```
 
 
 ## 0.52.0
