@@ -2,11 +2,11 @@ import { gsap, Dom } from '@brandocms/jupiter'
 
 export default (app) => ({
   mounted () {
+    console.log('mounted module picker')
     this.$btns = Dom.all('button.namespace-button') 
 
     this.$btns.forEach(btn => {
       let content = btn.nextElementSibling
-      console.log('content', content)
       gsap.set(content, { display: 'none' })
 
       btn.addEventListener('click', e => {
@@ -19,13 +19,16 @@ export default (app) => ({
   toggle(btn, content) {
     const open = Dom.hasClass(content, 'open')
 
-    console.log('open', open)
     if (open) {
+      console.log('removeClass active')
+      Dom.removeClass(btn, 'active')
       Dom.removeClass(content, 'open')
       gsap.set(content, { display: 'none' })
     } else {
       gsap.set(content, { display: 'block' })
       Dom.addClass(content, 'open')
+      console.log('addClass active')
+      Dom.addClass(btn, 'active')
     }
   },
 

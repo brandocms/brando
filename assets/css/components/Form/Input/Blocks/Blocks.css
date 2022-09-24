@@ -3,7 +3,7 @@
   background-color: var(--brando-color-peach);
 
   .modules {
-    @space margin-top 15px;
+    @space margin-bottom 15px;
   }
 
   [data-block-type="container"] & {
@@ -19,6 +19,31 @@
         opacity: 0;
       }
     }
+  }
+}
+
+.btn-stealth {
+  display: flex;
+  font-size: 15px;
+  align-items: center;
+  margin-left: auto;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--brando-color-dark);
+  color: var(--brando-color-dark);
+  transition: background-color 350ms ease;
+
+  &:hover {
+    background-color: var(--brando-color-peach);
+    svg {
+      opacity: 1;
+    }
+  }
+
+  svg {
+    opacity: 0.7;
+    margin-right: 9px;
+    transition: opacity 350ms ease;
   }
 }
 
@@ -60,14 +85,49 @@ section.alert.danger {
 }
 
 .namespace-button {
-  background-color: var(--brando-color-peach-darker);
+  background-color: var(--brando-color-dark);
+  color: var(--brando-color-peach);
+  border: none;
+  border-top: 3px solid white !important;
+  border-bottom: 3px solid white !important;
+  transition: background-color 350ms ease;
+
+  figure {
+    min-width: 35px;
+    transition: transform 350ms ease;
+  }
+
+  &.active {
+    background-color: black;
+    figure {
+      transform: rotate(90deg);
+      transform-origin: center center;
+    }
+  }
 
   &:hover {
-    @color bg peachDarkest;
+    background-color: black;
   }
 
   .info .name {
     text-transform: uppercase;
+  }
+}
+
+.module-button {
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+
+  figure {
+    min-width: 115px;
+    svg {
+      width: 115px;
+      height: auto;
+    }
+  }
+
+  &:hover {
+    background-color: var(--brando-color-peach);
   }
 }
 
@@ -101,16 +161,11 @@ section.alert.danger {
 }
 
 .module-button, .namespace-button {
-  @fontsize button;
-  border: 1px solid #666;
+  @fontsize button;  
   padding: 15px;
   display: flex;
   align-items: center;
   width: 100%;
-
-  &:hover {
-    background-color: var(--brando-color-peach);
-  }
 
   + .module-button {
     margin-top: -1px;
@@ -122,14 +177,6 @@ section.alert.danger {
 
   + .namespace-modules {
     margin-top: -1px;
-  }
-
-  figure {
-    min-width: 115px;
-    svg {
-      width: 115px;
-      height: auto;
-    }
   }
 
   .info {

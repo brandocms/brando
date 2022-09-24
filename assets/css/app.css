@@ -1037,9 +1037,18 @@ h3 {
     padding-left: 0;
   }
 
+  a {
+    &:hover {
+      svg {
+        fill: var(--brando-color-blue);
+      }
+    }
+  }
+
   svg {
-    margin-right: 4px;
+    margin-right: 9px;
     margin-top: -1px;
+    transition: fill 250ms ease;
   }
 }
 
