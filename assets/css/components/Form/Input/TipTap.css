@@ -117,6 +117,7 @@
     @fontsize lg(1);
     line-height: 1.05;
     font-weight: 500;
+    margin-top: 15px;
     margin-bottom: 15px;
 
     a {

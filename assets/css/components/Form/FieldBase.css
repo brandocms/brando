@@ -27,7 +27,7 @@
     }
 
     &:hover {
-      color: var(--brando-color-dark);
+      background-color: var(--brando-color-dark);
       svg path.s {
         fill: var(--brando-color-peach);
       }

@@ -1,4 +1,11 @@
 .variable {
+
+  &:last-of-type {
+    .brando-input .field-wrapper {
+      margin-bottom: 20px;
+    }
+  }
+
   .image-info {
     @fontsize 13px;
     @space margin-top 15px;

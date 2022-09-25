@@ -68,6 +68,12 @@
           text-align: left;
         }
       }
+
+      button {
+        margin-left: auto;
+        align-self: flex-start;
+        margin-top: 8px;
+      }
     }
   }
 
