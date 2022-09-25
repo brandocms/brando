@@ -1741,3 +1741,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Pick existing images"
 msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:212
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr ""

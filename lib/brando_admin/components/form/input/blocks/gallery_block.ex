@@ -208,6 +208,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                       <%= img.width %>&times;<%= img.height %>
                     </div>
                   </figcaption>
+                  <button class="tiny" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={img.path}>
+                    <%= gettext "Delete" %>
+                  </button>
                 </div>
               <% end %>
             <% end %>
@@ -229,7 +232,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 phx-update="ignore">
                 <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
               </span>
-              <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>pick existing images</button>
+              <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}><%= gettext "Pick existing images" %></button>
             </div>
           </div>
         <% end %>
@@ -437,6 +440,40 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       ) do
     {:ok, image} = Brando.Images.get_image(id)
     images = Enum.reject(input_value(block_data, :images), &(&1.path == image.path))
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: Enum.map(images, & &1.path)
+    )
+
+    changeset = base_form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "remove_image",
+        %{"path" => path},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    images = Enum.reject(input_value(block_data, :images), &(&1.path == path))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",

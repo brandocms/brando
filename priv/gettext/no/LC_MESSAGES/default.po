@@ -1445,3 +1445,7 @@ msgstr "Ekstern fil"
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:235
 msgid "Pick existing images"
 msgstr "Plukk fra eksisterende bilder"
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:212
+msgid "Delete"
+msgstr "Slett"
