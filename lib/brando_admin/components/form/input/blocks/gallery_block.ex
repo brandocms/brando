@@ -162,57 +162,56 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".preview">
             <%= if @display == :grid do %>
-              <%= for {img, idx} <- @indexed_images do %>
-                <div
-                  class={render_classes([
-                    "preview",
-                    "sort-handle",
-                    "draggable"
-                  ])}
-                  data-id={idx}>
-                  <Content.image image={img} size={:thumb} />
-                  <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
-                    <div>
-                      <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ #{gettext"No caption"} }") %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ #{gettext"No alt text"} }" %>
-                    </div>
-                  </figcaption>
-                </div>
-              <% end %>
+              <div
+                :for={{img, idx} <- @indexed_images}
+                class={render_classes([
+                  "preview",
+                  "sort-handle",
+                  "draggable"
+                ])}
+                data-id={idx}>
+                <Content.image image={img} size={:thumb} />
+                <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
+                  <div>
+                    <span><%= gettext("Caption") %></span>
+                    <%= raw(img.title || "{ #{gettext"No caption"} }") %>
+                  </div>
+                  <div>
+                    <span><%= gettext("Alt. text") %></span>
+                    <%= img.alt || "{ #{gettext"No alt text"} }" %>
+                  </div>
+                </figcaption>
+              </div>
             <% else %>
-              <%= for {img, idx} <- @indexed_images do %>
-                <div class={render_classes([
-                    "preview",
-                    "sort-handle",
-                    "draggable"
-                  ])}
-                  data-id={idx}>
-                  <figure>
-                    <Content.image image={img} size={:smallest} />
-                  </figure>
-                  <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-                    <div>
-                      <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ #{gettext"No caption"} }") %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ #{gettext"No alt text"} }" %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Dimensions") %></span>
-                      <%= img.width %>&times;<%= img.height %>
-                    </div>
-                  </figcaption>
-                  <button class="tiny" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={img.path}>
-                    <%= gettext "Delete" %>
-                  </button>
-                </div>
-              <% end %>
+              <div
+                :for={{img, idx} <- @indexed_images}
+                class={render_classes([
+                  "preview",
+                  "sort-handle",
+                  "draggable"
+                ])}
+                data-id={idx}>
+                <figure>
+                  <Content.image image={img} size={:smallest} />
+                </figure>
+                <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
+                  <div>
+                    <span><%= gettext("Caption") %></span>
+                    <%= raw(img.title || "{ #{gettext"No caption"} }") %>
+                  </div>
+                  <div>
+                    <span><%= gettext("Alt. text") %></span>
+                    <%= img.alt || "{ #{gettext"No alt text"} }" %>
+                  </div>
+                  <div>
+                    <span><%= gettext("Dimensions") %></span>
+                    <%= img.width %>&times;<%= img.height %>
+                  </div>
+                </figcaption>
+                <button class="tiny" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={img.path}>
+                  <%= gettext "Delete" %>
+                </button>
+              </div>
             <% end %>
           </div>
         <% else %>
@@ -238,21 +237,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         <% end %>
 
         <Content.modal
-          title="Edit captions"
+          title={gettext "Edit captions"}
           id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <%= for image <- inputs_for(@block_data, :images) do %>
-              <div class="caption-row">
-                <figure>
-                  <Content.image image={image.data} size={:thumb} />
-                </figure>
-                <div>
-                  <Input.rich_text form={image} field={:title} label={gettext "Title"} />
-                  <Input.text form={image} field={:credits} label={gettext "Credits"} />
-                  <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
-                </div>
+            <div
+              :for={image <- inputs_for(@block_data, :images)}
+              class="caption-row">
+              <figure>
+                <Content.image image={image.data} size={:thumb} />
+              </figure>
+              <div>
+                <Input.rich_text form={image} field={:title} label={gettext "Title"} />
+                <Input.text form={image} field={:credits} label={gettext "Credits"} />
+                <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
               </div>
-            <% end %>
+            </div>
           </div>
         </Content.modal>
 
