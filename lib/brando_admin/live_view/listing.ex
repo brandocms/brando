@@ -25,20 +25,10 @@ defmodule BrandoAdmin.LiveView.Listing do
       def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
-
-      # we need the uri on first load, so inject for now
-      def handle_params(params, url, socket) do
-        uri = URI.parse(url)
-
-        {:noreply,
-         socket
-         |> assign(:params, params)
-         |> assign(:uri, uri)}
-      end
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, _, socket, schema) do
     if Phoenix.LiveView.connected?(socket) do
       subscribe(schema)
     end
@@ -46,7 +36,6 @@ defmodule BrandoAdmin.LiveView.Listing do
     socket =
       socket
       |> assign(:socket_connected, true)
-      |> assign_current_user(token)
       |> set_admin_locale()
       |> assign_schema(schema)
       |> assign_title()
@@ -341,12 +330,6 @@ defmodule BrandoAdmin.LiveView.Listing do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:listing:content_listing_#{schema}_default",
       link: true
     )
-  end
-
-  defp assign_current_user(socket, token) do
-    assign_new(socket, :current_user, fn ->
-      Brando.Users.get_user_by_session_token(token)
-    end)
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do

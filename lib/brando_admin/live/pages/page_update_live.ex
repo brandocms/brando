@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Pages.PageUpdateLive do
       id="page_form"
       entry_id={@entry_id}
       current_user={@current_user}
+      presences={@presences}
       schema={@schema}>
       <:header>
         <%= gettext("Edit page") %>

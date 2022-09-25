@@ -65,6 +65,11 @@ defmodule Brando.LobbyChannel do
     {:reply, :ok, socket}
   end
 
+  def handle_info({_, {:uri_presence, _}}, socket) do
+    # we don't care about uri presence updates here
+    {:noreply, socket}
+  end
+
   def handle_info(:after_join, socket) do
     {:ok, _} =
       Brando.presence().track(socket, socket.assigns.user_id, %{

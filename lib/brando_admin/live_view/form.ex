@@ -23,21 +23,11 @@ defmodule BrandoAdmin.LiveView.Form do
       def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema))
       end
-
-      # we need the uri on first load, so inject for now
-      def handle_params(params, url, socket) do
-        uri = URI.parse(url)
-
-        {:noreply,
-         socket
-         |> assign(:params, params)
-         |> assign(:uri, uri)}
-      end
     end
   end
 
   # with entry_id means it's an update
-  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
+  def hooks(%{"entry_id" => entry_id}, _, socket, schema) do
     if connected?(socket) do
       socket =
         socket
@@ -46,9 +36,10 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_title()
         |> assign_entry_id(entry_id)
-        |> assign_current_user(token)
         |> set_admin_locale()
         |> attach_hooks(schema)
+
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
 
       {:cont, socket}
     else
@@ -56,7 +47,7 @@ defmodule BrandoAdmin.LiveView.Form do
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, _, socket, schema) do
     if connected?(socket) do
       socket =
         socket
@@ -65,7 +56,6 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_title()
         |> assign_entry_id(nil)
-        |> assign_current_user(token)
         |> set_admin_locale()
         |> attach_hooks(schema)
 
@@ -81,18 +71,8 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp attach_hooks(socket, _schema) do
     socket
-    |> attach_hook(:b_form_params, :handle_params, &handle_params/3)
     |> attach_hook(:b_form_events, :handle_event, &handle_event/3)
     |> attach_hook(:b_form_infos, :handle_info, &handle_info/2)
-  end
-
-  defp handle_params(params, url, socket) do
-    uri = URI.parse(url)
-
-    {:halt,
-     socket
-     |> assign(:params, params)
-     |> assign(:uri, uri)}
   end
 
   defp handle_event(
@@ -114,6 +94,16 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_event(_, _, socket), do: {:cont, socket}
+
+  defp handle_info({:dirty_fields, fields, user_id}, socket) do
+    if user_id == socket.assigns.current_user.id do
+      Brando.presence().update_dirty_fields(socket.assigns.uri.path, user_id, fields)
+    else
+      # TODO: there are updated dirty fields from other users.
+    end
+
+    {:halt, socket}
+  end
 
   defp handle_info({image, [:image, :updated], []}, socket) do
     case String.split(image.config_target, ":") do
@@ -200,12 +190,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp handle_info(_, socket) do
     {:cont, socket}
-  end
-
-  defp assign_current_user(socket, token) do
-    assign_new(socket, :current_user, fn ->
-      Brando.Users.get_user_by_session_token(token)
-    end)
   end
 
   defp assign_schema(socket, schema) do

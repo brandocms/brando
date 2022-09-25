@@ -36,6 +36,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
+     |> assign(:dirty_fields, [])
+     |> assign(:presences, %{})
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
@@ -500,6 +502,8 @@ defmodule BrandoAdmin.Components.Form do
               <% end %>
             </div>
 
+            <.form_presences presences={@presences} />
+
             <div class="form-tab-builtins">
               <%= if @has_meta? do %>
                 <button
@@ -659,6 +663,22 @@ defmodule BrandoAdmin.Components.Form do
           change_preview_target={JS.push("change_preview_target", target: @myself)}
         />
       </div>
+    </div>
+    """
+  end
+
+  attr :presences, :list
+
+  def form_presences(assigns) do
+    ~H"""
+    <div class="page-presences">
+      <%= for {_, user} <- @presences do %>
+        <div class="user-presence">
+          <div class="avatar">
+            <Content.image image={user.avatar} size={:thumb} />
+          </div>
+        </div>
+      <% end %>
     </div>
     """
   end
@@ -1295,7 +1315,8 @@ defmodule BrandoAdmin.Components.Form do
             current_user: current_user,
             singular: singular,
             live_preview_active?: live_preview_active?,
-            live_preview_cache_key: live_preview_cache_key
+            live_preview_cache_key: live_preview_cache_key,
+            dirty_fields: dirty_fields
           }
         } = socket
       ) do
@@ -1303,6 +1324,21 @@ defmodule BrandoAdmin.Components.Form do
     entry_or_default = entry || struct(schema)
 
     changeset = validate(schema, entry_or_default, entry_params, current_user)
+
+    changed_fields = Map.keys(changeset.changes)
+
+    socket =
+      if changed_fields != dirty_fields do
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          "brando:dirty_fields:#{entry.id}",
+          {:dirty_fields, changed_fields, current_user.id}
+        )
+
+        assign(socket, :dirty_fields, changed_fields)
+      else
+        socket
+      end
 
     if live_preview_active? do
       Brando.LivePreview.update(schema, changeset, live_preview_cache_key)

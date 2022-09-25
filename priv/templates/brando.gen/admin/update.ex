@@ -9,6 +9,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
       id="<%= singular %>_form"
       entry_id={@entry_id}
       current_user={@current_user}
+      presences={@presences}
       schema={@schema}>
       <:header>
         <%%= gettext("Update <%= singular %>") %>

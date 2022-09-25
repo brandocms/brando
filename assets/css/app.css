@@ -272,6 +272,22 @@ code {
   width: auto;
 }
 
+.page-presences {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  width: auto;
+  justify-content: flex-end;
+  margin-right: 15px;
+  flex-grow: 1;
+  flex-shrink: 1;
+
+  .user-presence {
+    margin-top: 0;
+    display: flex;
+  }
+}
+
 .user-presence {
   display: block;
   margin-right: 5px;

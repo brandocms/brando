@@ -105,4 +105,13 @@ defmodule Brando.Users do
   def reset_user_password(_user, _attrs) do
     raise "TODO"
   end
+
+  def get_users_map(user_ids) when is_list(user_ids) do
+    Brando.repo().all(
+      from u in User,
+        where: u.id in ^user_ids,
+        select: {u.id, u},
+        preload: :avatar
+    )
+  end
 end

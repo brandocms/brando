@@ -16,6 +16,21 @@
   chunkFileNames: `assets/admin/__[name]-[hash].js`,
   assetFileNames: `assets/admin/admin-[hash].[ext]`
   ```
+* To enable presence in your update forms, add `presences={@presences}` to your 
+  `Form` live components in update views:
+
+  ```
+  <.live_component module={Form}
+    id="page_form"
+    entry_id={@entry_id}
+    current_user={@current_user}
+    presences={@presences}
+    schema={@schema}>
+    <:header>
+      <%= gettext("Edit page") %>
+    </:header>
+  </.live_component>
+  ```
 
 * Added default actions for listings:
   - edit

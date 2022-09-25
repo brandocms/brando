@@ -16,10 +16,31 @@ defmodule BrandoAdmin.Presence do
         {:ok, %{}}
       end
 
-      def handle_metas(topic, %{joins: joins, leaves: leaves}, presences, state) do
+      def fetch("lobby", presences) do
+        presences
+      end
+
+      def fetch("url:" <> _rest = topic, presences) do
+        users =
+          presences
+          |> Map.keys()
+          |> Brando.Users.get_users_map()
+          |> Enum.into(%{})
+
+        for {key, %{metas: metas}} <- presences, into: %{} do
+          {key, %{metas: metas, user: users[String.to_integer(key)]}}
+        end
+      end
+
+      def handle_metas("url:" <> _rest = topic, %{joins: joins, leaves: leaves}, presences, state) do
         for {user_id, presence} <- joins do
           user_data = %{user: presence.user, metas: Map.fetch!(presences, user_id)}
-          local_broadcast(topic, {__MODULE__, %{user_joined: user_data}})
+
+          Phoenix.PubSub.local_broadcast(
+            unquote(pubsub_server),
+            topic,
+            {__MODULE__, {:uri_presence, %{user_joined: user_data}}}
+          )
         end
 
         for {user_id, presence} <- leaves do
@@ -31,9 +52,17 @@ defmodule BrandoAdmin.Presence do
 
           user_data = %{user: presence.user, metas: metas}
 
-          local_broadcast(topic, {__MODULE__, %{user_left: user_data}})
+          Phoenix.PubSub.local_broadcast(
+            unquote(pubsub_server),
+            topic,
+            {__MODULE__, {:uri_presence, %{user_left: user_data}}}
+          )
         end
 
+        {:ok, state}
+      end
+
+      def handle_metas(_topic, _diff, _presences, state) do
         {:ok, state}
       end
 
@@ -52,6 +81,38 @@ defmodule BrandoAdmin.Presence do
           "users",
           current_user_id
         )
+      end
+
+      def track_url(url, current_user_id) do
+        timestamp =
+          DateTime.utc_now()
+          |> DateTime.to_unix()
+          |> to_string()
+
+        track(
+          self(),
+          "url:#{url}",
+          current_user_id,
+          %{
+            last_active: timestamp,
+            active_field: nil,
+            dirty_fields: []
+          }
+        )
+      end
+
+      def untrack_url(url, current_user_id) do
+        untrack(
+          self(),
+          "url:#{url}",
+          current_user_id
+        )
+      end
+
+      def update_dirty_fields(url, user_id, dirty_fields) do
+        update(self(), "url:#{url}", user_id, fn state ->
+          %{state | dirty_fields: dirty_fields}
+        end)
       end
     end
   end

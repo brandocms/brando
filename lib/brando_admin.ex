@@ -86,6 +86,8 @@ defmodule BrandoAdmin do
       use Phoenix.LiveView,
         layout: {BrandoAdmin.LayoutView, "live.html"}
 
+      on_mount {BrandoAdmin.Hooks, :urls}
+
       unquote(view_helpers())
     end
   end
