@@ -40,7 +40,7 @@ msgstr "Ukjent feil ved oppretting av bildestørrelser."
 msgid "created"
 msgstr "opprettet"
 
-#: lib/brando/query/mutations.ex:233 lib/brando_admin/live_view/listing.ex:123
+#: lib/brando/query/mutations.ex:233 lib/brando_admin/live_view/listing.ex:124
 msgid "deleted"
 msgstr "slettet"
 
@@ -68,7 +68,7 @@ msgstr "publisert"
 msgid "Fragment contains circular reference to itself, %{ref_string}"
 msgstr "Fragmentet inneholder en referanse til seg selv, %{ref_string}"
 
-#: lib/brando_admin/live/config/cache_live.ex:33 lib/brando_admin/menu.ex:274
+#: lib/brando_admin/live/config/cache_live.ex:32 lib/brando_admin/menu.ex:274
 msgid "Cache"
 msgstr "Mellomlagring"
 
@@ -166,9 +166,9 @@ msgstr "Feil spørring"
 msgid "Block modules"
 msgstr "Blokkmoduler"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:261
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:269
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:125
-#: lib/brando_admin/components/form/input/blocks/svg_block.ex:59
+#: lib/brando_admin/components/form/input/blocks/svg_block.ex:60
 #: lib/brando_admin/components/form/module_props.ex:53
 #: lib/brando_admin/components/form/module_props.ex:216
 #: lib/brando_admin/components/form/module_props.ex:323
@@ -207,7 +207,7 @@ msgstr "Databasefeil"
 msgid "Datasource"
 msgstr "Datakilde"
 
-#: lib/brando_admin/components/form/input.ex:613
+#: lib/brando_admin/components/form/input.ex:615
 msgid "Deactivated"
 msgstr "Deaktivert"
 
@@ -227,7 +227,7 @@ msgstr "Deaktivert"
 
 #: lib/brando_admin/components/content/list.ex:650
 #: lib/brando_admin/components/content/list/row.ex:428
-#: lib/brando_admin/components/form/input.ex:610
+#: lib/brando_admin/components/form/input.ex:612
 msgid "Draft"
 msgstr "Utkast"
 
@@ -243,7 +243,7 @@ msgstr "Oppdater modul"
 msgid "Edit page"
 msgstr "Oppdater side"
 
-#: lib/brando_admin/components/form.ex:1387
+#: lib/brando_admin/components/form.ex:1388
 #: lib/brando_admin/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr "Feil"
@@ -287,13 +287,13 @@ msgstr "Sider & seksjoner"
 
 #: lib/brando_admin/components/content/list.ex:651
 #: lib/brando_admin/components/content/list/row.ex:429
-#: lib/brando_admin/components/form/input.ex:611
+#: lib/brando_admin/components/form/input.ex:613
 msgid "Pending"
 msgstr "Venter"
 
 #: lib/brando_admin/components/content/list.ex:652
 #: lib/brando_admin/components/content/list/row.ex:430
-#: lib/brando_admin/components/form/input.ex:612
+#: lib/brando_admin/components/form/input.ex:614
 msgid "Published"
 msgstr "Publisert"
 
@@ -309,10 +309,10 @@ msgstr "Maler"
 msgid "Thanks!"
 msgstr "Takk!"
 
-#: lib/brando_admin/components/form.ex:737
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:242
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:165
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:72
+#: lib/brando_admin/components/form.ex:738
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:250
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:167
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:79
 msgid "Title"
 msgstr "Tittel"
 
@@ -339,11 +339,11 @@ msgstr "Legg til rad"
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando_admin/components/form.ex:848
+#: lib/brando_admin/components/form.ex:849
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:180
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:198
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:244
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:109
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:203
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:252
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:111
 #: lib/brando_admin/components/form/module_props.ex:260
 msgid "Alt. text"
 msgstr "Alternativ tekst"
@@ -352,14 +352,14 @@ msgstr "Alternativ tekst"
 msgid "Assets — Images"
 msgstr "Ressurser — Bilder"
 
-#: lib/brando_admin/live/config/cache_live.ex:109
+#: lib/brando_admin/live/config/cache_live.ex:108
 msgid "Caches cleared!"
 msgstr "Mellomlagringene ble tømt!"
 
-#: lib/brando_admin/components/form.ex:840
+#: lib/brando_admin/components/form.ex:841
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:176
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:194
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:106
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:199
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:108
 #: lib/brando_admin/components/form/input/image.ex:215
 msgid "Caption"
 msgstr "Bildetekst"
@@ -369,8 +369,8 @@ msgstr "Bildetekst"
 msgid "Clear"
 msgstr "Tøm"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:125
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:159
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:127
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:161
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:325
 msgid "Click or drag an image &uarr; to upload"
 msgstr "Klikk eller dra et bilde &uarr; for å laste opp"
@@ -381,7 +381,7 @@ msgstr "Klikk “+” for å legge til innholdsblokker"
 
 #: lib/brando_admin/components/children_button.ex:37
 #: lib/brando_admin/components/content.ex:53
-#: lib/brando_admin/components/form/input/blocks.ex:290
+#: lib/brando_admin/components/form/input/blocks.ex:291
 #: lib/brando_admin/components/form/input/multi_select.ex:243
 #: lib/brando_admin/components/form/input/select.ex:202
 msgid "Close"
@@ -399,9 +399,9 @@ msgstr "Innholdspaletter"
 msgid "Content Templates"
 msgstr "Innholdsmaler"
 
-#: lib/brando_admin/live_view/form.ex:190
-#: lib/brando_admin/live_view/listing.ex:225
-#: lib/brando_admin/live_view/listing.ex:261
+#: lib/brando_admin/live_view/form.ex:191
+#: lib/brando_admin/live_view/listing.ex:226
+#: lib/brando_admin/live_view/listing.ex:262
 msgid "Content language is now %{language}"
 msgstr "Innholdsspråket er %{language}"
 
@@ -429,13 +429,13 @@ msgstr "Slett bilde"
 msgid "Delete job"
 msgstr "Slett jobb"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:256
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:264
 #: lib/brando_admin/components/form/module_props.ex:318
 #: lib/brando_admin/components/form/module_props.ex:482
 msgid "Display"
 msgstr "Vis"
 
-#: lib/brando/images/gallery.ex:61 lib/brando_admin/components/form.ex:826
+#: lib/brando/images/gallery.ex:61 lib/brando_admin/components/form.ex:827
 msgid "Duplicate image"
 msgstr "Dupliser bilde"
 
@@ -469,7 +469,7 @@ msgstr "Oppdater innleggsskjemaet direkte for å endre variablen [%{var_name}]"
 msgid "Enter the map's embed URL:"
 msgstr "Kartets embed URL:"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:106
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:113
 msgid "Enter the video's URL:"
 msgstr "Videoens URL:"
 
@@ -492,7 +492,7 @@ msgstr "Galleri"
 msgid "Get map info"
 msgstr "Hent kartinfo"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:109
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:116
 msgid "Get video info"
 msgstr "Hent video info"
 
@@ -505,7 +505,7 @@ msgstr "Globalsett"
 msgid "Globals"
 msgstr "Globaler"
 
-#: lib/brando_admin/live/config/cache_live.ex:34
+#: lib/brando_admin/live/config/cache_live.ex:33
 msgid "Inspect and clear caches"
 msgstr "Inspisér og tøm mellomlagring"
 
@@ -547,7 +547,7 @@ msgstr "Ingen valgte innlegg"
 msgid "No selection"
 msgstr "Inget valgt"
 
-#: lib/brando_admin/components/form/input/blocks.ex:610
+#: lib/brando_admin/components/form/input/blocks.ex:611
 msgid "Not shown..."
 msgstr "Ikke vist…"
 
@@ -575,7 +575,7 @@ msgstr "Oppdater jobbkø"
 msgid "Reset"
 msgstr "Nullstill"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:175
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:177
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:338
 msgid "Reset image"
 msgstr "Nullstill bilde"
@@ -585,7 +585,7 @@ msgstr "Nullstill bilde"
 msgid "Reset value"
 msgstr "Nullstill verdi"
 
-#: lib/brando_admin/components/form.ex:535
+#: lib/brando_admin/components/form.ex:536
 #: lib/brando_admin/components/form/input/select.ex:280
 #: lib/brando_admin/components/global_tabs.ex:71
 msgid "Save"
@@ -595,7 +595,7 @@ msgstr "Lagre"
 msgid "Scheduled Publishing"
 msgstr "Planlagt publisering"
 
-#: lib/brando_admin/components/form.ex:509
+#: lib/brando_admin/components/form.ex:510
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:14
 #: lib/brando_admin/menu.ex:270
 msgid "Scheduled publishing"
@@ -612,14 +612,14 @@ msgstr "Velg innholdstype"
 msgid "Select entries"
 msgstr "Velg innlegg"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:171
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:173
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:334
 #: lib/brando_admin/components/image_picker.ex:55
 msgid "Select image"
 msgstr "Velg bilde"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:83
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:79
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:81
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:309
 msgid "Uploading..."
 msgstr "Laster opp…"
@@ -679,7 +679,7 @@ msgstr "Legg til innholdsblokk"
 msgid "Delete version"
 msgstr "Slett versjon"
 
-#: lib/brando_admin/components/form/input/blocks/module_picker.ex:60
+#: lib/brando_admin/components/form/input/blocks/module_picker.ex:119
 msgid "Insert section"
 msgstr "Ny seksjon"
 
@@ -691,7 +691,7 @@ msgstr "Beskytt versjon"
 msgid "Purge inactive versions"
 msgstr "Slett inaktive versjoner"
 
-#: lib/brando_admin/components/form.ex:501
+#: lib/brando_admin/components/form.ex:502
 msgid "Revisions"
 msgstr "Versjoner"
 
@@ -735,11 +735,11 @@ msgstr "Legg til bilde"
 msgid "No image associated with field"
 msgstr "Inget bilde knyttet til feltet"
 
-#: lib/brando_admin/components/form.ex:835
+#: lib/brando_admin/components/form.ex:836
 msgid "Reset image field"
 msgstr "Nullstill bildefelt"
 
-#: lib/brando_admin/components/form.ex:817
+#: lib/brando_admin/components/form.ex:818
 msgid "Select existing image"
 msgstr "Velg eksisterende bilde"
 
@@ -747,11 +747,11 @@ msgstr "Velg eksisterende bilde"
 msgid "Select similarly typed image from library"
 msgstr "Velg fra lignende bildetype i bildebiblioteket"
 
-#: lib/brando_admin/components/form.ex:809
+#: lib/brando_admin/components/form.ex:810
 msgid "Upload image"
 msgstr "Last opp bilde"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:166
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:168
 msgid "Alt"
 msgstr "Alternativ tekst"
 
@@ -759,20 +759,20 @@ msgstr "Alternativ tekst"
 msgid "Arg"
 msgstr "Arg"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:83
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:90
 #: lib/brando_admin/components/form/module_props.ex:383
 #: lib/brando_admin/components/form/module_props.ex:461
 msgid "Autoplay"
 msgstr "Spill av automatisk"
 
-#: lib/brando_admin/components/form/input/blocks/svg_block.ex:58
+#: lib/brando_admin/components/form/input/blocks/svg_block.ex:59
 #: lib/brando_admin/components/form/module_props.ex:221
 #: lib/brando_admin/live/content/modules_update_live.ex:52
 #: lib/brando_admin/live/content/modules_update_live.ex:78
 msgid "Code"
 msgstr "Kode"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:77
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:84
 #: lib/brando_admin/components/form/module_props.ex:381
 msgid "Cover"
 msgstr "Coverbilde"
@@ -781,8 +781,8 @@ msgstr "Coverbilde"
 msgid "Create menu"
 msgstr "Opprett meny"
 
-#: lib/brando_admin/components/form.ex:844
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:243
+#: lib/brando_admin/components/form.ex:845
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:251
 #: lib/brando_admin/components/form/module_props.ex:261
 msgid "Credits"
 msgstr "Krediteringer"
@@ -835,7 +835,7 @@ msgstr "Nøkkel"
 msgid "Level"
 msgstr "Nivå"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:263
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:271
 #: lib/brando_admin/components/form/module_props.ex:325
 #: lib/brando_admin/components/form/module_props.ex:489
 msgid "Lightbox"
@@ -845,7 +845,7 @@ msgstr "Lysboks"
 msgid "Limit"
 msgstr "Antallsbegrensing"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:167
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:169
 #: lib/brando_admin/components/form/module_props.ex:210
 #: lib/brando_admin/components/form/module_props.ex:262
 msgid "Link"
@@ -853,19 +853,19 @@ msgstr "Lenke"
 
 #: lib/brando_admin/components/form/module_props.ex:321
 #: lib/brando_admin/components/form/module_props.ex:739
-#: lib/brando_admin/live/config/cache_live.ex:55
+#: lib/brando_admin/live/config/cache_live.ex:54
 msgid "List"
 msgstr "Liste"
 
-#: lib/brando_admin/components/form/meta_drawer.ex:31
+#: lib/brando_admin/components/form/meta_drawer.ex:32
 msgid "META description"
 msgstr "META beskrivelse"
 
-#: lib/brando_admin/components/form/meta_drawer.ex:40
+#: lib/brando_admin/components/form/meta_drawer.ex:41
 msgid "META image"
 msgstr "META bilde"
 
-#: lib/brando_admin/components/form/meta_drawer.ex:27
+#: lib/brando_admin/components/form/meta_drawer.ex:28
 msgid "META title"
 msgstr "META tittel"
 
@@ -877,7 +877,7 @@ msgstr "Merket som slettet"
 msgid "Micro"
 msgstr "Mikro"
 
-#: lib/brando_admin/live/config/cache_live.ex:45
+#: lib/brando_admin/live/config/cache_live.ex:44
 msgid "Module"
 msgstr "Modul"
 
@@ -898,7 +898,7 @@ msgstr "Bildeklasse"
 msgid "Picture class(es)"
 msgstr "Bildeklasse(r)"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:268
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:276
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:158
 #: lib/brando_admin/components/form/module_props.ex:329
 #: lib/brando_admin/components/form/module_props.ex:427
@@ -911,23 +911,23 @@ msgstr "Plassholder"
 msgid "Play button"
 msgstr "Avspillingsknapp"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:73
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:80
 #: lib/brando_admin/components/form/module_props.ex:380
 msgid "Poster"
 msgstr "Plakat"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:84
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:91
 #: lib/brando_admin/components/form/module_props.ex:384
 #: lib/brando_admin/components/form/module_props.ex:462
 msgid "Preload"
 msgstr "Forhåndslasting"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex:254
-#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:20
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex:21
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:71
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:78
 #: lib/brando_admin/components/form/module_props.ex:379
 msgid "Remote ID"
 msgstr "Fjern-ID"
@@ -947,14 +947,14 @@ msgstr "Utvalg"
 msgid "Sequence updated"
 msgstr "Rekkefølge oppdatert"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:262
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:270
 #: lib/brando_admin/components/form/module_props.ex:324
 #: lib/brando_admin/components/form/module_props.ex:488
 msgid "Series slug"
 msgstr "Serietamp"
 
 #: lib/brando_admin/components/form/module_props.ex:740
-#: lib/brando_admin/live/config/cache_live.ex:71
+#: lib/brando_admin/live/config/cache_live.ex:70
 msgid "Single"
 msgstr "Enkeltstående"
 
@@ -970,8 +970,8 @@ msgstr "Bildefremvisning"
 msgid "Source"
 msgstr "Kilde"
 
-#: lib/brando_admin/components/form/input/blocks.ex:736
-#: lib/brando_admin/components/form/input/blocks.ex:778
+#: lib/brando_admin/components/form/input/blocks.ex:738
+#: lib/brando_admin/components/form/input/blocks.ex:780
 #: lib/brando_admin/components/form/module_props.ex:208
 #: lib/brando_admin/components/form/module_props.ex:227
 msgid "Text"
@@ -986,7 +986,7 @@ msgstr "Tittel/bildetekst"
 #: lib/brando_admin/components/form/module_props.ex:309
 #: lib/brando_admin/components/form/module_props.ex:473
 #: lib/brando_admin/components/form/module_props.ex:738
-#: lib/brando_admin/live/config/cache_live.ex:44
+#: lib/brando_admin/live/config/cache_live.ex:43
 msgid "Type"
 msgstr "Type"
 
@@ -1008,11 +1008,11 @@ msgstr "Verdi"
 msgid "Wrapper"
 msgstr "Innpakningskode"
 
-#: lib/brando_admin/components/form.ex:778
+#: lib/brando_admin/components/form.ex:779
 msgid "+ Drop here to upload"
 msgstr "+ Slipp her for å laste opp"
 
-#: lib/brando_admin/live/config/cache_live.ex:38
+#: lib/brando_admin/live/config/cache_live.ex:37
 msgid "A cache is like a snapshot of your data that is accessed in memory to deliver content faster without rebuilding it from scratch every time. If you have changed some content and it is not reflected on the website, you can attempt to empty these caches in order to produce fresh data."
 msgstr "Mellomlagring er som et øyeblikksbilde av dataene dine som er tilgjengelig i minnet for å levere innhold raskere uten å gjenoppbygge det fra bunnen av hver gang. Hvis du har endret noe innhold og det ikke reflekteres på nettsiden, kan du prøve å tømme disse lagrene for å produsere ferske data."
 
@@ -1021,19 +1021,19 @@ msgstr "Mellomlagring er som et øyeblikksbilde av dataene dine som er tilgjenge
 msgid "Available options"
 msgstr "Tilgjengelige alternativer"
 
-#: lib/brando_admin/live/config/cache_live.ex:46
+#: lib/brando_admin/live/config/cache_live.ex:45
 msgid "Cache key"
 msgstr "Mellomlagringsnøkkel"
 
-#: lib/brando_admin/live/config/cache_live.ex:92
+#: lib/brando_admin/live/config/cache_live.ex:91
 msgid "Empty all caches"
 msgstr "Tøm alle lagre"
 
-#: lib/brando_admin/live/config/cache_live.ex:47
+#: lib/brando_admin/live/config/cache_live.ex:46
 msgid "Entry ID"
 msgstr "Oppførings-ID"
 
-#: lib/brando_admin/components/form.ex:750
+#: lib/brando_admin/components/form.ex:751
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:290
 msgid "Image"
 msgstr "Bilde"
@@ -1059,7 +1059,7 @@ msgstr "Velg alternativ"
 msgid "Select options"
 msgstr "Velg alternativer"
 
-#: lib/brando_admin/live_view/listing.ex:131
+#: lib/brando_admin/live_view/listing.ex:132
 msgid "Error deleting"
 msgstr "Feil ved sletting av"
 
@@ -1077,11 +1077,11 @@ msgstr "Opprett ny"
 msgid "Available entries"
 msgstr "Tilgjengelige alternativer"
 
-#: lib/brando_admin/components/form/input/blocks.ex:284
+#: lib/brando_admin/components/form/input/blocks.ex:285
 msgid "Configure"
 msgstr "Konfigurasjon"
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:202
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:207
 msgid "Dimensions"
 msgstr "Dimensjoner"
 
@@ -1125,12 +1125,12 @@ msgid "Moonwalk"
 msgstr "Månevandring"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:181
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:199
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:204
 msgid "No alt text"
 msgstr "Ingen alt. tekst"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:177
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:195
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:200
 msgid "No caption"
 msgstr "Ingen bildetekst"
 
@@ -1144,16 +1144,16 @@ msgid "Select images"
 msgstr "Velg bilder"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:149
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:225
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:233
 #: lib/brando_admin/components/form/input/gallery.ex:122
 msgid "Upload images"
 msgstr "Last opp bilder"
 
-#: lib/brando_admin/components/form/input/blocks/picture_block.ex:130
+#: lib/brando_admin/components/form/input/blocks/picture_block.ex:132
 msgid "Pick an existing image"
 msgstr "Plukk eksisterende bilde"
 
-#: lib/brando_admin/live_view/listing.ex:102
+#: lib/brando_admin/live_view/listing.ex:103
 msgid "Error undeleting"
 msgstr "Feil ved gjenoppretting"
 
@@ -1161,7 +1161,7 @@ msgstr "Feil ved gjenoppretting"
 msgid "Undelete entry"
 msgstr "Gjenopprett innlegg"
 
-#: lib/brando_admin/live_view/listing.ex:94
+#: lib/brando_admin/live_view/listing.ex:95
 msgid "undeleted"
 msgstr "gjenopprettet"
 
@@ -1169,7 +1169,7 @@ msgstr "gjenopprettet"
 msgid "Entry revisions"
 msgstr "Revisjoner"
 
-#: lib/brando_admin/components/form.ex:1239
+#: lib/brando_admin/components/form.ex:1240
 msgid "Notice"
 msgstr "Merk"
 
@@ -1177,7 +1177,7 @@ msgstr "Merk"
 msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
 msgstr "Angi en fremtidig publiseringsdato for denne oppføringen. La stå tomt for umiddelbar publisering."
 
-#: lib/brando_admin/components/form.ex:1242
+#: lib/brando_admin/components/form.ex:1243
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr "For å opprette og administrere revisjoner, må oppføringen lagres minst én gang først."
 
@@ -1233,7 +1233,7 @@ msgstr "Feil ved duplisering av fragment"
 msgid "Fragment duplicated"
 msgstr "Fragment duplisert"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:87
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:94
 msgid "Height"
 msgstr "Høyde"
 
@@ -1245,7 +1245,7 @@ msgstr "ID for palett å velge farger fra"
 msgid "None selected"
 msgstr "Ingen valgt"
 
-#: lib/brando_admin/components/form.ex:1748
+#: lib/brando_admin/components/form.ex:1749
 msgid "Open preview in new window"
 msgstr "Åpne forhåndsvisning i nytt vindu"
 
@@ -1257,7 +1257,7 @@ msgstr "Oppdater SEO"
 msgid "Update identity"
 msgstr "Oppdater identitet"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:86
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:93
 msgid "Width"
 msgstr "Bredde"
 
@@ -1273,12 +1273,12 @@ msgstr "Ressurser — Filer"
 msgid "Edit file"
 msgstr "Rediger fil"
 
-#: lib/brando_admin/components/form.ex:1500
-#: lib/brando_admin/components/form.ex:1659
+#: lib/brando_admin/components/form.ex:1501
+#: lib/brando_admin/components/form.ex:1660
 msgid "Error uploading"
 msgstr "Feil ved opplasting av fil"
 
-#: lib/brando_admin/components/form.ex:678
+#: lib/brando_admin/components/form.ex:679
 msgid "File"
 msgstr "Fil"
 
@@ -1294,11 +1294,11 @@ msgstr "ID"
 msgid "No file associated with field"
 msgstr "Ingen fil tilknyttet feltet"
 
-#: lib/brando_admin/components/form.ex:732
+#: lib/brando_admin/components/form.ex:733
 msgid "Reset file field"
 msgstr "Nullstill filfeltet"
 
-#: lib/brando_admin/components/form.ex:724
+#: lib/brando_admin/components/form.ex:725
 msgid "Select existing file"
 msgstr "Velg eksisterende fil"
 
@@ -1310,20 +1310,20 @@ msgstr "Velg fil"
 msgid "Select similarly typed file from library"
 msgstr "Velg fra lignende filtype i filbiblioteket"
 
-#: lib/brando_admin/components/form.ex:1662
+#: lib/brando_admin/components/form.ex:1663
 msgid "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr "Tjeneren avviste filtype [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
 
-#: lib/brando_admin/components/form.ex:1503
+#: lib/brando_admin/components/form.ex:1504
 msgid "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr "Tjeneren avviste filtype [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
 
-#: lib/brando_admin/components/form.ex:716
+#: lib/brando_admin/components/form.ex:717
 msgid "Upload file"
 msgstr "Last opp fil"
 
-#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:238
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:98
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:239
 msgid "Block description"
 msgstr "Beskrivelse av blokk"
 
@@ -1335,8 +1335,8 @@ msgstr "Hent manglende ref.blokker"
 msgid "Fetch missing vars"
 msgstr "Hent manglende variabler"
 
-#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:97
-#: lib/brando_admin/components/form/input/blocks/module_block.ex:238
+#: lib/brando_admin/components/form/input/blocks/module/entry_block.ex:98
+#: lib/brando_admin/components/form/input/blocks/module_block.ex:239
 msgid "Helpful for collapsed blocks"
 msgstr "Nyttig for skjulte blokker"
 
@@ -1352,20 +1352,20 @@ msgstr "Tilbakestill alle ref.blokker"
 msgid "Reset all variables"
 msgstr "Tilbakestill alle variabler"
 
-#: lib/brando_admin/components/form.ex:698
-#: lib/brando_admin/components/form.ex:770
+#: lib/brando_admin/components/form.ex:699
+#: lib/brando_admin/components/form.ex:771
 msgid "Uploading"
 msgstr "Laster opp"
 
-#: lib/brando_admin/components/form.ex:1390
+#: lib/brando_admin/components/form.ex:1391
 msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr "Feil ved lagring av skjema. Vennligst rett markerte felter og prøv igjen<br><br>Felter merket ugyldige:"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:141
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:150
 msgid "Configure video block"
 msgstr "Konfigurer videoblokk"
 
-#: lib/brando_admin/components/form.ex:948
+#: lib/brando_admin/components/form.ex:949
 msgid "Image duplicated"
 msgstr "Bilde duplisert"
 
@@ -1397,7 +1397,7 @@ msgstr "Planlegg versjon"
 msgid "Scheduled revision for publishing"
 msgstr "Planlagt versjon for publisering"
 
-#: lib/brando_admin/components/form.ex:540
+#: lib/brando_admin/components/form.ex:541
 msgid "Save and continue editing"
 msgstr "Lagre og redigér videre"
 
@@ -1421,19 +1421,27 @@ msgstr "Slett valgte"
 msgid "Duplicate selected to"
 msgstr "Dupliser valgte til"
 
-#: lib/brando_admin/components/form.ex:545
+#: lib/brando_admin/components/form.ex:546
 msgid "Save and create new"
 msgstr "Lagre og opprett ny"
 
-#: lib/brando_admin/components/form.ex:616
+#: lib/brando_admin/components/form.ex:617
 #: lib/brando_admin/live/content/modules_update_live.ex:102
 msgid "Save (⇧⌘S)"
 msgstr "Lagre (⇧⌘S)"
 
-#: lib/brando_admin/components/form.ex:1172
+#: lib/brando_admin/components/form.ex:1173
 msgid "A shareable time limited URL has been created. The URL will expire 48 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
 msgstr "En delbar lenke har blitt opprettet. Adressen utløper 48 timer fra nå.<br><br><a href=\"%{preview_url}\" target=\"_blank\">ÅPNE LENKE</a>"
 
-#: lib/brando_admin/components/form.ex:1178
+#: lib/brando_admin/components/form.ex:1179
 msgid "Get shareable link"
 msgstr "Delbar link"
+
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:60
+msgid "External file"
+msgstr "Ekstern fil"
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:235
+msgid "Pick existing images"
+msgstr "Plukk fra eksisterende bilder"
