@@ -59,10 +59,10 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(Brando.Pages.Page, @mock_data)
 
-    assigns = %{}
+    assigns = %{mock_conn: mock_conn}
 
     comp = ~H"""
-    <.render_json_ld conn={mock_conn} />
+    <.render_json_ld conn={@mock_conn} />
     """
 
     assert rendered_to_string(comp) ==
@@ -123,10 +123,10 @@ defmodule Brando.JSONLDRenderTest do
       |> Brando.Plug.I18n.put_locale(skip_session: true)
       |> Brando.Plug.HTML.put_json_ld(:breadcrumbs, breadcrumbs)
 
-    assigns = %{}
+    assigns = %{mock_conn: mock_conn}
 
     comp = ~H"""
-    <.render_json_ld conn={mock_conn} />
+    <.render_json_ld conn={@mock_conn} />
     """
 
     assert rendered_to_string(comp) ==

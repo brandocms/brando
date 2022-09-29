@@ -28,10 +28,16 @@ defmodule Brando.HTML.Video do
             }
           } = assigns
       }) do
+    assigns =
+      assigns
+      |> assign(:remote_id, remote_id)
+      |> assign(:width, width)
+      |> assign(:height, height)
+
     ~H"""
-      <iframe src={"https://player.vimeo.com/video/#{remote_id}?dnt=1"}
-              width={width}
-              height={height}
+      <iframe src={"https://player.vimeo.com/video/#{@remote_id}?dnt=1"}
+              width={@width}
+              height={@height}
               frameborder="0"
               allow="autoplay; encrypted-media"
               webkitallowfullscreen
@@ -57,10 +63,17 @@ defmodule Brando.HTML.Video do
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
     params = "autoplay=#{autoplay}&controls=#{controls}&showinfo=0&rel=0"
 
+    assigns =
+      assigns
+      |> assign(:remote_id, remote_id)
+      |> assign(:params, params)
+      |> assign(:width, width)
+      |> assign(:height, height)
+
     ~H"""
-      <iframe src={"https://www.youtube.com/embed/#{remote_id}?#{params}"}
-              width={width}
-              height={height}
+      <iframe src={"https://www.youtube.com/embed/#{@remote_id}?#{@params}"}
+              width={@width}
+              height={@height}
               frameborder="0"
               allow="autoplay; encrypted-media"
               webkitallowfullscreen
@@ -88,6 +101,12 @@ defmodule Brando.HTML.Video do
       |> assign(:aspect_ratio, aspect_ratio)
       |> assign(:autoplay, autoplay)
       |> assign(:controls, controls)
+      |> assign(:poster, validate_poster(poster))
+      |> assign(:width, width)
+      |> assign(:height, height)
+      |> assign(:preload, preload)
+      |> assign(:src, src)
+      |> assign(:play_button, play_button)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
       |> assign_new(:cover, fn ->
         nil
@@ -100,8 +119,8 @@ defmodule Brando.HTML.Video do
       style={@aspect_ratio}>
 
       <video
-        width={width}
-        height={height}
+        width={@width}
+        height={@height}
         alt=""
         tabindex="0"
         role="presentation"
@@ -112,14 +131,14 @@ defmodule Brando.HTML.Video do
         playsinline
         controls={@controls}
         data-video
-        poster={validate_poster(poster)}
-        style={width && "--aspect-ratio-division: #{width}/#{height}"}
-        data-src={preload && src}
-        src={!preload && src}></video>
+        poster={@poster}
+        style={@width && "--aspect-ratio-division: #{@width}/#{@height}"}
+        data-src={@preload && @src}
+        src={!@preload && @src}></video>
       <noscript>
         <video
-          width={width}
-          height={height}
+          width={@width}
+          height={@height}
           alt=""
           tabindex="0"
           role="presentation"
@@ -127,10 +146,10 @@ defmodule Brando.HTML.Video do
           muted={@autoplay}
           loop
           playsinline
-          src={src}></video>
+          src={@src}></video>
       </noscript>
 
-      <%= get_play_button(play_button) %>
+      <%= get_play_button(@play_button) %>
       <%= if @video_cover do %>
         <%= @video_cover %>
       <% end %>

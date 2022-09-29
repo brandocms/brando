@@ -106,14 +106,18 @@ defmodule Brando.HTML.Images do
       |> add_classes()
       |> add_moonwalk()
 
-    assigns = assign(assigns, :attrs, attrs)
-
     lightbox_src = Map.get(attrs, :src)
     lightbox_srcset = Keyword.get(attrs.img, :data_srcset)
 
+    assigns =
+      assigns
+      |> assign(:attrs, attrs)
+      |> assign(:lightbox_src, lightbox_src)
+      |> assign(:lightbox_srcset, lightbox_srcset)
+
     ~H"""
     <%= if @opts[:lightbox] do %>
-      <.lightbox src={lightbox_src} srcset={lightbox_srcset}>
+      <.lightbox src={@lightbox_src} srcset={@lightbox_srcset}>
         <.picture_tag src={@src} opts={@opts} attrs={@attrs} />
       </.lightbox>
     <% else %>
@@ -168,7 +172,7 @@ defmodule Brando.HTML.Images do
       ~H||
     else
       sizes_format = List.first(formats)
-
+      assigns = assign(assigns, :sizes_format, sizes_format)
       # FIXME: only add one source for gifs for now -- sharp doesn't seem to handle
       # animated webps very well?
       if sizes_format == :gif do
@@ -177,7 +181,7 @@ defmodule Brando.HTML.Images do
         """
       else
         ~H"""
-        <%= for format <- Enum.reverse(@src.formats) do %><%= if format == sizes_format do %><source {@attrs.source} /><% else %><source {replace_attrs(@attrs.source, format)} /><% end %><% end %>
+        <%= for format <- Enum.reverse(@src.formats) do %><%= if format == @sizes_format do %><source {@attrs.source} /><% else %><source {replace_attrs(@attrs.source, format)} /><% end %><% end %>
         """
       end
     end

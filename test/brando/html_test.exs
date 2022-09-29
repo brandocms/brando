@@ -80,10 +80,10 @@ defmodule Brando.HTMLTest do
   test "render_meta" do
     mock_conn = %Plug.Conn{assigns: %{language: "en"}, private: %{plug_session: %{}}}
 
-    assigns = %{}
+    assigns = %{mock_conn: mock_conn}
 
     comp = ~H"""
-    <.render_meta conn={mock_conn} />
+    <.render_meta conn={@mock_conn} />
     """
 
     html = rendered_to_string(comp)
@@ -111,10 +111,10 @@ defmodule Brando.HTMLTest do
       autoplay: true
     ]
 
-    assigns = %{}
+    assigns = %{opts: opts}
 
     comp = ~H"""
-    <.video video={"https://src.vid"} opts={opts} />
+    <.video video={"https://src.vid"} opts={@opts} />
     """
 
     assert rendered_to_string(comp) ==
@@ -132,10 +132,10 @@ defmodule Brando.HTMLTest do
       autoplay: true
     ]
 
-    assigns = %{}
+    assigns = %{opts: opts}
 
     comp = ~H"""
-    <.video video={"https://src.vid"} opts={opts} />
+    <.video video={"https://src.vid"} opts={@opts} />
     """
 
     assert rendered_to_string(comp) ==
@@ -154,10 +154,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
-    assigns = %{}
+    assigns = %{user: user, opts: opts}
 
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -203,8 +203,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{avatar: Map.put(user.avatar, :formats, [:jpg, :webp]), opts: opts}
+
     comp = ~H"""
-    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
+    <.picture src={@avatar} opts={@opts} />
     """
 
     doc =
@@ -239,8 +241,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{avatar: Map.put(user.avatar, :formats, [:jpg, :webp, :avif]), opts: opts}
+
     comp = ~H"""
-    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp, :avif])} opts={opts} />
+    <.picture src={@avatar} opts={@opts} />
     """
 
     doc =
@@ -282,8 +286,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -304,8 +310,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -334,8 +342,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -365,8 +375,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -393,8 +405,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -436,8 +450,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{avatar: Map.put(user.avatar, :formats, [:jpg, :webp]), opts: opts}
+
     comp = ~H"""
-    <.picture src={Map.put(user.avatar, :formats, [:jpg, :webp])} opts={opts} />
+    <.picture src={@avatar} opts={@opts} />
     """
 
     doc =
@@ -490,8 +506,10 @@ defmodule Brando.HTMLTest do
       placeholder: :micro
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -521,8 +539,10 @@ defmodule Brando.HTMLTest do
       lazyload: true
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -585,8 +605,10 @@ defmodule Brando.HTMLTest do
       width: 2000
     }
 
+    assigns = %{project_cover: project_cover, opts: opts}
+
     comp = ~H"""
-    <.picture src={project_cover} opts={opts} />
+    <.picture src={@project_cover} opts={@opts} />
     """
 
     doc =
@@ -629,8 +651,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =
@@ -663,8 +687,10 @@ defmodule Brando.HTMLTest do
       img_class: "img-fluid"
     ]
 
+    assigns = %{user: user, opts: opts}
+
     comp = ~H"""
-    <.picture src={user.avatar} opts={opts} />
+    <.picture src={@user.avatar} opts={@opts} />
     """
 
     doc =

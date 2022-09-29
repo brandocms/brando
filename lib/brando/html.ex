@@ -69,9 +69,9 @@ defmodule Brando.HTML do
   end
 
   def render_palettes_css(assigns) do
-    palettes_css = Brando.Cache.Palettes.get()
+    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get())
 
-    ~H|<%= if palettes_css != "" do %><style><%= palettes_css %></style><% end %>|
+    ~H|<%= if @palettes_css != "" do %><style><%= @palettes_css %></style><% end %>|
   end
 
   # def link(assigns) do
@@ -261,9 +261,18 @@ defmodule Brando.HTML do
     show_breakpoint_debug? = Application.get_env(Brando.otp_app(), :show_breakpoint_debug)
     extra = assigns_to_attributes(assigns, [:id, :conn])
 
+    assigns =
+      assigns
+      |> assign(:id, id)
+      |> assign(:classes, classes)
+      |> assign(:data_script, data_script)
+      |> assign(:data_vsn, data_vsn)
+      |> assign(:show_breakpoint_debug?, show_breakpoint_debug?)
+      |> assign(:extra, extra)
+
     ~H"""
-    <body id={id} class={[classes, "unloaded"]} data-script={data_script} data-vsn={data_vsn} {extra}>
-      <%= if show_breakpoint_debug? do %>
+    <body id={@id} class={[@classes, "unloaded"]} data-script={@data_script} data-vsn={@data_vsn} {@extra}>
+      <%= if @show_breakpoint_debug? do %>
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
       <% end %>
@@ -273,11 +282,11 @@ defmodule Brando.HTML do
   end
 
   def breakpoint_debug_tag(assigns) do
-    agency_brand = Application.get_env(:brando, :agency_brand)
+    assigns = assign(assigns, :agency_brand, Application.get_env(:brando, :agency_brand))
 
     ~H"""
     <i class="dbg-breakpoints">
-      <%= if agency_brand do %><div class="brand"><%= raw(agency_brand) %></div><% end %>
+      <%= if @agency_brand do %><div class="brand"><%= raw(@agency_brand) %></div><% end %>
       <div class="breakpoint"></div>
       <div class="user-agent"></div>
     </i>

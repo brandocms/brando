@@ -76,10 +76,10 @@ defmodule Brando.MetaRenderTest do
         @mock_data
       )
 
-    assigns = %{}
+    assigns = %{mock_conn: mock_conn}
 
     comp = ~H"""
-    <.render_meta conn={mock_conn} />
+    <.render_meta conn={@mock_conn} />
     """
 
     assert rendered_to_string(comp) ==
@@ -88,8 +88,10 @@ defmodule Brando.MetaRenderTest do
     mock_conn_with_image =
       Brando.Plug.HTML.put_meta(mock_conn, "og:image", "https://test.com/my_image.jpg")
 
+    assigns = %{mock_conn_with_image: mock_conn_with_image}
+
     comp = ~H"""
-    <.render_meta conn={mock_conn_with_image} />
+    <.render_meta conn={@mock_conn_with_image} />
     """
 
     assert rendered_to_string(comp) ==
@@ -104,8 +106,10 @@ defmodule Brando.MetaRenderTest do
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: meta_img.id}, :system)
 
+    assigns = %{mock_conn: mock_conn}
+
     comp = ~H"""
-    <.render_meta conn={mock_conn} />
+    <.render_meta conn={@mock_conn} />
     """
 
     assert rendered_to_string(comp) ==

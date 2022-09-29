@@ -14,9 +14,9 @@ defmodule Brando.Meta.HTML do
   @doc """
   Renders a <meta> tag
   """
-  def meta_tag(%{key: "og:" <> og_property, value: _value} = assigns) do
+  def meta_tag(%{key: "og:" <> _og_property, value: _value} = assigns) do
     ~H"""
-    <meta property={"og:#{og_property}"} content={@value}>
+    <meta property={@key} content={@value}>
     """
   end
 
@@ -47,8 +47,10 @@ defmodule Brando.Meta.HTML do
       |> maybe_add_custom_meta()
       |> get_meta()
 
+    assigns = assign(assigns, :metas, metas)
+
     ~H"""
-    <%= for {key, value} <- metas do %>
+    <%= for {key, value} <- @metas do %>
         <.meta_tag key={key} value={value} /><% end %>
     """
   end

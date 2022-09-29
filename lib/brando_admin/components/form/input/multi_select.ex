@@ -413,6 +413,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     assigns =
       assigns
+      |> assign(:entry_id, entry.id)
       |> assign(:identifier, identifier)
       |> assign_new(:deletable, fn -> false end)
       |> assign_new(:target, fn -> nil end)
@@ -420,7 +421,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <.status_circle status={@identifier.status} /> <%= @identifier.title %>
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={entry.id} phx-click={JS.push("select_option", target: @target)}>
+      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
           <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
