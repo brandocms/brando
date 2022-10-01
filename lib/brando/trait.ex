@@ -74,16 +74,10 @@ defmodule Brando.Trait do
       end
 
       if Module.get_attribute(__MODULE__, :relations) do
-        def trait_relations(_, _, _) do
-          @relations
-        end
-
+        def trait_relations(_, _, _), do: @relations
         defoverridable trait_relations: 3
       else
-        def trait_relations(_, _, _) do
-          []
-        end
-
+        def trait_relations(_, _, _), do: []
         defoverridable trait_relations: 3
       end
 
