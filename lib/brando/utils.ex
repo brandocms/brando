@@ -933,12 +933,19 @@ defmodule Brando.Utils do
       end)
 
     Enum.reduce(schema_assocs, coerced_fields_struct, fn assoc, final_struct ->
-      schema_assoc_meta = schema.__schema__(:association, assoc)
+      queryable =
+        if schema.__schema__(:association, assoc).__struct__ == Ecto.Association.HasThrough do
+          schema.__schema__(:association, assoc).owner
+        else
+          schema.__schema__(:association, assoc).queryable
+        end
+
+      final_struct_assoc = Map.get(final_struct, assoc)
 
       Map.put(
         final_struct,
         assoc,
-        coerce_struct(Map.get(final_struct, assoc), schema_assoc_meta.queryable)
+        coerce_struct(final_struct_assoc, queryable)
       )
     end)
   end
