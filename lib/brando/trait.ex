@@ -21,6 +21,7 @@ defmodule Brando.Trait do
   @callback validate(module, config) :: true | no_return
   @callback after_save(entry, changeset, user) :: any()
   @callback before_save(changeset, user) :: any()
+  @callback generate_code(module) :: any()
 
   defmacro __using__(_) do
     defprotocol Module.concat([__CALLER__.module, Implemented]) do
@@ -56,6 +57,11 @@ defmodule Brando.Trait do
 
       def after_save(_, _, _), do: :ok
       defoverridable after_save: 3
+
+      def generate_code(_) do
+      end
+
+      defoverridable generate_code: 1
 
       def list_implementations, do: list_implementations(__MODULE__)
     end
