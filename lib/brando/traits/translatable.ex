@@ -7,9 +7,7 @@ defmodule Brando.Trait.Translatable do
       parent_table_name = @table_name
       @translatable_alternates Keyword.get(unquote(config), :alternates, true)
 
-      def has_alternates? do
-        @translatable_alternates
-      end
+      def has_alternates?, do: @translatable_alternates
 
       defmodule Alternate do
         use Ecto.Schema

@@ -5,7 +5,7 @@ defmodule Brando.Repo.Migrations.AddTranslatableAlternatesTables do
     blueprints = Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
 
     for blueprint <- blueprints do
-      if blueprint.has_trait(Brando.Trait.Translatable) do
+      if blueprint.has_trait(Brando.Trait.Translatable) and blueprint.has_alternates? do
         alternate_source = "#{blueprint.__schema__(:source)}_alternates"
 
         create table(alternate_source) do

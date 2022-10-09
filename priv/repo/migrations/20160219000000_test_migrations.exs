@@ -146,7 +146,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:html, :text)
       add(:status, :integer)
       add(:sequence, :integer)
-      add :publish_at, :utc_datetime
+      add(:publish_at, :utc_datetime)
       add(:creator_id, references(:users))
       add(:page_id, references(:pages))
       soft_delete()
@@ -156,6 +156,14 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:language]))
     create(index(:pages_fragments, [:key]))
     create(index(:pages_fragments, [:parent_key]))
+
+    create table(:pages_alternates) do
+      add :entry_id, references(:pages, on_delete: :nilify_all)
+      add :linked_entry_id, references(:pages, on_delete: :nilify_all)
+      timestamps()
+    end
+
+    create unique_index(:pages_alternates, [:entry_id, :linked_entry_id])
 
     create table(:content_modules) do
       add :name, :string
