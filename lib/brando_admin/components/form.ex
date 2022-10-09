@@ -22,6 +22,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
+  alias BrandoAdmin.Components.Form.AlternatesDrawer
 
   def mount(socket) do
     if connected?(socket) do
@@ -345,28 +346,40 @@ defmodule BrandoAdmin.Components.Form do
     default_preloads = Map.get(query_params, :preload, [])
 
     file_preloads =
-      schema.__assets__
+      schema.__assets__()
       |> Enum.filter(&(&1.type == :file))
       |> Enum.map(& &1.name)
 
     image_preloads =
-      schema.__assets__
+      schema.__assets__()
       |> Enum.filter(&(&1.type == :image))
       |> Enum.map(& &1.name)
 
     gallery_preloads =
-      schema.__assets__
+      schema.__assets__()
       |> Enum.filter(&(&1.type == :gallery))
       |> Enum.map(&[{&1.name, [{:gallery_images, :image}]}])
 
     rel_preloads =
-      schema.__relations__
+      schema.__relations__()
       |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
       |> Enum.map(& &1.name)
 
+    alternates_preload =
+      if schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() do
+        [:alternate_entries]
+      else
+        []
+      end
+
     preloads =
       Enum.uniq(
-        file_preloads ++ gallery_preloads ++ image_preloads ++ rel_preloads ++ default_preloads
+        file_preloads ++
+          gallery_preloads ++
+          image_preloads ++
+          rel_preloads ++
+          alternates_preload ++
+          default_preloads
       )
 
     Map.put(
@@ -376,11 +389,13 @@ defmodule BrandoAdmin.Components.Form do
     )
   end
 
-  defp assign_addon_statuses(%{assigns: %{schema: schema}} = socket) do
+  defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
     assign(socket,
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
+      has_alternates?:
+        schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() && entry.id,
       has_live_preview?: check_live_preview(schema)
     )
   end
@@ -510,6 +525,16 @@ defmodule BrandoAdmin.Components.Form do
                   <span class="tab-text"><%= gettext "Scheduled publishing" %></span>
                 </button>
               <% end %>
+              <%= if @has_alternates? do %>
+                <button
+                  phx-click={toggle_drawer("##{@id}-alternates-drawer")}
+                  type="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
+                    <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              <% end %>
               <%= if @has_live_preview? do %>
                 <button
                   phx-click={JS.push("open_live_preview", target: @myself)}
@@ -600,6 +625,14 @@ defmodule BrandoAdmin.Components.Form do
                 id={"#{@id}-scheduled-publishing-drawer"}
                 form={f}
                 close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
+            <% end %>
+
+            <%= if @has_alternates? do %>
+              <.live_component module={AlternatesDrawer}
+                id={"#{@id}-alternates-drawer"}
+                entry={@entry}
+                on_close={toggle_drawer("##{@id}-alternates-drawer")}
+                on_remove_link={JS.push("remove_link", target: @myself)} />
             <% end %>
 
             <.form_tabs

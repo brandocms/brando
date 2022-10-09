@@ -10,7 +10,7 @@ defmodule Brando.Sites.Identity do
   import Brando.Gettext
 
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable
+  trait Brando.Trait.Translatable, alternates: false
 
   identifier "{{ entry.name }}"
 

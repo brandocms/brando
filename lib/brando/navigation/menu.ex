@@ -12,7 +12,7 @@ defmodule Brando.Navigation.Menu do
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable
+  trait Brando.Trait.Translatable, alternates: false
   trait Brando.Trait.Status
 
   identifier "{{ entry.title }} [{{ entry.language }}]"

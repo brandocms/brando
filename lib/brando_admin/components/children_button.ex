@@ -27,7 +27,8 @@ defmodule BrandoAdmin.Components.ChildrenButton do
 
   def render(assigns) do
     ~H"""
-    <div class="children-button">
+    <div
+      class={render_classes(["children-button", hidden: @count == 0])}>
       <button
         phx-click={JS.push("toggle", target: @myself)}
         type="button"

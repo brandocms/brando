@@ -145,7 +145,19 @@ defmodule Brando.Blueprint.Listings do
     quote generated: true,
           location: :keep,
           bind_quoted: [actions: actions] do
-      var!(brando_listing_actions) = actions
+      processed_actions =
+        Enum.map(actions, fn action ->
+          event =
+            if is_binary(action[:event]) do
+              Phoenix.LiveView.JS.push(action[:event])
+            else
+              action[:event]
+            end
+
+          Keyword.replace(action, :event, event)
+        end)
+
+      var!(brando_listing_actions) = processed_actions
     end
   end
 

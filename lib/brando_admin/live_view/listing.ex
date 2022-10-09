@@ -199,6 +199,34 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         {:halt, socket}
 
+      "duplicate_entry_to_language",
+      %{"id" => entry_id, "language" => language},
+      %{assigns: %{current_user: user, schema: schema}} = socket ->
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+        update_view = schema.__modules__().admin_update_view
+
+        override_opts = [
+          change_fields: [{:language, language}],
+          delete_fields: []
+        ]
+
+        {:ok, duped_entry} =
+          apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
+
+        send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
+
+        # link the entries together
+        _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+
+        send(
+          self(),
+          {:set_content_language_and_navigate, language,
+           Brando.routes().admin_live_path(socket, update_view, duped_entry.id)}
+        )
+
+        {:halt, socket}
+
       _, _, socket ->
         {:cont, socket}
     end)
@@ -227,6 +255,21 @@ defmodule BrandoAdmin.LiveView.Listing do
         )
 
         {:halt, assign(socket, :current_user, updated_current_user)}
+
+      {:set_content_language_and_navigate, language, url},
+      %{assigns: %{current_user: current_user}} = socket ->
+        {:ok, updated_current_user} =
+          Brando.Users.update_user(
+            current_user,
+            %{config: %{content_language: language}},
+            :system,
+            show_notification: false
+          )
+
+        {:halt,
+         socket
+         |> assign(:current_user, updated_current_user)
+         |> push_navigate(to: url)}
 
       _, socket ->
         {:cont, socket}
@@ -263,6 +306,21 @@ defmodule BrandoAdmin.LiveView.Listing do
         )
 
         {:halt, assign(socket, :current_user, updated_current_user)}
+
+      {:set_content_language_and_navigate, language, url},
+      %{assigns: %{current_user: current_user}} = socket ->
+        {:ok, updated_current_user} =
+          Brando.Users.update_user(
+            current_user,
+            %{config: %{content_language: language}},
+            :system,
+            show_notification: false
+          )
+
+        {:halt,
+         socket
+         |> assign(:current_user, updated_current_user)
+         |> push_navigate(to: url)}
 
       _, socket ->
         {:cont, socket}

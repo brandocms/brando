@@ -59,6 +59,8 @@ defmodule Brando.Blueprint.Migrations do
         opts
       )
 
+    opts = Keyword.put(opts, :add_alternates, :language in attributes_to_add)
+
     up = perform_operations(:up, operations)
     down = perform_operations(:down, operations)
 
@@ -72,7 +74,8 @@ defmodule Brando.Blueprint.Migrations do
       {up_indexes, down_indexes},
       operation_type,
       module,
-      sequence
+      sequence,
+      opts
     )
     |> format_code()
     |> write_migration(module, sequence, opts)
@@ -91,7 +94,14 @@ defmodule Brando.Blueprint.Migrations do
     Code.format_string!(content, locals_without_parens: locals_without_parens())
   end
 
-  defp wrap_in_operation_type({up, _}, {up_indexes, down_indexes}, :create, module, sequence) do
+  defp wrap_in_operation_type(
+         {up, _},
+         {up_indexes, down_indexes},
+         :create,
+         module,
+         sequence,
+         opts
+       ) do
     application = module.__naming__().application
     domain = module.__naming__().domain
     schema = module.__naming__().schema
@@ -99,57 +109,100 @@ defmodule Brando.Blueprint.Migrations do
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
 
     uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
+    alternates_source = "#{table_name}_alternates"
+    alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
 
-    if uuid? do
-      """
-      defmodule #{migration_module} do
-        use Ecto.Migration
-
-        def up do
-          create table(:#{table_name}, primary_key: false) do
-            add :id, :uuid, primary_key: true
-            #{up}
-          end
-
-          #{up_indexes}
+    create_table =
+      if uuid? do
+        """
+        create table(:#{table_name}, primary_key: false) do
+          add :id, :uuid, primary_key: true
+          #{up}
         end
-
-        def down do
-          drop table(:#{table_name})
-
-          #{down_indexes}
+        """
+      else
+        """
+        create table(:#{table_name}) do
+          #{up}
         end
+        """
       end
-      """
-    else
-      """
-      defmodule #{migration_module} do
-        use Ecto.Migration
 
-        def up do
-          create table(:#{table_name}) do
-            #{up}
-          end
+    {up_alternates, down_alternates} =
+      if alternates? do
+        {"""
+         create table(#{alternates_source}) do
+           add :entry_id, references(#{table_name}, on_delete: :nilify_all)
+           add :linked_entry_id, references(#{table_name}, on_delete: :nilify_all)
+           timestamps()
+         end
 
-          #{up_indexes}
-        end
-
-        def down do
-          drop table(:#{table_name})
-
-          #{down_indexes}
-        end
+         create unique_index(#{alternates_source}, [:entry_id, :linked_entry_id])
+         """,
+         """
+         drop table(#{alternates_source})
+         """}
+      else
+        {"", ""}
       end
-      """
+
+    """
+    defmodule #{migration_module} do
+      use Ecto.Migration
+
+      def up do
+        #{create_table}
+
+        #{up_indexes}
+
+        #{up_alternates}
+      end
+
+      def down do
+        drop table(:#{table_name})
+
+        #{down_indexes}
+
+        #{down_alternates}
+      end
     end
+    """
   end
 
-  defp wrap_in_operation_type({up, down}, {up_indexes, down_indexes}, :alter, module, sequence) do
+  defp wrap_in_operation_type(
+         {up, down},
+         {up_indexes, down_indexes},
+         :alter,
+         module,
+         sequence,
+         opts
+       ) do
     application = module.__naming__().application
     domain = module.__naming__().domain
     schema = module.__naming__().schema
     table_name = module.__naming__().table_name
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
+
+    alternates_source = "#{table_name}_alternates"
+    alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
+
+    {up_alternates, down_alternates} =
+      if alternates? do
+        {"""
+         create table(#{alternates_source}) do
+           add :entry_id, references(#{table_name}, on_delete: :nilify_all)
+           add :linked_entry_id, references(#{table_name}, on_delete: :nilify_all)
+           timestamps()
+         end
+
+         create unique_index(#{alternates_source}, [:entry_id, :linked_entry_id])
+         """,
+         """
+         drop table(#{alternates_source})
+         """}
+      else
+        {"", ""}
+      end
 
     """
     defmodule #{migration_module} do
@@ -161,6 +214,8 @@ defmodule Brando.Blueprint.Migrations do
         end
 
         #{up_indexes}
+
+        #{up_alternates}
       end
 
       def down do
@@ -169,6 +224,8 @@ defmodule Brando.Blueprint.Migrations do
         end
 
         #{down_indexes}
+
+        #{down_alternates}
       end
     end
     """

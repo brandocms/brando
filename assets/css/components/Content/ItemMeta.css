@@ -96,6 +96,10 @@
     background-color: var(--brando-color-dark);
     color: var(--brando-color-peach);
     border: 1px solid transparent;
+
+    .drawer-form & {
+      opacity: 0.5;
+    }
   }
 
   .content {
@@ -116,6 +120,9 @@
       border-radius: 50%;
       height: 35px;
       margin-left: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
   }
 }

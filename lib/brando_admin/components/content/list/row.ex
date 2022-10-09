@@ -8,9 +8,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.ChildrenButton
   alias BrandoAdmin.Components.CircleDropdown
+  alias BrandoAdmin.Components.Form.Input.Entries
 
-  alias Brando.Trait
   alias Brando.Blueprint.Listings.Template
+  alias Brando.Blueprint.Identifier
+  alias Brando.Trait
 
   # prop entry, :any
   # prop selected_rows, :list
@@ -49,55 +51,56 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       phx-value-id={@entry.id}
       phx-page-loading>
       <div class="main-content">
-        <%= if @status? do %>
-          <.status
-            entry={@entry}
-            soft_delete?={@soft_delete?} />
-        <% end %>
+        <.status
+          :if={@status?}
+          entry={@entry}
+          soft_delete?={@soft_delete?} />
 
-        <%= if @sortable? do %>
-          <.handle />
-        <% end %>
+        <.handle :if={@sortable?} />
 
-        <%= for field <- @listing.fields do %>
-          <.field
-            field={field}
-            entry={@entry}
-            schema={@schema} />
-        <% end %>
+        <.field
+          :for={field <- @listing.fields}
+          field={field}
+          entry={@entry}
+          schema={@schema} />
 
-        <%= if @creator? do %>
-          <.creator
-            entry={@entry}
-            soft_delete?={@soft_delete?}/>
-        <% end %>
+        <.alternates
+          :if={@alternates?}
+          entry={@entry}
+          target={@myself}
+          schema={@schema} />
+
+        <.creator
+          :if={@creator?}
+          entry={@entry}
+          soft_delete?={@soft_delete?}/>
 
         <.entry_menu
           schema={@schema}
+          content_language={@content_language}
           entry={@entry}
           listing={@listing} />
       </div>
 
       <%= if @show_children do %>
-        <%= for child_field <- @child_fields do %>
-          <div
-            class="child-rows"
-            id={"sortable-#{@entry.id}-#{child_field}"}
-            data-target={@target}
-            class="sort-container"
-            phx-hook="Brando.Sortable"
-            data-sortable-id={"child_listing|#{@entry.id}|#{child_field}"}
-            data-sortable-handle=".sequence-handle"
-            data-sortable-selector=".child-row"
-            >
-            <%= for child_entry <- Map.get(@entry, child_field, []) do %>
-              <.child_row
-                entry={child_entry}
-                schema={@schema}
-                child_listing={@listing.child_listing} />
-            <% end %>
-          </div>
-        <% end %>
+        <div
+          :for={child_field <- @child_fields}
+          class="child-rows"
+          id={"sortable-#{@entry.id}-#{child_field}"}
+          data-target={@target}
+          class="sort-container"
+          phx-hook="Brando.Sortable"
+          data-sortable-id={"child_listing|#{@entry.id}|#{child_field}"}
+          data-sortable-handle=".sequence-handle"
+          data-sortable-selector=".child-row">
+          <.child_row
+            :for={child_entry <- Map.get(@entry, child_field, [])}
+            entry={child_entry}
+            schema={@schema}
+            target={@myself}
+            content_language={@content_language}
+            child_listing={@listing.child_listing} />
+        </div>
       <% end %>
     </div>
     """
@@ -195,57 +198,107 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     end)
   end
 
+  attr :schema, :atom
+  attr :content_language, :string
+  attr :entry, :map
+  attr :listing, :map
+
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
-
     processed_actions = process_actions(assigns.listing.actions, language, assigns.entry.id)
+
+    ctx = assigns.schema.__modules__.context
+    singular = assigns.schema.__naming__.singular
+
+    has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
+
+    duplicate_langs? =
+      assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
+        Enum.count(Brando.config(:languages)) > 1
 
     assigns =
       assigns
       |> assign(:language, language)
-      |> assign(:no_actions, Enum.empty?(assigns.listing.actions))
       |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
+      |> assign(:has_duplicate_fn?, has_duplicate_fn?)
+      |> assign(:duplicate_langs?, duplicate_langs?)
+      |> assign(
+        :duplicate_langs,
+        get_duplication_langs(assigns.content_language, duplicate_langs?)
+      )
 
     ~H"""
-    <%= unless @no_actions do %>
-      <CircleDropdown.render id={@id}>
-        <%= for %{event: event, label: label} = action <- @processed_actions do %>
-          <li>
-            <%= if action[:confirm] do %>
-              <button
-                id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
-                phx-hook="Brando.ConfirmClick"
-                phx-confirm-click-message={action[:confirm]}
-                phx-confirm-click={event}
-                phx-value-language={@language}
-                phx-value-id={@entry.id}>
-                <%= g(@schema, label) %>
-              </button>
-            <% else %>
-              <button
-                id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
-                phx-value-id={@entry.id}
-                phx-value-language={@language}
-                phx-click={event}>
-                <%= g(@schema, label) %>
-              </button>
-            <% end %>
-          </li>
+    <CircleDropdown.render id={@id}>
+      <li>
+        <button
+          id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
+          phx-value-id={@entry.id}
+          phx-value-language={@language}
+          phx-click="edit_entry">
+          <%= gettext "Edit entry" %>
+        </button>
+      </li>
+      <li>
+        <button
+          id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
+          phx-hook="Brando.ConfirmClick"
+          phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
+          phx-confirm-click={JS.push("delete_entry")}
+          phx-value-language={@language}
+          phx-value-id={@entry.id}>
+          <%= gettext "Delete entry" %>
+        </button>
+      </li>
+      <li :if={@has_duplicate_fn?}>
+        <button
+          id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
+          phx-value-id={@entry.id}
+          phx-value-language={@language}
+          phx-click="duplicate_entry">
+          <%= gettext "Duplicate entry" %>
+        </button>
+      </li>
+      <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
+        <button
+          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang"}
+          phx-value-id={@entry.id}
+          phx-value-language={lang}
+          phx-click="duplicate_entry_to_language">
+          <%= gettext "Duplicate to" %> [<%= String.upcase(lang) %>]
+        </button>
+      </li>
+      <li :for={%{event: event, label: label} = action <- @processed_actions}>
+        <%= if action[:confirm] do %>
+          <button
+            id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
+            phx-hook="Brando.ConfirmClick"
+            phx-confirm-click-message={action[:confirm]}
+            phx-confirm-click={event}
+            phx-value-language={@language}
+            phx-value-id={@entry.id}>
+            <%= g(@schema, label) %>
+          </button>
+        <% else %>
+          <button
+            id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
+            phx-value-id={@entry.id}
+            phx-value-language={@language}
+            phx-click={event}>
+            <%= g(@schema, label) %>
+          </button>
         <% end %>
-        <%= if Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at) do %>
-          <li>
-            <button
-              id={"action_#{@listing.name}_undelete_#{@entry.id}"}
-              phx-value-id={@entry.id}
-              phx-value-language={@language}
-              phx-click="undelete_entry">
-              <%= gettext "Undelete entry" %>
-            </button>
-          </li>
-        <% end %>
-      </CircleDropdown.render>
-    <% end %>
+      </li>
+      <li :if={Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at)}>
+        <button
+          id={"action_#{@listing.name}_undelete_#{@entry.id}"}
+          phx-value-id={@entry.id}
+          phx-value-language={@language}
+          phx-click="undelete_entry">
+          <%= gettext "Undelete entry" %>
+        </button>
+      </li>
+    </CircleDropdown.render>
     """
   end
 
@@ -325,6 +378,37 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns) do
+    ~H""
+  end
+
+  def alternates(%{entry: %{alternate_entries: alternate_entries}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:alternate_entries?, Enum.count(alternate_entries) > 0)
+      |> assign(:identifiers, Identifier.identifiers_for!(alternate_entries))
+
+    ~H"""
+    <div class="col-1">
+      <button type="button" class={render_classes(["btn-icon-subtle"])} disabled={!@alternate_entries?} phx-click={show_modal("#entry-#{@entry.id}-alternates")}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+          <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
+          <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
+        </svg>
+      </button>
+      <Content.modal title={gettext "Alternates"} narrow id={"entry-#{@entry.id}-alternates"}>
+        <Entries.identifier
+          :for={identifier <- @identifiers}
+          identifier={identifier}
+          select={JS.push("update_entry", value: %{url: identifier.admin_url}, target: @target)}
+          remove={JS.push("remove_entry", value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.id}, target: @target)}
+          param={identifier.id}
+        />
+      </Content.modal>
+    </div>
+    """
+  end
+
   def creator(%{entry: %{creator: nil}} = assigns) do
     ~H"""
     <div class="col-4">
@@ -374,10 +458,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     assigns =
       assigns
-      |> assign(:sortable?, entry_schema.has_trait(Trait.Sequenced))
-      |> assign(:creator?, entry_schema.has_trait(Trait.Creator))
-      |> assign(:status?, entry_schema.has_trait(Trait.Status))
-      |> assign(:soft_delete?, entry_schema.has_trait(Trait.SoftDelete))
+      |> assign_new(:alternates?, fn ->
+        entry_schema.has_trait(Trait.Translatable) and schema.has_alternates?()
+      end)
+      |> assign_new(:sortable?, fn -> entry_schema.has_trait(Trait.Sequenced) end)
+      |> assign_new(:creator?, fn -> entry_schema.has_trait(Trait.Creator) end)
+      |> assign_new(:status?, fn -> entry_schema.has_trait(Trait.Status) end)
+      |> assign_new(:soft_delete?, fn -> entry_schema.has_trait(Trait.SoftDelete) end)
       |> assign_new(:listing, fn ->
         listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
         listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
@@ -393,31 +480,52 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <div
       class="child-row draggable"
       data-id={@entry.id}>
-      <%= if @sortable? do %>
-        <.handle />
-      <% end %>
-      <%= if @status? do %>
-        <.status
-          entry={@entry}
-          soft_delete?={@soft_delete?} />
-      <% end %>
-      <%= for field <- @listing.fields do %>
-        <.field
-          field={field}
-          entry={@entry}
-          schema={@schema} />
-      <% end %>
-      <%= if @creator? do %>
-        <.creator
-          entry={@entry}
-          soft_delete?={@soft_delete?}/>
-      <% end %>
+      <.status
+        :if={@status?}
+        entry={@entry}
+        soft_delete?={@soft_delete?} />
+      <.handle :if={@sortable?} />
+      <.field
+        :for={field <- @listing.fields}
+        field={field}
+        entry={@entry}
+        schema={@schema} />
+      <.alternates
+        :if={@alternates?}
+        entry={@entry}
+        target={@target}
+        schema={@schema} />
+      <.creator
+        :if={@creator?}
+        entry={@entry}
+        soft_delete?={@soft_delete?}/>
       <.entry_menu
         schema={@schema}
         entry={@entry}
+        content_language={@content_language}
         listing={@listing} />
     </div>
     """
+  end
+
+  def handle_event("update_entry", %{"url" => url}, socket) do
+    {:noreply, push_navigate(socket, to: url)}
+  end
+
+  def handle_event(
+        "remove_entry",
+        %{"schema" => schema, "parent_id" => parent_id, "id" => id},
+        socket
+      ) do
+    alternate_schema = Module.concat(schema, Alternate)
+    _ = alternate_schema.delete(id, parent_id)
+
+    send_update(BrandoAdmin.Components.Content.List,
+      id: "content_listing_#{socket.assigns.schema}_default",
+      action: :update_entries
+    )
+
+    {:noreply, socket}
   end
 
   defp statuses() do
@@ -429,4 +537,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp render_status_label(:pending), do: gettext("Pending")
   defp render_status_label(:published), do: gettext("Published")
   defp render_status_label(:deleted), do: gettext("Deleted")
+
+  defp get_duplication_langs(_, false), do: []
+
+  defp get_duplication_langs(content_language, true) do
+    Brando.config(:languages)
+    |> Enum.map(& &1[:value])
+    |> Enum.reject(&(&1 == content_language))
+  end
 end

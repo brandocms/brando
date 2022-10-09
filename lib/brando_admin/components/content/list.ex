@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.Sequenced
   alias Brando.Trait.SoftDelete
   alias Brando.Trait.Status
+  alias Brando.Trait.Translatable
 
   alias BrandoAdmin.Components.Content.List.Row
 
@@ -166,6 +167,9 @@ defmodule BrandoAdmin.Components.Content.List do
     |> assign_new(:listings, fn -> listings end)
     |> assign_new(:soft_delete?, fn -> schema.has_trait(SoftDelete) end)
     |> assign_new(:status?, fn -> schema.has_trait(Status) end)
+    |> assign_new(:alternates?, fn ->
+      schema.has_trait(Translatable) and schema.has_alternates?()
+    end)
     |> assign_new(:sortable?, fn -> schema.has_trait(Sequenced) end)
     |> assign_new(:creator?, fn -> schema.has_trait(Creator) end)
   end
@@ -222,6 +226,7 @@ defmodule BrandoAdmin.Components.Content.List do
     |> maybe_merge_listing_query(listing)
     |> maybe_merge_content_language(schema, content_language)
     |> maybe_preload_creator(schema)
+    |> maybe_preload_alternates(schema)
     |> preload_assets(schema)
     |> maybe_order_by_sequence(schema)
   end
@@ -300,6 +305,14 @@ defmodule BrandoAdmin.Components.Content.List do
   defp maybe_preload_creator(list_opts, schema) do
     if schema.has_trait(Creator) do
       add_preload(list_opts, creator: :avatar)
+    else
+      list_opts
+    end
+  end
+
+  defp maybe_preload_alternates(list_opts, schema) do
+    if schema.has_trait(Translatable) and schema.has_alternates?() do
+      add_preload(list_opts, :alternate_entries)
     else
       list_opts
     end

@@ -23,7 +23,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable
+  trait Brando.Trait.Translatable, alternates: false
   trait Brando.Trait.Villain
   trait Brando.Trait.Villain.PreventCircularReferences
 

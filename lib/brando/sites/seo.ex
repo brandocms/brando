@@ -24,7 +24,7 @@ defmodule Brando.Sites.SEO do
   import Brando.Gettext
 
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable
+  trait Brando.Trait.Translatable, alternates: false
 
   identifier "SEO"
 

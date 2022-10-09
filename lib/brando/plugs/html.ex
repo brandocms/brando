@@ -2,10 +2,11 @@ defmodule Brando.Plug.HTML do
   @moduledoc """
   A plug with HTML oriented helpers
   """
+  require Logger
+  import Plug.Conn
   alias Brando.Pages.Page
   alias Brando.Utils
   alias Brando.JSONLD
-  import Plug.Conn
 
   @type conn :: Plug.Conn.t()
 
@@ -86,9 +87,116 @@ defmodule Brando.Plug.HTML do
   end
 
   @doc """
+  Put hreflang data in conn
+
+  If you have a translatable entry:
+
+      put_hreflang(conn, entry)
+
+  If you want to supply your own alternates
+
+      put_hreflang(conn, [en: "/en/something", no: "/no/something"])
+
+  Or to run localized_path on all available languages:
+
+      put_hreflang(conn, {:post_path, [conn, :list]})
+
+  """
+  def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
+    full_host_canonical =
+      {conn.assigns.language, Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
+
+    full_host_hreflangs = Enum.map(hreflangs, &Brando.Utils.hostname/1)
+    put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)
+  end
+
+  def put_hreflang(conn, {fun, args}) do
+    full_host_canonical =
+      {conn.assigns.language, Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
+
+    full_host_hreflangs =
+      Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
+        {String.to_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
+      end)
+
+    put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)
+  end
+
+  def put_hreflang(conn, %{alternate_entries: %Ecto.Association.NotLoaded{}} = entry) do
+    Logger.error("""
+    ==> put_hreflang: Missing preload for :alternate_entries
+
+    Url....: #{Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
+    Schema.: #{entry.__struct__}
+    Id.....: ##{entry.id}
+
+    """)
+
+    conn
+  end
+
+  def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry)
+      when is_list(alternate_entries) do
+    canonical = {entry.language, Brando.HTML.absolute_url(entry, :with_host)}
+
+    hreflangs =
+      Enum.reduce(entry.alternate_entries, [], fn
+        %{status: :published} = alt, acc ->
+          case Brando.HTML.absolute_url(alt) do
+            "<no valid url found>" ->
+              log_no_valid_hreflang(alt)
+              acc
+
+            url ->
+              acc ++ [{alt.language, Brando.Utils.hostname(url)}]
+          end
+
+        %{status: _}, acc ->
+          acc
+
+        alt, acc ->
+          case Brando.HTML.absolute_url(alt) do
+            "<no valid url found>" ->
+              log_no_valid_hreflang(alt)
+              acc
+
+            url ->
+              acc ++ [{alt.language, Brando.Utils.hostname(url)}]
+          end
+      end)
+
+    put_private(conn, :brando_hreflangs, [canonical] ++ hreflangs)
+  end
+
+  def put_hreflang(conn, _), do: conn
+
+  defp log_no_valid_hreflang(alt) do
+    Logger.error("""
+    ==> put_hreflang: No valid url found for alternate entry.
+
+    Schema.......: #{alt.__struct__}
+    Id...........: ##{alt.id}
+    URL template.:
+
+    #{alt.__struct__.__absolute_url_template__}
+
+    This usually happens when the alternate entry is missing a preload.
+    For instance if you have an entry that requires a preloaded category
+    to generate a correct url, you must preload this category with
+    your alternate_entries:
+
+        opts = %{
+          matches: %{slug: slug, category: category},
+          status: :published,
+          preload: [:category, alternate_entries: [:category]]
+        }
+
+    """)
+  end
+
+  @doc """
   Put META data in conn
   """
-  @spec put_meta(conn, key :: binary, data :: any) :: conn
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data) when is_atom(module) do
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}

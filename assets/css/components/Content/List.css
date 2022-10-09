@@ -317,7 +317,8 @@
 
     transition: background-color 250ms ease;
 
-    .main-content .status + div {
+    .main-content .status + div,
+    .child-row .status + div {
       margin-left: 0 !important;
       padding-left: 1vw;
     }

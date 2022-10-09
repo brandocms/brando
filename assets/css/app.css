@@ -846,6 +846,10 @@ h3 {
   }
 }
 
+.flex {
+  display: flex;
+}
+
 .fit {
   white-space: nowrap;
   width: 1%;
@@ -1039,14 +1043,15 @@ h3 {
 
   a {
     &:hover {
+      @color fg var(--brando-color-blue);
       svg {
-        fill: var(--brando-color-blue);
+        stroke: var(--brando-color-blue);
       }
     }
   }
 
   svg {
-    margin-right: 9px;
+    margin-right: 5px;
     margin-top: -1px;
     transition: fill 250ms ease;
   }

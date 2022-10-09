@@ -9,7 +9,7 @@
   </head>
   <body id="app" data-env={Brando.env()} class="auth-login">
     <div class="fader" id="fader">
-      <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
+      <script>var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);</script>
       <div class="loading-container"></div>
     </div>
     <%= @inner_content %>

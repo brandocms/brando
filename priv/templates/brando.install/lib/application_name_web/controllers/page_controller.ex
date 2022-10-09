@@ -17,6 +17,7 @@ defmodule <%= application_module %>Web.PageController do
     page_opts = %{
       matches: %{uri: parsed_path, language: language},
       status: :published,
+      preload: [:alternate_entries],
       cache: {:ttl, :infinite}
     }
 
@@ -30,6 +31,7 @@ defmodule <%= application_module %>Web.PageController do
       conn
       |> put_section("index")
       |> put_meta(Pages.Page, page)
+      |> put_hreflang(page)
       |> put_title(page.title)
       |> assign(:partials, partials)
       |> assign(:page, page)
@@ -45,6 +47,7 @@ defmodule <%= application_module %>Web.PageController do
     page_opts = %{
       matches: %{path: parsed_path, language: language},
       status: :published,
+      preload: [:alternate_entries],
       cache: {:ttl, :infinite}
     }
 
@@ -58,18 +61,11 @@ defmodule <%= application_module %>Web.PageController do
       conn
       |> put_section(page.uri)
       |> put_meta(Pages.Page, page)
+      |> put_hreflang(page)
       |> put_title(page.title)
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> render(page.template)
     end
-  end
-
-  @doc false
-  @spec cookies(conn, map) :: conn
-  def cookies(conn, _) do
-    conn
-    |> put_section("cookies")
-    |> render(:cookies)
   end
 end

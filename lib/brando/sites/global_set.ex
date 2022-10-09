@@ -13,7 +13,7 @@ defmodule Brando.Sites.GlobalSet do
   trait Brando.Trait.Creator
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable
+  trait Brando.Trait.Translatable, alternates: false
 
   identifier "{{ entry.label }}"
 

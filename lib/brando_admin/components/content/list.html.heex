@@ -30,10 +30,12 @@
         entry={entry}
         sortable?={@sortable?}
         status?={@status?}
+        alternates?={@alternates?}
         creator?={@creator?}
         listing={@listing}
         schema={@schema}
         selected_rows={@selected_rows}
+        content_language={@content_language}
         target={@myself}
         click={JS.push("select_row", target: @myself)} />
     </.entries>

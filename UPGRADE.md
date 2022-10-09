@@ -17,6 +17,13 @@
   assetFileNames: `assets/admin/admin-[hash].[ext]`
   ```
 
+* Added default actions for listings:
+  - edit
+  - delete
+  - duplicate
+
+  This means you should remove these from your listings (unless you want them doubled)
+
 
 ## 0.52.0
 

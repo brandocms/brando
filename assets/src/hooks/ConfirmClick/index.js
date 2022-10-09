@@ -11,7 +11,7 @@ export default (app) => ({
 
       alertConfirm('OBS', message, confirmed => {
         if (confirmed !== false) {
-          liveSocket.execJS(this.el, event)
+          app.liveSocket.execJS(this.el, event)
         }
       })
     })

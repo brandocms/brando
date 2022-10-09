@@ -238,7 +238,7 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defmacro build_relations(relations) do
+  defmacro build_relations(module, relations) do
     quote do
       Enum.map(unquote(relations), fn
         %{type: :belongs_to, name: name, opts: opts} ->
@@ -262,6 +262,22 @@ defmodule Brando.Blueprint do
             name,
             to_ecto_opts(:has_many, opts)
           )
+
+        %{type: :has_many, name: :alternates, opts: %{module: :alternates}} ->
+          main_module = unquote(module)
+          alternate_module = Module.concat([main_module, Alternate])
+
+          [
+            Ecto.Schema.has_many(
+              :alternates,
+              alternate_module,
+              foreign_key: :linked_entry_id
+            ),
+            Ecto.Schema.has_many(
+              :alternate_entries,
+              through: [:alternates, :entry]
+            )
+          ]
 
         %{type: :has_many, name: name, opts: opts} ->
           Ecto.Schema.has_many(
@@ -345,22 +361,22 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defmacro build_schema(name, attrs, relations, assets) do
+  defmacro build_schema(module, name, attrs, relations, assets) do
     quote location: :keep do
       schema unquote(name) do
         build_attrs(unquote(attrs))
         build_assets(unquote(assets))
-        build_relations(unquote(relations))
+        build_relations(unquote(module), unquote(relations))
       end
     end
   end
 
-  defmacro build_embedded_schema(_name, attrs, relations, assets) do
+  defmacro build_embedded_schema(module, _name, attrs, relations, assets) do
     quote location: :keep do
       embedded_schema do
         build_attrs(unquote(attrs))
         build_assets(unquote(assets))
-        build_relations(unquote(relations))
+        build_relations(unquote(module), unquote(relations))
       end
     end
   end
@@ -474,6 +490,22 @@ defmodule Brando.Blueprint do
           unquote: false do
       def __primary_key__ do
         @primary_key
+      end
+
+      def __admin_url__(entry) do
+        modules = __modules__()
+
+        case Code.ensure_loaded(modules.admin_update_view) do
+          {:module, _} ->
+            Brando.routes().admin_live_path(
+              Brando.endpoint(),
+              modules.admin_update_view,
+              entry.id
+            )
+
+          _ ->
+            ""
+        end
       end
 
       @all_attributes Enum.reverse(@attrs) ++
@@ -727,6 +759,7 @@ defmodule Brando.Blueprint do
 
       if @data_layer == :embedded do
         build_embedded_schema(
+          __MODULE__,
           @table_name,
           @all_attributes,
           @all_relations,
@@ -734,6 +767,7 @@ defmodule Brando.Blueprint do
         )
       else
         build_schema(
+          __MODULE__,
           @table_name,
           @all_attributes,
           @all_relations,

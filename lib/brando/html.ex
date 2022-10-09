@@ -51,6 +51,51 @@ defmodule Brando.HTML do
     |> raw()
   end
 
+  attr :conn, :map
+  attr :class, :string
+  attr :language, :string
+  attr :fallback, :string, default: "/"
+
+  @doc """
+  Outputs an alternate URL for the current URL in conn
+
+  ## Example
+
+      <.alternate_url
+        :for={lang <- @available_languages}
+        conn={@conn}
+        language={lang}
+        class={render_classes(["language-switch", active: lang == @language])
+        fallback="/">
+        {{ lang }}
+      </.alternate_url>
+  """
+  def alternate_url(assigns) do
+    extra = assigns_to_attributes(assigns, [:conn, :class])
+    href = get_alternate_url(assigns)
+
+    assigns =
+      assigns
+      |> assign(:extra, extra)
+      |> assign(:href, href)
+
+    ~H"""
+    <a href={@href} class={@class} {@extra}>
+      <%= render_slot(@inner_block) %>
+    </a>
+    """
+  end
+
+  defp get_alternate_url(%{
+         fallback: fallback,
+         language: language,
+         conn: %{private: %{brando_hreflangs: hreflangs}}
+       }) do
+    Keyword.get(hreflangs, language, fallback)
+  end
+
+  defp get_alternate_url(assigns), do: assigns.fallback
+
   @doc """
   Link preload fonts
 
@@ -64,29 +109,46 @@ defmodule Brando.HTML do
   def preload_fonts(assigns) do
     assigns = assign_new(assigns, :fonts, fn -> [] end)
 
-    ~H|<%= for {type, font} <- @fonts do %><link rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true}>
-    <% end %>|
+    ~H"""
+    <link
+      :for={{type, font} <- @fonts}
+      rel="preload"
+      href={font}
+      as="font"
+      type={"font/#{type}"}
+      crossorigin={true} />
+    """
   end
 
   def render_palettes_css(assigns) do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get())
 
-    ~H|<%= if @palettes_css != "" do %><style><%= @palettes_css %></style><% end %>|
+    ~H"""
+    <style :if={@palettes_css != ""}><%= @palettes_css %></style>
+    """
   end
 
-  # def link(assigns) do
-  #   assigns =
-  #     assigns
-  #     |> assign_new(:rel, fn -> nil end)
-  #     |> assign_new(:target, fn -> nil end)
-  #     |> assign_new(:inner_block, fn -> [] end)
+  def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:canonical, elem(List.first(hreflangs), 1))
+      |> assign(:hreflangs, hreflangs)
+      |> assign(:multilang, Enum.count(hreflangs) > 1)
 
-  #   ~H"""
-  #   <a href={@url} rel={@rel} target={@target}>
-  #     <%= render_slot(@inner_block) %>
-  #   </a>
-  #   """
-  # end
+    ~H"""
+    <link rel="canonical" href={@canonical} />
+    <link
+      :if={@multilang}
+      :for={{lang, url} <- @hreflangs}
+      rel="alternate"
+      href={url}
+      hreflang={lang} />
+    """
+  end
+
+  def render_hreflangs(assigns) do
+    ~H""
+  end
 
   @doc """
   Replace $csrftoken in `html` with .. csrf token!
@@ -533,6 +595,14 @@ defmodule Brando.HTML do
     <%= @entry.html |> raw %>
     """
   end
+
+  def absolute_url(%{__struct__: module} = entry, :with_host) do
+    entry
+    |> module.__absolute_url__()
+    |> Brando.Utils.hostname()
+  end
+
+  def absolute_url(_, _), do: ""
 
   def absolute_url(%{__struct__: module} = entry) do
     module.__absolute_url__(entry)

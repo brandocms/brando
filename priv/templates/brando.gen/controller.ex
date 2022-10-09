@@ -23,11 +23,12 @@ defmodule <%= module %>Controller do
   @doc false
   @spec detail(conn, map) :: {:error, {:<%= singular %>, :not_found}} | conn
   def detail(conn, %{"slug" => slug}) do
-    opts = %{matches: %{slug: slug}, status: :published}
+    opts = %{matches: %{slug: slug}, <%= if translatable do %>preload: [:alternate_entries], <% end %>status: :published}
 
     with {:ok, <%= singular %>} <- <%= domain %>.get_<%= singular %>(opts) do
       conn
-      |> assign(:entry, <%= singular %>)
+      |> assign(:entry, <%= singular %>)<%= if translatable do %>
+      |> put_hreflang(<%= singular %>)<% end %>
       |> put_section("<%= singular %>")
       |> render(:detail)
     end

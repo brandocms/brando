@@ -1,7 +1,10 @@
 .children-button {
-
   justify-content: center;
   display: flex;
+
+  &.hidden {
+    display: none;
+  }
 
   a {
     padding-top: 16px;

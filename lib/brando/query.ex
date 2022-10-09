@@ -477,6 +477,16 @@ defmodule Brando.Query do
 
   def with_status(query, status), do: from(q in query, where: q.status == ^status)
 
+  def with_language(query, languages) when is_list(languages),
+    do: from(q in query, where: q.language in ^languages)
+
+  def with_language(query, language), do: from(q in query, where: q.language == ^language)
+
+  def with_exclude_language(query, languages) when is_list(languages),
+    do: from(q in query, where: q.language not in ^languages)
+
+  def with_exclude_language(query, language), do: from(q in query, where: q.language != ^language)
+
   def with_preload(query, preloads) do
     Enum.reduce(preloads, query, fn
       {key, {mod, pre}}, query ->
@@ -560,6 +570,8 @@ defmodule Brando.Query do
       {:limit, limit}, q -> limit(q, ^limit)
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
+      {:language, language}, q -> with_language(q, language)
+      {:exclude_language, language}, q -> with_exclude_language(q, language)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
       {:paginate, true}, q -> q
       {:with_deleted, true}, q -> q
@@ -579,6 +591,8 @@ defmodule Brando.Query do
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
       {:revision, revision}, _ -> get_revision(module, args, revision)
+      {:language, language}, q -> with_language(q, language)
+      {:exclude_language, language}, q -> with_exclude_language(q, language)
       {:force_villain, _}, q -> q
       {:with_deleted, true}, q -> q
       {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)

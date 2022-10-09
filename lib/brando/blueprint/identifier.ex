@@ -21,7 +21,9 @@ defmodule Brando.Blueprint.Identifier do
           Utils.try_path(__MODULE__.__translations__(), [:naming, :singular]) || @singular
 
         status = Map.get(entry, :status, nil)
+        language = Map.get(entry, :language, nil)
         absolute_url = __MODULE__.__absolute_url__(entry)
+        admin_url = __MODULE__.__admin_url__(entry)
         cover = Brando.Blueprint.Identifier.extract_cover(entry)
 
         %Brando.Content.Identifier{
@@ -29,7 +31,9 @@ defmodule Brando.Blueprint.Identifier do
           title: title,
           type: String.capitalize(translated_type),
           status: status,
+          language: language,
           absolute_url: absolute_url,
+          admin_url: admin_url,
           cover: cover,
           schema: __MODULE__,
           updated_at: entry.updated_at
@@ -78,7 +82,17 @@ defmodule Brando.Blueprint.Identifier do
 
   @spec identifiers_for([map]) :: {:ok, list}
   def identifiers_for(entries) do
-    {:ok, Enum.map(entries, &identifier_for/1)}
+    {:ok,
+     entries
+     |> Enum.map(&identifier_for/1)
+     |> Enum.sort_by(&{&1.type, &1.language, &1.status, &1.title})}
+  end
+
+  @spec identifiers_for([map]) :: list
+  def identifiers_for!(entries) do
+    entries
+    |> Enum.map(&identifier_for/1)
+    |> Enum.sort_by(&{&1.type, &1.language, &1.status, &1.title})
   end
 
   def identifier_for(%{__struct__: schema} = entry) do
@@ -98,13 +112,13 @@ defmodule Brando.Blueprint.Identifier do
     extract_cover(entry)
   end
 
+  def extract_cover(%{cover: cover}) do
+    Utils.img_url(cover, :thumb, prefix: Utils.media_url())
+  end
+
   def extract_cover(%{listing_image: %Ecto.Association.NotLoaded{}} = entry) do
     entry = Brando.repo().preload(entry, :listing_image)
     extract_cover(entry)
-  end
-
-  def extract_cover(%{cover: cover}) do
-    Utils.img_url(cover, :thumb, prefix: Utils.media_url())
   end
 
   def extract_cover(%{listing_image: listing_image}) do

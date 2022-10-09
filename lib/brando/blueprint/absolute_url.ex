@@ -21,6 +21,10 @@ defmodule Brando.Blueprint.AbsoluteURL do
         UndefinedFunctionError -> "<no valid url found>"
         ArgumentError -> "<no valid url found>"
       end
+
+      def __absolute_url_template__ do
+        unquote(tpl)
+      end
     end
   end
 end
