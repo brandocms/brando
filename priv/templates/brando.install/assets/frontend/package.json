@@ -9,18 +9,18 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.11.1",
-    "@vitejs/plugin-legacy": "^2.1.0",
+    "@vitejs/plugin-legacy": "^2.2.0",
     "css-mqgroup": "^7.1.0",
-    "postcss": "^8.4.16",
+    "postcss": "^8.4.17",
     "postcss-import": "^15.0.0",
     "postcss-preset-env": "^7.8.2",
     "postcss-reporter": "^7.0.5",
-    "stylelint": "^14.11.0",
-    "terser": "^5.15.0",
-    "vite": "^3.1.2"
+    "stylelint": "^14.13.0",
+    "terser": "^5.15.1",
+    "vite": "^3.1.6"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.46.3",
+    "@brandocms/jupiter": "^3.47.0",
     "css-vars-ponyfill": "^2.4.8",
     "custom-event-polyfill": "^1.0.7",
     "element-polyfill": "^1.1.0",
