@@ -62,7 +62,7 @@ defmodule <%= application_module %>.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 0.17"},
+      {:phoenix_live_view, "~> 0.18"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
