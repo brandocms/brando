@@ -55,18 +55,16 @@ defmodule Mix.Tasks.Brando.Install do
     # Lockdown files
     {:eex, "lib/application_name_web/controllers/lockdown_controller.ex",
      "lib/application_name_web/controllers/lockdown_controller.ex"},
-    {:eex, "lib/application_name_web/templates/layout/lockdown.html.eex",
-     "lib/application_name_web/templates/layout/lockdown.html.eex"},
-    {:eex, "lib/application_name_web/templates/lockdown/index.html.eex",
-     "lib/application_name_web/templates/lockdown/index.html.eex"},
+    {:eex, "lib/application_name_web/templates/layout/lockdown.html.heex",
+     "lib/application_name_web/templates/layout/lockdown.html.heex"},
+    {:eex, "lib/application_name_web/templates/lockdown/index.html.heex",
+     "lib/application_name_web/templates/lockdown/index.html.heex"},
     {:eex, "lib/application_name_web/views/lockdown_view.ex",
      "lib/application_name_web/views/lockdown_view.ex"},
 
     # Page files
     {:eex, "lib/application_name_web/controllers/page_controller.ex",
      "lib/application_name_web/controllers/page_controller.ex"},
-    {:eex, "lib/application_name_web/templates/page/cookies.html.eex",
-     "lib/application_name_web/templates/page/cookies.html.eex"},
 
     # Fallback and errors
     {:eex, "lib/application_name_web/controllers/fallback_controller.ex",
@@ -79,16 +77,16 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/templates/error/500_page.html.eex"},
 
     # Navigation and page index
-    {:eex, "lib/application_name_web/templates/page/_navigation.html.eex",
-     "lib/application_name_web/templates/page/_navigation.html.eex"},
-    {:eex, "lib/application_name_web/templates/page/index.html.eex",
-     "lib/application_name_web/templates/page/index.html.eex"},
-    {:eex, "lib/application_name_web/templates/page/default.html.eex",
-     "lib/application_name_web/templates/page/default.html.eex"},
-    {:eex, "lib/application_name_web/templates/page/_footer.html.eex",
-     "lib/application_name_web/templates/page/_footer.html.eex"},
-    {:eex, "lib/application_name_web/templates/page/_logo.html.eex",
-     "lib/application_name_web/templates/page/_logo.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/_navigation.html.heex",
+     "lib/application_name_web/templates/page/_navigation.html.heex"},
+    {:eex, "lib/application_name_web/templates/page/index.html.heex",
+     "lib/application_name_web/templates/page/index.html.heex"},
+    {:eex, "lib/application_name_web/templates/page/default.html.heex",
+     "lib/application_name_web/templates/page/default.html.heex"},
+    {:eex, "lib/application_name_web/templates/page/_footer.html.heex",
+     "lib/application_name_web/templates/page/_footer.html.heex"},
+    {:eex, "lib/application_name_web/templates/page/_logo.html.heex",
+     "lib/application_name_web/templates/page/_logo.html.heex"},
 
     # Default Villain parser & filters
     {:eex, "lib/application_name_web/villain/parser.ex",
@@ -137,8 +135,8 @@ defmodule Mix.Tasks.Brando.Install do
     # Layouts
     {:eex, "lib/application_name_web/templates/layout/app.html.heex",
      "lib/application_name_web/templates/layout/app.html.heex"},
-    {:eex, "lib/application_name_web/templates/layout/bare.html.eex",
-     "lib/application_name_web/templates/layout/bare.html.eex"},
+    {:eex, "lib/application_name_web/templates/layout/bare.html.heex",
+     "lib/application_name_web/templates/layout/bare.html.heex"},
 
     # Gettext templates
     {:keep, "priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},

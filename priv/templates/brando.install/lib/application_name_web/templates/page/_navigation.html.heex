@@ -13,7 +13,7 @@
       <ul>
         <%%= for menu_item <- @navigation.items do %>
         <li>
-          <a class="<%%= Brando.HTML.active(@conn, "#{menu_item.url}/*") %>" href="<%%= menu_item.url %>">
+          <a class={Brando.HTML.active(@conn, "#{menu_item.url}/*")} href={menu_item.url}>
             <%%= menu_item.title %>
           </a>
         </li>
