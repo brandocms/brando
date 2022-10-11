@@ -21,8 +21,8 @@ defmodule Brando.Images.Operations.Sizing do
   Create a sized version of image
   """
   def create_image_size(%Images.Operation{
-        image_id: image_id,
         type: :gif,
+        image_id: image_id,
         image_struct: %{path: image_src, width: width, height: height},
         sized_image_path: image_dest,
         sized_image_dir: image_dest_dir,
@@ -62,6 +62,21 @@ defmodule Brando.Images.Operations.Sizing do
        size_key: size_key,
        image_path: image_dest,
        cmd_params: Enum.join(params, " ")
+     }}
+  end
+
+  def create_image_size(%Images.Operation{
+        type: :svg,
+        image_id: image_id,
+        image_struct: %{path: image_src},
+        size_key: size_key
+      }) do
+    {:ok,
+     %Images.TransformResult{
+       image_id: image_id,
+       size_key: size_key,
+       image_path: image_src,
+       cmd_params: nil
      }}
   end
 
