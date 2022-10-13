@@ -54,7 +54,7 @@ defmodule <%= application_module %>.MixProject do
       {:phoenix_ecto, "~> 4.1"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_dashboard, "~> 0.5"},
+      {:phoenix_live_dashboard, "~> 0.8"},
       {:ecto_sql, "~> 3.6"},
       {:telemetry, "~> 1.0", override: true},
       {:telemetry_metrics, "~> 0.6"},
