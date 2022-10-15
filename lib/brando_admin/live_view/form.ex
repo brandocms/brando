@@ -96,11 +96,25 @@ defmodule BrandoAdmin.LiveView.Form do
   defp handle_event(_, _, socket), do: {:cont, socket}
 
   defp handle_info({:dirty_fields, fields, user_id}, socket) do
-    if user_id == socket.assigns.current_user.id do
-      Brando.presence().update_dirty_fields(socket.assigns.uri.path, user_id, fields)
-    else
-      # TODO: there are updated dirty fields from other users.
-    end
+    socket =
+      if user_id == socket.assigns.current_user.id do
+        Brando.presence().update_dirty_fields(socket.assigns.uri.path, user_id, fields)
+        socket
+      else
+        # TODO: there are updated dirty fields from other users.
+        require Logger
+
+        Logger.error("""
+
+        ==> dirty_fields
+
+        #{inspect(fields, pretty: true)}
+        #{inspect(user_id, pretty: true)}
+
+        """)
+
+        socket
+      end
 
     {:halt, socket}
   end

@@ -7,25 +7,7 @@ defmodule BrandoAdmin.Hooks do
       socket
       |> assign_current_user(token)
       |> attach_hook(:params, :handle_params, &handle_params/3)
-      |> attach_hook(:form_presence, :handle_info, fn
-        {_, {:uri_presence, %{user_joined: presence}}}, socket ->
-          {:halt, assign_presence(socket, presence)}
-
-        {_, {:uri_presence, %{user_left: presence}}}, socket ->
-          %{user: user} = presence
-
-          if presence.metas == [] do
-            {:halt, remove_presence(socket, user)}
-          else
-            {:halt, socket}
-          end
-
-        %Phoenix.Socket.Broadcast{event: "presence_diff"}, socket ->
-          {:halt, socket}
-
-        _event, socket ->
-          {:cont, socket}
-      end)
+      |> attach_hook(:form_presence, :handle_info, &handle_info/2)
 
     {:cont, socket}
   end
@@ -38,6 +20,7 @@ defmodule BrandoAdmin.Hooks do
 
   def handle_params(params, url, socket) do
     uri = URI.parse(url)
+    user_id = socket.assigns.current_user.id
 
     socket =
       socket
@@ -45,14 +28,49 @@ defmodule BrandoAdmin.Hooks do
       |> assign(:uri, uri)
 
     if connected?(socket) do
-      user_id = socket.assigns.current_user.id
-      Brando.presence().track_url(uri.path, user_id)
+      if socket.assigns[:previous_uri] do
+        require Logger
+        Logger.error("== untracking #{uri.path} for user #{user_id}")
+        Brando.presence().untrack_url(socket.assigns.previous_uri, user_id)
+      end
+
+      socket = assign(socket, :previous_uri, uri)
+
+      require Logger
+      Logger.error("== tracking #{uri.path} for user #{user_id}")
       Phoenix.PubSub.subscribe(Brando.pubsub(), "url:#{uri.path}")
+      Brando.presence().track_url(uri.path, user_id)
 
       {:halt, assign_presences(socket, uri)}
     else
       {:halt, socket}
     end
+  end
+
+  def handle_info({_, {:uri_presence, %{user_joined: presence}}}, socket) do
+    require Logger
+    Logger.error("== uri_presence: user_joined")
+    {:halt, assign_presence(socket, presence)}
+  end
+
+  def handle_info({_, {:uri_presence, %{user_left: presence}}}, socket) do
+    require Logger
+    Logger.error("== uri_presence: user_joined")
+    %{user: user} = presence
+
+    if presence.metas == [] do
+      {:halt, remove_presence(socket, user)}
+    else
+      {:halt, socket}
+    end
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    {:halt, socket}
+  end
+
+  def handle_info(_event, socket) do
+    {:cont, socket}
   end
 
   defp assign_presences(socket, uri) do

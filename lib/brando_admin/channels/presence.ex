@@ -33,8 +33,14 @@ defmodule BrandoAdmin.Presence do
       end
 
       def handle_metas("url:" <> _rest = topic, %{joins: joins, leaves: leaves}, presences, state) do
+        require Logger
+        Logger.error("handle_metas - #{inspect(topic)}")
+
         for {user_id, presence} <- joins do
           user_data = %{user: presence.user, metas: Map.fetch!(presences, user_id)}
+
+          require Logger
+          Logger.error("handle_metas url joins #{inspect(topic)}")
 
           Phoenix.PubSub.local_broadcast(
             unquote(pubsub_server),
@@ -62,7 +68,9 @@ defmodule BrandoAdmin.Presence do
         {:ok, state}
       end
 
-      def handle_metas(_topic, _diff, _presences, state) do
+      def handle_metas(topic, _diff, _presences, state) do
+        require Logger
+        Logger.error("== handle_metas unmatched #{inspect(topic)}")
         {:ok, state}
       end
 
