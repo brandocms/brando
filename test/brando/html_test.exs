@@ -764,35 +764,6 @@ defmodule Brando.HTMLTest do
              {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
   end
 
-  test "include_css" do
-    assert include_css(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<link href=\"/css/app.css\" rel=\"stylesheet\">"
-
-    Application.put_env(:brando, :hmr, true)
-
-    assert include_css(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<link href=\"http://localhost:9999/css/app.css\" rel=\"stylesheet\">"
-
-    Application.put_env(:brando, :hmr, false)
-  end
-
-  test "include_js" do
-    assert include_js(%Plug.Conn{host: "localhost", scheme: "http"})
-           |> Enum.map(&safe_to_string/1) ==
-             [
-               "<script type=\"module\">!function(e,t,n){!(\"noModule\"in(t=e.createElement(\"script\")))&&\"onbeforeload\"in t&&(n=!1,e.addEventListener(\"beforeload\",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute(\"nomodule\")||!n)return;e.preventDefault()},!0),t.type=\"module\",t.src=\".\",e.head.appendChild(t),t.remove())}(document)\n</script>",
-               "<script defer src=\"/js/app.js\" type=\"module\"></script>",
-               "<script defer nomodule src=\"/js/app.legacy.js\"></script>"
-             ]
-
-    Application.put_env(:brando, :hmr, true)
-
-    assert include_js(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<script defer src=\"http://localhost:9999/js/app.js\"></script>"
-
-    Application.put_env(:brando, :hmr, false)
-  end
-
   test "init_js" do
     assigns = %{}
 
