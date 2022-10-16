@@ -18,39 +18,20 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2;\n"
-"X-Generator: Poedit 3.0.1\n"
+"X-Generator: Poedit 3.1.1\n"
 
-#: lib/brando/content/module.ex:93
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr "Er du sikker?"
-
-#: lib/brando/content/module.ex:85
-#, elixir-autogen, elixir-format
+#: lib/brando/content/module.ex:86
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando/content/module.ex:91
-#, elixir-autogen, elixir-format
-msgid "Delete module"
-msgstr "Slett modul"
-
-#: lib/brando/content/module.ex:95
-#, elixir-autogen, elixir-format
-msgid "Duplicate module"
-msgstr "Dupliser modul"
-
-#: lib/brando/content/module.ex:89
-#, elixir-autogen, elixir-format
-msgid "Edit module"
-msgstr "Oppdater modul"
-
-#: lib/brando/content/module.ex:83
-#, elixir-autogen, elixir-format
+#: lib/brando/content/module.ex:84
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/module.ex:84
-#, elixir-autogen, elixir-format
+#: lib/brando/content/module.ex:85
 msgid "Namespace"
 msgstr "Navneområde"
+
+#: lib/brando/content/module.ex:91
+msgid "Export modules"
+msgstr "Eksporter moduler"

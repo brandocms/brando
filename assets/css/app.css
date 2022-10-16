@@ -1057,6 +1057,12 @@ h3 {
   }
 }
 
+.imported-module {
+  background-color: var(--brando-color-peach);
+  margin: 5px 0;
+  padding: 12px;
+}
+
 .alert-backdrop {
   position: fixed;
   top: 0;

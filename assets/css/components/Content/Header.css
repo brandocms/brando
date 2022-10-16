@@ -17,6 +17,8 @@
       font-weight: 400;
       display: flex;
       justify-content: flex-end;
+
+      column-gap: 20px;
     }
   }
 }

@@ -542,7 +542,7 @@ defmodule Brando.Query do
   @doc """
   Check cache for query matching args
   """
-  @spec try_cache(any(), any()) :: any()
+  @spec try_cache(any(), any()) :: {:hit, any()} | {:miss, any()} | :no_cache
   def try_cache(query_key, cache_opts)
   def try_cache(_query_key, nil), do: :no_cache
   def try_cache(_query_key, false), do: :no_cache
@@ -652,8 +652,6 @@ defmodule Brando.Query do
 
   defp do_mutation_create(module, singular_schema, callback_block, opts \\ []) do
     quote generated: true do
-      @spec unquote(:"create_#{singular_schema}")(map, map | :system) ::
-              {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"create_#{singular_schema}")(params, user, opts \\ [])
 
       def unquote(:"create_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, opts) do
@@ -666,7 +664,7 @@ defmodule Brando.Query do
         )
       end
 
-      def unquote(:"create_#{singular_schema}")(params, user, opts) do
+      def unquote(:"create_#{singular_schema}")(params, user, opts) when is_map(params) do
         Brando.Query.Mutations.create(
           unquote(module),
           params,
@@ -696,13 +694,6 @@ defmodule Brando.Query do
     preloads = Keyword.get(opts, :preload)
 
     quote do
-      @spec unquote(:"update_#{singular_schema}")(
-              integer | binary | map,
-              map,
-              Brando.Users.User.t() | :system,
-              list()
-            ) ::
-              {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"update_#{singular_schema}")(schema, params, user, opts \\ [])
 
       def unquote(:"update_#{singular_schema}")(%{id: id}, params, user, opts) do
@@ -754,11 +745,6 @@ defmodule Brando.Query do
     singular_schema = module.__naming__().singular
 
     quote do
-      @spec unquote(:"duplicate_#{singular_schema}")(
-              integer | binary,
-              Brando.Users.User.t() | :system
-            ) ::
-              {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"duplicate_#{singular_schema}")(id, user, override_opts \\ []) do
         Brando.Query.Mutations.duplicate(
           __MODULE__,
@@ -792,11 +778,6 @@ defmodule Brando.Query do
     preloads = Keyword.get(opts, :preload)
 
     quote do
-      @spec unquote(:"delete_#{singular_schema}")(
-              integer | binary,
-              Brando.Users.User.t() | :system
-            ) ::
-              {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"delete_#{singular_schema}")(id, user \\ :system) do
         Brando.Query.Mutations.delete(
           __MODULE__,

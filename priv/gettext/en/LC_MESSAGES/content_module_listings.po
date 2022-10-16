@@ -11,37 +11,22 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
-#: lib/brando/content/module.ex:93
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr ""
-
-#: lib/brando/content/module.ex:85
+#: lib/brando/content/module.ex:86
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr ""
 
-#: lib/brando/content/module.ex:91
-#, elixir-autogen, elixir-format
-msgid "Delete module"
-msgstr ""
-
-#: lib/brando/content/module.ex:95
-#, elixir-autogen, elixir-format
-msgid "Duplicate module"
-msgstr ""
-
-#: lib/brando/content/module.ex:89
-#, elixir-autogen, elixir-format
-msgid "Edit module"
-msgstr ""
-
-#: lib/brando/content/module.ex:83
+#: lib/brando/content/module.ex:84
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/content/module.ex:84
+#: lib/brando/content/module.ex:85
 #, elixir-autogen, elixir-format
 msgid "Namespace"
+msgstr ""
+
+#: lib/brando/content/module.ex:91
+#, elixir-autogen, elixir-format
+msgid "Export modules"
 msgstr ""

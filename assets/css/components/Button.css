@@ -199,6 +199,15 @@ a.secondary, button.secondary {
   border-left: none;
 }
 
+button.stealth {
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid var(--brando-color-blue);
+  padding: 0;
+  height: auto;
+  align-self: center;
+}
+
 button.tiny, a.tiny {
   @font mono;
   border-radius: 5px;
