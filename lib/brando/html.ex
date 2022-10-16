@@ -7,11 +7,11 @@ defmodule Brando.HTML do
   @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
 
-  alias Brando.Utils
-
   use Phoenix.Component
+  import Brando.Gettext
   import Phoenix.HTML
   import Phoenix.HTML.Tag
+  alias Brando.Utils
 
   @doc false
   defmacro __using__(_) do
@@ -51,11 +51,6 @@ defmodule Brando.HTML do
     |> raw()
   end
 
-  attr :conn, :map
-  attr :class, :string
-  attr :language, :string
-  attr :fallback, :string, default: "/"
-
   @doc """
   Outputs an alternate URL for the current URL in conn
 
@@ -70,6 +65,11 @@ defmodule Brando.HTML do
         {{ lang }}
       </.alternate_url>
   """
+  attr :conn, :map
+  attr :class, :string
+  attr :language, :string
+  attr :fallback, :string, default: "/"
+
   def alternate_url(assigns) do
     extra = assigns_to_attributes(assigns, [:conn, :class])
     href = get_alternate_url(assigns)
@@ -106,9 +106,9 @@ defmodule Brando.HTML do
       ]} />
 
   """
-  def preload_fonts(assigns) do
-    assigns = assign_new(assigns, :fonts, fn -> [] end)
+  attr :fonts, :list, default: []
 
+  def preload_fonts(assigns) do
     ~H"""
     <link
       :for={{type, font} <- @fonts}
@@ -192,7 +192,7 @@ defmodule Brando.HTML do
       "005"
 
   """
-  @spec zero_pad(val :: binary | integer, count :: integer) :: binary
+  @spec zero_pad(binary | integer, non_neg_integer) :: binary
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 
@@ -220,9 +220,9 @@ defmodule Brando.HTML do
   def cookie_law(assigns) do
     assigns =
       assigns
-      |> assign_new(:button_text, fn -> "OK" end)
-      |> assign_new(:info_link, fn -> "/cookies" end)
-      |> assign_new(:info_text, fn -> "More info" end)
+      |> assign_new(:button_text, fn -> gettext("OK") end)
+      |> assign_new(:info_link, fn -> gettext("/cookies") end)
+      |> assign_new(:info_text, fn -> gettext("More info") end)
 
     ~H"""
     <div class="container cookie-container">
@@ -256,7 +256,7 @@ defmodule Brando.HTML do
 
   """
   @spec google_analytics(ua_code :: binary) :: safe_string()
-  def google_analytics(ua_code) do
+  def google_analytics(ua_code) when is_binary(ua_code) do
     content =
       """
       (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
@@ -407,97 +407,6 @@ defmodule Brando.HTML do
   def ratio(nil), do: 0
 
   @doc """
-  Include CSS link tag.
-
-  Also includes a preconnect link tag for faster resolution
-  """
-  @spec include_css(conn) :: safe_string | [safe_string]
-  def include_css(%Plug.Conn{host: host, scheme: scheme}) do
-    cdn? = !!Brando.endpoint().config(:static_url)
-    hmr? = Application.get_env(Brando.otp_app(), :hmr)
-
-    url =
-      if hmr? do
-        "#{scheme}://#{host}:9999/css/app.css"
-      else
-        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
-          Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
-      end
-
-    css_tag = tag(:link, rel: "stylesheet", href: url, crossorigin: cdn?)
-
-    (cdn? &&
-       [
-         (hmr? && []) || preconnect_tag(),
-         css_tag
-       ]) || css_tag
-  end
-
-  @doc """
-  Renders JS script tags
-
-  Also includes a polyfill for Safari in prod.
-  """
-  @spec include_js(conn) :: safe_string | [safe_string]
-  def include_js(%Plug.Conn{host: host, scheme: scheme}) do
-    cdn? = !!Brando.endpoint().config(:static_url)
-    # check if we're HMR
-    if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "#{scheme}://#{host}:9999/js/app.js"
-      content_tag(:script, "", defer: true, src: url)
-    else
-      {modern_route, legacy_route} =
-        case cdn? do
-          true ->
-            {
-              Brando.helpers().static_url(
-                Brando.endpoint(),
-                "/js/app.js"
-              ),
-              Brando.helpers().static_url(
-                Brando.endpoint(),
-                "/js/app.legacy.js"
-              )
-            }
-
-          false ->
-            {
-              Brando.helpers().static_path(
-                Brando.endpoint(),
-                "/js/app.js"
-              ),
-              Brando.helpers().static_path(
-                Brando.endpoint(),
-                "/js/app.legacy.js"
-              )
-            }
-        end
-
-      polyfill =
-        '''
-        !function(e,t,n){!("noModule"in(t=e.createElement("script")))&&"onbeforeload"in t&&(n=!1,e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove())}(document)
-        '''
-        |> Phoenix.HTML.raw()
-
-      [
-        content_tag(:script, polyfill, type: "module"),
-        content_tag(:script, "",
-          defer: true,
-          src: modern_route,
-          type: "module",
-          crossorigin: cdn?
-        ),
-        content_tag(:script, "",
-          defer: true,
-          src: legacy_route,
-          nomodule: true,
-          crossorigin: cdn?
-        )
-      ]
-    end
-  end
-
-  @doc """
   Inject critical css
   """
   def inject_critical_css(assigns) do
@@ -571,10 +480,12 @@ defmodule Brando.HTML do
   @doc """
   Renders a link tag with preconnect to the CDN domain
   """
-  @spec preconnect_tag :: safe_string
-  def preconnect_tag do
-    static_url = Brando.endpoint().static_url
-    tag(:link, href: static_url, rel: "preconnect", crossorigin: true)
+  def preconnect_tag(assigns) do
+    assigns = assign(assigns, :static_url, Brando.endpoint().static_url)
+
+    ~H"""
+    <link href={@static_url} rel="preconnect" crossorigin="true" />
+    """
   end
 
   @doc """
@@ -584,11 +495,16 @@ defmodule Brando.HTML do
     ~H||
   end
 
+  attr :entry, :map, required: true
+  attr :conn, :map, required: true
+
   def render_data(assigns) do
     ~H"""
-    <%= Brando.Villain.parse(@entry.data, @entry) |> raw %>
+    <%= Brando.Villain.parse(@entry.data, @entry, @conn) |> raw %>
     """
   end
+
+  attr :entry, :map, required: true
 
   def render_blocks(assigns) do
     ~H"""

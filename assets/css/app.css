@@ -1028,6 +1028,12 @@ h3 {
     margin-left: 5px;
   }
 
+  &.mini {
+    font-size: 11px;
+    padding: 3px 5px;
+    border-radius: 9px;
+  }
+
   &.lowercase {
     text-transform: lowercase;
   }

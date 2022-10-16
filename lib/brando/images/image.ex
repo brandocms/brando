@@ -68,20 +68,36 @@ defmodule Brando.Images.Image do
         """
         <small class="monospace">\#{{ entry.id }}</small><br>
         <small class="monospace">{{ entry.path }}</small><br>
-        <small>{{ entry.width }}&times;{{ entry.height }}</small>
+        <small>{{ entry.width }}&times;{{ entry.height }}</small><br>
+        {% if entry.title %}<div class="badge mini">#{gettext("Title")}</div>{% endif %}
+        {% if entry.alt %}<div class="badge mini">Alt</div>{% endif %}
         """,
         columns: 9
       )
+    end
+  end
 
-      actions([
-        # [label: t("Edit image"), event: "edit_entry"],
-        [label: t("Duplicate image"), event: "duplicate_entry"],
-        [
-          label: t("Delete image"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ]
-      ])
+  forms do
+    form do
+      tab gettext("Content") do
+        fieldset size: :half do
+          input :cdn, :toggle,
+            label: t("CDN"),
+            instructions: t("Asset has been transferred to CDN")
+
+          input :title, :text, label: t("Title")
+          input :credits, :text, label: t("Credits")
+          input :alt, :text, label: t("Alt. text")
+          input :path, :text, label: t("Path"), monospace: true
+        end
+
+        fieldset size: :half do
+          input :width, :number, label: t("Width"), monospace: true
+          input :height, :number, label: t("Height"), monospace: true
+          input :dominant_color, :color, label: t("Dominant color"), monospace: true
+          input :config_target, :text, label: t("Configuration target"), monospace: true
+        end
+      end
     end
   end
 

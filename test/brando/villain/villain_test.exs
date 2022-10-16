@@ -81,6 +81,23 @@ defmodule Brando.VillainTest do
       Brando.Villain.parse(%{text: "**Some** text here.", type: "paragraph"}) ==
         ""
     end
+
+    conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
+
+    assert Brando.Villain.parse(
+             [
+               %{
+                 type: "text",
+                 data: %{
+                   text: "The url is {{ request.url }}. Param: {{ request.params.category_slug }}"
+                 }
+               }
+             ],
+             nil,
+             [],
+             conn
+           ) ==
+             "The url is /projects/all. Param: all"
   end
 
   test "list_villains" do

@@ -69,10 +69,9 @@ defmodule Brando.Router do
 
         live_session :admin do
           # brando routes
-          scope "/assets", BrandoAdmin.Assets do
-            live "/images", ImagesLive
-            live "/files", FilesLive
-          end
+          live "/assets/images", BrandoAdmin.Images.ImageListLive
+          live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageUpdateLive
+          live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config", BrandoAdmin.Sites do
             live "/cache", CacheLive

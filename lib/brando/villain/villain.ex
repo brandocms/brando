@@ -26,13 +26,13 @@ defmodule Brando.Villain do
   Renders to HTML.
   """
   @spec parse(binary | [map]) :: binary
-  def parse(data, entry \\ nil, opts \\ [])
-  def parse("", _, _), do: ""
-  def parse(nil, _, _), do: ""
+  def parse(data, entry \\ nil, opts \\ [], conn \\ nil)
+  def parse("", _, _, _), do: ""
+  def parse(nil, _, _, _), do: ""
 
-  def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
+  def parse(json, entry, opts, conn) when is_list(json), do: do_parse(json, entry, opts, conn)
 
-  defp do_parse(data, entry, opts) do
+  defp do_parse(data, entry, opts, conn) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
@@ -48,6 +48,7 @@ defmodule Brando.Villain do
     context =
       entry
       |> Brando.Villain.get_base_context()
+      |> add_request_to_context(conn)
       |> add_url_to_context(entry)
 
     opts_map =
@@ -73,6 +74,17 @@ defmodule Brando.Villain do
     })
 
     output
+  end
+
+  defp add_request_to_context(ctx, nil), do: ctx
+
+  defp add_request_to_context(ctx, conn) do
+    request = %{
+      params: conn.path_params,
+      url: conn.request_path
+    }
+
+    add_to_context(ctx, "request", request)
   end
 
   defp add_url_to_context(ctx, entry) do

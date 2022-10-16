@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Assets.FilesLive do
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Files.File
+defmodule BrandoAdmin.Images.ImageListLive do
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Images.Image
 
   alias BrandoAdmin.Components.Content
   import Brando.Gettext
@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Assets.FilesLive do
   def render(assigns) do
     ~H"""
     <Content.header
-      title={gettext("Assets — Files")}
+      title={gettext("Assets — Images")}
       subtitle={gettext("Overview")} />
 
     <.live_component module={Content.List}
