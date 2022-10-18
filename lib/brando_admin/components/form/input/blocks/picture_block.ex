@@ -294,13 +294,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ) do
     changeset = base_form.source
 
-    empty_block = %PictureBlock{
-      uid: Utils.generate_uid(),
-      data: %PictureBlock.Data{}
-    }
-
     updated_changeset =
-      Villain.replace_block_in_changeset(changeset, data_field, uid, empty_block)
+      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %PictureBlock.Data{}
+      })
 
     schema = changeset.data.__struct__
     form_id = "#{schema.__naming__().singular}_form"
