@@ -31,12 +31,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   @impl true
   def render([locale: locale, function: function, action: action, args: args], context) do
     evaled_locale = Liquex.Argument.eval(locale, context)
-    evaled_args = Enum.map(args, &Liquex.Argument.eval(&1, context))
-
-    evaled_args =
-      if function == "page_path" and action == "show",
-        do: Enum.map(evaled_args, &String.split(&1, "/")),
-        else: evaled_args
+    evaled_args = prepare_args(args, context, function, action)
 
     rendered_route =
       I18n.Helpers.localized_path(
@@ -55,6 +50,19 @@ defmodule Brando.Villain.Tags.RouteI18n do
       I18n.Helpers.localized_path(evaled_locale, :"#{function}", [Brando.endpoint(), :"#{action}"])
 
     {[rendered_route], context}
+  end
+
+  defp prepare_args(args, context, function, action) do
+    evaled_args =
+      args
+      |> Enum.map(&Liquex.Argument.eval(&1, context))
+      |> Enum.reject(&(&1 == nil))
+
+    if function == "page_path" and action == "show" do
+      Enum.map(evaled_args, &String.split(&1, "/"))
+    else
+      evaled_args
+    end
   end
 
   def braced_args(combinator \\ empty()) do

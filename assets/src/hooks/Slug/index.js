@@ -6,24 +6,26 @@ export default (app) => ({
     const type = this.el.dataset.slugType
     slugify.extend({ '/': '-' })
 
-    let fors = []
-    if (this.el.dataset.slugFor.indexOf(',') > -1) {
-      fors = this.el.dataset.slugFor.split(',')      
-    } else {
-      fors.push(this.el.dataset.slugFor)
-    }    
-
-    fors.forEach(f => {
-      const el = Dom.find(`[name="${f}"]`)      
-      el.addEventListener('input', () => {
-        const vals = fors.map(f => Dom.find(`[name="${f}"]`).value).join('-')   
-        if (type === 'standard') {
-          this.el.value = slugify(vals, { lower: true, strict: true })
-        } else {
-          this.el.value = camelCase(vals)
-        }
+    if (this.el.dataset.slugFor) {
+      let fors = []
+      if (this.el.dataset.slugFor.indexOf(',') > -1) {
+        fors = this.el.dataset.slugFor.split(',')      
+      } else {
+        fors.push(this.el.dataset.slugFor)
+      }    
+  
+      fors.forEach(f => {
+        const el = Dom.find(`[name="${f}"]`)      
+        el.addEventListener('input', () => {
+          const vals = fors.map(f => Dom.find(`[name="${f}"]`).value).join('-')   
+          if (type === 'standard') {
+            this.el.value = slugify(vals, { lower: true, strict: true })
+          } else {
+            this.el.value = camelCase(vals)
+          }
+        })
       })
-    })
+    }
   }
 })
 

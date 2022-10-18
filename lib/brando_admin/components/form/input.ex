@@ -593,15 +593,13 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   defp prepare_slug_for(form, slug_for) when is_list(slug_for) do
-    Enum.reduce(slug_for, [], fn sf, acc ->
-      acc ++ List.wrap("#{form.name}[#{sf}]")
-    end)
+    slug_for
+    |> Enum.reduce([], fn sf, acc -> acc ++ List.wrap("#{form.name}[#{sf}]") end)
     |> Enum.join(",")
   end
 
-  defp prepare_slug_for(form, slug_for) do
-    "#{form.name}[#{slug_for}]"
-  end
+  defp prepare_slug_for(_form, nil), do: false
+  defp prepare_slug_for(form, slug_for), do: "#{form.name}[#{slug_for}]"
 
   def status(assigns) do
     assigns =
