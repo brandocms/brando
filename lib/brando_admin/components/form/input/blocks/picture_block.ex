@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   import Brando.Gettext
 
   alias Brando.Blueprint.Villain.Blocks.PictureBlock
-  alias Brando.Utils
   alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
@@ -100,19 +99,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <% end %>
         </:description>
         <input class="file-input" type="file" />
-        <%= if @extracted_path do %>
-          <div class="preview" phx-click={show_modal("#block-#{@uid}_config")}>
-            <Content.image image={@image} size={:largest} />
-            <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-              <div id={"block-#{@uid}-figcaption-title"}>
-                <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
-              </div>
-              <div id={"block-#{@uid}-figcaption-alt"}>
-                <span><%= gettext("Alt. text") %></span> <%= v(@block_data, :alt) %>
-              </div>
-            </figcaption>
-          </div>
-        <% end %>
+        <div
+          :if={@extracted_path}
+          class="preview"
+          phx-click={show_modal("#block-#{@uid}_config")}>
+          <Content.image image={@image} size={:largest} />
+          <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
+            <div id={"block-#{@uid}-figcaption-title"}>
+              <span><%= gettext("Caption") %></span> <%= (@image.title |> raw) || "—" %><br>
+            </div>
+            <div id={"block-#{@uid}-figcaption-alt"}>
+              <span><%= gettext("Alt. text") %></span> <%= @image.alt || "—" %>
+            </div>
+          </figcaption>
+        </div>
 
         <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
           <figure>
