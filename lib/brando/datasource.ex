@@ -14,13 +14,6 @@ defmodule Brando.Datasource do
 
         list :all_posts, fn _, _, _ -> Posts.list_posts() end
 
-  You can also supply a callback with a 3-arity function to get the currently set language (if any)
-
-        list :localized_posts, fn _module, language, _vars ->
-          Posts.list_posts(%{filter: %{language: language}})
-        end
-
-
   ### Selection
 
   User can pick entries manually.
@@ -118,7 +111,6 @@ defmodule Brando.Datasource do
 
   OR if you know that all changes to the `:all_areas_with_grants` are coming from `Grantee`
   mutations, you can move the datasource to the `Grantee` schema instead!
-
   """
   alias Brando.Villain
   alias Brando.Blueprint.Identifier
