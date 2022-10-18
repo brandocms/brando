@@ -8,19 +8,19 @@
       </a>
     </figure>
 
-    <%%= if assigns[:navigation] do %>
-    <section class="main">
+    <section 
+      :if={assigns[:navigation]}
+      class="main">
       <ul>
-        <%%= for menu_item <- @navigation.items do %>
-        <li>
-          <a class={Brando.HTML.active(@conn, "#{menu_item.url}/*")} href={menu_item.url}>
+        <li 
+          :for={menu_item <- @navigation.items} 
+          :if={menu_item.status == 2}>
+          <a class={active(@conn, "#{menu_item.url}/*")} href={menu_item.url}>
             <%%= menu_item.title %>
           </a>
         </li>
-        <%% end %>
       </ul>
     </section>
-    <%% end %>
 
     <figure class="menu-button">
       <noscript>
