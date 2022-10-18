@@ -421,15 +421,16 @@ defmodule BrandoAdmin.Components.Content.List do
           <%= gettext("All") %>
         </button>
       </div>
-      <%= for p <- 0..@total_pages - 1 do %>
+      <div class="pagination-buttons">
         <button
+          :for={p <- 0..@total_pages - 1}
           type="button"
           class={render_classes([active: p + 1 == @current_page])}
           phx-click={@change_page}
           phx-value-page={p}>
           <%= p + 1 %>
         </button>
-      <% end %>
+      </div>
     </div>
     """
   end
