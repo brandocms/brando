@@ -7,13 +7,20 @@ defmodule Brando.Cache.Palettes do
   @type changeset :: Ecto.Changeset.t()
 
   @doc """
-  Get palettes from cache
+  Get palettes CSS from cache
   """
-  @spec get :: binary() | nil
-  def get do
+  @spec get_css :: binary() | nil
+  def get_css do
     case Cachex.get(:cache, :palettes_css) do
       {:ok, css} -> css
       css -> css
+    end
+  end
+
+  def get do
+    case Cachex.get(:cache, :palettes) do
+      {:ok, palettes} -> palettes
+      palettes -> palettes
     end
   end
 
@@ -22,7 +29,9 @@ defmodule Brando.Cache.Palettes do
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
-    palettes_css = get_palettes()
+    {:ok, palettes} = get_palettes()
+    palettes_css = get_palettes_css(palettes)
+    Cachex.put(:cache, :palettes, palettes)
     Cachex.put(:cache, :palettes_css, palettes_css)
   end
 
@@ -32,7 +41,9 @@ defmodule Brando.Cache.Palettes do
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, palette}) do
-    palettes_css = get_palettes()
+    {:ok, palettes} = get_palettes()
+    palettes_css = get_palettes_css(palettes)
+    Cachex.put(:cache, :palettes, palettes)
     Cachex.update(:cache, :palettes_css, palettes_css)
     {:ok, palette}
   end
@@ -40,8 +51,14 @@ defmodule Brando.Cache.Palettes do
   def update({:error, changeset}), do: {:error, changeset}
 
   defp get_palettes do
-    {:ok, palettes} = Content.list_palettes()
+    Content.list_palettes()
+  end
 
+  defp get_palettes_css(palettes) do
+    process_palettes(palettes)
+  end
+
+  defp process_palettes(palettes) do
     Enum.reduce(palettes, [], fn palette, acc ->
       [namespace_css(palette) | acc]
     end)

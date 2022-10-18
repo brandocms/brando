@@ -121,7 +121,7 @@ defmodule Brando.HTML do
   end
 
   def render_palettes_css(assigns) do
-    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get())
+    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
     ~H"""
     <style :if={@palettes_css != ""}><%= @palettes_css %></style>
