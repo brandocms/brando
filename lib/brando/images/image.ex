@@ -81,10 +81,6 @@ defmodule Brando.Images.Image do
     form do
       tab gettext("Content") do
         fieldset size: :half do
-          input :cdn, :toggle,
-            label: t("CDN"),
-            instructions: t("Asset has been transferred to CDN")
-
           input :title, :text, label: t("Title")
           input :credits, :text, label: t("Credits")
           input :alt, :text, label: t("Alt. text")
@@ -92,6 +88,10 @@ defmodule Brando.Images.Image do
         end
 
         fieldset size: :half do
+          input :cdn, :toggle,
+            label: t("CDN"),
+            instructions: t("Asset has been transferred to CDN")
+
           input :width, :number, label: t("Width"), monospace: true
           input :height, :number, label: t("Height"), monospace: true
           input :dominant_color, :color, label: t("Dominant color"), monospace: true
