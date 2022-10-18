@@ -33,8 +33,9 @@ export default class Presence {
       }
 
       if (this.lobbyPresences[user.id]) {
-        $user.dataset.userUrl = this.lobbyPresences[user.id].metas[0].url
-        if (this.lobbyPresences[user.id].metas[0].active) {
+        $user.dataset.userUrl = JSON.stringify(this.lobbyPresences[user.id].metas.map(meta => meta.url))
+        const anyActive = this.lobbyPresences[user.id].metas.some(meta => meta.active)
+        if (anyActive) {
           $user.dataset.userStatus = 'online'
         } else {
           $user.dataset.userStatus = 'idle'
