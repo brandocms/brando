@@ -11,7 +11,7 @@ defmodule Brando.Assets.Vite do
     def read(manifest_file, cache_key) do
       case :persistent_term.get(cache_key, nil) do
         nil ->
-          hmr? = Application.get_env(Brando.otp_app(), :hmr)
+          hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
           res = do_read(manifest_file, hmr?)
           :persistent_term.put(cache_key, res)
           res
