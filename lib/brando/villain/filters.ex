@@ -392,6 +392,8 @@ defmodule Brando.Villain.Filters do
   @spec newline_to_br(String.t(), Context.t()) :: String.t()
   def newline_to_br(value, _), do: String.replace(to_string(value), "\n", "<br />\n")
 
+  def nl2br(value, ctx), do: newline_to_br(value, ctx)
+
   @doc """
   Adds a number to another number.
 
