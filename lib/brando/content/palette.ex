@@ -74,16 +74,6 @@ defmodule Brando.Content.Palette do
         [label: t("Color"), filter: "color"]
       ])
 
-      actions([
-        [label: t("Edit palette"), event: "edit_entry"],
-        [
-          label: t("Delete palette"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ],
-        [label: t("Duplicate palette"), event: "duplicate_entry"]
-      ])
-
       template(
         """
         <div class="circle-stack">
