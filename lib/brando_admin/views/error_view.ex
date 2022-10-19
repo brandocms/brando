@@ -14,6 +14,13 @@ defmodule Brando.ErrorView do
   end
 
   def render("400.html", assigns) do
+    Logger.error("""
+    ==> 400 (400.html)
+
+    #{inspect(assigns, pretty: true)}
+
+    """)
+
     render("bad_request.html", assigns)
   end
 
