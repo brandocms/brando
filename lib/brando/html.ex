@@ -495,12 +495,53 @@ defmodule Brando.HTML do
     ~H||
   end
 
+  @doc """
+  Parses a villain field.
+
+  You can also parse a "content hole", if the data field you are processing contains
+  a `$__CONTENT__` delimiter.
+
+  For instance, the template:
+
+      something $__CONTENT__ anything
+
+  parsed with `render_data` as such:
+
+      <.render_data conn={@conn} entry={@entry}>
+        Hello world!
+      </.render_data>
+
+  will result in
+
+      something Hello world! anything
+
+  """
   attr :entry, :map, required: true
   attr :conn, :map, required: true
+  slot(:inner_block, default: nil)
 
   def render_data(assigns) do
+    parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, assigns.conn)
+
+    [pre, post] =
+      case String.split(parsed_data, "$__CONTENT__") do
+        [pre, post] -> [pre, post]
+        [pre] -> [pre, nil]
+      end
+
+    assigns =
+      assigns
+      |> assign(:pre, pre)
+      |> assign(:post, post)
+
     ~H"""
-    <%= Brando.Villain.parse(@entry.data, @entry, @conn) |> raw %>
+    <%= if @post do %>
+      <%= @pre |> raw %>
+      <%= render_slot(@inner_block) %>
+      <%= @post |> raw %>
+    <% else %>
+      <%= @pre |> raw %>
+    <% end %>
     """
   end
 

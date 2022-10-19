@@ -775,6 +775,52 @@ defmodule Brando.HTMLTest do
              "<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
   end
 
+  test "render_data" do
+    Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
+    conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
+
+    entry = %{
+      data: [
+        %{
+          type: "text",
+          data: %{
+            text: "SOMETHING -> $__CONTENT__ <- ANYTHING"
+          }
+        }
+      ]
+    }
+
+    assigns = %{conn: conn, entry: entry}
+
+    comp = ~H"""
+    <.render_data conn={@conn} entry={@entry}>
+      HELLO WORLD
+    </.render_data>
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  SOMETHING -> \n  \n  HELLO WORLD\n\n   <- ANYTHING\n"
+
+    entry = %{
+      data: [
+        %{
+          type: "text",
+          data: %{
+            text: "SOMETHING -><- ANYTHING"
+          }
+        }
+      ]
+    }
+
+    assigns = %{conn: conn, entry: entry}
+
+    comp = ~H"""
+    <.render_data conn={@conn} entry={@entry} />
+    """
+
+    assert rendered_to_string(comp) == "\n  SOMETHING -><- ANYTHING\n"
+  end
+
   test "breakpoint_debug_tag" do
     assert render_component(&breakpoint_debug_tag/1, %{}) ==
              "<i class=\"dbg-breakpoints\">\n  \n  <div class=\"breakpoint\"></div>\n  <div class=\"user-agent\"></div>\n</i>"
