@@ -521,7 +521,7 @@ defmodule Brando.HTML do
   slot(:inner_block, default: nil)
 
   def render_data(assigns) do
-    parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, assigns.conn)
+    parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, conn: assigns.conn)
 
     [pre, post] =
       case String.split(parsed_data, "$__CONTENT__") do

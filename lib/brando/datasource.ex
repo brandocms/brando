@@ -12,7 +12,36 @@ defmodule Brando.Datasource do
           {:ok, Repo.all(from t in module, where: t.year == ^year)}
         end
 
-        list :all_posts, fn _, _, _ -> Posts.list_posts() end
+        list :all_posts, fn _module, _language, _vars -> Posts.list_posts() end
+
+  The callback receives 3 arguments:
+
+    - `module`
+      The module the datasource is connected to
+
+      - `language`
+      The language the datasource was requested in
+
+      - `vars`
+      A map of variables passed on from the datasourced module. If the entry is
+      rendered with `<.render_data conn={@conn} entry={@entry} />` you can also
+      access the request in this map.
+
+          Map.get(vars, "request")
+
+      Within the request map there is a map of params you can use for matching
+      categories or other URL data. An example var map:
+
+          %{
+            "category" => "animation",
+            "request" => %{
+              params: %{
+                "category_slug" => "animation"
+              },
+              url: "/en/projects/animation"
+            }
+          }
+
 
   ### Selection
 

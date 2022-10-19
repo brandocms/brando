@@ -262,8 +262,11 @@ defmodule Brando.Villain.Parser do
              },
              %{vars: vars} = block
            ) do
-        language = Access.get(context, "language")
-        {:ok, entries} = Datasource.get_list(module, query, map_vars(vars), language)
+        language = Context.get(context, "language")
+        request = Context.get(context, "request")
+        mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
+
+        {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
         Context.assign(context, :entries, entries)
       end
 
@@ -292,46 +295,15 @@ defmodule Brando.Villain.Parser do
         end)
       end
 
-      # def datasource(
-      #       %{
-      #         module: module,
-      #         type: :list,
-      #         query: query,
-      #         code: code
-      #       } = data,
-      #       opts
-      #     ) do
-      #   arg = Map.get(data, :arg, nil)
-      #   src_module_id = Map.get(data, :module_id, nil)
-      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
+      def datasource(_, _) do
+        require Logger
 
-      #   language = Access.get(opts.context, "language")
+        Logger.error(
+          "==> parser: datasource/2 is deprecated. Use module with datasource instead."
+        )
 
-      #   with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
-      #     render_datasource_entries(src, entries, opts)
-      #   end
-      # end
-
-      # def datasource(
-      #       %{
-      #         module: module,
-      #         type: :selection,
-      #         query: query,
-      #         code: code,
-      #         ids: ids
-      #       } = data,
-      #       opts
-      #     ) do
-      #   arg = Map.get(data, :arg, nil)
-      #   src_module_id = Map.get(data, :module_id, nil)
-      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
-
-      #   with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
-      #     render_datasource_entries(src, entries, opts)
-      #   end
-      # end
-
-      def datasource(_, _), do: ""
+        ""
+      end
 
       defoverridable datasource: 2
 

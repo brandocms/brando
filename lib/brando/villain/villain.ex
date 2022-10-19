@@ -25,14 +25,13 @@ defmodule Brando.Villain do
   Delegates to the parser module configured in the otp_app's brando.exs.
   Renders to HTML.
   """
-  @spec parse(binary | [map]) :: binary
-  def parse(data, entry \\ nil, opts \\ [], conn \\ nil)
-  def parse("", _, _, _), do: ""
-  def parse(nil, _, _, _), do: ""
+  def parse(data, entry \\ nil, opts \\ [])
+  def parse("", _, _), do: ""
+  def parse(nil, _, _), do: ""
 
-  def parse(json, entry, opts, conn) when is_list(json), do: do_parse(json, entry, opts, conn)
+  def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
 
-  defp do_parse(data, entry, opts, conn) do
+  defp do_parse(data, entry, opts) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
@@ -48,7 +47,7 @@ defmodule Brando.Villain do
     context =
       entry
       |> Brando.Villain.get_base_context()
-      |> add_request_to_context(conn)
+      |> add_request_to_context(opts_map)
       |> add_url_to_context(entry)
 
     opts_map =
@@ -76,9 +75,7 @@ defmodule Brando.Villain do
     output
   end
 
-  defp add_request_to_context(ctx, nil), do: ctx
-
-  defp add_request_to_context(ctx, conn) do
+  defp add_request_to_context(ctx, %{conn: conn}) do
     request = %{
       params: conn.path_params,
       url: conn.request_path
@@ -86,6 +83,8 @@ defmodule Brando.Villain do
 
     add_to_context(ctx, "request", request)
   end
+
+  defp add_request_to_context(ctx, _), do: ctx
 
   defp add_url_to_context(ctx, entry) do
     add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))

@@ -94,8 +94,7 @@ defmodule Brando.VillainTest do
                }
              ],
              nil,
-             [],
-             conn
+             conn: conn
            ) ==
              "The url is /projects/all. Param: all"
   end
