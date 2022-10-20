@@ -66,12 +66,12 @@ defmodule Brando.HTML do
       </.alternate_url>
   """
   attr :conn, :map
-  attr :class, :string
+  attr :class, :string, default: nil
   attr :language, :string
   attr :fallback, :string, default: "/"
 
   def alternate_url(assigns) do
-    extra = assigns_to_attributes(assigns, [:conn, :class])
+    extra = assigns_to_attributes(assigns, [:conn, :class, :language, :fallback])
     href = get_alternate_url(assigns)
 
     assigns =
