@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     socket =
       socket
       |> assign(assigns)
+      |> assign_new(:new_identifiers, fn -> [] end)
       |> assign_new(:identifiers, fn ->
         Identifier.identifiers_for!(assigns.entry.alternate_entries)
       end)
@@ -42,6 +43,17 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
         <button class="secondary mt-1" type="button" phx-click={JS.push("get_entries_identifiers", target: @myself)}>
           <%= gettext "Select entries to link" %>
         </button>
+
+        <div
+          :if={Enum.count(@new_identifiers) > 1}
+          class="mt-3">
+          <p>
+            <%= gettext("When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well.") %>
+          </p>
+          <button type="button" class="primary mt-1" phx-click={JS.push("store_alternates", target: @myself)}>
+            <%= gettext("Link children") %>
+          </button>
+        </div>
 
         <div
           :if={@entries_identifiers != []}
@@ -95,19 +107,40 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     {:noreply, delete_identifier(socket, id)}
   end
 
+  def handle_event(
+        "store_alternates",
+        _,
+        socket
+      ) do
+    # new identifiers here must be linked to eachother.
+    identifiers = socket.assigns.new_identifiers
+    schema = socket.assigns.entry.__struct__
+    alternate_schema = Module.concat(schema, Alternate)
+    link_entries(identifiers, &alternate_schema.add/2)
+
+    {:noreply, assign(socket, :new_identifiers, [])}
+  end
+
   def add_identifier(socket, identifier_id) do
     identifier = Enum.find(socket.assigns.entries_identifiers, &(&1.id == identifier_id))
-    assign(socket, :identifiers, socket.assigns.identifiers ++ [identifier])
+
+    socket
+    |> assign(:identifiers, socket.assigns.identifiers ++ [identifier])
+    |> update(:new_identifiers, fn new_identifiers -> new_identifiers ++ [identifier.id] end)
   end
 
   def delete_identifier(socket, identifier_id) do
-    assign(
-      socket,
-      :identifiers,
-      Enum.reject(socket.assigns.identifiers, &(&1.id == identifier_id))
-    )
+    socket
+    |> assign(:identifiers, Enum.reject(socket.assigns.identifiers, &(&1.id == identifier_id)))
+    |> update(:new_identifiers, fn new_identifiers ->
+      Enum.reject(new_identifiers, &(&1.id == identifier_id))
+    end)
   end
 
-  # select={JS.push("update_entry", value: %{url: identifier.admin_url}, target: @target)}
-  # remove={JS.push("remove_entry", value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.id}, target: @target)}
+  defp link_entries([], _f), do: []
+
+  defp link_entries([a | rest], f) do
+    list = for b <- rest, do: f.(a, b)
+    list ++ link_entries(rest, f)
+  end
 end
