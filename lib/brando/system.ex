@@ -63,8 +63,12 @@ defmodule Brando.System do
   end
 
   defp check_identity_exists do
-    with [] <- Brando.repo().all(Brando.Sites.Identity),
-         {:ok, _} <- Brando.Sites.create_default_identity() do
+    with [] <- Brando.repo().all(Brando.Sites.Identity) do
+      # create identities
+      for lang <- Brando.config(:languages) do
+        Brando.Sites.create_default_identity(lang[:value])
+      end
+
       {:ok, {:identity, :exists}}
     else
       {:error, _} ->
@@ -82,8 +86,12 @@ defmodule Brando.System do
   end
 
   defp check_seo_exists do
-    with [] <- Brando.repo().all(Brando.Sites.SEO),
-         {:ok, _} <- Brando.Sites.create_default_seo() do
+    with [] <- Brando.repo().all(Brando.Sites.SEO) do
+      # create identities
+      for lang <- Brando.config(:languages) do
+        Brando.Sites.create_default_seo(lang[:value])
+      end
+
       {:ok, {:seo, :exists}}
     else
       {:error, _} ->
