@@ -26,38 +26,6 @@ post_cfg = %Brando.Type.ImageConfig{
   upload_path: "images/site/posts"
 }
 
-ss_cfg = %Brando.Type.ImageConfig{
-  allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-  default_size: "xlarge",
-  random_filename: true,
-  size_limit: 10_240_000,
-  sizes: %{
-    "cropxlarge" => %{"crop" => true, "quality" => 80, "size" => "1140x600"},
-    "large" => %{"quality" => 80, "size" => "1400"},
-    "medium" => %{"quality" => 80, "size" => "900"},
-    "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
-    "small" => %{"quality" => 80, "size" => "300"},
-    "test" => %{"quality" => 80, "size" => "900"},
-    "thumb" => %{"crop" => true, "quality" => 80, "size" => "150x150"},
-    "xlarge" => %{"quality" => 80, "size" => "2550"}
-  },
-  upload_path: "images/site/slideshows"
-}
-
-# insert admin user
-password = Bcrypt.hash_pwd_salt("admin")
-
-user = %Brando.Users.User{
-  name: "Brando Admin",
-  email: "admin@brandocms.com",
-  password: password,
-  avatar: nil,
-  role: :superuser,
-  language: :en
-}
-
-user = <%= application_module %>.Repo.insert!(user)
-
 %Brando.Navigation.Menu{
   creator_id: user.id,
   items: [
