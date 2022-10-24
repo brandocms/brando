@@ -518,7 +518,7 @@ body {
     @responsive iphone { --main-margin-left: 0 }
 
     margin-left: var(--main-margin-left);
-    width: calc(100% - var(--main-margin-left));
+    @space width calc(100% - var(--main-margin-left)) >=ipad_landscape;
   }
 }
 

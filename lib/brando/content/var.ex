@@ -9,7 +9,8 @@ defmodule Brando.Content.Var do
       string: Var.String,
       datetime: Var.Datetime,
       html: Var.Html,
-      color: Var.Color
+      color: Var.Color,
+      select: Var.Select
     ]
   end
 end

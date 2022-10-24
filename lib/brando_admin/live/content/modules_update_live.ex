@@ -491,6 +491,34 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     end
   end
 
+  def handle_info(
+        {:add_select_var_option, var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars) || []
+
+    vars =
+      Enum.reduce(vars, [], fn
+        %{key: ^var_key} = var, acc ->
+          acc ++
+            [
+              put_in(
+                var,
+                [Access.key(:options)],
+                (var.options || []) ++
+                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+              )
+            ]
+
+        var, acc ->
+          acc ++ [var]
+      end)
+
+    updated_changeset = put_change(changeset, :vars, vars)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
     |> to_string

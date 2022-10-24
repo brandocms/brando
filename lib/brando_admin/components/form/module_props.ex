@@ -668,6 +668,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="select"
+              class="secondary">
+              Select
+            </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="color"
               class="secondary">
               Color
@@ -705,6 +712,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     id={"#{@form.id}-#{@key}-render-var-#{idx}"}
                     var={var}
                     render={:all}
+                    target={@myself}
                     edit />
                 </Content.modal>
                 <span class="text-mono"><%= input_value(var, :type) %> - &lcub;&lcub; <%= input_value(var, :key) %> &rcub;&rcub;</span>
@@ -811,5 +819,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
       end
 
     {:noreply, assign(socket, :open_col_vars, updated_open_col_vars)}
+  end
+
+  def handle_event("add_select_var_option", %{"var_key" => var_key}, socket) do
+    send(self(), {:add_select_var_option, var_key})
+    {:noreply, socket}
   end
 end

@@ -285,6 +285,7 @@ defmodule Brando.Content do
   def render_var(%{type: "boolean", value: value}), do: value || false
   def render_var(%{type: "html", value: value}), do: value
   def render_var(%{type: "color", value: value}), do: value
+  def render_var(%{type: "select", value: value, default: default}), do: value || default
 
   @doc """
   Trims encoded module string, base decodes and converts to terms

@@ -2144,12 +2144,15 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  def label(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:click, fn -> nil end)
-      |> assign_new(:id_prefix, fn -> "" end)
+  attr :form, :any
+  attr :field, :any
+  attr :uid, :any, default: nil
+  attr :id_prefix, :string, default: ""
+  attr :class, :string, default: nil
+  attr :click, :any, default: nil
+  slot(:default, default: nil)
 
+  def label(assigns) do
     f_id =
       if assigns[:uid] do
         "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
@@ -2160,7 +2163,7 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <label class={render_classes(List.wrap(@class))} for={@f_id} phx-click={@click}>
+    <label class={render_classes(List.wrap(@class))} for={@f_id} phx-click={@click} phx-page-loading={@click && true || false}>
       <%= render_slot @inner_block %>
     </label>
     """
