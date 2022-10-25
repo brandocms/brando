@@ -749,7 +749,7 @@ defmodule BrandoAdmin.Components.Form do
               <span class="label">
                 <%= gettext "Upload file" %>
               </span>
-              <%= live_file_input @uploads[@edit_file.field] %>
+              <.live_file_input upload={@uploads[@edit_file.field]} />
             </div>
             <button
               class="secondary"
@@ -842,7 +842,7 @@ defmodule BrandoAdmin.Components.Form do
               <span class="label">
                 <%= gettext "Upload image" %>
               </span>
-              <%= live_file_input @uploads[@edit_image.field] %>
+              <.live_file_input upload={@uploads[@edit_image.field]} />
             </div>
             <button
               class="secondary"
