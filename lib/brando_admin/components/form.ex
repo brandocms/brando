@@ -1373,8 +1373,10 @@ defmodule BrandoAdmin.Components.Form do
         maybe_redirected_socket =
           case save_redirect_target do
             :self ->
-              id = "#{socket.assigns.id}-revisions-drawer"
-              send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+              if schema.has_trait(Brando.Trait.Revisioned) do
+                id = "#{socket.assigns.id}-revisions-drawer"
+                send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+              end
 
               # update entry!
               socket
