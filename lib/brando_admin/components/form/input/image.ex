@@ -53,6 +53,19 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     image = get_field(assigns.form.source, assigns.field)
     file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
 
+    if image && image.id != image_id do
+      {:ok, image} = Brando.Images.get_image(image_id)
+      module = assigns.form.source.data.__struct__
+
+      send_update(BrandoAdmin.Components.Form,
+        id: "#{module.__naming__().singular}_form",
+        action: :update_entry_relation,
+        updated_relation: image,
+        field: assigns.field,
+        force_validation: true
+      )
+    end
+
     {:ok,
      socket
      |> assign(assigns)
