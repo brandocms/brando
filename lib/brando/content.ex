@@ -227,6 +227,22 @@ defmodule Brando.Content do
     end
   end
 
+  @doc """
+  Get color from palette by key
+
+  ## Example
+
+      iex> get_color(palette, "fg")
+      "#ef00aa"
+
+  """
+  def get_color(%Palette{} = palette, color_key) do
+    case Enum.find(palette.colors, &(&1.key == color_key)) do
+      nil -> ""
+      color -> color.hex_value
+    end
+  end
+
   ## Templates
   ##
 
