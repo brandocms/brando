@@ -237,7 +237,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp maybe_merge_content_language(query_params, schema, content_language) do
     if schema.has_trait(Brando.Trait.Translatable) do
-      Brando.Utils.deep_merge(query_params, %{filter: %{language: content_language}})
+      Brando.Utils.deep_merge(query_params, %{language: content_language})
     else
       query_params
     end
