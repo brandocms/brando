@@ -22,7 +22,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   `manifest: 'admin_manifest.json`
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
-* Add "select" var type
+* Add `select` var type
 * Add `video_file_options/1` callback to Villain parser. Return a kw list of 
   options you want to use for video blocks.
 * Add split dropdown button to form tabs for more advanced save options
