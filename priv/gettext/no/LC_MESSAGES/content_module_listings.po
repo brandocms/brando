@@ -21,17 +21,21 @@ msgstr ""
 "X-Generator: Poedit 3.1.1\n"
 
 #: lib/brando/content/module.ex:86
+#, elixir-autogen, elixir-format
 msgid "Class"
 msgstr "Klasse"
 
 #: lib/brando/content/module.ex:84
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
 #: lib/brando/content/module.ex:85
+#, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Navneområde"
 
 #: lib/brando/content/module.ex:91
+#, elixir-autogen, elixir-format
 msgid "Export modules"
 msgstr "Eksporter moduler"
