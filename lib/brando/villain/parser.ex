@@ -104,6 +104,7 @@ defmodule Brando.Villain.Parser do
           poster: data.poster || nil,
           preload: (data.preload == nil && true) || data.preload,
           opacity: data.opacity || 0.1,
+          controls: data.controls || false,
           play_button: data.autoplay == false && (Brando.config(:video_play_button_text) || true)
         ]
       end
@@ -404,7 +405,8 @@ defmodule Brando.Villain.Parser do
       def video(%{remote_id: src, source: :file} = data, _) do
         assigns = %{
           video: src,
-          opts: video_file_options(data)
+          opts: video_file_options(data),
+          cover_image: Map.get(data, :cover_image)
         }
 
         assigns
@@ -977,6 +979,26 @@ defmodule Brando.Villain.Parser do
         <% end %>
       </div>
     <% end %>
+    """
+  end
+
+  def video_tag(%{cover_image: cover_image} = assigns) when not is_nil(cover_image) do
+    ~H"""
+    <.video
+      video={@video}
+      opts={@opts}>
+      <:cover>
+        <.picture
+        src={@cover_image}
+        opts={[
+          lazyload: true,
+          sizes: "auto",
+          srcset: :default,
+          placeholder: :dominant_color,
+          prefix: Brando.Utils.media_url()
+        ]} />
+      </:cover>
+    </.video>
     """
   end
 

@@ -23,9 +23,14 @@ defmodule Brando.Blueprint.Villain.Blocks.VideoBlock do
       attribute :opacity, :integer, default: 0
       attribute :preload, :boolean, default: false
       attribute :play_button, :boolean, default: false
+      attribute :controls, :boolean, default: false
       attribute :cover, :string, default: "false"
       attribute :thumbnail_url, :string
       attribute :title, :string
+    end
+
+    relations do
+      relation :cover_image, :embeds_one, module: Brando.Blueprint.Villain.Blocks.PictureBlock.Data
     end
   end
 

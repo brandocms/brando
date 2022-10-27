@@ -24,6 +24,10 @@ defmodule Brando.Videos.Video do
     attribute :loop, :boolean
   end
 
+  # relations do
+  #   relation :focal, :embeds_one, module: Focal
+  # end
+
   @derive {Jason.Encoder,
            only: [
              :url,

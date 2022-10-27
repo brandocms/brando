@@ -4,6 +4,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   import Brando.Gettext
 
+  alias Brando.Villain
+  alias Brando.Blueprint.Villain.Blocks.VideoBlock
+  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
 
@@ -34,7 +38,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      |> assign(assigns)
      |> assign(:uid, v(assigns.block, :uid))
      |> assign(:type, assigns.block.data.data.source)
-     |> assign(:block_data, block_data)}
+     |> assign(:block_data, block_data)
+     |> assign(:remote_id, v(block_data, :remote_id))
+     |> assign(:source, v(block_data, :source))
+     |> assign(:thumbnail_url, v(block_data, :thumbnail_url))
+     |> assign(:title, v(block_data, :title))
+     |> assign(:width, v(block_data, :width))
+     |> assign(:height, v(block_data, :height))
+     |> assign(:cover, v(block_data, :cover))
+     |> assign(:cover_image, v(block_data, :cover_image))
+
+    }
   end
 
   def render(assigns) do
@@ -59,39 +73,125 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           <%= if @type == :file do %>
             <%= gettext "External file" %>
           <% else %>
-            <%= @type %>: <%= v(@block_data, :remote_id) %>
+            <%= @type %>: <%= @remote_id %>
           <% end %>
         </:description>
         <:config>
-          <%= if v(@block_data, :remote_id) do %>
+          <%= if @remote_id do %>
             <div class="panels">
               <div class="panel">
-                <img src={v(@block_data, :thumbnail_url)} />
-                <div class="information">
-                  <strong>Title:</strong> <%= v(@block_data, :title) %><br>
-                  <strong>Dimensions:</strong> <%= v(@block_data, :width) %>&times;<%= v(@block_data, :height) %>
+                <div class="cover" :if={@cover_image}>
+                  <small><strong>Cover:</strong></small><br>
+                  <Content.image image={@cover_image} size={:smallest} />
+                </div>
+
+                <div class="cover" :if={!@cover_image}>
+                  <div class="img-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+                  </div>
+                </div>
+
+                <div :if={@cover_image} class="button-group-vertical">
+                  <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
+                    <%= gettext("Select cover image") %>
+                  </button>
+
+                  <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
+                    <%= gettext("Reset cover image") %>
+                  </button>
+                </div>
+
+                <div class="information mb-1 mt-1">
+                  <strong>Dimensions:</strong> <%= @width %>&times;<%= @height %>
                 </div>
               </div>
               <div class="panel">
                 <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
                 <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
-                <Input.text form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" label={gettext "Remote ID"} />
+                <Input.text form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" monospace label={gettext "Remote ID"} />
                 <Input.text form={@block_data} field={:title} uid={@uid} id_prefix="block_data" label={gettext "Title"} />
-                <Input.text form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" label={gettext "Poster"} />
-                <%= if v(@block_data, :cover) in ["false", "svg"] do %>
+
+                <div
+                  :if={!@cover_image}
+                  class="button-group-vertical">
+                  <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
+                    <%= gettext("Select cover image") %>
+                  </button>
+
+                  <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
+                    <%= gettext("Reset cover image") %>
+                  </button>
+                </div>
+
+                <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
+                <%= if @cover in ["false", "svg"] do %>
                   <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
                 <% else %>
                   <Input.text form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" label={gettext "Cover"} />
                 <% end %>
 
                 <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
-                <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
 
-                <Input.toggle form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" label={gettext "Autoplay"} />
-                <Input.toggle form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" label={gettext "Preload"} />
+                <div class="row">
+                  <div class="half">
+                    <Input.number form={@block_data} field={:width} uid={@uid} id_prefix="block_data" label={gettext "Width"} />
+                  </div>
+                  <div class="half">
+                    <Input.number form={@block_data} field={:height} uid={@uid} id_prefix="block_data" label={gettext "Height"} />
+                  </div>
+                </div>
 
-                <Input.number form={@block_data} field={:width} uid={@uid} id_prefix="block_data" label={gettext "Width"} />
-                <Input.number form={@block_data} field={:height} uid={@uid} id_prefix="block_data" label={gettext "Height"} />
+                <div class="row">
+                  <div class="half">
+                    <Input.toggle compact form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" label={gettext "Play button"} />
+                  </div>
+                  <div class="half">
+                    <Input.toggle compact form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" label={gettext "Autoplay"} />
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="half">
+                    <Input.toggle compact form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" label={gettext "Preload"} />
+                  </div>
+                  <div class="half">
+                    <Input.toggle compact form={@block_data} field={:controls} uid={@uid} id_prefix="block_data" label={gettext "Show native player controls"} />
+                  </div>
+                </div>
+                <%= if @cover_image do %>
+                  <%= for cover_image <- inputs_for(@block_data, :cover_image) do %>
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:placeholder} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:cdn} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:moonwalk} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:lazyload} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:credits} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:dominant_color} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:height} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:width} />
+                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:path} />
+
+                    <Form.inputs
+                      form={cover_image}
+                      for={:focal}
+                      let={%{form: focal_form}}>
+                      <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:x} />
+                      <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:y} />
+                    </Form.inputs>
+
+                    <Form.map_inputs
+                      let={%{value: value, name: name}}
+                      form={cover_image}
+                      for={:sizes}>
+                      <input type="hidden" name={"#{name}"} value={"#{value}"} />
+                    </Form.map_inputs>
+
+                    <Form.array_inputs
+                      let={%{value: array_value, name: array_name}}
+                      form={cover_image}
+                      for={:formats}>
+                      <input type="hidden" name={array_name} value={array_value} />
+                    </Form.array_inputs>
+                  <% end %>
+                <% end %>
               </div>
             </div>
           <% else %>
@@ -118,26 +218,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             </div>
           <% end %>
         </:config>
-        <%= if v(@block_data, :remote_id) do %>
-          <%= case v(@block_data, :source) do %>
+        <%= if @remote_id do %>
+          <%= case @source do %>
             <% :vimeo -> %>
               <div class="video-content">
                 <iframe
-                  src={"https://player.vimeo.com/video/#{v(@block_data, :remote_id)}?title=0&byline=0"}
+                  src={"https://player.vimeo.com/video/#{@remote_id}?title=0&byline=0"}
                   width="580" height="320" frameborder="0"></iframe>
               </div>
 
             <% :youtube -> %>
               <div class="video-content">
                 <iframe
-                  src={"https://www.youtube.com/embed/#{v(@block_data, :remote_id)}"}
+                  src={"https://www.youtube.com/embed/#{@remote_id}"}
                   width="580" height="320" frameborder="0"></iframe>
               </div>
 
             <% :file -> %>
               <div id={"block-#{@uid}-videoSize"}>
-                <video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src={v(@block_data, :remote_id)}>
-                  <source src={v(@block_data, :remote_id)} type="video/mp4">
+                <video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src={@remote_id}>
+                  <source src={@remote_id} type="video/mp4">
                 </video>
               </div>
           <% end %>
@@ -199,10 +299,103 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           })
       end
 
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+    updated_changeset = Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
 
     schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "set_target",
+        _,
+        %{assigns: %{myself: myself}} = socket
+      ) do
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: "default",
+      event_target: myself,
+      multi: false,
+      selected_images: []
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reset_image",
+        _,
+        %{assigns: %{base_form: base_form, block_data: block_data, block: block, data_field: data_field, uid: uid}} = socket
+      ) do
+    data_map = Map.from_struct(block_data.data)
+
+    updated_data_map = Map.put(data_map, :cover_image, nil)
+    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
+
+    updated_block = Map.put(block.data, :data, updated_data_struct)
+
+    changeset = base_form.source
+    schema = changeset.data.__struct__
+
+    updated_changeset =
+      Brando.Villain.replace_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        updated_block
+      )
+
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_image",
+        %{"id" => id},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: uid,
+            block: block,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    {:ok, image} = Brando.Images.get_image(id)
+
+    data_map = Map.from_struct(block_data.data)
+
+    updated_data_map = Map.put(data_map, :cover_image, image)
+    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
+
+    updated_block = Map.put(block.data, :data, updated_data_struct)
+
+    changeset = base_form.source
+    schema = changeset.data.__struct__
+
+    updated_changeset =
+      Brando.Villain.replace_block_in_changeset(
+        changeset,
+        data_field,
+        uid,
+        updated_block
+      )
+
     form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
