@@ -147,6 +147,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}
         bg_color={@selected_palette && "#{@first_color && @first_color.hex_value <> "22" || "transparent"}"}>
+        <:type><%= gettext "CONTAINER" %></:type>
         <:description>
           <%= if @selected_palette do %>
             <button
