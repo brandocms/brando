@@ -71,6 +71,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     """
   end
 
+  def handle_event("validate_module_import", %{"encoded_modules" => ""}, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("validate_module_import", %{"encoded_modules" => encoded_modules}, socket) do
     imported_modules = Brando.Content.deserialize_modules(encoded_modules)
     {:noreply, assign(socket, :imported_modules, imported_modules)}
