@@ -5,7 +5,7 @@ defmodule Brando.Sites.Redirects do
   @spec test_redirect(list, binary) ::
           {:ok, {:redirect, {binary, binary}}} | {:error, {:redirects, :no_match}}
   def test_redirect(test_path, language) do
-    test_url = Enum.join(["/", test_path, "/"])
+    test_url = "/" <> Enum.join(test_path, "/")
     seo = Brando.Cache.SEO.get(language)
     redirects = seo.redirects || []
 
