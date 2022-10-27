@@ -57,8 +57,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             form={form}
             create_ref={JS.push("create_ref")}
             delete_ref={JS.push("delete_ref")}
+            duplicate_ref={JS.push("duplicate_ref")}
             create_var={JS.push("create_var")}
             delete_var={JS.push("delete_var")}
+            duplicate_var={JS.push("duplicate_var")}
             add_table_row="add_table_row"
             add_table_col="add_table_col"
             add_table_template="add_table_template"
@@ -305,6 +307,20 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   end
 
   def handle_event(
+        "duplicate_ref",
+        %{"id" => ref_name},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    refs = get_field(changeset, :refs)
+    ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
+
+    new_ref = Map.put(ref_to_dupe, :name, Brando.Utils.random_string(5))
+    updated_changeset = put_change(changeset, :refs, refs ++ [new_ref])
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
         "create_var",
         %{"type" => var_type},
         %{assigns: %{changeset: changeset}} = socket
@@ -340,7 +356,27 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     filtered_vars = Enum.reject(vars, &(&1.key == var_key))
     updated_changeset = put_change(changeset, :vars, filtered_vars)
 
-    {:noreply, assign(socket, :changeset, updated_changeset)}
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
+  end
+
+  def handle_event(
+        "duplicate_var",
+        %{"id" => var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars)
+    var_to_dupe = Enum.find(vars, &(&1.key == var_key))
+
+    new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
+    updated_changeset = put_change(changeset, :vars, vars ++ [new_var])
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
   end
 
   ## Entry events
