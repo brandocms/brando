@@ -104,7 +104,7 @@ defmodule Brando.Villain.Parser do
           poster: data.poster || nil,
           preload: (data.preload == nil && true) || data.preload,
           opacity: data.opacity || 0.1,
-          controls: data.controls || false,
+          controls: Map.get(data, :controls) || false,
           play_button: data.autoplay == false && (Brando.config(:video_play_button_text) || true)
         ]
       end
