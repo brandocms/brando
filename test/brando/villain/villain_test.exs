@@ -801,26 +801,6 @@ defmodule Brando.VillainTest do
     )
   end
 
-  test "ensure villains update on config changes", %{user: user} do
-    Brando.Cache.Identity.set()
-
-    pf_params = pf_data("So configs.key1.value says: '{{ configs.key1.value }}'.")
-
-    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    assert pf1.html == "<div class=\"paragraph\">So configs.key1.value says: 'value1'.</div>"
-
-    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
-
-    Brando.Sites.update_identity(
-      identity,
-      %{configs: [%{key: "key1", value: "wow!"}]},
-      user
-    )
-
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "<div class=\"paragraph\">So configs.key1.value says: 'wow!'.</div>"
-  end
-
   test "fragment tag", %{user: user} do
     pf_params1 =
       Factory.params_for(:fragment, %{
