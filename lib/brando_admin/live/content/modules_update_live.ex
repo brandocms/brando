@@ -87,8 +87,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                   form={entry}
                   entry_form
                   create_ref={JS.push("entry_create_ref")}
+                  duplicate_ref={JS.push("entry_duplicate_ref")}
                   delete_ref="entry_delete_ref"
                   create_var={JS.push("entry_create_var")}
+                  duplicate_var={JS.push("entry_duplicate_var")}
                   delete_var="entry_delete_var"
                   show_modal="show_modal"
                 />
@@ -467,6 +469,29 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
      socket
      |> assign(:changeset, updated_changeset)
      |> push_event("b:validate", %{})}
+  end
+
+  def handle_event(
+        "entry_duplicate_var",
+        %{"id" => var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    entry_template = get_field(changeset, :entry_template)
+    vars = entry_template.vars || []
+    var_to_dupe = Enum.find(vars, &(&1.key == var_key))
+
+    new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__, :id])
+      |> Map.put(:vars, [new_var | vars])
+
+    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(

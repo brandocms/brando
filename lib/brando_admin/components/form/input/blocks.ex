@@ -216,6 +216,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     get_field(changeset, :data) || []
   end
 
+  defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{multi: true, entries: entries, refs: refs}} = block) do
+    updated_refs = Brando.Villain.add_uid_to_refs(refs)
+    updated_entries = Enum.map(entries, &replace_uids/1)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
+    |> put_in([Access.key(:data), Access.key(:entries)], updated_entries)
+  end
+
+  defp replace_uids(%Brando.Content.Module.Entry{} = block) do
+    put_in(block, [Access.key(:uid)], Brando.Utils.generate_uid())
+  end
+
   defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
     updated_refs = Brando.Villain.add_uid_to_refs(refs)
 

@@ -52,7 +52,7 @@ defmodule Brando.Sites.Identity do
   relations do
     relation :metas, :embeds_many, module: Brando.Meta, on_replace: :delete
     relation :links, :embeds_many, module: Brando.Link, on_replace: :delete
-    relation :configs, :embeds_many, module: Brando.ConfigEntry, on_replace: :delete
+    relation :configs, :embeds_one, module: Brando.Config, on_replace: :delete
   end
 
   forms do

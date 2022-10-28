@@ -136,7 +136,7 @@ defmodule Brando.Villain do
     %{}
     |> create_context()
     |> add_to_context("identity", identity)
-    |> add_to_context("configs", identity)
+    # |> add_to_context("configs", identity)
     |> add_to_context("links", identity)
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)
@@ -149,14 +149,14 @@ defmodule Brando.Villain do
     )
   end
 
-  def add_to_context(context, "configs" = key, %{configs: configs}) do
-    configs = Enum.map(configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
-    Context.assign(context, key, configs)
-  end
+  # def add_to_context(context, "configs" = key, %{configs: configs}) do
+  #   configs = Enum.map(configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+  #   Context.assign(context, key, configs)
+  # end
 
-  def add_to_context(context, "configs" = key, _) do
-    Context.assign(context, key, %{})
-  end
+  # def add_to_context(context, "configs" = key, _) do
+  #   Context.assign(context, key, %{})
+  # end
 
   def add_to_context(context, "links" = key, %{links: links}) do
     links = Enum.map(links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
@@ -409,6 +409,24 @@ defmodule Brando.Villain do
     {:ok, result}
   end
 
+  def list_module_usage(module_id) do
+    villains = list_villains()
+
+    result =
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn
+          data_field, acc ->
+            ids = list_ids_with_module(schema, data_field.name, module_id)
+            if ids == [] do
+              acc
+            else
+              [{schema, data_field.name, ids}|acc]
+            end
+        end)
+      end
+
+    {:ok, Enum.filter(result, &(&1 != []))}
+  end
   @doc """
   Update all villain fields in database that has a module with `id`.
   """

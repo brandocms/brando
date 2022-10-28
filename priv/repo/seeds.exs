@@ -23,12 +23,6 @@
       url: "https://facebook.com/test"
     }
   ],
-  configs: [
-    %Brando.ConfigEntry{
-      key: "key1",
-      value: "value1"
-    }
-  ],
   metas: [
     %Brando.Meta{
       key: "key1",
