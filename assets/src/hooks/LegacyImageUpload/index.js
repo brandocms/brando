@@ -6,7 +6,15 @@ const UPLOADING = 1
 const UPLOAD_URL = '/admin/api/content/upload/image'
 
 export default (app) => ({
-  mounted() {
+  updated () {
+    if (this.attachListenersOnUpdate) {
+      this.attachListenersOnUpdate = false
+      this.attachListeners()
+    }
+  },
+
+  mounted () {
+    this.attachListenersOnUpdate = false
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
     this.eventTarget = this.el.hasAttribute('data-upload-event-target') ? this.el.getAttribute('data-upload-event-target') : this.el
@@ -16,6 +24,10 @@ export default (app) => ({
     this.strings.uploading = this.el.dataset.textUploading
     this.status = IDLE
     this.uid = this.el.dataset.blockUid
+
+    this.handleEvent(`b:picture_block:attach_listeners:${this.uid}`, () => {
+      this.attachListenersOnUpdate = true
+    })
 
     const $formatsEl = Dom.find(this.el, '[data-upload-formats]')
     if ($formatsEl) {
@@ -55,6 +67,10 @@ export default (app) => ({
       this.files = []
     })
 
+    this.attachListeners()
+  },
+
+  attachListeners () {
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
     this.$uploadCanvases.forEach(uploadCanvas => {
@@ -62,7 +78,7 @@ export default (app) => ({
         if (e.target.tagName === 'BUTTON') {
           return
         }
-        
+
         if (Dom.hasClass(uploadCanvas, 'empty')) {
           this.$fileInput.click()
         } else {
@@ -80,16 +96,15 @@ export default (app) => ({
 
         if (!this.multi) {
           if (files.length > 1) {
-            console.log('too many files!')
+            alertError('Too many files dropped')
             return false
           }
-  
+
           const f = files.item(0)
           this.upload(f)
         }
       })
     })
-    
   },
 
   setStatusText () {

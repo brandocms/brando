@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     updated_changeset =
       Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: %PictureBlock.Data{}
+        data: nil
       })
 
     schema = changeset.data.__struct__
@@ -304,11 +304,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
-      force_validation: true
+      updated_changeset: updated_changeset
     )
 
-    {:noreply, socket}
+    {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
   def handle_event(
