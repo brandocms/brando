@@ -294,6 +294,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             opts={[options: input_value(@var, :options) || []]}
           />
 
+          <%= for opt <- inputs_for(@var, :options) do %>
+            <Input.hidden form={opt} field={:label} />
+            <Input.hidden form={opt} field={:value} />
+          <% end %>
+
         <% "image" -> %>
           <Form.field_base
             form={@var}
