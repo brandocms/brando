@@ -263,7 +263,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       </li>
       <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
         <button
-          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang"}
+          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
           phx-value-id={@entry.id}
           phx-value-language={lang}
           phx-click="duplicate_entry_to_language">
