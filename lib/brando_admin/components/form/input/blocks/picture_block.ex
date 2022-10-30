@@ -65,6 +65,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:image, v(assigns.block, :data))
+     |> assign(:path, v(block_data, :path))
+     |> assign(:sizes, v(block_data, :sizes))
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
@@ -189,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:height} />
           <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:width} />
 
-          <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
+          <%= if is_nil(@path) and !is_nil(@sizes) do %>
             <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} value={@extracted_path} />
           <% else %>
             <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} />
