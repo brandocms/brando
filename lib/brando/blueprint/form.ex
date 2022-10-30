@@ -353,6 +353,7 @@ defmodule Brando.Blueprint.Form do
   then will be transformed into subforms with all the fields specified.
 
       inputs_for :clients,
+        label: t("Clients"),
         cardinality: :many,
         style: {:transformer, :avatar},
         default: %Client{} do

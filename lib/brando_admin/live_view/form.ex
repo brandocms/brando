@@ -109,17 +109,30 @@ defmodule BrandoAdmin.LiveView.Form do
       |> Map.from_struct()
       |> Map.put(:focal, updated_focal)
 
+    require Logger
+    Logger.error("== TODO: update_focal_point updating changeset here!")
+    Logger.error(inspect(changeset, pretty: true))
+
     updated_changeset = Ecto.Changeset.put_change(changeset, field_atom, updated_field)
     {:halt, assign(socket, changeset: updated_changeset)}
   end
 
   defp handle_event(_, _, socket), do: {:cont, socket}
 
-  defp handle_info({image, [:image, :updated], []}, socket) do
+  defp handle_info({image, [:image, :updated], path}, socket) do
     case String.split(image.config_target, ":") do
-      ["image", _schema, field_name] ->
+      ["image", image_schema_binary, field_name] ->
         field_atom = String.to_existing_atom(field_name)
         schema = socket.assigns.schema
+        image_schema = Module.concat([image_schema_binary])
+
+        full_path =
+          if image_schema != schema do
+            path
+          else
+            [field_atom]
+          end
+
         singular = schema.__naming__().singular
         target_id = "#{singular}_form"
 
@@ -127,7 +140,7 @@ defmodule BrandoAdmin.LiveView.Form do
           id: target_id,
           action: :update_entry_relation,
           updated_relation: image,
-          field: field_atom,
+          path: full_path,
           force_validation: true
         )
 

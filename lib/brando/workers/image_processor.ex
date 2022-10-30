@@ -9,9 +9,16 @@ defmodule Brando.Worker.ImageProcessor do
         args: %{
           "image_id" => image_id,
           "config_target" => config_target,
-          "user_id" => user_id
+          "user_id" => user_id,
+          "field_full_path" => field_full_path
         }
       }) do
+    field_full_path =
+      Enum.map(field_full_path, fn
+        segment when is_binary(segment) -> String.to_existing_atom(segment)
+        integer -> integer
+      end)
+
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, _} <- Images.Utils.delete_sized_images(image),
          {:ok, user} <- Users.get_user(user_id),
@@ -31,7 +38,7 @@ defmodule Brando.Worker.ImageProcessor do
           Phoenix.PubSub.broadcast(
             Brando.pubsub(),
             "brando:image:#{image.id}",
-            {image, [:image, :updated], []}
+            {image, [:image, :updated], field_full_path}
           )
 
           {:ok, image}

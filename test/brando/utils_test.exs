@@ -10,6 +10,8 @@ defmodule Brando.UtilsTest do
   alias Brando.Files
   alias Brando.UtilsTest.TestStruct
 
+  doctest Brando.Utils
+
   defmodule TestStruct do
     defstruct a: "a", b: "b"
   end
