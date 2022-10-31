@@ -825,8 +825,7 @@ defmodule Brando.Blueprint do
       end
 
       for {trait, trait_opts} <- @all_traits do
-        defimpl Module.concat([trait, Implemented]),
-          for: __MODULE__ do
+        defimpl Module.concat([trait, Implemented]) do
           def implemented(_), do: true
         end
 

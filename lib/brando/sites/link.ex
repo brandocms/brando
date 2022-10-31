@@ -16,7 +16,7 @@ defmodule Brando.Link do
     attribute :url, :string, required: true
   end
 
-  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+  defimpl Phoenix.HTML.Safe do
     def to_iodata(link) do
       link.url
       |> Phoenix.HTML.raw()

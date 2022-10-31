@@ -46,7 +46,7 @@ defmodule Brando.Content.Var.Select do
     relation :options, :embeds_many, module: __MODULE__.Option, on_replace: :delete
   end
 
-  defimpl String.Chars, for: __MODULE__ do
+  defimpl String.Chars do
     def to_string(%{value: value}), do: value
   end
 end
