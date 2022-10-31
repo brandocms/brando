@@ -142,6 +142,21 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{
+          action: :update_entry_relation,
+          updated_relation: updated_relation,
+          path: path
+        },
+        %{assigns: %{entry: entry, schema: schema}} = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+    access_path = Brando.Utils.build_access_path(path)
+    updated_entry = put_in(entry_or_default, access_path, updated_relation)
+
+    {:ok, assign(socket, entry, updated_entry)}
+  end
+
+  def update(
         %{updated_entry: updated_entry},
         %{assigns: %{schema: schema, current_user: current_user}} = socket
       ) do
@@ -162,6 +177,21 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(%{updated_changeset: updated_changeset}, socket) do
+    {:ok, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def update(
+        %{action: :update_changeset, changeset: updated_changeset, force_validation: true},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{})
+     |> force_svelte_remounts()}
+  end
+
+  def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     {:ok, assign(socket, :changeset, updated_changeset)}
   end
 
@@ -268,6 +298,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_default_params()
      |> extract_tab_names()
      |> assign_changeset()
+     |> maybe_initial_validate()
      |> maybe_assign_uploads()}
   end
 
@@ -322,7 +353,7 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema)
       |> Map.put(:with_deleted, true)
 
-    assign(socket, :entry, context |> apply(:"get_#{singular}!", [query_params]))
+    assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
   end
 
   # defp scan_and_preload_block_vars(entry, schema) do
@@ -332,6 +363,15 @@ defmodule BrandoAdmin.Components.Form do
   #     Map.put(updated_entry, field, updated_blocks)
   #   end)
   # end
+
+  defp maybe_initial_validate(socket) do
+    if connected?(socket) && socket.assigns[:initial_update] do
+      socket
+      |> push_event("b:validate", %{})
+    else
+      socket
+    end
+  end
 
   defp maybe_assign_uploads(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
@@ -473,7 +513,6 @@ defmodule BrandoAdmin.Components.Form do
       <div
         id={"#{@id}-el"}
         class="brando-form"
-        data-moonwalk-run="brandoForm"
         phx-hook="Brando.Form">
         <div class="form-content">
 
@@ -1329,7 +1368,7 @@ defmodule BrandoAdmin.Components.Form do
     changeset =
       entry_or_default
       |> schema.changeset(entry_params, current_user)
-      |> Map.put(:action, :update)
+      |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(
         schema,
         current_user

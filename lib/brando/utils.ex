@@ -1114,4 +1114,12 @@ defmodule Brando.Utils do
         |> get_in([Access.key(:opts), :module])
     end
   end
+
+  @doc """
+  Set changeset action depending on if changeset has :id or not
+  """
+  def set_action(changeset) do
+    mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :create
+    Map.put(changeset, :action, mutation_type)
+  end
 end

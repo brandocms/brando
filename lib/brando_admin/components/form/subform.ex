@@ -197,14 +197,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
-    )
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_entry_relation,
-      updated_relation: updated_field,
-      path: [field_name],
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -233,14 +227,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
-    )
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_entry_relation,
-      updated_relation: updated_entries,
-      path: [field_name],
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -280,9 +268,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      action: :update_entry_relation,
-      updated_relation: sorted_entries,
-      path: [field_name],
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
