@@ -298,7 +298,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     updated_changeset =
       Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: nil
+        data: %PictureBlock.Data{}
       })
 
     schema = changeset.data.__struct__
