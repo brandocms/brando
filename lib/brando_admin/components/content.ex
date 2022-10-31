@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:subtitle, fn -> nil end)
 
     ~H"""
-    <header id="content-header" data-moonwalk-run="brandoHeader">
+    <header id="content-header">
       <div class="content">
         <section class="main">
           <h1>

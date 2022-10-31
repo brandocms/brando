@@ -130,15 +130,6 @@ export default (hooks, enableDebug = true) => {
         if (!topBarScheduled) {
           topBarScheduled = setTimeout(() => topbar.show(), 200)
         }
-
-        if ((detail.kind === 'initial' || detail.kind === 'redirect') && !app.reconnected) {
-          if (!PREFERS_REDUCED_MOTION) {
-            const $main = Dom.find('main .content')
-            if ($main) {
-              gsap.to($main, { opacity: 0, duration: 0.25 })
-            }
-          }
-        }
       })
 
       window.addEventListener('phx:page-loading-stop', ({ detail }) => {
@@ -151,11 +142,7 @@ export default (hooks, enableDebug = true) => {
         }
 
         if (detail.kind === 'initial' && !app.reconnected) {
-          const $main = Dom.find('main .content')
-          app.moonwalk = new Moonwalk(app, configureMoonwalk(app), $main)
           app.navigation.checkFullscreen()
-          gsap.to($main, { clearProps: 'opacity' })
-          app.moonwalk.ready()
           app.presence.setUrl(detail.to)
         }
       })      
