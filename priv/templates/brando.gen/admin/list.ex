@@ -8,7 +8,9 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
     <Content.header
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Overview")}>
-      <%%= live_patch gettext("Create new"), class: "primary", to: "/admin/<%= snake_domain %>/<%= plural %>/create" %>
+      <.link navigate="/admin/<%= snake_domain %>/<%= plural %>/create" class="primary">
+        <%= gettext("Create new") %>
+      </.link>
     </Content.header>
 
     <.live_component module={Content.List}
