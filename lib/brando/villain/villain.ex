@@ -409,6 +409,9 @@ defmodule Brando.Villain do
     {:ok, result}
   end
 
+  @doc """
+  List all {schema, data_field_name, ids} a module is used in
+  """
   def list_module_usage(module_id) do
     villains = list_villains()
 
@@ -417,16 +420,51 @@ defmodule Brando.Villain do
         Enum.reduce(fields, [], fn
           data_field, acc ->
             ids = list_ids_with_module(schema, data_field.name, module_id)
+
             if ids == [] do
               acc
             else
-              [{schema, data_field.name, ids}|acc]
+              [{schema, data_field.name, ids} | acc]
             end
         end)
       end
 
     {:ok, Enum.filter(result, &(&1 != []))}
   end
+
+  @doc """
+  List all unused modules
+  """
+  def list_unused_modules do
+    villains = list_villains()
+
+    for module <- Content.list_modules!(%{select: [:id, :name, :namespace], order: "asc id"}) do
+      reduced_fors =
+        for {schema, fields} <- villains do
+          reduced_fields =
+            Enum.reduce(fields, [], fn
+              data_field, acc ->
+                ids = list_ids_with_module(schema, data_field.name, module.id)
+
+                if ids == [] do
+                  [:unused | acc]
+                else
+                  [:in_use | acc]
+                end
+            end)
+
+          if Enum.any?(reduced_fields, &(&1 == :in_use)) do
+            :in_use
+          else
+            :unused
+          end
+        end
+
+      (Enum.any?(reduced_fors, &(&1 == :in_use)) && :in_use) || {:module, module.id, :unused}
+    end
+    |> Enum.reject(&(&1 == :in_use))
+  end
+
   @doc """
   Update all villain fields in database that has a module with `id`.
   """
