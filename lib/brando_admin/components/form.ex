@@ -1406,15 +1406,23 @@ defmodule BrandoAdmin.Components.Form do
         maybe_redirected_socket =
           case save_redirect_target do
             :self ->
-              if schema.has_trait(Brando.Trait.Revisioned) do
-                id = "#{socket.assigns.id}-revisions-drawer"
-                send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
-              end
+              if mutation_type == :create do
+                generated_update_view = schema.__modules__().admin_update_view
 
-              # update entry!
-              socket
-              |> assign(:entry_id, entry.id)
-              |> assign_refreshed_entry()
+                push_redirect(socket,
+                  to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
+                )
+              else
+                if schema.has_trait(Brando.Trait.Revisioned) do
+                  id = "#{socket.assigns.id}-revisions-drawer"
+                  send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+                end
+
+                # update entry!
+                socket
+                |> assign(:entry_id, entry.id)
+                |> assign_refreshed_entry()
+              end
 
             :listing ->
               push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
