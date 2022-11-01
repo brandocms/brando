@@ -433,6 +433,12 @@ defmodule Brando.HTML do
     end
   end
 
+  def include_assets(%{only_css: true} = assigns) do
+    ~H"""
+    <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+    """
+  end
+
   def include_assets(assigns) do
     if Brando.env() == :prod do
       ~H"""
