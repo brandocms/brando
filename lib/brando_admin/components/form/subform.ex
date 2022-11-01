@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:ok, socket}
   end
 
-  def render(%{subform: %{style: {:transformer, transform_field}}} = assigns) do
+  def render(%{subform: %{style: {:transformer, _transform_field}}} = assigns) do
     ~H"""
     <fieldset>
       <Form.field_base
