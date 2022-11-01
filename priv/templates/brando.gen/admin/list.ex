@@ -9,7 +9,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Overview")}>
       <.link navigate="/admin/<%= snake_domain %>/<%= plural %>/create" class="primary">
-        <%= gettext("Create new") %>
+        <%%= gettext("Create new") %>
       </.link>
     </Content.header>
 
