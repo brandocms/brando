@@ -9,6 +9,7 @@ defmodule Brando.CDN do
   ```elixir
   config :brando, Brando.Images, cdn: [
     enabled: true,
+    media_url: System.get_env("BRANDO_CDN_FILES_MEDIA_URL") || "https://mybucket.ams3.digitaloceanspaces.com",
     bucket: System.get_env("BRANDO_CDN_FILES_BUCKET"),
     s3: %{
       access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
@@ -33,7 +34,7 @@ defmodule Brando.CDN do
     Keyword.get(cdn_config, key, nil)
   end
 
-  def get_prefix, do: Brando.config(:media_url)
+  def get_prefix(module), do: config(module, :media_url)
 
   @doc """
 

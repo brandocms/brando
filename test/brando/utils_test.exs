@@ -198,15 +198,17 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original) == "images/file.jpg"
     assert img_url(img, :original, prefix: "prefix") == "prefix/images/file.jpg"
 
-    Application.put_env(:brando, Brando.CDN,
-      enabled: true,
-      media_url: "https://cdn.com"
+    Application.put_env(:brando, Brando.Images,
+      cdn: [
+        enabled: true,
+        media_url: "https://cdn.com"
+      ]
     )
 
     assert img_url(%{img | cdn: true}, :thumb, prefix: "prefix") ==
              "https://cdn.com/prefix/images/thumb/file.jpg"
 
-    Application.put_env(:brando, Brando.CDN, [])
+    Application.put_env(:brando, Brando.Images, cdn: [enabled: false])
 
     assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
              "Wrong size key for img_url function."
