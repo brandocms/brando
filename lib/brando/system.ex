@@ -109,8 +109,8 @@ defmodule Brando.System do
   end
 
   defp check_cdn_bucket_exists do
-    if CDN.enabled?() do
-      CDN.ensure_bucket_exists()
+    if CDN.enabled?(Brando.Images) do
+      CDN.ensure_bucket_exists(Brando.Images)
     else
       {:ok, {:bucket, :exists}}
     end

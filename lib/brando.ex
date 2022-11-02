@@ -22,6 +22,8 @@ defmodule Brando do
   """
   def config(key), do: Application.get_env(:brando, key)
 
+  def config(module, key), do: Keyword.get(Application.get_env(:brando, module), key, nil)
+
   @doc """
   Gets the parent app's router
   """

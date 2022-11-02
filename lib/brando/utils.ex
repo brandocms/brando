@@ -731,7 +731,7 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     prefix =
-      if image_field.cdn && Brando.CDN.enabled?() do
+      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
         if prefix do
           Path.join([Brando.CDN.get_prefix(), prefix])
         else
@@ -752,11 +752,13 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     prefix =
-      if image_field.cdn && Brando.CDN.enabled?() do
+      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
+        cdn_prefix = Brando.CDN.get_prefix()
+
         if prefix do
-          Path.join([Brando.CDN.get_prefix(), prefix])
+          Path.join([cdn_prefix, prefix])
         else
-          Brando.CDN.get_prefix()
+          cdn_prefix
         end
       else
         prefix

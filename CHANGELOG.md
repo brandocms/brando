@@ -20,6 +20,15 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BREAKING: Admin now reads JS and CSS from `priv/static/admin_manifest.json`.
   Make sure to set this in `assets/backend/vite.config.js` to:
   `manifest: 'admin_manifest.json`
+* BREAKING: CDN config is now per asset module, so instead of 
+  ```
+  config :brando, Brando.CDN, #...
+  ```
+  add
+  ```
+  config :brando, Brando.Images, cdn: [enabled: false]
+  config :brando, Brando.Files, cdn: [enabled: true, ...]
+  ```
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type

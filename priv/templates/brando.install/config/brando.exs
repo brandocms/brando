@@ -53,10 +53,6 @@ config :brando,
   </svg>
   """
 
-config :brando, Brando.CDN,
-  enabled: false,
-  bucket: "<%= application_name %>"
-
 config :brando, Brando.Images,
   processor_module: Brando.Images.Processor.Sharp,
   default_config: %{

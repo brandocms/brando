@@ -5,10 +5,11 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
   @shortdoc "Upload static files to CDN"
 
   def run(_args) do
-    unless Brando.CDN.enabled?() do
-      raise "CDN not enabled in config."
-    end
+    # unless Brando.CDN.enabled?(Brando.Static) do
+    #   raise "CDN not enabled in config."
+    # end
 
+    Mix.Task.run("app.config")
     :erlang.system_flag(:backtrace_depth, 20)
 
     Application.ensure_all_started(:ex_aws)
@@ -17,12 +18,12 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
 
     Mix.shell().info("=> Preparing bucket")
 
-    region = Map.fetch!(Application.get_env(:ex_aws, :s3), :region)
-    bucket = Atom.to_string(Brando.otp_app())
+    s3_config = Brando.CDN.config(Brando.Static, :s3)
+    bucket = Brando.CDN.config(Brando.Static, :bucket)
 
     bucket
     |> S3.get_bucket_location()
-    |> ExAws.request()
+    |> ExAws.request(s3_config)
     |> case do
       {:ok, _result} ->
         Mix.shell().info("==> OK - bucket [#{bucket}] exists")
@@ -32,8 +33,8 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
         Mix.shell().info("==> Creating bucket ...")
 
         bucket
-        |> ExAws.S3.put_bucket(region)
-        |> ExAws.request()
+        |> ExAws.S3.put_bucket(s3_config.region)
+        |> ExAws.request(s3_config)
     end
 
     static_dir = "priv/static"
@@ -41,7 +42,6 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
     static_dir
     |> Path.join("**/*")
     |> Path.wildcard()
-    |> Enum.filter(&(String.contains?(&1, "hot-update.js") == false))
     |> Enum.filter(&(File.dir?(&1) == false))
     |> Enum.each(fn f ->
       IO.puts("==> Uploading -> #{f}")
@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
         acl: :public_read,
         content_type: MIME.from_path(f)
       )
-      |> ExAws.request!()
+      |> ExAws.request!(s3_config)
     end)
 
     Mix.shell().info("==> Static files uploaded")
