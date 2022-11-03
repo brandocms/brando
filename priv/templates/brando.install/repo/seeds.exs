@@ -72,8 +72,8 @@ example_module = %Brando.Content.Module{
   namespace: "general",
   refs: [
     %Brando.Content.Module.Ref{
-      data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
-        data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
+      data: %Brando.Villain.Blocks.HeaderBlock{
+        data: %Brando.Villain.Blocks.HeaderBlock.Data{
           class: nil,
           id: nil,
           level: 1,
@@ -85,8 +85,8 @@ example_module = %Brando.Content.Module{
       name: "h1"
     },
     %Brando.Content.Module.Ref{
-      data: %Brando.Blueprint.Villain.Blocks.TextBlock{
-        data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+      data: %Brando.Villain.Blocks.TextBlock{
+        data: %Brando.Villain.Blocks.TextBlock.Data{
           extensions: [],
           text: "Text",
           type: "paragraph"
@@ -109,14 +109,14 @@ page = %Brando.Pages.Page{
   creator_id: user.id,
   css_classes: nil,
   data: [
-    %Brando.Blueprint.Villain.Blocks.ModuleBlock{
-      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+    %Brando.Villain.Blocks.ModuleBlock{
+      data: %Brando.Villain.Blocks.ModuleBlock.Data{
         module_id: m1.id,
         multi: false,
         refs: [
           %Brando.Content.Module.Ref{
-            data: %Brando.Blueprint.Villain.Blocks.HeaderBlock{
-              data: %Brando.Blueprint.Villain.Blocks.HeaderBlock.Data{
+            data: %Brando.Villain.Blocks.HeaderBlock{
+              data: %Brando.Villain.Blocks.HeaderBlock.Data{
                 class: nil,
                 id: nil,
                 level: 1,
@@ -128,8 +128,8 @@ page = %Brando.Pages.Page{
             name: "h1"
           },
           %Brando.Content.Module.Ref{
-            data: %Brando.Blueprint.Villain.Blocks.TextBlock{
-              data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+            data: %Brando.Villain.Blocks.TextBlock{
+              data: %Brando.Villain.Blocks.TextBlock.Data{
                 extensions: [],
                 text:
                   "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>",
@@ -172,8 +172,8 @@ footer_fragment = %Brando.Pages.Fragment{
   language: :en,
   html: "<p>(c) BrandoCMS — all rights reserved</p>",
   data: [
-    %Brando.Blueprint.Villain.Blocks.TextBlock{
-      data: %Brando.Blueprint.Villain.Blocks.TextBlock.Data{
+    %Brando.Villain.Blocks.TextBlock{
+      data: %Brando.Villain.Blocks.TextBlock.Data{
         text: "(c) BrandoCMS — all rights reserved",
         type: "paragraph"
       },

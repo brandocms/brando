@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
+defmodule Brando.Villain.Blocks.TextBlock do
   defmodule Data do
     use Ecto.Schema
     import Ecto.Changeset
@@ -16,7 +16,7 @@ defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "text"
 
   def protected_attrs do

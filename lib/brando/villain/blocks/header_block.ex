@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
+defmodule Brando.Villain.Blocks.HeaderBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -22,7 +22,7 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "header"
 
   def protected_attrs do

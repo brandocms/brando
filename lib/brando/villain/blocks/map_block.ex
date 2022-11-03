@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.MapBlock do
+defmodule Brando.Villain.Blocks.MapBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -18,6 +18,6 @@ defmodule Brando.Blueprint.Villain.Blocks.MapBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "map"
 end

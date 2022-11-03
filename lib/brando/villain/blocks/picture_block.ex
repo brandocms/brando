@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
+defmodule Brando.Villain.Blocks.PictureBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -47,14 +47,14 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "picture"
 
   def protected_attrs do
     [:sizes, :path, :dominant_color, :focal, :height, :width, :formats]
   end
 
-  def apply_ref(Brando.Blueprint.Villain.Blocks.MediaBlock, ref_src, ref_target) do
+  def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target) do
     # in order to not overwrite the chosen media block, we have to get the media
     # block template and merge against this instead
     tpl_src = ref_src.data.data.template_picture

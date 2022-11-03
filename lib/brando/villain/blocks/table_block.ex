@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
+defmodule Brando.Villain.Blocks.TableBlock do
   defmodule Row do
     use Brando.Blueprint,
       application: "Brando",
@@ -8,7 +8,7 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
       plural: "table_block_rows",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Villain.Blocks
     alias Brando.Content.Var
 
     trait Brando.Trait.CastPolymorphicEmbeds
@@ -37,7 +37,7 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
       plural: "table_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Villain.Blocks
 
     @primary_key false
     data_layer :embedded
@@ -59,7 +59,7 @@ defmodule Brando.Blueprint.Villain.Blocks.TableBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "table"
 
   def protected_attrs do

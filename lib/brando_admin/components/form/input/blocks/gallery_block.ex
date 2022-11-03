@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use Phoenix.HTML
   import Brando.Gettext
 
-  alias Brando.Blueprint.Villain.Blocks.GalleryBlock
-  alias Brando.Blueprint.Villain.Blocks.PictureBlock
+  alias Brando.Villain.Blocks.GalleryBlock
+  alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Utils
   alias Brando.Villain
 

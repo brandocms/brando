@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.HtmlBlock do
+defmodule Brando.Villain.Blocks.HtmlBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -17,7 +17,7 @@ defmodule Brando.Blueprint.Villain.Blocks.HtmlBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "html"
 
   def protected_attrs do

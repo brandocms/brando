@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.InputBlock do
+defmodule Brando.Villain.Blocks.InputBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.Villain.Blocks.InputBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "input"
 
   def protected_attrs do

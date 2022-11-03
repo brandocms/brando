@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   import Brando.Gettext
 
   alias Brando.Villain
-  alias Brando.Blueprint.Villain.Blocks.VideoBlock
+  alias Brando.Villain.Blocks.VideoBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -46,9 +46,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      |> assign(:width, v(block_data, :width))
      |> assign(:height, v(block_data, :height))
      |> assign(:cover, v(block_data, :cover))
-     |> assign(:cover_image, v(block_data, :cover_image))
-
-    }
+     |> assign(:cover_image, v(block_data, :cover_image))}
   end
 
   def render(assigns) do
@@ -299,7 +297,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           })
       end
 
-    updated_changeset = Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
+    updated_changeset =
+      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
 
     schema = changeset.data.__struct__
     form_id = "#{schema.__naming__().singular}_form"
@@ -332,7 +331,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   def handle_event(
         "reset_image",
         _,
-        %{assigns: %{base_form: base_form, block_data: block_data, block: block, data_field: data_field, uid: uid}} = socket
+        %{
+          assigns: %{
+            base_form: base_form,
+            block_data: block_data,
+            block: block,
+            data_field: data_field,
+            uid: uid
+          }
+        } = socket
       ) do
     data_map = Map.from_struct(block_data.data)
 

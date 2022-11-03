@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Block do
+defmodule Brando.Villain.Block do
   @moduledoc """
   Use to set module as a Villain block
   """
@@ -11,7 +11,7 @@ defmodule Brando.Blueprint.Villain.Block do
     quote do
       use Ecto.Schema
       import Ecto.Changeset
-      @behaviour Brando.Blueprint.Villain.Block
+      @behaviour Brando.Villain.Block
       @primary_key false
 
       embedded_schema do

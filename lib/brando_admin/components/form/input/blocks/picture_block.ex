@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   import Brando.Gettext
 
-  alias Brando.Blueprint.Villain.Blocks.PictureBlock
+  alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain
 
   alias BrandoAdmin.Components.Content

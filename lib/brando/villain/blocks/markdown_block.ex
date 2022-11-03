@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.MarkdownBlock do
+defmodule Brando.Villain.Blocks.MarkdownBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -17,7 +17,7 @@ defmodule Brando.Blueprint.Villain.Blocks.MarkdownBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "markdown"
 
   def protected_attrs do

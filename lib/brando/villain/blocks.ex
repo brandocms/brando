@@ -1,5 +1,5 @@
-defmodule Brando.Blueprint.Villain.Blocks do
-  alias Brando.Blueprint.Villain.Blocks
+defmodule Brando.Villain.Blocks do
+  alias Brando.Villain.Blocks
 
   def list_blocks do
     [

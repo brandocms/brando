@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
+defmodule Brando.Villain.Blocks.GalleryBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -8,7 +8,7 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
       plural: "gallery_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Villain.Blocks
 
     @primary_key false
     data_layer :embedded
@@ -40,7 +40,7 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "gallery"
 
   def protected_attrs do

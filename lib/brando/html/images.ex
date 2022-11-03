@@ -79,7 +79,7 @@ defmodule Brando.HTML.Images do
   end
 
   def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
-      when struct_type in [Brando.Images.Image, Brando.Blueprint.Villain.Blocks.PictureBlock.Data] do
+      when struct_type in [Brando.Images.Image, Brando.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
       img: [],
       picture: [],

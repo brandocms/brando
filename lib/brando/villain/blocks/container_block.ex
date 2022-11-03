@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.ContainerBlock do
+defmodule Brando.Villain.Blocks.ContainerBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -8,7 +8,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ContainerBlock do
       plural: "container_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Villain.Blocks
 
     @primary_key false
     data_layer :embedded
@@ -28,6 +28,6 @@ defmodule Brando.Blueprint.Villain.Blocks.ContainerBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "container"
 end

@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.CommentBlock do
+defmodule Brando.Villain.Blocks.CommentBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -17,7 +17,7 @@ defmodule Brando.Blueprint.Villain.Blocks.CommentBlock do
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "comment"
 
   def protected_attrs do

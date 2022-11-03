@@ -11,7 +11,7 @@ defmodule Brando.Villain do
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Content.Module
-  alias Brando.Blueprint.Villain.Blocks
+  alias Brando.Villain.Blocks
   alias Ecto.Changeset
   alias Liquex.Context
 

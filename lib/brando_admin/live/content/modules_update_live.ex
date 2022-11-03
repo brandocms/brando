@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   alias Brando.Villain
   alias Brando.Content.Module.Ref
-  alias Brando.Blueprint.Villain.Blocks
+  alias Brando.Villain.Blocks
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -481,6 +481,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     var_to_dupe = Enum.find(vars, &(&1.key == var_key))
 
     new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
+
     updated_entry_template =
       entry_template
       |> Map.from_struct()

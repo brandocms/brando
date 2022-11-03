@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.VideoBlock do
+defmodule Brando.Villain.Blocks.VideoBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
@@ -30,18 +30,18 @@ defmodule Brando.Blueprint.Villain.Blocks.VideoBlock do
     end
 
     relations do
-      relation :cover_image, :embeds_one, module: Brando.Blueprint.Villain.Blocks.PictureBlock.Data
+      relation :cover_image, :embeds_one, module: Brando.Villain.Blocks.PictureBlock.Data
     end
   end
 
-  use Brando.Blueprint.Villain.Block,
+  use Brando.Villain.Block,
     type: "video"
 
   def protected_attrs do
     [:url, :source, :remote_id, :width, :height, :thumbnail_url]
   end
 
-  def apply_ref(Brando.Blueprint.Villain.Blocks.MediaBlock, ref_src, ref_target) do
+  def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target) do
     # in order to not overwrite the chosen media block, we have to get the media
     # block template and merge against this instead
     tpl_src = ref_src.data.data.template_video

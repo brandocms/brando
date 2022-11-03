@@ -282,9 +282,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
 
     # if module.wrapper is true, this is a multi block!
-    new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
+    new_block = %Brando.Villain.Blocks.ModuleBlock{
       type: "module",
-      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+      data: %Brando.Villain.Blocks.ModuleBlock.Data{
         module_id: module_id,
         multi: module.wrapper,
         vars: module.vars,
@@ -313,7 +313,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
-  defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
+  defp replace_uids(%Brando.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
     updated_refs = Brando.Villain.add_uid_to_refs(refs)
 
     block
@@ -321,9 +321,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
   end
 
-  defp replace_uids(
-         %Brando.Blueprint.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block
-       ) do
+  defp replace_uids(%Brando.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block) do
     updated_blocks = Enum.map(blocks, &replace_uids/1)
 
     block

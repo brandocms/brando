@@ -2,7 +2,7 @@ defmodule Brando.Content.Module.Ref do
   @moduledoc """
   Ecto schema for a module ref
   """
-  alias Brando.Blueprint.Villain.Blocks
+  alias Brando.Villain.Blocks
 
   @type t :: %__MODULE__{}
 

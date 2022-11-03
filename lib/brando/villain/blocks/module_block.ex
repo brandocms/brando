@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
+defmodule Brando.Villain.Blocks.ModuleBlock do
   alias Brando.Content.Module
   alias Brando.Content.Var
 
