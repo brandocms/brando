@@ -1,23 +1,23 @@
 name: Continuous Integration
-
 on: [push, pull_request]
-
-env:
-  MIX_ENV: test
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  CACHE_VERSION: 1
+permissions:
+  contents: read
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
+  mix_test:
+    name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+
+    env:
+      MIX_ENV: test
+    
     strategy:
-      fail-fast: false
       matrix:
         pair:
           - erlang: 25.1.2
             elixir: 1.14.1
 
+    runs-on: ubuntu-latest
+    
     services:
       db:
         image: postgres:14
@@ -35,31 +35,27 @@ jobs:
     steps:
       - uses: actions/checkout@v3.1.0
 
-      - name: Install OTP and Elixir
-        uses: actions/setup-elixir@v1.5
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.pair.erlang}}
-          elixir-version: ${{matrix.pair.elixir}}
-          experimental-otp: true
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
 
-
-      - name: Cache deps
+      - name: Restore deps and _build cache
         uses: actions/cache@v3.0.10
         with:
-          path: deps
-          key: ${{ env.CACHE_VERSION }}-deps-build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ env.CACHE_VERSION }}-deps-build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-
-
-      - name: Cache _build
-        uses: actions/cache@v3.0.10
-        with:
-          path: _build/${{ env.MIX_ENV }}
-          key: ${{ env.CACHE_VERSION }}-_build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
 
       - name: Install dependencies
-        run: mix deps.get
+        run: mix deps.get --only test
+
+      - name: Remove compiled application files
+        run: mix clean
 
       - name: Run Tests
-        run: |
-          mix test
+        run: mix test
