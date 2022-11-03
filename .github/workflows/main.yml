@@ -15,12 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         pair:
-          - erlang: 24.1
-            elixir: 1.12.3
+          - erlang: 25.1.2
+            elixir: 1.14.1
 
     services:
       db:
-        image: postgres:11
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
