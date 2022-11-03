@@ -5,9 +5,9 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
   @shortdoc "Upload static files to CDN"
 
   def run(_args) do
-    # unless Brando.CDN.enabled?(Brando.Static) do
-    #   raise "CDN not enabled in config."
-    # end
+    unless Brando.CDN.enabled?(Brando.Static) do
+      raise "CDN not enabled in config."
+    end
 
     Mix.Task.run("app.config")
     :erlang.system_flag(:backtrace_depth, 20)

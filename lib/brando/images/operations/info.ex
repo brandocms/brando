@@ -8,7 +8,7 @@ defmodule Brando.Images.Operations.Info do
   Get processor module from config and call function
   """
   def get_dominant_color(image_path) do
-    module = Brando.config(Images)[:processor_module] || Images.Processor.Sharp
+    module = Brando.config(Images, :processor_module) || Images.Processor.Sharp
     apply(module, :get_dominant_color, [image_path])
   end
 end

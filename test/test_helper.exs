@@ -1,4 +1,4 @@
-# Logger.configure(level: :debug)
+Logger.configure(level: :info)
 :erlang.system_flag(:backtrace_depth, 30)
 
 # Clear tmp dir
@@ -221,4 +221,5 @@ File.cp!(fixture_src, Path.join([media_path, "images", "avatars", "27i97a.jpeg"]
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
+
 # Brando.presence().start
