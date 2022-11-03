@@ -9,15 +9,15 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.11.1",
-    "@vitejs/plugin-legacy": "^2.2.0",
+    "@vitejs/plugin-legacy": "^2.3.0",
     "css-mqgroup": "^7.1.0",
-    "postcss": "^8.4.17",
+    "postcss": "^8.4.18",
     "postcss-import": "^15.0.0",
     "postcss-preset-env": "^7.8.2",
     "postcss-reporter": "^7.0.5",
-    "stylelint": "^14.13.0",
+    "stylelint": "^14.14.1",
     "terser": "^5.15.1",
-    "vite": "^3.1.6"
+    "vite": "^3.2.2"
   },
   "dependencies": {
     "@brandocms/jupiter": "^3.47.0",
