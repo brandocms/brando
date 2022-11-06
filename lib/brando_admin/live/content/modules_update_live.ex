@@ -66,38 +66,40 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             add_table_template="add_table_template"
           />
         </div>
-        <%= if input_value(form, :wrapper) in [true, "true"] do %>
-          <Form.inputs form={form} for={:entry_template} let={%{form: entry}}>
-            <div class="entry-template">
-              <hr>
-              <h2>Entry template</h2>
-              <p>
-                This module will be used as a template when generating new entries inside the wrapper module
-              </p>
+        <Form.inputs
+          :if={input_value(form, :wrapper) in [true, "true"]}
+          form={form}
+          for={:entry_template}
+          let={%{form: entry}}>
+          <div class="entry-template">
+            <hr>
+            <h2>Entry template</h2>
+            <p>
+              This module will be used as a template when generating new entries inside the wrapper module
+            </p>
 
-              <div class="block-editor">
-                <div class="code">
-                  <Input.code form={entry} field={:code} label={gettext "Code"} />
-                </div>
-
-                <Input.input type={:hidden} form={entry} field={:id} />
-
-                <.live_component module={ModuleProps}
-                  id={"entry-module-props-#{entry.id}"}
-                  form={entry}
-                  entry_form
-                  create_ref={JS.push("entry_create_ref")}
-                  duplicate_ref={JS.push("entry_duplicate_ref")}
-                  delete_ref="entry_delete_ref"
-                  create_var={JS.push("entry_create_var")}
-                  duplicate_var={JS.push("entry_duplicate_var")}
-                  delete_var="entry_delete_var"
-                  show_modal="show_modal"
-                />
+            <div class="block-editor">
+              <div class="code">
+                <Input.code form={entry} field={:code} label={gettext "Code"} />
               </div>
+
+              <Input.input type={:hidden} form={entry} field={:id} />
+
+              <.live_component module={ModuleProps}
+                id={"entry-module-props-#{entry.id}"}
+                form={entry}
+                entry_form
+                create_ref={JS.push("entry_create_ref")}
+                duplicate_ref={JS.push("entry_duplicate_ref")}
+                delete_ref="entry_delete_ref"
+                create_var={JS.push("entry_create_var")}
+                duplicate_var={JS.push("entry_duplicate_var")}
+                delete_var="entry_delete_var"
+                show_modal="show_modal"
+              />
             </div>
-          </Form.inputs>
-        <% end %>
+          </div>
+        </Form.inputs>
 
         <div class="button-group">
           <Form.submit_button
