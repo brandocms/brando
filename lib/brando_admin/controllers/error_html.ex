@@ -1,13 +1,12 @@
-defmodule Brando.ErrorView do
-  import Brando.Gettext
-  require Logger
-
+defmodule Brando.ErrorHTML do
   @moduledoc """
   Error views for Brando.
 
   Diffentiates between admin paths and regular paths.
   """
-  use BrandoAdmin, :view
+
+  use BrandoAdmin, :html
+  require Logger
 
   def render("404.html", assigns) do
     render("not_found.html", assigns)

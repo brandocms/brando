@@ -1,4 +1,0 @@
-                <%= render(Brando.ErrorView, "top.html", assigns) %>
-                <h1 id="app-name">404</h1>
-                <p><%= gettext("Page not found") %></p>
-                <%= render(Brando.ErrorView, "bottom.html", assigns) %>

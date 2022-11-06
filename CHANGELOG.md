@@ -2,6 +2,14 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: `ErrorView` is now `ErrorHTML`. If you are using Brando's error 
+  templates, you must swap your endpoint's `render_errors` key with:
+  ```elixir
+  config :my_app, MyApp.Endpoint,
+    render_errors: [
+      formats: [html: Brando.ErrorHTML, json: Brando.ErrorJSON], layout: false
+    ]
+  ```
 * BREAKING: Add `delete_selected` as a default action for listing selections.
   This means you should remove your own `delete_selected` from your listing's
   `selection_actions`
@@ -9,7 +17,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   of a map of all languages
 * BREAKING: The tiptap dependency weirdness has returned... Add this dependency 
   resolution to your `assets/backend/package.json`:
-```
+```json
 "resolutions": {
   "@codemirror/state": "6.0.0"
 }
@@ -21,11 +29,11 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   Make sure to set this in `assets/backend/vite.config.js` to:
   `manifest: 'admin_manifest.json`
 * BREAKING: CDN config is now per asset module, so instead of 
-  ```
+  ```elixir
   config :brando, Brando.CDN, #...
   ```
   add
-  ```
+  ```elixir
   config :brando, Brando.Images, cdn: [enabled: false]
   config :brando, Brando.Files, cdn: [enabled: true, ...]
   ```
