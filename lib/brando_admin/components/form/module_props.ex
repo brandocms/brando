@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign(open_col_vars: [], datasource: false)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
-     |> assign_available_sources()}
+     |> assign_available_datasources()}
   end
 
   def update(assigns, socket) do
@@ -769,7 +769,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     """
   end
 
-  def assign_available_sources(socket) do
+  def assign_available_datasources(socket) do
     {:ok, available_sources} = Datasource.list_datasources()
 
     available_sources =
