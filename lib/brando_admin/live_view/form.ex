@@ -46,7 +46,6 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_title()
         |> assign_entry_id(entry_id)
-        |> assign_current_user(token)
         |> set_admin_locale()
         |> attach_hooks(schema)
 
@@ -65,7 +64,6 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_title()
         |> assign_entry_id(nil)
-        |> assign_current_user(token)
         |> set_admin_locale()
         |> attach_hooks(schema)
 
@@ -213,12 +211,6 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp handle_info(_, socket) do
     {:cont, socket}
-  end
-
-  defp assign_current_user(socket, token) do
-    assign_new(socket, :current_user, fn ->
-      Brando.Users.get_user_by_session_token(token)
-    end)
   end
 
   defp assign_schema(socket, schema) do

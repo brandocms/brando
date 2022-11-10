@@ -67,7 +67,7 @@ defmodule Brando.Router do
 
         post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
 
-        live_session :admin do
+        live_session :admin, on_mount: [{Brando.Users, :ensure_authenticated}] do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageUpdateLive
