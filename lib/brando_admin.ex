@@ -14,8 +14,6 @@ defmodule BrandoAdmin do
 
   def controller do
     quote do
-      use Phoenix.Controller
-
       use Phoenix.Controller,
         namespace: BrandoAdmin,
         formats: [:html, :json],
@@ -84,8 +82,8 @@ defmodule BrandoAdmin do
   defp html_helpers do
     quote do
       import Phoenix.HTML
+      import Phoenix.HTML.Form
       import Phoenix.HTML.Tag, only: [csrf_meta_tag: 0]
-      import Brando.Gettext
       alias Phoenix.LiveView.JS
 
       import Brando.Utils,

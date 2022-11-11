@@ -37,6 +37,19 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   config :brando, Brando.Images, cdn: [enabled: false]
   config :brando, Brando.Files, cdn: [enabled: true, ...]
   ```
+* BREAKING: Switch out your `<%= live_patch gettext("Create new") ...` calls
+  in your list views. Replace with
+  ```elixir
+  <.link navigate={@schema.__modules__().admin_create_view} class="primary">
+    <%= gettext("Create new") %>
+  </.link>
+  ```
+* BREAKING: With moving to Phoenix 1.7+, we've tossed out Phoenix.View from
+  Brando and use the new `embed_templates` setup instead. If your app depends
+  on Phoenix.View, then you must add it as a dependency:
+  ```
+  {:phoenix_view, "~> 2.0"},
+  ```
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type
