@@ -32,7 +32,7 @@ defmodule Brando.Router do
         plug :fetch_live_flash
         plug :protect_from_forgery
         plug :put_secure_browser_headers
-        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+        plug :put_root_layout, {BrandoAdmin.Layouts, :root}
         plug :fetch_current_user
         plug :put_admin_locale
       end
@@ -44,7 +44,7 @@ defmodule Brando.Router do
       end
 
       pipeline :brando_root_layout do
-        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+        plug :put_root_layout, {BrandoAdmin.Layouts, :root}
       end
 
       scope unquote(path), as: :admin do
