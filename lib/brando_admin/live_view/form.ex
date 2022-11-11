@@ -37,7 +37,7 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   # with entry_id means it's an update
-  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
+  def hooks(%{"entry_id" => entry_id}, _, socket, schema) do
     if connected?(socket) do
       socket =
         socket
@@ -55,7 +55,7 @@ defmodule BrandoAdmin.LiveView.Form do
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, _, socket, schema) do
     if connected?(socket) do
       socket =
         socket

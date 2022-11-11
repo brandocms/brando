@@ -38,7 +38,7 @@ defmodule BrandoAdmin.LiveView.Listing do
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, _, socket, schema) do
     if Phoenix.LiveView.connected?(socket) do
       subscribe(schema)
     end
