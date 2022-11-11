@@ -69,18 +69,18 @@ defmodule Brando.HTML do
   attr :class, :string, default: nil
   attr :language, :string
   attr :fallback, :string, default: "/"
+  attr :rest, :global
+  slot :default
 
   def alternate_url(assigns) do
-    extra = assigns_to_attributes(assigns, [:conn, :class, :language, :fallback])
     href = get_alternate_url(assigns)
 
     assigns =
       assigns
-      |> assign(:extra, extra)
       |> assign(:href, href)
 
     ~H"""
-    <a href={@href} class={@class} {@extra}>
+    <a href={@href} class={@class} {@rest}>
       <%= render_slot(@inner_block) %>
     </a>
     """
