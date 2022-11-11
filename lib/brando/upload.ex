@@ -67,13 +67,14 @@ defmodule Brando.Upload do
   """
   def handle_upload_type(%{upload_entry: %{client_type: "image/svg+xml"}} = upload, user) do
     svg_size = Brando.Images.Utils.svg_size(upload.meta.uploaded_file)
+    dominant_color = Images.Operations.Info.get_dominant_color(upload.meta.media_path)
 
     image_params = %{
       config_target: upload.meta.config_target,
       path: upload.meta.media_path,
       width: svg_size.width,
       height: svg_size.height,
-      dominant_color: nil,
+      dominant_color: dominant_color,
       focal: %{x: 50, y: 50},
       sizes: %{},
       status: :processed
