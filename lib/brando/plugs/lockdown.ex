@@ -7,10 +7,7 @@ defmodule Brando.Plug.Lockdown do
   ## Example
 
   ```elixir
-      plug Brando.Plug.Lockdown, [
-        layout: {MyApp.LockdownLayoutView, "lockdown.html"},
-        view: {MyApp.LockdownView, "lockdown.html"}
-      ]
+      plug Brando.Plug.Lockdown
   ```
 
   ## Configure
