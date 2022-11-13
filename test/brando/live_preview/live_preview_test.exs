@@ -1,26 +1,25 @@
 defmodule Brando.LivePreviewTest do
   use ExUnit.Case, async: true
 
-  defmodule LayoutView do
-    use Phoenix.View, root: "test/fixtures/templates"
+  defmodule Layouts do
+    use Phoenix.Component
 
-    def render("app.html", assigns) do
-      {:safe, "Hello #{List.first(assigns.employees).name} :)"}
+    def app(assigns) do
+      ~H"Hello #{List.first(assigns.employees).name} :)"
     end
   end
 
-  defmodule TestView do
-    use Phoenix.View, root: "test/fixtures/templates"
+  defmodule TestHTML do
+    use Phoenix.Component
+    embed_templates "../../fixtures/templates/live_preview_html/*"
   end
 
   defmodule LivePreview do
     use Brando.LivePreview
 
     preview_target Brando.Pages.Page do
-      view_module Brando.LivePreviewTest.TestView
-      layout_module Brando.LivePreviewTest.LayoutView
-      layout_template "app.html"
-      view_template fn entry -> "#{entry.key}.html" end
+      template fn e -> {Brando.LivePreviewTest.TestHTML, "#{e.key}.html"} end
+      layout {Brando.LivePreviewTest.Layouts, :app}
       template_section fn entry -> entry.key end
 
       assign :restaurants, fn _ -> __MODULE__.list_restaurants!() end
