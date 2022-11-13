@@ -69,12 +69,12 @@ defmodule Mix.Tasks.Brando.Install do
     # Fallback and errors
     {:eex, "lib/application_name_web/controllers/fallback_controller.ex",
      "lib/application_name_web/controllers/fallback_controller.ex"},
-    {:eex, "lib/application_name_web/views/error_view.ex",
-     "lib/application_name_web/views/error_view.ex"},
-    {:eex, "lib/application_name_web/templates/error/404_page.html.eex",
-     "lib/application_name_web/templates/error/404_page.html.eex"},
-    {:eex, "lib/application_name_web/templates/error/500_page.html.eex",
-     "lib/application_name_web/templates/error/500_page.html.eex"},
+    {:eex, "lib/application_name_web/controllers/error_html.ex",
+     "lib/application_name_web/controllers/error_html.ex"},
+    {:eex, "lib/application_name_web/controllers/error_html/404.html.heex",
+     "lib/application_name_web/controllers/error_html/404.html.heex"},
+    {:eex, "lib/application_name_web/controllers/error_html/500.html.heex",
+     "lib/application_name_web/controllers/error_html/500.html.heex"},
 
     # Navigation and page index
     {:eex, "lib/application_name_web/templates/page/_navigation.html.heex",
