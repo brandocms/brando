@@ -50,6 +50,32 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   ```
   {:phoenix_view, "~> 2.0"},
   ```
+* BREAKING: Update your `live_preview.ex` to the new format for setting layout
+  and template:
+
+  Old:
+  ```elixir
+  layout_module MyAppWeb.ProjectView
+  layout_template "app.html"
+  view_module MyAppWeb.ProjectView
+  view_template "detail.html"
+  ```
+
+  New (for Phoenix.View integrations):
+  ```elixir
+  layout {MyAppWeb.LayoutView, "app.html"}
+  template {MyAppWeb.ProjectView, "detail.html"}
+  # or
+  template fn e -> {MyAppWeb.ProjectView, e.template} end
+  ```
+  
+  New (for Phoenix.Template integrations):
+  ```elixir
+  layout {MyAppWeb.Layouts, :app}
+  template {MyAppWeb.ProjectHTML, "detail"}
+  # or
+  template fn e -> {MyAppWeb.ProjectHTML, e.template} end
+  ```
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type
