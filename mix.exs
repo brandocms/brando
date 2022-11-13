@@ -29,6 +29,7 @@ defmodule Brando.Mixfile do
     [
       {:phoenix, "~> 1.7.0-rc.0", override: true},
       {:phoenix_ecto, "~> 4.0"},
+      {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.16"},
       {:ecto, "~> 3.8"},
       {:ecto_sql, "~> 3.8"},
