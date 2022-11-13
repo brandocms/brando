@@ -197,6 +197,7 @@ defmodule Brando.LivePreview do
       end
 
       defp render_inner_content(:html, tpl_module, template, render_assigns) do
+        template = String.strip(template, ".html")
         Phoenix.Template.render(tpl_module, template, "html", render_assigns)
       end
 
