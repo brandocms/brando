@@ -5,7 +5,7 @@ defmodule Brando.LivePreviewTest do
     use Phoenix.Component
 
     def app(assigns) do
-      ~H"Hello #{List.first(assigns.employees).name} :)"
+      ~H|Hello <%= List.first(@employees).name %> :)|
     end
   end
 
@@ -19,7 +19,7 @@ defmodule Brando.LivePreviewTest do
 
     preview_target Brando.Pages.Page do
       template fn e -> {Brando.LivePreviewTest.TestHTML, "#{e.key}.html"} end
-      layout {Brando.LivePreviewTest.Layouts, :app}
+      layout {Brando.LivePreviewTest.Layouts, "app"}
       template_section fn entry -> entry.key end
 
       assign :restaurants, fn _ -> __MODULE__.list_restaurants!() end
