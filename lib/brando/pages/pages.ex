@@ -122,11 +122,25 @@ defmodule Brando.Pages do
   """
   def list_templates do
     view_module = Brando.web_module(PageView)
-    {_, _, templates} = view_module.__templates__
 
-    main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
+    if Code.ensure_loaded?(view_module) do
+      {_, _, templates} = view_module.__templates__
 
-    {:ok, main_templates}
+      main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
+
+      {:ok, main_templates}
+    else
+      html_module = Brando.web_module(PageHTML)
+
+      main_templates =
+        :functions
+        |> html_module.__info__()
+        |> Enum.map(fn {fun, _arity} -> to_string(fun) end)
+        |> Enum.reject(&String.starts_with?(&1, "__"))
+        |> Enum.map(&(&1 <> ".html"))
+
+      {:ok, main_templates}
+    end
   end
 
   @doc """
