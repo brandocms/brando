@@ -1,12 +1,5 @@
-defmodule Brando.ErrorHTML do
-  @moduledoc """
-  Basic error views for Brando.
-  """
-
-  use BrandoAdmin, :html
-  import Brando.Gettext
-
-  embed_templates "error_html/*"
+defmodule <%= application_module %>Web.ErrorHTML do
+  use <%= application_module %>Web, :html
 
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.html" becomes

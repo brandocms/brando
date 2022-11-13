@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>404: <%= gettext "Page not found" %></title>
+  <title>500: <%= gettext "Server Error" %></title>
   <link rel="shortcut icon" href="/favicon.ico">
   <link href={Routes.static_path @conn, "/css/app.css"} rel="stylesheet">
   <style>
@@ -22,9 +22,9 @@
   <div id="wrapper">
     <div class="container">
     <h2>404<br><br>
-    <%= gettext "Page not found." %>.<br />
-    <%= gettext "Maybe it was outdated and has been deleted?" %><br /><br />
-    <%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
+    <%= gettext "Server Error" %>.<br />
+    <%= gettext "This might occur during a server update or reboot" %><br /><br />
+    <%= gettext("Please try again shortly, or go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
     </div>
   </div>
 </body>

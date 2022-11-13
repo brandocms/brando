@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>404: <%= gettext "Page not found" %></title>
+  <title>500</title>
   <link rel="shortcut icon" href="/favicon.ico">
-  <link href={Routes.static_path @conn, "/css/app.css"} rel="stylesheet">
+  <link href="<%%= Routes.static_path @conn, "/css/app.css" %>" rel="stylesheet">
   <style>
     ::selection   { background: #222; color: #fcfcfc; text-shadow: none; }
     html,body,
@@ -21,10 +21,10 @@
 <body>
   <div id="wrapper">
     <div class="container">
-    <h2>404<br><br>
-    <%= gettext "Page not found." %>.<br />
-    <%= gettext "Maybe it was outdated and has been deleted?" %><br /><br />
-    <%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
+    <h2>500<br><br>
+    <%%= gettext "Server error." %>.<br />
+    <%%= gettext "This might occur during a server update. Please try again shortly." %><br /><br />
+    </h2>
     </div>
   </div>
 </body>
