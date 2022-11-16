@@ -179,10 +179,12 @@ defmodule Brando.LivePreview do
 
       def has_preview_target(unquote(schema_module)), do: true
 
-      defp render_layout(:html, layout_module, layout_template, root_assigns) do
+      defp render_layout(:html, layout_module, layout_tpl, root_assigns) do
+        layout_tpl = (is_binary(layout_tpl) && layout_tpl) || to_string(layout_tpl)
+
         Phoenix.Template.render_to_string(
           layout_module,
-          layout_template,
+          layout_tpl,
           "html",
           root_assigns
         )
@@ -196,13 +198,15 @@ defmodule Brando.LivePreview do
         )
       end
 
-      defp render_inner_content(:html, tpl_module, template, render_assigns) do
-        template = String.replace(template, ".html", "")
-        Phoenix.Template.render(tpl_module, template, "html", render_assigns)
+      defp render_inner_content(:html, tpl_module, tpl, render_assigns) do
+        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+        tpl_with_type = String.replace(tpl, ".html", "")
+        Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
       end
 
-      defp render_inner_content(:view, tpl_module, template, render_assigns) do
-        Phoenix.View.render(tpl_module, template, render_assigns)
+      defp render_inner_content(:view, tpl_module, tpl, render_assigns) do
+        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+        Phoenix.View.render(tpl_module, tpl, render_assigns)
       end
     end
   end
