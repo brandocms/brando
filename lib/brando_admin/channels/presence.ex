@@ -11,14 +11,8 @@ defmodule BrandoAdmin.Presence do
         presence: unquote(presence)
 
       def __brando_presence__, do: true
-
-      def init(_opts) do
-        {:ok, %{}}
-      end
-
-      def fetch("lobby", presences) do
-        presences
-      end
+      def init(_opts), do: {:ok, %{}}
+      def fetch("lobby", presences), do: presences
 
       def fetch("url:" <> _rest = topic, presences) do
         users =
@@ -33,14 +27,8 @@ defmodule BrandoAdmin.Presence do
       end
 
       def handle_metas("url:" <> _rest = topic, %{joins: joins, leaves: leaves}, presences, state) do
-        require Logger
-        Logger.error("handle_metas - #{inspect(topic)}")
-
         for {user_id, presence} <- joins do
           user_data = %{user: presence.user, metas: Map.fetch!(presences, user_id)}
-
-          require Logger
-          Logger.error("handle_metas url joins #{inspect(topic)}")
 
           Phoenix.PubSub.local_broadcast(
             unquote(pubsub_server),
@@ -68,9 +56,8 @@ defmodule BrandoAdmin.Presence do
         {:ok, state}
       end
 
-      def handle_metas(topic, _diff, _presences, state) do
-        require Logger
-        Logger.error("== handle_metas unmatched #{inspect(topic)}")
+      def handle_metas("lobby", _diff, _presences, state) do
+        # TODO: Handle lobby metas here when we dump the JS presence stuff
         {:ok, state}
       end
 
