@@ -1,0 +1,51 @@
+<header data-nav>
+  <nav id="menu" aria-label="Menu" role="navigation">
+    <div class="mobile-bg"></div>
+    <figure class="brand">
+      <a href="/">
+        <h1 class="sr-only">BrandoCMS</h1>
+        <.logo />
+      </a>
+    </figure>
+
+    <section 
+      :if={assigns[:navigation]}
+      class="main">
+      <ul>
+        <li 
+          :for={menu_item <- @navigation.items} 
+          :if={menu_item.status == 2}>
+          <a class={active(@conn, "#{menu_item.url}/*")} href={menu_item.url}>
+            <%%= menu_item.title %>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <figure class="menu-button">
+      <noscript>
+        <a href="#menu" class="no-js-menu hamburger hamburger--spin">
+          <span class="sr-only">Menu</span>
+          <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+          </span>
+        </a>
+        <a href="#top" class="no-js-menu-close hamburger hamburger--spin is-active">
+          <span class="sr-only">Menu</span>
+          <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+          </span>
+        </a>
+      </noscript>
+      <a
+        href="#menu"
+        class="hamburger noanim"
+        aria-label="Menu"
+        aria-controls="nav">
+        <i></i>
+        <i></i>
+        <i></i>
+      </a>
+    </figure>
+  </nav>
+</header>

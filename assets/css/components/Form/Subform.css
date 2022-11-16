@@ -42,6 +42,14 @@
       align-items: flex-start;
       margin-bottom: 15px;
 
+      &.group {
+        flex-direction: row;
+
+        .subform-fields {
+          flex-grow: 1;
+        }
+      }
+
       &.inline {
         display: flex;
         flex-wrap: nowrap;

@@ -1,6 +1,6 @@
-defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
+defmodule Brando.Villain.Block.PictureBlockTest do
   use ExUnit.Case
-  alias Brando.Blueprint.Villain.Blocks
+  alias Brando.Villain.Blocks
   alias Brando.Content.Module
   alias Brando.Content.Module.Ref
   alias Brando.Content.Var
@@ -37,9 +37,9 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
       vars: []
     }
 
-    original_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
+    original_block = %Brando.Villain.Blocks.ModuleBlock{
       collapsed: false,
-      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+      data: %Brando.Villain.Blocks.ModuleBlock.Data{
         entries: [],
         module_id: 1,
         multi: false,
@@ -122,9 +122,9 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
           name: "h2"
         },
         %Ref{
-          data: %Brando.Blueprint.Villain.Blocks.PictureBlock{
+          data: %Brando.Villain.Blocks.PictureBlock{
             collapsed: false,
-            data: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+            data: %Brando.Villain.Blocks.PictureBlock.Data{
               alt: nil,
               cdn: false,
               credits: nil,
@@ -187,9 +187,9 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
       wrapper: false
     }
 
-    original_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
+    original_block = %Brando.Villain.Blocks.ModuleBlock{
       collapsed: false,
-      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+      data: %Brando.Villain.Blocks.ModuleBlock.Data{
         entries: [],
         module_id: 22,
         multi: false,
@@ -212,9 +212,9 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
             name: "h2"
           },
           %Ref{
-            data: %Brando.Blueprint.Villain.Blocks.PictureBlock{
+            data: %Brando.Villain.Blocks.PictureBlock{
               collapsed: false,
-              data: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+              data: %Brando.Villain.Blocks.PictureBlock.Data{
                 alt: nil,
                 cdn: false,
                 credits: nil,
@@ -352,13 +352,13 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
       namespace: "identity",
       refs: [
         %Brando.Content.Module.Ref{
-          data: %Brando.Blueprint.Villain.Blocks.MediaBlock{
+          data: %Brando.Villain.Blocks.MediaBlock{
             collapsed: false,
-            data: %Brando.Blueprint.Villain.Blocks.MediaBlock.Data{
+            data: %Brando.Villain.Blocks.MediaBlock.Data{
               available_blocks: ["picture", "video", "svg"],
               marked_as_deleted: false,
               template_gallery: nil,
-              template_picture: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+              template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
                 alt: nil,
                 cdn: false,
                 credits: nil,
@@ -380,12 +380,12 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
                 title: nil,
                 width: nil
               },
-              template_svg: %Brando.Blueprint.Villain.Blocks.SvgBlock.Data{
+              template_svg: %Brando.Villain.Blocks.SvgBlock.Data{
                 class: nil,
                 code: nil,
                 marked_as_deleted: false
               },
-              template_video: %Brando.Blueprint.Villain.Blocks.VideoBlock.Data{
+              template_video: %Brando.Villain.Blocks.VideoBlock.Data{
                 autoplay: true,
                 cover: "false",
                 height: nil,
@@ -412,13 +412,13 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
           name: "asset2"
         },
         %Brando.Content.Module.Ref{
-          data: %Brando.Blueprint.Villain.Blocks.MediaBlock{
+          data: %Brando.Villain.Blocks.MediaBlock{
             collapsed: false,
-            data: %Brando.Blueprint.Villain.Blocks.MediaBlock.Data{
+            data: %Brando.Villain.Blocks.MediaBlock.Data{
               available_blocks: ["picture", "video", "svg"],
               marked_as_deleted: false,
               template_gallery: nil,
-              template_picture: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+              template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
                 alt: nil,
                 cdn: false,
                 credits: nil,
@@ -440,12 +440,12 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
                 title: nil,
                 width: nil
               },
-              template_svg: %Brando.Blueprint.Villain.Blocks.SvgBlock.Data{
+              template_svg: %Brando.Villain.Blocks.SvgBlock.Data{
                 class: nil,
                 code: nil,
                 marked_as_deleted: false
               },
-              template_video: %Brando.Blueprint.Villain.Blocks.VideoBlock.Data{
+              template_video: %Brando.Villain.Blocks.VideoBlock.Data{
                 autoplay: true,
                 cover: "false",
                 height: nil,
@@ -479,16 +479,16 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
       wrapper: false
     }
 
-    original_block_data = %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+    original_block_data = %Brando.Villain.Blocks.ModuleBlock.Data{
       entries: [],
       marked_as_deleted: false,
       module_id: 18,
       multi: false,
       refs: [
         %Brando.Content.Module.Ref{
-          data: %Brando.Blueprint.Villain.Blocks.PictureBlock{
+          data: %Brando.Villain.Blocks.PictureBlock{
             collapsed: false,
-            data: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+            data: %Brando.Villain.Blocks.PictureBlock.Data{
               alt: nil,
               cdn: false,
               credits: nil,
@@ -527,9 +527,9 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
           name: "asset2"
         },
         %Brando.Content.Module.Ref{
-          data: %Brando.Blueprint.Villain.Blocks.PictureBlock{
+          data: %Brando.Villain.Blocks.PictureBlock{
             collapsed: false,
-            data: %Brando.Blueprint.Villain.Blocks.PictureBlock.Data{
+            data: %Brando.Villain.Blocks.PictureBlock.Data{
               alt: nil,
               cdn: false,
               credits: nil,
@@ -580,22 +580,22 @@ defmodule Brando.Blueprint.Villain.Block.PictureBlockTest do
 
     assert mod_ref1.data.type == "media"
     assert mod_ref2.data.type == "media"
-    assert mod_ref1.data.__struct__ == Brando.Blueprint.Villain.Blocks.MediaBlock
-    assert mod_ref2.data.__struct__ == Brando.Blueprint.Villain.Blocks.MediaBlock
-    assert mod_ref1.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.MediaBlock.Data
-    assert mod_ref2.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.MediaBlock.Data
+    assert mod_ref1.data.__struct__ == Brando.Villain.Blocks.MediaBlock
+    assert mod_ref2.data.__struct__ == Brando.Villain.Blocks.MediaBlock
+    assert mod_ref1.data.data.__struct__ == Brando.Villain.Blocks.MediaBlock.Data
+    assert mod_ref2.data.data.__struct__ == Brando.Villain.Blocks.MediaBlock.Data
     assert org_ref1.data.type == "picture"
     assert org_ref2.data.type == "picture"
-    assert org_ref1.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock
-    assert org_ref2.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock
-    assert org_ref1.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock.Data
-    assert org_ref2.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock.Data
+    assert org_ref1.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert org_ref2.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert org_ref1.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+    assert org_ref2.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
     assert new_ref1.data.type == "picture"
     assert new_ref2.data.type == "picture"
-    assert new_ref1.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock
-    assert new_ref2.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock
-    assert new_ref1.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock.Data
-    assert new_ref2.data.data.__struct__ == Brando.Blueprint.Villain.Blocks.PictureBlock.Data
+    assert new_ref1.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert new_ref2.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert new_ref1.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+    assert new_ref2.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
 
     assert new_ref1.data.data.path == org_ref1.data.data.path
     assert new_ref1.data.data.sizes == org_ref1.data.data.sizes

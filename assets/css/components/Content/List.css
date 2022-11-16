@@ -24,6 +24,12 @@
       margin-bottom: 5px;
     }
 
+    .pagination-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
     button {
       width: 30px;
       height: 30px;
@@ -44,10 +50,6 @@
 
       &:hover {
         background-color: var(--brando-color-peach);
-      }
-
-      & + button {
-        margin-left: 5px;
       }
 
       &.limit-button {

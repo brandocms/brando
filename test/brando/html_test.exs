@@ -118,7 +118,7 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video style=\"--aspect-ratio: 0.75\">\n\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio-division: 400/300\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n\n  \n  \n    \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n  \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video style=\"--aspect-ratio: 0.75\">\n\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio-division: 400/300\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n</div>"
   end
 
   test "video_tag with valid poster" do
@@ -139,7 +139,7 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video style=\"--aspect-ratio: 0.75\">\n\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"/images/my_poster.jpg\" style=\"--aspect-ratio-division: 400/300\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n\n  \n  \n    \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n  \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video style=\"--aspect-ratio: 0.75\">\n\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"/images/my_poster.jpg\" style=\"--aspect-ratio-division: 400/300\" data-src=\"https://src.vid\"></video>\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"https://src.vid\"></video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n</div>"
   end
 
   test "picture_tag" do
@@ -764,35 +764,6 @@ defmodule Brando.HTMLTest do
              {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
   end
 
-  test "include_css" do
-    assert include_css(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<link href=\"/css/app.css\" rel=\"stylesheet\">"
-
-    Application.put_env(:brando, :hmr, true)
-
-    assert include_css(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<link href=\"http://localhost:9999/css/app.css\" rel=\"stylesheet\">"
-
-    Application.put_env(:brando, :hmr, false)
-  end
-
-  test "include_js" do
-    assert include_js(%Plug.Conn{host: "localhost", scheme: "http"})
-           |> Enum.map(&safe_to_string/1) ==
-             [
-               "<script type=\"module\">!function(e,t,n){!(\"noModule\"in(t=e.createElement(\"script\")))&&\"onbeforeload\"in t&&(n=!1,e.addEventListener(\"beforeload\",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute(\"nomodule\")||!n)return;e.preventDefault()},!0),t.type=\"module\",t.src=\".\",e.head.appendChild(t),t.remove())}(document)\n</script>",
-               "<script defer src=\"/js/app.js\" type=\"module\"></script>",
-               "<script defer nomodule src=\"/js/app.legacy.js\"></script>"
-             ]
-
-    Application.put_env(:brando, :hmr, true)
-
-    assert include_js(%Plug.Conn{host: "localhost", scheme: "http"}) |> safe_to_string ==
-             "<script defer src=\"http://localhost:9999/js/app.js\"></script>"
-
-    Application.put_env(:brando, :hmr, false)
-  end
-
   test "init_js" do
     assigns = %{}
 
@@ -802,6 +773,52 @@ defmodule Brando.HTMLTest do
 
     assert rendered_to_string(comp) ==
              "<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
+  end
+
+  test "render_data" do
+    Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
+    conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
+
+    entry = %{
+      data: [
+        %{
+          type: "text",
+          data: %{
+            text: "SOMETHING -> $__CONTENT__ <- ANYTHING"
+          }
+        }
+      ]
+    }
+
+    assigns = %{conn: conn, entry: entry}
+
+    comp = ~H"""
+    <.render_data conn={@conn} entry={@entry}>
+      HELLO WORLD
+    </.render_data>
+    """
+
+    assert rendered_to_string(comp) ==
+             "\n  SOMETHING -> \n  \n  HELLO WORLD\n\n   <- ANYTHING\n"
+
+    entry = %{
+      data: [
+        %{
+          type: "text",
+          data: %{
+            text: "SOMETHING -><- ANYTHING"
+          }
+        }
+      ]
+    }
+
+    assigns = %{conn: conn, entry: entry}
+
+    comp = ~H"""
+    <.render_data conn={@conn} entry={@entry} />
+    """
+
+    assert rendered_to_string(comp) == "\n  SOMETHING -><- ANYTHING\n"
   end
 
   test "breakpoint_debug_tag" do

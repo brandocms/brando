@@ -5,7 +5,8 @@ config :<%= application_name %>, show_breakpoint_debug: true
 # Configure your database
 config :<%= application_name %>, <%= application_module %>.Repo,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  pool_size: 10,
+  stacktrace: true
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

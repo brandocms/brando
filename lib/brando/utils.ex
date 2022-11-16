@@ -128,19 +128,42 @@ defmodule Brando.Utils do
 
   @doc """
   Tries to access `keys` as a path to `map`
+
+  ## Examples
+
+      iex> try_path(%{title: "Hello", clients: [%{cover_id: 2}, %{}]}, [:title])
+      "Hello"
+      iex> try_path(%{title: "Hello", clients: [%{cover_id: 2}, %{}]}, [:clients, 0, :cover_id])
+      2
+      iex> try_path(%{title: "Hello", clients: [%{cover_id: 2}, %{}]}, [:clients, 1])
+      %{}
+      iex> try_path(%{title: "Hello", clients: [%{cover_id: 2}, %{}]}, [:clients, 2])
+      nil
   """
-  @spec try_path(data :: map | list, keys :: [atom] | nil) :: any | nil
+  @spec try_path(data :: map | list, keys :: [atom | integer] | nil) :: any | nil
   def try_path(_, nil), do: nil
 
   def try_path(map, keys) when is_map(map) do
-    Enum.reduce(keys, map, fn key, acc ->
-      if acc, do: Map.get(acc, key)
+    Enum.reduce(keys, map, fn
+      key, acc when is_atom(key) or is_binary(key) -> if acc, do: Map.get(acc, key)
+      idx, acc when is_integer(idx) -> if acc, do: Enum.at(acc, idx)
     end)
   end
 
   def try_path(kw, keys) when is_list(kw) do
     Enum.reduce(keys, kw, fn key, acc ->
       if acc, do: Keyword.get(acc, key)
+    end)
+  end
+
+  @doc """
+  Takes a list of atoms and integers and builds a path with Access.key and Access.at
+  """
+  def build_access_path(path) do
+    Enum.map(path, fn
+      key when is_atom(key) -> Access.key(key)
+      key when is_binary(key) -> Access.key(key)
+      idx when is_integer(idx) -> Access.at(idx)
     end)
   end
 
@@ -722,11 +745,11 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     prefix =
-      if image_field.cdn && Brando.CDN.enabled?() do
+      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
         if prefix do
-          Path.join([Brando.CDN.get_prefix(), prefix])
+          Path.join([Brando.CDN.get_prefix(Brando.Images), prefix])
         else
-          Brando.CDN.get_prefix()
+          Brando.CDN.get_prefix(Brando.Images)
         end
       else
         prefix
@@ -743,11 +766,13 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     prefix =
-      if image_field.cdn && Brando.CDN.enabled?() do
+      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
+        cdn_prefix = Brando.CDN.get_prefix(Brando.Images)
+
         if prefix do
-          Path.join([Brando.CDN.get_prefix(), prefix])
+          Path.join([cdn_prefix, prefix])
         else
-          Brando.CDN.get_prefix()
+          cdn_prefix
         end
       else
         prefix
@@ -1054,5 +1079,63 @@ defmodule Brando.Utils do
         length - String.length(ellipsis)
       ) <> ellipsis
     end
+  end
+
+  @doc """
+  Extract a "path" (list of atoms) from a field's name
+
+  ## Examples
+      iex> get_path_from_field_name("post")
+      []
+      iex> get_path_from_field_name("post[clients]")
+      [:clients]
+      iex> get_path_from_field_name("post[clients][0]")
+      [:clients, 0]
+      iex> get_path_from_field_name("post[clients][0][avatar]")
+      [:clients, 0, :avatar]
+  """
+  def get_path_from_field_name(form_name) do
+    ~r/\[(\w+)\]/
+    |> Regex.scan(form_name, capture: :all_but_first)
+    |> Enum.reduce([], fn capture, acc ->
+      segment = List.first(capture)
+
+      case Integer.parse(segment) do
+        {number, ""} -> [number | acc]
+        :error -> [String.to_existing_atom(segment) | acc]
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  Extract the parent module from a singular
+
+  ## Examples:
+
+      iex> get_parent_module_from_field_name("page[fragments][0]", Brando.Pages.Fragment)
+      Brando.Pages.Page
+      iex> get_parent_module_from_field_name("page", Brando.Pages.Page)
+      Brando.Pages.Page
+  """
+  def get_parent_module_from_field_name(form_name, module) do
+    case String.split(form_name, "[") do
+      [_ | []] ->
+        module
+
+      [parent_singular | _] ->
+        parent_singular
+        |> String.to_existing_atom()
+        |> module.__relation__()
+        |> get_in([Access.key(:opts), :module])
+    end
+  end
+
+  @doc """
+  Set changeset action depending on if changeset has :id or not
+  """
+  def set_action(changeset) do
+    mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :create
+    Map.put(changeset, :action, mutation_type)
   end
 end

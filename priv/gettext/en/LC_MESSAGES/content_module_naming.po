@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#: lib/brando/content/module.ex:131
+#: lib/brando/content/module.ex:129
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr ""
 
-#: lib/brando/content/module.ex:132
+#: lib/brando/content/module.ex:130
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr ""

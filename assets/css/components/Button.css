@@ -45,6 +45,10 @@ button.primary, a.primary {
     border: none;
   }
 
+  &:focus {
+    box-shadow: 0px 0px 5px 2px var(--brando-color-blue);
+  }
+
   &.dark {
     background-color: var(--brando-color-dark); 
     border: 1px solid var(--brando-color-dark);
@@ -197,6 +201,15 @@ a.secondary, button.secondary {
 
 .secondary + .secondary {
   border-left: none;
+}
+
+button.stealth {
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px solid var(--brando-color-blue);
+  padding: 0;
+  height: auto;
+  align-self: center;
 }
 
 button.tiny, a.tiny {

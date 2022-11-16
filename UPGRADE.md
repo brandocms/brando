@@ -1,5 +1,36 @@
 ## 0.53.0-dev
 
+* Use Finch for emails:
+  - Add `finch` as a dep to your `mix.exs`:
+  ```elixir
+  {:finch, "~> 0.13"},
+  ```
+  - Add to your config:
+  ```elixir
+  config :swoosh, :api_client, MyApp.Finch
+  ```
+  - Add to your application supervisor in `lib/my_app/application.ex`
+  ```diff
+    children = [
+      # Start the Ecto repository
+      MyApp.Repo,
+      # Start the Telemetry supervisor
+      MyAppWeb.Telemetry,
+      # Start the PubSub system
+      {Phoenix.PubSub, name: MyApp.PubSub},
+      # Start Finch
+  +   {Finch, name: MyApp.Finch},
+      # Start the Endpoint (http/https)
+      MyAppWeb.Endpoint,
+      # Start the Presence system
+      MyApp.Presence,
+      # Start the Brando supervisor
+      Brando
+      # Start a worker by calling: MyApp.Worker.start_link(arg)
+      # {MyApp.Worker, arg},
+    ]
+  
+
 * Switch out `import Phoenix.LiveView.Helpers` with `import Phoenix.Component`
 
 * Upgrade deps:

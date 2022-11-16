@@ -147,7 +147,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         "picture" ->
           data_tpl = input_value(block_data, :template_picture)
 
-          %Brando.Blueprint.Villain.Blocks.PictureBlock{
+          %Brando.Villain.Blocks.PictureBlock{
             uid: Brando.Utils.generate_uid(),
             type: "picture",
             data: data_tpl
@@ -156,7 +156,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         "video" ->
           data_tpl = input_value(block_data, :template_video)
 
-          %Brando.Blueprint.Villain.Blocks.VideoBlock{
+          %Brando.Villain.Blocks.VideoBlock{
             uid: Brando.Utils.generate_uid(),
             type: "video",
             data: data_tpl
@@ -165,7 +165,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         "gallery" ->
           data_tpl = input_value(block_data, :template_gallery)
 
-          %Brando.Blueprint.Villain.Blocks.GalleryBlock{
+          %Brando.Villain.Blocks.GalleryBlock{
             uid: Brando.Utils.generate_uid(),
             type: "gallery",
             data: data_tpl
@@ -174,7 +174,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         "svg" ->
           data_tpl = input_value(block_data, :template_svg)
 
-          %Brando.Blueprint.Villain.Blocks.SvgBlock{
+          %Brando.Villain.Blocks.SvgBlock{
             uid: Brando.Utils.generate_uid(),
             type: "svg",
             data: data_tpl

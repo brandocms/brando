@@ -14,26 +14,32 @@ defmodule Brando.Query.Mutations do
     {custom_changeset, opts} = Keyword.pop(opts, :changeset)
     changeset_fun = custom_changeset || (&module.changeset/4)
 
-    with changeset <- changeset_fun.(struct(module), params, user, opts),
-         changeset <- Publisher.maybe_override_status(changeset),
-         {:ok, entry} <- Query.insert(changeset),
-         {:ok, entry} <- maybe_preload(entry, preloads),
-         {:ok, _} <- Datasource.update_datasource(module, entry),
-         {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      revisioned? = module.__trait__(Trait.Revisioned)
+    changeset =
+      struct(module)
+      |> changeset_fun.(params, user, opts)
+      |> Publisher.maybe_override_status()
 
-      if revisioned? do
-        Revisions.create_revision(entry, user)
-      end
+    case Query.insert(changeset) do
+      {:ok, entry} ->
+        {:ok, entry} = maybe_preload(entry, preloads)
+        {:ok, _} = Datasource.update_datasource(module, entry)
+        {:ok, _} = Publisher.schedule_publishing(entry, changeset, user)
 
-      case Brando.Blueprint.Identifier.identifier_for(entry) do
-        nil -> nil
-        identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
-      end
+        revisioned? = module.__trait__(Trait.Revisioned)
 
-      callback_block.(entry)
-    else
-      err -> err
+        if revisioned? do
+          Revisions.create_revision(entry, user)
+        end
+
+        case Brando.Blueprint.Identifier.identifier_for(entry) do
+          nil -> nil
+          identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+        end
+
+        callback_block.(entry)
+
+      err ->
+        err
     end
   end
 
@@ -58,8 +64,6 @@ defmodule Brando.Query.Mutations do
       end
 
       callback_block.(entry)
-    else
-      err -> err
     end
   end
 

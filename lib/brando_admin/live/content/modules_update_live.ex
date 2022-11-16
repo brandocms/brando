@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   alias Brando.Villain
   alias Brando.Content.Module.Ref
-  alias Brando.Blueprint.Villain.Blocks
+  alias Brando.Villain.Blocks
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -57,43 +57,49 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             form={form}
             create_ref={JS.push("create_ref")}
             delete_ref={JS.push("delete_ref")}
+            duplicate_ref={JS.push("duplicate_ref")}
             create_var={JS.push("create_var")}
             delete_var={JS.push("delete_var")}
+            duplicate_var={JS.push("duplicate_var")}
             add_table_row="add_table_row"
             add_table_col="add_table_col"
             add_table_template="add_table_template"
           />
         </div>
-        <%= if input_value(form, :wrapper) in [true, "true"] do %>
-          <Form.inputs form={form} for={:entry_template} let={%{form: entry}}>
-            <div class="entry-template">
-              <hr>
-              <h2>Entry template</h2>
-              <p>
-                This module will be used as a template when generating new entries inside the wrapper module
-              </p>
+        <Form.inputs
+          :if={input_value(form, :wrapper) in [true, "true"]}
+          form={form}
+          for={:entry_template}
+          let={%{form: entry}}>
+          <div class="entry-template">
+            <hr>
+            <h2>Entry template</h2>
+            <p>
+              This module will be used as a template when generating new entries inside the wrapper module
+            </p>
 
-              <div class="block-editor">
-                <div class="code">
-                  <Input.code form={entry} field={:code} label={gettext "Code"} />
-                </div>
-
-                <Input.input type={:hidden} form={entry} field={:id} />
-
-                <.live_component module={ModuleProps}
-                  id={"entry-module-props-#{entry.id}"}
-                  form={entry}
-                  entry_form
-                  create_ref={JS.push("entry_create_ref")}
-                  delete_ref="entry_delete_ref"
-                  create_var={JS.push("entry_create_var")}
-                  delete_var="entry_delete_var"
-                  show_modal="show_modal"
-                />
+            <div class="block-editor">
+              <div class="code">
+                <Input.code form={entry} field={:code} label={gettext "Code"} />
               </div>
+
+              <Input.input type={:hidden} form={entry} field={:id} />
+
+              <.live_component module={ModuleProps}
+                id={"entry-module-props-#{entry.id}"}
+                form={entry}
+                entry_form
+                create_ref={JS.push("entry_create_ref")}
+                duplicate_ref={JS.push("entry_duplicate_ref")}
+                delete_ref="entry_delete_ref"
+                create_var={JS.push("entry_create_var")}
+                duplicate_var={JS.push("entry_duplicate_var")}
+                delete_var="entry_delete_var"
+                show_modal="show_modal"
+              />
             </div>
-          </Form.inputs>
-        <% end %>
+          </div>
+        </Form.inputs>
 
         <div class="button-group">
           <Form.submit_button
@@ -305,6 +311,20 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   end
 
   def handle_event(
+        "duplicate_ref",
+        %{"id" => ref_name},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    refs = get_field(changeset, :refs)
+    ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
+
+    new_ref = Map.put(ref_to_dupe, :name, Brando.Utils.random_string(5))
+    updated_changeset = put_change(changeset, :refs, refs ++ [new_ref])
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def handle_event(
         "create_var",
         %{"type" => var_type},
         %{assigns: %{changeset: changeset}} = socket
@@ -340,7 +360,27 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     filtered_vars = Enum.reject(vars, &(&1.key == var_key))
     updated_changeset = put_change(changeset, :vars, filtered_vars)
 
-    {:noreply, assign(socket, :changeset, updated_changeset)}
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
+  end
+
+  def handle_event(
+        "duplicate_var",
+        %{"id" => var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars)
+    var_to_dupe = Enum.find(vars, &(&1.key == var_key))
+
+    new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
+    updated_changeset = put_change(changeset, :vars, vars ++ [new_var])
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
   end
 
   ## Entry events
@@ -434,6 +474,30 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   end
 
   def handle_event(
+        "entry_duplicate_var",
+        %{"id" => var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    entry_template = get_field(changeset, :entry_template)
+    vars = entry_template.vars || []
+    var_to_dupe = Enum.find(vars, &(&1.key == var_key))
+
+    new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
+
+    updated_entry_template =
+      entry_template
+      |> Map.from_struct()
+      |> Map.drop([:__meta__, :id])
+      |> Map.put(:vars, [new_var | vars])
+
+    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)}
+  end
+
+  def handle_event(
         "entry_delete_var",
         %{"id" => var_key},
         %{assigns: %{changeset: changeset}} = socket
@@ -489,6 +553,34 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
         {:noreply, assign(socket, changeset: changeset)}
     end
+  end
+
+  def handle_info(
+        {:add_select_var_option, var_key},
+        %{assigns: %{changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars) || []
+
+    vars =
+      Enum.reduce(vars, [], fn
+        %{key: ^var_key} = var, acc ->
+          acc ++
+            [
+              put_in(
+                var,
+                [Access.key(:options)],
+                (var.options || []) ++
+                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+              )
+            ]
+
+        var, acc ->
+          acc ++ [var]
+      end)
+
+    updated_changeset = put_change(changeset, :vars, vars)
+
+    {:noreply, assign(socket, :changeset, updated_changeset)}
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do

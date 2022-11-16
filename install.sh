@@ -20,4 +20,6 @@ then
   mix deps.get && mix brando.upgrade
   mix ecto.setup
   mix ecto.dump
+  mix brando.gen.languages
+  mix brando.gen.admin
 fi

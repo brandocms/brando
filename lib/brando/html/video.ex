@@ -150,13 +150,15 @@ defmodule Brando.HTML.Video do
       </noscript>
 
       <%= get_play_button(@play_button) %>
-      <%= if @video_cover do %>
-        <%= @video_cover %>
-      <% end %>
+
       <%= if @cover do %>
         <div data-cover>
           <%= render_slot(@cover) %>
         </div>
+      <% else %>
+        <%= if @video_cover do %>
+          <%= @video_cover %>
+        <% end %>
       <% end %>
     </div>
     """
@@ -192,7 +194,7 @@ defmodule Brando.HTML.Video do
       """
       <div class="video-play-button-wrapper">
         <button class="video-play-button">
-          <div class="video-play-button-inside"></div>
+          <div class="video-play-button-inside">▶︎</div>
         </button>
       </div>
       """

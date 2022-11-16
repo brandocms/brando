@@ -39,29 +39,93 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign_new(:previous_image_id, fn -> nil end)
      |> assign_new(:label, fn -> nil end)
      |> assign_new(:instructions, fn -> nil end)
+     |> assign_new(:path, fn -> [] end)
+     |> assign_new(:parent_form, fn -> nil end)
      |> assign_new(:placeholder, fn -> nil end)}
   end
 
   def update(assigns, socket) do
+    socket = assign(socket, assigns)
+
+    socket =
+      assign_new(socket, :form_id, fn ->
+        form = socket.assigns.form
+        path = Brando.Utils.get_path_from_field_name(form.name)
+        module_from_form = form.source.data.__struct__
+
+        module =
+          if path != [] do
+            Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
+          else
+            module_from_form
+          end
+
+        "#{module.__naming__().singular}_form"
+      end)
+
     relation_field = String.to_existing_atom("#{assigns.field}_id")
+    changeset = assigns.form.source
 
     image_id =
-      assigns.form.source
+      changeset
       |> get_field(relation_field)
       |> try_force_int()
 
-    image = get_field(assigns.form.source, assigns.field)
+    image = get_field(changeset, socket.assigns.field)
     file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
+    full_path = socket.assigns.path ++ [socket.assigns.field]
+
+    {image, image_id} =
+      cond do
+        !image && image_id ->
+          # we have an image in the changeset, but no loaded image
+          {:ok, image} = Brando.Images.get_image(image_id)
+          update_entry_relation(socket.assigns.form_id, image, full_path)
+          {image, image_id}
+
+        image && image.id != image_id && image_id != nil ->
+          # we have a loaded image, but it does not match the changeset image
+          # load the changeset image
+          {:ok, image} = Brando.Images.get_image(image_id)
+          update_entry_relation(socket.assigns.form_id, image, full_path)
+          {image, image_id}
+
+        image && image.id == nil && image_id == nil ->
+          # no loaded image, no image_id in changeset
+          # try to fetch by path?
+          full_path = socket.assigns.path ++ [relation_field]
+
+          image_id =
+            changeset
+            |> EctoNestedChangeset.get_at(full_path)
+            |> try_force_int()
+
+          {:ok, image} = Brando.Images.get_image(image_id)
+          update_entry_relation(socket.assigns.form_id, image, full_path)
+          {image, image_id}
+
+        true ->
+          {image, image_id}
+      end
 
     {:ok,
      socket
-     |> assign(assigns)
      |> prepare_input_component()
      |> assign(:image, image)
      |> assign(:image_id, image_id)
      |> assign(:file_name, file_name)
-     |> assign(:upload_field, assigns.uploads[assigns.field])
+     |> assign(:upload_field, socket.assigns.uploads[assigns.field])
      |> assign(:relation_field, relation_field)}
+  end
+
+  def update_entry_relation(form_id, image, full_path) do
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_entry_relation,
+      updated_relation: image,
+      path: full_path,
+      force_validation: true
+    )
   end
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
@@ -122,12 +186,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           }
         } = socket
       ) do
-    path =
-      ~r/\[(\w+)\]/
-      |> Regex.scan(form.name, capture: :all_but_first)
-      |> Enum.map(&(List.first(&1) |> String.to_existing_atom()))
+    path = Brando.Utils.get_path_from_field_name(form.name)
+    module_from_form = form.source.data.__struct__
 
-    module = form.source.data.__struct__
+    module =
+      if path != [] do
+        Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
+      else
+        module_from_form
+      end
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -137,31 +204,39 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       selected_images: []
     )
 
+    form_id = "#{module.__naming__().singular}_form"
+
+    edit_image = %{
+      id: image_id,
+      path: path,
+      field: field,
+      relation_field: relation_field,
+      schema: form.data.__struct__,
+      form_id: form_id,
+      image: image
+    }
+
     send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
+      id: form_id,
       action: :update_edit_image,
-      edit_image: %{
-        id: image_id,
-        path: path,
-        field: field,
-        relation_field: relation_field,
-        image: image
-      }
+      edit_image: edit_image
     )
 
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:path, path)
+     |> assign(:form_id, form_id)}
   end
 
   def handle_event(
         "select_image",
         %{"id" => selected_image_id},
-        %{assigns: %{form: form}} = socket
+        %{assigns: %{form_id: form_id}} = socket
       ) do
     {:ok, image} = Brando.Images.get_image(selected_image_id)
-    module = form.source.data.__struct__
 
     send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
+      id: form_id,
       action: :update_edit_image,
       image: image
     )

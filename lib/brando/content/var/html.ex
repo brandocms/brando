@@ -22,7 +22,7 @@ defmodule Brando.Content.Var.Html do
     attribute :instructions, :string
   end
 
-  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+  defimpl Phoenix.HTML.Safe do
     def to_iodata(%{value: value}) do
       value
       |> Phoenix.HTML.raw()
@@ -30,7 +30,7 @@ defmodule Brando.Content.Var.Html do
     end
   end
 
-  defimpl String.Chars, for: __MODULE__ do
+  defimpl String.Chars do
     def to_string(%{value: value}),
       do:
         value

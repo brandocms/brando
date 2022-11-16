@@ -120,7 +120,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <div class="actions">
             <button type="button" class="tiny upload-button">
               <%= gettext "Upload images" %>
-              <%= live_file_input @uploads[@field] %>
+              <.live_file_input upload={@uploads[@field]} />
+
             </button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}

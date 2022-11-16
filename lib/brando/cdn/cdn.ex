@@ -1,6 +1,25 @@
 defmodule Brando.CDN do
   @moduledoc """
   Interfacing with Content Delivery Networks
+
+  ## Configure
+
+  Example configuration (in runtime.exs)
+
+  ```elixir
+  config :brando, Brando.Images, cdn: [
+    enabled: true,
+    media_url: System.get_env("BRANDO_CDN_FILES_MEDIA_URL") || "https://mybucket.ams3.digitaloceanspaces.com",
+    bucket: System.get_env("BRANDO_CDN_FILES_BUCKET"),
+    s3: %{
+      access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+      secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
+      scheme: "https://",
+      host: "ams3.digitaloceanspaces.com",
+      region: "ams3"
+    }
+  ]
+
   """
   require Logger
   alias Ecto.Changeset
@@ -10,9 +29,12 @@ defmodule Brando.CDN do
   @type changeset :: Ecto.Changeset.t()
   @type upload_error :: {:error, {:cdn, {:upload, :failed}}}
 
-  def config(key), do: Keyword.get(Brando.config(Brando.CDN), key, nil)
+  def config(module, key) do
+    cdn_config = Brando.config(module, :cdn) || []
+    Keyword.get(cdn_config, key, nil)
+  end
 
-  def get_prefix, do: config(:media_url)
+  def get_prefix(module), do: config(module, :media_url)
 
   @doc """
 
@@ -24,7 +46,7 @@ defmodule Brando.CDN do
   end
 
   def do_upload_image({changeset, name, field}) do
-    s3_bucket = config(:bucket)
+    s3_bucket = config(Brando.Images, :bucket)
 
     # upload original
     original_key = Path.join(["media", field.path])
@@ -62,22 +84,21 @@ defmodule Brando.CDN do
       {:error, :invalid_bucket}
   end
 
-  @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | :no_return
-  def ensure_bucket_exists do
-    bucket = config(:bucket)
-
-    region = Map.fetch!(Application.get_env(:ex_aws, :s3), :region)
+  @spec ensure_bucket_exists(module) :: {:ok, {:bucket, :exists}} | :no_return
+  def ensure_bucket_exists(module) do
+    bucket = config(module, :bucket)
+    s3_config = config(module, :s3)
 
     bucket
     |> S3.get_bucket_location()
-    |> ExAws.request()
+    |> ExAws.request(s3_config)
     |> case do
       {:ok, _result} ->
         :ok
 
       {:error, _err} ->
         bucket
-        |> ExAws.S3.put_bucket(region)
+        |> ExAws.S3.put_bucket(s3_config.region)
         |> ExAws.request()
         |> case do
           {:ok, _} ->
@@ -98,10 +119,13 @@ defmodule Brando.CDN do
   end
 
   @doc """
-  Check if we use CDN in config
+  Check if we use CDN for the module
   """
-  @spec enabled? :: boolean
-  def enabled? do
-    (Brando.config(Brando.CDN) && Brando.config(Brando.CDN)[:enabled]) || false
+  @spec enabled?(module) :: boolean
+  def enabled?(module) when is_atom(module) do
+    cdn_config = Brando.config(module, :cdn) || []
+    !!Keyword.get(cdn_config, :enabled, false)
+  rescue
+    _ -> false
   end
 end

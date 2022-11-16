@@ -104,6 +104,7 @@ defmodule Brando.Villain.Parser do
           poster: data.poster || nil,
           preload: (data.preload == nil && true) || data.preload,
           opacity: data.opacity || 0.1,
+          controls: Map.get(data, :controls) || false,
           play_button: data.autoplay == false && (Brando.config(:video_play_button_text) || true)
         ]
       end
@@ -262,8 +263,11 @@ defmodule Brando.Villain.Parser do
              },
              %{vars: vars} = block
            ) do
-        language = Access.get(context, "language")
-        {:ok, entries} = Datasource.get_list(module, query, map_vars(vars), language)
+        language = Context.get(context, "language")
+        request = Context.get(context, "request")
+        mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
+
+        {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
         Context.assign(context, :entries, entries)
       end
 
@@ -292,46 +296,15 @@ defmodule Brando.Villain.Parser do
         end)
       end
 
-      # def datasource(
-      #       %{
-      #         module: module,
-      #         type: :list,
-      #         query: query,
-      #         code: code
-      #       } = data,
-      #       opts
-      #     ) do
-      #   arg = Map.get(data, :arg, nil)
-      #   src_module_id = Map.get(data, :module_id, nil)
-      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
+      def datasource(_, _) do
+        require Logger
 
-      #   language = Access.get(opts.context, "language")
+        Logger.error(
+          "==> parser: datasource/2 is deprecated. Use module with datasource instead."
+        )
 
-      #   with {:ok, entries} <- Datasource.get_list(module, query, arg, language) do
-      #     render_datasource_entries(src, entries, opts)
-      #   end
-      # end
-
-      # def datasource(
-      #       %{
-      #         module: module,
-      #         type: :selection,
-      #         query: query,
-      #         code: code,
-      #         ids: ids
-      #       } = data,
-      #       opts
-      #     ) do
-      #   arg = Map.get(data, :arg, nil)
-      #   src_module_id = Map.get(data, :module_id, nil)
-      #   src = (src_module_id && {:module, src_module_id}) || {:code, code}
-
-      #   with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
-      #     render_datasource_entries(src, entries, opts)
-      #   end
-      # end
-
-      def datasource(_, _), do: ""
+        ""
+      end
 
       defoverridable datasource: 2
 
@@ -432,7 +405,8 @@ defmodule Brando.Villain.Parser do
       def video(%{remote_id: src, source: :file} = data, _) do
         assigns = %{
           video: src,
-          opts: video_file_options(data)
+          opts: video_file_options(data),
+          cover_image: Map.get(data, :cover_image)
         }
 
         assigns
@@ -1005,6 +979,26 @@ defmodule Brando.Villain.Parser do
         <% end %>
       </div>
     <% end %>
+    """
+  end
+
+  def video_tag(%{cover_image: cover_image} = assigns) when not is_nil(cover_image) do
+    ~H"""
+    <.video
+      video={@video}
+      opts={@opts}>
+      <:cover>
+        <.picture
+        src={@cover_image}
+        opts={[
+          lazyload: true,
+          sizes: "auto",
+          srcset: :default,
+          placeholder: :dominant_color,
+          prefix: Brando.Utils.media_url()
+        ]} />
+      </:cover>
+    </.video>
     """
   end
 

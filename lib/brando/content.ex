@@ -46,6 +46,9 @@ defmodule Brando.Content do
       {:class, class}, query ->
         from(q in query, where: ilike(q.class, ^"%#{class}%"))
 
+      {:ids, ids}, query ->
+        from(q in query, where: q.id in ^ids)
+
       {:namespace, namespace}, query ->
         query =
           from(t in query,
@@ -224,6 +227,22 @@ defmodule Brando.Content do
     end
   end
 
+  @doc """
+  Get color from palette by key
+
+  ## Example
+
+      iex> get_color(palette, "fg")
+      "#ef00aa"
+
+  """
+  def get_color(%Palette{} = palette, color_key) do
+    case Enum.find(palette.colors, &(&1.key == color_key)) do
+      nil -> ""
+      color -> color.hex_value
+    end
+  end
+
   ## Templates
   ##
 
@@ -275,13 +294,32 @@ defmodule Brando.Content do
   mutation :delete, Template
   mutation :duplicate, {Template, change_fields: [:name]}
 
-  def get_var_by_type(var_type) do
-    Keyword.get(Var.types(), var_type)
-  end
+  def get_var_by_type(var_type), do: Keyword.get(Var.types(), var_type)
 
   def render_var(%{type: "string", value: value}), do: value
   def render_var(%{type: "text", value: value}), do: value
   def render_var(%{type: "boolean", value: value}), do: value || false
   def render_var(%{type: "html", value: value}), do: value
   def render_var(%{type: "color", value: value}), do: value
+  def render_var(%{type: "select", value: value, default: default}), do: value || default
+
+  @doc """
+  Trims encoded module string, base decodes and converts to terms
+  """
+  def deserialize_modules(encoded_modules) do
+    encoded_modules
+    |> String.trim()
+    |> Base.decode64!()
+    |> Brando.Utils.binary_to_term()
+  end
+
+  @doc """
+  Maps all ids to nil, converts terms to binary and base encodes
+  """
+  def serialize_modules(modules) do
+    modules
+    |> Enum.map(&Map.put(&1, :id, nil))
+    |> Brando.Utils.term_to_binary()
+    |> Base.encode64()
+  end
 end

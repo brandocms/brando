@@ -42,9 +42,13 @@ defmodule BrandoAdmin.Sites.IdentityLive do
         assign(socket, :entry_id, identity.id)
 
       {:error, _} ->
-        {:ok, english_identity} = Sites.get_identity(%{matches: %{language: "en"}})
-        {:ok, identity} = Sites.duplicate_identity(english_identity.id, :system)
-        {:ok, identity} = Sites.update_identity(identity, %{language: content_language}, :system)
+        first_identity = Sites.list_identities!() |> List.first()
+
+        {:ok, identity} =
+          Sites.duplicate_identity(first_identity.id, :system,
+            merge_fields: %{language: content_language}
+          )
+
         assign(socket, :entry_id, identity.id)
     end
   end

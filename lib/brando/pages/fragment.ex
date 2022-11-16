@@ -124,7 +124,7 @@ defmodule Brando.Pages.Fragment do
     )
   end
 
-  defimpl Phoenix.HTML.Safe, for: Brando.Pages.Fragment do
+  defimpl Phoenix.HTML.Safe do
     def to_iodata(%{wrapper: nil} = fragment) do
       fragment.html
       |> Phoenix.HTML.raw()

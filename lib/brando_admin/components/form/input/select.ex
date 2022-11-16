@@ -406,7 +406,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         id: form_id,
         action: :update_entry_relation,
         updated_relation: fetched_relation,
-        field: update_field,
+        path: [update_field],
         force_validation: true
       )
     end

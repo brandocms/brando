@@ -91,7 +91,7 @@ defmodule Brando.Files.File do
              :cdn
            ]}
 
-  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+  defimpl Phoenix.HTML.Safe do
     def to_iodata(file) do
       file
       |> Brando.Utils.file_url()
@@ -100,7 +100,7 @@ defmodule Brando.Files.File do
     end
   end
 
-  defimpl String.Chars, for: __MODULE__ do
+  defimpl String.Chars do
     def to_string(file) do
       file
       |> Brando.Utils.file_url()

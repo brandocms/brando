@@ -36,6 +36,7 @@ defmodule Brando.Content.Module do
 
   import Brando.Gettext
   alias Brando.Content.Var
+  alias Phoenix.LiveView.JS
 
   identifier "{{ entry.name }}"
 
@@ -85,14 +86,11 @@ defmodule Brando.Content.Module do
         [label: t("Class"), filter: "class"]
       ])
 
-      actions([
-        [label: t("Edit module"), event: "edit_entry"],
+      selection_actions([
         [
-          label: t("Delete module"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ],
-        [label: t("Duplicate module"), event: "duplicate_entry"]
+          label: t("Export modules"),
+          event: JS.push("export_modules") |> BrandoAdmin.Utils.show_modal("#module-export-modal")
+        ]
       ])
 
       template(

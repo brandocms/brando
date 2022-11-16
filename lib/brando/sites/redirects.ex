@@ -11,11 +11,8 @@ defmodule Brando.Sites.Redirects do
 
     Enum.reduce_while(redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
       case match_redirect(test_url, redirect.from, redirect.to) do
-        {:error, _} ->
-          {:cont, {:error, {:redirects, :no_match}}}
-
-        url ->
-          {:halt, {:ok, {:redirect, {url, redirect.code}}}}
+        {:error, _} -> {:cont, {:error, {:redirects, :no_match}}}
+        url -> {:halt, {:ok, {:redirect, {url, redirect.code}}}}
       end
     end)
   end
@@ -25,11 +22,8 @@ defmodule Brando.Sites.Redirects do
       from
       |> String.split("/")
       |> Enum.map_join("/", fn
-        ":" <> segment ->
-          "(?<#{segment}>[a-z0-9\-\_]+)"
-
-        segment ->
-          segment
+        ":" <> segment -> "(?<#{segment}>[a-z0-9\-\_]+)"
+        segment -> segment
       end)
       |> Regex.compile!()
 
@@ -41,11 +35,8 @@ defmodule Brando.Sites.Redirects do
         to
         |> String.split("/")
         |> Enum.map_join("/", fn
-          ":" <> segment ->
-            Map.get(captured_segments, segment, ":#{segment}")
-
-          segment ->
-            segment
+          ":" <> segment -> Map.get(captured_segments, segment, ":#{segment}")
+          segment -> segment
         end)
     end
   end

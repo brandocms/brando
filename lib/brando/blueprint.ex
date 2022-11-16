@@ -221,7 +221,7 @@ defmodule Brando.Blueprint do
             to_ecto_type(:villain),
             to_ecto_opts(attr.type, attr.opts) ++
               [
-                types: Brando.Blueprint.Villain.Blocks.list_blocks(),
+                types: Brando.Villain.Blocks.list_blocks(),
                 type_field: :type,
                 on_type_not_found: :raise,
                 on_replace: :delete
@@ -825,8 +825,7 @@ defmodule Brando.Blueprint do
       end
 
       for {trait, trait_opts} <- @all_traits do
-        defimpl Module.concat([trait, Implemented]),
-          for: __MODULE__ do
+        defimpl Module.concat([trait, Implemented]) do
           def implemented(_), do: true
         end
 

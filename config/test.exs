@@ -21,7 +21,11 @@ config :brando, BrandoIntegration.DummyRepo,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
 
+config :brando, Brando.Static, cdn: [enabled: false]
+config :brando, Brando.Files, cdn: [enabled: false]
+
 config :brando, Brando.Images,
+  cdn: [enabled: false],
   processor_module: Brando.Images.Processor.Dummy,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
@@ -55,21 +59,21 @@ config :brando, Brando.Images,
     ]
   }
 
-config :brando, :env, :test
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
 config :brando, :app_module, BrandoIntegration
-config :brando, :web_module, BrandoIntegrationWeb
 config :brando, :admin_module, BrandoIntegrationAdmin
-config :brando, :media_url, "/media"
-config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
+config :brando, :default_language, "en"
+config :brando, :default_admin_language, "en"
+config :brando, :env, :test
 config :brando, :log_dir, Path.expand("./tmp/logs")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
+config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
+config :brando, :media_url, "/media"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
-config :brando, :default_language, "en"
-config :brando, :default_admin_language, "en"
+config :brando, :web_module, BrandoIntegrationWeb
 
 config :brando, Oban,
   crontab: false,

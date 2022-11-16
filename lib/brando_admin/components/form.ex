@@ -127,19 +127,35 @@ defmodule BrandoAdmin.Components.Form do
         %{
           action: :update_entry_relation,
           updated_relation: updated_relation,
-          field: field_atom,
+          path: path,
           force_validation: true
         },
         %{assigns: %{entry: entry, schema: schema}} = socket
       ) do
     entry_or_default = entry || struct(schema)
-    updated_entry = Map.put(entry_or_default, field_atom, updated_relation)
+    access_path = Brando.Utils.build_access_path(path)
+    updated_entry = put_in(entry_or_default, access_path, updated_relation)
 
     {:ok,
      socket
      |> assign(:entry, updated_entry)
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
+  end
+
+  def update(
+        %{
+          action: :update_entry_relation,
+          updated_relation: updated_relation,
+          path: path
+        },
+        %{assigns: %{entry: entry, schema: schema}} = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+    access_path = Brando.Utils.build_access_path(path)
+    updated_entry = put_in(entry_or_default, access_path, updated_relation)
+
+    {:ok, assign(socket, entry, updated_entry)}
   end
 
   def update(
@@ -163,6 +179,21 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(%{updated_changeset: updated_changeset}, socket) do
+    {:ok, assign(socket, :changeset, updated_changeset)}
+  end
+
+  def update(
+        %{action: :update_changeset, changeset: updated_changeset, force_validation: true},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> push_event("b:validate", %{})
+     |> force_svelte_remounts()}
+  end
+
+  def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     {:ok, assign(socket, :changeset, updated_changeset)}
   end
 
@@ -269,6 +300,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_default_params()
      |> extract_tab_names()
      |> assign_changeset()
+     |> maybe_initial_validate()
      |> maybe_assign_uploads()}
   end
 
@@ -323,7 +355,7 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema)
       |> Map.put(:with_deleted, true)
 
-    assign(socket, :entry, context |> apply(:"get_#{singular}!", [query_params]))
+    assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
   end
 
   # defp scan_and_preload_block_vars(entry, schema) do
@@ -333,6 +365,15 @@ defmodule BrandoAdmin.Components.Form do
   #     Map.put(updated_entry, field, updated_blocks)
   #   end)
   # end
+
+  defp maybe_initial_validate(socket) do
+    if connected?(socket) && socket.assigns[:initial_update] do
+      socket
+      |> push_event("b:validate", %{})
+    else
+      socket
+    end
+  end
 
   defp maybe_assign_uploads(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
@@ -474,84 +515,81 @@ defmodule BrandoAdmin.Components.Form do
       <div
         id={"#{@id}-el"}
         class="brando-form"
-        data-moonwalk-run="brandoForm"
         phx-hook="Brando.Form">
         <div class="form-content">
-          <%= if @header do %>
-            <div class="form-header">
-              <h1>
-                <%= render_slot(@header) %>
-              </h1>
-            </div>
-          <% end %>
-          <%= if @instructions do %>
-            <div class="form-instructions">
-              <%= render_slot(@instructions) %>
-            </div>
-          <% end %>
+
+          <div
+            :if={@header}
+            class="form-header">
+            <h1>
+              <%= render_slot(@header) %>
+            </h1>
+          </div>
+
+          <div
+            :if={@instructions}
+            class="form-instructions">
+            <%= render_slot(@instructions) %>
+          </div>
+
           <div class="form-tabs">
             <div class="form-tab-customs">
-              <%= for tab <- @tabs do %>
-                <button
-                  type="button"
-                  class={render_classes([active: @active_tab == tab])}
-                  phx-click={JS.push("select_tab", target: @myself)}
-                  phx-value-name={tab}>
-                  <%= g(@schema, tab) %>
-                </button>
-              <% end %>
+              <button
+                :for={tab <- @tabs}
+                type="button"
+                class={render_classes([active: @active_tab == tab])}
+                phx-click={JS.push("select_tab", target: @myself)}
+                phx-value-name={tab}>
+                <%= g(@schema, tab) %>
+              </button>
             </div>
 
             <.form_presences presences={@presences} />
 
             <div class="form-tab-builtins">
-              <%= if @has_meta? do %>
-                <button
-                  phx-click={toggle_drawer("##{@id}-meta-drawer")}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
-                  <span class="tab-text">Meta</span>
-                </button>
-              <% end %>
-              <%= if @has_revisioning? do %>
-                <button
-                  phx-click={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-                  <span class="tab-text"><%= gettext "Revisions" %></span>
-                </button>
-              <% end %>
-              <%= if @has_scheduled_publishing? do %>
-                <button
-                  phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
-                  <span class="tab-text"><%= gettext "Scheduled publishing" %></span>
-                </button>
-              <% end %>
-              <%= if @has_alternates? do %>
-                <button
-                  phx-click={toggle_drawer("##{@id}-alternates-drawer")}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
-                    <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              <% end %>
-              <%= if @has_live_preview? do %>
-                <button
-                  phx-click={JS.push("open_live_preview", target: @myself)}
-                  class={render_classes([active: @live_preview_active?])}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
-                </button>
-                <button
-                  phx-click={JS.push("share_link", target: @myself)}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
-                </button>
-              <% end %>
+              <button
+                :if={@has_meta?}
+                phx-click={toggle_drawer("##{@id}-meta-drawer")}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
+                <span class="tab-text">Meta</span>
+              </button>
+              <button
+                :if={@has_revisioning?}
+                phx-click={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+                <span class="tab-text"><%= gettext "Revisions" %></span>
+              </button>
+              <button
+                :if={@has_scheduled_publishing?}
+                phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
+                <span class="tab-text"><%= gettext "Scheduled publishing" %></span>
+              </button>
+              <button
+                :if={@has_alternates?}
+                phx-click={toggle_drawer("##{@id}-alternates-drawer")}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
+                  <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <button
+                :if={@has_live_preview?}
+                phx-click={JS.push("open_live_preview", target: @myself)}
+                class={render_classes([active: @live_preview_active?])}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+              </button>
+              <button
+                :if={@has_live_preview?}
+                phx-click={JS.push("share_link", target: @myself)}
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
+              </button>
               <div class="split-dropdown">
                 <button
                   phx-click={JS.push("push_submit_redirect", target: @myself)}
@@ -606,38 +644,34 @@ defmodule BrandoAdmin.Components.Form do
             phx-submit="save"
             phx-change="validate">
 
-            <%= if @has_meta? do %>
-              <MetaDrawer.render
-                id={"#{@id}-meta-drawer"}
-                form={f}
-                uploads={@uploads}
-                close={toggle_drawer("##{@id}-meta-drawer")} />
-            <% end %>
+            <MetaDrawer.render
+              :if={@has_meta?}
+              id={"#{@id}-meta-drawer"}
+              form={f}
+              uploads={@uploads}
+              close={toggle_drawer("##{@id}-meta-drawer")} />
 
-            <%= if @has_revisioning? do %>
-              <.live_component module={RevisionsDrawer}
-                id={"#{@id}-revisions-drawer"}
-                current_user={@current_user}
-                entry_id={@entry_id}
-                form={f}
-                status={@status_revisions}
-                close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
-            <% end %>
+            <.live_component module={RevisionsDrawer}
+              :if={@has_revisioning?}
+              id={"#{@id}-revisions-drawer"}
+              current_user={@current_user}
+              entry_id={@entry_id}
+              form={f}
+              status={@status_revisions}
+              close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
 
-            <%= if @has_scheduled_publishing? do %>
-              <ScheduledPublishingDrawer.render
-                id={"#{@id}-scheduled-publishing-drawer"}
-                form={f}
-                close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
-            <% end %>
+            <ScheduledPublishingDrawer.render
+              :if={@has_scheduled_publishing?}
+              id={"#{@id}-scheduled-publishing-drawer"}
+              form={f}
+              close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
 
-            <%= if @has_alternates? do %>
-              <.live_component module={AlternatesDrawer}
-                id={"#{@id}-alternates-drawer"}
-                entry={@entry}
-                on_close={toggle_drawer("##{@id}-alternates-drawer")}
-                on_remove_link={JS.push("remove_link", target: @myself)} />
-            <% end %>
+            <.live_component module={AlternatesDrawer}
+              :if={@has_alternates?}
+              id={"#{@id}-alternates-drawer"}
+              entry={@entry}
+              on_close={toggle_drawer("##{@id}-alternates-drawer")}
+              on_remove_link={JS.push("remove_link", target: @myself)} />
 
             <.form_tabs
               tabs={@form.tabs}
@@ -685,20 +719,19 @@ defmodule BrandoAdmin.Components.Form do
 
   def form_tabs(assigns) do
     ~H"""
-    <%= for tab <- @tabs do %>
-      <div
-        class={render_classes(["form-tab", active: @active_tab == tab.name])}
-        data-tab-name={tab.name}>
-        <div class="row">
-          <.tab_fields
-            tab={tab}
-            current_user={@current_user}
-            uploads={@uploads}
-            schema={@schema}
-            form={@form} />
-        </div>
+    <div
+      :for={tab <- @tabs}
+      class={render_classes(["form-tab", active: @active_tab == tab.name])}
+      data-tab-name={tab.name}>
+      <div class="row">
+        <.tab_fields
+          tab={tab}
+          current_user={@current_user}
+          uploads={@uploads}
+          schema={@schema}
+          form={@form} />
       </div>
-    <% end %>
+    </div>
     """
   end
 
@@ -733,66 +766,63 @@ defmodule BrandoAdmin.Components.Form do
       close={close_file()}
       z={1001}
       narrow>
-      <%= if @file_changeset do %>
-        <.form
-          id="file-drawer-form"
-          for={@file_changeset}
-          let={file_form}
-          phx-submit="save_file"
-          phx-change="validate_file"
-          phx-target={@myself}>
-          <div
-            id="file-drawer-form-preview"
-            phx-hook="Brando.DragDrop"
-            class="file-drawer-preview"
-            phx-drop-target={@uploads[@edit_file.field].ref}>
-            <%= if @processing do %>
-              <div class="processing">
-                <div>
-                  <%= gettext "Uploading" %><br>
-                  <progress value={@processing} max="100"><%= @processing %>%</progress>
-                </div>
-              </div>
-            <% end %>
-
-            <div class="img-placeholder">
-              <div class="placeholder-wrapper">
-                <div class="svg-wrapper">
-                  <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z"/></svg>
-                </div>
-              </div>
+      <.form
+        :if={@file_changeset}
+        id="file-drawer-form"
+        for={@file_changeset}
+        let={file_form}
+        phx-submit="save_file"
+        phx-change="validate_file"
+        phx-target={@myself}>
+        <div
+          id="file-drawer-form-preview"
+          phx-hook="Brando.DragDrop"
+          class="file-drawer-preview"
+          phx-drop-target={@uploads[@edit_file.field].ref}>
+          <div :if={@processing} class="processing">
+            <div>
+              <%= gettext "Uploading" %><br>
+              <progress value={@processing} max="100"><%= @processing %>%</progress>
             </div>
           </div>
 
-          <div class="button-group vertical">
-            <div class="file-input-button">
-              <span class="label">
-                <%= gettext "Upload file" %>
-              </span>
-              <%= live_file_input @uploads[@edit_file.field] %>
+          <div class="img-placeholder">
+            <div class="placeholder-wrapper">
+              <div class="svg-wrapper">
+                <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z"/></svg>
+              </div>
             </div>
-            <button
-              class="secondary"
-              type="button"
-              phx-click={toggle_drawer("#file-picker")}>
-              <%= gettext "Select existing file" %>
-            </button>
-
-            <button
-              class="secondary"
-              type="button"
-              phx-page-loading
-              phx-click={reset_file_field(@myself)}>
-              <%= gettext "Reset file field" %>
-            </button>
           </div>
-          <%= if @edit_file.file do %>
-            <div class="brando-input">
-              <Input.text field={:title} form={file_form} label={gettext "Title"} />
-            </div>
-          <% end %>
-        </.form>
-      <% end %>
+        </div>
+
+        <div class="button-group vertical">
+          <div class="file-input-button">
+            <span class="label">
+              <%= gettext "Upload file" %>
+            </span>
+            <.live_file_input upload={@uploads[@edit_file.field]} />
+          </div>
+
+          <button
+            class="secondary"
+            type="button"
+            phx-click={toggle_drawer("#file-picker")}>
+            <%= gettext "Select existing file" %>
+          </button>
+
+          <button
+            class="secondary"
+            type="button"
+            phx-page-loading
+            phx-click={reset_file_field(@myself)}>
+            <%= gettext "Reset file field" %>
+          </button>
+        </div>
+
+        <div :if={@edit_file.file} class="brando-input">
+          <Input.text field={:title} form={file_form} label={gettext "Title"} />
+        </div>
+      </.form>
     </Content.drawer>
     """
   end
@@ -805,112 +835,107 @@ defmodule BrandoAdmin.Components.Form do
       close={close_image()}
       z={1001}
       narrow>
-      <%= if @image_changeset do %>
-        <.form
-          id="image-drawer-form"
-          for={@image_changeset}
-          let={image_form}
-          phx-submit="save_image"
-          phx-change="validate_image"
-          phx-target={@myself}>
-          <div
-            id="image-drawer-form-preview"
-            phx-hook="Brando.DragDrop"
-            class="image-drawer-preview"
-            phx-drop-target={@uploads[@edit_image.field].ref}>
-            <%= if @processing do %>
-              <div class="processing">
-                <div>
-                  <%= gettext "Uploading" %><br>
-                  <progress value={@processing} max="100"><%= @processing %>%</progress>
-                </div>
-              </div>
-            <% end %>
-            <%= if @edit_image.image do %>
-              <figure class="grid-overlay">
-                <div class="drop-indicator">
-                  <div><%= gettext "+ Drop here to upload" %></div>
-                </div>
-                <.live_component module={FocalPoint}
-                  id={"image-drawer-focal-#{@edit_image.id}"}
-                  image={@edit_image}
-                  form={image_form} />
-                <img
-                  width={@edit_image.image.width}
-                  height={@edit_image.image.height}
-                  src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
-              </figure>
-              <figcaption class="tiny"><%= @edit_image.image.path %></figcaption>
-            <% else %>
-              <div class="img-placeholder">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                      <circle cx="8" cy="9" r="2"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-          </div>
-
-          <div class="button-group vertical">
-            <div class="file-input-button">
-              <span class="label">
-                <%= gettext "Upload image" %>
-              </span>
-              <%= live_file_input @uploads[@edit_image.field] %>
+      <.form
+        :if={@image_changeset}
+        id="image-drawer-form"
+        for={@image_changeset}
+        let={image_form}
+        phx-submit="save_image"
+        phx-change="validate_image"
+        phx-target={@myself}>
+        <div
+          id="image-drawer-form-preview"
+          phx-hook="Brando.DragDrop"
+          class="image-drawer-preview"
+          phx-drop-target={@uploads[@edit_image.field].ref}>
+          <div :if={@processing} class="processing">
+            <div>
+              <%= gettext "Uploading" %><br>
+              <progress value={@processing} max="100"><%= @processing %>%</progress>
             </div>
-            <button
-              class="secondary"
-              type="button"
-              phx-click={toggle_drawer("#image-picker")}>
-              <%= gettext "Select existing image" %>
-            </button>
-
-            <%= if @edit_image.image do %>
-              <button
-                class="secondary"
-                type="button"
-                phx-click={duplicate_image(@edit_image, @myself)}
-                phx-page-loading>
-                <%= gettext "Duplicate image" %>
-              </button>
-            <% end %>
-
-            <button
-              class="secondary"
-              type="button"
-              phx-page-loading
-              phx-click={reset_image_field(@myself)}>
-              <%= gettext "Reset image field" %>
-            </button>
           </div>
           <%= if @edit_image.image do %>
-            <div class="brando-input">
-              <Input.text field={:title} form={image_form} label={gettext "Caption"} />
-            </div>
-
-            <div class="brando-input">
-              <Input.text field={:credits} form={image_form} label={gettext "Credits"} />
-            </div>
-
-            <div class="brando-input">
-              <Input.text field={:alt} form={image_form} label={gettext "Alt. text"} />
+            <figure class="grid-overlay">
+              <div class="drop-indicator">
+                <div><%= gettext "+ Drop here to upload" %></div>
+              </div>
+              <.live_component module={FocalPoint}
+                id={"image-drawer-focal-#{@edit_image.id}"}
+                image={@edit_image}
+                form={image_form} />
+              <img
+                width={@edit_image.image.width}
+                height={@edit_image.image.height}
+                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
+            </figure>
+            <figcaption class="tiny"><%= @edit_image.image.path %></figcaption>
+          <% else %>
+            <div class="img-placeholder">
+              <div class="placeholder-wrapper">
+                <div class="svg-wrapper">
+                  <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                    <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                    <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                    <circle cx="8" cy="9" r="2"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           <% end %>
-        </.form>
-      <% end %>
+        </div>
+
+        <div class="button-group vertical">
+          <div class="file-input-button">
+            <span class="label">
+              <%= gettext "Upload image" %>
+            </span>
+            <.live_file_input upload={@uploads[@edit_image.field]} />
+          </div>
+          <button
+            class="secondary"
+            type="button"
+            phx-click={toggle_drawer("#image-picker")}>
+            <%= gettext "Select existing image" %>
+          </button>
+
+          <button
+            :if={@edit_image.image}
+            class="secondary"
+            type="button"
+            phx-click={duplicate_image(@edit_image, @myself)}
+            phx-page-loading>
+            <%= gettext "Duplicate image" %>
+          </button>
+
+          <button
+            class="secondary"
+            type="button"
+            phx-page-loading
+            phx-click={reset_image_field(@myself)}>
+            <%= gettext "Reset image field" %>
+          </button>
+        </div>
+        <%= if @edit_image.image do %>
+          <div class="brando-input">
+            <Input.text field={:title} form={image_form} label={gettext "Caption"} />
+          </div>
+
+          <div class="brando-input">
+            <Input.text field={:credits} form={image_form} label={gettext "Credits"} />
+          </div>
+
+          <div class="brando-input">
+            <Input.text field={:alt} form={image_form} label={gettext "Alt. text"} />
+          </div>
+        <% end %>
+      </.form>
     </Content.drawer>
     """
   end
 
   def duplicate_image(js \\ %JS{}, edit_image, target) do
-    js
-    |> JS.push("duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
+    JS.push(js, "duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
   end
 
   def reset_file_field(js \\ %JS{}, target) do
@@ -1170,10 +1195,15 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_image = Map.put(edit_image, :image, updated_image)
-    full_path = path ++ [relation_field]
+    relation_full_path = path ++ [relation_field]
+    field_full_path = path ++ [field]
 
-    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> image.id end)
-    entrys_current_image = Map.get(entry_or_default, field)
+    updated_changeset =
+      EctoNestedChangeset.update_at(changeset, relation_full_path, fn _ -> image.id end)
+
+    entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
+
+    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
 
     updated_entry =
       cond do
@@ -1184,10 +1214,10 @@ defmodule BrandoAdmin.Components.Form do
           merged_image =
             Map.merge(entrys_current_image, Map.take(updated_image, [:title, :credits, :alt]))
 
-          Map.put(entry_or_default, field, merged_image)
+          put_in(entry_or_default, access_field_full_path, merged_image)
 
         true ->
-          Map.put(entry_or_default, field, updated_image)
+          put_in(entry_or_default, access_field_full_path, updated_image)
       end
 
     # Subscribe parent live view to changes to this image
@@ -1195,8 +1225,11 @@ defmodule BrandoAdmin.Components.Form do
 
     # this is only for fresh uploads.
     if updated_image.status !== :processed do
-      Brando.Images.Processing.queue_processing(updated_image, current_user)
+      Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end
+
+    target_field_name =
+      [singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")] |> Enum.join("")
 
     {:noreply,
      socket
@@ -1205,7 +1238,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
      |> push_event("b:validate", %{
-       target: "#{singular}[#{edit_image.relation_field}]",
+       target: target_field_name,
        value: image.id
      })}
   end
@@ -1371,7 +1404,7 @@ defmodule BrandoAdmin.Components.Form do
     changeset =
       entry_or_default
       |> schema.changeset(entry_params, current_user)
-      |> Map.put(:action, :update)
+      |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(
         schema,
         current_user
@@ -1409,13 +1442,23 @@ defmodule BrandoAdmin.Components.Form do
         maybe_redirected_socket =
           case save_redirect_target do
             :self ->
-              id = "#{socket.assigns.id}-revisions-drawer"
-              send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+              if mutation_type == :create do
+                generated_update_view = schema.__modules__().admin_update_view
 
-              # update entry!
-              socket
-              |> assign(:entry_id, entry.id)
-              |> assign_refreshed_entry()
+                push_redirect(socket,
+                  to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
+                )
+              else
+                if schema.has_trait(Brando.Trait.Revisioned) do
+                  id = "#{socket.assigns.id}-revisions-drawer"
+                  send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+                end
+
+                # update entry!
+                socket
+                |> assign(:entry_id, entry.id)
+                |> assign_refreshed_entry()
+              end
 
             :listing ->
               push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
@@ -1540,7 +1583,6 @@ defmodule BrandoAdmin.Components.Form do
         upload_entry,
         %{
           assigns: %{
-            schema: schema,
             edit_image: edit_image,
             current_user: current_user
           }
@@ -1551,19 +1593,21 @@ defmodule BrandoAdmin.Components.Form do
     if upload_entry.done? do
       socket = assign(socket, :processing, false)
       relation_key = String.to_existing_atom("#{key}_id")
-      %{cfg: cfg} = schema.__asset_opts__(key)
-      config_target = "image:#{inspect(schema)}:#{key}"
+
+      %{cfg: cfg} = edit_image.schema.__asset_opts__(key)
+      config_target = "image:#{inspect(edit_image.schema)}:#{key}"
 
       case consume_uploaded_entry(
              socket,
              upload_entry,
              fn meta ->
-               Brando.Upload.handle_upload(
-                 Map.put(meta, :config_target, config_target),
-                 upload_entry,
-                 cfg,
-                 current_user
-               )
+               updated_meta =
+                 Map.merge(meta, %{
+                   config_target: config_target,
+                   field_path: edit_image.path ++ [relation_key]
+                 })
+
+               Brando.Upload.handle_upload(updated_meta, upload_entry, cfg, current_user)
              end
            ) do
         {:error, :content_type, rejected_type, allowed_types} ->
@@ -1583,7 +1627,7 @@ defmodule BrandoAdmin.Components.Form do
 
           {:noreply,
            socket
-           |> update_changeset(relation_key, image.id)
+           |> update_changeset(edit_image.path, relation_key, image.id)
            |> assign(:edit_image, edit_image)
            |> assign(:image_changeset, image_changeset)}
       end
@@ -1787,6 +1831,35 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  def update_changeset(%{assigns: %{changeset: _}} = socket, [], key, arg) do
+    # empty path, treat as root field
+    update_changeset(socket, key, arg)
+  end
+
+  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, list)
+      when is_list(list) do
+    new_changeset =
+      EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ ->
+        Enum.map(list, &Map.from_struct/1)
+      end)
+
+    assign(socket, :changeset, new_changeset)
+  end
+
+  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, map)
+      when is_list(path) and is_map(map) do
+    new_changeset =
+      EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
+
+    assign(socket, :changeset, new_changeset)
+  end
+
+  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, value)
+      when is_list(path) do
+    new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
+    assign(socket, :changeset, new_changeset)
+  end
+
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, list)
       when is_list(list) do
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
@@ -1952,6 +2025,7 @@ defmodule BrandoAdmin.Components.Form do
           "-"
         )
       end)
+      |> assign_new(:parent_form, fn -> nil end)
       |> assign_new(:component_target, fn ->
         case assigns.type do
           {:component, module} ->
@@ -1979,6 +2053,7 @@ defmodule BrandoAdmin.Components.Form do
         <.live_component module={@component_target}
           id={@component_id}
           form={@form}
+          parent_form={@parent_form}
           field={@field}
           label={@label}
           placeholder={@placeholder}
@@ -2180,12 +2255,15 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  def label(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:click, fn -> nil end)
-      |> assign_new(:id_prefix, fn -> "" end)
+  attr :form, :any
+  attr :field, :any
+  attr :uid, :any, default: nil
+  attr :id_prefix, :string, default: ""
+  attr :class, :string, default: nil
+  attr :click, :any, default: nil
+  slot(:default, default: nil)
 
+  def label(assigns) do
     f_id =
       if assigns[:uid] do
         "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
@@ -2196,7 +2274,7 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <label class={render_classes(List.wrap(@class))} for={@f_id} phx-click={@click}>
+    <label class={render_classes(List.wrap(@class))} for={@f_id} phx-click={@click} phx-page-loading={@click && true || false}>
       <%= render_slot @inner_block %>
     </label>
     """

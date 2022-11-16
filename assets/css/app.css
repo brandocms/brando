@@ -534,7 +534,7 @@ body {
     @responsive iphone { --main-margin-left: 0 }
 
     margin-left: var(--main-margin-left);
-    width: calc(100% - var(--main-margin-left));
+    @space width calc(100% - var(--main-margin-left)) >=ipad_landscape;
   }
 }
 
@@ -1044,6 +1044,12 @@ h3 {
     margin-left: 5px;
   }
 
+  &.mini {
+    font-size: 11px;
+    padding: 3px 5px;
+    border-radius: 9px;
+  }
+
   &.lowercase {
     text-transform: lowercase;
   }
@@ -1071,6 +1077,12 @@ h3 {
     margin-top: -1px;
     transition: fill 250ms ease;
   }
+}
+
+.imported-module {
+  background-color: var(--brando-color-peach);
+  margin: 5px 0;
+  padding: 12px;
 }
 
 .alert-backdrop {

@@ -10,29 +10,9 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/palette.ex:82
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr ""
-
 #: lib/brando/content/palette.ex:74
 #, elixir-autogen, elixir-format
 msgid "Color"
-msgstr ""
-
-#: lib/brando/content/palette.ex:80
-#, elixir-autogen, elixir-format
-msgid "Delete palette"
-msgstr ""
-
-#: lib/brando/content/palette.ex:84
-#, elixir-autogen, elixir-format
-msgid "Duplicate palette"
-msgstr ""
-
-#: lib/brando/content/palette.ex:78
-#, elixir-autogen, elixir-format
-msgid "Edit palette"
 msgstr ""
 
 #: lib/brando/content/palette.ex:73

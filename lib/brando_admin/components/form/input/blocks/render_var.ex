@@ -60,6 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     important = get_field(changeset, :important)
     render = Map.get(assigns, :render, :all)
     edit = Map.get(assigns, :edit, false)
+    target = Map.get(assigns, :target, nil)
 
     should_render? =
       cond do
@@ -100,9 +101,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      socket
      |> assign(:id, assigns.id)
      |> assign(:edit, edit)
+     |> assign(:target, target)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
      |> assign(:label, get_field(changeset, :label))
+     |> assign(:key, v(var, :key))
      |> assign(:type, type)
      |> assign(:value, value)
      |> assign_new(:images, fn -> nil end)
@@ -127,6 +130,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   defp control_value("color", "#" <> value), do: "##{value}"
   defp control_value("color", _value), do: "#000000"
+
+  defp control_value("select", value) when is_binary(value), do: value
+  defp control_value("select", _value), do: ""
 
   defp control_value("html", value) when is_binary(value), do: value
   defp control_value("html", _value), do: "<p></p>"
@@ -162,12 +168,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   %{label: "Datetime", value: "datetime"},
                   %{label: "Html", value: "html"},
                   %{label: "String", value: "string"},
+                  %{label: "Select", value: "select"},
                   %{label: "Text", value: "text"},
                   %{label: "Image", value: "image"},
                 ]]} />
 
                 <.render_value_inputs
                   edit
+                  id={@id}
                   type={@type}
                   var={@var}
                   image={@image}
@@ -183,6 +191,29 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     <Input.toggle form={@var} field={:picker} label={gettext "Allow picking custom colors"} />
                     <Input.toggle form={@var} field={:opacity} label={gettext "Allow setting opacity"} />
                     <Input.number form={@var} field={:palette_id} label={gettext "ID of palette to choose colors from"} />
+
+                  <% "select" -> %>
+                    <Form.field_base
+                      form={@var}
+                      field={:options}
+                      label="Options"
+                      instructions=""
+                      left_justify_meta>
+                      <Form.label
+                        form={@var}
+                        field={:options}>
+                        <%= for opt <- inputs_for(@var, :options) do %>
+                          <Input.text form={opt} field={:label} label={gettext "Label"} />
+                          <Input.text form={opt} field={:value} label={gettext "Value"} />
+                        <% end %>
+                      </Form.label>
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}>
+                        <%= gettext("Add option") %>
+                      </button>
+                    </Form.field_base>
 
                   <% _ -> %>
 
@@ -253,6 +284,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
         <% "html" -> %>
           <Input.rich_text form={@var} field={:value} label={@label} instructions={@instructions} />
+
+        <% "select" -> %>
+          <.live_component module={Input.Select}
+            id={"#{@var.id}-select"}
+            label={@label}
+            form={@var}
+            field={:value}
+            opts={[options: input_value(@var, :options) || []]}
+          />
+
+          <%= for opt <- inputs_for(@var, :options) do %>
+            <Input.hidden form={opt} field={:label} />
+            <Input.hidden form={opt} field={:value} />
+          <% end %>
 
         <% "image" -> %>
           <Form.field_base

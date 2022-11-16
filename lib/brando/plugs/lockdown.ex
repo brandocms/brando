@@ -6,27 +6,24 @@ defmodule Brando.Plug.Lockdown do
 
   ## Example
 
+  ```elixir
       plug Brando.Plug.Lockdown
-
-  The `Lockdown` plug looks for a `lockdown_path` in your `router.ex`.
-
-  ## Example
-
-      scope "/coming-soon" do
-        get "/", Brando.LockdownController, :index
-        post "/", Brando.LockdownController, :post_password
-      end
+  ```
 
   ## Configure
 
       config :brando,
         lockdown: true,
         lockdown_password: "my_pass",
-        lockdown_until: ~U[2015-01-13 13:00:00Z]
+        lockdown_until: ~U[2040-01-13 13:00:00Z]
 
-  Password is optional. If no password configuration is found, you have to login
-  through the backend to see the frontend website.
+  `lockdown_password` and `lockdown_until` is optional. If no password
+  configuration is found, you have to login through the backend to see
+  the frontend website.
 
+  You can also add a key as query string to set a cookie that allows browsing.
+
+  `https://website/?key=<pass>`
   """
   alias Brando.Users
   import Phoenix.Controller, only: [redirect: 2]
@@ -34,10 +31,8 @@ defmodule Brando.Plug.Lockdown do
 
   @behaviour Plug
 
-  @spec init(Keyword.t()) :: Keyword.t()
   def init(options), do: options
 
-  @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(conn, _) do
     if Brando.config(:lockdown) do
       allowed?(conn, Brando.config(:lockdown_password))
@@ -46,7 +41,6 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @spec allowed?(Plug.Conn.t(), binary) :: Plug.Conn.t()
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn, _) do
     if Users.can_login?(user) do
       conn
@@ -61,11 +55,7 @@ defmodule Brando.Plug.Lockdown do
     do: Plug.Conn.put_session(conn, :lockdown_authorized, true)
 
   defp allowed?(conn, _), do: lockdown(conn)
-
-  @spec lockdown(Plug.Conn.t()) :: Plug.Conn.t()
-  defp lockdown(conn) do
-    check_lockdown_date(conn, Brando.config(:lockdown_until))
-  end
+  defp lockdown(conn), do: check_lockdown_date(conn, Brando.config(:lockdown_until))
 
   defp check_lockdown_date(conn, nil) do
     conn

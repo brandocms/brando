@@ -4,8 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   import Brando.Gettext
 
-  alias Brando.Blueprint.Villain.Blocks.PictureBlock
-  alias Brando.Utils
+  alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
@@ -66,6 +65,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:image, v(assigns.block, :data))
+     |> assign(:path, v(block_data, :path))
+     |> assign(:sizes, v(block_data, :sizes))
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
@@ -100,19 +101,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <% end %>
         </:description>
         <input class="file-input" type="file" />
-        <%= if @extracted_path do %>
-          <div class="preview" phx-click={show_modal("#block-#{@uid}_config")}>
-            <Content.image image={@image} size={:largest} />
-            <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-              <div id={"block-#{@uid}-figcaption-title"}>
-                <span><%= gettext("Caption") %></span> <%= v(@block_data, :title) |> raw %><br>
-              </div>
-              <div id={"block-#{@uid}-figcaption-alt"}>
-                <span><%= gettext("Alt. text") %></span> <%= v(@block_data, :alt) %>
-              </div>
-            </figcaption>
-          </div>
-        <% end %>
+        <div
+          :if={@extracted_path}
+          class="preview"
+          phx-click={show_modal("#block-#{@uid}_config")}>
+          <Content.image image={@image} size={:largest} />
+          <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
+            <div id={"block-#{@uid}-figcaption-title"}>
+              <span><%= gettext("Caption") %></span> <%= (@image.title |> raw) || "—" %><br>
+            </div>
+            <div id={"block-#{@uid}-figcaption-alt"}>
+              <span><%= gettext("Alt. text") %></span> <%= @image.alt || "—" %>
+            </div>
+          </figcaption>
+        </div>
 
         <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
           <figure>
@@ -189,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:height} />
           <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:width} />
 
-          <%= if is_nil(v(@block_data, :path)) and !is_nil(v(@block_data, :sizes)) do %>
+          <%= if is_nil(@path) and !is_nil(@sizes) do %>
             <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} value={@extracted_path} />
           <% else %>
             <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} />
@@ -294,24 +296,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ) do
     changeset = base_form.source
 
-    empty_block = %PictureBlock{
-      uid: Utils.generate_uid(),
-      data: %PictureBlock.Data{}
-    }
-
     updated_changeset =
-      Villain.replace_block_in_changeset(changeset, data_field, uid, empty_block)
+      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %PictureBlock.Data{}
+      })
 
     schema = changeset.data.__struct__
     form_id = "#{schema.__naming__().singular}_form"
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
-      force_validation: true
+      updated_changeset: updated_changeset
     )
 
-    {:noreply, socket}
+    {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
   def handle_event(

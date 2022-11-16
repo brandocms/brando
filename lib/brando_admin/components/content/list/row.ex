@@ -209,6 +209,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ctx = assigns.schema.__modules__.context
     singular = assigns.schema.__naming__.singular
+    translated_singular = assigns.schema.__translations__[:naming][:singular]
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
 
@@ -223,6 +224,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
       |> assign(:duplicate_langs?, duplicate_langs?)
+      |> assign(:translated_singular, translated_singular)
       |> assign(
         :duplicate_langs,
         get_duplication_langs(assigns.content_language, duplicate_langs?)
@@ -236,7 +238,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           phx-value-id={@entry.id}
           phx-value-language={@language}
           phx-click="edit_entry">
-          <%= gettext "Edit entry" %>
+          <%= gettext "Edit" %> <%= @translated_singular %>
         </button>
       </li>
       <li>
@@ -247,7 +249,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           phx-confirm-click={JS.push("delete_entry")}
           phx-value-language={@language}
           phx-value-id={@entry.id}>
-          <%= gettext "Delete entry" %>
+          <%= gettext "Delete" %> <%= @translated_singular %>
         </button>
       </li>
       <li :if={@has_duplicate_fn?}>
@@ -256,12 +258,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           phx-value-id={@entry.id}
           phx-value-language={@language}
           phx-click="duplicate_entry">
-          <%= gettext "Duplicate entry" %>
+          <%= gettext "Duplicate" %>
         </button>
       </li>
       <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
         <button
-          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang"}
+          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
           phx-value-id={@entry.id}
           phx-value-language={lang}
           phx-click="duplicate_entry_to_language">
@@ -295,7 +297,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           phx-value-id={@entry.id}
           phx-value-language={@language}
           phx-click="undelete_entry">
-          <%= gettext "Undelete entry" %>
+          <%= gettext "Undelete" %> <%= @translated_singular %>
         </button>
       </li>
     </CircleDropdown.render>
@@ -339,11 +341,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="status-dropdown hidden" id={@id}>
-      <%= for status <- @statuses do %>
-        <button type="button" phx-click={JS.push("set_status", value: %{id: @entry_id, status: status}) |> toggle_dropdown("##{@id}")}>
-          <.status_circle status={status} /> <%= render_status_label(status) %>
-        </button>
-      <% end %>
+      <button
+        :for={status <- @statuses}
+        type="button"
+        phx-click={JS.push("set_status", value: %{id: @entry_id, status: status}) |> toggle_dropdown("##{@id}")}>
+        <.status_circle status={status} /> <%= render_status_label(status) %>
+      </button>
     </div>
     """
   end

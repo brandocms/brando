@@ -81,6 +81,22 @@ defmodule Brando.VillainTest do
       Brando.Villain.parse(%{text: "**Some** text here.", type: "paragraph"}) ==
         ""
     end
+
+    conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
+
+    assert Brando.Villain.parse(
+             [
+               %{
+                 type: "text",
+                 data: %{
+                   text: "The url is {{ request.url }}. Param: {{ request.params.category_slug }}"
+                 }
+               }
+             ],
+             nil,
+             conn: conn
+           ) ==
+             "The url is /projects/all. Param: all"
   end
 
   test "list_villains" do
@@ -783,26 +799,6 @@ defmodule Brando.VillainTest do
       },
       user
     )
-  end
-
-  test "ensure villains update on config changes", %{user: user} do
-    Brando.Cache.Identity.set()
-
-    pf_params = pf_data("So configs.key1.value says: '{{ configs.key1.value }}'.")
-
-    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    assert pf1.html == "<div class=\"paragraph\">So configs.key1.value says: 'value1'.</div>"
-
-    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
-
-    Brando.Sites.update_identity(
-      identity,
-      %{configs: [%{key: "key1", value: "wow!"}]},
-      user
-    )
-
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "<div class=\"paragraph\">So configs.key1.value says: 'wow!'.</div>"
   end
 
   test "fragment tag", %{user: user} do

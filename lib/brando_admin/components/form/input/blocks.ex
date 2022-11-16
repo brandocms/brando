@@ -106,9 +106,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    new_block = %Brando.Blueprint.Villain.Blocks.ContainerBlock{
+    new_block = %Brando.Villain.Blocks.ContainerBlock{
       type: "container",
-      data: %Brando.Blueprint.Villain.Blocks.ContainerBlock.Data{
+      data: %Brando.Villain.Blocks.ContainerBlock.Data{
         palette_id: nil,
         blocks: []
       },
@@ -152,9 +152,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
 
     # if module.wrapper is true, this is a multi block!
-    new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
+    new_block = %Brando.Villain.Blocks.ModuleBlock{
       type: "module",
-      data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
+      data: %Brando.Villain.Blocks.ModuleBlock.Data{
         module_id: module_id,
         multi: module.wrapper,
         vars: module.vars,
@@ -216,7 +216,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     get_field(changeset, :data) || []
   end
 
-  defp replace_uids(%Brando.Blueprint.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
+  defp replace_uids(
+         %Brando.Villain.Blocks.ModuleBlock{data: %{multi: true, entries: entries, refs: refs}} =
+           block
+       ) do
+    updated_refs = Brando.Villain.add_uid_to_refs(refs)
+    updated_entries = Enum.map(entries, &replace_uids/1)
+
+    block
+    |> put_in([Access.key(:uid)], Brando.Utils.generate_uid())
+    |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
+    |> put_in([Access.key(:data), Access.key(:entries)], updated_entries)
+  end
+
+  defp replace_uids(%Brando.Content.Module.Entry{} = block) do
+    put_in(block, [Access.key(:uid)], Brando.Utils.generate_uid())
+  end
+
+  defp replace_uids(%Brando.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do
     updated_refs = Brando.Villain.add_uid_to_refs(refs)
 
     block
@@ -224,9 +241,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     |> put_in([Access.key(:data), Access.key(:refs)], updated_refs)
   end
 
-  defp replace_uids(
-         %Brando.Blueprint.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block
-       ) do
+  defp replace_uids(%Brando.Villain.Blocks.ContainerBlock{data: %{blocks: blocks}} = block) do
     updated_blocks = Enum.map(blocks, &replace_uids/1)
 
     block
@@ -390,8 +405,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             class="block-action toggler"
             click={toggle_collapsed(@collapsed, @uid)}
             uid={@uid}
-            id_prefix="base_block"
-            phx-page-loading>
+            id_prefix="base_block">
             <%= if @collapsed do %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M9.342 18.782l-1.931-.518.787-2.939a10.988 10.988 0 0 1-3.237-1.872l-2.153 2.154-1.415-1.415 2.154-2.153a10.957 10.957 0 0 1-2.371-5.07l1.968-.359C3.903 10.812 7.579 14 12 14c4.42 0 8.097-3.188 8.856-7.39l1.968.358a10.957 10.957 0 0 1-2.37 5.071l2.153 2.153-1.415 1.415-2.153-2.154a10.988 10.988 0 0 1-3.237 1.872l.787 2.94-1.931.517-.788-2.94a11.072 11.072 0 0 1-3.74 0l-.788 2.94z"/></svg>
             <% else %>

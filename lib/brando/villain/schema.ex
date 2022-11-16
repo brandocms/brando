@@ -38,7 +38,7 @@ defmodule Brando.Villain.Schema do
       @before_compile unquote(__MODULE__)
 
       unless Keyword.fetch(unquote(opts), :generate_protocol) == {:ok, false} do
-        defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+        defimpl Phoenix.HTML.Safe do
           def to_iodata(%{html: html}) do
             html
             |> Phoenix.HTML.raw()

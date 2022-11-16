@@ -2,6 +2,35 @@ defmodule Brando.Blueprint.Relations do
   @moduledoc """
   WIP
 
+  ## Has many
+
+  ### Example
+
+      relations do
+        relation :clients, :has_many, module: Client, cast: true, on_replace: :delete
+      end
+
+      forms do
+        form do
+          form_query &__MODULE__.query_with_preloads/1
+          fieldset size: :full do
+            inputs_for :clients,
+              label: t("Clients"),
+              cardinality: :many,
+              style: {:transformer, :cover},
+              default: %Client{} do
+              input :cover, :image, label: t("Cover", Client)
+              input :name, :text, placeholder: "Client Name"
+              input :description, :rich_text
+            end
+          end
+        end
+      end
+
+      def query_with_preloads(id) do
+        %{matches: %{id: id}, preload: [clients: :cover]}
+      end
+
   ## Many to many
 
   If you want to pass just ids of your many_to_many relation use `cast: true`

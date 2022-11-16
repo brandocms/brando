@@ -7,11 +7,11 @@ defmodule Brando.HTML do
   @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
 
-  alias Brando.Utils
-
   use Phoenix.Component
+  import Brando.Gettext
   import Phoenix.HTML
   import Phoenix.HTML.Tag
+  alias Brando.Utils
 
   @doc false
   defmacro __using__(_) do
@@ -51,11 +51,6 @@ defmodule Brando.HTML do
     |> raw()
   end
 
-  attr :conn, :map
-  attr :class, :string
-  attr :language, :string
-  attr :fallback, :string, default: "/"
-
   @doc """
   Outputs an alternate URL for the current URL in conn
 
@@ -70,17 +65,22 @@ defmodule Brando.HTML do
         {{ lang }}
       </.alternate_url>
   """
+  attr :conn, :map
+  attr :class, :string, default: nil
+  attr :language, :string
+  attr :fallback, :string, default: "/"
+  attr :rest, :global
+  slot :default
+
   def alternate_url(assigns) do
-    extra = assigns_to_attributes(assigns, [:conn, :class])
     href = get_alternate_url(assigns)
 
     assigns =
       assigns
-      |> assign(:extra, extra)
       |> assign(:href, href)
 
     ~H"""
-    <a href={@href} class={@class} {@extra}>
+    <a href={@href} class={@class} {@rest}>
       <%= render_slot(@inner_block) %>
     </a>
     """
@@ -106,9 +106,9 @@ defmodule Brando.HTML do
       ]} />
 
   """
-  def preload_fonts(assigns) do
-    assigns = assign_new(assigns, :fonts, fn -> [] end)
+  attr :fonts, :list, default: []
 
+  def preload_fonts(assigns) do
     ~H"""
     <link
       :for={{type, font} <- @fonts}
@@ -121,7 +121,7 @@ defmodule Brando.HTML do
   end
 
   def render_palettes_css(assigns) do
-    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get())
+    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
     ~H"""
     <style :if={@palettes_css != ""}><%= @palettes_css %></style>
@@ -192,7 +192,7 @@ defmodule Brando.HTML do
       "005"
 
   """
-  @spec zero_pad(val :: binary | integer, count :: integer) :: binary
+  @spec zero_pad(binary | integer, non_neg_integer) :: binary
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 
@@ -220,9 +220,9 @@ defmodule Brando.HTML do
   def cookie_law(assigns) do
     assigns =
       assigns
-      |> assign_new(:button_text, fn -> "OK" end)
-      |> assign_new(:info_link, fn -> "/cookies" end)
-      |> assign_new(:info_text, fn -> "More info" end)
+      |> assign_new(:button_text, fn -> gettext("OK") end)
+      |> assign_new(:info_link, fn -> gettext("/cookies") end)
+      |> assign_new(:info_text, fn -> gettext("More info") end)
 
     ~H"""
     <div class="container cookie-container">
@@ -256,7 +256,7 @@ defmodule Brando.HTML do
 
   """
   @spec google_analytics(ua_code :: binary) :: safe_string()
-  def google_analytics(ua_code) do
+  def google_analytics(ua_code) when is_binary(ua_code) do
     content =
       """
       (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
@@ -407,97 +407,6 @@ defmodule Brando.HTML do
   def ratio(nil), do: 0
 
   @doc """
-  Include CSS link tag.
-
-  Also includes a preconnect link tag for faster resolution
-  """
-  @spec include_css(conn) :: safe_string | [safe_string]
-  def include_css(%Plug.Conn{host: host, scheme: scheme}) do
-    cdn? = !!Brando.endpoint().config(:static_url)
-    hmr? = Application.get_env(Brando.otp_app(), :hmr)
-
-    url =
-      if hmr? do
-        "#{scheme}://#{host}:9999/css/app.css"
-      else
-        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
-          Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
-      end
-
-    css_tag = tag(:link, rel: "stylesheet", href: url, crossorigin: cdn?)
-
-    (cdn? &&
-       [
-         (hmr? && []) || preconnect_tag(),
-         css_tag
-       ]) || css_tag
-  end
-
-  @doc """
-  Renders JS script tags
-
-  Also includes a polyfill for Safari in prod.
-  """
-  @spec include_js(conn) :: safe_string | [safe_string]
-  def include_js(%Plug.Conn{host: host, scheme: scheme}) do
-    cdn? = !!Brando.endpoint().config(:static_url)
-    # check if we're HMR
-    if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "#{scheme}://#{host}:9999/js/app.js"
-      content_tag(:script, "", defer: true, src: url)
-    else
-      {modern_route, legacy_route} =
-        case cdn? do
-          true ->
-            {
-              Brando.helpers().static_url(
-                Brando.endpoint(),
-                "/js/app.js"
-              ),
-              Brando.helpers().static_url(
-                Brando.endpoint(),
-                "/js/app.legacy.js"
-              )
-            }
-
-          false ->
-            {
-              Brando.helpers().static_path(
-                Brando.endpoint(),
-                "/js/app.js"
-              ),
-              Brando.helpers().static_path(
-                Brando.endpoint(),
-                "/js/app.legacy.js"
-              )
-            }
-        end
-
-      polyfill =
-        '''
-        !function(e,t,n){!("noModule"in(t=e.createElement("script")))&&"onbeforeload"in t&&(n=!1,e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove())}(document)
-        '''
-        |> Phoenix.HTML.raw()
-
-      [
-        content_tag(:script, polyfill, type: "module"),
-        content_tag(:script, "",
-          defer: true,
-          src: modern_route,
-          type: "module",
-          crossorigin: cdn?
-        ),
-        content_tag(:script, "",
-          defer: true,
-          src: legacy_route,
-          nomodule: true,
-          crossorigin: cdn?
-        )
-      ]
-    end
-  end
-
-  @doc """
   Inject critical css
   """
   def inject_critical_css(assigns) do
@@ -522,6 +431,12 @@ defmodule Brando.HTML do
       <!-- end admin dev/test -->
       """
     end
+  end
+
+  def include_assets(%{only_css: true} = assigns) do
+    ~H"""
+    <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+    """
   end
 
   def include_assets(assigns) do
@@ -571,10 +486,12 @@ defmodule Brando.HTML do
   @doc """
   Renders a link tag with preconnect to the CDN domain
   """
-  @spec preconnect_tag :: safe_string
-  def preconnect_tag do
-    static_url = Brando.endpoint().static_url
-    tag(:link, href: static_url, rel: "preconnect", crossorigin: true)
+  def preconnect_tag(assigns) do
+    assigns = assign(assigns, :static_url, Brando.endpoint().static_url)
+
+    ~H"""
+    <link href={@static_url} rel="preconnect" crossorigin="true" />
+    """
   end
 
   @doc """
@@ -584,11 +501,57 @@ defmodule Brando.HTML do
     ~H||
   end
 
+  @doc """
+  Parses a villain field.
+
+  You can also parse a "content hole", if the data field you are processing contains
+  a `$__CONTENT__` delimiter.
+
+  For instance, the template:
+
+      something $__CONTENT__ anything
+
+  parsed with `render_data` as such:
+
+      <.render_data conn={@conn} entry={@entry}>
+        Hello world!
+      </.render_data>
+
+  will result in
+
+      something Hello world! anything
+
+  """
+  attr :entry, :map, required: true
+  attr :conn, :map, required: true
+  slot(:inner_block, default: nil)
+
   def render_data(assigns) do
+    parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, conn: assigns.conn)
+
+    [pre, post] =
+      case String.split(parsed_data, "$__CONTENT__") do
+        [pre, post] -> [pre, post]
+        [pre] -> [pre, nil]
+      end
+
+    assigns =
+      assigns
+      |> assign(:pre, pre)
+      |> assign(:post, post)
+
     ~H"""
-    <%= Brando.Villain.parse(@entry.data, @entry) |> raw %>
+    <%= if @post do %>
+      <%= @pre |> raw %>
+      <%= render_slot(@inner_block) %>
+      <%= @post |> raw %>
+    <% else %>
+      <%= @pre |> raw %>
+    <% end %>
     """
   end
+
+  attr :entry, :map, required: true
 
   def render_blocks(assigns) do
     ~H"""

@@ -1,4 +1,4 @@
-defmodule Brando.ConfigEntry do
+defmodule Brando.Config do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",
@@ -7,11 +7,10 @@ defmodule Brando.ConfigEntry do
     plural: "configs",
     gettext_module: Brando.Gettext
 
-  data_layer :embedded
-  identifier "{{ entry.key }}"
+  identifier "<< config struct >>"
 
   attributes do
-    attribute :key, :string, required: true
-    attribute :value, :string, required: true
+    attribute :lockdown_enabled, :boolean, default: false
+    attribute :lockdown_password, :string
   end
 end

@@ -1,7 +1,7 @@
 defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular) %>CreateLive do
   use BrandoAdmin.LiveView.Form, schema: <%= inspect schema_module %>
   alias BrandoAdmin.Components.Form
-  import <%= admin_module %>.Gettext
+  import <%= admin_module %>.Gettext, warn: false
 
   def render(assigns) do
     ~H"""

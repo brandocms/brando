@@ -42,9 +42,11 @@ defmodule BrandoAdmin.Sites.SEOLive do
         assign(socket, :entry_id, seo.id)
 
       {:error, _} ->
-        {:ok, english_seo} = Sites.get_seo(%{matches: %{language: "en"}})
-        {:ok, seo} = Sites.duplicate_seo(english_seo.id, :system)
-        {:ok, seo} = Sites.update_seo(seo, %{language: content_language}, :system)
+        first_seo = Sites.list_seos!() |> List.first()
+
+        {:ok, seo} =
+          Sites.duplicate_seo(first_seo.id, :system, merge_fields: %{language: content_language})
+
         assign(socket, :entry_id, seo.id)
     end
   end

@@ -7,7 +7,7 @@ defmodule BrandoAdmin.UserSessionController do
   def new(conn, _params) do
     conn
     |> put_root_layout(:auth)
-    |> render("new.html", error_message: nil)
+    |> render(:new, error_message: nil)
   end
 
   def create(conn, %{"user" => %{"email" => email, "password" => _password} = user_params}) do
@@ -18,7 +18,7 @@ defmodule BrandoAdmin.UserSessionController do
       _ ->
         conn
         |> put_root_layout(:auth)
-        |> render("new.html", error_message: "Invalid email or password")
+        |> render(:new, error_message: "Invalid email or password")
     end
   end
 

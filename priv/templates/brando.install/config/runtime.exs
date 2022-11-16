@@ -14,3 +14,18 @@ config :<%= application_name %>, <%= application_module %>.Repo,
 
 config :brando, default_language: System.get_env("BRANDO_DEFAULT_LANGUAGE", "no")
 config :brando, default_admin_language: "no"
+
+config :brando, Brando.Images, cdn: [
+  enabled: false,
+  bucket: "<%= application_name %>"
+]
+
+config :brando, Brando.Files, cdn: [
+  enabled: false,
+  bucket: "<%= application_name %>"
+]
+
+config :brando, Brando.Static, cdn: [
+  enabled: false,
+  bucket: "<%= application_name %>"
+]

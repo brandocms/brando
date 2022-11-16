@@ -25,6 +25,16 @@ defmodule BrandoAdmin.LiveView.Listing do
       def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
+
+      # we need the uri on first load, so inject for now
+      def handle_params(params, url, socket) do
+        uri = URI.parse(url)
+
+        {:noreply,
+         socket
+         |> assign(:params, params)
+         |> assign(:uri, uri)}
+      end
     end
   end
 
@@ -317,19 +327,15 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   def update_list_entries(schema) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:listing:content_listing_#{schema}_default",
-      {schema, [:entries, :updated], []}
-    )
+    topic = "brando:listing:content_listing_#{schema}_default"
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {schema, [:entries, :updated], []})
   end
 
   defp subscribe(nil), do: :ok
 
   defp subscribe(schema) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:listing:content_listing_#{schema}_default",
-      link: true
-    )
+    topic = "brando:listing:content_listing_#{schema}_default"
+    Phoenix.PubSub.subscribe(Brando.pubsub(), topic, link: true)
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
@@ -341,9 +347,7 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   defp assign_schema(socket, schema) do
-    assign_new(socket, :schema, fn ->
-      schema
-    end)
+    assign_new(socket, :schema, fn -> schema end)
   end
 
   defp assign_title(%{assigns: %{schema: nil}} = socket) do
@@ -351,14 +355,8 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
-    translated_plural =
-      schema.__translations__()
-      |> Utils.try_path([:naming, :plural])
-
-    assign(
-      socket,
-      :page_title,
-      (translated_plural && String.capitalize(translated_plural)) || nil
-    )
+    translated_plural = Utils.try_path(schema.__translations__(), [:naming, :plural])
+    page_title = (translated_plural && String.capitalize(translated_plural)) || nil
+    assign(socket, :page_title, page_title)
   end
 end
