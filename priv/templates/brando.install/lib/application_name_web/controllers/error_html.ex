@@ -1,6 +1,7 @@
 defmodule <%= application_module %>Web.ErrorHTML do
-  use <%= application_module %>Web, :html
+  use BrandoWeb, :html
 
+  embed_templates "error_html/*"
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.html" becomes
   # "Not Found".

@@ -55,16 +55,22 @@ defmodule Mix.Tasks.Brando.Install do
     # Lockdown files
     {:eex, "lib/application_name_web/controllers/lockdown_controller.ex",
      "lib/application_name_web/controllers/lockdown_controller.ex"},
-    {:eex, "lib/application_name_web/templates/layout/lockdown.html.heex",
-     "lib/application_name_web/templates/layout/lockdown.html.heex"},
-    {:eex, "lib/application_name_web/templates/lockdown/index.html.heex",
-     "lib/application_name_web/templates/lockdown/index.html.heex"},
-    {:eex, "lib/application_name_web/views/lockdown_view.ex",
-     "lib/application_name_web/views/lockdown_view.ex"},
+    {:eex, "lib/application_name_web/components/layouts/lockdown.html.heex",
+     "lib/application_name_web/components/layouts/lockdown.html.heex"},
+    {:eex, "lib/application_name_web/controllers/lockdown_html/index.html.heex",
+     "lib/application_name_web/controllers/lockdown_html/index.html.heex"},
+    {:eex, "lib/application_name_web/controllers/lockdown_html.ex",
+     "lib/application_name_web/controllers/lockdown_html.ex"},
 
     # Page files
     {:eex, "lib/application_name_web/controllers/page_controller.ex",
      "lib/application_name_web/controllers/page_controller.ex"},
+    {:eex, "lib/application_name_web/controllers/page_html.ex",
+     "lib/application_name_web/controllers/page_html.ex"},
+    {:eex, "lib/application_name_web/controllers/page_html/index.html.heex",
+     "lib/application_name_web/controllers/page_html/index.html.heex"},
+    {:eex, "lib/application_name_web/controllers/page_html/default.html.heex",
+     "lib/application_name_web/controllers/page_html/default.html.heex"},
 
     # Fallback and errors
     {:eex, "lib/application_name_web/controllers/fallback_controller.ex",
@@ -76,17 +82,13 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/controllers/error_html/500.html.heex",
      "lib/application_name_web/controllers/error_html/500.html.heex"},
 
-    # Navigation and page index
-    {:eex, "lib/application_name_web/templates/page/_navigation.html.heex",
-     "lib/application_name_web/templates/page/_navigation.html.heex"},
-    {:eex, "lib/application_name_web/templates/page/index.html.heex",
-     "lib/application_name_web/templates/page/index.html.heex"},
-    {:eex, "lib/application_name_web/templates/page/default.html.heex",
-     "lib/application_name_web/templates/page/default.html.heex"},
-    {:eex, "lib/application_name_web/templates/page/_footer.html.heex",
-     "lib/application_name_web/templates/page/_footer.html.heex"},
-    {:eex, "lib/application_name_web/templates/page/_logo.html.heex",
-     "lib/application_name_web/templates/page/_logo.html.heex"},
+    # Partials
+    {:eex, "lib/application_name_web/components/partials/navigation.html.heex",
+     "lib/application_name_web/components/partials/navigation.html.heex"},
+    {:eex, "lib/application_name_web/components/partials/footer.html.heex",
+     "lib/application_name_web/components/partials/footer.html.heex"},
+    {:eex, "lib/application_name_web/components/partials/logo.html.heex",
+     "lib/application_name_web/components/partials/logo.html.heex"},
 
     # Default Villain parser & filters
     {:eex, "lib/application_name_web/villain/parser.ex",
@@ -133,18 +135,17 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Layouts
-    {:eex, "lib/application_name_web/templates/layout/app.html.heex",
-     "lib/application_name_web/templates/layout/app.html.heex"},
-    {:eex, "lib/application_name_web/templates/layout/bare.html.heex",
-     "lib/application_name_web/templates/layout/bare.html.heex"},
+    {:eex, "lib/application_name_web/components/layouts.ex",
+     "lib/application_name_web/components/layouts.ex"},
+    {:eex, "lib/application_name_web/components/layouts/app.html.heex",
+     "lib/application_name_web/components/layouts/app.html.heex"},
+    {:eex, "lib/application_name_web/components/layouts/bare.html.heex",
+     "lib/application_name_web/components/layouts/bare.html.heex"},
 
     # Gettext templates
     {:keep, "priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
     {:keep, "priv/static/gettext/frontend", "priv/static/gettext/frontend"},
     {:eex, "lib/application_name_web/gettext.ex", "lib/application_name_web/gettext.ex"},
-
-    # Helpers for frontend
-    {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},
 
     # Endpoint
     {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},

@@ -174,10 +174,11 @@ defmodule Mix.Tasks.Brando.Gen do
       files ++
         [
           {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
-          {:eex, "list.html.eex", "lib/application_name_web/templates/#{path}/list.html.heex"},
           {:eex, "detail.html.eex",
-           "lib/application_name_web/templates/#{path}/detail.html.heex"},
-          {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
+           "lib/application_name_web/controllers/#{binding[:singular]}_html/detail.html.heex"},
+          {:eex, "list.html.eex",
+           "lib/application_name_web/controllers/#{binding[:singular]}_html/list.html.heex"},
+          {:eex, "html.ex", "lib/application_name_web/controllers/#{binding[:singular]}_html.ex"},
 
           # ADMIN
           {:eex, "admin/list.ex",

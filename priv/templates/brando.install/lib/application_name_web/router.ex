@@ -1,5 +1,5 @@
 defmodule <%= application_module %>Web.Router do
-  use <%= application_module %>Web, :router
+  use BrandoWeb, :router
 
   import Brando.Plug.I18n
   import Brando.Router

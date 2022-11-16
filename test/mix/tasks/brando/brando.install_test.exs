@@ -41,12 +41,13 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert File.exists?("lib/brando_web/villain")
     assert_file("lib/brando_web/villain/parser.ex")
 
-    assert_file("lib/brando_web.ex", fn file ->
-      assert file =~ "BrandoWeb.Gettext"
-    end)
-
     assert_file("config/runtime.exs", fn file ->
       assert file =~ ~s<url: System.get_env("BRANDO_DB_URL")>
+    end)
+
+    assert_file("lib/brando_web/components/layouts.ex", fn file ->
+      assert file =~ "embed_templates \"layouts/*\""
+      assert file =~ "embed_templates \"partials/*\""
     end)
 
     assert_file("mix.exs", fn file ->

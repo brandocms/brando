@@ -1,4 +1,3 @@
-Logger.configure(level: :info)
 :erlang.system_flag(:backtrace_depth, 30)
 
 # Clear tmp dir

@@ -1,9 +1,9 @@
 defmodule <%= application_module %>Web.LockdownController do
-  use <%= application_module %>Web, :controller
+  use BrandoWeb, :controller
 
   def index(conn, _) do
     conn
-    |> put_layout({<%= application_module %>Web.LayoutView, "lockdown.html"})
+    |> put_layout({<%= application_module %>Web.Layouts, html: "lockdown.html"})
     |> render("index.html")
   end
 

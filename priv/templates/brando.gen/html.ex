@@ -1,7 +1,8 @@
-defmodule <%= module %>View do
-  use <%= web_module %>, :view
+defmodule <%= module %>HTML do
+  use <%= web_module %>, :html
   # import <%= web_module %>.Gettext
   use Phoenix.Component
+  embed_templates "<%= singular %>_html/*"
 
   def list_<%= plural %>(assigns) do
     ~H"""

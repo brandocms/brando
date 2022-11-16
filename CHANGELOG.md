@@ -50,6 +50,31 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   ```
   {:phoenix_view, "~> 2.0"},
   ```
+
+  You can use a prefab'ed MyAppWeb setup by replacing your `my_app_web.ex`
+  content with `use Brando.App`. If you need to customize the content, 
+  you can look at Brando's `lib/brando/app.ex`
+
+  This will add a `:legacy_controller` you can use with
+
+  `use MyAppWeb, :legacy_controller`
+
+  for utilizing the new layouts setup, but use regular template views.
+
+  Convert your layout templates to heex, rename the layout view to 
+  `MyAppWeb.Layouts`, move it to `my_app_web/components/layouts.ex` and add
+  
+  ```elixir
+  use BrandoWeb, :html
+
+  embed_templates "components/layouts/*"
+  embed_templates "components/partials/*"
+  ```
+
+  Move your partials from `templates/page` into `components/partials`,
+  rename them to drop the leading `_` and reference them in your `app.html.heex`
+  layout as `<.navigation {assigns} />`, `<.footer {assigns} />` etc.
+
 * BREAKING: Update your `live_preview.ex` to the new format for setting layout
   and template:
 

@@ -1,5 +1,8 @@
 defmodule BrandoWeb.FallbackController do
-  use BrandoWeb, :controller
+  use Phoenix.Controller,
+    namespace: Brando.config(:web_module),
+    formats: [:html, :json]
+
   alias Brando.Sites.Redirects
 
   @doc """
@@ -11,7 +14,7 @@ defmodule BrandoWeb.FallbackController do
         conn
         |> put_status(:not_found)
         |> put_layout(false)
-        |> put_view(Module.concat(Brando.config(:web_module), ErrorView))
+        |> put_view(html: Module.concat(Brando.config(:web_module), ErrorHTML))
         |> render(:"404")
 
       {:ok, {:redirect, {url, code}}} ->
@@ -26,7 +29,7 @@ defmodule BrandoWeb.FallbackController do
     conn
     |> put_status(:unauthorized)
     |> put_layout(false)
-    |> put_view(Module.concat(Brando.config(:web_module), ErrorView))
+    |> put_view(html: Module.concat(Brando.config(:web_module), ErrorHTML))
     |> render(:"401")
   end
 end
