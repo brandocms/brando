@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.14",
       deps: deps(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -27,8 +27,9 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.6"},
+      {:phoenix, "~> 1.7.0-rc.0", override: true},
       {:phoenix_ecto, "~> 4.0"},
+      {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.16"},
       {:ecto, "~> 3.8"},
       {:ecto_sql, "~> 3.8"},

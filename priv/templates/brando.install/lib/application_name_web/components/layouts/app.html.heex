@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html class="no-js" lang={@language}>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no">
+
+    <.preload_fonts fonts={[]} />
+    <.init_js />
+    <.inject_critical_css />
+
+    <.render_meta conn={@conn} />
+    <.render_rel conn={@conn} />
+    <.render_palettes_css />
+
+    <link rel="shortcut icon" href="/ico/favicon.ico">
+
+    <title><%%= Brando.Utils.get_page_title(@conn) %></title>
+
+    <.include_assets />
+    <.render_json_ld conn={@conn} />
+    <.render_hreflangs conn={@conn} />
+  </head>
+  <.body_tag conn={@conn} id="top">
+    <.cookie_law 
+      button_text="OK"
+      info_link="/privacy"
+      info_text="Privacy">
+      This webpage is using cookies for analytics (Not really, just an example).<br>
+      Click OK to accept
+    </.cookie_law>
+    <div class="backdrop"></div>
+<!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <.navigation {assigns} />
+<!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+<!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <%%= @inner_content %>
+<!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+<!-- :footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <.footer {assigns} />
+<!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+
+    <.include_legacy_assets />
+    <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
+  </.body_tag>
+</html>

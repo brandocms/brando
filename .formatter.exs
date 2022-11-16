@@ -83,6 +83,7 @@ locals_without_parens = [
   field: 1,
   field: 2,
   field: 3,
+  layout: 1,
   template: 1,
   template: 2,
   listing_query: 1,

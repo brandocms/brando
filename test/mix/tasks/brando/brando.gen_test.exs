@@ -46,18 +46,19 @@ defmodule Mix.Tasks.Brando.Gen.Test do
                  "<.live_component module={Content.List}\n      id={\"content_listing_\#{@schema}_default\"}\n"
       end)
 
-      assert_file("lib/brando_web/views/project_view.ex", fn file ->
-        assert file =~ "BrandoIntegrationWeb.ProjectView"
+      assert_file("lib/brando_web/controllers/project_html.ex", fn file ->
+        assert file =~ "BrandoIntegrationWeb.ProjectHTML"
+        assert file =~ "embed_templates \"project_html/*\""
         assert file =~ "use Phoenix.Component"
         assert file =~ "def list_projects(assigns) do"
         assert file =~ "<%= for project <- @projects do %>"
       end)
 
-      assert_file("lib/brando_web/templates/project/list.html.heex", fn file ->
+      assert_file("lib/brando_web/controllers/project_html/list.html.heex", fn file ->
         assert file =~ "<.list_projects projects={@projects} conn={@conn} />"
       end)
 
-      assert_file("lib/brando_web/templates/project/detail.html.heex", fn file ->
+      assert_file("lib/brando_web/controllers/project_html/detail.html.heex", fn file ->
         assert file =~ "<div class=\"project-header\">"
       end)
     end)

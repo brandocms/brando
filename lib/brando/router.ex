@@ -32,7 +32,7 @@ defmodule Brando.Router do
         plug :fetch_live_flash
         plug :protect_from_forgery
         plug :put_secure_browser_headers
-        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+        plug :put_root_layout, {BrandoAdmin.Layouts, :root}
         plug :fetch_current_user
         plug :put_admin_locale
       end
@@ -43,8 +43,8 @@ defmodule Brando.Router do
         # plug :refresh_token
       end
 
-      pipeline :root_layout do
-        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+      pipeline :brando_root_layout do
+        plug :put_root_layout, {BrandoAdmin.Layouts, :root}
       end
 
       scope unquote(path), as: :admin do
@@ -63,7 +63,7 @@ defmodule Brando.Router do
       end
 
       scope unquote(path), as: :admin do
-        pipe_through [:admin, :root_layout, :require_authenticated_user]
+        pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
         post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
 

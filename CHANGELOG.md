@@ -2,6 +2,14 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: `ErrorView` is now `ErrorHTML`. If you are using Brando's error 
+  templates, you must swap your endpoint's `render_errors` key with:
+  ```elixir
+  config :my_app, MyApp.Endpoint,
+    render_errors: [
+      formats: [html: Brando.ErrorHTML, json: Brando.ErrorJSON], layout: false
+    ]
+  ```
 * BREAKING: Add `delete_selected` as a default action for listing selections.
   This means you should remove your own `delete_selected` from your listing's
   `selection_actions`
@@ -9,7 +17,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   of a map of all languages
 * BREAKING: The tiptap dependency weirdness has returned... Add this dependency 
   resolution to your `assets/backend/package.json`:
-```
+```json
 "resolutions": {
   "@codemirror/state": "6.0.0"
 }
@@ -21,13 +29,77 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   Make sure to set this in `assets/backend/vite.config.js` to:
   `manifest: 'admin_manifest.json`
 * BREAKING: CDN config is now per asset module, so instead of 
-  ```
+  ```elixir
   config :brando, Brando.CDN, #...
   ```
   add
-  ```
+  ```elixir
   config :brando, Brando.Images, cdn: [enabled: false]
   config :brando, Brando.Files, cdn: [enabled: true, ...]
+  ```
+* BREAKING: Switch out your `<%= live_patch gettext("Create new") ...` calls
+  in your list views. Replace with
+  ```elixir
+  <.link navigate={@schema.__modules__().admin_create_view} class="primary">
+    <%= gettext("Create new") %>
+  </.link>
+  ```
+* BREAKING: With moving to Phoenix 1.7+, we've tossed out Phoenix.View from
+  Brando and use the new `embed_templates` setup instead. If your app depends
+  on Phoenix.View, then you must add it as a dependency:
+  ```
+  {:phoenix_view, "~> 2.0"},
+  ```
+
+  You can use a prefab'ed MyAppWeb setup by replacing your `my_app_web.ex`
+  content with `use Brando.App`. If you need to customize the content, 
+  you can look at Brando's `lib/brando/app.ex`
+
+  This will add a `:legacy_controller` you can use with
+
+  `use MyAppWeb, :legacy_controller`
+
+  for utilizing the new layouts setup, but use regular template views.
+
+  Convert your layout templates to heex, rename the layout view to 
+  `MyAppWeb.Layouts`, move it to `my_app_web/components/layouts.ex` and add
+  
+  ```elixir
+  use BrandoWeb, :html
+
+  embed_templates "components/layouts/*"
+  embed_templates "components/partials/*"
+  ```
+
+  Move your partials from `templates/page` into `components/partials`,
+  rename them to drop the leading `_` and reference them in your `app.html.heex`
+  layout as `<.navigation {assigns} />`, `<.footer {assigns} />` etc.
+
+* BREAKING: Update your `live_preview.ex` to the new format for setting layout
+  and template:
+
+  Old:
+  ```elixir
+  layout_module MyAppWeb.ProjectView
+  layout_template "app.html"
+  view_module MyAppWeb.ProjectView
+  view_template "detail.html"
+  ```
+
+  New (for Phoenix.View integrations):
+  ```elixir
+  layout {MyAppWeb.LayoutView, "app.html"}
+  template {MyAppWeb.ProjectView, "detail.html"}
+  # or
+  template fn e -> {MyAppWeb.ProjectView, e.template} end
+  ```
+  
+  New (for Phoenix.Template integrations):
+  ```elixir
+  layout {MyAppWeb.Layouts, :app}
+  template {MyAppWeb.ProjectHTML, "detail"}
+  # or
+  template fn e -> {MyAppWeb.ProjectHTML, e.template} end
   ```
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`

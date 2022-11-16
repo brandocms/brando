@@ -84,12 +84,19 @@ defmodule Brando.LivePreview do
         unquote(block)
         processed_opts = var!(opts)
 
-        template =
-          if is_function(processed_opts[:view_template]) do
-            processed_opts[:view_template].(var!(entry))
+        {tpl_module, template} =
+          if is_function(processed_opts[:template]) do
+            processed_opts[:template].(var!(entry))
           else
-            processed_opts[:view_template]
+            processed_opts[:template]
           end
+
+        {layout_module, layout_template} = processed_opts[:layout]
+
+        tpl_type = ({:__templates__, 0} in tpl_module.__info__(:functions) && :view) || :html
+
+        layout_type =
+          ({:__templates__, 0} in layout_module.__info__(:functions) && :view) || :html
 
         section =
           if is_function(processed_opts[:template_section]) do
@@ -160,17 +167,47 @@ defmodule Brando.LivePreview do
              ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
-        inner = Phoenix.View.render(processed_opts[:view_module], template, render_assigns)
-        root_assigns = render_assigns |> Map.put(:inner_content, inner) |> Map.delete(:layout)
+        inner_content = render_inner_content(tpl_type, tpl_module, template, render_assigns)
 
-        Phoenix.View.render_to_string(
-          processed_opts[:layout_module],
-          processed_opts[:layout_template],
+        root_assigns =
+          render_assigns
+          |> Map.put(:inner_content, inner_content)
+          |> Map.delete(:layout)
+
+        render_layout(layout_type, layout_module, layout_template, root_assigns)
+      end
+
+      def has_preview_target(unquote(schema_module)), do: true
+
+      defp render_layout(:html, layout_module, layout_tpl, root_assigns) do
+        layout_tpl = (is_binary(layout_tpl) && layout_tpl) || to_string(layout_tpl)
+
+        Phoenix.Template.render_to_string(
+          layout_module,
+          layout_tpl,
+          "html",
           root_assigns
         )
       end
 
-      def has_preview_target(unquote(schema_module)), do: true
+      defp render_layout(:view, layout_module, layout_template, root_assigns) do
+        Phoenix.View.render_to_string(
+          layout_module,
+          layout_template,
+          root_assigns
+        )
+      end
+
+      defp render_inner_content(:html, tpl_module, tpl, render_assigns) do
+        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+        tpl_with_type = String.replace(tpl, ".html", "")
+        Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
+      end
+
+      defp render_inner_content(:view, tpl_module, tpl, render_assigns) do
+        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+        Phoenix.View.render(tpl_module, tpl, render_assigns)
+      end
     end
   end
 
@@ -195,25 +232,69 @@ defmodule Brando.LivePreview do
     end
   end
 
+  defmacro layout(layout) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :layout, unquote(layout))
+    end
+  end
+
   defmacro layout_module(layout_module) do
+    raise "deprecated. Use `layout {MyApp.Layouts, :app}` instead"
+
     quote do
       var!(opts) = Keyword.put(var!(opts), :layout_module, unquote(layout_module))
     end
   end
 
   defmacro layout_template(layout_template) do
+    raise "deprecated. Use `layout {MyApp.Layouts, :app}` instead"
+
     quote do
       var!(opts) = Keyword.put(var!(opts), :layout_template, unquote(layout_template))
     end
   end
 
+  defmacro template(template) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :template, unquote(template))
+    end
+  end
+
   defmacro view_module(view_module) do
+    raise """
+    deprecated.
+
+    Use
+
+        template {MyApp.ProjectHTML, \"list\"}
+
+    or
+
+        template {MyApp.ProjectView, \"list.html\"}
+
+    instead
+    """
+
     quote do
       var!(opts) = Keyword.put(var!(opts), :view_module, unquote(view_module))
     end
   end
 
   defmacro view_template(view_template) do
+    raise """
+    deprecated.
+
+    Use
+
+        template {MyApp.ProjectHTML, \"list\"}
+
+    or
+
+        template {MyApp.ProjectView, \"list.html\"}
+
+    instead
+    """
+
     quote do
       var!(opts) = Keyword.put(var!(opts), :view_template, unquote(view_template))
     end
@@ -305,7 +386,7 @@ defmodule Brando.LivePreview do
 
           """)
 
-          if err.term.__struct__ == Ecto.Association.NotLoaded do
+          if err.term[:__struct__] && err.term[:__struct__] == Ecto.Association.NotLoaded do
             {:error,
              "LivePreview is missing preload for #{inspect(err.term.__field__)}<br><br>Add `schema_preloads [#{inspect(err.term.__field__)}]` to your `preview_target`"}
           else

@@ -33,11 +33,13 @@ Run the install script:
 
 Go through `config/brando.exs`.
 
-To use Brando's error view, add to your Endpoint's config (in prod.exs):
+To use Brando's error views, add to your Endpoint's config (in prod.exs):
 
 ```elixir
 config :my_app, MyApp.Endpoint,
-  render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
+  render_errors: [
+    formats: [html: Brando.ErrorHTML, json: Brando.ErrorJSON], layout: false
+  ],
 ```
 
 *Remember to switch out your ports and configure SSL in `etc/nginx/prod.conf`*

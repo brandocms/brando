@@ -1,14 +1,14 @@
 defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular) %>ListLive do
   use BrandoAdmin.LiveView.Listing, schema: <%= inspect schema_module %>
   alias BrandoAdmin.Components.Content
-  import <%= admin_module %>.Gettext
+  import <%= admin_module %>.Gettext, warn: false
 
   def render(assigns) do
     ~H"""
     <Content.header
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Overview")}>
-      <.link navigate="/admin/<%= snake_domain %>/<%= plural %>/create" class="primary">
+      <.link navigate={@schema.__modules__().admin_create_view} class="primary">
         <%%= gettext("Create new") %>
       </.link>
     </Content.header>
