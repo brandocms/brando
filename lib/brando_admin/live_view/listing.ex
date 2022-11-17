@@ -25,16 +25,6 @@ defmodule BrandoAdmin.LiveView.Listing do
       def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
-
-      # we need the uri on first load, so inject for now
-      def handle_params(params, url, socket) do
-        uri = URI.parse(url)
-
-        {:noreply,
-         socket
-         |> assign(:params, params)
-         |> assign(:uri, uri)}
-      end
     end
   end
 

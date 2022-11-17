@@ -23,16 +23,6 @@ defmodule BrandoAdmin.LiveView.Form do
       def on_mount(:hooks, params, assigns, socket) do
         BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema))
       end
-
-      # we need the uri on first load, so inject for now
-      def handle_params(params, url, socket) do
-        uri = URI.parse(url)
-
-        {:noreply,
-         socket
-         |> assign(:params, params)
-         |> assign(:uri, uri)}
-      end
     end
   end
 
@@ -81,18 +71,8 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp attach_hooks(socket, _schema) do
     socket
-    |> attach_hook(:b_form_params, :handle_params, &handle_params/3)
     |> attach_hook(:b_form_events, :handle_event, &handle_event/3)
     |> attach_hook(:b_form_infos, :handle_info, &handle_info/2)
-  end
-
-  defp handle_params(params, url, socket) do
-    uri = URI.parse(url)
-
-    {:halt,
-     socket
-     |> assign(:params, params)
-     |> assign(:uri, uri)}
   end
 
   defp handle_event(

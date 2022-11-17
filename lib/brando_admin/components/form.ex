@@ -706,13 +706,13 @@ defmodule BrandoAdmin.Components.Form do
   def form_presences(assigns) do
     ~H"""
     <div class="page-presences">
-      <%= for {_, user} <- @presences do %>
-        <div class="user-presence">
-          <div class="avatar">
-            <Content.image image={user.avatar} size={:thumb} />
-          </div>
+      <div
+        :for={{_, user} <- @presences}
+        class="user-presence visible">
+        <div class="avatar">
+          <Content.image image={user.avatar} size={:thumb} />
         </div>
-      <% end %>
+      </div>
     </div>
     """
   end

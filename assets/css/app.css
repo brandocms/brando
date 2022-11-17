@@ -264,6 +264,7 @@ code {
 
 .presences {
   display: flex;
+  z-index: 1;
   flex-wrap: wrap;
   flex-direction: row;
   position: fixed;
@@ -292,6 +293,13 @@ code {
   display: block;
   margin-right: 5px;
   margin-top: 5px;
+  transform: translateY(150%) rotate(180deg);
+  transition: transform 850ms ease;
+  transition-delay: 250ms;
+
+  &.visible {
+    transform: translateY(0) rotate(0);
+  }
   
   &:last-of-type {
     margin-right: 0;

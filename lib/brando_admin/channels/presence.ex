@@ -12,7 +12,28 @@ defmodule BrandoAdmin.Presence do
 
       def __brando_presence__, do: true
       def init(_opts), do: {:ok, %{}}
-      def fetch("lobby", presences), do: presences
+
+      def fetch("lobby", presences) do
+        users =
+          presences
+          |> Map.keys()
+          |> Brando.Users.get_users_map()
+          |> Enum.into(%{})
+
+        for {id, %{metas: metas}} <- presences, into: %{} do
+          user = users[String.to_integer(id)]
+
+          {user.id,
+           %{
+             user: %{
+               id: user.id,
+               name: user.name,
+               avatar: user.avatar
+             },
+             metas: metas
+           }}
+        end
+      end
 
       def fetch("url:" <> _rest = topic, presences) do
         users =
@@ -56,26 +77,60 @@ defmodule BrandoAdmin.Presence do
         {:ok, state}
       end
 
-      def handle_metas("lobby", _diff, _presences, state) do
-        # TODO: Handle lobby metas here when we dump the JS presence stuff
+      def handle_metas("lobby", %{joins: joins, leaves: leaves}, presences, state) do
+        for {user_id, presence} <- joins do
+          metas = Map.fetch!(presences, user_id)
+
+          updated_fields =
+            if metas == [] do
+              %{last_active: nil, urls: nil, status: "offline"}
+            else
+              last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
+              urls = metas |> Enum.map(& &1.url) |> Jason.encode!()
+              status = (Enum.any?(metas, & &1.active) && "online") || "idle"
+              %{last_active: last_active, urls: urls, status: status}
+            end
+
+          user_data = %{
+            user: %{
+              id: presence.user.id,
+              name: presence.user.name,
+              avatar: presence.user.avatar
+            },
+            metas: metas
+          }
+
+          Phoenix.PubSub.local_broadcast(
+            unquote(pubsub_server),
+            "presence",
+            {__MODULE__, {:presence, %{user_joined: user_data}}}
+          )
+        end
+
+        for {user_id, presence} <- leaves do
+          metas =
+            case Map.fetch(presences, user_id) do
+              {:ok, presence_metas} -> presence_metas
+              :error -> []
+            end
+
+          user_data = %{
+            user: %{
+              id: presence.user.id,
+              name: presence.user.name,
+              avatar: presence.user.avatar
+            },
+            metas: metas
+          }
+
+          Phoenix.PubSub.local_broadcast(
+            unquote(pubsub_server),
+            "presence",
+            {__MODULE__, {:presence, %{user_left: user_data}}}
+          )
+        end
+
         {:ok, state}
-      end
-
-      def track_user(current_user_id) do
-        track(
-          self(),
-          "users",
-          current_user_id,
-          %{}
-        )
-      end
-
-      def untrack_user(current_user_id) do
-        untrack(
-          self(),
-          "users",
-          current_user_id
-        )
       end
 
       def track_url(url, current_user_id) do

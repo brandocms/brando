@@ -29,33 +29,24 @@ defmodule BrandoAdmin.Hooks do
 
     if connected?(socket) do
       if socket.assigns[:previous_uri] do
-        require Logger
-        Logger.error("== untracking #{uri.path} for user #{user_id}")
         Brando.presence().untrack_url(socket.assigns.previous_uri, user_id)
       end
 
       socket = assign(socket, :previous_uri, uri)
-
-      require Logger
-      Logger.error("== tracking #{uri.path} for user #{user_id}")
       Phoenix.PubSub.subscribe(Brando.pubsub(), "url:#{uri.path}")
       Brando.presence().track_url(uri.path, user_id)
 
-      {:halt, assign_presences(socket, uri)}
+      {:halt, assign_uri_presences(socket, uri)}
     else
       {:halt, socket}
     end
   end
 
   def handle_info({_, {:uri_presence, %{user_joined: presence}}}, socket) do
-    require Logger
-    Logger.error("== uri_presence: user_joined")
-    {:halt, assign_presence(socket, presence)}
+    {:halt, assign_uri_presence(socket, presence)}
   end
 
   def handle_info({_, {:uri_presence, %{user_left: presence}}}, socket) do
-    require Logger
-    Logger.error("== uri_presence: user_joined")
     %{user: user} = presence
 
     if presence.metas == [] do
@@ -66,6 +57,7 @@ defmodule BrandoAdmin.Hooks do
   end
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    # Swallow presence_diff events
     {:halt, socket}
   end
 
@@ -73,19 +65,19 @@ defmodule BrandoAdmin.Hooks do
     {:cont, socket}
   end
 
-  defp assign_presences(socket, uri) do
+  defp assign_uri_presences(socket, uri) do
     socket = assign(socket, presences: %{}, presence_ids: %{})
 
     Enum.reduce(
       Brando.presence().list("url:#{uri.path}"),
       socket,
       fn {_, presence}, acc ->
-        assign_presence(acc, presence)
+        assign_uri_presence(acc, presence)
       end
     )
   end
 
-  defp assign_presence(socket, presence) do
+  defp assign_uri_presence(socket, presence) do
     %{user: user} = presence
     %{presence_ids: presence_ids} = socket.assigns
 
