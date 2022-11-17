@@ -264,6 +264,7 @@ code {
 
 .presences {
   display: flex;
+  z-index: 1;
   flex-wrap: wrap;
   flex-direction: row;
   position: fixed;
@@ -272,10 +273,33 @@ code {
   width: auto;
 }
 
+.page-presences {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  width: auto;
+  justify-content: flex-end;
+  margin-right: 15px;
+  flex-grow: 1;
+  flex-shrink: 1;
+
+  .user-presence {
+    margin-top: 0;
+    display: flex;
+  }
+}
+
 .user-presence {
   display: block;
   margin-right: 5px;
   margin-top: 5px;
+  transform: translateY(150%) rotate(180deg);
+  transition: transform 850ms ease;
+  transition-delay: 250ms;
+
+  &.visible {
+    transform: translateY(0) rotate(0);
+  }
   
   &:last-of-type {
     margin-right: 0;

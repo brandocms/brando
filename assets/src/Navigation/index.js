@@ -34,7 +34,7 @@ export default class Navigation {
 
       const items = document.querySelectorAll('#navigation [data-phx-link]')
       Array.from(items).forEach(item => {
-        if (item.getAttribute('href') === window.location.pathname) {
+        if (item.getAttribute('href') === window.location.pathname + window.location.search) {
           item.classList.add('active')
         }
       })

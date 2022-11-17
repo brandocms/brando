@@ -15,10 +15,7 @@ import Toast from './Toast'
 
 import brandoHooks from './hooks'
 import initializeLiveSocket from './initializeLiveSocket'
-
 import configureFader from './config/FADER'
-import configureMoonwalk from './config/MOONWALK'
-
 import { alertError } from './alerts'
 
 const prmEl = Dom.find('meta[name="prefers_reduced_motion"]')
@@ -161,14 +158,6 @@ export default (hooks, enableDebug = true) => {
         app.toast.mutation(data.level, data.payload)
       })
 
-      app.lobbyChannel.on('presence_state', state => {
-        app.presence.storeLobbyPresences(state)
-      })
-
-      app.lobbyChannel.on('presence_diff', diff => {
-        app.presence.storeLobbyPresencesDiff(diff)
-      })
-
       app.userChannel.on('progress:show', () => {
         gsap.to($progressWrapper, { yPercent: 0, ease: 'circ.out', duration: 0.35 })
       })
@@ -257,8 +246,7 @@ export default (hooks, enableDebug = true) => {
         console.debug('==> Joined user_channel')
       })
 
-      app.lobbyChannel.join().receive('ok', payload => {
-        app.presence.setUsers(payload.users)
+      app.lobbyChannel.join().receive('ok', () => {
         app.presence.trackIdle()
         console.debug('==> Joined lobby_channel')
       })

@@ -30,7 +30,10 @@ Supervisor.start_link(
 ExUnit.start()
 
 defmodule BrandoIntegration.Presence do
-  use Phoenix.Presence, otp_app: :brando, pubsub_server: BrandoIntegration.PubSub
+  use BrandoAdmin.Presence,
+    otp_app: :brando,
+    pubsub_server: BrandoIntegration.PubSub,
+    presence: __MODULE__
 end
 
 defmodule BrandoIntegrationWeb.Gettext do

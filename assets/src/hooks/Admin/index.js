@@ -7,7 +7,9 @@ export default (app) => ({
     console.log('==> Brando/Admin mounted.')
     this.animateNav()
     
-    window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
+    }, 350)
     
     this.handleEvent('b:alert', ({ title, message }) => {
       alertError(title, message)

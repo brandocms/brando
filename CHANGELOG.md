@@ -110,6 +110,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Update revisions when saving entry without redirecting
 * Add scheduled publishing for revisions
 * Fix max width for #content
+* Presence in update forms. Add `presences={@presences}` to your 
+  `my_schema_update_live.ex` live view
 * Automatically add uploaded gallery images to gallery
 * Add `alert` and `after_save` to forms:
 

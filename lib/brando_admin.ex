@@ -28,6 +28,8 @@ defmodule BrandoAdmin do
       use Phoenix.LiveView,
         layout: {BrandoAdmin.Layouts, :live}
 
+      on_mount {BrandoAdmin.Hooks, :urls}
+
       unquote(html_helpers())
     end
   end

@@ -1,6 +1,15 @@
+<BrandoAdmin.AdminHTML.sidebar
+  current_user={@current_user}
+  current_url={@uri && @uri.path}
+  menu_sections={BrandoAdmin.Menu.get_menu()}
+/>
+
+<%= live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true) %>
+
 <div id="admin" phx-hook="Brando.Admin">
   <%= if @socket_connected do %>
-    <.live_component module={BrandoAdmin.Components.ContentLanguageSwitch}
+    <.live_component 
+      module={BrandoAdmin.Components.ContentLanguageSwitch}
       id={"content-language-switch"}
       current_user={@current_user} />
     <main id="brando-main">

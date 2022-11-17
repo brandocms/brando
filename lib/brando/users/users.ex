@@ -18,6 +18,7 @@ defmodule Brando.Users do
 
   filters User do
     fn
+      {:ids, ids}, q -> from t in q, where: t.id in ^ids
       {:active, active}, q -> from t in q, where: t.active == ^active
       {:name, name}, q -> from t in q, where: ilike(t.name, ^"%#{name}%")
       {:email, email}, q -> from t in q, where: ilike(t.email, ^"%#{email}%")
@@ -105,6 +106,43 @@ defmodule Brando.Users do
 
   def reset_user_password(_user, _attrs) do
     raise "TODO"
+  end
+
+  def get_users_map() do
+    list_opts = %{
+      select: [:id, :name],
+      cache: {:ttl, :infinite},
+      preload: [{:avatar, :join}]
+    }
+
+    do_get_users_map(list_opts)
+  end
+
+  def get_users_map(user_ids) when is_list(user_ids) do
+    list_opts = %{
+      filter: %{ids: user_ids},
+      select: [:id, :name],
+      cache: {:ttl, :infinite},
+      preload: [{:avatar, :join}]
+    }
+
+    do_get_users_map(list_opts)
+  end
+
+  def do_get_users_map(list_opts) do
+    {:ok, users} = Brando.Users.list_users(list_opts)
+
+    Enum.map(
+      users,
+      fn user ->
+        {user.id,
+         %{
+           name: user.name,
+           id: user.id,
+           avatar: user.avatar
+         }}
+      end
+    )
   end
 
   def on_mount(:ensure_authenticated, _params, session, socket) do

@@ -8,6 +8,7 @@ defmodule Brando.Utils do
 
   @type changeset :: Ecto.Changeset.t()
   @type conn :: Plug.Conn.t()
+  @type uri :: URI.t()
 
   @filtered_deps [
     :brando,
@@ -609,9 +610,22 @@ defmodule Brando.Utils do
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active_path?(conn, binary) :: boolean
-  def active_path?(conn, url_to_match) do
-    current_path = Path.join(["/" | conn.path_info])
+  @spec active_path?(conn | binary | uri | nil, binary) :: boolean
+  def active_path?(nil, _), do: false
+
+  def active_path?(%Plug.Conn{} = conn, url_to_match) do
+    do_active_path?(Path.join(["/" | conn.path_info]), url_to_match)
+  end
+
+  def active_path?(%URI{} = uri, url_to_match) do
+    do_active_path?(uri.path, url_to_match)
+  end
+
+  def active_path?(current_path, url_to_match) when is_binary(current_path) do
+    do_active_path?(current_path, url_to_match)
+  end
+
+  defp do_active_path?(current_path, url_to_match) do
     chunks = String.split(url_to_match, "/")
 
     {url, current_path} =

@@ -170,10 +170,10 @@ defmodule Brando.HTML do
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active(conn, binary) :: binary
-  def active(conn, url_to_match, add_class? \\ nil) do
+  @spec active(conn | binary, binary) :: binary
+  def active(source, url_to_match, add_class? \\ nil) do
     result = (add_class? && ~s(class="active")) || "active"
-    (Utils.active_path?(conn, url_to_match) && result) || ""
+    (Utils.active_path?(source, url_to_match) && result) || ""
   end
 
   @doc """

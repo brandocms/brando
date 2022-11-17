@@ -47,15 +47,6 @@
       </section>
       <section class="dropdown-content">
         <ul>
-          <!--
-          <li>
-            <a
-              tabindex="0"
-              href="/admin/profile">
-              <%= gettext("Edit profile") %>
-            </a>
-          </li>
-          -->
           <li>
             <a
               data-testid="logout"
@@ -71,47 +62,38 @@
     <nav>
       <div id="nav-circle" class="nav-circle"></div>
       <div class="nav-sections">
-        <%= for section <- @menu_sections do %>
-        <section class="navigation-section">
+        <section 
+          :for={section <- @menu_sections}
+          class="navigation-section">
           <header>
             <h3><%= section.name %></h3>
             <div class="line"></div>
           </header>
-          <%= for item <- section.items do %>
-            <dl>
-              <dt>
-                <%= if item.url do %>
-                  <a href={item.url}
-                     class={Brando.HTML.active(@conn, "#{item.url}")}
-                     data-phx-link="redirect"
-                     data-phx-link-state="push">
-                     <%= item.name %>
+          <dl :for={item <- section.items}>
+            <dt>
+              <a 
+                :if={item.url} 
+                href={item.url}
+                class={active(@current_url, "#{item.url}")}
+                data-phx-link="redirect"
+                data-phx-link-state="push">
+                  <%= item.name %>
+              </a>
+              <span :if={item[:items]} data-nav-expand><%= item.name %> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" fill="rgba(5,39,82,1)"/></svg></span>
+            </dt>
+            <dd :if={item[:items]}>
+              <ul>
+                <li :for={sub_item <- item.items}>
+                  <a href={sub_item.url}
+                      data-phx-link="redirect"
+                      data-phx-link-state="push">
+                    <%= sub_item.name %>
                   </a>
-                <% end %>
-                <%= if item[:items] do %>
-                  <span data-nav-expand><%= item.name %> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" fill="rgba(5,39,82,1)"/></svg></span>
-                <% end %>
-              </dt>
-              <%= if item[:items] do %>
-                <dd>
-                  <ul>
-                    <%= for sub_item <- item.items do %>
-                    <li>
-                      <a href={sub_item.url}
-                         class={Brando.HTML.active(@conn, "#{item.url}")}
-                         data-phx-link="redirect"
-                         data-phx-link-state="push">
-                        <%= sub_item.name %>
-                      </a>
-                    </li>
-                    <% end %>
-                  </ul>
-                </dd>
-              <% end %>
-            </dl>
-          <% end %>
+                </li>
+              </ul>
+            </dd>
+          </dl>
         </section>
-        <% end %>
       </div>
     </nav>
   </div>
