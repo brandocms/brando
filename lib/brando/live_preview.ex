@@ -9,9 +9,8 @@ defmodule Brando.LivePreview do
   preview_target Brando.Pages.Page do
     mutate_data fn entry -> %{entry | title: "custom"} end
 
-    layout_module MyAppWeb.LayoutView
-    view_module MyAppWeb.PageView
-    view_template fn e -> e.template end
+    layout {MyAppWeb.Layouts, :app}
+    template {MyAppWeb.PageHTML, "index.html"}
     template_section fn e -> e.key end
 
     assign :navigation, fn _ -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
@@ -28,6 +27,14 @@ defmodule Brando.LivePreview do
                    salt: "bxqStiFpm5to0gsRHyC0afyIaTOH5jjD/T+kOMU5Z9UHCLJuPVnM6ESNaMC8rkzR",
                    min_len: 32
                  )
+
+  defstruct layout: nil,
+            template: nil,
+            mutate_data: nil,
+            schema_preloads: [],
+            template_prop: nil,
+            template_section: nil,
+            template_css_classes: nil
 
   defmacro __using__(_) do
     quote do
@@ -51,11 +58,9 @@ defmodule Brando.LivePreview do
 
     - `schema_preloads` - List of atoms to preload on `entry``
     - `mutate_data` - function to mutate entry data `entry`
-        mutate_data fn entry -> %{entry | title: "custom"} end
-    - `layout_module` - The layout view module we want to use for rendering
-    - `layout_template` - The layout template we want to use for rendering
-    - `view_module` - The view module we want to use for rendering
-    - `view_template` - The template we want to use for rendering
+          mutate_data fn entry -> %{entry | title: "custom"} end
+    - `layout` - The layout template we want to use for rendering
+    - `template` - The template we want to use for rendering
     - `template_prop` - What we are refering to entry as
     - `template_section` - Run this with `put_section` on conn
     - `template_css_classes` - Run this with `put_css_classes` on conn
@@ -70,11 +75,9 @@ defmodule Brando.LivePreview do
       def render(unquote(schema_module), entry, cache_key) do
         var!(cache_key) = cache_key
 
-        var!(opts) = [
-          layout_template: "app.html",
-          mutate_data: fn e -> e end,
-          schema_preloads: []
-        ]
+        var!(opts) = %Brando.LivePreview{
+          mutate_data: fn e -> e end
+        }
 
         var!(entry) = entry
         var!(extra_vars) = []
@@ -85,13 +88,13 @@ defmodule Brando.LivePreview do
         processed_opts = var!(opts)
 
         {tpl_module, template} =
-          if is_function(processed_opts[:template]) do
-            processed_opts[:template].(var!(entry))
+          if is_function(processed_opts.template) do
+            processed_opts.template.(var!(entry))
           else
-            processed_opts[:template]
+            processed_opts.template
           end
 
-        {layout_module, layout_template} = processed_opts[:layout]
+        {layout_module, layout_template} = processed_opts.layout
 
         tpl_type = ({:__templates__, 0} in tpl_module.__info__(:functions) && :view) || :html
 
@@ -99,28 +102,28 @@ defmodule Brando.LivePreview do
           ({:__templates__, 0} in layout_module.__info__(:functions) && :view) || :html
 
         section =
-          if is_function(processed_opts[:template_section]) do
-            processed_opts[:template_section].(var!(entry))
+          if is_function(processed_opts.template_section) do
+            processed_opts.template_section.(var!(entry))
           else
-            processed_opts[:template_section]
+            processed_opts.template_section
           end
 
         css_classes =
-          if is_function(processed_opts[:template_css_classes]) do
-            processed_opts[:template_css_classes].(var!(entry))
+          if is_function(processed_opts.template_css_classes) do
+            processed_opts.template_css_classes.(var!(entry))
           else
-            processed_opts[:template_css_classes]
+            processed_opts.template_css_classes
           end
 
         # preloads
         var!(entry) =
           var!(entry)
-          |> Brando.repo().preload(processed_opts[:schema_preloads])
-          |> processed_opts[:mutate_data].()
+          |> Brando.repo().preload(processed_opts.schema_preloads)
+          |> processed_opts.mutate_data.()
 
         atom_prop =
-          if processed_opts[:template_prop] !== nil,
-            do: processed_opts[:template_prop],
+          if processed_opts.template_prop !== nil,
+            do: processed_opts.template_prop,
             else: :entry
 
         villain_fields = unquote(schema_module).__villain_fields__
@@ -228,13 +231,13 @@ defmodule Brando.LivePreview do
   """
   defmacro mutate_data(mutate_data) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :mutate_data, unquote(mutate_data))
+      var!(opts) = Map.put(var!(opts), :mutate_data, unquote(mutate_data))
     end
   end
 
   defmacro layout(layout) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :layout, unquote(layout))
+      var!(opts) = Map.put(var!(opts), :layout, unquote(layout))
     end
   end
 
@@ -242,7 +245,7 @@ defmodule Brando.LivePreview do
     raise "deprecated. Use `layout {MyApp.Layouts, :app}` instead"
 
     quote do
-      var!(opts) = Keyword.put(var!(opts), :layout_module, unquote(layout_module))
+      var!(opts) = Map.put(var!(opts), :layout_module, unquote(layout_module))
     end
   end
 
@@ -250,13 +253,13 @@ defmodule Brando.LivePreview do
     raise "deprecated. Use `layout {MyApp.Layouts, :app}` instead"
 
     quote do
-      var!(opts) = Keyword.put(var!(opts), :layout_template, unquote(layout_template))
+      var!(opts) = Map.put(var!(opts), :layout_template, unquote(layout_template))
     end
   end
 
   defmacro template(template) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :template, unquote(template))
+      var!(opts) = Map.put(var!(opts), :template, unquote(template))
     end
   end
 
@@ -276,7 +279,7 @@ defmodule Brando.LivePreview do
     """
 
     quote do
-      var!(opts) = Keyword.put(var!(opts), :view_module, unquote(view_module))
+      var!(opts) = Map.put(var!(opts), :view_module, unquote(view_module))
     end
   end
 
@@ -296,25 +299,25 @@ defmodule Brando.LivePreview do
     """
 
     quote do
-      var!(opts) = Keyword.put(var!(opts), :view_template, unquote(view_template))
+      var!(opts) = Map.put(var!(opts), :view_template, unquote(view_template))
     end
   end
 
   defmacro template_section(template_section) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :template_section, unquote(template_section))
+      var!(opts) = Map.put(var!(opts), :template_section, unquote(template_section))
     end
   end
 
   defmacro template_css_classes(template_css_classes) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :template_css_classes, unquote(template_css_classes))
+      var!(opts) = Map.put(var!(opts), :template_css_classes, unquote(template_css_classes))
     end
   end
 
   defmacro template_prop(template_prop) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :template_prop, unquote(template_prop))
+      var!(opts) = Map.put(var!(opts), :template_prop, unquote(template_prop))
     end
   end
 
