@@ -155,6 +155,7 @@ defmodule Brando.LivePreview do
           Phoenix.ConnTest.build_conn(:get, "/#{var!(language)}/__LIVE_PREVIEW")
           |> Plug.Session.call(session_opts)
           |> Plug.Conn.assign(:language, to_string(var!(language)))
+          |> Plug.Conn.put_private(:brando_live_preview, true)
           |> Brando.router().browser([])
           |> Brando.Plug.HTML.put_section(section)
           |> Brando.Plug.HTML.put_css_classes(css_classes)
