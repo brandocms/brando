@@ -13,7 +13,7 @@
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.4.18",
     "postcss-import": "^15.0.0",
-    "postcss-preset-env": "^7.8.2",
+    "postcss-preset-env": "^7.8.3",
     "postcss-reporter": "^7.0.5",
     "stylelint": "^14.14.1",
     "terser": "^5.15.1",
