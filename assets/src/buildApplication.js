@@ -7,7 +7,7 @@ import {
 } from '@brandocms/jupiter'
 
 import { Socket } from 'phoenix'
-import topbar from 'topbar'
+import topbar from './topbar'
 
 import Navigation from './Navigation'
 import Presence from './Presence'
@@ -122,26 +122,34 @@ export default (hooks, enableDebug = true) => {
         app.components.forEach(cmp => cmp.remount())
       })
 
-      let topBarScheduled = undefined;
-      window.addEventListener('phx:page-loading-start', ({ detail }) => {
-        if (!topBarScheduled) {
-          topBarScheduled = setTimeout(() => topbar.show(), 200)
-        }
+      window.addEventListener('phx:page-loading-start', () => {
+        topbar.delayedShow(200)
       })
 
       window.addEventListener('phx:page-loading-stop', ({ detail }) => {
-        clearTimeout(topBarScheduled)
-        topBarScheduled = undefined
         topbar.hide()
 
-        if (detail.kind === 'redirect' && app.reconnected) {
-          app.reconnected = false
+        if (detail.kind === 'redirect') {
+          if (app.reconnected) {
+            app.reconnected = false
+          }
+
+          // remove current active
+          const currentActiveItem = document.querySelector('#navigation .active')
+          if (currentActiveItem) {
+            currentActiveItem.classList.remove('active')
+          }
+
+          const newActiveItem = document.querySelector(`#navigation [data-phx-link][href="${window.location.pathname + window.location.search}"]`)
+          if (newActiveItem) {
+            newActiveItem.classList.add('active')
+          }
         }
 
         if (detail.kind === 'initial' && !app.reconnected) {
           app.navigation.checkFullscreen()
           app.presence.setUrl(detail.to)
-        }
+        }        
       })      
 
       const $progressWrapper = Dom.find('.progress-wrapper')

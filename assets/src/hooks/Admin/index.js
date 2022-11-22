@@ -9,7 +9,7 @@ export default (app) => ({
     
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
-    }, 350)
+    }, 1)
     
     this.handleEvent('b:alert', ({ title, message }) => {
       alertError(title, message)

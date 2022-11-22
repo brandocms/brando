@@ -12,7 +12,6 @@ export default class Navigation {
     
     this.setupNavCircle()
     this.setupNavDropdowns()
-    this.setupNavListeners()
     this.setupCurrentUserDropdown()
     this.setupFullscreenToggle()
   }
@@ -21,23 +20,6 @@ export default class Navigation {
     this.fsToggle.addEventListener('click', e => {
       this.fsToggle.classList.toggle('minimized')
       this.setFullscreen(!this.fullscreen)
-    })
-  }
-
-  setupNavListeners() {
-    window.addEventListener('b:navigation:refresh_active', () => {
-      // remove current active
-      const currentActiveItem = document.querySelector('#navigation .active')
-      if (currentActiveItem) {
-        currentActiveItem.classList.remove('active')
-      }
-
-      const items = document.querySelectorAll('#navigation [data-phx-link]')
-      Array.from(items).forEach(item => {
-        if (item.getAttribute('href') === window.location.pathname + window.location.search) {
-          item.classList.add('active')
-        }
-      })
     })
   }
 
