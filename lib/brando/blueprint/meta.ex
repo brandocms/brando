@@ -125,8 +125,7 @@ defmodule Brando.Blueprint.Meta do
     end
   end
 
-  defmacro meta_field(name, path, mutator_function)
-           when is_binary(name) and is_list(path) and is_function(mutator_function) do
+  defmacro meta_field(name, path, mutator_function) when is_binary(name) and is_list(path) do
     quote do
       Module.put_attribute(__MODULE__, :meta_fields, unquote(name))
 
