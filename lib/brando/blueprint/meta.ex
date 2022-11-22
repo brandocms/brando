@@ -12,13 +12,14 @@ defmodule Brando.Blueprint.Meta do
       meta_schema do
         meta_field ["description", "og:description"], &Brando.HTML.truncate(&1, 155)
         meta_field ["title", "og:title"], [:title]
-        meta_field ["title", "og:title"], &fallback(&1, [:meta_title, :title])
+        meta_field ["title", "og:title"], &fallback(&1, [:meta_title, {:strip_tags, :title}])
         meta_field "og:image", [:meta_image]
         meta_field "og:locale", [:language], &encode_locale/1
       end
 
   `fallback(data, keys)` tries `keys` until it gets a value, so in the above example it
-  first tries to get `data.meta_title`, if that fails it tries `data.title`.
+  first tries to get `data.meta_title`, if that fails it tries `data.title`, but will strip
+  it for HTML tags.
 
   `encode_locale(language)` converts the locale to a format facebook/opengraph understands.
   """
@@ -124,7 +125,8 @@ defmodule Brando.Blueprint.Meta do
     end
   end
 
-  defmacro meta_field(name, path, mutator_function) when is_binary(name) and is_list(path) do
+  defmacro meta_field(name, path, mutator_function)
+           when is_binary(name) and is_list(path) and is_function(mutator_function) do
     quote do
       Module.put_attribute(__MODULE__, :meta_fields, unquote(name))
 
@@ -159,15 +161,21 @@ defmodule Brando.Blueprint.Meta do
   end
 
   def fallback(data, keys) when is_list(keys) do
-    Enum.reduce_while(keys, nil, fn key, _ ->
-      case Map.get(data, key) do
-        nil -> {:cont, nil}
-        val -> {:halt, val}
-      end
+    Enum.reduce_while(keys, nil, fn
+      {:strip_tags, key}, _ ->
+        case Map.get(data, key) do
+          nil -> {:cont, nil}
+          val -> {:halt, HtmlSanitizeEx.strip_tags(val)}
+        end
+
+      key, _ ->
+        case Map.get(data, key) do
+          nil -> {:cont, nil}
+          val -> {:halt, val}
+        end
     end)
   end
 
-  @spec encode_locale(binary) :: binary
   def encode_locale("en"), do: "en_US"
   def encode_locale("no"), do: "nb_NO"
   def encode_locale("nb"), do: "nb_NO"
