@@ -60,5 +60,10 @@ defmodule Brando.MetaSchemaTest do
 
     data = %{meta_title: nil, title: nil, foo: "bar"}
     assert Brando.Blueprint.Meta.fallback(data, [:meta_title, :title]) == nil
+
+    data = %{title: "<p>Title grabbed from a field with rich text</p>", foo: "bar"}
+
+    assert Brando.Blueprint.Meta.fallback(data, [:meta_title, {:strip_tags, :title}]) ==
+             "Title grabbed from a field with rich text"
   end
 end
