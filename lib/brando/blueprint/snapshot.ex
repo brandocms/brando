@@ -85,7 +85,6 @@ defmodule Brando.Blueprint.Snapshot do
   end
 
   defp get_snapshot_version(module, opts \\ @default_opts) do
-    # get sequence
     snapshot_path = build_path(module, opts)
     File.mkdir_p!(snapshot_path)
 
