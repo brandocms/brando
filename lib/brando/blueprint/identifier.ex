@@ -1,6 +1,11 @@
 defmodule Brando.Blueprint.Identifier do
   @moduledoc """
   Identifies the entry
+
+  ## Example
+
+      identifier "{{ entry.title }} [{{ entry.language }}]"
+
   """
 
   alias Brando.Villain

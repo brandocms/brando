@@ -1,6 +1,15 @@
 defmodule Brando.Blueprint.AbsoluteURL do
   @moduledoc """
-  Absolute URL
+  Defines the absolute URL for the entry
+
+  ## Examples
+
+      absolute_url "{% route_i18n entry.language project_path detail { entry.category.slug, entry.slug } %}"
+
+  or
+
+      absolute_url "/projects/{{ entry.id }}"
+
   """
   alias Brando.Villain
 

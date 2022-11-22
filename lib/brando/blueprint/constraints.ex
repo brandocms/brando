@@ -1,4 +1,21 @@
 defmodule Brando.Blueprint.Constraints do
+  @moduledoc """
+  Logic for changeset constraints
+
+  ## Foreign key constraints
+
+  Foreign key constraints are automatically added to the changeset for
+  any :belongs_to assocs.
+
+  ## Other constraints
+
+      - `min_length`
+      - `max_length`
+      - `length`
+      - `format` - see `Ecto.Changeset.validate_format/4`
+      - `acceptance` - see `Ecto.Changeset.validate_acceptance/3`
+      - `confirmation` - see `Ecto.Changeset.validate_confirmation/3`
+  """
   import Ecto.Changeset
 
   def run_validations(changeset, _module, attributes) do

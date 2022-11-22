@@ -12,6 +12,7 @@ defmodule Brando.Blueprint.Form do
       - `template_namespace`: Show templates from this namespace as starting
         points when presented with a blank editor
 
+  ### `multi_select`: Multiple select field
 
   ### `color`: Color picker
 
@@ -22,6 +23,9 @@ defmodule Brando.Blueprint.Form do
          and use a `palette_id` to only allow picking from a locked set of colors
       - `palette_id`: `int` — Allow to pick from colors in this palette
 
+  ### `rich_text`: Rich text editor (TipTap)
+
+  ### `select`: Select field
 
   ### `slug`: Slug field
 
@@ -41,6 +45,9 @@ defmodule Brando.Blueprint.Form do
       - `show_url: true` - Runs the applied changeset through the schema's `__absolute_url__`
         function and displays the resulting url.
 
+  ### `status`: Status field
+
+  ### `text`: Standard form element
   """
   import Brando.Gettext
 
