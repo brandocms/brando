@@ -709,7 +709,7 @@ defmodule BrandoAdmin.Components.Form do
       <div
         :for={{_, user} <- @presences}
         class="user-presence visible">
-        <div class="avatar">
+        <div class="avatar" data-popover={user.name}>
           <Content.image image={user.avatar} size={:thumb} />
         </div>
       </div>
