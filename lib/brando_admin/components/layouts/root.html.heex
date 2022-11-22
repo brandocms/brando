@@ -18,6 +18,11 @@
     <div class="progress-wrapper">
       <div class="progress"></div>
     </div>
+    <BrandoAdmin.AdminHTML.sidebar
+      current_user={@current_user}
+      current_url={@uri && @uri.path}
+      menu_sections={BrandoAdmin.Menu.get_menu()}
+    />
     <%= @inner_content %>
     <Brando.HTML.breakpoint_debug_tag />
     <Brando.HTML.grid_debug_tag />

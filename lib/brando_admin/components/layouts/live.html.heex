@@ -1,9 +1,3 @@
-<BrandoAdmin.AdminHTML.sidebar
-  current_user={@current_user}
-  current_url={@uri && @uri.path}
-  menu_sections={BrandoAdmin.Menu.get_menu()}
-/>
-
 <%= live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true) %>
 
 <div id="admin" phx-hook="Brando.Admin">
