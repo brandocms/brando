@@ -4,11 +4,11 @@ const GMAPS_REGEX = /<iframe(?:.*)src="(.*?)"/
 
 const PROVIDERS = {
   gmaps: {
-    regex: GMAPS_REGEX,
+    regex: GMAPS_REGEX
   }
 }
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.target = this.el.dataset.target
     this.bindInput()
@@ -25,7 +25,7 @@ export default (app) => ({
 
   handleInput(url) {
     let match
-    
+
     for (const key of Object.keys(PROVIDERS)) {
       const provider = PROVIDERS[key]
       match = provider.regex.exec(url)

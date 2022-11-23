@@ -1,13 +1,13 @@
 // BRANDOJS
 //
-// Let the incantations begin. 
+// Let the incantations begin.
 // We're in the realm of Javascript now.
 //
 // '             .           .
 //      o       '   o  .     '   . O
 //   '   .   ' .   _____  '    .      .
 //    .     .   .mMMMMMMMm.  '  o  '   .
-//  '   .     .MMXXXXXXXXXMM.    .   ' 
+//  '   .     .MMXXXXXXXXXMM.    .   '
 // .       . /XX77:::::::77XX\ .   .   .
 //    o  .  ;X7:::''''''':::7X;   .  '
 //   '    . |::'.:'        '::| .   .  .
@@ -37,6 +37,4 @@
 // main app construction
 import buildApplication from './buildApplication'
 
-export {
-  buildApplication,
-}
+export { buildApplication }

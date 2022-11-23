@@ -8,7 +8,7 @@ vex.defaultOptions.className = 'vex-theme-b'
 
 function alertError(title, text, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -29,7 +29,7 @@ function alertError(title, text, callback) {
 
 function alertInfo(title, text, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -50,7 +50,7 @@ function alertInfo(title, text, callback) {
 
 function alertSuccess(title, text, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -71,7 +71,7 @@ function alertSuccess(title, text, callback) {
 
 function alertWarning(title, text, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -92,7 +92,7 @@ function alertWarning(title, text, callback) {
 
 function alertPrompt(text, value, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -112,7 +112,7 @@ function alertPrompt(text, value, callback) {
 
 function alertConfirm(title, text, callback) {
   if (!callback) {
-    callback = () => { }
+    callback = () => {}
   }
   vex.dialog.open({
     unsafeMessage: `
@@ -131,11 +131,4 @@ function alertConfirm(title, text, callback) {
   })
 }
 
-export {
-  alertError,
-  alertInfo,
-  alertSuccess,
-  alertWarning,
-  alertConfirm,
-  alertPrompt
-}
+export { alertError, alertInfo, alertSuccess, alertWarning, alertConfirm, alertPrompt }

@@ -1,6 +1,6 @@
 import autosize from 'autosize'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.$wrapper = this.el.closest('[data-block-index]')
     this.$baseBlock = this.el.closest('.base-block')

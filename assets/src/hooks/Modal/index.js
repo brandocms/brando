@@ -1,6 +1,6 @@
 import { gsap } from '@brandocms/jupiter'
 
-export default (app) => ({
+export default app => ({
   show() {
     const timeline = gsap.timeline()
     timeline

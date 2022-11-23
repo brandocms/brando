@@ -1,13 +1,13 @@
 import Sortable from 'sortablejs'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.awaitValidation = false
 
     new Sortable(this.el, {
       animation: 350,
       ghostClass: 'is-sorting',
-      swapThreshold: 0.50,
+      swapThreshold: 0.5,
       handle: '.subform-handle',
       draggable: '.subform-entry',
       store: {

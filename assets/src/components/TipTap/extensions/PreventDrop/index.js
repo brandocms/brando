@@ -12,7 +12,7 @@ export default Extension.create({
         key: new PluginKey('preventDrop'),
         props: {
           attributes: {
-            tabindex: '0',
+            tabindex: '0'
           },
           handleDOMEvents: {
             drop: (view, event) => {

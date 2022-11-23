@@ -2,17 +2,17 @@ import {
   getMarksBetween,
   findChildrenInRange,
   combineTransactionSteps,
-  getChangedRanges,
+  getChangedRanges
 } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { find, test } from 'linkifyjs'
 
-export default function autolink(options){
+export default function autolink(options) {
   return new Plugin({
     key: new PluginKey('autolink'),
     appendTransaction: (transactions, oldState, newState) => {
-      const docChanges = transactions.some(transaction => transaction.docChanged)
-        && !oldState.doc.eq(newState.doc)
+      const docChanges =
+        transactions.some(transaction => transaction.docChanged) && !oldState.doc.eq(newState.doc)
 
       if (!docChanges) {
         return
@@ -30,8 +30,9 @@ export default function autolink(options){
           .forEach(oldMark => {
             const newFrom = mapping.map(oldMark.from)
             const newTo = mapping.map(oldMark.to)
-            const newMarks = getMarksBetween(newFrom, newTo, newState.doc)
-              .filter(item => item.mark.type === options.type)
+            const newMarks = getMarksBetween(newFrom, newTo, newState.doc).filter(
+              item => item.mark.type === options.type
+            )
 
             if (!newMarks.length) {
               return
@@ -51,15 +52,15 @@ export default function autolink(options){
           })
 
         // now let’s see if we can add new links
-        findChildrenInRange(newState.doc, newRange, node => node.isTextblock)
-          .forEach(textBlock => {
+        findChildrenInRange(newState.doc, newRange, node => node.isTextblock).forEach(
+          textBlock => {
             // we need to define a placeholder for leaf nodes
             // so that the link position can be calculated correctly
             const text = newState.doc.textBetween(
               textBlock.pos,
               textBlock.pos + textBlock.node.nodeSize,
               undefined,
-              ' ',
+              ' '
             )
 
             find(text)
@@ -68,7 +69,7 @@ export default function autolink(options){
               .map(link => ({
                 ...link,
                 from: textBlock.pos + link.start + 1,
-                to: textBlock.pos + link.end + 1,
+                to: textBlock.pos + link.end + 1
               }))
               // check if link is within the changed range
               .filter(link => {
@@ -79,11 +80,16 @@ export default function autolink(options){
               })
               // add link mark
               .forEach(link => {
-                tr.addMark(link.from, link.to, options.type.create({
-                  href: link.href,
-                }))
+                tr.addMark(
+                  link.from,
+                  link.to,
+                  options.type.create({
+                    href: link.href
+                  })
+                )
               })
-          })
+          }
+        )
       })
 
       if (!tr.steps.length) {
@@ -91,6 +97,6 @@ export default function autolink(options){
       }
 
       return tr
-    },
+    }
   })
 }

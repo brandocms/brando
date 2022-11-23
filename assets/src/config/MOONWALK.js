@@ -1,7 +1,10 @@
 import { Dom, gsap } from '@brandocms/jupiter'
 
-function reset (app, el) {
-  app.liveSocket.execJS(el, '[["add_class",{"names":["moonwalked"],"time":0,"to":null,"transition":[[],[],[]]}]]')
+function reset(app, el) {
+  app.liveSocket.execJS(
+    el,
+    '[["add_class",{"names":["moonwalked"],"time":0,"to":null,"transition":[[],[],[]]}]]'
+  )
 }
 
 export default app => ({
@@ -14,7 +17,17 @@ export default app => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
-        gsap.set(['.field-wrapper', '.brando-versioning', '.login-box', '.primary', '.figure-wrapper', '.title'], { opacity: 0 })
+        gsap.set(
+          [
+            '.field-wrapper',
+            '.brando-versioning',
+            '.login-box',
+            '.primary',
+            '.figure-wrapper',
+            '.title'
+          ],
+          { opacity: 0 }
+        )
         gsap.set('.login-box', { y: 35 })
         gsap.set(['.field-wrapper', '.primary', '.title'], { x: -15 })
         gsap.set('.figure-wrapper', { x: -10 })
@@ -24,8 +37,16 @@ export default app => ({
           .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
           .to('.login-box', { y: 0, duration: 0.5, ease: 'power3.out' })
           .to('.login-box', { opacity: 1, duration: 0.5, ease: 'none' }, '<')
-          .to(['.title', '.field-wrapper', '.primary'], { x: 0, duration: 0.35, ease: 'circ.out', stagger: 0.1 }, '<0.25')
-          .to(['.title', '.field-wrapper', '.primary'], { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 }, '<')
+          .to(
+            ['.title', '.field-wrapper', '.primary'],
+            { x: 0, duration: 0.35, ease: 'circ.out', stagger: 0.1 },
+            '<0.25'
+          )
+          .to(
+            ['.title', '.field-wrapper', '.primary'],
+            { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 },
+            '<'
+          )
           .to('.figure-wrapper', { x: 0, duration: 0.35, ease: 'circ.out' }, '<')
           .to('.figure-wrapper', { opacity: 1, duration: 0.35, ease: 'none' }, '<')
           .to('.brando-versioning', { opacity: 1, ease: 'none' })
@@ -59,15 +80,23 @@ export default app => ({
           .to(toolsWrapper, { opacity: 1, duration: 0.3, ease: 'none' })
           .to(toolEls, { y: 0, duration: 0.3, ease: 'power3.out', stagger: 0.1 }, '<0.2')
           .to(toolEls, { opacity: 1, duration: 0.3, ease: 'none', stagger: 0.1 }, '<')
-          
+
         if (listRows.length) {
           timeline
             .to(listRows, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 }, '<0.2')
-            .to(listRows, {
-              opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06, onComplete: () => {
-                gsap.set(listRows, { clearProps: 'all' })
-              }
-            }, '<')
+            .to(
+              listRows,
+              {
+                opacity: 1,
+                duration: 0.25,
+                ease: 'none',
+                stagger: 0.06,
+                onComplete: () => {
+                  gsap.set(listRows, { clearProps: 'all' })
+                }
+              },
+              '<'
+            )
         } else {
           timeline
             .to(emptyList, { y: 0, ease: 'power3.out' })
@@ -88,7 +117,10 @@ export default app => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
-        const inputEls = Dom.all(el, '.form-tabs, .form-tabs button, .form-tabs .split-dropdown, .subform, .shaded, .brando-input')
+        const inputEls = Dom.all(
+          el,
+          '.form-tabs, .form-tabs button, .form-tabs .split-dropdown, .subform, .shaded, .brando-input'
+        )
 
         gsap.set(inputEls, { opacity: 0, x: -15 })
 
@@ -96,8 +128,12 @@ export default app => ({
           .to(el, { opacity: 1, duration: 0.25, ease: 'none' })
           .to(inputEls, { x: 0, duration: 0.25, ease: 'power3.out', stagger: 0.06 }, '<0.2')
           .to(inputEls, { opacity: 1, duration: 0.25, ease: 'none', stagger: 0.06 }, '<')
-          .call(() => { gsap.set(inputEls, { clearProps: 'all' }) })
-          .call(() => { reset(app, el) })
+          .call(() => {
+            gsap.set(inputEls, { clearProps: 'all' })
+          })
+          .call(() => {
+            reset(app, el)
+          })
       }
     },
 
@@ -105,11 +141,7 @@ export default app => ({
       threshold: 0.0,
       callback: el => {
         const timeline = gsap.timeline()
-        const els = [
-          Dom.find(el, 'h1'),
-          Dom.find(el, 'h3'),
-          Dom.find(el, '.actions')
-        ]
+        const els = [Dom.find(el, 'h1'), Dom.find(el, 'h3'), Dom.find(el, '.actions')]
 
         gsap.set(el, { scaleX: 0, transformOrigin: 'left', opacity: 1 })
         gsap.set(els, { opacity: 0, x: -15 })

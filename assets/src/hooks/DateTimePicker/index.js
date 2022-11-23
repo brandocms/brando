@@ -6,18 +6,18 @@ const LOCALES = {
   no: Norwegian
 }
 
-export default (app) => ({
-  mounted () {
+export default app => ({
+  mounted() {
     this.locale = this.el.dataset.locale
     this.initialize()
   },
 
-  destroyed () {
+  destroyed() {
     this.flatpickrInstance?.destroy()
   },
 
-  initialize () {
-    let opts = {      
+  initialize() {
+    let opts = {
       enableTime: true,
       minuteIncrement: 15,
       time_24hr: true,
@@ -30,7 +30,7 @@ export default (app) => ({
     if (this.locale !== 'en') {
       opts = { ...opts, locale: LOCALES[this.locale] }
     }
-    
+
     this.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     this.$timezoneEl = Dom.find(this.el, '.timezone span')
     this.$btnClear = Dom.find(this.el, 'button.clear-datetime')

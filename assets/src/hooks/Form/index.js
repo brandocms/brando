@@ -1,7 +1,7 @@
 import { Dom, Events, gsap } from '@brandocms/jupiter'
 
-export default (app) => ({
-  mounted () {
+export default app => ({
+  mounted() {
     this.$form = this.el.querySelector('form')
     this.$input = this.$form.querySelector('input')
     this.paramName = this.$input.name.split('[')[0]
@@ -24,17 +24,17 @@ export default (app) => ({
     })
   },
 
-  destroyed() { 
+  destroyed() {
     window.removeEventListener('keydown', this.submitListenerEvent, false)
   },
 
-  submitListener (ev) {
+  submitListener(ev) {
     if (ev.metaKey && ev.shiftKey && ev.key.toLowerCase() === 's') {
-      ev.preventDefault();
+      ev.preventDefault()
       this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
       return
     }
-    
+
     if (ev.metaKey && ev.key === 's') {
       ev.preventDefault()
       this.pushEventTo(this.el, 'save_redirect_target', { save_redirect_target: 'self' })

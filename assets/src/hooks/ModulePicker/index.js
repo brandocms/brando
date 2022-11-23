@@ -1,9 +1,9 @@
 import { gsap, Dom } from '@brandocms/jupiter'
 
-export default (app) => ({
-  mounted () {
+export default app => ({
+  mounted() {
     console.log('mounted module picker')
-    this.$btns = Dom.all('button.namespace-button') 
+    this.$btns = Dom.all('button.namespace-button')
 
     this.$btns.forEach(btn => {
       let content = btn.nextElementSibling
@@ -35,7 +35,7 @@ export default (app) => ({
   openContent() {
     this.open = true
     this.$btn.classList.add('open')
-    
+
     gsap.set(this.$content, { opacity: 0, x: -15, display: 'block' })
     const contentRect = this.$content.getBoundingClientRect()
 

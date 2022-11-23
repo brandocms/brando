@@ -1,9 +1,7 @@
-
 import { Mark, markPasteRule, mergeAttributes } from '@tiptap/core'
 import { find } from 'linkifyjs'
 import autolink from './helpers/autolink'
 import pasteHandler from './helpers/pasteHandler'
-
 
 export default Mark.create({
   name: 'link',
@@ -21,15 +19,15 @@ export default Mark.create({
       autolink: true,
       HTMLAttributes: {
         target: '_blank',
-        rel: 'noopener noreferrer nofollow',
-      },
+        rel: 'noopener noreferrer nofollow'
+      }
     }
   },
 
   addAttributes() {
     return {
       href: {
-        default: null,
+        default: null
       },
       target: {
         default: this.options.HTMLAttributes.target,
@@ -65,50 +63,51 @@ export default Mark.create({
   },
 
   parseHTML() {
-    return [
-      { tag: 'a[href]' },
-    ]
+    return [{ tag: 'a[href]' }]
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      'a',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
-      0,
-    ]
+    return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
   },
 
   addCommands() {
     return {
-      setLink: attributes => ({ commands }) => {
-        return commands.setMark(this.name, attributes)
-      },
+      setLink:
+        attributes =>
+        ({ commands }) => {
+          return commands.setMark(this.name, attributes)
+        },
 
-      toggleLink: attributes => ({ commands }) => {
-        return commands.toggleMark(this.name, attributes, { extendEmptyMarkRange: true })
-      },
+      toggleLink:
+        attributes =>
+        ({ commands }) => {
+          return commands.toggleMark(this.name, attributes, { extendEmptyMarkRange: true })
+        },
 
-      unsetLink: () => ({ commands }) => {
-        return commands.unsetMark(this.name, { extendEmptyMarkRange: true })
-      },
+      unsetLink:
+        () =>
+        ({ commands }) => {
+          return commands.unsetMark(this.name, { extendEmptyMarkRange: true })
+        }
     }
   },
 
   addPasteRules() {
     return [
       markPasteRule({
-        find: text => find(text)
-          .filter(link => link.isLink)
-          .map(link => ({
-            text: link.value,
-            index: link.start,
-            data: link,
-          })),
+        find: text =>
+          find(text)
+            .filter(link => link.isLink)
+            .map(link => ({
+              text: link.value,
+              index: link.start,
+              data: link
+            })),
         type: this.type,
         getAttributes: match => ({
-          href: match.data?.href,
-        }),
-      }),
+          href: match.data?.href
+        })
+      })
     ]
   },
 
@@ -116,18 +115,22 @@ export default Mark.create({
     const plugins = []
 
     if (this.options.autolink) {
-      plugins.push(autolink({
-        type: this.type,
-      }))
+      plugins.push(
+        autolink({
+          type: this.type
+        })
+      )
     }
 
     if (this.options.linkOnPaste) {
-      plugins.push(pasteHandler({
-        editor: this.editor,
-        type: this.type,
-      }))
+      plugins.push(
+        pasteHandler({
+          editor: this.editor,
+          type: this.type
+        })
+      )
     }
 
     return plugins
-  },
+  }
 })

@@ -2,8 +2,8 @@ import { Dom } from '@brandocms/jupiter'
 import Picker from 'vanilla-picker/csp'
 import debounce from 'lodash.debounce'
 
-export default (app) => ({
-  mounted () {
+export default app => ({
+  mounted() {
     this.picker = null
     const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
@@ -28,7 +28,7 @@ export default (app) => ({
     this.initialize()
   },
 
-  initialize () {
+  initialize() {
     if (this.picker) {
       this.picker.destroy()
     }
@@ -36,7 +36,9 @@ export default (app) => ({
     const initialColor = this.el.dataset.color
     const opacity = this.el.hasAttribute('data-opacity')
     const inputTarget = Dom.find(this.el.dataset.input)
-    const paletteColors = this.el.hasAttribute('data-palette') ? this.el.dataset.palette.split(',') : []
+    const paletteColors = this.el.hasAttribute('data-palette')
+      ? this.el.dataset.palette.split(',')
+      : []
 
     this.lastColor = initialColor
 
@@ -48,10 +50,10 @@ export default (app) => ({
     const parent = this.el.querySelector('.picker-target')
     const that = this
 
-    this.picker = new Picker({ 
-      parent: parent, 
-      popup: 'top', 
-      color: initialColor || '#000000', 
+    this.picker = new Picker({
+      parent: parent,
+      popup: 'top',
+      color: initialColor || '#000000',
       alpha: opacity,
 
       onChange: debounce(color => {
@@ -62,8 +64,8 @@ export default (app) => ({
 
         this.circle.style.background = processedColor
         this.colorHex.innerHTML = processedColor
-        inputTarget.value = processedColor  
-        
+        inputTarget.value = processedColor
+
         // has the color actually changed?
         if (this.lastColor.toLowerCase() !== processedColor) {
           inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
@@ -73,21 +75,24 @@ export default (app) => ({
       }, 800),
 
       onOpen: function () {
-          this._colorToSplotch = {}
-          this._domPalette = this.domElement.querySelectorAll('.picker_palette')[0]
-          this._domPalette.innerHTML = ''
-          this._colorToSplotch = {}
-          for(let i = 0; i < paletteColors.length; i += 1){
-            const splotch = document.createElement('div')
-            splotch.classList.add('picker_splotch')
-            const c = new (this.color.constructor)(paletteColors[i])
-            this._colorToSplotch[c.hslaString] = splotch
-            splotch.addEventListener('click', function(c, e){
+        this._colorToSplotch = {}
+        this._domPalette = this.domElement.querySelectorAll('.picker_palette')[0]
+        this._domPalette.innerHTML = ''
+        this._colorToSplotch = {}
+        for (let i = 0; i < paletteColors.length; i += 1) {
+          const splotch = document.createElement('div')
+          splotch.classList.add('picker_splotch')
+          const c = new this.color.constructor(paletteColors[i])
+          this._colorToSplotch[c.hslaString] = splotch
+          splotch.addEventListener(
+            'click',
+            function (c, e) {
               this._setColor(c.hslaString)
-            }.bind(this, c))
-            splotch.style.backgroundColor = c.hslaString
-            this._domPalette.appendChild(splotch)
-          }
+            }.bind(this, c)
+          )
+          splotch.style.backgroundColor = c.hslaString
+          this._domPalette.appendChild(splotch)
+        }
       },
 
       template: `
@@ -118,7 +123,7 @@ export default (app) => ({
     })
   },
 
-  setColor (color) {
+  setColor(color) {
     this.circle.style.background = color
     this.colorHex.innerHTML = color
   }

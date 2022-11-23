@@ -2,8 +2,8 @@ import { LiveSocket } from 'phoenix_live_view'
 import { Socket } from 'phoenix'
 
 export default (hooks, enableDebug) => {
-  let csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content")
-  let liveSocket = new LiveSocket("/live", Socket, {
+  let csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute('content')
+  let liveSocket = new LiveSocket('/live', Socket, {
     hooks: hooks,
     params: { _csrf_token: csrfToken },
     timeout: 70000
@@ -15,7 +15,7 @@ export default (hooks, enableDebug) => {
   if (enableDebug) {
     liveSocket.enableDebug()
   }
-  
+
   // expose liveSocket on window for web console debug logs and latency simulation:
   window.liveSocket = liveSocket
 

@@ -1,32 +1,30 @@
-import {
-  Mark,
-  markPasteRule,
-  mergeAttributes,
-} from '@tiptap/core'
+import { Mark, markPasteRule, mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 
 /**
  * A regex that matches any string that contains a link
  */
-export const pasteRegex = /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,}\b(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)/gi
+export const pasteRegex =
+  /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,}\b(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)/gi
 
 /**
  * A regex that matches an url
  */
-export const pasteRegexExact = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,}\b(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)$/gi
+export const pasteRegexExact =
+  /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,}\b(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)(?:[-a-zA-Z0-9@:%._+~#=?!&/]*)$/gi
 
 export default Mark.create({
   name: 'button',
   priority: 1100,
   inclusive: false,
 
-  addOptions () {
+  addOptions() {
     return {
       linkOnPaste: true,
       HTMLAttributes: {
         class: 'action-button',
         target: '_blank',
-        rel: 'noopener noreferrer nofollow',
+        rel: 'noopener noreferrer nofollow'
       }
     }
   },
@@ -34,7 +32,7 @@ export default Mark.create({
   addAttributes() {
     return {
       href: {
-        default: null,
+        default: null
       },
       target: {
         default: this.options.HTMLAttributes.target,
@@ -65,15 +63,13 @@ export default Mark.create({
             target: this.options.HTMLAttributes.target,
             rel: this.options.HTMLAttributes.rel
           }
-        },
-      },
+        }
+      }
     }
   },
 
   parseHTML() {
-    return [
-      { tag: 'a[class="action-button"]' },
-    ]
+    return [{ tag: 'a[class="action-button"]' }]
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -82,22 +78,26 @@ export default Mark.create({
 
   addCommands() {
     return {
-      setButton: attributes => ({ commands }) => {
-        return commands.setMark('button', attributes)
-      },
-      toggleButton: attributes => ({ commands }) => {
-        return commands.toggleMark('button', attributes)
-      },
-      unsetButton: () => ({ commands }) => {
-        return commands.unsetMark('button')
-      },
+      setButton:
+        attributes =>
+        ({ commands }) => {
+          return commands.setMark('button', attributes)
+        },
+      toggleButton:
+        attributes =>
+        ({ commands }) => {
+          return commands.toggleMark('button', attributes)
+        },
+      unsetButton:
+        () =>
+        ({ commands }) => {
+          return commands.unsetMark('button')
+        }
     }
   },
 
   addPasteRules() {
-    return [
-      markPasteRule(pasteRegex, this.type, match => ({ href: match[0] })),
-    ]
+    return [markPasteRule(pasteRegex, this.type, match => ({ href: match[0] }))]
   },
 
   addProseMirrorPlugins() {
@@ -133,12 +133,12 @@ export default Mark.create({
               })
 
               return true
-            },
-          },
-        }),
+            }
+          }
+        })
       )
     }
 
     return plugins
-  },
+  }
 })

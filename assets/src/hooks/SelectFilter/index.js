@@ -1,6 +1,6 @@
 import { Dom, gsap } from '@brandocms/jupiter'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.$input = Dom.find(this.el, 'input')
     this.$options = Dom.all(this.el.nextElementSibling, '.options-option')
@@ -25,5 +25,5 @@ export default (app) => ({
     if (str === false) str = 'false'
     const text = str.toString().toLowerCase()
     return text.indexOf(query.trim()) !== -1
-  },
+  }
 })

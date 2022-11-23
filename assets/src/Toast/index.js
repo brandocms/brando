@@ -1,7 +1,7 @@
 import iziToast from 'izitoast'
 
 export default class Toast {
-  constructor (app) {
+  constructor(app) {
     this.app = app
     this.izitoast = iziToast
     this.izitoast.settings({
@@ -14,7 +14,7 @@ export default class Toast {
     })
   }
 
-  notification (level, message) {
+  notification(level, message) {
     switch (level) {
       case 'success':
         this.izitoast.success({ message })
@@ -33,11 +33,11 @@ export default class Toast {
     }
   }
 
-  show (opts) {
+  show(opts) {
     this.izitoast.show(opts)
   }
 
-  mutation (level, payload) {
+  mutation(level, payload) {
     this.izitoast.show({
       title: payload.user.name || '',
       message: `${payload.action} [${payload.identifier.type}#<strong>${payload.identifier.id}</strong>] &raquo; "${payload.identifier.title}"`,

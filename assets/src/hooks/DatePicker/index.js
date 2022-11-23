@@ -1,16 +1,16 @@
 import { Dom } from '@brandocms/jupiter'
 import Flatpickr from 'flatpickr'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.initialize()
   },
 
-  destroyed () {
+  destroyed() {
     this.flatpickrInstance?.destroy()
   },
 
-  initialize () {
+  initialize() {
     const opts = {
       enableTime: false,
       altInput: true,

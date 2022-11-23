@@ -5,19 +5,21 @@ const IDLE = 0
 const UPLOADING = 1
 const UPLOAD_URL = '/admin/api/content/upload/image'
 
-export default (app) => ({
-  updated () {
+export default app => ({
+  updated() {
     if (this.attachListenersOnUpdate) {
       this.attachListenersOnUpdate = false
       this.attachListeners()
     }
   },
 
-  mounted () {
+  mounted() {
     this.attachListenersOnUpdate = false
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
-    this.eventTarget = this.el.hasAttribute('data-upload-event-target') ? this.el.getAttribute('data-upload-event-target') : this.el
+    this.eventTarget = this.el.hasAttribute('data-upload-event-target')
+      ? this.el.getAttribute('data-upload-event-target')
+      : this.el
 
     this.strings = {}
     this.strings.idle = Dom.find(this.el, '.instructions span')
@@ -35,13 +37,18 @@ export default (app) => ({
     } else {
       this.formats = ''
     }
-    
+
     this.csrfToken = Dom.find('meta[name="csrf-token"]').content
     this.pluses = Dom.all(this.el, '.upload-canvas .plus')
 
     if (this.pluses.length) {
       this.plusTimeline = gsap.timeline({ repeat: -1 })
-      this.plusTimeline.to(this.pluses, { duration: 3, rotate: 360, ease: 'none', transformOrigin: '50% 50%' })
+      this.plusTimeline.to(this.pluses, {
+        duration: 3,
+        rotate: 360,
+        ease: 'none',
+        transformOrigin: '50% 50%'
+      })
       this.plusTimeline.timeScale(0)
     }
 
@@ -53,7 +60,7 @@ export default (app) => ({
         this.$fileInput.click()
       })
     }
-    
+
     this.$fileInput.addEventListener('change', async e => {
       e.preventDefault()
       e.stopPropagation()
@@ -70,7 +77,7 @@ export default (app) => ({
     this.attachListeners()
   },
 
-  attachListeners () {
+  attachListeners() {
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
     this.$uploadCanvases.forEach(uploadCanvas => {
@@ -86,9 +93,15 @@ export default (app) => ({
         }
       })
 
-      uploadCanvas.addEventListener('dragenter', () => { uploadCanvas.classList.add('dragging') })
-      uploadCanvas.addEventListener('dragover', () => { uploadCanvas.classList.add('dragging') })
-      uploadCanvas.addEventListener('dragleave', () => { uploadCanvas.classList.remove('dragging') })
+      uploadCanvas.addEventListener('dragenter', () => {
+        uploadCanvas.classList.add('dragging')
+      })
+      uploadCanvas.addEventListener('dragover', () => {
+        uploadCanvas.classList.add('dragging')
+      })
+      uploadCanvas.addEventListener('dragleave', () => {
+        uploadCanvas.classList.remove('dragging')
+      })
 
       uploadCanvas.addEventListener('drop', event => {
         event.preventDefault()
@@ -107,7 +120,7 @@ export default (app) => ({
     })
   },
 
-  setStatusText () {
+  setStatusText() {
     if (this.status === IDLE) {
       Dom.all(this.el, '.instructions span').forEach(sp => {
         sp.innerHTML = this.strings.idle
@@ -119,16 +132,15 @@ export default (app) => ({
     }
   },
 
-  spinPlus () {
+  spinPlus() {
     gsap.to(this.plusTimeline, { timeScale: 1 })
   },
 
-  stopPlus () {
+  stopPlus() {
     gsap.to(this.plusTimeline, { timeScale: 0 })
   },
 
-
-  async upload (f) {
+  async upload(f) {
     return new Promise(async (resolve, reject) => {
       const formData = new FormData()
       const headers = new Headers()

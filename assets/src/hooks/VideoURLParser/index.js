@@ -1,7 +1,8 @@
 import { Dom } from '@brandocms/jupiter'
 
 const VIMEO_REGEX = /(?:http[s]?:\/\/)?(?:www.)?vimeo.com\/(.+)/
-const YOUTUBE_REGEX = /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
+const YOUTUBE_REGEX =
+  /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
 const FILE_REGEX = /(.*)/
 
 const PROVIDERS = {
@@ -14,31 +15,39 @@ const PROVIDERS = {
   },
   youtube: {
     regex: YOUTUBE_REGEX,
-    html: ['<iframe src="{{protocol}}//www.youtube.com/embed/{{remote_id}}" ',
+    html: [
+      '<iframe src="{{protocol}}//www.youtube.com/embed/{{remote_id}}" ',
       'width="580" height="320" frameborder="0" allowfullscreen></iframe>'
     ].join('\n')
   },
   file: {
     regex: FILE_REGEX,
-    html: ['<video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src="{{remote_id}}">',
+    html: [
+      '<video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src="{{remote_id}}">',
       '<source src="{{remote_id}}" type="video/mp4">',
       '</video>'
     ].join('\n')
   }
 }
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.target = this.el.dataset.target
     this.bindInput()
   },
 
-  bindInput() {    
+  bindInput() {
     this.$button = Dom.find(this.el, 'button')
     this.$input = Dom.find(this.el, 'input')
     this.$button.addEventListener('click', async () => {
       await this.handleInput(this.$input.value)
-      this.pushEventTo(this.target, 'url', { width: this.width || 0, height: this.height || 0, source: this.source, remoteId: this.remoteId, url: this.$input.value })
+      this.pushEventTo(this.target, 'url', {
+        width: this.width || 0,
+        height: this.height || 0,
+        source: this.source,
+        remoteId: this.remoteId,
+        url: this.$input.value
+      })
     })
   },
 
@@ -46,9 +55,12 @@ export default (app) => ({
     let match
     this.url = url
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       this.resolve = resolve
-      if (url.startsWith('https://player.vimeo.com/external/') || url.startsWith('https://player.vimeo.com/progressive_redirect/')) {
+      if (
+        url.startsWith('https://player.vimeo.com/external/') ||
+        url.startsWith('https://player.vimeo.com/progressive_redirect/')
+      ) {
         this.source = 'file'
         this.remoteId = url
         this.createVideoProxy()
@@ -71,7 +83,7 @@ export default (app) => ({
     })
   },
 
-  createVideoProxy () {
+  createVideoProxy() {
     this.attempts = 0
     this.videoElement = document.createElement('video')
     this.videoElement.autoplay = true
@@ -81,7 +93,7 @@ export default (app) => ({
     this.videoElement.src = this.url
   },
 
-  readyListener () {
+  readyListener() {
     this.findVideoSize()
   },
 
@@ -92,12 +104,12 @@ export default (app) => ({
       this.height = this.videoElement.videoHeight
 
       this.videoElement.remove()
-      
+
       this.resolve()
     } else {
       if (this.attempts < 10) {
-        this.attempts++;
-        setTimeout(this.findVideoSize, 400);
+        this.attempts++
+        setTimeout(this.findVideoSize, 400)
       } else {
         console.error('VideoURLParser: Could not find video dimensions')
       }

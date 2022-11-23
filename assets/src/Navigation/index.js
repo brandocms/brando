@@ -1,7 +1,7 @@
 import { Dom, gsap } from '@brandocms/jupiter'
 
 export default class Navigation {
-  constructor (app) {
+  constructor(app) {
     this.app = app
     this.fullscreen = false
     this.fsToggle = Dom.find('.fullscreen-toggle')
@@ -9,21 +9,21 @@ export default class Navigation {
     if (!Dom.find('#navigation')) {
       return
     }
-    
+
     this.setupNavCircle()
     this.setupNavDropdowns()
     this.setupCurrentUserDropdown()
     this.setupFullscreenToggle()
   }
 
-  setupFullscreenToggle () {
+  setupFullscreenToggle() {
     this.fsToggle.addEventListener('click', e => {
       this.fsToggle.classList.toggle('minimized')
       this.setFullscreen(!this.fullscreen)
     })
   }
 
-  setupCurrentUserDropdown () {
+  setupCurrentUserDropdown() {
     this.$currentUserDropdown = document.querySelector('#current-user')
     this.$currentUserDropdownContent = Dom.find(this.$currentUserDropdown, '.dropdown-content')
     this.currentUserDropdownOpen = false
@@ -32,10 +32,13 @@ export default class Navigation {
     })
   }
 
-  toggleCurrentUserDropdown () {
+  toggleCurrentUserDropdown() {
     const lis = this.$currentUserDropdownContent.querySelectorAll('li')
 
-    gsap.to(this.$currentUserDropdown.querySelector('.dropdown-icon'), { duration: 0.35, rotate: '+=180' })
+    gsap.to(this.$currentUserDropdown.querySelector('.dropdown-icon'), {
+      duration: 0.35,
+      rotate: '+=180'
+    })
     if (this.currentUserDropdownOpen) {
       gsap.to(Array.from(lis).reverse(), { duration: 0.35, autoAlpha: 0, x: -8, stagger: 0.06 })
       gsap.to(this.$currentUserDropdown, { duration: 0.35, delay: 0.2, height: this.height })
@@ -50,7 +53,7 @@ export default class Navigation {
     }
   }
 
-  toggleDropdown (trigger) {
+  toggleDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
     const lis = dd.querySelectorAll('li')
@@ -70,7 +73,7 @@ export default class Navigation {
     }
   }
 
-  setupNavDropdowns () {
+  setupNavDropdowns() {
     const targets = [
       Dom.find('#navigation-content header'),
       Dom.find('#navigation-content .current-user'),
@@ -88,7 +91,7 @@ export default class Navigation {
     })
   }
 
-  setupNavCircle () {
+  setupNavCircle() {
     const circle = document.querySelector('.nav-circle')
     const dts = document.querySelectorAll('nav dl dt')
     dts.forEach(dt => {
@@ -106,7 +109,7 @@ export default class Navigation {
     gsap.to(circle, { duration: 0.35, opacity: 0 })
   }
 
-  moveCircle (circle, el) {
+  moveCircle(circle, el) {
     const nav = document.querySelector('#navigation nav')
     const navTop = nav.getBoundingClientRect().top
     this.showCircle(circle)
@@ -114,7 +117,7 @@ export default class Navigation {
     gsap.to(circle, { ease: 'expo.ease', duration: 0.35, top: top - navTop })
   }
 
-  setFullscreen (value) {
+  setFullscreen(value) {
     const main = document.querySelector('main')
     const navigation = document.querySelector('#navigation')
 
@@ -126,20 +129,25 @@ export default class Navigation {
     } else {
       const marginLeft = this.getCSSVar(main, '--main-margin-left')
       gsap.to(navigation, { ease: 'sine.inOut', duration: 0.35, xPercent: '0' })
-      gsap.to(main, { ease: 'sine.inOut', duration: 0.35, marginLeft, onComplete: () => {
-        gsap.set(main, { clearProps: 'margin-left'})
-      } })
+      gsap.to(main, {
+        ease: 'sine.inOut',
+        duration: 0.35,
+        marginLeft,
+        onComplete: () => {
+          gsap.set(main, { clearProps: 'margin-left' })
+        }
+      })
     }
   }
 
-  checkFullscreen () {
+  checkFullscreen() {
     if (this.fullscreen) {
       const main = document.querySelector('main')
       gsap.set(main, { marginLeft: 24 })
     }
   }
 
-  getCSSVar (el, varName) {
+  getCSSVar(el, varName) {
     const styles = window.getComputedStyle(el)
     return styles.getPropertyValue(varName)
   }

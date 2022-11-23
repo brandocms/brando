@@ -1,4 +1,4 @@
-export default (app) => ({
+export default app => ({
   mounted() {
     this.scrollTop = 0
     this.el.addEventListener('scroll', this.scrollListener.bind(this))
@@ -14,7 +14,7 @@ export default (app) => ({
     this.el.removeEventListener('scroll', this.scrollListener.bind(this))
   },
 
-  scrollListener () {
+  scrollListener() {
     this.scrollTop = this.el.scrollTop
   }
 })

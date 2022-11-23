@@ -1,10 +1,4 @@
-import { 
-  Application, 
-  Dom, 
-  Moonwalk, 
-  Events, 
-  gsap 
-} from '@brandocms/jupiter'
+import { Application, Dom, Moonwalk, Events, gsap } from '@brandocms/jupiter'
 
 import { Socket } from 'phoenix'
 import topbar from './topbar'
@@ -19,7 +13,11 @@ import configureFader from './config/FADER'
 import { alertError } from './alerts'
 
 const prmEl = Dom.find('meta[name="prefers_reduced_motion"]')
-const PREFERS_REDUCED_MOTION = prmEl ? (prmEl.getAttribute('content') === 'true' ? true : false) : false
+const PREFERS_REDUCED_MOTION = prmEl
+  ? prmEl.getAttribute('content') === 'true'
+    ? true
+    : false
+  : false
 
 if (PREFERS_REDUCED_MOTION) {
   gsap.globalTimeline.timeScale(200)
@@ -27,7 +25,10 @@ if (PREFERS_REDUCED_MOTION) {
 
 const IS_LOGIN = Dom.find('.auth-login')
 
-topbar.config({ barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' }, shadowColor: 'rgba(0, 0, 0, .2)' })
+topbar.config({
+  barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' },
+  shadowColor: 'rgba(0, 0, 0, .2)'
+})
 
 export default (hooks, enableDebug = true) => {
   let app
@@ -42,7 +43,17 @@ export default (hooks, enableDebug = true) => {
           threshold: 0.0,
           callback: el => {
             const timeline = gsap.timeline()
-            gsap.set(['.field-wrapper', '.brando-versioning', '.login-box', '.primary', '.figure-wrapper', '.title'], { opacity: 0 })
+            gsap.set(
+              [
+                '.field-wrapper',
+                '.brando-versioning',
+                '.login-box',
+                '.primary',
+                '.figure-wrapper',
+                '.title'
+              ],
+              { opacity: 0 }
+            )
             gsap.set('.login-box', { y: 35 })
             gsap.set(['.field-wrapper', '.primary', '.title'], { x: -15 })
             gsap.set('.figure-wrapper', { x: -10 })
@@ -52,8 +63,16 @@ export default (hooks, enableDebug = true) => {
               .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
               .to('.login-box', { y: 0, duration: 0.5, ease: 'power3.out' })
               .to('.login-box', { opacity: 1, duration: 0.5, ease: 'none' }, '<')
-              .to(['.title', '.field-wrapper', '.primary'], { x: 0, duration: 0.35, ease: 'circ.out', stagger: 0.1 }, '<0.25')
-              .to(['.title', '.field-wrapper', '.primary'], { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 }, '<')
+              .to(
+                ['.title', '.field-wrapper', '.primary'],
+                { x: 0, duration: 0.35, ease: 'circ.out', stagger: 0.1 },
+                '<0.25'
+              )
+              .to(
+                ['.title', '.field-wrapper', '.primary'],
+                { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 },
+                '<'
+              )
               .to('.figure-wrapper', { x: 0, duration: 0.35, ease: 'circ.out' }, '<')
               .to('.figure-wrapper', { opacity: 1, duration: 0.35, ease: 'none' }, '<')
               .to('.brando-versioning', { opacity: 1, ease: 'none' })
@@ -140,7 +159,11 @@ export default (hooks, enableDebug = true) => {
             currentActiveItem.classList.remove('active')
           }
 
-          const newActiveItem = document.querySelector(`#navigation [data-phx-link][href="${window.location.pathname + window.location.search}"]`)
+          const newActiveItem = document.querySelector(
+            `#navigation [data-phx-link][href="${
+              window.location.pathname + window.location.search
+            }"]`
+          )
           if (newActiveItem) {
             newActiveItem.classList.add('active')
           }
@@ -149,8 +172,8 @@ export default (hooks, enableDebug = true) => {
         if (detail.kind === 'initial' && !app.reconnected) {
           app.navigation.checkFullscreen()
           app.presence.setUrl(detail.to)
-        }        
-      })      
+        }
+      })
 
       const $progressWrapper = Dom.find('.progress-wrapper')
       const $progress = Dom.find($progressWrapper, '.progress')
@@ -245,7 +268,10 @@ export default (hooks, enableDebug = true) => {
           // we've connected before. see if versions match!
           if (app.vsn !== params.vsn) {
             // new version, alert user
-            alertError('👀', 'The application was updated while you were logged in. It is recommended to refresh the page, but make sure you have saved your work first.')
+            alertError(
+              '👀',
+              'The application was updated while you were logged in. It is recommended to refresh the page, but make sure you have saved your work first.'
+            )
           }
         } else {
           app.vsn = params.vsn

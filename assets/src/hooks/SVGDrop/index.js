@@ -1,15 +1,21 @@
 import { Dom } from '@brandocms/jupiter'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.target = this.el.dataset.target
     this.bindDrop()
   },
 
   bindDrop() {
-    this.el.addEventListener('dragenter', () => { this.el.classList.add('dragging') })
-    this.el.addEventListener('dragover', () => { this.el.classList.add('dragging') })
-    this.el.addEventListener('dragleave', () => { this.el.classList.remove('dragging') })
+    this.el.addEventListener('dragenter', () => {
+      this.el.classList.add('dragging')
+    })
+    this.el.addEventListener('dragover', () => {
+      this.el.classList.add('dragging')
+    })
+    this.el.addEventListener('dragleave', () => {
+      this.el.classList.remove('dragging')
+    })
 
     this.el.addEventListener('drop', event => {
       event.preventDefault()
@@ -27,7 +33,7 @@ export default (app) => ({
 
   upload(f) {
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = event => {
       this.pushEventTo(this.target, 'drop_svg', { code: event.target.result })
     }
     reader.readAsText(f)

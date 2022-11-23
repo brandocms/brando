@@ -2,7 +2,7 @@ import { Dom, gsap } from '@brandocms/jupiter'
 import autosize from 'autosize'
 import Sortable from 'sortablejs'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.bindSortable()
   },
@@ -26,9 +26,7 @@ export default (app) => ({
     })
   },
 
-  getOrder() {
-
-  },
+  getOrder() {},
 
   setOrder() {
     let order = this.sortable.toArray().map(Number)

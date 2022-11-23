@@ -27,11 +27,11 @@ export default function pasteHandler(options) {
         }
 
         options.editor.commands.setMark(options.type, {
-          href: link.href,
+          href: link.href
         })
 
         return true
-      },
-    },
+      }
+    }
   })
 }

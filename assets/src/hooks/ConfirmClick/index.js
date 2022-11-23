@@ -1,6 +1,6 @@
 import { alertConfirm } from '../../alerts'
 
-export default (app) => ({
+export default app => ({
   mounted() {
     this.el.addEventListener('click', e => {
       e.preventDefault()

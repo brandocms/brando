@@ -4,7 +4,7 @@ const calc = (c, mw, w) => {
   return Math.round(((c - mw) / w) * 100)
 }
 
-export default (app) => ({
+export default app => ({
   mounted() {
     console.log('==> Image FocalPoint mounted!!!')
     const field = this.el.dataset.field

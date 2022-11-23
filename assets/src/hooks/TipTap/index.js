@@ -1,13 +1,13 @@
 import { Dom } from '@brandocms/jupiter'
 import TipTap from '../../components/TipTap/TipTap.svelte'
 
-export default (app) => ({
-  mounted () {
-    this.mount()    
+export default app => ({
+  mounted() {
+    this.mount()
     app.components.push(this)
   },
 
-  mount () {
+  mount() {
     const $input = Dom.find(this.el, '.tiptap-text')
 
     this._instance = new TipTap({
@@ -15,16 +15,16 @@ export default (app) => ({
       props: {
         content: $input.getAttribute('value') || '',
         extensions: this.el.getAttribute('data-tiptap-extensions')
-      },
+      }
     })
   },
 
-  remount () {
+  remount() {
     this._instance?.$destroy()
     this.mount()
   },
 
-  destroyed () {
+  destroyed() {
     this._instance?.$destroy()
   }
 })

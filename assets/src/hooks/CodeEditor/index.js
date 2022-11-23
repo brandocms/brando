@@ -6,9 +6,9 @@ import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { html } from '@codemirror/lang-html'
 
-export default (app) => ({
+export default app => ({
   mounted() {
-    this.initialize()    
+    this.initialize()
   },
 
   // updated() {
@@ -18,13 +18,13 @@ export default (app) => ({
   //     const update = this.view.state.update(transaction)
   //     this.view.update([update])
   //   }
-  // }, 
+  // },
 
-  destroyed () {
+  destroyed() {
     this.editor?.destroy()
   },
 
-  syncInput () {
+  syncInput() {
     return transaction => {
       this.view.update([transaction])
       if (!transaction.changes.empty) {
@@ -34,7 +34,7 @@ export default (app) => ({
     }
   },
 
-  initialize () {
+  initialize() {
     this.$containerEl = Dom.find(this.el, '.editor')
     this.$input = Dom.find(this.el, 'textarea')
     this._value = this.$input.value
@@ -42,8 +42,8 @@ export default (app) => ({
     this.view = new EditorView({
       dispatch: this.syncInput(),
       parent: this.$containerEl,
-      state: EditorState.create({ 
-        doc: this.$input.value, 
+      state: EditorState.create({
+        doc: this.$input.value,
         extensions: [
           keymap.of([indentWithTab]),
           EditorView.theme({
@@ -51,23 +51,23 @@ export default (app) => ({
               fontSize: '13px',
               border: '1px solid #c0c0c0'
             },
-              '.cm-content': {
+            '.cm-content': {
               fontFamily: 'Mono',
               minHeight: '200px'
             },
-              '.cm-gutters': {
+            '.cm-gutters': {
               minHeight: '200px'
             },
-              '.cm-scroller': {
+            '.cm-scroller': {
               overflow: 'auto',
               maxHeight: '600px'
             }
           }),
-          EditorState.tabSize.of(16), 
+          EditorState.tabSize.of(16),
           basicSetup,
           html()
         ]
-      })      
+      })
     })
   }
 })

@@ -1,7 +1,7 @@
 import { Dom, Events, gsap } from '@brandocms/jupiter'
 
-export default (app) => ({
-  mounted () {
+export default app => ({
+  mounted() {
     this.active = false
 
     this.handleEvent(`b:live_preview`, () => {
@@ -15,7 +15,7 @@ export default (app) => ({
     $blankLink.addEventListener('click', this.toggle.bind(this))
   },
 
-  toggle () {
+  toggle() {
     this.active = !this.active
     app.navigation.fsToggle.classList.toggle('minimized')
     app.navigation.setFullscreen(this.active)
@@ -24,7 +24,7 @@ export default (app) => ({
     this.$livePreview = this.el.querySelector('.live-preview')
     this.$iframeWrapper = document.querySelector('.live-preview-iframe-wrapper')
     this.$iframe = document.querySelector('.live-preview iframe')
-    
+
     if (this.active) {
       lpDivider.addEventListener('mousedown', this.resizeListener)
 
@@ -51,16 +51,16 @@ export default (app) => ({
     }
   },
 
-  windowResize () {
+  windowResize() {
     this.lpSetMaxWidth()
     this.setPreviewTarget('desktop', this.lpMaxWidth > 600 ? 600 : this.lpMaxWidth)
   },
 
-  lpSetMaxWidth () {
+  lpSetMaxWidth() {
     this.lpMaxWidth = window.innerWidth - 805
   },
 
-  resizer (e) {
+  resizer(e) {
     const that = this
     function mousemove(e) {
       let newX = prevX - e.x
