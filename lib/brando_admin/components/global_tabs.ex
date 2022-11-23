@@ -16,26 +16,32 @@ defmodule BrandoAdmin.Components.GlobalTabs do
 
   def render(assigns) do
     ~H"""
-    <div class="global-tabs">
-      <.live_component module={ImagePicker} id="image-picker" />
-      <div class="form-tabs">
-        <div class="form-tab-customs">
-          <%= for {global_set, index} <- @indexed_global_sets do %>
-            <button
-              id={"set-#{global_set.key}-#{global_set.language}"}
-              type="button"
-              class={render_classes([active: @active_tab == index])}
-              phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}><%= global_set.label %></button>
-          <% end %>
-        </div>
-      </div>
-
-      <%= for {global_set, index} <- @indexed_global_sets do %>
-        <%= if index == @active_tab do %>
-          <div id={"set-#{index}"}>
+    <div>
+      <%= if @global_sets == [] do %>
+        <.alert type={:info}>
+          <%= gettext "The application currently has no globals configured" %>
+        </.alert>
+      <% else %>
+        <div class="global-tabs">
+          <.live_component module={ImagePicker} id="image-picker" />
+          <div class="form-tabs">
+            <div
+              :for={{global_set, index} <- @indexed_global_sets}
+              class="form-tab-customs">
+              <button
+                id={"set-#{global_set.key}-#{global_set.language}"}
+                type="button"
+                class={render_classes([active: @active_tab == index])}
+                phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}><%= global_set.label %></button>
+            </div>
+          </div>
+          <div
+            :for={{global_set, index} <- @indexed_global_sets}
+            :if={index == @active_tab}
+            id={"set-#{index}"}>
             <.set_form global_set={global_set} index={index} target={@myself} />
           </div>
-        <% end %>
+        </div>
       <% end %>
     </div>
     """
