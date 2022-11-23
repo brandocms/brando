@@ -84,7 +84,6 @@ defmodule Brando.Blueprint.Relations do
   end
 
   def run_cast_relations(changeset, relations, user) do
-    # if we have images or video, add these here, since we should cast_embed them
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
   end
 
@@ -195,7 +194,7 @@ defmodule Brando.Blueprint.Relations do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do
-          cast_embed(changeset, name, required: true)
+          cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
         else
           put_embed(changeset, name, [])
         end
@@ -215,7 +214,7 @@ defmodule Brando.Blueprint.Relations do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do
-          cast_embed(changeset, name, required: true)
+          cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
         else
           put_embed(changeset, name, [])
         end
@@ -249,6 +248,8 @@ defmodule Brando.Blueprint.Relations do
       schema.__relations__
       |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
       |> Enum.map(& &1.name)
+
+    # TODO: Add alternate_entries here if Translatable?
 
     Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads)
   end
