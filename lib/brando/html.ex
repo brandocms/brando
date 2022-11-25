@@ -13,13 +13,6 @@ defmodule Brando.HTML do
   import Phoenix.HTML.Tag
   alias Brando.Utils
 
-  @doc false
-  defmacro __using__(_) do
-    quote do
-      import Brando.HTML
-    end
-  end
-
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
   defdelegate picture(assigns), to: Brando.HTML.Images
   defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML

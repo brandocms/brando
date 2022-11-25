@@ -92,7 +92,7 @@ defmodule BrandoAdmin do
         only: [media_url: 0, media_url: 1, current_user: 1, app_name: 0, img_url: 3]
 
       # Import all HTML functions (forms, tags, etc)
-      use Brando.HTML
+      import Brando.HTML
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
       import Phoenix.Component
