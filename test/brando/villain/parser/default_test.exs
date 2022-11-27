@@ -81,9 +81,9 @@ defmodule Brando.Villain.ParserTest do
 
   test "blockquote/2" do
     assert blockquote(%{text: "Some text", cite: "J. Williamson"}, []) ==
-             "<blockquote>\n  <p>Some text</p>\n\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
+             "<blockquote>\n  <p>\nSome text</p>\n\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
 
     assert blockquote(%{text: "Some text", cite: ""}, []) ==
-             "<blockquote>\n  <p>Some text</p>\n\n</blockquote>\n"
+             "<blockquote>\n  <p>\nSome text</p>\n\n</blockquote>\n"
   end
 end
