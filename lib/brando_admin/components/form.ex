@@ -963,9 +963,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def allow_uploads(socket) do
-    image_fields = socket.assigns.schema.__image_fields__()
-    gallery_fields = socket.assigns.schema.__gallery_fields__()
-    file_fields = socket.assigns.schema.__file_fields__()
+    schema = socket.assigns.schema
+    image_fields = schema.__image_fields__()
+    gallery_fields = schema.__gallery_fields__()
+    file_fields = schema.__file_fields__()
+    transformers = socket.assigns.form.transformers
 
     socket_with_image_uploads =
       Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
@@ -985,7 +987,6 @@ defmodule BrandoAdmin.Components.Form do
         max_entries = Brando.Utils.try_path(gallery_field, [:opts, :max_entries]) || 25
 
         allow_upload(updated_socket, gallery_field.name,
-          # TODO: Read max_entries from gallery config!
           max_entries: max_entries,
           max_file_size: max_size,
           accept: ~w(.jpg .jpeg .png .gif .webp .svg),
@@ -1007,8 +1008,25 @@ defmodule BrandoAdmin.Components.Form do
         )
       end)
 
+    socket_with_transformers =
+      Enum.reduce(transformers, socket_with_file_uploads, fn
+        {relation_key, field}, updated_socket ->
+          relation = schema.__relation__(relation_key)
+          relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
+          img_field = relation_module.__asset__(field)
+          max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
+
+          allow_upload(updated_socket, :"#{relation_key}|#{field}",
+            accept: ~w(.jpg .jpeg .png .gif .webp .svg),
+            max_entries: 25,
+            max_file_size: max_size,
+            auto_upload: true,
+            progress: &__MODULE__.handle_image_progress/3
+          )
+      end)
+
     # fallback to nil if no uploads
-    assign_new(socket_with_file_uploads, :uploads, fn -> nil end)
+    assign_new(socket_with_transformers, :uploads, fn -> nil end)
   end
 
   def handle_event(
