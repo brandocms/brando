@@ -6,7 +6,7 @@
   &.lead,
   &.lede {
     .ProseMirror p {
-      @fontsize lg;
+      @fontsize input;
     }
   }
 }

@@ -148,7 +148,7 @@ module.exports = {
             desktop_lg: '11px',
             desktop_xl: '12px'
           },
-          
+
           label: {
             iphone: '14px',
             mobile: '14px',
@@ -259,8 +259,8 @@ module.exports = {
           mobile: '16px',
           ipad_portrait: '20px',
           ipad_landscape: '18px',
-          desktop_md: '19px',
-          desktop_lg: '20px',
+          desktop_md: '18px',
+          desktop_lg: '19px',
           desktop_xl: '20px'
         },
 
@@ -298,9 +298,9 @@ module.exports = {
         badge: {
           iphone: '10px',
           mobile: '10px',
-          ipad_portrait: '12px',
-          ipad_landscape: '0.8333333333333334vw',
-          desktop_md: '0.8333333333333334vw',
+          ipad_portrait: '10px',
+          ipad_landscape: '11px',
+          desktop_md: '11px',
           desktop_lg: '12px',
           desktop_xl: '12px'
         },
@@ -329,7 +329,8 @@ module.exports = {
           }
         },
 
-        xl: { //
+        xl: {
+          //
           iphone: {
             'font-size': '24px',
             'font-weight': '200'
@@ -383,23 +384,24 @@ module.exports = {
             'font-weight': '600'
           },
           desktop_md: {
-            'font-size': '3.5vw',
+            'font-size': '50px',
             'letter-spacing': '-0.5px',
             'font-weight': '600'
           },
           desktop_lg: {
-            'font-size': '3.5vw',
+            'font-size': '55px',
             'letter-spacing': '-0.5px',
             'font-weight': '600'
           },
           desktop_xl: {
-            'font-size': '3.5vw',
+            'font-size': '65px',
             'letter-spacing': '-0.5px',
             'font-weight': '600'
           }
         },
 
-        h2: { //
+        h2: {
+          //
           iphone: {
             'font-size': '22px',
             'font-weight': '500'
@@ -454,7 +456,8 @@ module.exports = {
           }
         },
 
-        '3xl': { //
+        '3xl': {
+          //
           iphone: '36px',
           mobile: '36px',
           ipad_portrait: '41px',
@@ -464,7 +467,8 @@ module.exports = {
           desktop_xl: '80px'
         },
 
-        '4xl': { //
+        '4xl': {
+          //
           iphone: '35px',
           mobile: '40px',
           ipad_portrait: '45px',
@@ -678,9 +682,7 @@ module.exports = {
           'sans-serif'
         ],
 
-        blocks: [
-          'Blocks',
-        ],
+        blocks: ['Blocks'],
 
         mono: [
           'Mono',
