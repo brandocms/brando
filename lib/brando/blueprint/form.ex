@@ -56,6 +56,7 @@ defmodule Brando.Blueprint.Form do
             after_save: nil,
             default_params: %{},
             tabs: [],
+            transformers: [],
             redirect_on_save: nil
 
   defmacro forms(do: block) do
@@ -114,6 +115,7 @@ defmodule Brando.Blueprint.Form do
       var!(b_fieldset) = []
       var!(b_subform) = []
       var!(b_form) = []
+      var!(b_transformers) = []
       var!(b_redirect_on_save) = nil
       var!(b_query) = &Brando.Blueprint.Form.default_query/1
 
@@ -128,6 +130,7 @@ defmodule Brando.Blueprint.Form do
         default_params: default_params,
         redirect_on_save: var!(b_redirect_on_save),
         query: var!(b_query),
+        transformers: var!(b_transformers),
         after_save: after_save
       }
 
@@ -413,6 +416,7 @@ defmodule Brando.Blueprint.Form do
     quote location: :keep do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
+      _ = var!(b_transformers)
 
       prev_ctx = @brando_macro_context
 
@@ -430,6 +434,13 @@ defmodule Brando.Blueprint.Form do
       unquote(block)
 
       named_subform = build_subform(unquote(field), unquote(opts), Enum.reverse(var!(b_subform)))
+
+      var!(b_transformers) =
+        case named_subform.style do
+          {:transformer, field} -> var!(b_transformers) ++ [{named_subform.field, field}]
+          _ -> var!(b_transformers)
+        end
+
       var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
 
       Module.put_attribute(__MODULE__, :brando_macro_context, prev_ctx)
