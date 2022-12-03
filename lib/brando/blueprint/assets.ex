@@ -2,14 +2,13 @@ defmodule Brando.Blueprint.Assets do
   @moduledoc """
   WIP
   """
-  import Ecto.Changeset
-  import Brando.Blueprint.Utils
-  alias Brando.Blueprint.Asset
+  alias Ecto.Changeset
+  alias Brando.Blueprint
 
   def build_asset(name, type, opts \\ [])
 
   def build_asset(name, :image, cfg: :db) do
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :image,
       opts: %{module: Brando.Images.Image, opts: %{cfg: :db}}
@@ -49,7 +48,7 @@ defmodule Brando.Blueprint.Assets do
 
     opts_map = Map.put(opts_map, :cfg, cfg)
 
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :image,
       opts: opts_map
@@ -89,7 +88,7 @@ defmodule Brando.Blueprint.Assets do
 
     opts_map = Map.put(opts_map, :cfg, cfg)
 
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :file,
       opts: opts_map
@@ -129,7 +128,7 @@ defmodule Brando.Blueprint.Assets do
 
     opts_map = Map.put(opts_map, :cfg, cfg)
 
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :video,
       opts: opts_map
@@ -166,7 +165,7 @@ defmodule Brando.Blueprint.Assets do
 
     opts_map = Map.put(opts_map, :cfg, cfg)
 
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :gallery,
       opts: opts_map
@@ -176,7 +175,7 @@ defmodule Brando.Blueprint.Assets do
   def build_asset(name, :gallery_images, opts) do
     opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.GalleryImage})
 
-    %Asset{
+    %Blueprint.Asset{
       name: name,
       type: :gallery_images,
       opts: opts_map
@@ -184,7 +183,7 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, type, opts) do
-    %Asset{name: name, type: type, opts: Enum.into(opts, %{})}
+    %Blueprint.Asset{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
   defmacro assets(do: block) do
@@ -246,8 +245,15 @@ defmodule Brando.Blueprint.Assets do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, [])
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+      "" ->
+        Changeset.put_embed(changeset, name, [])
+
+      _ ->
+        Changeset.cast_embed(
+          changeset,
+          name,
+          Blueprint.Utils.to_changeset_opts(:embeds_many, opts)
+        )
     end
   end
 
@@ -257,8 +263,15 @@ defmodule Brando.Blueprint.Assets do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_assoc(changeset, name, nil)
-      _ -> cast_assoc(changeset, name, to_changeset_opts(:belongs_to, opts))
+      "" ->
+        Changeset.put_assoc(changeset, name, nil)
+
+      _ ->
+        Changeset.cast_assoc(
+          changeset,
+          name,
+          Blueprint.Utils.to_changeset_opts(:belongs_to, opts)
+        )
     end
   end
 
@@ -268,8 +281,11 @@ defmodule Brando.Blueprint.Assets do
         _user
       ) do
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_assoc(changeset, name, nil)
-      _ -> cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
+      "" ->
+        Changeset.put_assoc(changeset, name, nil)
+
+      _ ->
+        Changeset.cast_assoc(changeset, name, Blueprint.Utils.to_changeset_opts(:has_many, opts))
     end
   end
 
