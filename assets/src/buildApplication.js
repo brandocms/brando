@@ -26,6 +26,7 @@ if (PREFERS_REDUCED_MOTION) {
 const IS_LOGIN = Dom.find('.auth-login')
 
 topbar.config({
+  barThickness: 1,
   barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' },
   shadowColor: 'rgba(0, 0, 0, .2)'
 })
