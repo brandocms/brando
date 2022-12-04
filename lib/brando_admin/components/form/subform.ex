@@ -25,11 +25,17 @@ defmodule BrandoAdmin.Components.Form.Subform do
         :indexed_sub_form_fields,
         Enum.with_index(inputs_for(assigns.form, assigns.subform.field))
       )
+      |> assign(:path, List.wrap(assigns.subform.field))
 
     {:ok, socket}
   end
 
-  def render(%{subform: %{style: {:transformer, _transform_field}}} = assigns) do
+  def render(%{subform: %{style: {:transformer, transform_field}}} = assigns) do
+    upload_key = :"#{assigns.subform.field}|#{transform_field}"
+    _ = :"#{assigns.subform.field}|#{transform_field}_id"
+    upload_field = Map.get(assigns.uploads, upload_key)
+    assigns = assign(assigns, :upload_field, upload_field)
+
     ~H"""
     <fieldset>
       <Form.field_base
@@ -70,20 +76,30 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 form={@form}
                 sub_form={sub_form}
                 input={input}
+                path={@path ++ [index]}
                 uploads={@uploads}
                 current_user={@current_user} />
             </div>
           </div>
         </div>
-        <button
-          id={"#{@form.id}-#{@subform.field}-add-entry"}
-          type="button"
-          class="add-entry-button"
-          phx-click={JS.push("add_subentry", target: @myself)}
-          phx-page-loading>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
-          <%= gettext("Add entry") %>
-        </button>
+        <div class="actions">
+          <button
+            id={"#{@form.id}-#{@subform.field}-add-entry"}
+            type="button"
+            class="add-entry-button"
+            phx-click={JS.push("add_subentry", target: @myself)}
+            phx-page-loading>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
+            <%= gettext("Add entry") %>
+          </button>
+          <label class="upload-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <%= gettext("Pick files") %>
+            <.live_file_input upload={@upload_field} />
+          </label>
+        </div>
       </Form.field_base>
     </fieldset>
     """
@@ -111,6 +127,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
             instructions={@instructions}
             placeholder={@placeholder}
             input={input}
+            path={@path}
             uploads={@uploads}
             current_user={@current_user} />
         </div>
@@ -153,6 +170,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               form={@form}
               sub_form={sub_form}
               input={input}
+              path={@path ++ [index]}
               uploads={@uploads}
               current_user={@current_user} />
           </div>
@@ -222,7 +240,15 @@ defmodule BrandoAdmin.Components.Form.Subform do
           put_in(changeset, [Access.key(:changes), Access.key(field_name)], [])
 
         false ->
-          Ecto.Changeset.put_embed(changeset, field_name, updated_entries)
+          case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
+            %{type: :has_many} ->
+              # assoc
+              Ecto.Changeset.put_assoc(changeset, field_name, updated_entries)
+
+            _ ->
+              # embed
+              Ecto.Changeset.put_embed(changeset, field_name, updated_entries)
+          end
       end
 
     send_update(BrandoAdmin.Components.Form,

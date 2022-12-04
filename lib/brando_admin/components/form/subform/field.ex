@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
       instructions={@instructions}
       placeholder={@placeholder}
       uploads={@uploads}
+      path={@path}
       opts={@input.opts}
       type={@input.type}
       current_user={@current_user} />
