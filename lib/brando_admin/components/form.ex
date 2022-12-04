@@ -204,13 +204,13 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     images =
       changeset
-      |> Ecto.Changeset.get_field(key)
+      |> get_field(key)
       |> Enum.map(fn
         %{path: ^path} -> updated_gallery_image
         img -> img
       end)
 
-    updated_changeset = Ecto.Changeset.put_change(changeset, key, images)
+    updated_changeset = put_change(changeset, key, images)
 
     {:ok,
      socket
@@ -1442,7 +1442,7 @@ defmodule BrandoAdmin.Components.Form do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    mutation_type = (Ecto.Changeset.get_field(new_changeset, :id) && :update) || :create
+    mutation_type = (get_field(new_changeset, :id) && :update) || :create
 
     # if redirect_on_save is set in form, use this
     redirect_fn =
@@ -1640,7 +1640,7 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
 
         image ->
-          image_changeset = Ecto.Changeset.change(image)
+          image_changeset = change(image)
           edit_image = Map.merge(edit_image, %{id: image.id, image: image})
 
           {:noreply,
@@ -1805,21 +1805,18 @@ defmodule BrandoAdmin.Components.Form do
           default = Map.get(transformer_defaults, key)
           asset_relation_key = String.to_existing_atom("#{asset_key}_id")
           default_with_asset = Map.put(default, asset_relation_key, image.id)
-
           changeset = socket.assigns.changeset
-
-          module = changeset.data.__struct__
           relation_atom = String.to_existing_atom(relation_key)
 
           updated_field =
             changeset
-            |> Ecto.Changeset.get_field(relation_atom)
+            |> get_field(relation_atom)
             |> Kernel.++([default_with_asset])
 
           updated_changeset =
             case relation.type do
-              :has_many -> Ecto.Changeset.put_assoc(changeset, relation_atom, updated_field)
-              _ -> Ecto.Changeset.put_embed(changeset, relation_atom, updated_field)
+              :has_many -> put_assoc(changeset, relation_atom, updated_field)
+              _ -> put_embed(changeset, relation_atom, updated_field)
             end
 
           {:noreply,
@@ -1881,7 +1878,7 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
 
         file ->
-          file_changeset = Ecto.Changeset.change(file)
+          file_changeset = change(file)
           edit_file = Map.merge(edit_file, %{id: file.id, file: file})
 
           {:noreply,
