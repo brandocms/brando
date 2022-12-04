@@ -850,11 +850,16 @@ defmodule Brando.Utils do
     do: "#{human_spaced_number(div(ms, @day_time))} days"
 
   @doc """
-  Show binary `string` as a spaced number
+  This function takes a string representing a number and intersperses it with spaces every three digits,
+  starting from the right side of the string. This makes it easier to read large numbers.
 
-  Example:
-  iex(1)> Brando.Utils.human_spaced_number("1000000000")
+  ## Examples
+
+  iex> Brando.Utils.human_spaced_number("1000000000")
   "1 000 000 000"
+
+  iex> Brando.Utils.human_spaced_number("12345")
+  "12 345"
   """
   def human_spaced_number(string) when is_binary(string) do
     split = rem(byte_size(string), 3)
@@ -1094,18 +1099,20 @@ defmodule Brando.Utils do
       iex> get_path_from_field_name("post[clients][0][avatar]")
       [:clients, 0, :avatar]
   """
-  def get_path_from_field_name(form_name) do
-    ~r/\[(\w+)\]/
-    |> Regex.scan(form_name, capture: :all_but_first)
-    |> Enum.reduce([], fn capture, acc ->
-      segment = List.first(capture)
+  def get_path_from_field_name(input) do
+    parts =
+      input
+      |> String.replace("]", "")
+      |> String.split("[")
 
-      case Integer.parse(segment) do
-        {number, ""} -> [number | acc]
-        :error -> [String.to_existing_atom(segment) | acc]
+    parts = Enum.drop(parts, 1)
+
+    Enum.map(parts, fn part ->
+      case Integer.parse(part) do
+        {int, _} -> int
+        _ -> String.to_existing_atom(part)
       end
     end)
-    |> Enum.reverse()
   end
 
   @doc """
