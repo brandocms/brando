@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
      |> assign(:presences, %{})
+     |> assign(:transformer_defaults, %{})
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
@@ -53,7 +54,7 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{edit_file: edit_file}} = socket
       ) do
     updated_edit_file = Map.merge(edit_file, %{file: file, id: file.id})
-    file_changeset = Ecto.Changeset.change(file)
+    file_changeset = change(file)
 
     {:ok,
      socket
@@ -65,7 +66,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_file, edit_file: %{file: nil} = edit_file},
         socket
       ) do
-    file_changeset = Ecto.Changeset.change(%Brando.Files.File{})
+    file_changeset = change(%Brando.Files.File{})
 
     {:ok,
      socket
@@ -77,7 +78,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_file, edit_file: %{file: file} = edit_file},
         socket
       ) do
-    file_changeset = Ecto.Changeset.change(file)
+    file_changeset = change(file)
 
     {:ok,
      socket
@@ -91,7 +92,7 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{edit_image: edit_image}} = socket
       ) do
     updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
-    image_changeset = Ecto.Changeset.change(image)
+    image_changeset = change(image)
 
     {:ok,
      socket
@@ -103,7 +104,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_image, edit_image: %{image: nil} = edit_image},
         socket
       ) do
-    image_changeset = Ecto.Changeset.change(%Brando.Images.Image{})
+    image_changeset = change(%Brando.Images.Image{})
 
     {:ok,
      socket
@@ -115,7 +116,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_image, edit_image: %{image: image} = edit_image},
         socket
       ) do
-    image_changeset = Ecto.Changeset.change(image)
+    image_changeset = change(image)
 
     {:ok,
      socket
@@ -388,14 +389,9 @@ defmodule BrandoAdmin.Components.Form do
   defp add_preloads(query_params, schema) do
     default_preloads = Map.get(query_params, :preload, [])
 
-    file_preloads =
+    asset_preloads =
       schema.__assets__()
-      |> Enum.filter(&(&1.type == :file))
-      |> Enum.map(& &1.name)
-
-    image_preloads =
-      schema.__assets__()
-      |> Enum.filter(&(&1.type == :image))
+      |> Enum.filter(&(&1.type in [:file, :image]))
       |> Enum.map(& &1.name)
 
     gallery_preloads =
@@ -405,8 +401,15 @@ defmodule BrandoAdmin.Components.Form do
 
     rel_preloads =
       schema.__relations__()
-      |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
-      |> Enum.map(& &1.name)
+      |> Enum.filter(&(&1.type in [:belongs_to, :has_many] and &1.name != :creator))
+      |> Enum.map(fn
+        %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
+          sub_assets = Enum.map(mod.__assets__(), & &1.name)
+          {name, sub_assets}
+
+        %{name: name} ->
+          name
+      end)
 
     alternates_preload =
       if schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() do
@@ -417,9 +420,8 @@ defmodule BrandoAdmin.Components.Form do
 
     preloads =
       Enum.uniq(
-        file_preloads ++
+        asset_preloads ++
           gallery_preloads ++
-          image_preloads ++
           rel_preloads ++
           alternates_preload ++
           default_preloads
@@ -1010,18 +1012,21 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_transformers =
       Enum.reduce(transformers, socket_with_file_uploads, fn
-        {relation_key, field}, updated_socket ->
+        {relation_key, field, default}, updated_socket ->
           relation = schema.__relation__(relation_key)
           relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
           img_field = relation_module.__asset__(field)
           max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
+          key = :"#{relation_key}|#{field}"
 
-          allow_upload(updated_socket, :"#{relation_key}|#{field}",
+          updated_socket
+          |> update(:transformer_defaults, &Map.put(&1, key, default))
+          |> allow_upload(key,
             accept: ~w(.jpg .jpeg .png .gif .webp .svg),
             max_entries: 25,
             max_file_size: max_size,
             auto_upload: true,
-            progress: &__MODULE__.handle_image_progress/3
+            progress: &__MODULE__.handle_transformer_progress/3
           )
       end)
 
@@ -1217,10 +1222,12 @@ defmodule BrandoAdmin.Components.Form do
     field_full_path = path ++ [field]
 
     updated_changeset =
-      EctoNestedChangeset.update_at(changeset, relation_full_path, fn _ -> image.id end)
+      changeset
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> image.id end)
 
     entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
-
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
 
     updated_entry =
@@ -1596,16 +1603,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_image_progress(
-        key,
-        upload_entry,
-        %{
-          assigns: %{
-            edit_image: edit_image,
-            current_user: current_user
-          }
-        } = socket
-      ) do
+  def handle_image_progress(key, upload_entry, socket) do
+    edit_image = socket.assigns.edit_image
+    current_user = socket.assigns.current_user
     socket = assign(socket, :processing, upload_entry.progress)
 
     if upload_entry.done? do
@@ -1745,6 +1745,88 @@ defmodule BrandoAdmin.Components.Form do
       )
 
       {:noreply, assign(socket, :changeset, updated_changeset)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_transformer_progress(key, upload_entry, socket) do
+    current_user = socket.assigns.current_user
+    schema = socket.assigns.schema
+    socket = assign(socket, :processing, upload_entry.progress)
+
+    if upload_entry.done? do
+      [relation_key, asset_key] = String.split(to_string(key), "|")
+      relation = schema.__relation__(String.to_existing_atom(relation_key))
+      relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
+      %{cfg: cfg} = relation_module.__asset_opts__(String.to_existing_atom(asset_key))
+      config_target = "image:#{inspect(relation_module)}:#{asset_key}"
+
+      case consume_uploaded_entry(
+             socket,
+             upload_entry,
+             fn meta ->
+               Brando.Upload.handle_upload(
+                 Map.put(meta, :config_target, config_target),
+                 upload_entry,
+                 cfg,
+                 current_user
+               )
+             end
+           ) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+            )
+
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+
+        image ->
+          socket =
+            case uploaded_entries(socket, key) do
+              {[_ | _], []} ->
+                assign(socket, :processing, false)
+
+              {[_ | _], [_ | _]} ->
+                assign(socket, :processing, true)
+
+              {[], [_ | _]} ->
+                assign(socket, :processing, true)
+            end
+
+          Brando.Images.Processing.queue_processing(image, current_user)
+
+          # get the default struct for the transformer
+          transformer_defaults = socket.assigns.transformer_defaults
+          default = Map.get(transformer_defaults, key)
+          asset_relation_key = String.to_existing_atom("#{asset_key}_id")
+          default_with_asset = Map.put(default, asset_relation_key, image.id)
+
+          changeset = socket.assigns.changeset
+
+          module = changeset.data.__struct__
+          relation_atom = String.to_existing_atom(relation_key)
+
+          updated_field =
+            changeset
+            |> Ecto.Changeset.get_field(relation_atom)
+            |> Kernel.++([default_with_asset])
+
+          updated_changeset =
+            case relation.type do
+              :has_many -> Ecto.Changeset.put_assoc(changeset, relation_atom, updated_field)
+              _ -> Ecto.Changeset.put_embed(changeset, relation_atom, updated_field)
+            end
+
+          {:noreply,
+           socket
+           |> assign(:changeset, updated_changeset)
+           |> push_event("b:validate", %{})}
+      end
     else
       {:noreply, socket}
     end
@@ -2037,6 +2119,7 @@ defmodule BrandoAdmin.Components.Form do
   def input(assigns) do
     assigns =
       assigns
+      |> assign_new(:path, fn -> [] end)
       |> assign_new(:component_id, fn ->
         Enum.join(
           [assigns.form.id, assigns.field],
@@ -2074,6 +2157,7 @@ defmodule BrandoAdmin.Components.Form do
           parent_form={@parent_form}
           field={@field}
           label={@label}
+          path={@path}
           placeholder={@placeholder}
           instructions={@instructions}
           uploads={@uploads}

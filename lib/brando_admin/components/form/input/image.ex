@@ -33,8 +33,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def mount(socket) do
     {:ok,
      socket
-     |> assign_new(:relation_field, fn -> nil end)
-     |> assign_new(:image, fn -> nil end)
      |> assign_new(:opts, fn -> [] end)
      |> assign_new(:previous_image_id, fn -> nil end)
      |> assign_new(:label, fn -> nil end)
@@ -45,11 +43,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def update(assigns, socket) do
-    socket = assign(socket, assigns)
-
     socket =
-      assign_new(socket, :form_id, fn ->
-        form = socket.assigns.form
+      socket
+      |> assign(assigns)
+      |> assign_new(:form_id, fn ->
+        form = assigns.form
         path = Brando.Utils.get_path_from_field_name(form.name)
         module_from_form = form.source.data.__struct__
 
@@ -66,66 +64,54 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     relation_field = String.to_existing_atom("#{assigns.field}_id")
     changeset = assigns.form.source
 
+    full_path_fk = socket.assigns.path ++ [relation_field]
+
     image_id =
       changeset
       |> get_field(relation_field)
       |> try_force_int()
 
     image = get_field(changeset, socket.assigns.field)
-    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
-    full_path = socket.assigns.path ++ [socket.assigns.field]
 
-    {image, image_id} =
+    {socket, image} =
       cond do
         !image && image_id ->
           # we have an image in the changeset, but no loaded image
           {:ok, image} = Brando.Images.get_image(image_id)
-          update_entry_relation(socket.assigns.form_id, image, full_path)
-          {image, image_id}
+          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
 
-        image && image.id != image_id && image_id != nil ->
+        image && to_string(image.id) != to_string(image_id) && image_id != nil ->
           # we have a loaded image, but it does not match the changeset image
           # load the changeset image
           {:ok, image} = Brando.Images.get_image(image_id)
-          update_entry_relation(socket.assigns.form_id, image, full_path)
-          {image, image_id}
+          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
 
         image && image.id == nil && image_id == nil ->
           # no loaded image, no image_id in changeset
           # try to fetch by path?
-          full_path = socket.assigns.path ++ [relation_field]
 
           image_id =
             changeset
-            |> EctoNestedChangeset.get_at(full_path)
+            |> EctoNestedChangeset.get_at(full_path_fk)
             |> try_force_int()
 
           {:ok, image} = Brando.Images.get_image(image_id)
-          update_entry_relation(socket.assigns.form_id, image, full_path)
-          {image, image_id}
+          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
 
         true ->
-          {image, image_id}
+          {socket
+           |> assign_new(:image, fn -> image end)
+           |> assign_new(:image_id, fn -> image_id end), image}
       end
+
+    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
 
     {:ok,
      socket
      |> prepare_input_component()
-     |> assign(:image, image)
-     |> assign(:image_id, image_id)
      |> assign(:file_name, file_name)
-     |> assign(:upload_field, socket.assigns.uploads[assigns.field])
-     |> assign(:relation_field, relation_field)}
-  end
-
-  def update_entry_relation(form_id, image, full_path) do
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_entry_relation,
-      updated_relation: image,
-      path: full_path,
-      force_validation: true
-    )
+     |> assign_new(:upload_field, fn -> socket.assigns.uploads[assigns.field] end)
+     |> assign_new(:relation_field, fn -> relation_field end)}
   end
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
@@ -172,20 +158,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     |> toggle_drawer("#image-drawer")
   end
 
-  def handle_event(
-        "open_image",
-        _,
-        %{
-          assigns: %{
-            form: form,
-            field: field,
-            relation_field: relation_field,
-            image_id: image_id,
-            image: image,
-            myself: myself
-          }
-        } = socket
-      ) do
+  def handle_event("open_image", _, socket) do
+    form = socket.assigns.form
+    field = socket.assigns.field
+    relation_field = socket.assigns.relation_field
+    image_id = socket.assigns.image_id
+    image = socket.assigns.image
+    myself = socket.assigns.myself
+
     path = Brando.Utils.get_path_from_field_name(form.name)
     module_from_form = form.source.data.__struct__
 
