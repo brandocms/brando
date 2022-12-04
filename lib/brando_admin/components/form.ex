@@ -1956,6 +1956,16 @@ defmodule BrandoAdmin.Components.Form do
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, value)
       when is_list(path) do
+    # if we have a path, apply_changes and change the changeset before updating it(?)
+    changeset =
+      if path != [] do
+        changeset
+        |> apply_changes()
+        |> change()
+      else
+        changeset
+      end
+
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
     assign(socket, :changeset, new_changeset)
   end
