@@ -16,6 +16,50 @@
       }
     }
 
+    .actions {
+      display: flex;
+      column-gap: 10px;
+    }
+
+    .upload-button {
+      position: relative;
+      cursor: pointer;
+      border: 1px solid var(--brando-color-dark);
+      font-size: 17px;
+      padding: 12px 20px 12px;
+      border-radius: 25px;
+      display: flex;
+      align-items: center;
+      margin-top: 15px;
+      transition: background-color 250ms ease, color 250ms ease;
+      display: inline-flex;
+      
+      &:hover {
+        background-color: var(--brando-color-dark);
+        color: var(--brando-color-peach);
+      }
+      
+      > * {
+        cursor: pointer;
+      }
+      
+      svg {
+        margin-right: 10px;
+      }
+      
+      input[type=file] {
+        display: inline-block;
+        position: absolute;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+    }
+
     .multiselect {
       @fontsize sm;
       background-color: #fff;
