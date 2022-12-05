@@ -100,8 +100,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
         true ->
           {socket
-           |> assign_new(:image, fn -> image end)
-           |> assign_new(:image_id, fn -> image_id end), image}
+           |> assign(:image, image)
+           |> assign(:image_id, image_id), image}
       end
 
     file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
