@@ -388,8 +388,8 @@ defmodule Brando.Datasource do
         filter: %{
           datasource: true,
           datasource_module: to_string(datasource_module),
-          datasource_type: datasource_type,
-          datasource_query: datasource_query
+          datasource_type: to_string(datasource_type),
+          datasource_query: to_string(datasource_query)
         },
         select: [:id]
       })
