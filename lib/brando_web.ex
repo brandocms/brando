@@ -125,7 +125,6 @@ defmodule BrandoWeb do
   end
 
   def view_helpers do
-    error_module = Brando.web_module(ErrorHelpers)
     gettext_module = Brando.web_module(Gettext)
     routes_module = Brando.web_module(Router.Helpers)
 
@@ -139,7 +138,7 @@ defmodule BrandoWeb do
       import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_var: 2]
       import Brando.I18n.Helpers
 
-      import unquote(error_module)
+      import BrandoAdmin.ErrorHelpers
       import unquote(gettext_module)
       alias unquote(routes_module), as: Routes
     end
