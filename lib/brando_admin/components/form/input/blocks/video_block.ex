@@ -75,7 +75,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           <% end %>
         </:description>
         <:config>
-          <%= if @remote_id do %>
+          <%= if @remote_id in [nil, ""] do %>
+            <Input.input type={:hidden} form={@block_data} field={:url} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:width} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:height} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:title} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
+
+            <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
+              <%= gettext("Enter the video's URL:") %>
+              <input id={"block-#{@uid}-url"} type="text" class="text">
+              <button id={"block-#{@uid}-button"} type="button" class="secondary small">
+                <%= gettext("Get video info") %>
+              </button>
+            </div>
+          <% else %>
             <div class="panels">
               <div class="panel">
                 <div class="cover" :if={@cover_image}>
@@ -192,31 +214,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <% end %>
               </div>
             </div>
-          <% else %>
-            <Input.input type={:hidden} form={@block_data} field={:url} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:width} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:height} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:title} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
-
-            <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
-              <%= gettext("Enter the video's URL:") %>
-              <input id={"block-#{@uid}-url"} type="text" class="text">
-              <button id={"block-#{@uid}-button"} type="button" class="secondary small">
-                <%= gettext("Get video info") %>
-              </button>
-            </div>
           <% end %>
         </:config>
-        <%= if @remote_id do %>
+        <%= if @remote_id in [nil, ""] do %>
+          <div class="empty">
+            <figure>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0H24V24H0z"/><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z"/></svg>
+            </figure>
+            <div class="instructions">
+              <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}><%= gettext "Configure video block" %></button>
+            </div>
+          </div>
+        <% else %>
           <%= case @source do %>
             <% :vimeo -> %>
               <div class="video-content">
@@ -239,15 +248,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </video>
               </div>
           <% end %>
-        <% else %>
-          <div class="empty">
-            <figure>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0H24V24H0z"/><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z"/></svg>
-            </figure>
-            <div class="instructions">
-              <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}><%= gettext "Configure video block" %></button>
-            </div>
-          </div>
         <% end %>
       </Blocks.block>
     </div>
