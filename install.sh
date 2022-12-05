@@ -18,8 +18,10 @@ then
   direnv allow
   cd assets/frontend && yarn && yarn upgrade @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add @brandocms/brandojs && yarn && yarn build && cd ../../
   mix deps.get && mix brando.upgrade
-  mix ecto.setup
+  mix ecto.create
+  mix ecto.migrate
   mix ecto.dump
   mix brando.gen.languages
   mix brando.gen.admin
+  mix run priv/repo/seeds.exs
 fi
