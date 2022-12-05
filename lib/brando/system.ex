@@ -94,46 +94,28 @@ defmodule Brando.System do
 
   defp check_identity_exists do
     with [] <- Brando.repo().all(Brando.Sites.Identity) do
-      # create identities
-      for lang <- Brando.config(:languages) do
-        Brando.Sites.create_default_identity(lang[:value])
-      end
-
+      Logger.error("==> No identities found.")
       {:ok, {:identity, :exists}}
     else
-      {:error, _} ->
-        raise ConfigError,
-          message: """
+      identities ->
+        for identity <- identities do
+          Logger.debug("==> identity: [#{identity.language}] exists")
+        end
 
-
-          Failed creating default `identity` table.
-
-          """
-
-      _ ->
         {:ok, {:identity, :exists}}
     end
   end
 
   defp check_seo_exists do
     with [] <- Brando.repo().all(Brando.Sites.SEO) do
-      # create identities
-      for lang <- Brando.config(:languages) do
-        Brando.Sites.create_default_seo(lang[:value])
-      end
-
+      Logger.error("==> No seo entries found.")
       {:ok, {:seo, :exists}}
     else
-      {:error, _} ->
-        raise ConfigError,
-          message: """
+      seos ->
+        for seo <- seos do
+          Logger.debug("==> seo: [#{seo.language}] exists")
+        end
 
-
-          Failed creating default `seo` table.
-
-          """
-
-      _ ->
         {:ok, {:seo, :exists}}
     end
   end
