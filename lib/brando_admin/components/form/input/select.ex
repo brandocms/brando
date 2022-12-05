@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign_input_options()
-     |> assign(:selected_option, selected_option)
+     |> assign_new(:selected_option, fn -> selected_option end)
      |> assign_label()
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
@@ -179,7 +179,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         compact={@compact}>
 
         <Input.input type={:hidden} form={@form} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
-
         <div class="multiselect">
           <div>
             <span class="select-label">
