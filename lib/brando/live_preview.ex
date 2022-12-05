@@ -217,7 +217,7 @@ defmodule Brando.LivePreview do
 
   defmacro schema_preloads(schema_preloads) do
     quote do
-      var!(opts) = Keyword.put(var!(opts), :schema_preloads, unquote(schema_preloads))
+      var!(opts) = Map.put(var!(opts), :schema_preloads, unquote(schema_preloads))
     end
   end
 
