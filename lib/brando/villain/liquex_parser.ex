@@ -5,6 +5,7 @@ defmodule Brando.Villain.LiquexParser do
       Brando.Villain.Tags.Inspect,
       Brando.Villain.Tags.Ref,
       Brando.Villain.Tags.Picture,
+      Brando.Villain.Tags.Video,
       Brando.Villain.Tags.Route,
       Brando.Villain.Tags.RouteI18n,
       Brando.Villain.Tags.Fragment,
