@@ -2,6 +2,8 @@
   import { onMount, onDestroy } from 'svelte'
   import { Editor } from '@tiptap/core'
   import StarterKit from '@tiptap/starter-kit'
+  import Color from '@tiptap/extension-color'
+  import TextStyle from '@tiptap/extension-text-style'
   import Typography from '@tiptap/extension-typography'
   import Subscript from '@tiptap/extension-subscript'
   import Superscript from '@tiptap/extension-superscript'
@@ -36,7 +38,8 @@
       'bold',
       'italic',
       'sub',
-      'sup'
+      'sup',
+      'color'
     ]
 
     if (extensions) {
@@ -100,7 +103,6 @@
     }
 
     extensions = processExtensions()
-    
     tiptapInput = element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector('.tiptap-text')
 
     editor = new Editor({
@@ -120,7 +122,9 @@
           className: 'has-focus',
           mode: 'shallowest',
         }),
-        PreventDrop
+        PreventDrop,
+        TextStyle,
+        Color
       ],
       content,
       onUpdate({ editor }) {
@@ -274,6 +278,21 @@
         title="Superscript">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 7v13H9V7H3V5h12v2h-4zm8.55-.42a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 4a2 2 0 0 1 1.373 3.454L18.744 9H21v1h-4V9l2.55-2.42z"/></svg>
       </button>
+    {/if}
+    {#if extensions.includes('color')}
+      <label class="menu-item">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="18" height="18" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z" />
+        </svg>
+
+        <input
+          type="color"
+          on:input={ev => editor.chain().focus().setColor(ev.target.value).run()}
+          :value={editor.getAttributes('textStyle').color}
+          >
+          <!-- bind:value={() => editor.getAttributes('textStyle').color} -->
+        <!-- on:input={() => editor.chain().focus().setColor($event.target.value).run()} -->
+      </label>
     {/if}
   </div>
   {/if}

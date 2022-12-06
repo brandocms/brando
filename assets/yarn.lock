@@ -284,6 +284,11 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-code/-/extension-code-2.0.0-beta.205.tgz#c5c03007e608f91a152df5964391245b8cdcc51b"
   integrity sha512-F/YBt/pUZ91diNOSB29wFs6tiOvEu+aomU7Hvu86OVg1tOI0WuKjmDlWXkf8NRfodiHeR9cOJhVT9Z0kH5ib8A==
 
+"@tiptap/extension-color@^2.0.0-beta.205":
+  version "2.0.0-beta.205"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-color/-/extension-color-2.0.0-beta.205.tgz#9d784592a3cbc53c07968917dee3f160dfa05c52"
+  integrity sha512-uj+xfyhv4QrXtvVcolu+Kl2ihO/AxBGvv+PSeG5B4M7zezZ0fa789eXurdf8QkXMs0w0A6ZAA8WeGa/jkwyqZw==
+
 "@tiptap/extension-document@^2.0.0-beta.205":
   version "2.0.0-beta.205"
   resolved "https://registry.yarnpkg.com/@tiptap/extension-document/-/extension-document-2.0.0-beta.205.tgz#a20348e6c8d99b36c23b314a9c5d69eec7688110"
@@ -365,6 +370,11 @@
   version "2.0.0-beta.205"
   resolved "https://registry.yarnpkg.com/@tiptap/extension-superscript/-/extension-superscript-2.0.0-beta.205.tgz#2ac205996c75b665e867c3d00141a62abc6fe6be"
   integrity sha512-cn0ln56rbl+qndX6RezBPQVoWND2PzAeIP1payO3v4VtGyUDPwFI4Hq0LMOW8JEJ5gvzM4inmaTL1k75FnHKtA==
+
+"@tiptap/extension-text-style@^2.0.0-beta.205":
+  version "2.0.0-beta.205"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-text-style/-/extension-text-style-2.0.0-beta.205.tgz#23145e73d6401cfc8f13941bf4fc33dbfe3d6db4"
+  integrity sha512-FY3xefaKAvujY7en5yw1B7gltNv9hlrhOWnRKmjPJ9lLcDKkn1OmEcRQzVNNsK0heQkhIRoF91YCFEgGaBiYtQ==
 
 "@tiptap/extension-text@^2.0.0-beta.205":
   version "2.0.0-beta.205"

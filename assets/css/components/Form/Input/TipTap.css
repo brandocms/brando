@@ -48,6 +48,19 @@
         vertical-align: baseline;
         margin: 0 auto;
       }
+
+      input {
+        visibility: hidden;
+        position: relative;
+        opacity: 0;
+      }
+    }
+
+    label.menu-item {
+      svg {
+        padding-top: 2px;
+        transform: translateY(1px);
+      }
     }
 
     button {
