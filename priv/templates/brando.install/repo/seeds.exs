@@ -129,7 +129,8 @@ for lang <- languages do
                   level: 1,
                   text: "Welcome to Brando!"
                 },
-                type: "header"
+                type: "header",
+                uid: Brando.Utils.generate_uid()
               },
               description: "",
               name: "h1"
@@ -142,7 +143,8 @@ for lang <- languages do
                     "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>",
                   type: "paragraph"
                 },
-                type: "text"
+                type: "text",
+                uid: Brando.Utils.generate_uid()
               },
               description: "",
               name: "p"
@@ -184,7 +186,8 @@ for lang <- languages do
           text: "(c) BrandoCMS — all rights reserved",
           type: "paragraph"
         },
-        type: "text"
+        type: "text",
+        uid: Brando.Utils.generate_uid()
       }
     ],
     page_id: p1.id,
