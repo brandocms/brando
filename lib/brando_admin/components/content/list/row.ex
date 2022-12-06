@@ -206,6 +206,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
     processed_actions = process_actions(assigns.listing.actions, language, assigns.entry.id)
+    default_actions? = assigns.listing.default_actions
 
     ctx = assigns.schema.__modules__.context
     singular = assigns.schema.__naming__.singular
@@ -220,6 +221,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     assigns =
       assigns
       |> assign(:language, language)
+      |> assign(:default_actions?, default_actions?)
       |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
@@ -232,44 +234,46 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <CircleDropdown.render id={@id}>
-      <li>
-        <button
-          id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
-          phx-value-id={@entry.id}
-          phx-value-language={@language}
-          phx-click="edit_entry">
-          <%= gettext "Edit" %> <%= @translated_singular %>
-        </button>
-      </li>
-      <li>
-        <button
-          id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
-          phx-hook="Brando.ConfirmClick"
-          phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
-          phx-confirm-click={JS.push("delete_entry")}
-          phx-value-language={@language}
-          phx-value-id={@entry.id}>
-          <%= gettext "Delete" %> <%= @translated_singular %>
-        </button>
-      </li>
-      <li :if={@has_duplicate_fn?}>
-        <button
-          id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
-          phx-value-id={@entry.id}
-          phx-value-language={@language}
-          phx-click="duplicate_entry">
-          <%= gettext "Duplicate" %>
-        </button>
-      </li>
-      <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
-        <button
-          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
-          phx-value-id={@entry.id}
-          phx-value-language={lang}
-          phx-click="duplicate_entry_to_language">
-          <%= gettext "Duplicate to" %> [<%= String.upcase(lang) %>]
-        </button>
-      </li>
+      <%= if @default_actions? do %>
+        <li>
+          <button
+            id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
+            phx-value-id={@entry.id}
+            phx-value-language={@language}
+            phx-click="edit_entry">
+            <%= gettext "Edit" %> <%= @translated_singular %>
+          </button>
+        </li>
+        <li>
+          <button
+            id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
+            phx-hook="Brando.ConfirmClick"
+            phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
+            phx-confirm-click={JS.push("delete_entry")}
+            phx-value-language={@language}
+            phx-value-id={@entry.id}>
+            <%= gettext "Delete" %> <%= @translated_singular %>
+          </button>
+        </li>
+        <li :if={@has_duplicate_fn?}>
+          <button
+            id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
+            phx-value-id={@entry.id}
+            phx-value-language={@language}
+            phx-click="duplicate_entry">
+            <%= gettext "Duplicate" %> <%= @translated_singular %>
+          </button>
+        </li>
+        <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
+          <button
+            id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
+            phx-value-id={@entry.id}
+            phx-value-language={lang}
+            phx-click="duplicate_entry_to_language">
+            <%= gettext "Duplicate to" %> [<%= String.upcase(lang) %>]
+          </button>
+        </li>
+      <% end %>
       <li :for={%{event: event, label: label} = action <- @processed_actions}>
         <%= if action[:confirm] do %>
           <button
@@ -410,6 +414,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       </Content.modal>
     </div>
     """
+  end
+
+  def alternates(assigns) do
+    ~H""
   end
 
   def creator(%{entry: %{creator: nil}} = assigns) do

@@ -55,16 +55,6 @@ defmodule Brando.Images.Gallery do
         """,
         columns: 8
       )
-
-      actions([
-        [label: gettext("Edit image"), event: "edit_entry"],
-        [label: gettext("Duplicate image"), event: "duplicate_entry"],
-        [
-          label: gettext("Delete image"),
-          event: "delete_entry",
-          confirm: gettext("Are you sure?")
-        ]
-      ])
     end
   end
 

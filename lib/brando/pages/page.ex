@@ -193,15 +193,18 @@ defmodule Brando.Pages.Page do
         columns: 8
       )
 
-      actions([
-        [label: t("Edit fragment"), event: "edit_fragment"],
-        [label: t("Duplicate fragment"), event: "duplicate_fragment"],
+      actions(
         [
-          label: t("Delete fragment"),
-          event: "delete_fragment",
-          confirm: t("Are you sure?")
-        ]
-      ])
+          [label: t("Edit fragment"), event: "edit_fragment"],
+          [label: t("Duplicate fragment"), event: "duplicate_fragment"],
+          [
+            label: t("Delete fragment"),
+            event: "delete_fragment",
+            confirm: t("Are you sure?")
+          ]
+        ],
+        default_actions: false
+      )
     end
 
     listing :page_children do
@@ -227,15 +230,18 @@ defmodule Brando.Pages.Page do
         columns: 7
       )
 
-      actions([
-        [label: t("Edit sub page"), event: "edit_subpage"],
-        [label: t("Duplicate sub page"), event: "duplicate_entry"],
+      actions(
         [
-          label: t("Delete sub page"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ]
-      ])
+          [label: t("Edit sub page"), event: "edit_subpage"],
+          [label: t("Duplicate sub page"), event: "duplicate_entry"],
+          [
+            label: t("Delete sub page"),
+            event: "delete_entry",
+            confirm: t("Are you sure?")
+          ]
+        ],
+        default_actions: false
+      )
     end
   end
 

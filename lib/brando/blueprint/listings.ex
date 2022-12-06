@@ -35,6 +35,7 @@ defmodule Brando.Blueprint.Listings do
               query: %{},
               fields: [],
               filters: [],
+              default_actions: true,
               actions: [],
               selection_actions: [],
               child_listing: nil
@@ -82,6 +83,8 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_actions) = []
       var!(brando_listing_selection_actions) = []
       var!(brando_listing_child_listing) = nil
+      var!(brando_listing_default_actions) = true
+
       unquote(block)
 
       named_listing =
@@ -92,7 +95,8 @@ defmodule Brando.Blueprint.Listings do
           var!(brando_listing_filters),
           var!(brando_listing_actions),
           var!(brando_listing_selection_actions),
-          var!(brando_listing_child_listing)
+          var!(brando_listing_child_listing),
+          var!(brando_listing_default_actions)
         )
 
       Module.put_attribute(__MODULE__, :listings, named_listing)
@@ -141,10 +145,10 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro actions(actions) do
+  defmacro actions(actions, opts \\ []) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [actions: actions] do
+          bind_quoted: [actions: actions, opts: opts] do
       processed_actions =
         Enum.map(actions, fn action ->
           event =
@@ -157,6 +161,9 @@ defmodule Brando.Blueprint.Listings do
           Keyword.replace(action, :event, event)
         end)
 
+      default_actions = Keyword.get(opts, :default_actions, true)
+
+      var!(brando_listing_default_actions) = default_actions
       var!(brando_listing_actions) = processed_actions
     end
   end
@@ -176,7 +183,8 @@ defmodule Brando.Blueprint.Listings do
         filters,
         actions,
         selection_actions,
-        child_listing
+        child_listing,
+        default_actions
       ) do
     %__MODULE__.Listing{
       name: name,
@@ -185,7 +193,8 @@ defmodule Brando.Blueprint.Listings do
       filters: filters,
       actions: Enum.map(actions, &Enum.into(&1, %{})),
       selection_actions: Enum.map(selection_actions, &Enum.into(&1, %{})),
-      child_listing: child_listing
+      child_listing: child_listing,
+      default_actions: default_actions
     }
   end
 

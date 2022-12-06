@@ -41,16 +41,6 @@ defmodule Brando.Content.Template do
         [label: t("Namespace"), filter: "namespace"]
       ])
 
-      actions([
-        [label: t("Edit template"), event: "edit_entry"],
-        [
-          label: t("Delete template"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ],
-        [label: t("Duplicate template"), event: "duplicate_entry"]
-      ])
-
       template(
         """
         <div class="badge">{{ entry.namespace }}</div><br>

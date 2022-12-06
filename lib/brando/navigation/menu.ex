@@ -75,13 +75,6 @@ defmodule Brando.Navigation.Menu do
       ])
 
       actions([
-        [label: t("Edit menu"), event: "edit_entry"],
-        [
-          label: t("Delete menu"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ],
-        [label: t("Duplicate menu"), event: "duplicate_entry"],
         [label: t("Create menu item"), event: "create_menu_item"]
       ])
 

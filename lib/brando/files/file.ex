@@ -69,15 +69,6 @@ defmodule Brando.Files.File do
         """,
         columns: 1
       )
-
-      actions([
-        [label: t("Duplicate file"), event: "duplicate_entry"],
-        [
-          label: t("Delete file"),
-          event: "delete_entry",
-          confirm: t("Are you sure?")
-        ]
-      ])
     end
   end
 

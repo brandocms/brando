@@ -107,14 +107,17 @@ defmodule Brando.Users.User do
         [label: t("Email"), filter: "email"]
       ])
 
-      actions([
-        [label: t("Edit user"), event: "edit_entry"],
+      actions(
         [
-          label: t("Disable user"),
-          event: "disable_user",
-          confirm: t("Are you sure?")
-        ]
-      ])
+          [label: t("Edit user"), event: "edit_entry"],
+          [
+            label: t("Disable user"),
+            event: "disable_user",
+            confirm: t("Are you sure?")
+          ]
+        ],
+        default_actions: false
+      )
 
       template """
                <a
