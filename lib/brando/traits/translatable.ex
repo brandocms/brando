@@ -9,54 +9,60 @@ defmodule Brando.Trait.Translatable do
 
       def has_alternates?, do: @translatable_alternates
 
-      defmodule Alternate do
-        use Ecto.Schema
-        import Ecto.Query
-
-        schema "#{parent_table_name}_alternates" do
-          Ecto.Schema.belongs_to(
-            :entry,
-            parent_module
-          )
-
-          Ecto.Schema.belongs_to(
-            :linked_entry,
-            parent_module
-          )
-
-          Ecto.Schema.timestamps()
+      if @translatable_alternates do
+        relations do
+          relation :alternates, :has_many, module: :alternates
         end
 
-        def changeset(struct, params \\ %{}) do
-          cast(struct, params, [:entry_id, :linked_entry_id])
-        end
+        defmodule Alternate do
+          use Ecto.Schema
+          import Ecto.Query
 
-        def add(id, parent_id) do
-          changesets = [
-            changeset(%__MODULE__{}, %{"entry_id" => id, "linked_entry_id" => parent_id}),
-            changeset(%__MODULE__{}, %{"entry_id" => parent_id, "linked_entry_id" => id})
-          ]
-
-          Enum.each(changesets, &Brando.repo().insert!(&1, []))
-
-          Brando.Cache.Query.evict_entry(unquote(parent_module), id)
-          Brando.Cache.Query.evict_entry(unquote(parent_module), parent_id)
-
-          :ok
-        end
-
-        def delete(id, parent_id) do
-          res =
-            Brando.repo().delete_all(
-              from q in __MODULE__,
-                where: q.entry_id == ^id and q.linked_entry_id == ^parent_id,
-                or_where: q.entry_id == ^parent_id and q.linked_entry_id == ^id
+          schema "#{parent_table_name}_alternates" do
+            Ecto.Schema.belongs_to(
+              :entry,
+              parent_module
             )
 
-          Brando.Cache.Query.evict_entry(unquote(parent_module), id)
-          Brando.Cache.Query.evict_entry(unquote(parent_module), parent_id)
+            Ecto.Schema.belongs_to(
+              :linked_entry,
+              parent_module
+            )
 
-          res
+            Ecto.Schema.timestamps()
+          end
+
+          def changeset(struct, params \\ %{}) do
+            cast(struct, params, [:entry_id, :linked_entry_id])
+          end
+
+          def add(id, parent_id) do
+            changesets = [
+              changeset(%__MODULE__{}, %{"entry_id" => id, "linked_entry_id" => parent_id}),
+              changeset(%__MODULE__{}, %{"entry_id" => parent_id, "linked_entry_id" => id})
+            ]
+
+            Enum.each(changesets, &Brando.repo().insert!(&1, []))
+
+            Brando.Cache.Query.evict_entry(unquote(parent_module), id)
+            Brando.Cache.Query.evict_entry(unquote(parent_module), parent_id)
+
+            :ok
+          end
+
+          def delete(id, parent_id) do
+            res =
+              Brando.repo().delete_all(
+                from q in __MODULE__,
+                  where: q.entry_id == ^id and q.linked_entry_id == ^parent_id,
+                  or_where: q.entry_id == ^parent_id and q.linked_entry_id == ^id
+              )
+
+            Brando.Cache.Query.evict_entry(unquote(parent_module), id)
+            Brando.Cache.Query.evict_entry(unquote(parent_module), parent_id)
+
+            res
+          end
         end
       end
     end
@@ -64,9 +70,5 @@ defmodule Brando.Trait.Translatable do
 
   attributes do
     attribute :language, :language, required: true
-  end
-
-  relations do
-    relation :alternates, :has_many, module: :alternates
   end
 end
