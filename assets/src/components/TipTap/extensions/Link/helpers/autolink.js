@@ -64,7 +64,12 @@ export default function autolink(options) {
             )
 
             find(text)
-              .filter(link => link.isLink)
+              .filter(link => {
+                if (link.start >= 3 && text.substring(link.start - 3, link.start) == '{{ ') {
+                  return false
+                }
+                return link.isLink
+              })
               // calculate link position
               .map(link => ({
                 ...link,
