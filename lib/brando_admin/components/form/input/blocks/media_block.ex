@@ -140,8 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def handle_event(
         "select_block",
         %{"block" => block},
-        %{assigns: %{uid: uid, data_field: data_field, base_form: form, block_data: block_data}} =
-          socket
+        %{assigns: %{uid: uid, data_field: data_field, base_form: form}} = socket
       ) do
     # replace block
     changeset = form.source
