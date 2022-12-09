@@ -206,13 +206,31 @@ defmodule Brando.Pages do
 
   mutation :update, Fragment do
     fn entry ->
-      update_villains_referencing_fragment(entry)
+      Villain.update_module_in_fields(entry.id)
       {:ok, entry}
     end
   end
 
-  mutation :delete, Fragment
+  mutation :delete, Fragment do
+    fn entry ->
+      Villain.update_module_in_fields(entry.id)
+      {:ok, entry}
+    end
+  end
+
   mutation :duplicate, {Fragment, delete_fields: [], change_fields: [:key]}
+
+  @doc """
+  Find fragment with `id` in `fragments`
+  """
+  def find_fragment(fragments, id) do
+    fragments
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, {:fragment, :not_found, id}}
+      mod -> {:ok, mod}
+    end
+  end
 
   @doc """
   Get set of fragments by parent key

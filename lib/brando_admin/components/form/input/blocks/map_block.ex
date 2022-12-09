@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   # prop is_ref?, :boolean, default: false
   # prop belongs_to, :string
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data block_data, :any
@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         wide_config>
         <:description><%= v(@block_data, :source) %></:description>

@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   # prop data_field, :atom
   # prop belongs_to, :string
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data splits, :list
@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         is_datasource?={@module_datasource}>
         <:type><%= if @module_datasource do %><%= gettext "DATAMODULE" %><% else %><%= gettext "MODULE" %><% end %></:type>

@@ -893,6 +893,22 @@ defmodule Brando.Villain.Parser do
 
       defoverridable timeline: 2
 
+      def fragment(%{fragment_id: nil}, _),
+        do: "<!-- fragment not embedded. fragment_id = nil -->"
+
+      def fragment(%{fragment_id: id} = block, opts) do
+        base_context = opts.context
+        fragments = opts.fragments
+        {:ok, fragment} = Brando.Pages.find_fragment(fragments, id)
+
+        case fragment.status do
+          :published -> fragment.html
+          _ -> "<!-- fragment not embedded. status != :published -->"
+        end
+      end
+
+      defoverridable fragment: 2
+
       # ...
       defp process_vars(nil), do: %{}
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})

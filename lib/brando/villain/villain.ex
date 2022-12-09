@@ -19,6 +19,7 @@ defmodule Brando.Villain do
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @fragment_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parses `json` (in Villain-format).
@@ -38,6 +39,7 @@ defmodule Brando.Villain do
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
+    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
 
     entry =
       entry
@@ -55,6 +57,7 @@ defmodule Brando.Villain do
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
       |> Map.put(:palettes, palettes)
+      |> Map.put(:fragments, fragments)
 
     html =
       data
@@ -419,7 +422,7 @@ defmodule Brando.Villain do
       for {schema, fields} <- villains do
         Enum.reduce(fields, [], fn
           data_field, acc ->
-            ids = list_ids_with_module(schema, data_field.name, module_id)
+            ids = list_ids_with_modules(schema, data_field.name, [module_id])
 
             if ids == [] do
               acc
@@ -444,7 +447,7 @@ defmodule Brando.Villain do
           reduced_fields =
             Enum.reduce(fields, [], fn
               data_field, acc ->
-                ids = list_ids_with_module(schema, data_field.name, module.id)
+                ids = list_ids_with_modules(schema, data_field.name, [module.id])
 
                 if ids == [] do
                   [:unused | acc]
@@ -475,13 +478,13 @@ defmodule Brando.Villain do
       for {schema, fields} <- villains do
         Enum.reduce(fields, [], fn
           {:villain, data_field, html_field}, acc ->
-            ids = list_ids_with_module(schema, data_field, module_id)
+            ids = list_ids_with_modules(schema, data_field, [module_id])
             [acc | rerender_html_from_ids({schema, data_field, html_field}, ids, module_id)]
 
           data_field, acc ->
             html_field = get_html_field(schema, data_field)
 
-            case list_ids_with_module(schema, data_field.name, module_id) do
+            case list_ids_with_modules(schema, data_field.name, [module_id]) do
               [] ->
                 acc
 
@@ -492,6 +495,42 @@ defmodule Brando.Villain do
                       {schema, data_field.name, html_field.name},
                       ids,
                       module_id
+                    )
+                ]
+            end
+        end)
+      end
+
+    {:ok, result}
+  end
+
+  @doc """
+  Update all villain fields in database that has a fragment with `id`.
+  """
+  def update_fragment_in_fields(fragment_id) do
+    villains = list_villains()
+
+    result =
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn
+          {:villain, data_field, html_field}, acc ->
+            ids = list_ids_with_fragments(schema, data_field, [fragment_id])
+            [acc | rerender_html_from_ids({schema, data_field, html_field}, ids, fragment_id)]
+
+          data_field, acc ->
+            html_field = get_html_field(schema, data_field)
+
+            case list_ids_with_fragments(schema, data_field.name, [fragment_id]) do
+              [] ->
+                acc
+
+              ids ->
+                [
+                  acc
+                  | rerender_html_from_ids(
+                      {schema, data_field.name, html_field.name},
+                      ids,
+                      fragment_id
                     )
                 ]
             end
@@ -561,24 +600,33 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  List ids of `schema` records that has `module_id` in `data_field`
+  List ids of `schema` records that has `fragment_ids` in `data_field`
   Also check inside containers.
   """
-  def list_ids_with_module(schema, data_field, module_id) do
-    t = [
-      %{type: "module", data: %{module_id: module_id}}
-    ]
-
-    contained_t = [
-      %{type: "container", data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}}
-    ]
-
-    Brando.repo().all(
+  def list_ids_with_fragments(schema, data_field, fragment_ids) when is_list(fragment_ids) do
+    query =
       from s in schema,
-        select: s.id,
-        where: jsonb_contains(s, data_field, t),
-        or_where: jsonb_contains(s, data_field, contained_t)
-    )
+        select: s.id
+
+    query =
+      Enum.reduce(fragment_ids, query, fn fragment_id, updated_query ->
+        t = [
+          %{type: "fragment", data: %{fragment_id: fragment_id}}
+        ]
+
+        contained_t = [
+          %{
+            type: "container",
+            data: %{blocks: [%{type: "fragment", data: %{fragment_id: fragment_id}}]}
+          }
+        ]
+
+        from s in updated_query,
+          or_where: jsonb_contains(s, data_field, t),
+          or_where: jsonb_contains(s, data_field, contained_t)
+      end)
+
+    Brando.repo().all(query)
   end
 
   @doc """

@@ -80,8 +80,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           data_field={@data_field}
           insert_index={@insert_index}
           opts={@opts}
-          insert_block={JS.push("insert_block", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@form.id}-#{@field}-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)} />
       </Form.field_base>
@@ -135,7 +136,43 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def handle_event(
-        "insert_block",
+        "insert_fragment",
+        %{"index" => index_binary},
+        %{assigns: %{form: form}} = socket
+      ) do
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    new_block = %Brando.Villain.Blocks.FragmentBlock{
+      type: "fragment",
+      data: %Brando.Villain.Blocks.FragmentBlock.Data{
+        fragment_id: nil
+      },
+      uid: Brando.Utils.generate_uid()
+    }
+
+    {index, ""} = Integer.parse(index_binary)
+
+    new_data =
+      changeset
+      |> get_blocks_data()
+      |> List.insert_at(index, new_block)
+
+    updated_changeset = put_change(changeset, :data, new_data)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    selector = "[data-block-uid=\"#{new_block.uid}\"]"
+
+    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+  end
+
+  def handle_event(
+        "insert_module",
         %{"index" => index_binary, "module-id" => module_id_binary},
         %{assigns: %{form: form}} = socket
       ) do
@@ -294,7 +331,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       <%= if !@is_ref? and !@is_entry? do %>
         <Blocks.Plus.render
           index={@index}
-          click={@insert_block} />
+          click={@insert_module} />
       <% end %>
 
       <Content.modal title={gettext "Configure"} id={"block-#{@uid}_config"} wide={@wide_config}>
@@ -437,7 +474,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def dynamic_block(assigns) do
     assigns =
       assigns
-      |> assign_new(:insert_block, fn -> nil end)
+      |> assign_new(:insert_module, fn -> nil end)
       |> assign_new(:duplicate_block, fn -> nil end)
       |> assign_new(:belongs_to, fn -> nil end)
       |> assign_new(:is_ref?, fn -> false end)
@@ -495,7 +532,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         ref_name={@ref_name}
         ref_description={@ref_description}
         block_count={@block_count}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         uploads={@uploads} />
     <% end %>
@@ -530,7 +567,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
@@ -619,7 +656,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= gettext("Not shown...") %>
@@ -661,7 +698,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>(H<%= @level %>)</:description>
         <:config>
@@ -736,7 +773,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
@@ -778,7 +815,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
@@ -823,7 +860,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>

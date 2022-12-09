@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # prop entry_template, :map
   # prop belongs_to, :string
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data splits, :list
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         block={@block}
         belongs_to={@belongs_to}
         is_entry?={true}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description><%= if @description do %><strong><%= @description %></strong>&nbsp;| <% end %><%= @module_name %></:description>
         <:config>

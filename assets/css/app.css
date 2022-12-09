@@ -38,6 +38,7 @@
 @import './components/Form/Input/TipTap.css';
 @import './components/Form/Input/Blocks/Block.css';
 @import './components/Form/Input/Blocks/Blocks.css';
+@import './components/Form/Input/Blocks/FragmentBlock.css';
 @import './components/Form/Input/Blocks/GalleryBlock.css';
 @import './components/Form/Input/Blocks/HeaderBlock.css';
 @import './components/Form/Input/Blocks/MapBlock.css';

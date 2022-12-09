@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
           module_id={@module_id}
           index={idx}
           block_count={@entry_count}
-          insert_block=""
+          insert_module=""
           duplicate_block=""
         />
       <% end %>

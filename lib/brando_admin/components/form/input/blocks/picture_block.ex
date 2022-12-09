@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # prop ref_description, :string
   # prop belongs_to, :string
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data extracted_path, :string
@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>

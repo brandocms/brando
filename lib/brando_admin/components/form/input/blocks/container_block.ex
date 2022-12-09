@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   # prop data_field, :atom
   # prop belongs_to, :string
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data uid, :string
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         bg_color={@selected_palette && "#{@first_color && @first_color.hex_value <> "22" || "transparent"}"}>
         <:type><%= gettext "CONTAINER" %></:type>
@@ -204,9 +204,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           type="container"
           uid={@uid}
           hide_sections
+          hide_fragments
           insert_index={@insert_index}
-          insert_block={JS.push("insert_block", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
           insert_section={JS.push("insert_section", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
@@ -260,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def handle_event(
-        "insert_block",
+        "insert_module",
         %{"index" => index_binary, "module-id" => module_id_binary},
         %{
           assigns: %{

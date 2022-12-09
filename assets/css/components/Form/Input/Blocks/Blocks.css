@@ -2,6 +2,39 @@
   padding: 0.7rem;
   background-color: var(--brando-color-peach);
 
+  .modules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+
+    .module-info {
+      font-size: 12px;
+      transform: translateY(-5px);
+    }
+
+    .other-buttons {
+      display: flex;
+      width: fit-content;
+      column-gap: 10px;
+      margin-left: auto;
+
+      button {
+        border: none;
+        display: flex;
+        column-gap: 10px;
+        align-items: center;
+        font-size: 12px;
+        padding: 5px 10px;
+
+        &:hover {
+          background-color: var(--brando-color-peach);
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
   .modules {
     @space margin-bottom 15px;
   }
@@ -113,20 +146,14 @@ section.alert.danger {
 }
 
 .namespace-button {
-  background-color: var(--brando-color-dark);
-  color: var(--brando-color-peach);
+  background-color: var(--brando-color-peach);
   border: none;
   border-top: 3px solid white !important;
   border-bottom: 3px solid white !important;
   transition: background-color 350ms ease;
-
-  figure {
-    min-width: 35px;
-    transition: transform 350ms ease;
-  }
-
+  
   &.active {
-    background-color: black;
+    background-color: var(--brando-color-peach-darker);
     figure {
       transform: rotate(90deg);
       transform-origin: center center;
@@ -134,10 +161,17 @@ section.alert.danger {
   }
 
   &:hover {
-    background-color: black;
+    background-color: var(--brando-color-peach-darker);
+  }
+
+  figure {
+    min-width: 35px;
+    transition: transform 350ms ease;
   }
 
   .info .name {
+    @font mono;
+    font-size: 14px;
     text-transform: uppercase;
   }
 }
@@ -212,7 +246,8 @@ section.alert.danger {
     text-align: left;
 
     .name {
-      font-weight: 500;
+      @font mono;
+      font-size: 14px;
     }
 
     .instructions {

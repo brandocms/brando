@@ -17,7 +17,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   # prop belongs_to, :string
   # prop data_field, :atom
 
-  # prop insert_block, :event, required: true
+  # prop insert_module, :event, required: true
   # prop duplicate_block, :event, required: true
 
   # data uid, :string
@@ -36,7 +36,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
      |> assign(assigns)
      |> assign(:block_data, block_data)
      |> assign(:available_blocks, input_value(block_data, :available_blocks))
-     |> assign(:uid, v(assigns.block, :uid))}
+     |> assign(:uid, v(assigns.block, :uid))
+     |> assign_new(:template_picture, fn -> input_value(block_data, :template_picture) end)
+     |> assign_new(:template_gallery, fn -> input_value(block_data, :template_gallery) end)
+     |> assign_new(:template_video, fn -> input_value(block_data, :template_video) end)
+     |> assign_new(:template_svg, fn -> input_value(block_data, :template_svg) end)}
   end
 
   def render(assigns) do
@@ -53,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         base_form={@base_form}
         block={@block}
         belongs_to={@belongs_to}
-        insert_block={@insert_block}
+        insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
           <%= if @ref_description do %>
@@ -145,39 +149,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     new_block =
       case block do
         "picture" ->
-          data_tpl = input_value(block_data, :template_picture)
-
           %Brando.Villain.Blocks.PictureBlock{
             uid: Brando.Utils.generate_uid(),
             type: "picture",
-            data: data_tpl
+            data: socket.assigns.template_picture
           }
+          |> IO.inspect(pretty: true)
 
         "video" ->
-          data_tpl = input_value(block_data, :template_video)
-
           %Brando.Villain.Blocks.VideoBlock{
             uid: Brando.Utils.generate_uid(),
             type: "video",
-            data: data_tpl
+            data: socket.assigns.template_video
           }
 
         "gallery" ->
-          data_tpl = input_value(block_data, :template_gallery)
-
           %Brando.Villain.Blocks.GalleryBlock{
             uid: Brando.Utils.generate_uid(),
             type: "gallery",
-            data: data_tpl
+            data: socket.assigns.template_gallery
           }
 
         "svg" ->
-          data_tpl = input_value(block_data, :template_svg)
-
           %Brando.Villain.Blocks.SvgBlock{
             uid: Brando.Utils.generate_uid(),
             type: "svg",
-            data: data_tpl
+            data: socket.assigns.template_svg
           }
       end
 
