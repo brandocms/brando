@@ -1,5 +1,5 @@
 defmodule <%= module %>HTML do
-  use <%= web_module %>, :html
+  use BrandoWeb, :html
   # import <%= web_module %>.Gettext
   use Phoenix.Component
   embed_templates "<%= singular %>_html/*"

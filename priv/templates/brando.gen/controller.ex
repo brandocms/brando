@@ -1,5 +1,5 @@
 defmodule <%= module %>Controller do
-  use <%= web_module %>, :controller
+  use BrandoWeb, :controller
   alias <%= app_module %>.<%= domain %>
   alias <%= web_module %>.FallbackController
 
