@@ -8,7 +8,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
     <Content.header
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Overview")}>
-      <.link navigate={@schema.__modules__().admin_create_view} class="primary">
+      <.link navigate={@admin_create_url} class="primary">
         <%%= gettext("Create new") %>
       </.link>
     </Content.header>

@@ -38,6 +38,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       |> assign(:socket_connected, true)
       |> set_admin_locale()
       |> assign_schema(schema)
+      |> assign_create_url(schema)
       |> assign_title()
       |> attach_hooks(schema)
 
@@ -348,5 +349,18 @@ defmodule BrandoAdmin.LiveView.Listing do
     translated_plural = Utils.try_path(schema.__translations__(), [:naming, :plural])
     page_title = (translated_plural && String.capitalize(translated_plural)) || nil
     assign(socket, :page_title, page_title)
+  end
+
+  defp assign_create_url(socket, schema) do
+    assign_new(socket, :admin_create_url, fn ->
+      try do
+        Brando.helpers().admin_live_path(
+          Brando.endpoint(),
+          schema.__modules__().admin_create_view
+        )
+      rescue
+        _ -> nil
+      end
+    end)
   end
 end
