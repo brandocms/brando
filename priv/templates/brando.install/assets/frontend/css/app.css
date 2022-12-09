@@ -67,15 +67,15 @@ a.plain {
 html.moonwalk {
   [data-moonwalk=""] {
     transform: translateY(0);
-    transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
-                 opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
-    transition-delay: 0.02s;
     opacity: 0;
 
     &.moonwalked {
       transform: translateY(0);
       opacity: 1;
       visibility: visible;
+      transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+                   opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
+      transition-delay: 0.02s;
     }
   }
 
