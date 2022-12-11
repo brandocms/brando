@@ -333,7 +333,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <div class="status">
         <div phx-click={toggle_dropdown("#status-dropdown-#{make_id(@entry)}")}>
           <.status_circle status={@entry.status} publish_at={@publish_at} />
-          <.status_dropdown id={"status-dropdown-#{make_id(@entry)}"} entry_id={@entry.id} />
+          <.status_dropdown id={"status-dropdown-#{make_id(@entry)}"} entry_id={@entry.id} schema={@entry.__struct__} />
         </div>
       </div>
     <% end %>
@@ -348,7 +348,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <button
         :for={status <- @statuses}
         type="button"
-        phx-click={JS.push("set_status", value: %{id: @entry_id, status: status}) |> toggle_dropdown("##{@id}")}>
+        phx-click={JS.push("set_status", value: %{id: @entry_id, status: status, schema: @schema}) |> toggle_dropdown("##{@id}")}>
         <.status_circle status={status} /> <%= render_status_label(status) %>
       </button>
     </div>
