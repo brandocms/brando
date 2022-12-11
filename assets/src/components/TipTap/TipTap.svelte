@@ -290,8 +290,6 @@
           on:input={ev => editor.chain().focus().setColor(ev.target.value).run()}
           :value={editor.getAttributes('textStyle').color}
           >
-          <!-- bind:value={() => editor.getAttributes('textStyle').color} -->
-        <!-- on:input={() => editor.chain().focus().setColor($event.target.value).run()} -->
       </label>
     {/if}
   </div>
