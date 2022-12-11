@@ -672,7 +672,8 @@ defmodule Brando.Villain do
                 type(field(q, ^data_field), :string),
                 ^search_term
               )
-          }
+          },
+          order_by: [asc: q.id]
         )
       end)
 
