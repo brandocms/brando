@@ -10,6 +10,10 @@ See `UPGRADE.md` for instructions on upgrading between versions.
       formats: [html: Brando.ErrorHTML, json: Brando.ErrorJSON], layout: false
     ]
   ```
+  Also switch out the view in your `fallback_controller.ex`:
+  ```elixir
+  |> put_view(html: <%= application_module %>Web.ErrorHTML)
+  ```
 * BREAKING: Add `delete_selected` as a default action for listing selections.
   This means you should remove your own `delete_selected` from your listing's
   `selection_actions`
