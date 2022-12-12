@@ -23,7 +23,7 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
     "//localhost:4000"
   ],
   server: true,
-  render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
+  render_errors: [formats: [html: <%= application_module %>Web.ErrorHTML], layout: false],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Ensure no HMR in prod :)

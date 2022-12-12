@@ -12,7 +12,7 @@ config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
 # Configures the endpoint
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: <%= application_module %>Web.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [formats: [html: <%= application_module %>Web.ErrorHTML], layout: false],
   pubsub_server: <%= application_module %>.PubSub,
   live_view: [signing_salt: "<%= lv_signing_salt %>"]
 
