@@ -1802,7 +1802,16 @@ defmodule BrandoAdmin.Components.Form do
 
           # get the default struct for the transformer
           transformer_defaults = socket.assigns.transformer_defaults
-          default = Map.get(transformer_defaults, key)
+
+          default =
+            case Map.get(transformer_defaults, key) do
+              fun when is_function(fun) ->
+                fun.(image)
+
+              default ->
+                default
+            end
+
           asset_relation_key = String.to_existing_atom("#{asset_key}_id")
           default_with_asset = Map.put(default, asset_relation_key, image.id)
           changeset = socket.assigns.changeset

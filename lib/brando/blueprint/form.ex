@@ -357,7 +357,7 @@ defmodule Brando.Blueprint.Form do
         {:component, BrandoAdmin.Components.Pages.PageVars},
         label: t("Page variables")
 
-  Image transformer: (TODO)
+  Image transformer:
 
   This creates a "dropbox" where you can drop or pick a bunch of images which
   then will be transformed into subforms with all the fields specified.
@@ -372,6 +372,17 @@ defmodule Brando.Blueprint.Form do
         input :phone, :text, placeholder: "+47 900 00 000"
         input :email, :text, placeholder: "my@email.co"
       end
+
+  You can also specify a callback function for the `default` key:
+
+        default: &__MODULE__.default_client/1
+
+        def default_client(image) do
+          orientation = Brando.Images.get_image_orientation(image)
+          %Client{
+            name: orientation
+          }
+        end
   """
   defmacro inputs_for(field, {:component, component}) do
     do_inputs_for(field, component, [])
