@@ -13,5 +13,6 @@ defmodule Brando.Trait.Status do
     query = from q in schema, where: q.id == ^id, update: [set: [status: ^status]]
     Brando.repo().update_all(query, [])
     Brando.Datasource.update_datasource(schema)
+    Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})
   end
 end
