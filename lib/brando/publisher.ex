@@ -91,8 +91,12 @@ defmodule Brando.Publisher do
       when not is_nil(publish_at) do
     status = Changeset.get_field(changeset, :status)
 
-    if DateTime.compare(publish_at, DateTime.utc_now()) == :gt and status == :published do
-      Changeset.put_change(changeset, :status, :pending)
+    if DateTime.compare(publish_at, DateTime.utc_now()) == :gt do
+      if status in [:pending, :published] do
+        Changeset.put_change(changeset, :status, :pending)
+      else
+        changeset
+      end
     else
       # publish date has passed - if it is still pending, set it to published
       if status == :pending do
