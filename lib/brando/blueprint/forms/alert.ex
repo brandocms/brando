@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Form.Alert do
+defmodule Brando.Blueprint.Forms.Alert do
   defstruct type: nil,
             content: ""
 end

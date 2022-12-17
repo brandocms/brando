@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Form.Input do
+defmodule Brando.Blueprint.Forms.Input do
   defstruct name: nil,
             type: nil,
             template: nil,

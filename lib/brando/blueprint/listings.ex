@@ -52,6 +52,13 @@ defmodule Brando.Blueprint.Listings do
               opts: []
   end
 
+  defmacro __using__(_) do
+    quote do
+      import Brando.Blueprint.Listings
+      import Brando.Blueprint.Translations
+    end
+  end
+
   defmacro listings(do: block) do
     Module.put_attribute(__CALLER__.module, :ctx, "listings")
     listings(__CALLER__, block)

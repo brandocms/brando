@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Form do
+defmodule Brando.Blueprint.Forms do
   @moduledoc """
   # Form
 
@@ -59,6 +59,14 @@ defmodule Brando.Blueprint.Form do
             transformers: [],
             redirect_on_save: nil
 
+  defmacro __using__(_) do
+    quote do
+      import Brando.Blueprint.Forms
+      import Brando.Blueprint.Translations
+      import Phoenix.Component, only: [sigil_H: 2]
+    end
+  end
+
   defmacro forms(do: block) do
     Module.put_attribute(__CALLER__.module, :ctx, "forms")
     forms(__CALLER__, block)
@@ -117,14 +125,14 @@ defmodule Brando.Blueprint.Form do
       var!(b_form) = []
       var!(b_transformers) = []
       var!(b_redirect_on_save) = nil
-      var!(b_query) = &Brando.Blueprint.Form.default_query/1
+      var!(b_query) = &Brando.Blueprint.Forms.default_query/1
 
       unquote(block)
 
       default_params = unquote(Macro.escape(default_params))
       after_save = unquote(after_save)
 
-      named_form = %Brando.Blueprint.Form{
+      named_form = %Brando.Blueprint.Forms{
         name: unquote(name),
         tabs: Enum.reverse(var!(b_form)),
         default_params: default_params,

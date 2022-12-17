@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Form.Tab do
+defmodule Brando.Blueprint.Forms.Tab do
   defstruct name: nil,
             fields: []
 end

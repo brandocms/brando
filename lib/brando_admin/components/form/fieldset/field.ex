@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign(:placeholder, nil)
 
     ~H"""
-    <%= if @input.__struct__ == Brando.Blueprint.Form.Subform do %>
+    <%= if @input.__struct__ == Brando.Blueprint.Forms.Subform do %>
       <%= if @input.component do %>
         <.live_component module={@input.component}
           id={"#{@form.id}-#{@input.field}-custom-component"}

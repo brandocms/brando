@@ -1,22 +1,22 @@
-defmodule Brando.Blueprint.FormTest do
+defmodule Brando.Blueprint.FormsTest do
   use ExUnit.Case
 
   test "default form" do
     assert Brando.BlueprintTest.Project.__form__() ==
-             %Brando.Blueprint.Form{
+             %Brando.Blueprint.Forms{
                name: :default,
                tabs: [
-                 %Brando.Blueprint.Form.Tab{
+                 %Brando.Blueprint.Forms.Tab{
                    fields: [
-                     %Brando.Blueprint.Form.Fieldset{
+                     %Brando.Blueprint.Forms.Fieldset{
                        fields: [
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
                            template: nil,
                            type: :text
                          },
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :slug,
                            opts: [from: :title],
                            template: nil,
@@ -29,24 +29,24 @@ defmodule Brando.Blueprint.FormTest do
                    ],
                    name: "Content"
                  },
-                 %Brando.Blueprint.Form.Tab{
+                 %Brando.Blueprint.Forms.Tab{
                    fields: [
-                     %Brando.Blueprint.Form.Fieldset{
+                     %Brando.Blueprint.Forms.Fieldset{
                        fields: [
-                         %Brando.Blueprint.Form.Subform{
+                         %Brando.Blueprint.Forms.Subform{
                            cardinality: :many,
                            component: nil,
                            default: %{},
                            field: :properties,
                            style: :inline,
                            sub_fields: [
-                             %Brando.Blueprint.Form.Input{
+                             %Brando.Blueprint.Forms.Input{
                                name: :key,
                                opts: [placeholder: "Key"],
                                template: nil,
                                type: :text
                              },
-                             %Brando.Blueprint.Form.Input{
+                             %Brando.Blueprint.Forms.Input{
                                name: :value,
                                opts: [placeholder: "Val"],
                                template: nil,
@@ -55,7 +55,7 @@ defmodule Brando.Blueprint.FormTest do
                            ],
                            listing: nil
                          },
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :data,
                            opts: [],
                            template: nil,
@@ -73,20 +73,26 @@ defmodule Brando.Blueprint.FormTest do
   end
 
   test "get_tab_for_field" do
-    assert Brando.Blueprint.Form.get_tab_for_field(:slug, Brando.BlueprintTest.Project.__form__()) ==
+    assert Brando.Blueprint.Forms.get_tab_for_field(
+             :slug,
+             Brando.BlueprintTest.Project.__form__()
+           ) ==
              "Content"
 
-    assert Brando.Blueprint.Form.get_tab_for_field(
+    assert Brando.Blueprint.Forms.get_tab_for_field(
              :properties,
              Brando.BlueprintTest.Project.__form__()
            ) ==
              "Properties"
 
-    assert Brando.Blueprint.Form.get_tab_for_field(:data, Brando.BlueprintTest.Project.__form__()) ==
+    assert Brando.Blueprint.Forms.get_tab_for_field(
+             :data,
+             Brando.BlueprintTest.Project.__form__()
+           ) ==
              "Properties"
 
     # get the first one if we don't find the tab
-    assert Brando.Blueprint.Form.get_tab_for_field(
+    assert Brando.Blueprint.Forms.get_tab_for_field(
              :non_existing,
              Brando.BlueprintTest.Project.__form__()
            ) == "Content"
@@ -94,20 +100,20 @@ defmodule Brando.Blueprint.FormTest do
 
   test "forms" do
     assert Brando.BlueprintTest.Project.__forms__() == [
-             %Brando.Blueprint.Form{
+             %Brando.Blueprint.Forms{
                name: :default,
                tabs: [
-                 %Brando.Blueprint.Form.Tab{
+                 %Brando.Blueprint.Forms.Tab{
                    fields: [
-                     %Brando.Blueprint.Form.Fieldset{
+                     %Brando.Blueprint.Forms.Fieldset{
                        fields: [
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
                            template: nil,
                            type: :text
                          },
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :slug,
                            opts: [from: :title],
                            template: nil,
@@ -120,24 +126,24 @@ defmodule Brando.Blueprint.FormTest do
                    ],
                    name: "Content"
                  },
-                 %Brando.Blueprint.Form.Tab{
+                 %Brando.Blueprint.Forms.Tab{
                    fields: [
-                     %Brando.Blueprint.Form.Fieldset{
+                     %Brando.Blueprint.Forms.Fieldset{
                        fields: [
-                         %Brando.Blueprint.Form.Subform{
+                         %Brando.Blueprint.Forms.Subform{
                            cardinality: :many,
                            component: nil,
                            default: %{},
                            field: :properties,
                            style: :inline,
                            sub_fields: [
-                             %Brando.Blueprint.Form.Input{
+                             %Brando.Blueprint.Forms.Input{
                                name: :key,
                                opts: [placeholder: "Key"],
                                template: nil,
                                type: :text
                              },
-                             %Brando.Blueprint.Form.Input{
+                             %Brando.Blueprint.Forms.Input{
                                name: :value,
                                opts: [placeholder: "Val"],
                                template: nil,
@@ -146,7 +152,7 @@ defmodule Brando.Blueprint.FormTest do
                            ],
                            listing: nil
                          },
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :data,
                            opts: [],
                            template: nil,
@@ -161,14 +167,14 @@ defmodule Brando.Blueprint.FormTest do
                  }
                ]
              },
-             %Brando.Blueprint.Form{
+             %Brando.Blueprint.Forms{
                name: :extra,
                tabs: [
-                 %Brando.Blueprint.Form.Tab{
+                 %Brando.Blueprint.Forms.Tab{
                    fields: [
-                     %Brando.Blueprint.Form.Fieldset{
+                     %Brando.Blueprint.Forms.Fieldset{
                        fields: [
-                         %Brando.Blueprint.Form.Input{
+                         %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
                            template: nil,

@@ -742,7 +742,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {fieldset, idx} <- @indexed_fields do %>
-      <%= if fieldset.__struct__ == Brando.Blueprint.Form.Alert do %>
+      <%= if fieldset.__struct__ == Brando.Blueprint.Forms.Alert do %>
         <.alert type={fieldset.type}>
           <%= raw(g(@form.source.data.__struct__, fieldset.content)) %>
         </.alert>
@@ -1540,7 +1540,7 @@ defmodule BrandoAdmin.Components.Form do
     tab_with_first_error =
       error_keys
       |> List.first()
-      |> Brando.Blueprint.Form.get_tab_for_field(form)
+      |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
     translated_error_keys = translate_error_keys(error_keys, form, schema)
 
@@ -1578,7 +1578,7 @@ defmodule BrandoAdmin.Components.Form do
       String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}_forms")
 
     for error_key <- error_keys do
-      case Brando.Blueprint.Form.get_field(error_key, form) do
+      case Brando.Blueprint.Forms.get_field(error_key, form) do
         nil ->
           require Logger
 
@@ -1592,7 +1592,7 @@ defmodule BrandoAdmin.Components.Form do
 
         field ->
           msgid =
-            if field.__struct__ == Brando.Blueprint.Form.Subform do
+            if field.__struct__ == Brando.Blueprint.Forms.Subform do
               field.label
             else
               Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))

@@ -185,7 +185,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).AbsoluteURL
       import unquote(__MODULE__).Assets
       import unquote(__MODULE__).Attributes
-      import unquote(__MODULE__).Form
+      import unquote(__MODULE__).Forms
       import unquote(__MODULE__).Identifier
       import unquote(__MODULE__).JSONLD
       import unquote(__MODULE__).Listings
@@ -941,7 +941,7 @@ defmodule Brando.Blueprint do
     quote generated: true, location: :keep do
       case Module.get_attribute(__MODULE__, :brando_macro_context) do
         :form ->
-          Brando.Blueprint.Form.form_query(unquote(arg))
+          Brando.Blueprint.Forms.form_query(unquote(arg))
 
         :listing ->
           Brando.Blueprint.Listing.listing_query(unquote(arg))
