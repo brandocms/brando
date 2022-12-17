@@ -38,7 +38,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign_new(:label, fn -> nil end)
      |> assign_new(:instructions, fn -> nil end)
      |> assign_new(:path, fn -> [] end)
+     |> assign_new(:image, fn -> nil end)
+     |> assign_new(:image_id, fn -> nil end)
      |> assign_new(:parent_form, fn -> nil end)
+     |> assign_new(:small, fn -> false end)
+     |> assign_new(:square, fn -> false end)
      |> assign_new(:placeholder, fn -> nil end)}
   end
 
@@ -71,11 +75,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       |> get_field(relation_field)
       |> try_force_int()
 
-    image = get_field(changeset, socket.assigns.field)
+    image = socket.assigns.image
 
     {socket, image} =
       cond do
-        !image && image_id ->
+        is_nil(image) && image_id ->
           # we have an image in the changeset, but no loaded image
           {:ok, image} = Brando.Images.get_image(image_id)
           {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
@@ -99,9 +103,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
 
         true ->
-          {socket
-           |> assign(:image, image)
-           |> assign(:image_id, image_id), image}
+          if image_id != socket.assigns.image_id do
+            {assign(socket, :image_id, image_id), image}
+          else
+            {socket, image}
+          end
       end
 
     file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
@@ -110,6 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      socket
      |> prepare_input_component()
      |> assign(:file_name, file_name)
+     |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
      |> assign_new(:upload_field, fn -> socket.assigns.uploads[assigns.field] end)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
@@ -129,21 +136,23 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         class={@class}
         relation>
         <div>
-          <div class="input-image">
+          <div class={render_classes(["input-image", small: @small, square: @square])}>
             <%= if @image && @image.path do %>
               <.image_preview
                 image={@image}
                 form={@form}
                 field={@field}
                 relation_field={@relation_field}
-                click={open_image(@myself)}
+                click={@editable && open_image(@myself)}
+                editable={@editable}
                 file_name={@file_name} />
             <% else %>
               <.empty_preview
                 form={@form}
                 field={@field}
                 relation_field={@relation_field}
-                click={open_image(@myself)} />
+                editable={@editable}
+                click={@editable && open_image(@myself)} />
             <% end %>
           </div>
         </div>
@@ -225,6 +234,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def empty_preview(assigns) do
+    assigns = assign_new(assigns, :editable, fn -> true end)
+
     ~H"""
     <div class="image-wrapper-compact">
       <Input.input type={:hidden} form={@form} field={@relation_field} value={""} />
@@ -232,7 +243,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
       </div>
 
-      <div class="image-info">
+      <div :if={@editable} class="image-info">
         <%= gettext "No image associated with field" %>
         <button
           class="btn-small"
@@ -252,6 +263,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       assigns
       |> assign(:type, Brando.Images.Utils.image_type(assigns.image.path))
       |> assign_new(:value, fn -> nil end)
+      |> assign_new(:editable, fn -> true end)
 
     ~H"""
     <div class="image-wrapper-compact">
@@ -263,8 +275,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z"/></svg>
         </div>
       <% end %>
-
-      <div class="image-info">
+      <div :if={@editable} class="image-info">
         <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
         <%= if @image.title do %>
           <div class="title"><%= gettext "Caption" %>: <%= @image.title %></div>
