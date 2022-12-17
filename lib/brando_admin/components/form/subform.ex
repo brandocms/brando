@@ -249,7 +249,13 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.form.source
-    default = socket.assigns.subform.default
+
+    default =
+      case socket.assigns.subform.default do
+        fun when is_function(fun) -> fun.(nil)
+        struct -> struct
+      end
+
     field_name = socket.assigns.subform.field
 
     module = changeset.data.__struct__
