@@ -39,6 +39,8 @@ locals_without_parens = [
   application: 1,
   domain: 1,
   factory: 1,
+  import_forms: 1,
+  import_listings: 1,
   schema: 1,
   singular: 1,
   plural: 1,

@@ -59,7 +59,7 @@ defmodule Brando.Blueprint.Listings do
 
   defp listings(_caller, block) do
     quote generated: true, location: :keep do
-      Module.register_attribute(__MODULE__, :listings, accumulate: true)
+      Module.register_attribute(__MODULE__, :listings, accumulate: true, persist: true)
       Module.put_attribute(__MODULE__, :brando_macro_context, :listings)
       unquote(block)
     end

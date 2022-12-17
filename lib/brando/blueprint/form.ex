@@ -66,7 +66,7 @@ defmodule Brando.Blueprint.Form do
 
   defp forms(_caller, block) do
     quote generated: true, location: :keep do
-      Module.register_attribute(__MODULE__, :forms, accumulate: true)
+      Module.register_attribute(__MODULE__, :forms, accumulate: true, persist: true)
       Module.put_attribute(__MODULE__, :brando_macro_context, :forms)
       unquote(block)
     end

@@ -485,9 +485,42 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defmacro __before_compile__(_) do
+  defmacro __before_compile__(env) do
+    imported_form_modules =
+      Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
+
+    imported_listing_modules =
+      Module.get_attribute(env.module, :__brando_imported_listing_modules__) || []
+
+    imported_forms =
+      for imported_form_module <- imported_form_modules do
+        Code.ensure_compiled!(imported_form_module)
+
+        :attributes
+        |> imported_form_module.__info__()
+        |> Keyword.get(:forms)
+        |> Macro.escape()
+      end
+
+    imported_listings =
+      for imported_listing_module <- imported_listing_modules do
+        Code.ensure_compiled!(imported_listing_module)
+
+        :attributes
+        |> imported_listing_module.__info__()
+        |> Keyword.get(:listings)
+        |> Macro.escape()
+      end
+
     quote location: :keep,
+          bind_quoted: [
+            imported_forms: imported_forms,
+            imported_listings: imported_listings
+          ],
           unquote: false do
+      @imported_forms List.flatten(imported_forms)
+      @imported_listings List.flatten(imported_listings)
+
       def __primary_key__ do
         @primary_key
       end
@@ -776,19 +809,19 @@ defmodule Brando.Blueprint do
       end
 
       def __listings__ do
-        @listings
+        @listings ++ @imported_listings
       end
 
       def __forms__ do
-        Enum.reverse(@forms)
+        Enum.reverse(@forms) ++ @imported_forms
       end
 
       def __form__ do
-        Enum.find(@forms, &(&1.name == :default))
+        Enum.find(__forms__(), &(&1.name == :default))
       end
 
       def __form__(name) do
-        Enum.find(@forms, &(&1.name == name))
+        Enum.find(__forms__(), &(&1.name == name))
       end
 
       # generate changeset
@@ -967,6 +1000,102 @@ defmodule Brando.Blueprint do
   def get_plural(module) do
     plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
     String.capitalize(plural || module.__naming__().plural)
+  end
+
+  defmacro import_forms(forms_module_ast) do
+    env = __CALLER__
+
+    forms_module_ast
+    |> Macro.expand(env)
+    |> do_import_forms(env)
+  end
+
+  defmacro import_listings(listings_module_ast) do
+    env = __CALLER__
+
+    listings_module_ast
+    |> Macro.expand(env)
+    |> do_import_listings(env)
+  end
+
+  defp do_import_forms({{:., _, [{:__MODULE__, _, _}, :{}]}, _, modules_ast_list}, env) do
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([env.module | leaf])
+
+      do_import_forms(type_module, env)
+    end
+  end
+
+  defp do_import_forms(
+         {{:., _, [{:__aliases__, _, [{:__MODULE__, _, _} | tail]}, :{}]}, _, modules_ast_list},
+         env
+       ) do
+    root_module = Module.concat([env.module | tail])
+
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([root_module | leaf])
+
+      do_import_forms(type_module, env)
+    end
+  end
+
+  defp do_import_forms({{:., _, [{:__aliases__, _, root}, :{}]}, _, modules_ast_list}, env) do
+    root_module = Module.concat(root)
+    root_module_with_alias = Keyword.get(env.aliases, root_module, root_module)
+
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([root_module_with_alias | leaf])
+
+      do_import_forms(type_module, env)
+    end
+  end
+
+  defp do_import_forms(module, env) do
+    Module.put_attribute(env.module, :__brando_imported_form_modules__, [
+      module | Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
+    ])
+
+    []
+  end
+
+  defp do_import_listings({{:., _, [{:__MODULE__, _, _}, :{}]}, _, modules_ast_list}, env) do
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([env.module | leaf])
+
+      do_import_listings(type_module, env)
+    end
+  end
+
+  defp do_import_listings(
+         {{:., _, [{:__aliases__, _, [{:__MODULE__, _, _} | tail]}, :{}]}, _, modules_ast_list},
+         env
+       ) do
+    root_module = Module.concat([env.module | tail])
+
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([root_module | leaf])
+
+      do_import_listings(type_module, env)
+    end
+  end
+
+  defp do_import_listings({{:., _, [{:__aliases__, _, root}, :{}]}, _, modules_ast_list}, env) do
+    root_module = Module.concat(root)
+    root_module_with_alias = Keyword.get(env.aliases, root_module, root_module)
+
+    for {_, _, leaf} <- modules_ast_list do
+      type_module = Module.concat([root_module_with_alias | leaf])
+
+      do_import_listings(type_module, env)
+    end
+  end
+
+  defp do_import_listings(module, env) do
+    Module.put_attribute(env.module, :__brando_imported_listing_modules__, [
+      module | Module.get_attribute(env.module, :__brando_imported_listing_modules__) || []
+    ])
+
+    []
   end
 
   defmacro __after_compile__(env, _) do
