@@ -380,9 +380,18 @@ code {
   }
 }
 
+.justify-start {
+  display: flex;
+  justify-content: flex-start !important;
+}
+
 .justify-end {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-end !important;
+}
+
+.gap-1 {
+  @space column-gap 1;
 }
 
 .fade-enter-active, .fade-leave-active {

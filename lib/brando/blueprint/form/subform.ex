@@ -5,5 +5,6 @@ defmodule Brando.Blueprint.Form.Subform do
             sub_fields: [],
             style: :regular,
             default: nil,
+            listing: nil,
             component: nil
 end

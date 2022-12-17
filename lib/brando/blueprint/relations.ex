@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Relations do
-  @moduledoc """
+  @moduledoc ~S|
   WIP
 
   ## Has many
@@ -18,7 +18,9 @@ defmodule Brando.Blueprint.Relations do
               label: t("Clients"),
               cardinality: :many,
               style: {:transformer, :cover},
-              default: %Client{} do
+              inputs_for :clients,
+              default: &__MODULE__.default_client/1,
+              listing: &__MODULE__.client_listing/1 do
               input :cover, :image, label: t("Cover", Client)
               input :name, :text, placeholder: "Client Name"
               input :description, :rich_text
@@ -31,10 +33,38 @@ defmodule Brando.Blueprint.Relations do
         %{matches: %{id: id}, preload: [clients: :cover]}
       end
 
+      def default_client(image) do
+        %Client{
+          name: "Default! #{Brando.Images.get_image_orientation(image)}"
+        }
+      end
+
+      def client_listing(assigns) do
+        ~H"""
+        <div>
+          <%= @entry.name %><br>
+          <strong>Some classification</strong>
+          <div class="tags flex-h justify-start gap-1 mt-1">
+            <div class="badge">
+              Monochrome
+            </div>
+            <div class="badge">
+              Vertical
+            </div>
+            <div class="badge">
+              Outdoors
+            </div>
+          </div>
+        </div>
+        """
+      end
+
+
   ## Many to many
 
   If you want to pass just ids of your many_to_many relation use `cast: true`
-  """
+  |
+
   import Ecto.Changeset
   import Brando.M2M
   import Brando.Blueprint.Utils

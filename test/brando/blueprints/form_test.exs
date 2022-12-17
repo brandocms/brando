@@ -52,7 +52,8 @@ defmodule Brando.Blueprint.FormTest do
                                template: nil,
                                type: :text
                              }
-                           ]
+                           ],
+                           listing: nil
                          },
                          %Brando.Blueprint.Form.Input{
                            name: :data,
@@ -142,7 +143,8 @@ defmodule Brando.Blueprint.FormTest do
                                template: nil,
                                type: :text
                              }
-                           ]
+                           ],
+                           listing: nil
                          },
                          %Brando.Blueprint.Form.Input{
                            name: :data,

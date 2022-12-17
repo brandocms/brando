@@ -355,7 +355,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def status_circle(%{status: "pending", publish_at: publish_at} = assigns)
+  def status_circle(%{status: :pending, publish_at: publish_at} = assigns)
       when not is_nil(publish_at) do
     ~H"""
     <svg
@@ -385,9 +385,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns) do
-    ~H""
-  end
+  def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns),
+    do: ~H""
 
   def alternates(%{entry: %{alternate_entries: alternate_entries}} = assigns) do
     assigns =

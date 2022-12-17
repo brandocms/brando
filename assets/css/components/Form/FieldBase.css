@@ -17,19 +17,20 @@
 
   button {
     border: none;
-    background-color: white;
+    background-color: #f5f5f5;
     padding: 5px;
     border-radius: 50%;
     width: fit-content;
+    margin-bottom: 5px;
 
-    &:first-of-type {
-      margin-bottom: 5px;
+    &:last-of-type {
+      margin-bottom: 0;
     }
 
     &:hover {
       background-color: var(--brando-color-dark);
-      svg path.s {
-        fill: var(--brando-color-peach);
+      svg path {
+        stroke: var(--brando-color-peach);
       }
     }
   }

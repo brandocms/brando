@@ -4,10 +4,6 @@
     padding: 15px;
     border-radius: 20px;
 
-    .text, .tiptap-wrapper {
-      background-color: #fff;
-    }
-
     .text {
       @fontsize sm;
 
@@ -62,7 +58,6 @@
 
     .multiselect {
       @fontsize sm;
-      background-color: #fff;
       height: 45px;
 
       .button-edit {
@@ -78,13 +73,56 @@
       font-size: 18px;
     }
 
-    .subform-entry {
-      border-left: 4px solid #dac5d1;
-      padding-left: 15px;
+    .subform-entry {      
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       margin-bottom: 15px;
+      background-color: white;
+      border-radius: 15px;
+      padding: 10px;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+
+      &.listing {
+        .subform-listing {
+          @space column-gap 1;
+          display: flex;
+          align-items: center;
+          width: 100%;
+          > div > .field-wrapper > .label-wrapper.hidden {
+            display: none;
+          }
+
+          .subform-listing-row {
+            display: flex;
+            @space column-gap 1;
+            width: 100%;
+
+            > div {
+              flex-grow: 1;
+
+              &[class^="col-"] {
+                flex-grow: 0;
+              }
+            }
+          }
+
+          .field-wrapper {
+            margin-bottom: 0 !important;
+          }
+        }
+        .subform-fields {
+          display: none;
+        }
+      }
+
+      .subform-listing {
+        display: none;
+        font-size: 16px;
+      }
 
       &.group {
         flex-direction: row;
