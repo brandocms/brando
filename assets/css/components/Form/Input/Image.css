@@ -43,9 +43,9 @@
   }
 
   &.square {
-    .image-wrapper {
+    .image-wrapper-compact {
       img {
-        border-radius: none;
+        border-radius: 0;
       }
     }
   }
