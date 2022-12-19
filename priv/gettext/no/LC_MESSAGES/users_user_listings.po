@@ -20,17 +20,17 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#: lib/brando/users/user.ex:115
+#: lib/brando/users/user.ex:116
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/users/user.ex:113
+#: lib/brando/users/user.ex:114
 #, elixir-autogen, elixir-format
 msgid "Disable user"
 msgstr "Deaktiver bruker"
 
-#: lib/brando/users/user.ex:111
+#: lib/brando/users/user.ex:112
 #, elixir-autogen, elixir-format
 msgid "Edit user"
 msgstr "Oppdater bruker"

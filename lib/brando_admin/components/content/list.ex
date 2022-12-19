@@ -10,7 +10,10 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.Status
   alias Brando.Trait.Translatable
 
+  alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content.List.Row
+
+  NimbleCSV.define(Brando.CSVParser, separator: "\t", escape: "\"")
 
   def mount(socket) do
     {:ok, assign(socket, :selected_rows, [])}
@@ -49,6 +52,60 @@ defmodule BrandoAdmin.Components.Content.List do
       end
 
     push_patch(socket, to: to)
+  end
+
+  def handle_event("export", %{"name" => export_name}, socket) do
+    send(self(), {:toast, gettext("Exporting entries...")})
+    exports = socket.assigns.listing.exports
+    schema = socket.assigns.schema
+    context = schema.__modules__().context
+    plural = schema.__naming__().plural
+    selected_export = Enum.find(exports, &(to_string(&1.name) == export_name))
+
+    {:ok, entries} = apply(context, :"list_#{plural}", [selected_export.query])
+    headers = Enum.map(selected_export.fields, &to_string/1)
+
+    rows =
+      List.wrap([headers]) ++
+        Enum.map(entries, fn entry ->
+          for key <- selected_export.fields, do: Map.get(entry, key)
+        end)
+
+    csv_content = Brando.CSVParser.dump_to_iodata(rows)
+
+    date = Brando.config(:timezone) |> DateTime.now!() |> Calendar.strftime("%Y%m%d_%H%M%S")
+
+    exports_path =
+      Path.join([
+        "exports",
+        to_string(selected_export.type)
+      ])
+
+    target_path =
+      Path.join([
+        Brando.config(:media_path),
+        exports_path
+      ])
+
+    File.mkdir_p!(target_path)
+
+    target_filename = "#{plural}_export_#{date}.csv"
+    File.write(Path.join(target_path, target_filename), csv_content)
+
+    download_path = Brando.Utils.media_url(Path.join(exports_path, target_filename))
+
+    message = """
+    #{gettext("Download exports: ")}
+    <a href="#{download_path}" target="_blank" download>
+      #{gettext("Download")}
+    </a>
+    """
+
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Download ready"),
+       message: message
+     })}
   end
 
   def handle_event("next_filter_key", _, socket) do
@@ -364,6 +421,24 @@ defmodule BrandoAdmin.Components.Content.List do
           &times; <%= name %>: <%= value %>
         </button>
       <% end %>
+    </div>
+    """
+  end
+
+  defp exports(assigns) do
+    ~H"""
+    <div class="exports">
+      <%= gettext "Export data: " %>
+      <CircleDropdown.render id="listing-exports-dropdown">
+        <li :for={export <- @exports}>
+          <button
+            type="button"
+            phx-value-name={export.name}
+            phx-click={@click}>
+            <%= export.label %> <span class="shortcut"><%= export.type %></span>
+          </button>
+        </li>
+      </CircleDropdown.render>
     </div>
     """
   end

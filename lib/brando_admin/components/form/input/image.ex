@@ -106,7 +106,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           if image_id != socket.assigns.image_id do
             {assign(socket, :image_id, image_id), image}
           else
-            {socket, image}
+            if image && image.status == :unprocessed do
+              # if the image is unprocessed, we can try to reload and see if it's done.
+              {:ok, image} = Brando.Images.get_image(image_id)
+
+              {socket |> assign(:image, image), image}
+            else
+              {socket, image}
+            end
           end
       end
 

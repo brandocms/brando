@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.0\n"
 
-#: lib/brando/sites/global_set.ex:100
+#: lib/brando/sites/global_set.ex:90
 #, elixir-autogen, elixir-format
 msgid "global set"
 msgstr "globalsett"
 
-#: lib/brando/sites/global_set.ex:101
+#: lib/brando/sites/global_set.ex:91
 #, elixir-autogen, elixir-format
 msgid "global sets"
 msgstr "globalsett"

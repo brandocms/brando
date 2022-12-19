@@ -10,21 +10,6 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/files/file.ex:78
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr ""
-
-#: lib/brando/files/file.ex:76
-#, elixir-autogen, elixir-format
-msgid "Delete file"
-msgstr ""
-
-#: lib/brando/files/file.ex:74
-#, elixir-autogen, elixir-format
-msgid "Duplicate file"
-msgstr ""
-
 #: lib/brando/files/file.ex:38
 #, elixir-autogen, elixir-format
 msgid "Filename"

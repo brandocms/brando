@@ -79,6 +79,7 @@ defmodule Brando.Mixfile do
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
       {:ecto_nested_changeset, "~> 0.2"},
+      {:nimble_csv, "~> 1.2"},
 
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},

@@ -10,29 +10,9 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:82
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr ""
-
-#: lib/brando/navigation/menu.ex:85
-#, elixir-autogen, elixir-format
-msgid "Create menu item"
-msgstr ""
-
-#: lib/brando/navigation/menu.ex:80
-#, elixir-autogen, elixir-format
-msgid "Delete menu"
-msgstr ""
-
-#: lib/brando/navigation/menu.ex:84
-#, elixir-autogen, elixir-format
-msgid "Duplicate menu"
-msgstr ""
-
 #: lib/brando/navigation/menu.ex:78
 #, elixir-autogen, elixir-format
-msgid "Edit menu"
+msgid "Create menu item"
 msgstr ""
 
 #: lib/brando/navigation/menu.ex:74
@@ -40,7 +20,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:115
+#: lib/brando/navigation/menu.ex:108
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr ""

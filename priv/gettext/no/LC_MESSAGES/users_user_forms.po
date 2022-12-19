@@ -20,64 +20,64 @@ msgstr ""
 "Plural-Forms: nplurals=2;\n"
 "X-Generator: Poedit 3.1\n"
 
-#: lib/brando/users/user.ex:160
+#: lib/brando/users/user.ex:163
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr "Admin"
 
-#: lib/brando/users/user.ex:137
-#: lib/brando/users/user.ex:150
+#: lib/brando/users/user.ex:140
+#: lib/brando/users/user.ex:153
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/users/user.ex:161
+#: lib/brando/users/user.ex:164
 #, elixir-autogen, elixir-format
 msgid "Editor"
 msgstr "Redaktør"
 
-#: lib/brando/users/user.ex:159
+#: lib/brando/users/user.ex:162
 #, elixir-autogen, elixir-format
 msgid "Superuser"
 msgstr "Superbruker"
 
-#: lib/brando/users/user.ex:162
+#: lib/brando/users/user.ex:165
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr "Bruker"
 
-#: lib/brando/users/user.ex:167
+#: lib/brando/users/user.ex:170
 #, elixir-autogen, elixir-format
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: lib/brando/users/user.ex:153
+#: lib/brando/users/user.ex:156
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Epost"
 
-#: lib/brando/users/user.ex:155
+#: lib/brando/users/user.ex:158
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/users/user.ex:152
+#: lib/brando/users/user.ex:155
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/users/user.ex:144
-#: lib/brando/users/user.ex:154
+#: lib/brando/users/user.ex:147
+#: lib/brando/users/user.ex:157
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Passord"
 
-#: lib/brando/users/user.ex:139
+#: lib/brando/users/user.ex:142
 #, elixir-autogen, elixir-format
 msgid "The administrator has set a mandatory password change on first login for this website."
 msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
 
-#: lib/brando/users/user.ex:169
+#: lib/brando/users/user.ex:172
 #, elixir-autogen, elixir-format
 msgid "Config"
 msgstr "Konfigurasjon"

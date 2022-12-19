@@ -3,6 +3,10 @@
     id={"listing-#{@listing.name}"} 
     class="content-list" 
     phx-hook="Brando.Listing">
+    <.exports 
+      :if={@listing.exports != []}
+      exports={@listing.exports} 
+      click={JS.push("export", target: @myself)} />
     <.tools
       schema={@schema}
       listing={@listing}
@@ -55,5 +59,4 @@
     selected_rows={@selected_rows}
     selection_actions={@listing.selection_actions}
     target={@myself} />
-
 </div>

@@ -38,6 +38,7 @@ defmodule Brando.Blueprint.Listings do
               default_actions: true,
               actions: [],
               selection_actions: [],
+              exports: [],
               child_listing: nil
   end
 
@@ -50,6 +51,16 @@ defmodule Brando.Blueprint.Listings do
   defmodule Template do
     defstruct template: nil,
               opts: []
+  end
+
+  defmodule Export do
+    defstruct name: nil,
+              label: nil,
+              type: :csv,
+              fields: [],
+              description: nil,
+              query: %{},
+              after_export: nil
   end
 
   defmacro __using__(_) do
@@ -89,6 +100,7 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_filters) = []
       var!(brando_listing_actions) = []
       var!(brando_listing_selection_actions) = []
+      var!(brando_listing_exports) = []
       var!(brando_listing_child_listing) = nil
       var!(brando_listing_default_actions) = true
 
@@ -103,7 +115,8 @@ defmodule Brando.Blueprint.Listings do
           var!(brando_listing_actions),
           var!(brando_listing_selection_actions),
           var!(brando_listing_child_listing),
-          var!(brando_listing_default_actions)
+          var!(brando_listing_default_actions),
+          var!(brando_listing_exports)
         )
 
       Module.put_attribute(__MODULE__, :listings, named_listing)
@@ -141,6 +154,17 @@ defmodule Brando.Blueprint.Listings do
           location: :keep,
           bind_quoted: [listing_name: listing_name] do
       var!(brando_listing_child_listing) = listing_name
+    end
+  end
+
+  defmacro export(export_name, opts) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [export_name: export_name, opts: opts] do
+      var!(brando_listing_exports) = [
+        Map.merge(%Brando.Blueprint.Listings.Export{name: export_name}, Enum.into(opts, %{}))
+        | var!(brando_listing_exports)
+      ]
     end
   end
 
@@ -191,7 +215,8 @@ defmodule Brando.Blueprint.Listings do
         actions,
         selection_actions,
         child_listing,
-        default_actions
+        default_actions,
+        exports
       ) do
     %__MODULE__.Listing{
       name: name,
@@ -201,7 +226,8 @@ defmodule Brando.Blueprint.Listings do
       actions: Enum.map(actions, &Enum.into(&1, %{})),
       selection_actions: Enum.map(selection_actions, &Enum.into(&1, %{})),
       child_listing: child_listing,
-      default_actions: default_actions
+      default_actions: default_actions,
+      exports: exports
     }
   end
 

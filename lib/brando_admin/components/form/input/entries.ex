@@ -72,15 +72,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   end
 
   defp process_identifiers(identifiers) do
-    processed_identifiers =
-      Enum.map(identifiers, fn
-        %Brando.Content.Identifier{} = identifier -> identifier
-        %Changeset{action: :replace} -> nil
-        %Changeset{} = changeset -> Changeset.apply_changes(changeset)
-        _ -> nil
-      end)
-
-    Enum.reject(processed_identifiers, &(&1 == nil))
+    identifiers
+    |> Enum.map(fn
+      %Brando.Content.Identifier{} = identifier -> identifier
+      %Changeset{action: :replace} -> nil
+      %Changeset{} = changeset -> Changeset.apply_changes(changeset)
+      _ -> nil
+    end)
+    |> Enum.reject(&(&1 == nil))
   end
 
   def assign_available_schemas(socket, wanted_schemas) do

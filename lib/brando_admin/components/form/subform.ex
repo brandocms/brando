@@ -89,6 +89,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
             </div>
             <.listing subform={sub_form} subform_config={@subform} />
             <div class="subform-fields">
+              <%!-- <Input.hidden form={sub_form} field={:id} /> --%>
+              <%= Phoenix.HTML.Form.hidden_inputs_for(sub_form) %>
               <Subform.Field.render
                 :for={input <- @subform.sub_fields}
                 cardinality={:many}

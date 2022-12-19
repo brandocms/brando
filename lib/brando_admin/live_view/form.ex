@@ -89,10 +89,6 @@ defmodule BrandoAdmin.LiveView.Form do
       |> Map.from_struct()
       |> Map.put(:focal, updated_focal)
 
-    require Logger
-    Logger.error("== TODO: update_focal_point updating changeset here!")
-    Logger.error(inspect(changeset, pretty: true))
-
     updated_changeset = Ecto.Changeset.put_change(changeset, field_atom, updated_field)
     {:halt, assign(socket, changeset: updated_changeset)}
   end

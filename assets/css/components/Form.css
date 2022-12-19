@@ -432,15 +432,6 @@
         background-color: transparent;
       }
 
-      .shortcut {
-        font-size: 11px;
-        border: 1px solid black;
-        margin-left: 6px;
-        background-color: white;
-        border-radius: 6px;
-        padding: 2px;
-      }
-
       > button, .split-dropdown-wrapper > button {
         font-size: 15px;
         display: inline-flex;
@@ -502,4 +493,13 @@
       }
     }
   }
+}
+
+.shortcut {
+  font-size: 11px;
+  border: 1px solid black;
+  margin-left: 6px;
+  background-color: white;
+  border-radius: 6px;
+  padding: 2px;
 }
