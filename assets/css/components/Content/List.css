@@ -93,7 +93,7 @@
       display: flex;
       height: 100%;
       margin-right: 5px;
-      min-height: clamp(2.8vw, 3.3vw, 45px);
+      min-height: 48px;
       align-items: center;
 
       .status {
@@ -102,11 +102,11 @@
         display: flex;
         cursor: pointer;
         user-select: none;
-        font-size: clamp(0.8vw, 1vw, 15px);
+        font-size: 15px;
         text-transform: uppercase;
         padding-left: 15px;
         padding-right: 15px;
-        height: clamp(2.8vw, 3.3vw, 45px);
+        height: 48px;
         border: none;
 
         &.active {
@@ -117,10 +117,12 @@
       .label {
         line-height: 1;
         padding-top: 1px;
+        @display none <=ipad_landscape;
       }
 
       svg {
         margin-right: 9px;
+        @space margin-right 0 <=ipad_landscape;
 
         circle {
           fill: theme(colors.status.published);
@@ -170,7 +172,7 @@
 
     .filter {
       background-color: var(--brando-color-input);
-      height: clamp(2.8vw, 3.3vw, 45px);
+      height: 48px;
       display: flex;
       align-items: center;
       display: none;
@@ -532,14 +534,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  font-size: 16px;
+  font-size: 14px;
   justify-content: flex-end;
-  background-color: var(--brando-color-peach);
-  margin-left: auto;
+  background-color: var(--brando-color-input);
+  margin-left: 5px;
   width: fit-content;
-  padding: 5px 12px;
-  border-radius: 10px;
-  margin-bottom: 15px;
+  padding: 0 12px;
 
   .circle-dropdown {
     margin-left: 8px;

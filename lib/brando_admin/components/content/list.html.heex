@@ -3,15 +3,13 @@
     id={"listing-#{@listing.name}"} 
     class="content-list" 
     phx-hook="Brando.Listing">
-    <.exports 
-      :if={@listing.exports != []}
-      exports={@listing.exports} 
-      click={JS.push("export", target: @myself)} />
     <.tools
       schema={@schema}
       listing={@listing}
       active_filter={@active_filter}
       list_opts={@list_opts}
+      exports={@listing.exports} 
+      select_export={JS.push("export", target: @myself)}
       update_status={JS.push("update_status", target: @myself)}
       update_filter={JS.push("update_filter", target: @myself)}
       next_filter_key={JS.push("next_filter_key", target: @myself)}

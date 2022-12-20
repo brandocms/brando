@@ -97,7 +97,7 @@
         display: block;
         padding: 15px;
         text-align: right;
-        line-height: 1;
+        line-height: 1.5;
         float: right;
         width: 100%;
         font-size: 15px;
@@ -105,6 +105,10 @@
         &:hover {
           background-color: var(--brando-color-dark); 
           color: theme(colors.peach);
+
+          .shortcut {
+            color: var(--brando-color-dark);
+          }
         }
       }
     }

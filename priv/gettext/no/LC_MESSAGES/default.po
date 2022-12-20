@@ -158,7 +158,7 @@ msgstr "Blokkmoduler"
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando_admin/components/content/list.ex:659
+#: lib/brando_admin/components/content/list.ex:655
 msgid "Clear selection"
 msgstr "Nullstill utvalg"
 
@@ -188,17 +188,17 @@ msgstr "Datakilde"
 msgid "Deactivated"
 msgstr "Deaktivert"
 
-#: lib/brando_admin/components/content/list.ex:742
+#: lib/brando_admin/components/content/list.ex:738
 #: lib/brando_admin/components/content/list/row.ex:549
 msgid "Deleted"
 msgstr "Slettet"
 
-#: lib/brando_admin/components/content/list.ex:738
+#: lib/brando_admin/components/content/list.ex:734
 #: lib/brando_admin/components/content/list/row.ex:545
 msgid "Disabled"
 msgstr "Deaktivert"
 
-#: lib/brando_admin/components/content/list.ex:739
+#: lib/brando_admin/components/content/list.ex:735
 #: lib/brando_admin/components/content/list/row.ex:546
 #: lib/brando_admin/components/form/input.ex:610
 msgid "Draft"
@@ -221,7 +221,7 @@ msgstr "Oppdater side"
 msgid "Error"
 msgstr "Feil"
 
-#: lib/brando_admin/components/content/list.ex:579
+#: lib/brando_admin/components/content/list.ex:561
 msgid "Filter"
 msgstr "Filter"
 
@@ -233,7 +233,7 @@ msgstr "Bilder"
 msgid "Namespace"
 msgstr "Namespace"
 
-#: lib/brando_admin/components/content/list.html.heex:31
+#: lib/brando_admin/components/content/list.html.heex:29
 msgid "No matching entries found"
 msgstr "Ingen matchende rader"
 
@@ -258,13 +258,13 @@ msgstr "Fant ikke siden"
 msgid "Pages & sections"
 msgstr "Sider & seksjoner"
 
-#: lib/brando_admin/components/content/list.ex:740
+#: lib/brando_admin/components/content/list.ex:736
 #: lib/brando_admin/components/content/list/row.ex:547
 #: lib/brando_admin/components/form/input.ex:611
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando_admin/components/content/list.ex:741
+#: lib/brando_admin/components/content/list.ex:737
 #: lib/brando_admin/components/content/list/row.ex:548
 #: lib/brando_admin/components/form/input.ex:612
 msgid "Published"
@@ -281,15 +281,15 @@ msgstr "Maler"
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando_admin/components/content/list.ex:663
+#: lib/brando_admin/components/content/list.ex:659
 msgid "With"
 msgstr "Med"
 
-#: lib/brando_admin/components/content/list.ex:470
+#: lib/brando_admin/components/content/list.ex:452
 msgid "entries"
 msgstr "objekter"
 
-#: lib/brando_admin/components/content/list.ex:665
+#: lib/brando_admin/components/content/list.ex:661
 msgid "selected, perform action"
 msgstr "valgt, utfør følgende"
 
@@ -608,7 +608,7 @@ msgstr "Din tidssone er"
 msgid "or get started with a prefab'ed template"
 msgstr "eller begynn med en ferdiglaget mal"
 
-#: lib/brando_admin/components/content/list.ex:472
+#: lib/brando_admin/components/content/list.ex:454
 msgid "showing"
 msgstr "viser"
 
@@ -1147,7 +1147,7 @@ msgstr "For å opprette og administrere revisjoner, må oppføringen lagres mins
 msgid "A list of upcoming publisher queue jobs."
 msgstr "En liste over kommende publiseringskøjobber."
 
-#: lib/brando_admin/components/content/list.ex:496
+#: lib/brando_admin/components/content/list.ex:478
 msgid "All"
 msgstr "Alle"
 
@@ -1155,7 +1155,7 @@ msgstr "Alle"
 msgid "Meta properties"
 msgstr "Meta egenskaper"
 
-#: lib/brando_admin/components/content/list.ex:474
+#: lib/brando_admin/components/content/list.ex:456
 msgid "Per page:"
 msgstr "Per side:"
 
@@ -1377,11 +1377,11 @@ msgstr "Er du sikker på at du vil slette dette?"
 msgid "Are you sure you want to purge unprotected and non active revisions of this entry?"
 msgstr "Er du sikker på at du vil renske ut ubeskyttede og inaktive versjoner av denne oppføringen?"
 
-#: lib/brando_admin/components/content/list.ex:698
+#: lib/brando_admin/components/content/list.ex:694
 msgid "Delete selected"
 msgstr "Slett valgte"
 
-#: lib/brando_admin/components/content/list.ex:690
+#: lib/brando_admin/components/content/list.ex:686
 msgid "Duplicate selected to"
 msgstr "Dupliser valgte til"
 
@@ -1530,7 +1530,7 @@ msgstr "Last ned"
 
 #: lib/brando_admin/components/content/list.ex:98
 msgid "Download exports: "
-msgstr "Last ned eksport:"
+msgstr "Last ned eksport: "
 
 #: lib/brando_admin/components/content/list.ex:106
 msgid "Download ready"
@@ -1539,10 +1539,6 @@ msgstr "Klar for nedlasting"
 #: lib/brando_admin/components/form/input/blocks/fragment_block.ex:125
 msgid "Embedded fragment"
 msgstr "Innebygd fragment"
-
-#: lib/brando_admin/components/content/list.ex:431
-msgid "Export data: "
-msgstr "Eksporter data: "
 
 #: lib/brando_admin/components/content/list.ex:58
 msgid "Exporting entries..."
@@ -1600,3 +1596,7 @@ msgstr "Dette kan skje under en serveroppdatering eller omstart"
 #: lib/brando/users/users.ex:156
 msgid "You must log in to access this page."
 msgstr "Du må logge inn for å få tilgang til denne siden."
+
+#: lib/brando_admin/components/content/list.ex:576
+msgid "Export"
+msgstr "Eksporter"

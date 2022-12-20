@@ -425,24 +425,6 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
-  defp exports(assigns) do
-    ~H"""
-    <div class="exports">
-      <%= gettext "Export data: " %>
-      <CircleDropdown.render id="listing-exports-dropdown">
-        <li :for={export <- @exports}>
-          <button
-            type="button"
-            phx-value-name={export.name}
-            phx-click={@click}>
-            <%= export.label %> <span class="shortcut"><%= export.type %></span>
-          </button>
-        </li>
-      </CircleDropdown.render>
-    </div>
-    """
-  end
-
   defp pagination(
          %{
            pagination_meta: %{
@@ -588,6 +570,20 @@ defmodule BrandoAdmin.Components.Content.List do
               </.form>
             </div>
           <% end %>
+        </div>
+
+        <div :if={@exports != []} class="exports">
+          <%= gettext "Export" %>
+          <CircleDropdown.render id="listing-exports-dropdown">
+            <li :for={export <- @exports}>
+              <button
+                type="button"
+                phx-value-name={export.name}
+                phx-click={@select_export}>
+                <%= g(@schema, export.label) %> <span class="shortcut"><%= export.type %></span>
+              </button>
+            </li>
+          </CircleDropdown.render>
         </div>
       </div>
 
