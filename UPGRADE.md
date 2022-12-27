@@ -102,13 +102,13 @@
   `$ rm -rf lib/my_app/graphql`
 
 * Pull down a new router from:
-  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web/router.ex
+  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web/router.ex
 
 * Pull down a new `application_web.ex` from:
-  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web.ex
+  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web.ex
 
 * Pull down a new `endpoint.ex` from:
-  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/lib/application_name_web/endpoint.ex
+  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web/endpoint.ex
 
 * Delete the admin channel (or the whole dir, if you don't have anything of your own there):
   `$ rm -rf lib/my_app_web/channels`
@@ -150,12 +150,12 @@ end
 * Add `layout: false` to your `error_view` config in `config.exs`:
 `render_errors: [view: MyAppWeb.ErrorView, accepts: ~w(html json), layout: false]`
 
-* If you cannot add entries to your legacy multi module, try
+* If you cannot add entries to your legacy Villain blocks, try
   saving the main entry first. It might just be missing UIDs on
   the blocks.
 
-* Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`, you should also
-  add `webp` to your formats list.
+* Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`, 
+  you should also add `webp` to your formats list.
 
 * Switch your frontend `app.html.eex` to `app.html.heex`. Change your `<%= body_tag %>` call to 
   a heex component call: `<.body_tag conn={@conn} id="top"> ... <./body_tag>`
