@@ -639,7 +639,7 @@ defmodule Brando.Villain do
         ) :: [any]
   def search_villains_for_text(schema, data_field, search_terms) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from(s in schema, select: s.id)
+    org_query = from(s in schema, select: s.id, order_by: [asc: s.id])
 
     built_query =
       Enum.reduce(search_terms, org_query, fn search_term, query ->
