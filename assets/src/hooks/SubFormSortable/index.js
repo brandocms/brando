@@ -1,8 +1,10 @@
 import Sortable from 'sortablejs'
+import { Dom } from '@brandocms/jupiter'
 
 export default app => ({
   mounted() {
     this.awaitValidation = false
+    this.embeds = this.el.dataset.embeds
 
     new Sortable(this.el, {
       animation: 350,
@@ -30,9 +32,17 @@ export default app => ({
 
   setOrder(sortable) {
     const sortedArray = sortable.toArray().map(Number)
-
-    this.pushEventTo(this.el, 'sequenced_subform', { ids: sortedArray }, () => {
-      this.awaitValidation = true
-    })
+    if (this.embeds) {
+      this.pushEventTo(
+        this.el,
+        'sequenced_subform',
+        { ids: sortedArray, embeds: this.embeds },
+        () => {
+          this.awaitValidation = true
+        }
+      )
+    } else {
+      this.pushEventTo(this.el, 'sequenced_subform', { ids: sortedArray, embeds: this.embeds })
+    }
   }
 })

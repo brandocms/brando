@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
   import Phoenix.HTML.Form
   import Phoenix.LiveView.HTMLEngine
 
@@ -405,7 +406,13 @@ defmodule BrandoAdmin.Components.Form do
       |> Enum.map(fn
         %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
           sub_assets = Enum.map(mod.__assets__(), & &1.name)
-          {name, sub_assets}
+
+          if mod.has_trait(Brando.Trait.Sequenced) do
+            preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_assets
+            {name, preload_query}
+          else
+            {name, sub_assets}
+          end
 
         %{name: name} ->
           name
@@ -1806,7 +1813,7 @@ defmodule BrandoAdmin.Components.Form do
           default =
             case Map.get(transformer_defaults, key) do
               fun when is_function(fun) ->
-                fun.(image)
+                fun.(socket.assigns.entry, image)
 
               default ->
                 default

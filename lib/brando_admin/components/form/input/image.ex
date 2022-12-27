@@ -82,13 +82,19 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         is_nil(image) && image_id ->
           # we have an image in the changeset, but no loaded image
           {:ok, image} = Brando.Images.get_image(image_id)
-          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
+
+          {socket
+           |> assign(:image, image)
+           |> assign(:image_id, image_id), image}
 
         image && to_string(image.id) != to_string(image_id) && image_id != nil ->
           # we have a loaded image, but it does not match the changeset image
           # load the changeset image
           {:ok, image} = Brando.Images.get_image(image_id)
-          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
+
+          {socket
+           |> assign(:image, image)
+           |> assign(:image_id, image_id), image}
 
         image && image.id == nil && image_id == nil ->
           # no loaded image, no image_id in changeset
@@ -100,20 +106,28 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             |> try_force_int()
 
           {:ok, image} = Brando.Images.get_image(image_id)
-          {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
+
+          {socket
+           |> assign(:image, image)
+           |> assign(:image_id, image_id), image}
+
+        image_id == nil && image != nil ->
+          # reset image to nil
+          {socket
+           |> assign(:image_id, nil)
+           |> assign(:image, nil), nil}
+
+        image_id != socket.assigns.image_id ->
+          {assign(socket, :image_id, image_id), image}
 
         true ->
-          if image_id != socket.assigns.image_id do
-            {assign(socket, :image_id, image_id), image}
-          else
-            if image && image.status == :unprocessed do
-              # if the image is unprocessed, we can try to reload and see if it's done.
-              {:ok, image} = Brando.Images.get_image(image_id)
+          if image && image.status == :unprocessed do
+            # if the image is unprocessed, we can try to reload and see if it's done.
+            {:ok, image} = Brando.Images.get_image(image_id)
 
-              {socket |> assign(:image, image), image}
-            else
-              {socket, image}
-            end
+            {assign(socket, :image, image), image}
+          else
+            {socket, image}
           end
       end
 
@@ -136,6 +150,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     ~H"""
     <div>
       <Form.field_base
+        :if={@editable}
         form={@form}
         field={@field}
         label={@label}
@@ -164,6 +179,28 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           </div>
         </div>
       </Form.field_base>
+      <div
+        :if={!@editable}
+        class={render_classes(["input-image", small: @small, square: @square])}
+      >
+        <%= if @image && @image.path do %>
+          <.image_preview
+            image={@image}
+            form={@form}
+            field={@field}
+            relation_field={@relation_field}
+            click={@editable && open_image(@myself)}
+            editable={@editable}
+            file_name={@file_name} />
+        <% else %>
+          <.empty_preview
+            form={@form}
+            field={@field}
+            relation_field={@relation_field}
+            editable={@editable}
+            click={@editable && open_image(@myself)} />
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -245,7 +282,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     ~H"""
     <div class="image-wrapper-compact">
-      <Input.input type={:hidden} form={@form} field={@relation_field} value={""} />
+      <Input.input
+        :if={@editable}
+        type={:hidden}
+        form={@form}
+        field={@relation_field}
+        value={""}
+      />
       <div class="img-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
       </div>
@@ -274,7 +317,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     ~H"""
     <div class="image-wrapper-compact">
-      <Input.input type={:hidden} form={@form} field={@relation_field} value={@value || @image.id} />
+      <Input.input
+        :if={@editable}
+        type={:hidden}
+        form={@form}
+        field={@relation_field}
+        value={@value || @image.id}
+      />
       <%= if @image.status == :processed do %>
         <Content.image image={@image} size={:thumb} />
       <% else %>

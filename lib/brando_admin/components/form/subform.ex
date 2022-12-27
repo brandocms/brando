@@ -23,6 +23,31 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(assigns)
       |> prepare_subform_component()
       |> assign_new(:open_entries, fn -> [] end)
+      |> assign_new(:sequenced?, fn ->
+        # can we sequence the subform? we can if it
+        #   - is an embed
+        #   - has a :sequenced trait
+        parent_schema = assigns.form.data.__struct__
+
+        case parent_schema.__relation__(assigns.subform.field) do
+          %Brando.Blueprint.Relation{type: :has_many, opts: %{module: rel_module}} ->
+            rel_module.has_trait(Brando.Trait.Sequenced)
+
+          %Brando.Blueprint.Relation{type: :embeds_many} ->
+            true
+
+          _ ->
+            false
+        end
+      end)
+      |> assign_new(:embeds?, fn ->
+        parent_schema = assigns.form.data.__struct__
+
+        case parent_schema.__relation__(assigns.subform.field) do
+          %Brando.Blueprint.Relation{type: :embeds_many} -> true
+          _ -> false
+        end
+      end)
       |> assign(
         :indexed_sub_form_fields,
         Enum.with_index(inputs_for(assigns.form, assigns.subform.field))
@@ -49,7 +74,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
         class={"subform"}>
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
-          phx-hook="Brando.SubFormSortable">
+          data-embeds={@embeds?}
+          phx-hook={@sequenced? && "Brando.SubFormSortable"}>
           <%= if Enum.empty?(inputs_for(@form, @subform.field)) do %>
             <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
             <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
@@ -71,7 +97,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
-              <button type="button" class="subform-handle">
+              <button
+                :if={@sequenced?}
+                type="button"
+                class="subform-handle"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="16" height="16" stroke-width="1.5" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
                 </svg>
@@ -89,7 +119,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
             </div>
             <.listing subform={sub_form} subform_config={@subform} />
             <div class="subform-fields">
-              <%!-- <Input.hidden form={sub_form} field={:id} /> --%>
+              <Input.hidden
+                :if={@sequenced?}
+                form={sub_form}
+                field={:sequence}
+                value={index}
+              />
               <%= Phoenix.HTML.Form.hidden_inputs_for(sub_form) %>
               <Subform.Field.render
                 :for={input <- @subform.sub_fields}
@@ -99,7 +134,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 input={input}
                 path={@path ++ [index]}
                 uploads={@uploads}
-                current_user={@current_user} />
+                current_user={@current_user}
+              />
             </div>
           </div>
         </div>
@@ -162,6 +198,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         class={"subform"}>
         <div
           id={"#{@form.id}-#{@subform.field}-sortable"}
+          data-embeds={@embeds?}
           phx-hook="Brando.SubFormSortable">
           <%= if Enum.empty?(inputs_for(@form, @subform.field)) do %>
             <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
@@ -251,10 +288,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.form.source
+    entry = Ecto.Changeset.apply_changes(changeset)
 
     default =
       case socket.assigns.subform.default do
-        fun when is_function(fun) -> fun.(nil)
+        fun when is_function(fun) -> fun.(entry, nil)
         struct -> struct
       end
 
@@ -267,8 +305,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
       changeset
       |> Ecto.Changeset.get_field(field_name)
       |> Kernel.++([default])
-
-    count = Enum.count(updated_field)
 
     updated_changeset =
       case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
@@ -288,7 +324,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       force_validation: true
     )
 
-    {:noreply, update(socket, :open_entries, &(&1 ++ [count]))}
+    {:noreply, socket}
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
@@ -297,74 +333,85 @@ defmodule BrandoAdmin.Components.Form.Subform do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    updated_entries =
+    related_entries =
       changeset
-      |> Ecto.Changeset.get_field(field_name, [])
-      |> List.delete_at(String.to_integer(index))
+      |> Map.get(:params)
+      |> Map.get(to_string(field_name))
+      |> Map.delete(to_string(index))
+
+    changeset =
+      put_in(
+        changeset,
+        [Access.key(:params), to_string(field_name)],
+        related_entries
+      )
 
     updated_changeset =
-      case Enum.empty?(updated_entries) do
+      cond do
+        socket.assigns.embeds? && Map.keys(related_entries) == [] ->
+          Ecto.Changeset.put_embed(changeset, field_name, [])
+
+        socket.assigns.embeds? ->
+          Ecto.Changeset.cast_embed(changeset, field_name)
+
+        Map.keys(related_entries) == [] ->
+          Ecto.Changeset.put_assoc(changeset, field_name, [])
+
         true ->
-          put_in(changeset, [Access.key(:changes), Access.key(field_name)], [])
-
-        false ->
-          case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
-            %{type: :has_many} ->
-              # assoc
-              Ecto.Changeset.put_assoc(changeset, field_name, updated_entries)
-
-            _ ->
-              # embed
-              Ecto.Changeset.put_embed(changeset, field_name, updated_entries)
-          end
+          Ecto.Changeset.cast_assoc(changeset, field_name)
       end
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
       changeset: updated_changeset,
-      force_validation: true
+      force_validation: false
     )
 
     {:noreply, socket}
   end
 
   def handle_event("force_validate", _, socket) do
-    field_name = socket.assigns.subform.field
-    event_id = "#{socket.assigns.form.id}-#{field_name}-add-entry"
-    {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
+    {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
+  def handle_event("sequenced_subform", %{"ids" => order_indices} = params, socket) do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    entries = Ecto.Changeset.get_field(changeset, field_name)
-    sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
+    related_entries =
+      changeset
+      |> Map.get(:params)
+      |> Map.get(to_string(field_name))
+      |> Enum.map(fn {_idx, c} -> c end)
+
+    sorted_related_entries =
+      order_indices
+      |> Enum.map(&Enum.at(related_entries, &1))
+      |> Enum.with_index(&{to_string(&2), Map.put(&1, "sequence", to_string(&2))})
+      |> Enum.into(%{})
+
+    changeset =
+      Map.put(
+        changeset,
+        :params,
+        Map.put(params, to_string(field_name), sorted_related_entries)
+      )
 
     updated_changeset =
-      case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
-        %{type: :has_many} ->
-          # assoc
-          Ecto.Changeset.put_assoc(changeset, field_name, sorted_entries)
-
-        _ ->
-          # embed
-          Ecto.Changeset.put_embed(changeset, field_name, sorted_entries)
+      if params["embeds"] do
+        Ecto.Changeset.cast_embed(changeset, field_name)
+      else
+        Ecto.Changeset.cast_assoc(changeset, field_name)
       end
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
       changeset: updated_changeset,
-      force_validation: true
+      force_validation: false
     )
 
     {:noreply, socket}

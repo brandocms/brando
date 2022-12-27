@@ -383,9 +383,9 @@ defmodule Brando.Blueprint.Forms do
 
   You can also specify a callback function for the `default` key:
 
-        default: &__MODULE__.default_client/1
+        default: &__MODULE__.default_client/2
 
-        def default_client(image) do
+        def default_client(_entry, image) do
           orientation = Brando.Images.get_image_orientation(image)
           %Client{
             name: orientation
