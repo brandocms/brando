@@ -76,8 +76,8 @@ export default app => ({
       Dom.find('#navigation-content .current-user'),
       Dom.all('#navigation-content .navigation-section > *')
     ]
-    gsap.to(targets, { x: 0, stagger: 0.06, ease: 'circ.out' })
-    gsap.to(targets, { opacity: 1, stagger: 0.06, ease: 'none' })
+    gsap.to(targets, { duration: 0.35, x: 0, stagger: 0.02, ease: 'circ.out' })
+    gsap.to(targets, { duration: 0.35, opacity: 1, stagger: 0.02, ease: 'none' })
   },
 
   initializeTippy() {
