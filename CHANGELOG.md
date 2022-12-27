@@ -57,7 +57,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
   You can use a prefab'ed MyAppWeb setup by replacing your `my_app_web.ex`
   content with `use Brando.App`. If you need to customize the content, 
-  you can look at Brando's `lib/brando/app.ex`
+  you can look at Brando's `lib/brando/web.ex`
 
   This will add a `:legacy_controller` you can use with
 
