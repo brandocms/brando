@@ -19,7 +19,8 @@ defmodule Brando.SoftDelete.QueryTest do
              Brando.MigrationTest.Project,
              Brando.Pages.Fragment,
              Brando.Pages.Page,
-             Brando.Users.User
+             Brando.Users.User,
+             Brando.Videos.Video
            ]
   end
 
@@ -37,7 +38,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 0},
              {Brando.Pages.Page, 0},
-             {Brando.Users.User, 0}
+             {Brando.Users.User, 0},
+             {Brando.Videos.Video, 0}
            ]
 
     sixty_days_in_seconds = -60 * 24 * 3600
@@ -74,7 +76,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 1},
-             {Brando.Users.User, 2}
+             {Brando.Users.User, 2},
+             {Brando.Videos.Video, 0}
            ]
 
     deleted_users = Query.list_soft_deleted_entries(Brando.Users.User)
@@ -98,7 +101,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 0},
-             {Brando.Users.User, 0}
+             {Brando.Users.User, 0},
+             {Brando.Videos.Video, 0}
            ]
   end
 end

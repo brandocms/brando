@@ -73,6 +73,26 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users, on_delete: :nothing)
     end
 
+    create table(:videos) do
+      add :url, :text
+      add :source, :text
+      add :filename, :text
+      add :remote_id, :text
+      add :width, :integer
+      add :height, :integer
+      add :thumbnail_url, :text
+      add :autoplay, :boolean
+      add :preload, :boolean
+      add :loop, :boolean
+      add :controls, :boolean
+      add :cdn, :boolean
+      add :config_target, :text
+      add :creator_id, references(:users, on_delete: :nothing)
+      add :cover_image_id, references(:images, on_delete: :nilify_all)
+      add :deleted_at, :utc_datetime
+      timestamps()
+    end
+
     create table(:users_tokens) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
       add :token, :binary, null: false

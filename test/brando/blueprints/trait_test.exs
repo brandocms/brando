@@ -123,7 +123,8 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.MigrationTest.Project,
                Brando.Pages.Fragment,
                Brando.Pages.Page,
-               Brando.Users.User
+               Brando.Users.User,
+               Brando.Videos.Video
              ]
     end
   end
