@@ -143,8 +143,10 @@
         flex-direction: row;
         width: 100%;
         margin-bottom: 15px;
-        padding-left: 0;
         border-left: none;
+        background-color: white;
+        border-radius: 15px;
+        padding: 10px;
 
         .label-wrapper {
           height: 0;
@@ -157,6 +159,11 @@
 
         .subform-tools {
           justify-content: flex-start;
+        }
+
+        .subform-fields {
+          display: flex;
+          width: 100%;
         }
 
         &:first-of-type {
