@@ -394,6 +394,10 @@ code {
   @space column-gap 1;
 }
 
+.gap-5px {
+  @space column-gap 5px;
+}
+
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.35s;
 }

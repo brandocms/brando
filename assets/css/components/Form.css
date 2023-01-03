@@ -164,6 +164,27 @@
       }
     }
 
+    .third {
+      grid-column: 1/span 5;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
+    }
+
+    .third + .third {
+      grid-column: 6/span 5;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
+    }
+
+    .third + .third + .third {
+      grid-column: 11/span 5;
+      @responsive $mobile {
+        grid-column: 1/span 16;
+      }
+    }
+
     .sized {
       grid-column: 1/span 12;
       @responsive $mobile {
