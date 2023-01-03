@@ -135,6 +135,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Layouts
+    {:eex, "lib/application_name_web/components/error_helpers.ex",
+     "lib/application_name_web/components/error_helpers.ex"},
     {:eex, "lib/application_name_web/components/layouts.ex",
      "lib/application_name_web/components/layouts.ex"},
     {:eex, "lib/application_name_web/components/layouts/app.html.heex",
@@ -274,6 +276,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     Mix.shell().info("\nDeleting old assets")
     File.rm_rf("assets")
+    File.rm_rf("lib/#{binding[:application_name]}_web/components/layouts/root.html.heex")
 
     Mix.shell().info("\nMoving test/ to test/unit/")
     File.rename("test", "test/unit")
