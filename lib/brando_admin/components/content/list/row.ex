@@ -459,6 +459,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  def creator(assigns) do
+    ~H"""
+    """
+  end
+
   def child_row(%{schema: schema, entry: entry, child_listing: child_listing} = assigns) do
     entry_schema = entry.__struct__
 
