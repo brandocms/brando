@@ -290,7 +290,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     ~H"""
     <div class="subform-listing">
-      <.live_component module={Input.Image}
+      <.live_component
+        module={Input.Image}
         id={"#{@subform.id}-image_field"}
         field={@image_field}
         uploads={[]}
