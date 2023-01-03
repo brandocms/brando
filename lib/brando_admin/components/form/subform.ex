@@ -122,7 +122,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
     """
   end
 
-  def render(%{subform: %{style: :inline}} = assigns) do
+  # inline
+  def render(%{subform: _} = assigns) do
     ~H"""
     <fieldset>
       <Form.field_base
