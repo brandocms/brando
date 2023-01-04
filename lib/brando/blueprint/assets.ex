@@ -1,6 +1,24 @@
 defmodule Brando.Blueprint.Assets do
   @moduledoc """
   WIP
+
+  ## Asset types
+
+
+  ### File
+
+  #### Example
+
+      assets do
+        asset :pdf, :file, required: true, cfg: [
+          allowed_mimetypes: ["application/pdf"],
+          random_filename: false,
+          upload_path: Path.join("files", "pdfs"),
+          force_filename: "a_single_file.pdf",
+          overwrite: true,
+          size_limit: 16_000_000
+        ]
+      end
   """
   alias Ecto.Changeset
   alias Brando.Blueprint
