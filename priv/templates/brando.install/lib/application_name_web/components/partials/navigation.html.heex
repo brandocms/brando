@@ -14,7 +14,7 @@
       <ul>
         <li 
           :for={menu_item <- @navigation.items} 
-          :if={menu_item.status == 2}>
+          :if={menu_item.status == :published}>
           <a class={active(@conn, "#{menu_item.url}/*")} href={menu_item.url}>
             <%%= menu_item.title %>
           </a>
