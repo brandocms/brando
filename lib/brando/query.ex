@@ -80,7 +80,11 @@ defmodule Brando.Query do
   For simple ordering of the preload association, you can use
   a more complex setup of `{key, {schema, [direction: sort_key]}}`. For instance:
 
-      {:ok, results} = list_posts(%{preload: [{:comments, {Comment, [desc: :inserted_at]}}]})
+      {:ok, results} = list_posts(%{
+        preload: [
+          {:comments, {Comment, [desc: :inserted_at]}}
+        ]
+      })
 
   For slightly more advances ordered preloads you can supply a map:
 
