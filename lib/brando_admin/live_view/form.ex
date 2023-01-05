@@ -146,21 +146,6 @@ defmodule BrandoAdmin.LiveView.Form do
           force_validation: true
         )
 
-      ["gallery", _schema, field_name] ->
-        schema = socket.assigns.schema
-        singular = schema.__naming__().singular
-        target_id = "#{singular}_form_form-#{field_name}"
-
-        image = Map.put(image, :status, :unprocessed)
-
-        # update image in gallery input
-        send_update(BrandoAdmin.Components.Form.Input.Gallery,
-          id: target_id,
-          action: :update_image,
-          updated_image: image,
-          force_validation: true
-        )
-
       _ ->
         nil
     end

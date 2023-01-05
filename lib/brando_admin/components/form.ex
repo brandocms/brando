@@ -1729,11 +1729,28 @@ defmodule BrandoAdmin.Components.Form do
           }
         end
 
-      selection =
-        ((gallery && gallery.gallery_images) || []) ++
-          List.wrap(%Brando.Images.GalleryImage{image_id: image.id, image: image})
+      # TODO: This sucks.
+      current_gallery_images = (gallery && gallery.gallery_images) || []
 
-      selected_images = Enum.map(selection, & &1.image.path)
+      unloaded_image_ids =
+        current_gallery_images
+        |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
+        |> Enum.map(& &1.image_id)
+
+      loaded_image_paths =
+        current_gallery_images
+        |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
+        |> Enum.map(& &1.image.path)
+
+      unloaded_image_paths =
+        if unloaded_image_ids != [] do
+          Brando.Images.list_images!(%{filter: %{ids: unloaded_image_ids}, select: [:path]})
+          |> Enum.map(& &1.path)
+        else
+          []
+        end
+
+      selected_images = loaded_image_paths ++ unloaded_image_paths ++ [image.path]
 
       send_update(BrandoAdmin.Components.ImagePicker,
         id: "image-picker",
