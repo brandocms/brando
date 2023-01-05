@@ -282,7 +282,11 @@ defmodule Brando.Blueprint.Assets do
       ) do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
-        Changeset.put_assoc(changeset, name, nil)
+        if Map.get(opts, :required) do
+          Changeset.cast_assoc(changeset, name, required: true)
+        else
+          Changeset.put_assoc(changeset, name, nil)
+        end
 
       _ ->
         Changeset.cast_assoc(
