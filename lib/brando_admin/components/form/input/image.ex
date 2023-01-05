@@ -333,9 +333,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       <% end %>
       <div :if={@editable} class="image-info">
         <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
-        <%= if @image.title do %>
-          <div class="title"><%= gettext "Caption" %>: <%= @image.title %></div>
-        <% end %>
+        <div :if={@image.title} class="title">
+          <%= gettext "Caption" %>: <%= @image.title %>
+        </div>
         <button
           class="btn-small"
           type="button"
