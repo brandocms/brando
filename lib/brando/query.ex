@@ -84,7 +84,16 @@ defmodule Brando.Query do
 
   For slightly more advances ordered preloads you can supply a map:
 
-      {:ok, results} = list_posts(%{preload: [fragments: %{module: Fragment, order: [asc: :sequence], preload: [creator: :avatar], hide_deleted: true}]})
+      {:ok, results} = list_posts(%{
+        preload: [
+          fragments: %{
+            module: Fragment,
+            order: [asc: :sequence],
+            preload: [creator: :avatar],
+            hide_deleted: true
+          }
+        ]
+      })
 
   You can also supply a preorder query directly:
 
