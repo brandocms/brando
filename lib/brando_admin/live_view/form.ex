@@ -119,6 +119,55 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
+  defp handle_info({image, [:image, :processing], path}, socket) do
+    case String.split(image.config_target, ":") do
+      ["image", image_schema_binary, field_name] ->
+        field_atom = String.to_existing_atom(field_name)
+        schema = socket.assigns.schema
+        image_schema = Module.concat([image_schema_binary])
+
+        full_path =
+          if image_schema != schema do
+            path
+          else
+            [field_atom]
+          end
+
+        singular = schema.__naming__().singular
+        target_id = "#{singular}_form"
+
+        image = Map.put(image, :status, :unprocessed)
+
+        send_update(BrandoAdmin.Components.Form,
+          id: target_id,
+          action: :update_entry_relation,
+          updated_relation: image,
+          path: full_path,
+          force_validation: true
+        )
+
+      ["gallery", _schema, field_name] ->
+        schema = socket.assigns.schema
+        singular = schema.__naming__().singular
+        target_id = "#{singular}_form_form-#{field_name}"
+
+        image = Map.put(image, :status, :unprocessed)
+
+        # update image in gallery input
+        send_update(BrandoAdmin.Components.Form.Input.Gallery,
+          id: target_id,
+          action: :update_image,
+          updated_image: image,
+          force_validation: true
+        )
+
+      _ ->
+        nil
+    end
+
+    {:halt, socket}
+  end
+
   defp handle_info({image, [:image, :updated], path}, socket) do
     case String.split(image.config_target, ":") do
       ["image", image_schema_binary, field_name] ->

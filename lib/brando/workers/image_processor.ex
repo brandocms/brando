@@ -20,6 +20,7 @@ defmodule Brando.Worker.ImageProcessor do
       end)
 
     with {:ok, image} <- Images.get_image(image_id),
+         {:ok, _} <- broadcast_processing(image, field_full_path, :processing),
          {:ok, _} <- Images.Utils.delete_sized_images(image),
          {:ok, user} <- Users.get_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
@@ -34,17 +35,8 @@ defmodule Brando.Worker.ImageProcessor do
       }
 
       case Images.update_image(image, image_params, user) do
-        {:ok, image} ->
-          Phoenix.PubSub.broadcast(
-            Brando.pubsub(),
-            "brando:image:#{image.id}",
-            {image, [:image, :updated], field_full_path}
-          )
-
-          {:ok, image}
-
-        err ->
-          err
+        {:ok, image} -> broadcast_processing(image, field_full_path, :updated)
+        err -> err
       end
     else
       err ->
@@ -54,4 +46,14 @@ defmodule Brando.Worker.ImageProcessor do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(180)
+
+  defp broadcast_status(image, path, status) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:image:#{image.id}",
+      {image, [:image, status], path}
+    )
+
+    {:ok, image}
+  end
 end
