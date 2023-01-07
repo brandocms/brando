@@ -250,7 +250,7 @@ defmodule Brando.Query do
     source = module.__schema__(:source)
 
     singular_schema = module.__naming__().singular
-    singular_schema_atom = String.to_existing_atom(singular_schema)
+    singular_schema_atom = String.to_atom(singular_schema)
 
     quote do
       @spec unquote(:"get_#{singular_schema}")(nil | integer | binary | map()) ::
@@ -471,6 +471,7 @@ defmodule Brando.Query do
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
   def with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
   def with_select(query, fields), do: from(q in query, select: map(q, ^fields))
+
   def with_status(query, "all"), do: query
 
   def with_status(query, "deleted"),
