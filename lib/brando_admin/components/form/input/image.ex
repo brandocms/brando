@@ -33,6 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def mount(socket) do
     {:ok,
      socket
+     |> assign_new(:focal, fn -> {nil, nil} end)
      |> assign_new(:opts, fn -> [] end)
      |> assign_new(:previous_image_id, fn -> nil end)
      |> assign_new(:label, fn -> nil end)
@@ -85,7 +86,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
           {socket
            |> assign(:image, image)
-           |> assign(:image_id, image_id), image}
+           |> assign(:image_id, image_id)
+           |> assign(:focal, {image.focal.x, image.focal.y}), image}
 
         image && to_string(image.id) != to_string(image_id) && image_id != nil ->
           # we have a loaded image, but it does not match the changeset image
@@ -94,7 +96,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
           {socket
            |> assign(:image, image)
-           |> assign(:image_id, image_id), image}
+           |> assign(:image_id, image_id)
+           |> assign(:focal, {image.focal.x, image.focal.y}), image}
 
         image && image.id == nil && image_id == nil ->
           # no loaded image, no image_id in changeset
@@ -114,18 +117,29 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         image_id == nil && image != nil ->
           # reset image to nil
           {socket
+           |> assign(:focal, {nil, nil})
            |> assign(:image_id, nil)
            |> assign(:image, nil), nil}
 
         image_id != socket.assigns.image_id ->
           {assign(socket, :image_id, image_id), image}
 
+        image && socket.assigns.focal != {nil, nil} &&
+            socket.assigns.focal != {image.focal.x, image.focal.y} ->
+          {:ok, image} = Brando.Images.get_image(image_id)
+
+          {socket
+           |> assign(:image, image)
+           |> assign(:focal, {image.focal.x, image.focal.y}), image}
+
         true ->
           if image && image.status == :unprocessed do
             # if the image is unprocessed, we can try to reload and see if it's done.
             {:ok, image} = Brando.Images.get_image(image_id)
 
-            {assign(socket, :image, image), image}
+            {socket
+             |> assign(:image, image)
+             |> assign(:focal, {image.focal.x, image.focal.y}), image}
           else
             {socket, image}
           end
