@@ -50,16 +50,16 @@
     vex-dialog "^1.1.0"
     vex-js "^4.1.0"
 
-"@brandocms/europacss@^0.11.1":
-  version "0.11.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.11.1.tgz#09ea25930a53a803617f8065937d4ff8ce10df91"
-  integrity sha512-ppndE215XDWHjNHZHMiWoDcru5SSXSTc+LubQ3jG8HW6ocAujOTEN4GRu3R9Oz0QjlhIYR8EXX1se11HJtROuQ==
+"@brandocms/europacss@^0.12.0":
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.12.0.tgz#41694ee33f2bbc39904a0b305043330ac4f7a77d"
+  integrity sha512-NXcPdZfvXFP5780+jLWofBBIXybpKjzgXlmcS6uXO5LmXsrA2y+tV3/vkRRUKgCMx541E1eYh2vhHf4pbJsKbQ==
   dependencies:
     lodash "^4.17.21"
     normalize.css "^8.0.1"
     postcss "^7.0.30"
     postcss-extend-rule "^3.0.0"
-    postcss-functions twined/postcss-functions
+    postcss-functions "github:twined/postcss-functions"
     postcss-nested "^4.2.1"
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
@@ -1110,8 +1110,9 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-postcss-functions@twined/postcss-functions:
+"postcss-functions@github:twined/postcss-functions":
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
