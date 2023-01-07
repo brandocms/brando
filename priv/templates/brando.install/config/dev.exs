@@ -28,9 +28,8 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
       ~r"priv/static/css/.*(css)$",
       ~r"priv/static/js/admin/.*(js)$",
       ~r"priv/static/css/admin/.*(css)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/<%= application_name %>_web/{live,views}/.*(ex)$",
-      ~r"lib/<%= application_name %>_web/templates/.*(eex)$"
+      ~r"priv/gettext/(backend|frontend)/.*(po)$",
+      ~r"lib/<%= application_name %>_web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
 
