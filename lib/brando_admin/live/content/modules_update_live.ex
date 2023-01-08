@@ -43,8 +43,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
     <div id="module-form-el" phx-hook="Brando.Form">
       <.form
+        :let={form}
         for={@changeset}
-        let={form}
         phx-change="validate"
         phx-submit="save">
         <div class="block-editor">
@@ -68,9 +68,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         </div>
         <Form.inputs
           :if={input_value(form, :wrapper) in [true, "true"]}
+          :let={%{form: entry}}
           form={form}
           for={:entry_template}
-          let={%{form: entry}}>
+        >
           <div class="entry-template">
             <hr>
             <h2>Entry template</h2>
