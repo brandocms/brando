@@ -498,7 +498,7 @@ defmodule Brando.Blueprint do
 
         :attributes
         |> imported_form_module.__info__()
-        |> Keyword.get(:forms)
+        |> Keyword.get_values(:forms)
         |> Macro.escape()
       end
 
@@ -508,7 +508,7 @@ defmodule Brando.Blueprint do
 
         :attributes
         |> imported_listing_module.__info__()
-        |> Keyword.get(:listings)
+        |> Keyword.get_values(:listings)
         |> Macro.escape()
       end
 
