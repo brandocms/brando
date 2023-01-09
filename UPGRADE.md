@@ -72,7 +72,7 @@
 
 * Svelte's Vite plugin is requiring type = module now so there are some changes to do:
   - Upgrade Vite + plugins > 4
-  - Set `assets/backend/package.json` type to `module` -> `"type" => "module"`
+  - Set `assets/backend/package.json` type to `module` -> `"type": "module"`
   - Rename `assets/backend/postcss.config.js` to `assets/backend/postcss.config.cjs`
   - Rename `assets/backend/europa.config.js` to `assets/backend/europa.config.cjs`
   - Upgrade `assets/backend` europacss to `> 0.12`
