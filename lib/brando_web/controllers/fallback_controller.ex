@@ -14,7 +14,7 @@ defmodule BrandoWeb.FallbackController do
         conn
         |> put_status(:not_found)
         |> put_layout(false)
-        |> put_view(html: Module.concat(Brando.config(:web_module), ErrorHTML))
+        |> put_view(Brando.endpoint().config(:render_errors)[:formats])
         |> render(:"404")
 
       {:ok, {:redirect, {url, code}}} ->
@@ -29,7 +29,7 @@ defmodule BrandoWeb.FallbackController do
     conn
     |> put_status(:unauthorized)
     |> put_layout(false)
-    |> put_view(html: Module.concat(Brando.config(:web_module), ErrorHTML))
+    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
     |> render(:"401")
   end
 end
