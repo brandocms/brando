@@ -234,8 +234,8 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     query_params =
       entry_id
-      |> form.query.()
-      |> add_preloads(schema)
+      |> maybe_query(form)
+      |> add_preloads(schema, form)
       |> Map.put(:with_deleted, true)
 
     updated_entry = apply(context, :"get_#{singular}!", [query_params])
@@ -325,8 +325,8 @@ defmodule BrandoAdmin.Components.Form do
        ) do
     query_params =
       entry_id
-      |> form.query.()
-      |> add_preloads(schema)
+      |> maybe_query(form)
+      |> add_preloads(schema, form)
       |> Map.put(:with_deleted, true)
 
     assign_new(socket, :entry, fn ->
@@ -353,8 +353,8 @@ defmodule BrandoAdmin.Components.Form do
        ) do
     query_params =
       entry_id
-      |> form.query.()
-      |> add_preloads(schema)
+      |> maybe_query(form)
+      |> add_preloads(schema, form)
       |> Map.put(:with_deleted, true)
 
     assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
@@ -367,6 +367,14 @@ defmodule BrandoAdmin.Components.Form do
   #     Map.put(updated_entry, field, updated_blocks)
   #   end)
   # end
+
+  defp maybe_query(id, form) do
+    if form.query do
+      form.query.(id)
+    else
+      %{matches: %{id: id}}
+    end
+  end
 
   defp maybe_initial_validate(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
@@ -387,7 +395,7 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp add_preloads(query_params, schema) do
+  defp add_preloads(query_params, schema, %{query: nil}) do
     default_preloads = Map.get(query_params, :preload, [])
 
     asset_preloads =
@@ -402,7 +410,9 @@ defmodule BrandoAdmin.Components.Form do
 
     rel_preloads =
       schema.__relations__()
-      |> Enum.filter(&(&1.type in [:belongs_to, :has_many] and &1.name != :creator))
+      |> Enum.filter(
+        &(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator)
+      )
       |> Enum.map(fn
         %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
           sub_assets = Enum.map(mod.__assets__(), & &1.name)
@@ -439,6 +449,11 @@ defmodule BrandoAdmin.Components.Form do
       :preload,
       preloads
     )
+  end
+
+  # if we have a custom form_query, just pass it through.
+  defp add_preloads(query_params, _schema, _form) do
+    query_params
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
