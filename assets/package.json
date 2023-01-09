@@ -51,6 +51,7 @@
     "prosemirror-view": "^1.28.2",
     "slugify": "^1.6.5",
     "sortablejs": "^1.15.0",
+    "sweetalert2": "^11.6.16",
     "tippy.js": "^6.3.7",
     "vanilla-click-outside": "^2.1.0",
     "vanilla-picker": "^2.12.1",

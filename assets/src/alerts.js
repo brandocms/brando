@@ -1,29 +1,15 @@
-import vex from 'vex-js'
-import vexDialog from 'vex-dialog'
-
-if (!vex.dialog) {
-  vex.registerPlugin(vexDialog)
-}
-vex.defaultOptions.className = 'vex-theme-b'
+import Swal from 'sweetalert2/dist/sweetalert2.js'
 
 function alertError(title, text, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-danger text-lg">
-        <i class="fa fa-exclamation-circle fa-5x"></i>
-      </div>
-      <div class="text-center text-lg mt-3 mb-3 dialog-title">
-        ${title}
-      </div>
-      <div class="text-center">
-        ${text}
-      </div>
-    `,
-    buttons: [vex.dialog.buttons.YES],
-    callback
+
+  Swal.fire({
+    title,
+    text,
+    icon: 'error',
+    confirmButtonText: 'OK'
   })
 }
 
@@ -31,20 +17,12 @@ function alertInfo(title, text, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-info text-lg">
-        <i class="fa fa-info-circle fa-5x"></i>
-      </div>
-      <div class="text-center text-lg mt-3 mb-3 dialog-title">
-        ${title}
-      </div>
-      <div class="text-center">
-        ${text}
-      </div>
-    `,
-    buttons: [vex.dialog.buttons.YES],
-    callback
+
+  Swal.fire({
+    title,
+    text,
+    icon: 'info',
+    confirmButtonText: 'OK'
   })
 }
 
@@ -52,20 +30,12 @@ function alertSuccess(title, text, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-success text-lg">
-        <i class="fa fa-check-circle fa-5x"></i>
-      </div>
-      <div class="text-center text-lg mt-3 mb-3 dialog-title">
-        ${title}
-      </div>
-      <div class="text-center">
-        ${text}
-      </div>
-    `,
-    buttons: [vex.dialog.buttons.YES],
-    callback
+
+  Swal.fire({
+    title,
+    text,
+    icon: 'success',
+    confirmButtonText: 'OK'
   })
 }
 
@@ -73,61 +43,48 @@ function alertWarning(title, text, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-warning text-lg">
-        <i class="fa fa-exclamation-triangle fa-5x"></i>
-      </div>
-      <div class="text-center text-lg mt-3 mb-3 dialog-title">
-        ${title}
-      </div>
-      <div class="text-center">
-        ${text}
-      </div>
-    `,
-    buttons: [vex.dialog.buttons.YES],
-    callback
+
+  Swal.fire({
+    title,
+    text,
+    icon: 'warning',
+    confirmButtonText: 'OK'
   })
 }
 
-function alertPrompt(text, value, callback) {
+async function alertPrompt(text, value, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-danger text-lg">
-        <i class="fa fa-exclamation-circle fa-5x"></i>
-      </div>
-      <div class="text-center mt-3 mb-3">
-        ${text}
-      </div>
-    `,
-    input: `<input name="data" type="text" value="${value}" />`,
-    showCloseButton: true,
-    buttons: [vex.dialog.buttons.YES],
-    callback
+
+  const { value: data } = await Swal.fire({
+    input: 'text',
+    inputLabel: '',
+    inputValue: value,
+    text: text,
+    confirmButtonText: 'OK'
   })
+  callback({ data })
 }
 
 function alertConfirm(title, text, callback) {
   if (!callback) {
     callback = () => {}
   }
-  vex.dialog.open({
-    unsafeMessage: `
-      <div class="text-center text-warning text-lg">
-        <i class="fa fa-exclamation-triangle fa-5x"></i>
-      </div>
-      <div class="text-center text-lg mt-3 mb-3 dialog-title">
-        ${title}
-      </div>
-      <div class="text-center">
-        ${text}
-      </div>
-    `,
-    buttons: [vex.dialog.buttons.YES, { ...vex.dialog.buttons.NO, text: 'Avbryt' }],
-    callback
+
+  Swal.fire({
+    title,
+    text,
+    icon: 'question',
+    showCancelButton: true,
+    cancelButtonText: 'Cancel/Avbryt',
+    confirmButtonText: 'OK'
+  }).then(result => {
+    if (result.isConfirmed) {
+      callback(true)
+    } else {
+      callback(false)
+    }
   })
 }
 
