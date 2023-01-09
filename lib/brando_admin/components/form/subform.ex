@@ -394,7 +394,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sequenced_subform", %{"ids" => order_indices} = params, socket) do
+  def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
@@ -404,12 +404,20 @@ defmodule BrandoAdmin.Components.Form.Subform do
       changeset
       |> Map.get(:params)
       |> Map.get(to_string(field_name))
-      |> Enum.map(fn {_idx, c} -> c end)
+      |> Enum.map(fn {k, v} -> {String.to_integer(k), v} end)
+      |> Enum.sort()
+
+    params =
+      changeset
+      |> Map.get(:params)
 
     sorted_related_entries =
       order_indices
       |> Enum.map(&Enum.at(related_entries, &1))
-      |> Enum.with_index(&{to_string(&2), Map.put(&1, "sequence", to_string(&2))})
+      |> Enum.with_index()
+      |> Enum.map(fn {{_idx, entry}, sequence} ->
+        {to_string(sequence), Map.put(entry, "sequence", sequence)}
+      end)
       |> Enum.into(%{})
 
     changeset =
