@@ -52,7 +52,7 @@ defmodule Brando.Blueprint.Forms do
   import Brando.Gettext
 
   defstruct name: :default,
-            query: &__MODULE__.default_query/1,
+            query: nil,
             after_save: nil,
             default_params: %{},
             tabs: [],
@@ -125,7 +125,7 @@ defmodule Brando.Blueprint.Forms do
       var!(b_form) = []
       var!(b_transformers) = []
       var!(b_redirect_on_save) = nil
-      var!(b_query) = &Brando.Blueprint.Forms.default_query/1
+      var!(b_query) = nil
 
       unquote(block)
 
@@ -219,6 +219,9 @@ defmodule Brando.Blueprint.Forms do
       def query_with_preloads(id) do
         %{matches: %{id: id}, preload: [:illustrators]}
       end
+
+  If you override the default query, you must supply ALL preloads -- this includes `alternate_entries`
+  as well as images, videos and files.
 
   """
   defmacro form_query(query_fun) do
@@ -616,8 +619,6 @@ defmodule Brando.Blueprint.Forms do
     |> Enum.reject(&is_nil(&1))
     |> List.first()
   end
-
-  def default_query(id), do: %{matches: %{id: id}}
 
   defp find_field(inputs, field) do
     Enum.find(inputs, fn
