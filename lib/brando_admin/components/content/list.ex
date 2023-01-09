@@ -346,7 +346,7 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp maybe_order_by_sequence(list_opts, schema) do
-    if schema.has_trait(Sequenced) do
+    if schema.has_trait(Sequenced) && !Map.get(list_opts, :order) do
       add_order_by(list_opts, [{:asc, :sequence}, {:desc, :inserted_at}])
     else
       list_opts
