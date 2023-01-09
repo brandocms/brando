@@ -589,7 +589,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             ]]} />
 
           <Form.array_inputs
-            let={%{value: array_value, name: array_name}}
+            :let={%{value: array_value, name: array_name}}
             form={@text_block_data}
             for={:extensions}>
             <input type="hidden" name={array_name} value={array_value} />

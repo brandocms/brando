@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <Form.inputs
             form={@form}
             for={@field}
-            let={%{form: identifier_form}}>
+            :let={%{form: identifier_form}}>
             <Input.input type={:hidden} form={identifier_form} field={:id} />
             <Input.input type={:hidden} form={identifier_form} field={:schema} />
             <Input.input type={:hidden} form={identifier_form} field={:status} />

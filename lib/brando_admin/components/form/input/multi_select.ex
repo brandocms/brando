@@ -215,7 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
         <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
-            <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
+            <.labels selected_options={@selected_options} input_options={@input_options} :let={opt}>
               <.get_label opt={opt} />
             </.labels>
           </div>
@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 </div>
                 <div class="selected-labels">
                   <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
-                  <.labels selected_options={@selected_options} input_options={@input_options} let={opt}>
+                  <.labels selected_options={@selected_options} input_options={@input_options} :let={opt}>
                     <.get_label opt={opt} target={@myself} deletable />
                   </.labels>
                 </div>
@@ -303,7 +303,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   <.form
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
-                    let={entry_form}>
+                    :let={entry_form}>
                     <%= for tab <- @select_form.tabs do %>
                       <div
                         class={render_classes(["form-tab", active: true])}

@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           </h2>
 
           <ul>
-            <Form.inputs form={@form} for={:refs} let={%{form: ref, index: idx}}>
+            <Form.inputs form={@form} for={:refs} :let={%{form: ref, index: idx}}>
               <li class="padded">
                 <%= for ref_data <- inputs_for_block(ref, :data) do %>
                   <div>
@@ -278,7 +278,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 ]]}
                               />
                               <Form.array_inputs_from_data
-                                let={%{
+                                :let={%{
                                   id: array_id,
                                   value: array_value,
                                   label: array_label,
@@ -340,7 +340,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               />
 
                               <Form.array_inputs_from_data
-                                let={%{
+                                :let={%{
                                   id: array_id,
                                   value: array_value,
                                   label: array_label,
@@ -392,7 +392,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           <% "media" -> %>
                             <%= for block_data <- inputs_for_block(ref_data, :data) do %>
                               <Form.array_inputs_from_data
-                                let={%{
+                                :let={%{
                                   id: array_id,
                                   value: array_value,
                                   label: array_label,
@@ -438,7 +438,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   />
 
                                   <Form.array_inputs_from_data
-                                    let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
+                                    :let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
                                     form={tpl_data}
                                     for={:formats}
                                     options={[
@@ -503,7 +503,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   />
 
                                   <Form.array_inputs_from_data
-                                    let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
+                                    :let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
                                     form={tpl_data}
                                     for={:formats}
                                     options={[
@@ -556,7 +556,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     data-sortable-selector=".col-var"
                                     data-sortable-handle=".sort-handle"
                                     data-sortable-params={input_value(ref, :name)}>
-                                    <Form.poly_inputs form={tpl_row} for={:cols} let={%{form: var, index: var_idx}}>
+                                    <Form.poly_inputs form={tpl_row} for={:cols} :let={%{form: var, index: var_idx}}>
                                       <div class="col-var draggable" data-id={var_idx}>
                                         <div
                                           class="col-var-toggle"
@@ -709,7 +709,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-id={"sortable-vars#{@entry_form && "-entry-form" || ""}"}
             data-sortable-selector=".var"
             data-sortable-handle=".sort-handle">
-            <Form.poly_inputs form={@form} for={:vars} let={%{form: var, index: idx}}>
+            <Form.poly_inputs form={@form} for={:vars} :let={%{form: var, index: idx}}>
               <li class="var padded sort-handle draggable" data-id={idx}>
                 <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{idx}"}>
                   <.live_component module={RenderVar}

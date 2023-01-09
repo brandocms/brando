@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   </button>
                 </div>
 
-                <Form.poly_inputs form={row} for={:cols} let={%{form: var, index: index}}>
+                <Form.poly_inputs form={row} for={:cols} :let={%{form: var, index: index}}>
                   <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
                 </Form.poly_inputs>
                 <Input.input type={:hidden} form={row} field={:uid} uid={input_value(row, :uid)} id_prefix="table_block_row" />
@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <!-- template row -->
         <%# TODO: key this with @id_prefix and @uid %>
         <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
-          <Form.poly_inputs form={tpl_row} for={:cols} let={%{form: var}}>
+          <Form.poly_inputs form={tpl_row} for={:cols} :let={%{form: var}}>
             <Input.input type={:hidden} form={var} field={:key} />
             <Input.input type={:hidden} form={var} field={:type} />
             <Input.input type={:hidden} form={var} field={:important} />

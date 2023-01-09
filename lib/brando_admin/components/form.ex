@@ -663,7 +663,7 @@ defmodule BrandoAdmin.Components.Form do
           <.form
             id={"#{@id}_form"}
             for={@changeset}
-            let={f}
+            :let={f}
             phx-target={@myself}
             phx-submit="save"
             phx-change="validate">
@@ -794,7 +794,7 @@ defmodule BrandoAdmin.Components.Form do
         :if={@file_changeset}
         id="file-drawer-form"
         for={@file_changeset}
-        let={file_form}
+        :let={file_form}
         phx-submit="save_file"
         phx-change="validate_file"
         phx-target={@myself}>
@@ -863,7 +863,7 @@ defmodule BrandoAdmin.Components.Form do
         :if={@image_changeset}
         id="image-drawer-form"
         for={@image_changeset}
-        let={image_form}
+        :let={image_form}
         phx-submit="save_image"
         phx-change="validate_image"
         phx-target={@myself}>

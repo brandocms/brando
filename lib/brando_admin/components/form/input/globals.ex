@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           <Form.poly_inputs
             form={@form}
             for={@subform.field}
-            let={%{form: var, index: index}}>
+            :let={%{form: var, index: index}}>
             <div
               class="subform-entry flex-row"
               data-id={index}>

@@ -192,20 +192,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     <Form.inputs
                       form={cover_image}
                       for={:focal}
-                      let={%{form: focal_form}}>
+                      :let={%{form: focal_form}}>
                       <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:x} />
                       <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:y} />
                     </Form.inputs>
 
                     <Form.map_inputs
-                      let={%{value: value, name: name}}
+                      :let={%{value: value, name: name}}
                       form={cover_image}
                       for={:sizes}>
                       <input type="hidden" name={"#{name}"} value={"#{value}"} />
                     </Form.map_inputs>
 
                     <Form.array_inputs
-                      let={%{value: array_value, name: array_name}}
+                      :let={%{value: array_value, name: array_name}}
                       form={cover_image}
                       for={:formats}>
                       <input type="hidden" name={array_name} value={array_value} />

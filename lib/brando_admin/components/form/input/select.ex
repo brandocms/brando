@@ -252,7 +252,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   <.form
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
-                    let={entry_form}>
+                    :let={entry_form}>
                     <%= gettext("Create entry") %>
                     <code style="font-family: monospace; font-size: 11px"><pre>
                     <%= inspect @select_changeset, pretty: true %>

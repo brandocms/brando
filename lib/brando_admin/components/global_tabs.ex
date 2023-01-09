@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       phx-target={@target}
       phx-change="validate"
       phx-submit="submit"
-      let={f}>
+      :let={f}>
       <Input.input type={:hidden} form={f} field={:id} />
       <Input.input type={:hidden} form={f} field={:language} />
       <Input.input type={:hidden} form={f} field={:label} />

@@ -122,20 +122,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <Form.inputs
             form={image}
             for={:focal}
-            let={%{form: focal_form}}>
+            :let={%{form: focal_form}}>
             <Input.input type={:hidden} form={focal_form} field={:x} />
             <Input.input type={:hidden} form={focal_form} field={:y} />
           </Form.inputs>
 
           <Form.map_inputs
-            let={%{value: value, name: name}}
+            :let={%{value: value, name: name}}
             form={image}
             for={:sizes}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
           <Form.array_inputs
-            let={%{value: array_value, name: array_name}}
+            :let={%{value: array_value, name: array_name}}
             form={image}
             for={:formats}>
             <input type="hidden" name={array_name} value={array_value} />
@@ -281,7 +281,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             ]]} />
 
           <Form.array_inputs
-            let={%{value: array_value, name: array_name}}
+            :let={%{value: array_value, name: array_name}}
             form={@block_data}
             for={:formats}>
             <input type="hidden" name={array_name} value={array_value} />

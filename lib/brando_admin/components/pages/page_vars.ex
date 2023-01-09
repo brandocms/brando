@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
               <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
               <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
             <% end %>
-            <Form.poly_inputs form={@form} for={@subform.field} let={%{form: var, index: index}}>
+            <Form.poly_inputs form={@form} for={@subform.field} :let={%{form: var, index: index}}>
               <div
                 class="subform-entry flex-row"
                 data-id={index}>
@@ -92,7 +92,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
           </button>
         <% else %>
           <%= unless Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
-            <Form.poly_inputs form={@form} for={@subform.field} let={%{form: var, index: index}}>
+            <Form.poly_inputs form={@form} for={@subform.field} :let={%{form: var, index: index}}>
               <.live_component module={RenderVar}
                 id={"#{@form.id}-#{@subform.field}-render-var-#{index}"}
                 var={var}

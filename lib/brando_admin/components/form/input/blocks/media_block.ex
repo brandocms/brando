@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             </div>
             <div class="buttons">
               <Form.array_inputs
-                let={%{value: array_value, name: array_name}}
+                :let={%{value: array_value, name: array_name}}
                 form={@block_data}
                 for={:available_blocks}>
                 <input type="hidden" name={array_name} value={array_value} />
@@ -88,7 +88,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <Input.input type={:hidden} form={tpl_data} field={:placeholder} uid={@uid} id_prefix="block_data_tpl_picture" />
 
                   <Form.array_inputs
-                    let={%{value: array_value, name: array_name}}
+                    :let={%{value: array_value, name: array_name}}
                     form={@block_data}
                     for={:formats}>
                     <input type="hidden" name={array_name} value={array_value} />
@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <Input.input type={:hidden} form={tpl_data} field={:lightbox} uid={@uid} id_prefix="block_data_tpl_gallery" />
                   <Input.input type={:hidden} form={tpl_data} field={:placeholder} uid={@uid} id_prefix="block_data_tpl_gallery" />
                   <Form.array_inputs
-                    let={%{value: array_value, name: array_name}}
+                    :let={%{value: array_value, name: array_name}}
                     form={@block_data}
                     for={:formats}>
                     <input type="hidden" name={array_name} value={array_value} />
