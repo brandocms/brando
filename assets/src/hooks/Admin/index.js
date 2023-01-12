@@ -1,6 +1,6 @@
 import tippy from 'tippy.js'
 import { Dom, gsap } from '@brandocms/jupiter'
-import { alertError } from '../../alerts'
+import { alertError, alertWarning, alertInfo } from '../../alerts'
 
 export default app => ({
   mounted() {
@@ -11,8 +11,16 @@ export default app => ({
       window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
     }, 1)
 
-    this.handleEvent('b:alert', ({ title, message }) => {
-      alertError(title, message)
+    this.handleEvent('b:alert', ({ title, message, type }) => {
+      if (type === 'error') {
+        alertError(title, message)
+      } else if (type === 'warning') {
+        alertWarning(title, message)
+      } else if (type === 'info') {
+        alertInfo(title, message)
+      } else {
+        alertInfo(title, message)
+      }
     })
 
     this.handleEvent('b:scroll_to_first_error', () => {
