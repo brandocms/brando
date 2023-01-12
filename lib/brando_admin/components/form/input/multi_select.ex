@@ -285,6 +285,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                           "options-option",
                           "option-selected": is_selected?(opt, @selected_options)
                         ])}
+                        data-label={extract_label(opt)}
                         value={get_value(opt)}
                         phx-click={JS.push("select_option", target: @myself)}>
                         <.get_label opt={opt} />
@@ -393,6 +394,18 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_value(%{value: value}), do: value
   defp get_value(%{id: value}), do: value
+
+  defp extract_label(%{opt: %{label: label}}), do: label
+
+  defp extract_label(%{opt: entry}) do
+    identifier = entry.__struct__.__identifier__(entry)
+    identifier.title
+  end
+
+  defp extract_label(entry) do
+    identifier = entry.__struct__.__identifier__(entry)
+    identifier.title
+  end
 
   defp get_label(%{opt: %{label: _}} = assigns) do
     assigns = assign_new(assigns, :deletable, fn -> false end)
