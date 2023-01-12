@@ -13,7 +13,7 @@ export default app => ({
     const optionsToHide = this.$options.filter(option => {
       return !this.includes(option.dataset.label, value)
     })
-    gsap.set(this.$options, { display: 'block' })
+    gsap.set(this.$options, { display: 'flex' })
     if (optionsToHide.length) {
       gsap.set(optionsToHide, { display: 'none' })
     }
