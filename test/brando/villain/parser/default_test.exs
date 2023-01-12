@@ -46,6 +46,7 @@ defmodule Brando.Villain.ParserTest do
   test "video/2 file" do
     assert video(
              %{
+               play_button: false,
                remote_id: "my_video.mp4",
                source: :file,
                width: 300,

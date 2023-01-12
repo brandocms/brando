@@ -96,16 +96,30 @@ defmodule Brando.Villain.Parser do
       defoverridable render_caption: 1
 
       def video_file_options(data) do
+        play_button =
+          if data.play_button == true && data.autoplay == false do
+            Brando.config(:video_play_button_text) || true
+          else
+            false
+          end
+
+        autoplay =
+          if data.autoplay in [nil, false] do
+            false
+          else
+            data.autoplay
+          end
+
         [
           width: data.width,
           height: data.height,
           cover: :svg,
-          autoplay: (data.autoplay == nil && false) || data.autoplay,
+          autoplay: autoplay,
           poster: data.poster || nil,
           preload: (data.preload == nil && true) || data.preload,
           opacity: data.opacity || 0.1,
           controls: Map.get(data, :controls) || false,
-          play_button: data.autoplay == false && (Brando.config(:video_play_button_text) || true)
+          play_button: play_button
         ]
       end
 
