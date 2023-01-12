@@ -1045,8 +1045,9 @@ defmodule BrandoAdmin.Components.Form do
           |> update(:transformer_defaults, &Map.put(&1, key, default))
           |> allow_upload(key,
             accept: ~w(.jpg .jpeg .png .gif .webp .svg),
-            max_entries: 25,
+            max_entries: 50,
             max_file_size: max_size,
+            chunk_timeout: 60_000,
             auto_upload: true,
             progress: &__MODULE__.handle_transformer_progress/3
           )
@@ -1309,7 +1310,11 @@ defmodule BrandoAdmin.Components.Form do
       )
 
     {:noreply,
-     push_event(socket, "b:alert", %{title: gettext("Get shareable link"), message: message})}
+     push_event(socket, "b:alert", %{
+       title: gettext("Get shareable link"),
+       message: message,
+       type: "info"
+     })}
   end
 
   def handle_event(
@@ -1338,7 +1343,11 @@ defmodule BrandoAdmin.Components.Form do
 
         {:error, err} ->
           {:noreply,
-           push_event(socket, "b:alert", %{title: "Live Preview error", message: inspect(err)})}
+           push_event(socket, "b:alert", %{
+             title: "Live Preview error",
+             message: inspect(err),
+             type: "error"
+           })}
       end
     end
   end
@@ -1377,7 +1386,8 @@ defmodule BrandoAdmin.Components.Form do
           "To create and administrate revisions, the entry must be saved at least one time first."
         )
 
-      {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+      {:noreply,
+       push_event(socket, "b:alert", %{title: error_title, message: error_msg, type: "error"})}
     end
   end
 
@@ -1589,7 +1599,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:active_tab, tab_with_first_error)
-    |> push_event("b:alert", %{title: error_title, message: error_msg})
+    |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
   end
 
@@ -1659,7 +1669,8 @@ defmodule BrandoAdmin.Components.Form do
               %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
             )
 
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+          {:noreply,
+           push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
 
         image ->
           image_changeset = change(image)
@@ -1822,7 +1833,8 @@ defmodule BrandoAdmin.Components.Form do
               %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
             )
 
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+          {:noreply,
+           push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
 
         image ->
           socket =
@@ -1923,7 +1935,8 @@ defmodule BrandoAdmin.Components.Form do
               %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
             )
 
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg})}
+          {:noreply,
+           push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
 
         file ->
           file_changeset = change(file)

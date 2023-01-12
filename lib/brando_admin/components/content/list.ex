@@ -104,6 +104,7 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply,
      push_event(socket, "b:alert", %{
        title: gettext("Download ready"),
+       type: "info",
        message: message
      })}
   end
