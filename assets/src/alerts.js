@@ -1,58 +1,58 @@
-import Swal from 'sweetalert2/dist/sweetalert2.js'
+import Swal from 'sweetalert2/src/sweetalert2.js'
 
-function alertError(title, text, callback) {
+function alertError(title, html, callback) {
   if (!callback) {
     callback = () => {}
   }
 
   Swal.fire({
     title,
-    text,
+    html,
     icon: 'error',
     confirmButtonText: 'OK'
   })
 }
 
-function alertInfo(title, text, callback) {
+function alertInfo(title, html, callback) {
   if (!callback) {
     callback = () => {}
   }
 
   Swal.fire({
     title,
-    text,
+    html,
     icon: 'info',
     confirmButtonText: 'OK'
   })
 }
 
-function alertSuccess(title, text, callback) {
+function alertSuccess(title, html, callback) {
   if (!callback) {
     callback = () => {}
   }
 
   Swal.fire({
     title,
-    text,
+    html,
     icon: 'success',
     confirmButtonText: 'OK'
   })
 }
 
-function alertWarning(title, text, callback) {
+function alertWarning(title, html, callback) {
   if (!callback) {
     callback = () => {}
   }
 
   Swal.fire({
     title,
-    text,
+    html,
     icon: 'warning',
     confirmButtonText: 'OK'
   })
 }
 
-async function alertPrompt(text, value, callback) {
+async function alertPrompt(html, value, callback) {
   if (!callback) {
     callback = () => {}
   }
@@ -61,20 +61,20 @@ async function alertPrompt(text, value, callback) {
     input: 'text',
     inputLabel: '',
     inputValue: value,
-    text: text,
+    html,
     confirmButtonText: 'OK'
   })
   callback({ data })
 }
 
-function alertConfirm(title, text, callback) {
+function alertConfirm(title, html, callback) {
   if (!callback) {
     callback = () => {}
   }
 
   Swal.fire({
     title,
-    text,
+    html,
     icon: 'question',
     showCancelButton: true,
     cancelButtonText: 'Cancel/Avbryt',
