@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Select do
   use BrandoAdmin, :live_component
   import Brando.Gettext
+  import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -238,12 +239,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       type="button"
                       class={render_classes([
                         "options-option",
-                        "option-selected": opt.value == @selected_option
+                        "option-selected": is_selected?(opt, @selected_option)
                       ])}
-                      data-label={opt.label}
-                      value={opt.value}
+                      data-label={extract_label(opt)}
+                      value={extract_value(opt)}
                       phx-click={JS.push("select_option", target: @myself) |> JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
-                      <%= opt.label |> raw %>
+                      <.get_label opt={opt} />
                     </button>
                   <% end %>
                 </div>
@@ -309,10 +310,81 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     """
   end
 
+  defp is_selected?(%{value: value}, opt) do
+    value == opt
+  end
+
+  defp is_selected?(%{id: id}, opt) do
+    to_string(id) == opt
+  end
+
+  defp extract_label(%{opt: %{label: label}}), do: label
+
+  defp extract_label(%{opt: entry}) do
+    identifier = entry.__struct__.__identifier__(entry)
+    identifier.title
+  end
+
+  defp extract_label(%{__struct__: _} = entry) do
+    identifier = entry.__struct__.__identifier__(entry)
+    identifier.title
+  end
+
+  defp extract_label(%{label: label}) do
+    label
+  end
+
+  defp extract_label(_) do
+    "No label found"
+  end
+
+  defp extract_value(%{value: value}), do: value
+  defp extract_value(%{id: value}), do: value
+
+  defp get_label(%{opt: %{label: _}} = assigns) do
+    assigns = assign_new(assigns, :deletable, fn -> false end)
+
+    ~H"""
+    — <%= @opt.label %>
+    """
+  end
+
+  defp get_label(%{opt: nil} = assigns) do
+    ~H"""
+    <%= gettext "Missing option" %>
+    """
+  end
+
+  defp get_label(%{opt: entry} = assigns) do
+    identifier = entry.__struct__.__identifier__(entry)
+
+    assigns =
+      assigns
+      |> assign(:entry_id, entry.id)
+      |> assign(:identifier, identifier)
+      |> assign_new(:deletable, fn -> false end)
+      |> assign_new(:target, fn -> nil end)
+
+    ~H"""
+    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <%= if @deletable do %>
+      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+        </svg>
+      </button>
+    <% end %>
+    """
+  end
+
   defp get_label(input_options, selected_option) do
-    case Enum.find(input_options, &(&1.value == selected_option)) do
+    case Enum.find(input_options, fn
+           %{value: value} -> value == selected_option
+           %{id: id} -> to_string(id) == selected_option
+         end) do
       nil -> gettext("No selection")
-      %{label: label} -> label
+      opt -> extract_label(opt)
     end
   end
 
@@ -386,7 +458,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           }
         } = socket
       ) do
-    label = get_label(input_options, value)
     changeset = form.source
 
     module = changeset.data.__struct__
@@ -413,7 +484,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply,
      socket
      |> assign(:selected_option, value)
-     |> assign(:select_label, label)
+     |> assign_label()
      |> push_event("b:validate", %{})}
   end
 
@@ -422,11 +493,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         _,
         %{assigns: %{input_options: input_options}} = socket
       ) do
-    label = get_label(input_options, "")
-
     {:noreply,
      socket
      |> assign(:selected_option, "")
-     |> assign(:select_label, label)}
+     |> assign_label()}
   end
 end

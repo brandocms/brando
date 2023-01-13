@@ -97,33 +97,36 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     }
   }
 
-  svg {
-    margin-right: 9px;
-
-    circle {
-      fill: theme(colors.status.published);
-
-      &.draft {
-        fill: theme(colors.status.draft);
-      }
-
-      &.pending {
-        fill: theme(colors.status.pending);
-      }
-
-      &.published {
+  .options {
+    svg {
+      margin-right: 9px;
+  
+      circle {
         fill: theme(colors.status.published);
-      }
-
-      &.disabled {
-        fill: theme(colors.status.disabled);
-      }
-
-      &.deleted {
-        fill: #111;
+  
+        &.draft {
+          fill: theme(colors.status.draft);
+        }
+  
+        &.pending {
+          fill: theme(colors.status.pending);
+        }
+  
+        &.published {
+          fill: theme(colors.status.published);
+        }
+  
+        &.disabled {
+          fill: theme(colors.status.disabled);
+        }
+  
+        &.deleted {
+          fill: #111;
+        }
       }
     }
   }
+
 
   .select-label {
     display: flex;
