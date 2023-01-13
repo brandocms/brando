@@ -99,6 +99,7 @@ defmodule Brando.HTML.Video do
 
     assigns =
       assigns
+      |> assign(:orientation, orientation)
       |> assign(:aspect_ratio, aspect_ratio)
       |> assign(:autoplay, autoplay)
       |> assign(:controls, controls)
@@ -117,7 +118,7 @@ defmodule Brando.HTML.Video do
     <div
       class="video-wrapper video-file"
       data-smart-video
-      data-orientation={orientation}
+      data-orientation={@orientation}
       style={@aspect_ratio}>
 
       <video
