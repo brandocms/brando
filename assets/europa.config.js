@@ -264,6 +264,16 @@ module.exports = {
           desktop_xl: '20px'
         },
 
+        lede: {
+          iphone: '18px',
+          mobile: '18px',
+          ipad_portrait: '24px',
+          ipad_landscape: '24px',
+          desktop_md: '26px',
+          desktop_lg: '27px',
+          desktop_xl: '28px'
+        },
+
         base: {
           iphone: {
             'font-size': '16px',
