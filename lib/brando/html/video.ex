@@ -86,6 +86,7 @@ defmodule Brando.HTML.Video do
   def video(%{video: src, opts: opts} = assigns) when is_binary(src) do
     width = Keyword.get(opts, :width)
     height = Keyword.get(opts, :height)
+    orientation = (width > height && "landscape") || "portrait"
     opacity = Keyword.get(opts, :opacity, 0)
     preload = Keyword.get(opts, :preload, false)
     preload = if preload == true, do: "auto", else: preload
@@ -116,6 +117,7 @@ defmodule Brando.HTML.Video do
     <div
       class="video-wrapper video-file"
       data-smart-video
+      data-orientation={orientation}
       style={@aspect_ratio}>
 
       <video
