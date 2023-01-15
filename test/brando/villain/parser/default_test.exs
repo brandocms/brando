@@ -35,12 +35,12 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/2 youtube" do
     assert video(%{remote_id: "asdf1234", source: :youtube, autoplay: false}, []) ==
-             "<div class=\"video-wrapper video-embed\" style=\"--aspect-ratio: 0.75\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"//www.youtube.com/embed/asdf1234?autoplay=0&controls=0&showinfo=0&rel=0\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.75\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"//www.youtube.com/embed/asdf1234?autoplay=0&controls=0&showinfo=0&rel=0\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "video/2 vimeo" do
     assert video(%{remote_id: "asdf1234", source: :vimeo}, []) ==
-             "<div class=\"video-wrapper video-embed\" style=\"--aspect-ratio: 0.562\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "video/2 file" do
@@ -58,7 +58,7 @@ defmodule Brando.Villain.ParserTest do
              },
              []
            ) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video style=\"--aspect-ratio: 1.0\">\n\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio-division: 300/300\" data-src=\"my_video.mp4\"></video>\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\"></video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"300\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" style=\"--aspect-ratio: 1.0\">\n\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio-division: 300/300\" data-src=\"my_video.mp4\"></video>\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" role=\"presentation\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\"></video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"300\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n</div>"
   end
 
   test "divider/2" do
