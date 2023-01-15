@@ -2,6 +2,16 @@ defmodule Brando.Blueprint.Listings do
   @moduledoc """
   # Listings
 
+  You can use a `template` or a `field` for displaying data in a listing.
+
+  ## Template
+
+  ```elixir
+  template("<a href="/">{{ entry.title }}</a>", columns: 8)
+  ```
+
+  ## Field
+
   ### Field types
 
   - `:image` - Display an image in the listing
@@ -14,6 +24,18 @@ defmodule Brando.Blueprint.Listings do
     ```
 
     If no `size` is supplied, it will fall back to `thumb`.
+
+  - `:language` -
+
+    ```elixir
+    field :language, :language, columns: 1
+    ```
+
+  - `:url` -
+
+    ```elixir
+    field :url, :url
+    ```
 
   ### Custom query params
 
@@ -35,6 +57,7 @@ defmodule Brando.Blueprint.Listings do
               query: %{},
               fields: [],
               filters: [],
+              sortable: true,
               default_actions: true,
               actions: [],
               selection_actions: [],
@@ -103,6 +126,7 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_exports) = []
       var!(brando_listing_child_listing) = nil
       var!(brando_listing_default_actions) = true
+      var!(brando_listing_sortable) = true
 
       unquote(block)
 
@@ -116,6 +140,7 @@ defmodule Brando.Blueprint.Listings do
           var!(brando_listing_selection_actions),
           var!(brando_listing_child_listing),
           var!(brando_listing_default_actions),
+          var!(brando_listing_sortable),
           var!(brando_listing_exports)
         )
 
@@ -154,6 +179,14 @@ defmodule Brando.Blueprint.Listings do
           location: :keep,
           bind_quoted: [listing_name: listing_name] do
       var!(brando_listing_child_listing) = listing_name
+    end
+  end
+
+  defmacro sortable(boolean) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [boolean: boolean] do
+      var!(brando_listing_sortable) = boolean
     end
   end
 
@@ -216,6 +249,7 @@ defmodule Brando.Blueprint.Listings do
         selection_actions,
         child_listing,
         default_actions,
+        sortable,
         exports
       ) do
     %__MODULE__.Listing{
@@ -227,6 +261,7 @@ defmodule Brando.Blueprint.Listings do
       selection_actions: Enum.map(selection_actions, &Enum.into(&1, %{})),
       child_listing: child_listing,
       default_actions: default_actions,
+      sortable: sortable,
       exports: exports
     }
   end

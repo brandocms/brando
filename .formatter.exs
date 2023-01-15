@@ -44,6 +44,7 @@ locals_without_parens = [
   export: 2,
   schema: 1,
   singular: 1,
+  sortable: 1,
   plural: 1,
   trait: 1,
   trait: 2,

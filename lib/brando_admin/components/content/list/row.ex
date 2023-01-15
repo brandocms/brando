@@ -476,7 +476,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign_new(:alternates?, fn ->
         entry_schema.has_trait(Trait.Translatable) and schema.has_alternates?()
       end)
-      |> assign_new(:sortable?, fn -> entry_schema.has_trait(Trait.Sequenced) end)
       |> assign_new(:creator?, fn -> entry_schema.has_trait(Trait.Creator) end)
       |> assign_new(:status?, fn -> entry_schema.has_trait(Trait.Status) end)
       |> assign_new(:soft_delete?, fn -> entry_schema.has_trait(Trait.SoftDelete) end)
@@ -489,6 +488,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         end
 
         listing
+      end)
+
+    assigns =
+      assign_new(assigns, :sortable?, fn ->
+        assigns.listing.sortable && entry_schema.has_trait(Trait.Sequenced)
       end)
 
     ~H"""

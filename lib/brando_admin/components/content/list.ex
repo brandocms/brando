@@ -27,7 +27,6 @@ defmodule BrandoAdmin.Components.Content.List do
     {:ok,
      socket
      |> assign_defaults(assigns)
-     |> assign_listing(assigns)
      |> assign_filter(assigns)
      |> assign_entries(assigns)}
   end
@@ -214,34 +213,35 @@ defmodule BrandoAdmin.Components.Content.List do
     plural = schema.__naming__().plural
     listings = schema.__listings__()
 
-    socket
-    |> assign(:uri, assigns.uri)
-    |> assign(:params, assigns.params)
-    |> assign(:current_user, assigns.current_user)
-    |> assign_new(:schema, fn -> schema end)
-    |> assign_new(:context, fn -> context end)
-    |> assign_new(:singular, fn -> singular end)
-    |> assign_new(:plural, fn -> plural end)
-    |> assign_new(:listings, fn -> listings end)
-    |> assign_new(:soft_delete?, fn -> schema.has_trait(SoftDelete) end)
-    |> assign_new(:status?, fn -> schema.has_trait(Status) end)
-    |> assign_new(:alternates?, fn ->
-      schema.has_trait(Translatable) and schema.has_alternates?()
-    end)
-    |> assign_new(:sortable?, fn -> schema.has_trait(Sequenced) end)
-    |> assign_new(:creator?, fn -> schema.has_trait(Creator) end)
-  end
+    socket =
+      socket
+      |> assign(:uri, assigns.uri)
+      |> assign(:params, assigns.params)
+      |> assign(:current_user, assigns.current_user)
+      |> assign_new(:schema, fn -> schema end)
+      |> assign_new(:context, fn -> context end)
+      |> assign_new(:singular, fn -> singular end)
+      |> assign_new(:plural, fn -> plural end)
+      |> assign_new(:listings, fn -> listings end)
+      |> assign_new(:soft_delete?, fn -> schema.has_trait(SoftDelete) end)
+      |> assign_new(:status?, fn -> schema.has_trait(Status) end)
+      |> assign_new(:alternates?, fn ->
+        schema.has_trait(Translatable) and schema.has_alternates?()
+      end)
+      |> assign_new(:creator?, fn -> schema.has_trait(Creator) end)
+      |> assign_new(:listing, fn ->
+        listing_name = Map.get(assigns, :listing, :default)
+        listing = Enum.find(listings, &(&1.name == listing_name))
 
-  defp assign_listing(%{assigns: %{listings: listings, schema: schema}} = socket, assigns) do
-    assign_new(socket, :listing, fn ->
-      listing_name = Map.get(assigns, :listing, :default)
-      listing = Enum.find(listings, &(&1.name == listing_name))
+        if !listing do
+          raise "No listing `#{inspect(listing_name)}` found for `#{inspect(schema)}`"
+        end
 
-      if !listing do
-        raise "No listing `#{inspect(listing_name)}` found for `#{inspect(schema)}`"
-      end
+        listing
+      end)
 
-      listing
+    assign_new(socket, :sortable?, fn ->
+      socket.assigns.listing.sortable && schema.has_trait(Sequenced)
     end)
   end
 
@@ -419,7 +419,7 @@ defmodule BrandoAdmin.Components.Content.List do
           class="filter"
           phx-click={@delete}
           phx-value-filter={name}>
-          &times; <%= name %>: <%= value %>
+          &times; <%= name %>: <%= inspect value %>
         </button>
       <% end %>
     </div>
