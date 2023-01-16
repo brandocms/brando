@@ -195,11 +195,15 @@ defmodule Brando.LivePreview do
       end
 
       defp render_layout(:view, layout_module, layout_template, root_assigns) do
-        Phoenix.View.render_to_string(
-          layout_module,
-          layout_template,
-          root_assigns
-        )
+        if Code.ensure_loaded?(Phoenix.View) do
+          Phoenix.View.render_to_string(
+            layout_module,
+            layout_template,
+            root_assigns
+          )
+        else
+          raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
+        end
       end
 
       defp render_inner_content(:html, tpl_module, tpl, render_assigns) do
@@ -209,8 +213,12 @@ defmodule Brando.LivePreview do
       end
 
       defp render_inner_content(:view, tpl_module, tpl, render_assigns) do
-        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
-        Phoenix.View.render(tpl_module, tpl, render_assigns)
+        if Code.ensure_loaded?(Phoenix.View) do
+          tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+          Phoenix.View.render(tpl_module, tpl, render_assigns)
+        else
+          raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
+        end
       end
     end
   end
