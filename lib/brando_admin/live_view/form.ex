@@ -172,6 +172,12 @@ defmodule BrandoAdmin.LiveView.Form do
 
         send_update(BrandoAdmin.Components.Form,
           id: target_id,
+          action: :image_processed,
+          image_id: image.id
+        )
+
+        send_update(BrandoAdmin.Components.Form,
+          id: target_id,
           action: :update_entry_relation,
           updated_relation: image,
           path: full_path,
