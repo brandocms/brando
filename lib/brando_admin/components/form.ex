@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Components.Form do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules", link: true)
     end
 
+    # TODO: maybe check oban queue for :processing_images?
     {:ok,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
@@ -38,6 +39,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
+     |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
      |> assign(:has_meta?, false)
@@ -47,6 +49,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)}
+  end
+
+  def update(%{action: :image_processed, image_id: id}, socket) do
+    {:ok, update(socket, :processing_images, &Enum.reject(&1, fn proc_id -> proc_id == id end))}
   end
 
   # edit_file
@@ -129,6 +135,39 @@ defmodule BrandoAdmin.Components.Form do
         %{
           action: :update_entry_relation,
           updated_relation: updated_relation,
+          path: [:transformer, relation_key, asset_key, image_id],
+          force_validation: true
+        },
+        socket
+      ) do
+    schema = socket.assigns.schema
+    changeset = socket.assigns.changeset
+    entries = get_field(changeset, relation_key)
+    assoc_type = schema.__relation__(relation_key).type
+
+    case Enum.find_index(entries, &(Map.get(&1, :"#{asset_key}_id") == image_id)) do
+      nil ->
+        {:ok, socket}
+
+      idx ->
+        updated_entries =
+          put_in(entries, [Access.at(idx), Access.key(asset_key)], updated_relation)
+
+        updated_changeset =
+          (assoc_type == :has_many && put_assoc(changeset, relation_key, updated_entries)) ||
+            put_embed(changeset, relation_key, updated_entries)
+
+        {:ok,
+         socket
+         |> assign(:changeset, updated_changeset)
+         |> force_svelte_remounts()}
+    end
+  end
+
+  def update(
+        %{
+          action: :update_entry_relation,
+          updated_relation: updated_relation,
           path: path,
           force_validation: true
         },
@@ -136,6 +175,7 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     entry_or_default = entry || struct(schema)
     access_path = Brando.Utils.build_access_path(path)
+
     updated_entry = put_in(entry_or_default, access_path, updated_relation)
 
     {:ok,
@@ -541,18 +581,13 @@ defmodule BrandoAdmin.Components.Form do
         class="brando-form"
         phx-hook="Brando.Form">
         <div class="form-content">
-
-          <div
-            :if={@header}
-            class="form-header">
+          <div :if={@header} class="form-header">
             <h1>
               <%= render_slot(@header) %>
             </h1>
           </div>
 
-          <div
-            :if={@instructions}
-            class="form-instructions">
+          <div :if={@instructions} class="form-instructions">
             <%= render_slot(@instructions) %>
           </div>
 
@@ -1806,6 +1841,9 @@ defmodule BrandoAdmin.Components.Form do
     socket = assign(socket, :processing, upload_entry.progress)
 
     if upload_entry.done? do
+      entries = get_in(socket.assigns.uploads, [key, Access.key(:entries)])
+      all_done? = Enum.all?(entries, &(&1.progress == 100))
+
       [relation_key, asset_key] = String.split(to_string(key), "|")
       relation = schema.__relation__(String.to_existing_atom(relation_key))
       relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
@@ -1849,7 +1887,13 @@ defmodule BrandoAdmin.Components.Form do
                 assign(socket, :processing, true)
             end
 
-          Brando.Images.Processing.queue_processing(image, current_user)
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+
+          Brando.Images.Processing.queue_processing(
+            image,
+            current_user,
+            {:transformer, relation_key, asset_key, image.id}
+          )
 
           # get the default struct for the transformer
           transformer_defaults = socket.assigns.transformer_defaults
@@ -1879,10 +1923,15 @@ defmodule BrandoAdmin.Components.Form do
               _ -> put_embed(changeset, relation_atom, updated_field)
             end
 
+          if all_done? do
+            require Logger
+            Logger.error("== ALL done. how do we refresh?")
+          end
+
           {:noreply,
            socket
-           |> assign(:changeset, updated_changeset)
-           |> push_event("b:validate", %{})}
+           |> update(:processing_images, &[image.id | &1])
+           |> assign(:changeset, updated_changeset)}
       end
     else
       {:noreply, socket}
