@@ -61,7 +61,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
     upload_key = :"#{assigns.subform.field}|#{transform_field}"
     _ = :"#{assigns.subform.field}|#{transform_field}_id"
     upload_field = Map.get(assigns.uploads, upload_key)
-    assigns = assign(assigns, :upload_field, upload_field)
+
+    assigns =
+      assigns
+      |> assign(:upload_field, upload_field)
+      |> assign(:transform_field, transform_field)
 
     ~H"""
     <fieldset>
@@ -116,6 +120,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         <div class="actions">
           <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
           <.transformer_upload upload_field={@upload_field} />
+          <.sort_by_filename on_click={JS.push("sort_by_filename", value: %{transform_field: @transform_field}, target: @myself)} />
         </div>
       </Form.field_base>
     </fieldset>
@@ -232,6 +237,21 @@ defmodule BrandoAdmin.Components.Form.Subform do
     """
   end
 
+  def sort_by_filename(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="add-entry-button"
+      phx-click={@on_click}
+      phx-page-loading>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="16" height="16" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />
+      </svg>
+      <%= gettext("Sort by filename") %>
+    </button>
+    """
+  end
+
   def subentry_sequence(assigns) do
     ~H"""
     <button type="button" class="subform-handle">
@@ -298,8 +318,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
         uploads={[]}
         form={@subform}
         label={:hidden}
+        editable={false}
         square
-        editable={false} />
+      />
       <div class="subform-listing-row">
         <%= Phoenix.LiveView.HTMLEngine.component(
           @subform_config.listing,
@@ -394,7 +415,81 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
+  def handle_event("sort_by_filename", %{"transform_field" => transform_field}, socket) do
+    field_name = socket.assigns.subform.field
+    changeset = socket.assigns.form.source
+    module = changeset.data.__struct__
+    %{type: rel_type} = module.__relation__(field_name)
+    form_id = "#{module.__naming__().singular}_form"
+
+    entries = Ecto.Changeset.get_field(changeset, field_name)
+
+    order_indices =
+      entries
+      |> Enum.with_index()
+      |> Enum.sort(
+        &(get_in(elem(&1, 0), [
+            Access.key(String.to_existing_atom(transform_field)),
+            Access.key(:path)
+          ]) <=
+            get_in(elem(&2, 0), [
+              Access.key(String.to_existing_atom(transform_field)),
+              Access.key(:path)
+            ]))
+      )
+      |> Enum.map(fn {_, idx} -> idx end)
+
+    params = changeset |> Map.get(:params)
+
+    case Map.get(params, to_string(field_name)) do
+      "" ->
+        {:noreply, socket}
+
+      entry_params ->
+        related_entries =
+          entry_params
+          |> Enum.map(fn {k, v} -> {String.to_integer(k), v} end)
+          |> Enum.sort()
+
+        params =
+          changeset
+          |> Map.get(:params)
+
+        sorted_related_entries =
+          order_indices
+          |> Enum.map(&Enum.at(related_entries, &1))
+          |> Enum.with_index()
+          |> Enum.map(fn {{_idx, entry}, sequence} ->
+            {to_string(sequence), Map.put(entry, "sequence", sequence)}
+          end)
+          |> Enum.into(%{})
+
+        changeset =
+          Map.put(
+            changeset,
+            :params,
+            Map.put(params, to_string(field_name), sorted_related_entries)
+          )
+
+        updated_changeset =
+          if rel_type == :has_many do
+            Ecto.Changeset.cast_assoc(changeset, field_name)
+          else
+            Ecto.Changeset.cast_embed(changeset, field_name)
+          end
+
+        send_update(BrandoAdmin.Components.Form,
+          id: form_id,
+          action: :update_changeset,
+          changeset: updated_changeset,
+          force_validation: false
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
     field_name = socket.assigns.subform.field
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
@@ -428,7 +523,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       )
 
     updated_changeset =
-      if params["embeds"] do
+      if event_params["embeds"] do
         Ecto.Changeset.cast_embed(changeset, field_name)
       else
         Ecto.Changeset.cast_assoc(changeset, field_name)
