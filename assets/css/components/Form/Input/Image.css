@@ -46,6 +46,7 @@
     .image-wrapper-compact {
       img {
         border-radius: 0;
+        height: auto;
       }
     }
   }
