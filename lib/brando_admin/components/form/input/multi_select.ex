@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign_new(:selected_options, fn -> get_selected_options(assigns.form, assigns.field) end)
+     |> assign(:selected_options, get_selected_options(assigns.form, assigns.field))
      |> assign_input_options()
      |> assign_label()
      |> assign(:narrow, narrow)
@@ -76,9 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:entry_form, entry_form)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
-     |> assign_new(:modal_id, fn ->
-       "select-#{assigns.id}-modal"
-     end)}
+     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
   end
 
   defp get_selected_options(form, field) do
