@@ -64,20 +64,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.47.0":
-  version "3.47.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.47.0.tgz#a5a7aec048d7d019312a0f2432cdb428c15641b3"
-  integrity sha512-90mjFVVoHUtP7KiAanXk2m3olsRc6DHNiweb0t5DsErSi3c68Tm7k7Sf9a75IJiZZ8CbuFYB4khTnXNSg23Oyw==
-  dependencies:
-    "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^4.0.0-beta.0"
-    gsap "3.11.0"
-    lodash.defaultsdeep "^4.6.1"
-
-"@brandocms/jupiter@^3.48.0":
-  version "3.48.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.0.tgz#a1f000664e810089830aaf3add784e4aedaf906d"
-  integrity sha512-jS4ZOzCQ1CN5W5wq9X6k0l2FBhB0bm/V9XWZ8/piNd1k28bQwWXl4F0I2DwULTtSzYaw/6Ho5x3lSaYo7zG1bA==
+"@brandocms/jupiter@^3.47.0", "@brandocms/jupiter@^3.48.1":
+  version "3.48.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.1.tgz#d422d8cae14687fa85f86669fe1134dde093f20f"
+  integrity sha512-2bY674iSj5Tr89zoFaQd2pDvPFCx091gGwL0SUvJl44c7hJEuUpQrxND2JcBagvNgMyUoQBahzDZcDKA49OZOQ==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -891,11 +881,6 @@ graceful-fs@^4.1.3:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.8.tgz#e412b8d33f5e006593cbd3cee6df9f2cebbe802a"
   integrity sha512-qkIilPUYcNhJpd33n0GBXTB1MMPp14TxEsEs0pTrsSVucApsYzW5V+Q8Qxhik6KU3evy+qkAAowTByymK0avdg==
 
-gsap@3.11.0:
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.11.0.tgz#5a45da0f35b49e2c479e1e274feb6ac51e86478b"
-  integrity sha512-TV5aFGqXht+0o/CelnhCikSe3QGeG+q1XA/fyFFsMzesILHgWgFWIz0NuXIgcMaL5h7MG2l+j0BTupS5YyYkrw==
-
 gsap@3.11.3:
   version "3.11.3"
   resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.11.3.tgz#ca5be827f56fe8d5720e08343390f74fb89a05f3"
@@ -1109,8 +1094,9 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
