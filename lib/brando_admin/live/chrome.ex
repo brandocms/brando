@@ -30,8 +30,8 @@ defmodule BrandoAdmin.Chrome do
       {:ok,
        socket
        |> assign(:socket_connected, false)
-       |> assign(:selected_presence, nil)
-       |> assign(:presences, %{})}
+       |> assign(:presences, %{})
+       |> assign(:selected_presence, nil)}
     end
   end
 
