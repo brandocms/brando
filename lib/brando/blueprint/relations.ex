@@ -66,6 +66,7 @@ defmodule Brando.Blueprint.Relations do
   |
 
   import Ecto.Changeset
+  import Ecto.Query
   import Brando.M2M
   import Brando.Blueprint.Utils
   alias Brando.Blueprint.Relation
@@ -173,7 +174,14 @@ defmodule Brando.Blueprint.Relations do
         end
 
       _ ->
-        cast_collection(changeset, name, Brando.repo(), module, Map.get(opts, :required, false))
+        cast_collection(
+          changeset,
+          name,
+          fn ids ->
+            Brando.repo().all(from m in module, where: m.id in ^ids)
+          end,
+          Map.get(opts, :required, false)
+        )
     end
   end
 
