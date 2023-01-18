@@ -422,71 +422,43 @@ defmodule BrandoAdmin.Components.Form.Subform do
     %{type: rel_type} = module.__relation__(field_name)
     form_id = "#{module.__naming__().singular}_form"
 
-    entries = Ecto.Changeset.get_field(changeset, field_name)
+    related_entries = get_change_or_field(changeset, field_name)
 
     order_indices =
-      entries
+      related_entries
+      |> Enum.map(fn entry ->
+        entry
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.get_field(String.to_existing_atom(transform_field))
+        |> Map.get(:path)
+      end)
       |> Enum.with_index()
-      |> Enum.sort(
-        &(get_in(elem(&1, 0), [
-            Access.key(String.to_existing_atom(transform_field)),
-            Access.key(:path)
-          ]) <=
-            get_in(elem(&2, 0), [
-              Access.key(String.to_existing_atom(transform_field)),
-              Access.key(:path)
-            ]))
-      )
+      |> Enum.sort()
       |> Enum.map(fn {_, idx} -> idx end)
 
-    params = changeset |> Map.get(:params)
+    sorted_related_entries =
+      order_indices
+      |> Enum.map(&Enum.at(related_entries, &1))
+      |> Enum.with_index()
+      |> Enum.map(fn {entry, idx} ->
+        Ecto.Changeset.change(entry, %{sequence: idx})
+      end)
 
-    case Map.get(params, to_string(field_name)) do
-      "" ->
-        {:noreply, socket}
+    updated_changeset =
+      if rel_type == :embeds_many do
+        Ecto.Changeset.put_embed(changeset, field_name, sorted_related_entries)
+      else
+        Ecto.Changeset.put_assoc(changeset, field_name, sorted_related_entries)
+      end
 
-      entry_params ->
-        related_entries =
-          entry_params
-          |> Enum.map(fn {k, v} -> {String.to_integer(k), v} end)
-          |> Enum.sort()
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset,
+      force_validation: false
+    )
 
-        params =
-          changeset
-          |> Map.get(:params)
-
-        sorted_related_entries =
-          order_indices
-          |> Enum.map(&Enum.at(related_entries, &1))
-          |> Enum.with_index()
-          |> Enum.map(fn {{_idx, entry}, sequence} ->
-            {to_string(sequence), Map.put(entry, "sequence", sequence)}
-          end)
-          |> Enum.into(%{})
-
-        changeset =
-          Map.put(
-            changeset,
-            :params,
-            Map.put(params, to_string(field_name), sorted_related_entries)
-          )
-
-        updated_changeset =
-          if rel_type == :has_many do
-            Ecto.Changeset.cast_assoc(changeset, field_name)
-          else
-            Ecto.Changeset.cast_embed(changeset, field_name)
-          end
-
-        send_update(BrandoAdmin.Components.Form,
-          id: form_id,
-          action: :update_changeset,
-          changeset: updated_changeset,
-          force_validation: false
-        )
-
-        {:noreply, socket}
-    end
+    {:noreply, socket}
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
