@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_selected_options(form, field) do
     raw_values =
-      case input_value(form, field) do
+      case Ecto.Changeset.get_field(form.source, field) do
         "" -> []
         nil -> []
         %Ecto.Association.NotLoaded{} -> []
@@ -515,28 +515,36 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  def handle_event(
-        "select_option",
-        %{"value" => value},
-        %{
-          assigns: %{
-            selected_options: selected_options
-          }
-        } = socket
-      ) do
-    selected_options =
-      case Enum.find(selected_options, &(&1 == value)) do
-        nil ->
-          [value | selected_options]
+  def handle_event("select_option", %{"value" => value}, socket) do
+    form = socket.assigns.form
+    field = socket.assigns.field
+    changeset = form.source
+    module = changeset.data.__struct__
+    relation = module.__relation__(field)
+    form_id = "#{module.__naming__().singular}_form"
 
-        _ ->
-          Enum.reject(selected_options, &(&1 == value))
-      end
+    updated_changeset =
+      update_in(changeset, [Access.key(:params), to_string(field)], fn current_options ->
+        case Enum.find(current_options, &(&1 == value)) do
+          nil ->
+            [value | current_options]
 
-    {:noreply,
-     socket
-     |> assign(:selected_options, selected_options)
-     |> assign_label()}
+          _ ->
+            Enum.reject(current_options, &(&1 == value))
+        end
+      end)
+
+    updated_changeset =
+      Brando.Blueprint.Relations.run_cast_relation(relation, updated_changeset, nil)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset,
+      force_validation: false
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
