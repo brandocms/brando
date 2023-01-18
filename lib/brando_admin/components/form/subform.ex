@@ -495,47 +495,35 @@ defmodule BrandoAdmin.Components.Form.Subform do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    related_entries =
-      changeset
-      |> Map.get(:params)
-      |> Map.get(to_string(field_name))
-      |> Enum.map(fn {k, v} -> {String.to_integer(k), v} end)
-      |> Enum.sort()
-
-    params =
-      changeset
-      |> Map.get(:params)
+    related_entries = get_change_or_field(changeset, field_name)
 
     sorted_related_entries =
       order_indices
       |> Enum.map(&Enum.at(related_entries, &1))
       |> Enum.with_index()
-      |> Enum.map(fn {{_idx, entry}, sequence} ->
-        {to_string(sequence), Map.put(entry, "sequence", sequence)}
+      |> Enum.map(fn {entry, idx} ->
+        Ecto.Changeset.change(entry, %{sequence: idx})
       end)
-      |> Enum.into(%{})
-
-    changeset =
-      Map.put(
-        changeset,
-        :params,
-        Map.put(params, to_string(field_name), sorted_related_entries)
-      )
 
     updated_changeset =
       if event_params["embeds"] do
-        Ecto.Changeset.cast_embed(changeset, field_name)
+        Ecto.Changeset.put_embed(changeset, field_name, sorted_related_entries)
       else
-        Ecto.Changeset.cast_assoc(changeset, field_name)
+        Ecto.Changeset.put_assoc(changeset, field_name, sorted_related_entries)
       end
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: false
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
+  end
+
+  defp get_change_or_field(changeset, field) do
+    with nil <- Ecto.Changeset.get_change(changeset, field) do
+      Ecto.Changeset.get_field(changeset, field, [])
+    end
   end
 end
