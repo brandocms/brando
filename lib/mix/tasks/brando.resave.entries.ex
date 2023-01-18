@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Brando.Resave.Entries do
 
     for entry <- entries do
       IO.write([
-        "* [#{singular}:#{entry.id}] → #{blueprint.__identifier__(entry).title} ... "
+        "* [#{singular}:#{entry.id}] → #{blueprint.__identifier__(entry, skip_cover: true).title} ... "
       ])
 
       changeset = Ecto.Changeset.change(entry)

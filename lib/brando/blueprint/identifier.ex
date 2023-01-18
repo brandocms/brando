@@ -17,7 +17,8 @@ defmodule Brando.Blueprint.Identifier do
 
     quote location: :keep do
       @parsed_identifier unquote(parsed_identifier)
-      def __identifier__(entry) do
+      def __identifier__(entry, opts \\ []) do
+        skip_cover = Keyword.get(opts, :skip_cover, false)
         context = Villain.get_base_context(entry)
         {result, _} = Liquex.Render.render([], @parsed_identifier, context)
         title = Enum.join(result)
@@ -29,7 +30,7 @@ defmodule Brando.Blueprint.Identifier do
         language = Map.get(entry, :language, nil)
         absolute_url = __MODULE__.__absolute_url__(entry)
         admin_url = __MODULE__.__admin_url__(entry)
-        cover = Brando.Blueprint.Identifier.extract_cover(entry)
+        cover = if skip_cover, do: nil, else: Brando.Blueprint.Identifier.extract_cover(entry)
 
         %Brando.Content.Identifier{
           id: entry.id,

@@ -321,12 +321,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   defp extract_label(%{opt: %{label: label}}), do: label
 
   defp extract_label(%{opt: entry}) do
-    identifier = entry.__struct__.__identifier__(entry)
+    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
     identifier.title
   end
 
   defp extract_label(%{__struct__: _} = entry) do
-    identifier = entry.__struct__.__identifier__(entry)
+    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
     identifier.title
   end
 
@@ -356,7 +356,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   defp get_label(%{opt: entry} = assigns) do
-    identifier = entry.__struct__.__identifier__(entry)
+    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
 
     assigns =
       assigns
