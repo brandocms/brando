@@ -466,6 +466,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
+    embed? = event_params["embeds"]
 
     related_entries = get_change_or_field(changeset, field_name)
 
@@ -474,11 +475,15 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> Enum.map(&Enum.at(related_entries, &1))
       |> Enum.with_index()
       |> Enum.map(fn {entry, idx} ->
-        Ecto.Changeset.change(entry, %{sequence: idx})
+        if embed? do
+          entry
+        else
+          Ecto.Changeset.change(entry, %{sequence: idx})
+        end
       end)
 
     updated_changeset =
-      if event_params["embeds"] do
+      if embed? do
         Ecto.Changeset.put_embed(changeset, field_name, sorted_related_entries)
       else
         Ecto.Changeset.put_assoc(changeset, field_name, sorted_related_entries)
