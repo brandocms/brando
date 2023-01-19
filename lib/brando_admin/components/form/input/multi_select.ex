@@ -59,12 +59,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     default = Keyword.get(assigns.opts, :default)
     entry_form = Keyword.get(assigns.opts, :form)
     update_relation = Keyword.get(assigns.opts, :update_relation)
+    changeset = assigns.form.source
 
     {:ok,
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign(:selected_options, get_selected_options(assigns.form, assigns.field))
+     |> assign(:selected_options, get_selected_options(changeset, assigns.field))
      |> assign_input_options()
      |> assign_label()
      |> assign(:narrow, narrow)
@@ -79,28 +80,40 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
   end
 
-  defp get_selected_options(form, field) do
-    raw_values =
-      case Ecto.Changeset.get_field(form.source, field) do
-        "" -> []
-        nil -> []
-        %Ecto.Association.NotLoaded{} -> []
-        val -> val
-      end
+  defp get_selected_options(changeset, field) do
+    selected_options = get_change_or_field(changeset, field) || []
 
-    Enum.map(raw_values, fn
-      %Ecto.Changeset{} = changeset ->
-        changeset
-        |> Ecto.Changeset.apply_changes()
-        |> Map.get(:id)
-        |> to_string()
+    selected_changesets =
+      Enum.map(selected_options, fn opt ->
+        opt |> Ecto.Changeset.change()
+      end)
 
-      %{id: id} ->
-        to_string(id)
+    require Logger
+    Logger.error(inspect(Enum.map(selected_changesets, & &1.data.id), pretty: true))
 
-      val ->
-        val
-    end)
+    selected_changesets
+
+    # raw_values =
+    #   case Ecto.Changeset.get_field(form.source, field) do
+    #     "" -> []
+    #     nil -> []
+    #     %Ecto.Association.NotLoaded{} -> []
+    #     val -> val
+    #   end
+
+    # Enum.map(raw_values, fn
+    #   %Ecto.Changeset{} = changeset ->
+    #     changeset
+    #     |> Ecto.Changeset.apply_changes()
+    #     |> Map.get(:id)
+    #     |> to_string()
+
+    #   %{id: id} ->
+    #     to_string(id)
+
+    #   val ->
+    #     val
+    # end)
   end
 
   def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
@@ -207,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               field={@field}
               id={"#{@form.name}-#{@field}-#{maybe_slug(opt)}"}
               name={"#{@form.name}[#{@field}][]"}
-              value={opt} />
+              value={extract_value(opt)} />
           <% end %>
         <% end %>
 
@@ -375,6 +388,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
+  defp get_opt(%Ecto.Changeset{data: %{id: wanted_id}}, opts) do
+    Enum.find(opts, fn
+      %{id: found_id} -> found_id == wanted_id
+    end)
+  end
+
   defp get_opt(opt, opts) do
     Enum.find(opts, fn
       %{value: value} -> to_string(value) == opt
@@ -382,9 +401,24 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
+  defp is_selected?(%Ecto.Changeset{data: %{id: id}}, opts) do
+    require Logger
+
+    Logger.error("""
+
+    is_selected? #{id}
+
+    opts: #{inspect(opts, pretty: true)}
+
+    """)
+
+    false
+  end
+
   defp is_selected?(%{value: value}, opts), do: value in opts
   defp is_selected?(%{id: id}, opts), do: to_string(id) in opts
 
+  defp extract_value(%Ecto.Changeset{data: %{id: id}}), do: id
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
   defp extract_label(%{opt: %{label: label}}), do: label
@@ -415,6 +449,30 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
+  defp get_label(%{opt: %Ecto.Changeset{} = changeset} = assigns) do
+    entry = changeset.data
+    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
+
+    assigns =
+      assigns
+      |> assign(:entry_id, entry.id)
+      |> assign(:identifier, identifier)
+      |> assign_new(:deletable, fn -> false end)
+      |> assign_new(:target, fn -> nil end)
+
+    ~H"""
+    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <%= if @deletable do %>
+      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+        </svg>
+      </button>
+    <% end %>
+    """
+  end
+
   defp get_label(%{opt: entry} = assigns) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
 
@@ -438,8 +496,16 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  defp maybe_slug(opt) when is_integer(opt), do: opt
-  defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
+  defp maybe_slug(%Ecto.Changeset{data: %{id: id}}) do
+    require Logger
+    Logger.error("id=#{id}")
+    id
+  end
+
+  # defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
+  # defp maybe_slug(%{id: id}), do: id
+  # defp maybe_slug(opt) when is_integer(opt), do: opt
+  # defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 
   defp get_label(_, []) do
     gettext("<None selected>")
@@ -516,38 +582,44 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def handle_event("select_option", %{"value" => value}, socket) do
-    form = socket.assigns.form
-    field = socket.assigns.field
-    changeset = form.source
-    module = changeset.data.__struct__
-    relation = module.__relation__(field)
-    form_id = "#{module.__naming__().singular}_form"
+    # form = socket.assigns.form
+    # field = socket.assigns.field
+    # changeset = form.source
+    # module = changeset.data.__struct__
 
-    updated_changeset =
-      update_in(changeset, [Access.key(:params), to_string(field)], fn current_options ->
-        if current_options == "" do
-          [value]
-        else
-          case Enum.find(current_options, &(&1 == value)) do
-            nil ->
-              [value | current_options]
+    # relation =
+    #   if {:__relation__, 1} in module.__info__(:functions) do
+    #     module.__relation__(field)
+    #   end
 
-            _ ->
-              Enum.reject(current_options, &(&1 == value))
-          end
-        end
-      end)
+    # form_id = "#{module.__naming__().singular}_form"
 
-    updated_changeset =
-      Brando.Blueprint.Relations.run_cast_relation(relation, updated_changeset, nil)
+    # updated_changeset =
+    #   update_in(changeset, [Access.key(:params), to_string(field)], fn current_options ->
+    #     if current_options == "" do
+    #       [value]
+    #     else
+    #       case Enum.find(current_options, &(&1 == value)) do
+    #         nil ->
+    #           [value | current_options]
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: false
-    )
+    #         _ ->
+    #           Enum.reject(current_options, &(&1 == value))
+    #       end
+    #     end
+    #   end)
 
+    # updated_changeset = if relation do
+    #   Brando.Blueprint.Relations.run_cast_relation(relation, updated_changeset, nil)
+
+    # send_update(BrandoAdmin.Components.Form,
+    #   id: form_id,
+    #   action: :update_changeset,
+    #   changeset: updated_changeset,
+    #   force_validation: false
+    # )
+
+    # {:noreply, socket}
     {:noreply, socket}
   end
 
@@ -567,5 +639,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("hide_form", _, socket) do
     {:noreply, assign(socket, :creating, false)}
+  end
+
+  defp get_change_or_field(changeset, field) do
+    with nil <- Ecto.Changeset.get_change(changeset, field) do
+      Ecto.Changeset.get_field(changeset, field, [])
+    end
   end
 end
