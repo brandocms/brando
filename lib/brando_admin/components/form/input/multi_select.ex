@@ -525,12 +525,16 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     updated_changeset =
       update_in(changeset, [Access.key(:params), to_string(field)], fn current_options ->
-        case Enum.find(current_options, &(&1 == value)) do
-          nil ->
-            [value | current_options]
+        if current_options == "" do
+          [value]
+        else
+          case Enum.find(current_options, &(&1 == value)) do
+            nil ->
+              [value | current_options]
 
-          _ ->
-            Enum.reject(current_options, &(&1 == value))
+            _ ->
+              Enum.reject(current_options, &(&1 == value))
+          end
         end
       end)
 
