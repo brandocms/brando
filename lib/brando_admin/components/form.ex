@@ -1914,7 +1914,7 @@ defmodule BrandoAdmin.Components.Form do
 
           updated_field =
             changeset
-            |> get_field(relation_atom)
+            |> get_change_or_field(relation_atom)
             |> Kernel.++([default_with_asset])
 
           updated_changeset =
@@ -1942,6 +1942,12 @@ defmodule BrandoAdmin.Components.Form do
     gallery_images
     |> Enum.with_index()
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
+  end
+
+  defp get_change_or_field(changeset, field) do
+    with nil <- Ecto.Changeset.get_change(changeset, field) do
+      Ecto.Changeset.get_field(changeset, field, [])
+    end
   end
 
   def handle_file_progress(
