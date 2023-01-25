@@ -91,7 +91,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
 
             <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
-              <%= gettext("Enter the video's URL:") %>
+              <div class="video-loading hidden">
+                <%= gettext("Fetching video information. Please wait...") %>
+              </div>
+              <%= gettext("Enter the video's URL:") %><br>
+              <small>
+                <%= gettext "You can enter YouTube- or Vimeo addresses to embed videos. You can also reference files directly, to use a custom player." %>
+              </small>
               <input id={"block-#{@uid}-url"} type="text" class="text">
               <button id={"block-#{@uid}-button"} type="button" class="secondary small">
                 <%= gettext("Get video info") %>
@@ -140,6 +146,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
                   <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                     <%= gettext("Reset cover image") %>
+                  </button>
+                  <button type="button" class="danger" phx-click={JS.push("reset_video", target: @myself)}>
+                    <%= gettext("Reset video") %>
                   </button>
                 </div>
 
@@ -365,6 +374,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       id: form_id,
       updated_changeset: updated_changeset,
       force_validation: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reset_video",
+        _,
+        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
+      ) do
+    changeset = base_form.source
+
+    updated_changeset =
+      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
+        data: %VideoBlock.Data{}
+      })
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
     )
 
     {:noreply, socket}

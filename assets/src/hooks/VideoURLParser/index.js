@@ -33,13 +33,19 @@ const PROVIDERS = {
 export default app => ({
   mounted() {
     this.target = this.el.dataset.target
+    this.$loader = Dom.find(this.el, '.video-loading')
     this.bindInput()
+  },
+
+  loading() {
+    Dom.removeClass(this.$loader, 'hidden')
   },
 
   bindInput() {
     this.$button = Dom.find(this.el, 'button')
     this.$input = Dom.find(this.el, 'input')
     this.$button.addEventListener('click', async () => {
+      this.loading()
       await this.handleInput(this.$input.value)
       this.pushEventTo(this.target, 'url', {
         width: this.width || 0,
