@@ -325,6 +325,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     identifier.title
   end
 
+  defp extract_label(%Brando.Content.Var.Select.Option{label: label}), do: label
+
   defp extract_label(%{__struct__: _} = entry) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
     identifier.title
@@ -340,6 +342,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
+  defp extract_value(%Brando.Content.Var.Select.Option{value: value}), do: value
 
   defp get_label(%{opt: %{label: _}} = assigns) do
     assigns = assign_new(assigns, :deletable, fn -> false end)
