@@ -9,7 +9,9 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
     <Content.header
       title={gettext("Global sets")}
       subtitle={gettext("Overview")}>
-      <%= live_patch gettext("Create new"), to: "/admin/config/global_sets/create", class: "primary" %>
+      <.link navigate={"/admin/config/global_sets/create"} class="primary">
+        <%= gettext("Create new") %>
+      </.link>
     </Content.header>
 
     <.live_component module={Content.List}

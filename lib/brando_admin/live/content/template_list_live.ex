@@ -9,7 +9,9 @@ defmodule BrandoAdmin.Content.TemplateListLive do
     <Content.header
       title={gettext("Content Templates")}
       subtitle={gettext("Overview")}>
-      <%= live_patch gettext("Create new"), to: "/admin/config/content/templates/create", class: "primary" %>
+      <.link navigate={"/admin/config/content/templates/create"} class="primary">
+        <%= gettext("Create new") %>
+      </.link>
     </Content.header>
 
     <.live_component module={Content.List}

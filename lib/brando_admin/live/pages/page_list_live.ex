@@ -10,7 +10,9 @@ defmodule BrandoAdmin.Pages.PageListLive do
     <Content.header
       title={gettext("Pages & sections")}
       subtitle={gettext("Overview")}>
-      <%= live_patch gettext("Create page"), to: "/admin/pages/create", class: "primary" %>
+      <.link navigate={"/admin/pages/create"} class="primary">
+        <%= gettext("Create page") %>
+      </.link>
     </Content.header>
 
     <.live_component module={Content.List}

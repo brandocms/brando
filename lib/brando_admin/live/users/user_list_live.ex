@@ -9,7 +9,9 @@ defmodule BrandoAdmin.Users.UserListLive do
     <Content.header
       title={gettext("Users")}
       subtitle={gettext("Overview")}>
-      <%= live_patch gettext("Create new"), class: "primary", to: "/admin/users/create" %>
+      <.link navigate={"/admin/users/create"} class="primary">
+        <%= gettext("Create new") %>
+      </.link>
     </Content.header>
 
     <.live_component module={Content.List}
