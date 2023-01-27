@@ -72,6 +72,7 @@ defmodule Brando.Router do
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageUpdateLive
           live "/assets/files", BrandoAdmin.Files.FileListLive
+          live "/assets/videos", BrandoAdmin.Videos.VideoListLive
 
           scope "/config", BrandoAdmin.Sites do
             live "/cache", CacheLive

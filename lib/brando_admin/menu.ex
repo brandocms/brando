@@ -299,11 +299,11 @@ defmodule BrandoAdmin.Menu do
               %{
                 name: Brando.Gettext.gettext("Files"),
                 url: "/admin/assets/files"
+              },
+              %{
+                name: Brando.Gettext.gettext("Videos"),
+                url: "/admin/assets/videos"
               }
-              # %{
-              #   name: Brando.Gettext.gettext("Videos"),
-              #   url: "/admin/assets/videos"
-              # },
             ]
           },
           %{

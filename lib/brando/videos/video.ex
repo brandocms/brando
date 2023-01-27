@@ -10,6 +10,8 @@ defmodule Brando.Videos.Video do
     plural: "videos",
     gettext_module: Brando.Gettext
 
+  import Brando.Gettext
+
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
@@ -57,5 +59,55 @@ defmodule Brando.Videos.Video do
 
   assets do
     asset :cover_image, :image, cfg: @cfg
+  end
+
+  listings do
+    listing do
+      listing_query %{
+        order: [{:desc, :id}]
+      }
+
+      filters([
+        [label: t("Path"), filter: "path"]
+      ])
+
+      template(
+        """
+        <div class="padded">
+          {% if entry.cover %}
+            <img
+              width="25"
+              height="25"
+              src="{{ entry.cover|src:"original" }}" />
+          {% else %}
+            {% if entry.thumbnail_url %}
+              <img
+                width="25"
+                height="25"
+                src="{{ entry.thumbnail_url }}" />
+            {% endif %}
+          {% endif %}
+        </div>
+        """,
+        columns: 2
+      )
+
+      template(
+        """
+        <small class="monospace">\#{{ entry.id }}</small><br>
+        <small class="monospace">
+          {% if entry.filename %}
+            {{ entry.filename }}
+          {% else %}
+            {{ entry.url }}
+          {% endif %}
+        </small><br>
+        <small>{{ entry.width }}&times;{{ entry.height }}</small><br>
+        {% if entry.title %}<div class="badge mini">#{gettext("Title")}</div>{% endif %}
+        {% if entry.alt %}<div class="badge mini">Alt</div>{% endif %}
+        """,
+        columns: 9
+      )
+    end
   end
 end
