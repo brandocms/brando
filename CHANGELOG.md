@@ -44,7 +44,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BREAKING: Switch out your `<%= live_patch gettext("Create new") ...` calls
   in your list views. Replace with
   ```elixir
-  <.link navigate={@schema.__modules__().admin_create_view} class="primary">
+  <.link navigate={@admin_create_url} class="primary">
     <%= gettext("Create new") %>
   </.link>
   ```
