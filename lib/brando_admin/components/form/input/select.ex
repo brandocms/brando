@@ -345,7 +345,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     assigns = assign_new(assigns, :deletable, fn -> false end)
 
     ~H"""
-    — <%= @opt.label %>
+    — <%= @opt.label |> raw %>
     """
   end
 
