@@ -88,6 +88,7 @@ defmodule BrandoWeb do
   def html do
     quote do
       use Phoenix.Component
+      import Phoenix.Controller, only: [get_csrf_token: 0]
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())
@@ -110,6 +111,8 @@ defmodule BrandoWeb do
 
       # Import all HTML functions (forms, tags, etc)
       import Brando.HTML
+      import Brando.I18n.Helpers
+      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_var: 2]
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
       import Phoenix.Component
