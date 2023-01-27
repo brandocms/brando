@@ -9,8 +9,8 @@ defmodule Brando.Repo.Migrations.AddTranslatableAlternatesTables do
         alternate_source = "#{blueprint.__schema__(:source)}_alternates"
 
         create table(alternate_source) do
-          add :entry_id, references(blueprint.__schema__(:source), on_delete: :nilify_all)
-          add :linked_entry_id, references(blueprint.__schema__(:source), on_delete: :nilify_all)
+          add :entry_id, references(blueprint.__schema__(:source), on_delete: :delete_all)
+          add :linked_entry_id, references(blueprint.__schema__(:source), on_delete: :delete_all)
           timestamps()
         end
 

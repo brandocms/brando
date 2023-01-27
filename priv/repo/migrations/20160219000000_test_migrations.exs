@@ -178,8 +178,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:parent_key]))
 
     create table(:pages_alternates) do
-      add :entry_id, references(:pages, on_delete: :nilify_all)
-      add :linked_entry_id, references(:pages, on_delete: :nilify_all)
+      add :entry_id, references(:pages, on_delete: :delete_all)
+      add :linked_entry_id, references(:pages, on_delete: :delete_all)
       timestamps()
     end
 

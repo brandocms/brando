@@ -190,8 +190,8 @@ defmodule Brando.Blueprint.Migrations do
       if alternates? do
         {"""
          create table(#{alternates_source}) do
-           add :entry_id, references(#{table_name}, on_delete: :nilify_all)
-           add :linked_entry_id, references(#{table_name}, on_delete: :nilify_all)
+           add :entry_id, references(#{table_name}, on_delete: :delete_all)
+           add :linked_entry_id, references(#{table_name}, on_delete: :delete_all)
            timestamps()
          end
 
