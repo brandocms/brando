@@ -18,6 +18,12 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   server: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+# Ensure no HMR in prod :)
+config :<%= application_name %>, hmr: false
+
+# Show breakpoint debug in frontend
+config :<%= application_name %>, show_breakpoint_debug: true
+
 # Do not print debug messages in production
 config :logger, level: :debug
 
@@ -26,6 +32,9 @@ config :brando, media_path: "./media"
 
 # Path to your log directory.
 config :brando, log_dir: "./log"
+
+# Handle SASL reports
+config :logger, handle_sasl_reports: true
 
 # ## SSL Support
 #
