@@ -69,6 +69,7 @@ defmodule Brando.Blueprint.Relations do
   import Ecto.Query
   import Brando.M2M
   import Brando.Blueprint.Utils
+  alias Brando.Exception
   alias Brando.Blueprint.Relation
 
   def build_relation(name, type, opts \\ [])
@@ -98,6 +99,27 @@ defmodule Brando.Blueprint.Relations do
   end
 
   defmacro relation(name, type, opts \\ []) do
+    if type == :many_to_many do
+      raise Exception.BlueprintError,
+        message: """
+        Many to many relations are deprecated.
+
+            relation #{inspect(name)}, :many_to_many, ...
+
+        Use two `:has_many` relations instead, with one being a `:through` assoc:
+
+            relation :article_contributors, :has_many,
+              module: Articles.ArticleContributor,
+              preload_order: [asc: :sequence],
+              cast: true
+
+            relation :contributors, :has_many,
+              module: Articles.Contributor,
+              through: [:article_contributors, :contributor]
+
+        """
+    end
+
     relation(__CALLER__, name, type, opts)
   end
 
