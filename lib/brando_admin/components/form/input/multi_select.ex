@@ -67,6 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(assigns)
      |> prepare_input_component()
+     |> assign(:relation_key, relation_key)
      |> assign_relation_type(assigns.form, assigns.field)
      |> assign_selected_options(changeset, assigns.field)
      |> assign_input_options()
@@ -75,7 +76,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_relation_fields(assigns.form, assigns.field)
      |> assign_label()
      |> assign(:narrow, narrow)
-     |> assign(:relation_key, relation_key)
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
      |> assign(:changeset_fun, changeset_fun)
@@ -159,6 +159,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         Map.get(module.__changeset__, field)
       end
 
+    if relation_type == :has_many and socket.assigns.relation_key == :id do
+      raise BlueprintError,
+        message: """
+        Multi selects for a :has_many relation needs a `relation_key`.
+
+        Set this in your form:
+
+            input :article_contributors, :multi_select,
+              options: &__MODULE__.get_contributors/2,
+              relation_key: :contributor_id,
+              resetable: true,
+              label: t("Contributors")
+        """
+    end
+
     assign(socket, :relation_type, relation_type)
   end
 
@@ -222,7 +237,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def assign_label(
         %{assigns: %{input_options: input_options, selected_options: selected_options}} = socket
       ) do
-    assign(socket, :count_label, get_label(input_options, selected_options))
+    assign(
+      socket,
+      :count_label,
+      get_count_label(input_options, selected_options, socket.assigns.relation_type)
+    )
   end
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
@@ -268,7 +287,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         compact={@compact}>
         <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
-            <.labels selected_options={@selected_options} input_options={@input_options} relation_key={@relation_key} :let={opt}>
+            <.labels
+              selected_options={@selected_options}
+              input_options={@input_options}
+              relation_type={@relation_type}
+              relation_key={@relation_key}
+              :let={opt}>
               <.get_label opt={opt} />
             </.labels>
           </div>
@@ -347,7 +371,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 </div>
                 <div class="selected-labels">
                   <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
-                  <.labels selected_options={@selected_options} input_options={@input_options} relation_key={@relation_key} :let={opt}>
+                  <.labels
+                    selected_options={@selected_options}
+                    input_options={@input_options}
+                    relation_type={@relation_type}
+                    relation_key={@relation_key}
+                    :let={opt}>
                     <.get_label opt={opt} target={@myself} deletable />
                   </.labels>
                 </div>
@@ -357,21 +386,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
                     :let={entry_form}>
-                    <%= for tab <- @select_form.tabs do %>
-                      <div
-                        class={render_classes(["form-tab", active: true])}
-                        data-tab-name={tab.name}>
-                        <div class="row">
-                          <%= for fieldset <- tab.fields do %>
-                            <Fieldset.render
-                              translations={@form_translations}
-                              form={entry_form}
-                              uploads={[]}
-                              fieldset={fieldset} />
-                          <% end %>
-                        </div>
+                    <div
+                      :for={tab <- @select_form.tabs}
+                      class={render_classes(["form-tab", active: true])}
+                      data-tab-name={tab.name}>
+                      <div class="row">
+                        <Fieldset.render
+                          :for={fieldset <- tab.fields}
+                          translations={@form_translations}
+                          form={entry_form}
+                          uploads={[]}
+                          fieldset={fieldset} />
                       </div>
-                    <% end %>
+                    </div>
                     <button
                       phx-click={JS.push("save_new_entry", target: @myself)}
                       type="button" class="primary">
@@ -394,16 +421,16 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
                   OK
                 </button>
-                <%= if @resetable do %>
-                  <div class="reset">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={JS.push("reset", target: @myself)}>
-                      <%= gettext("Reset value") %>
-                    </button>
-                  </div>
-                <% end %>
+                <div
+                  :if={@resetable}
+                  class="reset">
+                  <button
+                    type="button"
+                    class="secondary"
+                    phx-click={JS.push("reset", target: @myself)}>
+                    <%= gettext("Reset value") %>
+                  </button>
+                </div>
               </div>
             </:footer>
           </Content.modal>
@@ -450,7 +477,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  def labels(assigns) do
+  def labels(%{relation_type: :has_many} = assigns) do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
       <div class="empty-label"><%= gettext "None selected" %></div>
@@ -460,28 +487,44 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         :if={Ecto.Changeset.get_change(opt, :marked_as_deleted) in [false, nil]}
         class="selected-label">
         <div class="selected-label-text">
-          <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key)) %>
+          <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
         </div>
       </div>
     <% end %>
     """
   end
 
-  defp get_opt(%{id: id} = opt, _opts, relation_key) do
+  def labels(%{relation_type: {:array, _}} = assigns) do
+    ~H"""
+    <%= if Enum.empty?(@selected_options) do %>
+      <div class="empty-label"><%= gettext "None selected" %></div>
+    <% else %>
+      <div
+        :for={opt <- @selected_options}
+        class="selected-label">
+        <div class="selected-label-text">
+          <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  defp get_opt(%{id: id} = opt, _opts, relation_key, relation_type) do
     opt
   end
 
-  defp get_opt(changeset, opts, relation_key) do
+  defp get_opt(changeset, opts, relation_key, :has_many) do
     wanted_id = Ecto.Changeset.get_field(changeset, relation_key)
     Enum.find(opts, &(to_string(&1.id) == to_string(wanted_id)))
   end
 
-  # defp get_opt(opt, opts, relation_key) do
-  #   Enum.find(opts, fn
-  #     %{value: value} -> to_string(value) == opt
-  #     %{id: value} -> to_string(value) == opt
-  #   end)
-  # end
+  defp get_opt(opt, opts, relation_key, _) do
+    Enum.find(opts, fn
+      %{value: value} -> to_string(value) == opt
+      %{id: value} -> to_string(value) == opt
+    end)
+  end
 
   defp is_selected?(%{id: id} = str, selected_opts, relation_key, :has_many) do
     Enum.find_index(
@@ -500,6 +543,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp extract_value(%Ecto.Changeset{data: %{id: id}}), do: id
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
+  defp extract_value(value), do: value
+
   defp extract_label(%{opt: %{label: label}}), do: label
 
   defp extract_label(%{opt: entry}) do
@@ -577,16 +622,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
   defp maybe_slug(%{id: id}), do: id
+  defp maybe_slug(opt) when is_integer(opt), do: opt
+  defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 
-  # defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
-  # defp maybe_slug(opt) when is_integer(opt), do: opt
-  # defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
-
-  defp get_label(_, []) do
+  defp get_count_label(_, [], _) do
     gettext("<None selected>")
   end
 
-  defp get_label(_, selected_options) do
+  defp get_count_label(_, selected_options, :has_many) do
     count =
       selected_options
       |> Enum.reject(&Ecto.Changeset.get_change(&1, :marked_as_deleted))
@@ -595,8 +638,25 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     gettext("%{count} selected", count: count)
   end
 
-  def handle_event("toggle_modal", _, socket) do
+  defp get_count_label(_, selected_options, _) do
+    count = Enum.count(selected_options)
+
+    gettext("%{count} selected", count: count)
+  end
+
+  def handle_event("toggle_modal", _, %{assigns: %{relation_type: :has_many}} = socket) do
     socket = assign(socket, :open, !socket.assigns.open)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_modal", _, %{assigns: %{relation_type: _}} = socket) do
+    socket = assign(socket, :open, !socket.assigns.open)
+
+    socket =
+      (socket.assigns.open && update_input_options(socket)) ||
+        push_event(socket, "b:validate", %{})
+
     {:noreply, socket}
   end
 
@@ -669,7 +729,30 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         %{"value" => value},
         %{assigns: %{relation_type: {:array, _}}} = socket
       ) do
-    {:noreply, socket}
+    form = socket.assigns.form
+    field = socket.assigns.field
+    changeset = form.source
+    module = form.data.__struct__
+
+    current_selected_options = socket.assigns.selected_options
+
+    exists_at_idx =
+      Enum.find_index(
+        current_selected_options,
+        &(&1 == value)
+      )
+
+    updated_selected_options =
+      if exists_at_idx do
+        List.delete_at(current_selected_options, exists_at_idx)
+      else
+        current_selected_options ++ [value]
+      end
+
+    {:noreply,
+     socket
+     |> assign(:selected_options, updated_selected_options)
+     |> assign_label()}
   end
 
   def handle_event(
@@ -749,7 +832,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
-    label = get_label(input_options, [])
+    label = get_count_label(input_options, [], socket.assigns.relation_type)
 
     {:noreply,
      socket
