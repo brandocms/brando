@@ -510,23 +510,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  defp get_opt(%{id: id} = opt, _opts, relation_key, relation_type) do
-    opt
-  end
+  defp get_opt(%{id: _id} = opt, _opts, _relation_key, _relation_type), do: opt
 
   defp get_opt(changeset, opts, relation_key, :has_many) do
     wanted_id = Ecto.Changeset.get_field(changeset, relation_key)
     Enum.find(opts, &(to_string(&1.id) == to_string(wanted_id)))
   end
 
-  defp get_opt(opt, opts, relation_key, _) do
+  defp get_opt(opt, opts, _relation_key, _) do
     Enum.find(opts, fn
       %{value: value} -> to_string(value) == opt
       %{id: value} -> to_string(value) == opt
     end)
   end
 
-  defp is_selected?(%{id: id} = str, selected_opts, relation_key, :has_many) do
+  defp is_selected?(%{id: id}, selected_opts, relation_key, :has_many) do
     Enum.find_index(
       selected_opts,
       &(to_string(Ecto.Changeset.get_field(&1, relation_key)) == to_string(id) &&
@@ -716,24 +714,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  defp find_option(input_options, value, :has_many) do
-    Enum.find(input_options, &(to_string(&1.id) == value))
-  end
-
-  defp find_option(input_options, value, :many_to_many) do
-    Enum.find(input_options, &(to_string(&1.id) == value))
-  end
-
   def handle_event(
         "select_option",
         %{"value" => value},
         %{assigns: %{relation_type: {:array, _}}} = socket
       ) do
-    form = socket.assigns.form
-    field = socket.assigns.field
-    changeset = form.source
-    module = form.data.__struct__
-
     current_selected_options = socket.assigns.selected_options
 
     exists_at_idx =
@@ -766,7 +751,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     module = form.data.__struct__
     %{opts: %{module: rel_module}} = module.__relation__(field)
 
-    input_options = socket.assigns.input_options
     relation_type = socket.assigns.relation_type
     relation_key = socket.assigns.relation_key
     selected_options = get_selected_options(changeset, field, relation_type)
@@ -792,8 +776,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           rest
         end
       else
-        selected_option = find_option(input_options, value, socket.assigns.relation_type)
-
         new_rel =
           rel_module
           |> struct!()
@@ -819,18 +801,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, :selected_options, selected_options)}
   end
 
-  defp update_relation(changeset, field, updated_relation, :has_many) do
-    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
-  end
-
-  defp update_relation(changeset, field, updated_relation, :many_to_many) do
-    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
-  end
-
-  defp update_relation(changeset, field, updated_relation, :embeds_many) do
-    Ecto.Changeset.put_embed(changeset, field, updated_relation)
-  end
-
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
     label = get_count_label(input_options, [], socket.assigns.relation_type)
 
@@ -847,5 +817,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("hide_form", _, socket) do
     {:noreply, assign(socket, :creating, false)}
+  end
+
+  defp update_relation(changeset, field, updated_relation, :has_many) do
+    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
+  end
+
+  defp update_relation(changeset, field, updated_relation, :many_to_many) do
+    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
+  end
+
+  defp update_relation(changeset, field, updated_relation, :embeds_many) do
+    Ecto.Changeset.put_embed(changeset, field, updated_relation)
   end
 end
