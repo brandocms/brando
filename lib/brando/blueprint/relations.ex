@@ -62,7 +62,28 @@ defmodule Brando.Blueprint.Relations do
 
   ## Many to many
 
-  If you want to pass just ids of your many_to_many relation use `cast: true`
+  Instead of using a many to many association, we use two has_many associations
+
+      relation :article_contributors, :has_many,
+        module: Articles.ArticleContributor,
+        preload_order: [asc: :sequence],
+        on_replace: :delete_if_exists,
+        cast: true
+
+      relation :contributors, :has_many,
+        module: Articles.Contributor,
+        through: [:article_contributors, :contributor]
+
+  This enables us to use other fields from the join table, such as `sequence` in the example above.
+
+  We can then use a multi select to select contributors for our article:
+
+      input :article_contributors, :multi_select,
+        options: &__MODULE__.get_contributors/2,
+        relation_key: :contributor_id,
+        resetable: true,
+        label: t("Contributors")
+
   |
 
   import Ecto.Changeset
