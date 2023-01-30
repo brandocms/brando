@@ -210,16 +210,23 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## has_many
   def run_cast_relation(
-        %{type: :has_many, name: name, opts: %{cast: true, module: _module} = opts},
+        %{type: :has_many, name: name, opts: %{cast: true, module: module} = opts},
         changeset,
-        _user
+        user
       ) do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_assoc(changeset, name, [])
-      _ -> cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
+      "" ->
+        put_assoc(changeset, name, [])
+
+      _ ->
+        cast_assoc(
+          changeset,
+          name,
+          to_changeset_opts(:has_many, opts) ++ [with: &module.changeset(&1, &2, user)]
+        )
     end
   end
 
