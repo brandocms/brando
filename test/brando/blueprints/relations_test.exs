@@ -18,6 +18,39 @@ defmodule Brando.Blueprint.RelationsTest do
       end
     end
 
+    defmodule Contributor do
+      use Brando.Blueprint,
+        application: "Brando",
+        domain: "Projects",
+        schema: "Contributor",
+        singular: "contributor",
+        plural: "contributors"
+
+      trait Brando.Trait.Sequenced
+
+      attributes do
+        attribute :name, :text
+      end
+    end
+
+    defmodule ProjectContributor do
+      use Brando.Blueprint,
+        application: "Brando",
+        domain: "Projects",
+        schema: "ProjectContributor",
+        singular: "project_contributor",
+        plural: "project_contributors"
+
+      trait Brando.Trait.Sequenced
+
+      @allow_mark_as_deleted true
+
+      relations do
+        relation :project, :belongs_to, module: Brando.Blueprint.RelationsTest.P1
+        relation :contributor, :belongs_to, module: Brando.Blueprint.RelationsTest.P1.Contributor
+      end
+    end
+
     use Brando.Blueprint,
       application: "Brando",
       domain: "Projects",
@@ -32,13 +65,15 @@ defmodule Brando.Blueprint.RelationsTest do
     relations do
       relation :creator, :belongs_to, module: Brando.Users.User
 
-      relation :related_projects, :many_to_many,
-        module: __MODULE__,
-        cast: true,
-        join_through: "projects_related",
-        join_keys: [project_id: :id, related_project_id: :id],
-        on_delete: :delete_all,
-        on_replace: :delete
+      relation :project_contributors, :has_many,
+        module: __MODULE__.ProjectContributor,
+        preload_order: [asc: :sequence],
+        on_replace: :delete_if_exists,
+        cast: true
+
+      relation :contributors, :has_many,
+        module: __MODULE__.Contributor,
+        through: [:project_contributors, :contributor]
 
       relation :property, :embeds_one, module: __MODULE__.Property
       relation :properties, :embeds_many, module: __MODULE__.Property
@@ -68,30 +103,28 @@ defmodule Brando.Blueprint.RelationsTest do
               }}
   end
 
-  test "many_to_many" do
+  test "has_many" do
     changeset_meta = __MODULE__.P1.__changeset__()
 
-    assert changeset_meta.related_projects ==
+    assert changeset_meta.project_contributors ==
              {:assoc,
-              %Ecto.Association.ManyToMany{
+              %Ecto.Association.Has{
                 cardinality: :many,
-                defaults: [],
-                field: :related_projects,
-                on_cast: nil,
-                on_replace: :delete,
-                ordered: false,
+                field: :project_contributors,
                 owner: Brando.Blueprint.RelationsTest.P1,
+                related: Brando.Blueprint.RelationsTest.P1.ProjectContributor,
                 owner_key: :id,
-                queryable: Brando.Blueprint.RelationsTest.P1,
-                related: Brando.Blueprint.RelationsTest.P1,
-                relationship: :child,
-                unique: false,
+                related_key: :p1_id,
+                on_cast: nil,
+                queryable: Brando.Blueprint.RelationsTest.P1.ProjectContributor,
+                on_delete: :nothing,
+                on_replace: :delete_if_exists,
                 where: [],
-                join_defaults: [],
-                join_keys: [project_id: :id, related_project_id: :id],
-                join_through: "projects_related",
-                join_where: [],
-                on_delete: :delete_all
+                unique: true,
+                defaults: [],
+                relationship: :child,
+                ordered: false,
+                preload_order: [asc: :sequence]
               }}
   end
 
