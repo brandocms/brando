@@ -26,9 +26,9 @@ defmodule Mix.Tasks.Brando.Gen.Backend do
 
     files = [
       # Backend tooling
-      {:copy, "assets/backend/europa.config.js", "assets/backend/europa.config.js"},
+      {:copy, "assets/backend/europa.config.cjs", "assets/backend/europa.config.cjs"},
       {:copy, "assets/backend/package.json", "assets/backend/package.json"},
-      {:copy, "assets/backend/postcss.config.js", "assets/backend/postcss.config.js"},
+      {:copy, "assets/backend/postcss.config.cjs", "assets/backend/postcss.config.cjs"},
       {:copy, "assets/backend/README.md", "assets/backend/README.md"},
       {:copy, "assets/backend/svelte.config.cjs", "assets/backend/svelte.config.cjs"},
       {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},

@@ -7,15 +7,15 @@ function HMREuropa() {
     enforce: 'post',
     // HMR
     handleHotUpdate({ file, server }) {
-      if (file.endsWith('europa.config.js')) {
-        console.log('europa.config.js updated. reloading...');
+      if (file.endsWith('europa.config.cjs')) {
+        console.log('europa.config.cjs updated. reloading...')
 
         server.ws.send({
           type: 'full-reload',
           path: '*'
-        });
+        })
       }
-    },
+    }
   }
 }
 
@@ -27,13 +27,13 @@ export default defineConfig({
   build: {
     manifest: true,
     emptyOutDir: false,
-    target: "es2015",
-    outDir: "../../priv/static", // <- Phoenix expects our files here
+    target: 'es2015',
+    outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        main: "js/index.js",
-        critical: "js/critical.js"
+        main: 'js/index.js',
+        critical: 'js/critical.js'
       }
     },
     terserOptions: {
@@ -56,12 +56,7 @@ export default defineConfig({
     legacy({
       // The browsers that must be supported by your legacy bundle.
       // https://babeljs.io/docs/en/babel-preset-env#targets
-      targets: [
-        '> 0.5%',
-        'last 2 versions',
-        'Firefox ESR',
-        'not dead',
-      ],
+      targets: ['> 0.5%', 'last 2 versions', 'Firefox ESR', 'not dead'],
       // Define which polyfills your legacy bundle needs. They will be loaded
       // from the Polyfill.io server. See the "Polyfills" section for more info.
       additionalLegacyPolyfills: [
