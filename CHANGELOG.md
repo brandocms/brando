@@ -2,6 +2,45 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: Deprecated `:many_to_many` for now. This might return later if
+  there's a usecase for it. Right now it is replaced by `:has_many` `through`
+  associations instead. 
+
+  Before:
+
+  ```elixir
+  relation :contributors, :many_to_many,
+    module: Articles.Contributor,
+    join_through: Articles.ArticleContributor,
+    on_replace: :delete,
+    cast: true
+  ```
+
+  After:
+
+  ```elixir
+  relation :article_contributors, :has_many,
+    module: Articles.ArticleContributor,
+    preload_order: [asc: :sequence],
+    on_replace: :delete_if_exists,
+    cast: true
+
+  relation :contributors, :has_many,
+    module: Articles.Contributor,
+    through: [:article_contributors, :contributor]
+  ```
+
+  If you use the `ArticleContributor` schema for a multi select, you must
+  add `@allow_mark_as_deleted true` to this schema. Also you need to add a 
+  `relation_key` to the input declaration:
+
+  ```elixir
+  input :article_contributors, :multi_select,
+    options: &__MODULE__.get_contributors/2,
+    relation_key: :contributor_id,
+    resetable: true,
+    label: t("Contributors")
+  ```
 * BREAKING: `ErrorView` is now `ErrorHTML`. If you are using Brando's error 
   templates, you must swap your endpoint's `render_errors` key with:
   ```elixir

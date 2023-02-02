@@ -1550,6 +1550,7 @@ defmodule BrandoAdmin.Components.Form do
                 socket
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
+                |> assign_refreshed_changeset
               end
 
             :listing ->
@@ -2042,6 +2043,23 @@ defmodule BrandoAdmin.Components.Form do
       |> schema.changeset(%{}, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
     end)
+  end
+
+  def assign_refreshed_changeset(
+        %{
+          assigns: %{
+            entry: entry,
+            schema: schema,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    changeset =
+      entry
+      |> schema.changeset(%{}, current_user, skip_villain: true)
+      |> Map.put(:action, :validate)
+
+    assign(socket, :changeset, changeset)
   end
 
   def update_changeset(%{assigns: %{changeset: _}} = socket, [], key, arg) do

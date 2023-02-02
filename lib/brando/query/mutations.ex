@@ -184,6 +184,10 @@ defmodule Brando.Query.Mutations do
 
   defp maybe_change_fields(entry, %{change_fields: change_fields}) do
     Enum.reduce(change_fields, entry, fn
+      {f, new_value_fun}, updated_entry when is_function(new_value_fun) ->
+        current_value = Map.get(updated_entry, f)
+        Map.put(updated_entry, f, new_value_fun.(updated_entry, current_value))
+
       {f, new_value}, updated_entry ->
         Map.put(updated_entry, f, new_value)
 

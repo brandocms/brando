@@ -62,13 +62,35 @@ defmodule Brando.Blueprint.Relations do
 
   ## Many to many
 
-  If you want to pass just ids of your many_to_many relation use `cast: true`
+  Instead of using a many to many association, we use two has_many associations
+
+      relation :article_contributors, :has_many,
+        module: Articles.ArticleContributor,
+        preload_order: [asc: :sequence],
+        on_replace: :delete_if_exists,
+        cast: true
+
+      relation :contributors, :has_many,
+        module: Articles.Contributor,
+        through: [:article_contributors, :contributor]
+
+  This enables us to use other fields from the join table, such as `sequence` in the example above.
+
+  We can then use a multi select to select contributors for our article:
+
+      input :article_contributors, :multi_select,
+        options: &__MODULE__.get_contributors/2,
+        relation_key: :contributor_id,
+        resetable: true,
+        label: t("Contributors")
+
   |
 
   import Ecto.Changeset
   import Ecto.Query
   import Brando.M2M
   import Brando.Blueprint.Utils
+  alias Brando.Exception
   alias Brando.Blueprint.Relation
 
   def build_relation(name, type, opts \\ [])
@@ -98,6 +120,27 @@ defmodule Brando.Blueprint.Relations do
   end
 
   defmacro relation(name, type, opts \\ []) do
+    if type == :many_to_many do
+      raise Exception.BlueprintError,
+        message: """
+        Many to many relations are deprecated.
+
+            relation #{inspect(name)}, :many_to_many, ...
+
+        Use two `:has_many` relations instead, with one being a `:through` assoc:
+
+            relation :article_contributors, :has_many,
+              module: Articles.ArticleContributor,
+              preload_order: [asc: :sequence],
+              cast: true
+
+            relation :contributors, :has_many,
+              module: Articles.Contributor,
+              through: [:article_contributors, :contributor]
+
+        """
+    end
+
     relation(__CALLER__, name, type, opts)
   end
 
@@ -188,16 +231,23 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## has_many
   def run_cast_relation(
-        %{type: :has_many, name: name, opts: %{cast: true, module: _module} = opts},
+        %{type: :has_many, name: name, opts: %{cast: true, module: module} = opts},
         changeset,
-        _user
+        user
       ) do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_assoc(changeset, name, [])
-      _ -> cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
+      "" ->
+        put_assoc(changeset, name, [])
+
+      _ ->
+        cast_assoc(
+          changeset,
+          name,
+          to_changeset_opts(:has_many, opts) ++ [with: &module.changeset(&1, &2, user)]
+        )
     end
   end
 

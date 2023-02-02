@@ -425,7 +425,6 @@
 
       .padded {
         @space padding 1;
-        @space! padding-left 0;
       }
 
       .img-placeholder {

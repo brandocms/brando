@@ -765,6 +765,10 @@ defmodule Brando.Villain.Filters do
   """
   def where(list, key, _), do: Liquex.Collection.where(list, key)
 
+  def zero_pad(number, length \\ 3, _) do
+    Brando.HTML.zero_pad(number, length)
+  end
+
   @doc """
   Converts `value` timestamp into another date `format`.
   The format for this syntax is the same as strftime. The input uses the same format as Ruby’s Time.parse.
