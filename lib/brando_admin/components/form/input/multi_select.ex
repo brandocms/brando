@@ -803,14 +803,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, :selected_options, selected_options)}
   end
 
-  defp maybe_change_sequence?(changeset, sequence_count, true) do
-    Ecto.Changeset.change(changeset, [{:sequence, sequence_count}])
-  end
-
-  defp maybe_change_sequence?(changeset, _, _) do
-    changeset
-  end
-
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
     label = get_count_label(input_options, [], socket.assigns.relation_type)
 
@@ -839,5 +831,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp update_relation(changeset, field, updated_relation, :embeds_many) do
     Ecto.Changeset.put_embed(changeset, field, updated_relation)
+  end
+
+  defp maybe_change_sequence?(changeset, sequence_count, true) do
+    Ecto.Changeset.change(changeset, [{:sequence, sequence_count}])
+  end
+
+  defp maybe_change_sequence?(changeset, _, _) do
+    changeset
   end
 end
