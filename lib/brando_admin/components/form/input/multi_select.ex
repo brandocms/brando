@@ -749,6 +749,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     field = socket.assigns.field
     changeset = form.source
     module = form.data.__struct__
+    sequenced? = socket.assigns.sequenced?
+
     %{opts: %{module: rel_module}} = module.__relation__(field)
 
     relation_type = socket.assigns.relation_type
@@ -776,13 +778,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           rest
         end
       else
+        sequence_count = Enum.count(selected_options)
+
         new_rel =
           rel_module
           |> struct!()
-          |> Ecto.Changeset.change([
-            {relation_key, value},
-            {:sequence, Enum.count(selected_options)}
-          ])
+          |> Ecto.Changeset.change([{relation_key, value}])
+          |> maybe_change_sequence?(sequence_count, sequenced?)
 
         selected_options ++ [new_rel]
       end
@@ -799,6 +801,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     )
 
     {:noreply, assign(socket, :selected_options, selected_options)}
+  end
+
+  defp maybe_change_sequence?(changeset, sequence_count, true) do
+    Ecto.Changeset.change(changeset, [{:sequence, sequence_count}])
+  end
+
+  defp maybe_change_sequence?(changeset, _, _) do
+    changeset
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
