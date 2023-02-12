@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Forms.Subform do
-  defstruct field: nil,
+  defstruct name: nil,
             label: nil,
             cardinality: :one,
             sub_fields: [],

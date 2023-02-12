@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def prepare_input_component(assigns) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     assigns =
       assigns

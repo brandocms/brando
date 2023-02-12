@@ -319,6 +319,9 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :id, :any, default: nil
+  attr :opts, :any, default: []
+
   def radios(assigns) do
     input_options =
       case Keyword.get(assigns.opts, :options) do
@@ -347,7 +350,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -358,7 +360,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <%= for opt <- @input_options do %>
             <div class="form-check">
               <label class="form-check-label">
-                <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
+                <input type="radio" id={@id || @field.id <> "-#{opt}"} name={@field.name <> "[]"} class="form-check-input" value={opt.value} checked={opt.value == @field.value}>
                 <span class="label-text">
                   <%= g(@form.source.data.__struct__, to_string(opt.label)) %>
                 </span>
@@ -376,8 +378,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
-      field={@field}
+      field={@form[@field]}
       label={@label}
       instructions={@instructions}
       class={@class}
@@ -396,7 +397,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               class="tiptap-target">
             </div>
           </div>
-          <.input type={:hidden} form={@form} field={@field} class="tiptap-text" phx_debounce={750} />
+          <.input type={:hidden} field={@form[@field]} class="tiptap-text" phx_debounce={750} />
         </div>
       </div>
     </Form.field_base>
@@ -417,16 +418,14 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
-      field={@field}
+      field={@form[@field]}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <.input
         type={:text}
-        form={@form}
-        field={@field}
+        field={@form[@field]}
         class="text monospace"
         phx_hook="Brando.Slug"
         phx_debounce={750}
@@ -447,17 +446,23 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def hidden(assigns) do
     ~H"""
-    <.input
-      type={:hidden}
-      form={@form}
-      field={@field} />
+    <.input type={:hidden} field={@form[@field]} />
     """
   end
+
+  attr :id, :any, default: nil
+  attr :name, :any, default: nil
+  attr :type, :atom, default: :text
+
+  attr :rest, :global,
+    include: ~w(class phx_hook phx_debounce data_slug_for data_slug_type autocorrect spellcheck)
+
+  attr :field, Phoenix.HTML.FormField,
+    doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   def input(%{type: :checkbox} = assigns) do
     extra =
       assigns_to_attributes(assigns, [
-        :form,
         :field,
         :type,
         :uid,
@@ -468,24 +473,22 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assigns
-      |> assign_new(:value, fn -> maybe_html_escape(input_value(assigns.form, assigns.field)) end)
-      |> assign_new(:id, fn -> input_id(assigns.form, assigns.field) end)
-      |> assign_new(:name, fn -> input_name(assigns.form, assigns.field) end)
+      |> assign_new(:value, fn -> nil end)
       |> assign_new(:checked_value, fn -> maybe_html_escape(true) end)
       |> assign_new(:unchecked_value, fn -> maybe_html_escape(false) end)
       |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
-    assigns = assign(assigns, :checked, assigns.value == assigns.checked_value)
+    assigns = assign(assigns, :checked, assigns.field.value == assigns.checked_value)
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@name} id={"#{@id}-unchecked"} value={@unchecked_value} {@extra}>
-      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} checked={@checked} {@extra}>
+      <input type={:hidden} name={@field.name} id={"#{@field.id}-unchecked"} value={@unchecked_value} {@extra}>
+      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} checked={@checked} {@extra}>
       """
     else
       ~H"""
-      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} {@extra}>
+      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} {@extra}>
       """
     end
   end
@@ -493,7 +496,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   def input(%{type: :textarea} = assigns) do
     extra =
       assigns_to_attributes(assigns, [
-        :form,
         :field,
         :type,
         :uid,
@@ -506,23 +508,15 @@ defmodule BrandoAdmin.Components.Form.Input do
       if assigns[:value] do
         assigns
       else
-        assign(assigns, :value, maybe_html_escape(input_value(assigns.form, assigns.field)))
+        assign(
+          assigns,
+          :value,
+          Phoenix.HTML.Form.normalize_value("textarea", assigns.field.value)
+        )
       end
 
-    assigns =
-      if assigns[:id] do
-        assigns
-      else
-        assign(assigns, :id, input_id(assigns.form, assigns.field))
-      end
-
-    assigns =
-      if assigns[:name] do
-        assigns
-      else
-        assign(assigns, :name, input_name(assigns.form, assigns.field))
-      end
-
+    assigns = assign(assigns, :id, assigns.id || assigns.field.id)
+    assigns = assign(assigns, :name, assigns.name || assigns.field.name)
     assigns = process_input_id(assigns)
 
     ~H"""
@@ -533,7 +527,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   def input(assigns) do
     extra =
       assigns_to_attributes(assigns, [
-        :form,
         :field,
         :type,
         :uid,
@@ -546,23 +539,15 @@ defmodule BrandoAdmin.Components.Form.Input do
       if assigns[:value] do
         assigns
       else
-        assign(assigns, :value, maybe_html_escape(input_value(assigns.form, assigns.field)))
+        assign(
+          assigns,
+          :value,
+          Phoenix.HTML.Form.normalize_value(assigns.type, assigns.field.value)
+        )
       end
 
-    assigns =
-      if assigns[:id] do
-        assigns
-      else
-        assign(assigns, :id, input_id(assigns.form, assigns.field))
-      end
-
-    assigns =
-      if assigns[:name] do
-        assigns
-      else
-        assign(assigns, :name, input_name(assigns.form, assigns.field))
-      end
-
+    assigns = assign(assigns, :id, assigns.id || assigns.field.id)
+    assigns = assign(assigns, :name, assigns.name || assigns.field.name)
     assigns = process_input_id(assigns)
 
     ~H"""
@@ -574,7 +559,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     do: assigns
 
   defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
-    do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field}")
+    do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field.id}")
 
   defp process_input_id(assigns), do: assigns
 

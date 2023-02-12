@@ -555,14 +555,14 @@ defmodule Brando.Blueprint.Forms do
     %__MODULE__.Tab{name: name, fields: fields}
   end
 
-  def build_subform(field, component, opts) when is_atom(component) do
+  def build_subform(name, component, opts) when is_atom(component) do
     mapped_opts = Enum.into(opts, %{})
-    Map.merge(%__MODULE__.Subform{field: field, component: component}, mapped_opts)
+    Map.merge(%__MODULE__.Subform{name: name, component: component}, mapped_opts)
   end
 
-  def build_subform(field, opts, sub_fields) when is_list(opts) do
+  def build_subform(name, opts, sub_fields) when is_list(opts) do
     mapped_opts = Enum.into(opts, %{})
-    Map.merge(%__MODULE__.Subform{field: field, sub_fields: sub_fields}, mapped_opts)
+    Map.merge(%__MODULE__.Subform{name: name, sub_fields: sub_fields}, mapped_opts)
   end
 
   def build_fieldset(opts, fields) do

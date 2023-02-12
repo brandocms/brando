@@ -72,19 +72,19 @@ defmodule BrandoAdmin.Components.Form.Subform do
       <Form.field_base
         :if={@subform.cardinality == :many}
         form={@form}
-        field={@subform.field}
+        field={@subform.name}
         label={@label}
         instructions={@instructions}
         class={"subform"}>
         <div
-          id={"#{@form.id}-#{@subform.field}-sortable"}
+          id={"#{@form.id}-#{@subform.name}-sortable"}
           data-embeds={@embeds?}
           phx-hook={@sequenced? && "Brando.SubFormSortable"}
         >
           <.empty_subform
             :if={@indexed_sub_form_fields == []}
             form={@form}
-            subform_field={@subform.field}
+            subform_field={@subform.name}
           />
           <div
             :for={{sub_form, index} <- @indexed_sub_form_fields}
@@ -134,13 +134,13 @@ defmodule BrandoAdmin.Components.Form.Subform do
       <Form.field_base
         :if={@subform.cardinality == :one}
         form={@form}
-        field={@subform.field}
+        field={@subform.name}
         label={@label}
         instructions={@instructions}
         class={"subform"}
       >
         <div
-          :for={sub_form <- inputs_for(@form, @subform.field)}
+          :for={sub_form <- inputs_for(@form, @subform.name)}
           class="subform-entry"
         >
           <Subform.Field.render
@@ -161,20 +161,20 @@ defmodule BrandoAdmin.Components.Form.Subform do
       <Form.field_base
         :if={@subform.cardinality == :many}
         form={@form}
-        field={@subform.field}
+        field={@subform.name}
         label={@label}
         instructions={@instructions}
         class={"subform"}
       >
         <div
-          id={"#{@form.id}-#{@subform.field}-sortable"}
+          id={"#{@form.id}-#{@subform.name}-sortable"}
           data-embeds={@embeds?}
           phx-hook="Brando.SubFormSortable"
         >
           <.empty_subform
             :if={@indexed_sub_form_fields == []}
             form={@form}
-            subform_field={@subform.field}
+            subform_field={@subform.name}
           />
           <div
             :for={{sub_form, index} <- @indexed_sub_form_fields}
