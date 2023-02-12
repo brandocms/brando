@@ -266,7 +266,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -306,7 +307,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
@@ -350,7 +352,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

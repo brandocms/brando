@@ -220,7 +220,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(new_vars, &(&1.important == true)))}
@@ -258,7 +259,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(module_vars, &(&1.important == true)))}
@@ -296,7 +298,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

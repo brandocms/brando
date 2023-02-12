@@ -156,7 +156,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -191,7 +192,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -219,7 +221,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

@@ -324,7 +324,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -356,7 +357,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -382,7 +384,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -419,7 +422,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -454,7 +458,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -488,7 +493,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

@@ -261,7 +261,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply,
@@ -311,7 +312,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply,
@@ -359,7 +361,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :gallery_images, sorted_gallery_images)}
@@ -392,7 +395,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :selected_images, [])}

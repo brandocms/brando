@@ -399,7 +399,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -450,7 +451,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(new_vars, &(&1.important == true)))}
@@ -485,7 +487,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(module.vars, &(&1.important == true)))}
@@ -530,7 +533,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -579,7 +583,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -616,7 +621,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -663,7 +669,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -708,7 +715,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     socket

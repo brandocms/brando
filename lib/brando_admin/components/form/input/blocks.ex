@@ -127,7 +127,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -163,7 +164,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -211,7 +213,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -242,7 +245,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
