@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:uid, uid)
         |> assign(:description, description)
         |> assign(:block_data, block_data)
-        |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data, :vars)))
+        |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data[:vars])))
         |> assign(:module_name, module.name)
         |> assign(:module_class, module.class)
         |> assign(:module_code, module.code)

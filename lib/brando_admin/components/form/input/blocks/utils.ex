@@ -1,14 +1,15 @@
+# TODO: REWRITE with new form logic?
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
   use Phoenix.HTML
 
-  def form_for_map(form, field, opts \\ []) do
-    id = to_string(form.id <> "_#{field}")
-    name = to_string(form.name <> "[#{field}]")
-    data = Map.get(form.source.data, field)
-    params = Map.get(form.source.params || %{}, to_string(field), %{})
+  def form_for_map(field, opts \\ []) do
+    id = field.id
+    name = field.name
+    data = Map.get(field.form.source.data, field.name)
+    params = Map.get(field.form.source.params || %{}, to_string(field.name), %{})
 
     %Phoenix.HTML.Form{
-      source: form.source,
+      source: field.form.source,
       impl: Phoenix.HTML.FormData.Ecto.Changeset,
       id: id,
       index: nil,
@@ -20,15 +21,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     }
   end
 
-  def form_for_map_value(form, field, opts \\ []) do
-    id = to_string(form.id <> "_#{field}")
-    name = to_string(form.name <> "[#{field}]")
-    data = Map.get(form.data, field)
-
-    params = Map.get(form.params || %{}, to_string(field), %{})
+  def form_for_map_value(field, opts \\ []) do
+    id = field.id
+    name = field.name
+    data = Map.get(field.form.data, field.name)
+    params = Map.get(field.form.params || %{}, to_string(field.name), %{})
 
     %Phoenix.HTML.Form{
-      source: form.source,
+      source: field.form.source,
       impl: Phoenix.HTML.FormData.Ecto.Changeset,
       id: id,
       index: nil,
@@ -40,24 +40,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     }
   end
 
-  def inputs_for_blocks(form, field, opts \\ []) do
-    to_form_multi(form.source, form, field, opts)
+  def inputs_for_blocks(field, opts \\ []) do
+    to_form_multi(field.form.source, field, opts)
   end
 
-  def inputs_for_poly(form, field, opts \\ []) do
-    to_form_multi(form.source, form, field, opts)
+  def inputs_for_poly(field, opts \\ []) do
+    to_form_multi(field.form.source, field, opts)
   end
 
-  def inputs_for_block(form, field, opts \\ []) do
-    to_form_single(form.source, form, field, opts)
+  def inputs_for_block(field, opts \\ []) do
+    to_form_single(field.form.source, field, opts)
   end
 
-  def to_form_single(%{action: parent_action} = source_changeset, form, field, options) do
-    id = to_string(form.id <> "_#{field}")
-    name = to_string(form.name <> "[#{field}]")
+  def to_form_single(%{action: parent_action} = source_changeset, field, options) do
+    id = field.id
+    name = field.name
 
-    params = Map.get(source_changeset.params || %{}, to_string(field), %{})
-    block = Ecto.Changeset.get_field(source_changeset, field)
+    params = Map.get(source_changeset.params || %{}, to_string(field.name), %{})
+    block = Ecto.Changeset.get_field(source_changeset, field.name)
 
     changeset =
       Ecto.Changeset.change(block)
@@ -87,14 +87,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     |> List.wrap()
   end
 
-  def to_form_multi(%{action: parent_action} = source_changeset, form, field, options) do
-    id = to_string(form.id <> "_#{field}")
-    name = to_string(form.name <> "[#{field}]")
+  def to_form_multi(%{action: parent_action} = source_changeset, field, options) do
+    id = field.id
+    name = field.name
 
-    params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
+    params = Map.get(source_changeset.params || %{}, to_string(field.name), %{}) |> List.wrap()
     params = if params == [""], do: [%{}], else: params
 
-    list_data = Ecto.Changeset.get_field(source_changeset, field) |> List.wrap()
+    list_data = Ecto.Changeset.get_field(source_changeset, field.name) |> List.wrap()
 
     list_data
     |> Enum.with_index()

@@ -140,35 +140,31 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def date(assigns) do
-    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
+    value = assigns.field.value || get_default(assigns.opts)
     assigns = prepare_input_component(assigns)
 
-    assigns =
-      assign(assigns,
-        value: value
-      )
+    assigns = assign(assigns, value: value)
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-datepicker"}
+        id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DatePicker">
           <div
-            id={"#{@form.id}-#{@field}-datepicker-flatpickr"}
+            id={"#{@field.id}-datepicker-flatpickr"}
             phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
               <%= gettext "Clear" %>
             </button>
-            <.input type={:hidden} form={@form} field={@field} value={@value} class="flatpickr" />
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
           </div>
       </div>
     </Form.field_base>
@@ -180,33 +176,32 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assign(assigns,
-        value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
+        value: assigns.field.value || get_default(assigns.opts),
         class: assigns.opts[:class],
         locale: Gettext.get_locale()
       )
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-datetimepicker"}
+        id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
         data-locale={@locale}>
           <div
-            id={"#{@form.id}-#{@field}-datetimepicker-flatpickr"}
+            id={"#{@field.id}-datetimepicker-flatpickr"}
             phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
               <%= gettext "Clear" %>
             </button>
-            <.input type={:hidden} form={@form} field={@field} value={@value} class="flatpickr" />
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
             <div class="timezone">&mdash; <%= gettext "Your timezone is" %>: <span>Unknown</span></div>
           </div>
       </div>
@@ -410,7 +405,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_input_component()
       |> assign(:slug_for, assigns.opts[:for])
       |> assign_new(:url, fn -> nil end)
-      |> assign_new(:data_slug_for, fn -> prepare_slug_for(assigns.form, assigns.opts[:for]) end)
+      |> assign_new(:data_slug_for, fn -> prepare_slug_for(assigns.field, assigns.opts[:for]) end)
       |> assign_new(:data_slug_type, fn ->
         (Keyword.get(assigns.opts, :camel_case) && "camel") || "standard"
       end)
@@ -418,14 +413,14 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      field={@form[@field]}
+      field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <.input
         type={:text}
-        field={@form[@field]}
+        field={@field}
         class="text monospace"
         phx_hook="Brando.Slug"
         phx_debounce={750}
@@ -453,6 +448,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :id, :any, default: nil
   attr :name, :any, default: nil
   attr :type, :atom, default: :text
+  attr :rows, :any
+  attr :disabled, :boolean
 
   attr :rest, :global,
     include: ~w(class phx_hook phx_debounce data_slug_for data_slug_type autocorrect spellcheck)
@@ -461,16 +458,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   def input(%{type: :checkbox} = assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
-
     assigns =
       assigns
       |> assign_new(:value, fn -> nil end)
@@ -483,27 +470,17 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@field.name} id={"#{@field.id}-unchecked"} value={@unchecked_value} {@extra}>
-      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} checked={@checked} {@extra}>
+      <input type={:hidden} name={@field.name} id={"#{@field.id}-unchecked"} value={@unchecked_value} {@rest}>
+      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} checked={@checked} {@rest}>
       """
     else
       ~H"""
-      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} {@extra}>
+      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} {@rest}>
       """
     end
   end
 
   def input(%{type: :textarea} = assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
-
     assigns =
       if assigns[:value] do
         assigns
@@ -520,21 +497,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = process_input_id(assigns)
 
     ~H"""
-    <textarea type={@type} name={@name} id={@id} {@extra}><%= @value %></textarea>
+    <textarea type={@type} name={@name} id={@id} {@rest}><%= @value %></textarea>
     """
   end
 
   def input(assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
-
     assigns =
       if assigns[:value] do
         assigns
@@ -551,7 +518,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = process_input_id(assigns)
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} {@extra}>
+    <input type={@type} name={@name} id={@id} value={@value} {@rest}>
     """
   end
 
@@ -567,7 +534,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp maybe_html_escape(value), do: html_escape(value)
 
   defp maybe_assign_url(assigns, true) do
-    entry = Ecto.Changeset.apply_changes(assigns.form.source)
+    entry = Ecto.Changeset.apply_changes(assigns.field.form.source)
     schema = entry.__struct__
     url = schema.__absolute_url__(entry)
     assign(assigns, :url, url)
@@ -577,14 +544,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns
   end
 
-  defp prepare_slug_for(form, slug_for) when is_list(slug_for) do
+  defp prepare_slug_for(%{form: form}, slug_for) when is_list(slug_for) do
     slug_for
     |> Enum.reduce([], fn sf, acc -> acc ++ List.wrap("#{form.name}[#{sf}]") end)
     |> Enum.join(",")
   end
 
   defp prepare_slug_for(_form, nil), do: false
-  defp prepare_slug_for(form, slug_for), do: "#{form.name}[#{slug_for}]"
+  defp prepare_slug_for(%{form: form}, slug_for), do: "#{form.name}[#{slug_for}]"
 
   def status(assigns) do
     assigns =
@@ -604,7 +571,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     else
       ~H"""
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -614,7 +580,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <%= for status <- @statuses do %>
             <div class="form-check">
               <label class="form-check-label">
-                <%= radio_button @form, @field, status.value, class: "form-check-input" %>
+                <input type="radio" id={@id || @field.id <> "-#{status.value}"} name={@field.name <> "[]"} class="form-check-input" value={status.value} checked={status.value == @field.value}>
                 <span class={render_classes(["label-text", status.value])}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -647,7 +613,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -659,7 +624,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         <%= for status <- @statuses do %>
           <div class="form-check">
             <label class="form-check-label">
-              <%= radio_button @form, @field, status.value, class: "form-check-input" %>
+              <input type="radio" id={@id || @field.id <> "-#{status.value}"} name={@field.name <> "[]"} class="form-check-input" value={status.value} checked={status.value == @field.value}>
               <span class={render_classes(["label-text", status.value])}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -688,7 +653,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -696,7 +660,6 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}>
       <.input
         type={:text}
-        form={@form}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
@@ -716,21 +679,19 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <.input type={:textarea}
-        form={@form}
         field={@field}
         class="text"
         placeholder={@placeholder}
         rows={@rows}
         disabled={@disabled}
         phx_debounce={@debounce}
-        id={make_uid(@form, @field, @uid)} />
+        id={make_uid(@field, @uid)} />
     </Form.field_base>
     """
   end
@@ -743,7 +704,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -751,13 +711,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       left_justify_meta>
       <Form.label
-        form={@form}
         field={@field}
         class={render_classes(["switch", small: @compact])}>
         <%= if @inner_block do %>
           <%= render_slot @inner_block %>
         <% else %>
-          <.input type={:checkbox} form={@form} field={@field} />
+          <.input type={:checkbox} field={@field} />
         <% end %>
         <div class="slider round"></div>
       </Form.label>

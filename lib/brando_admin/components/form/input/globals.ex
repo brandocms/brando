@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   # prop form, :form
   # prop subform, :form
@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def update(assigns, socket) do
-    empty_subform = Enum.empty?(inputs_for_poly(assigns.form, assigns.subform.field, []))
+    empty_subform = Enum.empty?(inputs_for_poly(assigns.form[assigns.subform.field], []))
 
     {:ok,
      socket
@@ -35,21 +35,19 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
     ~H"""
     <fieldset>
       <Form.field_base
-        form={@form}
-        field={@subform.field}
+        field={@form[@subform.name]}
         label={@label}
         instructions={@instructions}
         class={"subform"}>
         <div
-          id={"#{@form.id}-#{@subform.field}-sortable"}
+          id={"#{@form[@subform.name].id}-sortable"}
           phx-hook="Brando.SubFormSortable">
-          <%= if Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
-            <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
+          <%= if Enum.empty?(inputs_for_poly(@form[@subform.name], [])) do %>
+            <input type="hidden" name={@form[@subform.name].name} value="" />
             <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
           <% else %>
           <Form.poly_inputs
-            form={@form}
-            for={@subform.field}
+            field={@form[@subform.name]}
             :let={%{form: var, index: index}}>
             <div
               class="subform-entry flex-row"
@@ -68,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
               </div>
 
               <.live_component module={RenderVar}
-                id={"#{@form.id}-#{@subform.field}-render-var-#{index}"}
+                id={"#{@form[@subform.name].id}-render-var-#{index}"}
                 var={var}
                 render={:all}
                 edit />
@@ -77,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           <% end %>
         </div>
         <button
-          id={"#{@form.id}-#{@subform.field}-add-entry"}
+          id={"#{@form[@subform.name].id}-add-entry"}
           type="button"
           class="add-entry-button"
           phx-click={JS.push("add_subentry", target: @myself)}

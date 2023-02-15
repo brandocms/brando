@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator, "forms"
 
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
   import Phoenix.HTML.Form
@@ -2190,7 +2190,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def field_base(assigns) do
     relation = Map.get(assigns, :relation, false)
-    failed = assigns.form && has_error(assigns.form, assigns.field, relation)
+    failed = has_error(assigns.field, relation)
     label = get_label(assigns)
     hidden = label == :hidden
 
@@ -2209,9 +2209,9 @@ defmodule BrandoAdmin.Components.Form do
 
     f_id =
       if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)
@@ -2226,20 +2226,17 @@ defmodule BrandoAdmin.Components.Form do
           class={render_classes(["control-label", failed: @failed])}>
           <span><%= @label %></span>
         </label>
-        <%= if @form do %>
+        <%= if @field do %>
           <.error_tag
-            form={@form}
             field={@field}
             relation={@relation}
             id_prefix={@id_prefix}
             uid={@uid}
           />
         <% end %>
-        <%= if @header do %>
-          <div class="field-wrapper-header">
-            <%= render_slot @header %>
-          </div>
-        <% end %>
+        <div :if={@header} class="field-wrapper-header">
+          <%= render_slot @header %>
+        </div>
       </div>
       <div class="field-base" id={"#{@f_id}-field-base"}>
         <%= render_slot @inner_block %>
@@ -2250,11 +2247,9 @@ defmodule BrandoAdmin.Components.Form do
             <div class="help-text">
               ↳ <span><%= raw @instructions %></span>
             </div>
-            <%= if @meta do %>
-              <div class="extra">
-                <%= render_slot @meta %>
-              </div>
-            <% end %>
+            <div :if={@meta} class="extra">
+              <%= render_slot @meta %>
+            </div>
           <% end %>
         </div>
       <% end %>
@@ -2263,7 +2258,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp get_label(%{label: nil} = assigns) do
-    assigns.field
+    assigns.field.field
     |> to_string
     |> Brando.Utils.humanize()
   end
@@ -2272,21 +2267,17 @@ defmodule BrandoAdmin.Components.Form do
     label
   end
 
-  defp has_error(form, field, true) do
-    field = :"#{field}_id"
+  # defp has_error(field, true) do
+  #   field = :"#{field}_id"
 
-    case Keyword.get_values(form.errors, field) do
-      [] -> false
-      _ -> true
-    end
-  end
+  #   case Keyword.get_values(form.errors, field) do
+  #     [] -> false
+  #     _ -> true
+  #   end
+  # end
 
-  defp has_error(form, field, _) do
-    case Keyword.get_values(form.errors, field) do
-      [] -> false
-      _ -> true
-    end
-  end
+  defp has_error(%{errors: []}, _), do: false
+  defp has_error(%{errors: _}, _), do: true
 
   def input(assigns) do
     assigns =
@@ -2320,7 +2311,6 @@ defmodule BrandoAdmin.Components.Form do
       <div class="brando-input">
         <.live_component module={@component_target}
           id={@component_id}
-          form={@form}
           parent_form={@parent_form}
           field={@field}
           label={@label}
@@ -2335,28 +2325,38 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  # attr :field, Phoenix.HTML.FormField
+  # attr :opts, :any
+
   def inputs(assigns) do
     assigns =
       assigns
       |> assign_new(:opts, fn -> [] end)
 
     assigns =
-      assigns
-      |> assign(
-        :indexed_inputs,
-        Enum.with_index(inputs_for(assigns.form, assigns.for, assigns.opts))
+      assign(
+        assigns,
+        :inputs,
+        assigns.field.form.impl.to_form(
+          assigns.field.form.source,
+          assigns.field.form,
+          assigns.field.name,
+          assigns.opts
+        )
       )
 
     ~H"""
-    <%= for {form, index} <- @indexed_inputs do %>
-      <%= render_slot(@inner_block, %{form: form, index: index}) %>
+    <%= for form <- @inputs do %>
+      <%= render_slot(@inner_block, %{form: form, index: form.index}) %>
     <% end %>
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def map_inputs(assigns) do
-    subform = Utils.form_for_map(assigns.form, assigns.for)
-    input_value = input_value(assigns.form, assigns.for)
+    subform = Utils.form_for_map(assigns.field)
+    input_value = assigns.field.value
 
     assigns =
       assigns
@@ -2367,7 +2367,7 @@ defmodule BrandoAdmin.Components.Form do
     <%= if @input_value do %>
       <%= for {map_key, map_value} <- @input_value do %>
         <%= render_slot @inner_block, %{
-          name: "#{@form.name}[#{@for}][#{map_key}]",
+          name: "#{@field.name}[#{map_key}]",
           key: map_key,
           value: map_value,
           subform: @subform
@@ -2377,9 +2377,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def map_value_inputs(assigns) do
-    subform = Utils.form_for_map_value(assigns.form, assigns.for)
-    input_value = subform.data
+    subform = Utils.form_for_map_value(assigns.field)
+    input_value = assigns.field.value
 
     assigns =
       assigns
@@ -2389,7 +2391,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {map_key, map_value} <- @input_value do %>
       <%= render_slot @inner_block, %{
-        name: "#{@subform.name}[#{map_key}]",
+        name: "#{@field.name}[#{map_key}]",
         key: map_key,
         value: map_value,
         subform: @subform
@@ -2398,17 +2400,19 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def poly_inputs(assigns) do
     assigns =
       assigns
-      |> assign(:input_value, input_value(assigns.form, assigns.for))
+      |> assign(:input_value, assigns.field.value)
       |> assign_new(:opts, fn -> [] end)
 
     assigns =
       assigns
       |> assign(
         :indexed_inputs,
-        Enum.with_index(inputs_for_poly(assigns.form, assigns.for, assigns.opts))
+        assigns.field |> inputs_for_poly(assigns.opts) |> Enum.with_index()
       )
 
     ~H"""
@@ -2421,20 +2425,19 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def array_inputs(assigns) do
     assigns =
       assigns
-      |> assign(:input_value, input_value(assigns.form, assigns.for))
-      |> assign(
-        :indexed_inputs,
-        Enum.with_index(input_value(assigns.form, assigns.for) || [])
-      )
+      |> assign(:input_value, assigns.field.value)
+      |> assign(:indexed_inputs, Enum.with_index(assigns.field.value || []))
 
     ~H"""
     <%= if @input_value do %>
       <%= for {array_value, array_index} <- @indexed_inputs do %>
         <%= render_slot @inner_block, %{
-          name: "#{@form.name}[#{@for}][]",
+          name: "#{@field.name}[]",
           index: array_index,
           value: array_value} %>
       <% end %>
@@ -2442,8 +2445,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :options, :any
+
   def array_inputs_from_data(assigns) do
-    checked_values = input_value(assigns.form, assigns.for) || []
+    checked_values = assigns.field.value || []
 
     assigns =
       assigns
@@ -2453,8 +2459,8 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {option, idx} <- @indexed_options do %>
       <%= render_slot @inner_block, %{
-        name: "#{@form.name}[#{@for}][]",
-        id: "#{@form.id}-#{@for}-#{idx}",
+        name: "#{@field.name}][]",
+        id: "#{@field.id}-#{idx}",
         index: idx,
         value: option.value,
         label: option.label,
@@ -2505,22 +2511,21 @@ defmodule BrandoAdmin.Components.Form do
 
     f_id =
       if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <%= for error <- Keyword.get_values(@form.errors, @field) do %>
     <span
+      :for={error <- @field.errors}
       id={"#{@f_id}-error"}
       class="field-error"
       phx-feedback-for={@feedback_for || @f_id}>
       <%= @translate_fn.(error) %>
     </span>
-    <% end %>
     """
   end
 
@@ -2534,10 +2539,10 @@ defmodule BrandoAdmin.Components.Form do
 
   def label(assigns) do
     f_id =
-      if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+      if assigns.uid do
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)

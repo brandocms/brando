@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   use Phoenix.HTML
 
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -28,8 +28,8 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     ~H"""
     <fieldset>
       <Form.field_base
-        form={@form}
-        field={@subform.field}
+        form={}
+        field={@form[@subform.name]}
         label={@label}
         instructions={@instructions}
         class={"subform"}>
@@ -50,13 +50,13 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
 
         <%= if @advanced do %>
           <div
-            id={"#{@form.id}-#{@subform.field}-sortable"}
+            id={"#{@form[@subform.name].id}-sortable"}
             phx-hook="Brando.SubFormSortable">
-            <%= if Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
-              <input type="hidden" name={"#{@form.name}[#{@subform.field}]"} value="" />
+            <%= if Enum.empty?(inputs_for_poly(@form[@subform.name], [])) do %>
+              <input type="hidden" name={"#{@form[@subform.name].name}"} value="" />
               <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
             <% end %>
-            <Form.poly_inputs form={@form} for={@subform.field} :let={%{form: var, index: index}}>
+            <Form.poly_inputs field={@form[@subform.name]} :let={%{form: var, index: index}}>
               <div
                 class="subform-entry flex-row"
                 data-id={index}>
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
                 </div>
 
                 <.live_component module={RenderVar}
-                  id={"#{@form.id}-#{@subform.field}-render-var-#{index}"}
+                  id={"#{@form[@subform.name].id}-render-var-#{index}"}
                   var={var}
                   render={:all}
                   edit />
@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
             </Form.poly_inputs>
           </div>
           <button
-            id={"#{@form.id}-#{@subform.field}-add-entry"}
+            id={"#{@form[@subform.name].id}-add-entry"}
             type="button"
             class="add-entry-button"
             phx-click={JS.push("add_subentry", target: @myself)}
@@ -91,10 +91,10 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
             <%= gettext("Add entry") %>
           </button>
         <% else %>
-          <%= unless Enum.empty?(inputs_for_poly(@form, @subform.field, [])) do %>
-            <Form.poly_inputs form={@form} for={@subform.field} :let={%{form: var, index: index}}>
+          <%= unless Enum.empty?(inputs_for_poly(@form[@subform.name], [])) do %>
+            <Form.poly_inputs field={@form[@subform.name]} :let={%{form: var, index: index}}>
               <.live_component module={RenderVar}
-                id={"#{@form.id}-#{@subform.field}-render-var-#{index}"}
+                id={"#{@form[@subform.name].id}-render-var-#{index}"}
                 var={var}
                 render={:all} />
             </Form.poly_inputs>
@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   end
 
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
 
     default = %Brando.Content.Var.Boolean{
       type: "boolean",
@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
       value: true
     }
 
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -160,13 +160,13 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   end
 
   def handle_event("force_validate", _, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     event_id = "#{socket.assigns.form.id}-#{field_name}-add-entry"
     {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"

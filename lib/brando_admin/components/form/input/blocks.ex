@@ -39,8 +39,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def update(assigns, socket) do
     # TODO: when using input_value here, we sometimes end up
     # with the whole block field as a params map %{"0" => ...}
-    blocks = Utils.iv(assigns.form, assigns.field) || []
-    block_forms = inputs_for_blocks(assigns.form, assigns.field) || []
+    blocks = assigns.field.value || []
+    block_forms = inputs_for_blocks(assigns.field) || []
 
     {:ok,
      socket
@@ -65,13 +65,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}>
 
         <.live_component module={Blocks.BlockRenderer}
-          id={"#{@form.id}-#{@field}-blocks"}
+          id={"#{@field.id}-blocks"}
           base_form={@form}
           blocks={@blocks}
           block_forms={@block_forms}

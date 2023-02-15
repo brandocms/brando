@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.GlobalTabs do
   use BrandoAdmin, :live_component
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
   import Brando.Gettext
   alias Brando.Sites
   alias BrandoAdmin.Components.Form.Input
@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <Input.input type={:hidden} form={f} field={:label} />
       <Input.input type={:hidden} form={f} field={:key} />
 
-      <%= for var <- inputs_for_poly(f, :globals, []) do %>
+      <%= for var <- inputs_for_poly(f[:globals], []) do %>
         <.live_component module={RenderVar}
           id={"set-#{@global_set.id}-#{var.id}-#{@index}"}
           var={var}

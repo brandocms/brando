@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
     |> assign(:uid, v(block, :uid) || Brando.Utils.generate_uid())
     |> assign(:description, description)
     |> assign(:block_data, block_data)
-    |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data, :vars)))
+    |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data[:vars])))
     |> assign(:module_name, entry_template.name)
     |> assign(:module_class, entry_template.class)
     |> assign(:module_code, entry_template.code)
@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <:config>
           <div class="panels">
             <div class="panel">
-              <Input.text form={@block} field={:description} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
               <%= for {var, index} <- @indexed_vars do %>
                 <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
               <% end %>
@@ -137,7 +137,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <div class="module-block" b-editor-tpl={@module_class}>
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
-              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
+              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data[:vars])) do %>
                 <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
               <% end %>
             </div>
@@ -167,9 +167,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                 <%= raw split %>
             <% end %>
           <% end %>
-          <Input.input type={:hidden} form={@block_data} field={:module_id} />
-          <Input.input type={:hidden} form={@block_data} field={:sequence} />
-          <Input.input type={:hidden} form={@block_data} field={:multi} />
+          <Input.input type={:hidden} field={@block_data[:module_id]} />
+          <Input.input type={:hidden} field={@block_data[:sequence]} />
+          <Input.input type={:hidden} field={@block_data[:multi]} />
         </div>
       </Blocks.block>
     </div>
