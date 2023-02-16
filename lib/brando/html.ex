@@ -113,6 +113,30 @@ defmodule Brando.HTML do
     """
   end
 
+  attr :fragment, Brando.Pages.Fragment
+  attr :parent_key, :string
+  attr :key, :string
+  attr :language, :string
+
+  def fragment(%{fragment: fragment} = assigns) when not is_nil(fragment) do
+    ~H"""
+    <%= raw(@fragment.html) %>
+    """
+  end
+
+  def fragment(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :fragment,
+        Brando.Pages.render_fragment(assigns.parent_key, assigns.key, assigns.language)
+      )
+
+    ~H"""
+    <%= raw(@fragment.html) %>
+    """
+  end
+
   def render_palettes_css(assigns) do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
