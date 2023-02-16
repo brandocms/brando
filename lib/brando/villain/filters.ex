@@ -988,11 +988,28 @@ defmodule Brando.Villain.Filters do
   Prefix media url to file/image
   """
   def media_url(%Brando.Files.File{} = file, _) do
-    Utils.file_url(file)
+    Utils.media_url(file)
   end
 
   def media_url(%Brando.Images.Image{} = img, _) do
     Brando.Utils.img_url(img, :original, prefix: Brando.Utils.media_url())
+  end
+
+  def media_url(%Ecto.Association.NotLoaded{}, _) do
+    require Logger
+
+    Logger.error("""
+
+    Tried calling the `media_url` filter on a not loaded association.
+    If you are using datasources, make sure you have preloaded the assoications you are trying to access in the template
+
+    """)
+
+    ""
+  end
+
+  def media_url(nil, _) do
+    ""
   end
 
   def schema(%{__struct__: schema}, _) do

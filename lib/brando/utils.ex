@@ -548,6 +548,27 @@ defmodule Brando.Utils do
   def media_url, do: Brando.config(:media_url)
   @spec media_url(binary | nil) :: binary | nil
   def media_url(nil), do: Brando.config(:media_url)
+
+  def media_url(%Ecto.Association.NotLoaded{}) do
+    ""
+  end
+
+  def media_url(%Brando.Files.File{} = file) do
+    {:ok, config} = Brando.Files.get_config_for(file.config_target)
+
+    file_path = Path.join([config.upload_path, file.filename])
+
+    case Brando.CDN.enabled?(Brando.Files) && file.cdn do
+      true ->
+        s3_cfg = Brando.CDN.config(Brando.Files, :s3)
+        bucket = Brando.CDN.config(Brando.Files, :bucket)
+        "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
+
+      false ->
+        media_url(file_path)
+    end
+  end
+
   def media_url(path), do: Path.join([Brando.config(:media_url), path])
 
   @doc """
