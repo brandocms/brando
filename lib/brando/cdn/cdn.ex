@@ -22,6 +22,8 @@ defmodule Brando.CDN do
 
   """
   require Logger
+  import Ecto.Query
+  alias Brando.Worker
   alias Ecto.Changeset
   alias ExAws.S3
   alias ExAws.S3.Upload
@@ -36,13 +38,48 @@ defmodule Brando.CDN do
 
   def get_prefix(module), do: config(module, :media_url)
 
+  def queue_upload(%Brando.Files.File{} = file, user, field_full_path \\ []) do
+    args = %{
+      file_id: file.id,
+      config_target: file.config_target,
+      user_id: user.id,
+      field_full_path: field_full_path
+    }
+
+    Brando.repo().delete_all(
+      from j in Oban.Job,
+        where: fragment("? @> ?", j.args, ^args)
+    )
+
+    args
+    |> Worker.FileUploader.new(replace_args: true)
+    |> Oban.insert()
+  end
+
   @doc """
 
   """
-  @spec upload_file(changeset, atom | binary, map) :: {:ok, :task_started}
-  def upload_file(changeset, name, %Brando.Images.Image{} = field) do
-    Task.start_link(__MODULE__, :do_upload_image, [{changeset, name, field}])
-    {:ok, :task_started}
+  @spec upload_file(any, any) :: {:ok, binary}
+  def upload_file(%Brando.Files.File{} = file, config) do
+    s3_bucket = config(Brando.Files, :bucket)
+
+    # upload original
+    local_path = config.upload_path
+    filename = file.filename
+    original_key = Path.join(["media", local_path, filename])
+    Logger.error("==> uploading `#{original_key}` to bucket `#{s3_bucket}`")
+    s3_config = Brando.CDN.config(Brando.Files, :s3) |> Map.to_list()
+
+    case s3_upload(s3_bucket, original_key, s3_config) do
+      {:ok, s3_key} ->
+        Logger.error("==> uploaded as #{s3_key}")
+        {:ok, s3_key}
+
+      {:error, {:http_error, 403, err}} ->
+        Logger.error("==> Error uploading file. 403 from AMAZON")
+        Logger.error(inspect(err, pretty: true))
+        {:error, "S3 Upload failed"}
+    end
   end
 
   def do_upload_image({changeset, name, field}) do
@@ -65,11 +102,11 @@ defmodule Brando.CDN do
     |> Brando.repo().update
   end
 
-  defp s3_upload(s3_bucket, s3_key) do
+  defp s3_upload(s3_bucket, s3_key, s3_config \\ []) do
     s3_key
     |> Upload.stream_file()
     |> S3.upload(s3_bucket, s3_key, acl: :public_read)
-    |> ExAws.request()
+    |> ExAws.request(s3_config)
     |> case do
       {:ok, %{status_code: 200}} ->
         {:ok, s3_key}

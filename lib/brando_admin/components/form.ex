@@ -1214,6 +1214,13 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> file.id end)
     updated_entry = Map.put(entry_or_default, field, updated_file)
 
+    # this is only for fresh uploads.
+    if !updated_file.cdn && Brando.CDN.enabled?(Brando.Files) do
+      # TODO __ FIGURE OUT FULL_PATH
+      full_field_path = []
+      Brando.CDN.queue_upload(updated_file, current_user, full_field_path)
+    end
+
     {:noreply,
      socket
      |> assign(:entry, updated_entry)
