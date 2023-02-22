@@ -552,7 +552,8 @@ defmodule BrandoAdmin.Components.Content.List do
                 <span><%= g(@schema, filter[:label]) %></span>
               </button>
               <.form
-                for={:filter_form}
+                for={%{}}
+                as={:filter_form}
                 phx-change={@update_filter}
                 onkeydown="return event.key != 'Enter';">
                 <input

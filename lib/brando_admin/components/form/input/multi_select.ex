@@ -439,10 +439,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <%= if Enum.empty?(@selected_options) do %>
           <Input.input
             type={:hidden}
-            form={@form}
             field={@field}
-            id={"#{@form.name}-#{@field}-empty"}
-            name={"#{@form.name}[#{@field}]"}
+            id={"#{@field.id}-empty"}
+            name={@field.name}
             value={""} />
         <% else %>
           <%= if @relation_type == :has_many do %>
@@ -450,24 +449,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= Phoenix.HTML.Form.hidden_inputs_for(eform) %>
               <Input.hidden
                 :if={@sequenced?}
-                form={eform}
-                field={:sequence}
+                field={eform[:sequence]}
                 value={index}
               />
               <Input.hidden
                 :for={efield <- @relation_fields}
-                form={eform}
-                field={efield}
+                field={eform[efield]}
               />
             <% end %>
           <% else %>
             <%= for opt <- @selected_options do %>
               <Input.input
                 type={:hidden}
-                form={@form}
                 field={@field}
-                id={"#{@form.name}-#{@field}-#{maybe_slug(opt)}"}
-                name={"#{@form.name}[#{@field}][]"}
+                id={"#{@field.id}-#{maybe_slug(opt)}"}
+                name={"#{@field.name}[]"}
                 value={extract_value(opt)} />
             <% end %>
           <% end %>

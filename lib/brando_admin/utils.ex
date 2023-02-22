@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def prepare_input_component(%{assigns: assigns} = socket) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     socket =
       socket

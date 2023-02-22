@@ -2188,6 +2188,17 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :relation, :boolean
+  attr :compact, :boolean, default: false
+  attr :instructions, :string
+  attr :label, :any
+  attr :class, :any
+  attr :uid, :string
+  attr :id_prefix, :string
+  slot :meta
+  slot :header
+
   def field_base(assigns) do
     relation = Map.get(assigns, :relation, false)
     failed = has_error(assigns.field, relation)
@@ -2198,8 +2209,6 @@ defmodule BrandoAdmin.Components.Form do
       assigns
       |> assign_new(:uid, fn -> nil end)
       |> assign_new(:id_prefix, fn -> "" end)
-      |> assign_new(:header, fn -> nil end)
-      |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
       |> assign_new(:left_justify_meta, fn -> nil end)
       |> assign(:relation, relation)
@@ -2234,7 +2243,7 @@ defmodule BrandoAdmin.Components.Form do
             uid={@uid}
           />
         <% end %>
-        <div :if={@header} class="field-wrapper-header">
+        <div :if={@header != []} class="field-wrapper-header">
           <%= render_slot @header %>
         </div>
       </div>
@@ -2247,7 +2256,7 @@ defmodule BrandoAdmin.Components.Form do
             <div class="help-text">
               ↳ <span><%= raw @instructions %></span>
             </div>
-            <div :if={@meta} class="extra">
+            <div :if={@meta != []} class="extra">
               <%= render_slot @meta %>
             </div>
           <% end %>
@@ -2493,6 +2502,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :relation, :atom
+  attr :id_prefix, :string
+  attr :uid, :string
+
   def error_tag(assigns) do
     assigns =
       assigns
@@ -2504,7 +2518,8 @@ defmodule BrandoAdmin.Components.Form do
 
     assigns =
       if assigns.relation do
-        assign(assigns, :field, :"#{assigns.field}_id")
+        relation_field_atom = :"#{assigns.field.field}_id"
+        assign(assigns, :field, assigns.field.form[relation_field_atom])
       else
         assigns
       end

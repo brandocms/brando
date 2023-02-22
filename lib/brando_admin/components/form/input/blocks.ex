@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
         <.live_component module={Blocks.BlockRenderer}
           id={"#{@field.id}-blocks"}
-          base_form={@form}
+          base_form={@field.form}
           blocks={@blocks}
           block_forms={@block_forms}
           uploads={@uploads}
@@ -79,10 +79,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           data_field={@data_field}
           insert_index={@insert_index}
           opts={@opts}
-          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@form.id}-#{@field}-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@field.id}-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)} />
       </Form.field_base>
     </div>

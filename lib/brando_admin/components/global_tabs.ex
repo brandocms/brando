@@ -62,10 +62,10 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       phx-change="validate"
       phx-submit="submit"
       :let={f}>
-      <Input.input type={:hidden} form={f} field={:id} />
-      <Input.input type={:hidden} form={f} field={:language} />
-      <Input.input type={:hidden} form={f} field={:label} />
-      <Input.input type={:hidden} form={f} field={:key} />
+      <Input.input type={:hidden} field={f[:id]} />
+      <Input.input type={:hidden} field={f[:language]} />
+      <Input.input type={:hidden} field={f[:label]} />
+      <Input.input type={:hidden} field={f[:key]} />
 
       <%= for var <- inputs_for_poly(f[:globals], []) do %>
         <.live_component module={RenderVar}

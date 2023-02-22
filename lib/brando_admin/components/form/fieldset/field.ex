@@ -49,7 +49,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       <% end %>
     <% else %>
       <Form.input
-        id={"#{@form.id}-#{@input.name}"}
         field={@form[@input.name]}
         label={@label}
         instructions={@instructions}

@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       socket
       |> assign(assigns)
       |> assign_new(:form_id, fn ->
-        form = assigns.form
+        form = assigns.field.form
         path = Brando.Utils.get_path_from_field_name(form.name)
         module_from_form = form.source.data.__struct__
 
@@ -66,14 +66,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         "#{module.__naming__().singular}_form"
       end)
 
-    relation_field = String.to_existing_atom("#{assigns.field}_id")
-    changeset = assigns.form.source
+    relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
+    relation_field = assigns.field.form[relation_field_atom]
+    changeset = assigns.field.form.source
 
-    full_path_fk = socket.assigns.path ++ [relation_field]
+    full_path_fk = socket.assigns.path ++ [relation_field_atom]
 
     image_id =
       changeset
-      |> get_field(relation_field)
+      |> get_field(relation_field_atom)
       |> try_force_int()
 
     image = socket.assigns.image
@@ -152,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> prepare_input_component()
      |> assign(:file_name, file_name)
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:upload_field, fn -> socket.assigns.uploads[assigns.field] end)
+     |> assign_new(:upload_field, fn -> socket.assigns.uploads[assigns.field.field] end)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
 
@@ -165,7 +166,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     <div>
       <Form.field_base
         :if={@editable}
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -176,7 +176,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             <%= if @image && @image.path do %>
               <.image_preview
                 image={@image}
-                form={@form}
                 field={@field}
                 relation_field={@relation_field}
                 click={@editable && open_image(@myself)}
@@ -184,7 +183,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                 file_name={@file_name} />
             <% else %>
               <.empty_preview
-                form={@form}
                 field={@field}
                 relation_field={@relation_field}
                 editable={@editable}
@@ -200,7 +198,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         <%= if @image && @image.path do %>
           <.image_preview
             image={@image}
-            form={@form}
             field={@field}
             relation_field={@relation_field}
             click={@editable && open_image(@myself)}
@@ -208,7 +205,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             file_name={@file_name} />
         <% else %>
           <.empty_preview
-            form={@form}
             field={@field}
             relation_field={@relation_field}
             editable={@editable}
@@ -299,7 +295,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       <Input.input
         :if={@editable}
         type={:hidden}
-        form={@form}
         field={@relation_field}
         value={""}
       />
@@ -313,7 +308,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           class="btn-small"
           type="button"
           phx-click={@click}
-          phx-value-id={"edit-image-#{@form.id}-#{@field}"}><%= gettext "Add image" %></button>
+          phx-value-id={"edit-image-#{@field.id}"}><%= gettext "Add image" %></button>
       </div>
     </div>
     """
@@ -334,7 +329,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       <Input.input
         :if={@editable}
         type={:hidden}
-        form={@form}
         field={@relation_field}
         value={@value || @image.id}
       />
