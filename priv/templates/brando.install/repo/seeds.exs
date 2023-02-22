@@ -11,23 +11,6 @@
 # and so on) as they will fail if something goes wrong.
 
 user = <%= application_module %>.Repo.get_by!(Brando.Users.User, id: 1)
-
-post_cfg = %Brando.Type.ImageConfig{
-  allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-  default_size: "xlarge",
-  random_filename: true,
-  size_limit: 10_240_000,
-  sizes: %{
-    "large" => %{"quality" => 85, "size" => "1400"},
-    "medium" => %{"quality" => 85, "size" => "1000"},
-    "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
-    "small" => %{"quality" => 85, "size" => "700"},
-    "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
-    "xlarge" => %{"quality" => 85, "size" => "1900"}
-  },
-  upload_path: "images/site/posts"
-}
-
 languages = Brando.config(:languages) |> Enum.map(&String.to_existing_atom(&1[:value]))
 
 for lang <- languages do
