@@ -27,7 +27,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.7.0-rc.2", override: true},
+      {:phoenix, "~> 1.7.0-rc.3", override: true},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.16"},
