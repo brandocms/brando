@@ -277,6 +277,7 @@ defmodule Mix.Tasks.Brando.Install do
     Mix.shell().info("\nDeleting old assets")
     File.rm_rf("assets")
     File.rm_rf("lib/#{binding[:application_name]}_web/components/layouts/root.html.heex")
+    File.rm_rf("lib/#{binding[:application_name]}_web/controllers/page_html/home.html.heex")
 
     Mix.shell().info("\nMoving test/ to test/unit/")
     File.rename("test", "test/unit")
