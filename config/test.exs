@@ -79,7 +79,8 @@ config :brando, Oban,
   crontab: false,
   queues: false,
   plugins: false,
-  repo: BrandoIntegration.DummyRepo
+  repo: BrandoIntegration.DummyRepo,
+  testing: :inline
 
 config :brando, :languages, [
   [value: "no", text: "Norsk"],
