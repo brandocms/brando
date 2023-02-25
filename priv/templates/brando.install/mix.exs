@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "~> 1.7.0-rc.3", override: true},
+      {:phoenix, "~> 1.7.0", override: true},
       {:ecto, github: "elixir-ecto/ecto", override: true},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
