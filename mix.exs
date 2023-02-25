@@ -72,7 +72,7 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.3"},
 
       # Misc
-      {:httpoison, "~> 1.0"},
+      {:httpoison, "~> 2.0"},
       {:gettext, "~> 0.20"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
