@@ -42,10 +42,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.48.0":
-  version "3.48.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.0.tgz#a1f000664e810089830aaf3add784e4aedaf906d"
-  integrity sha512-jS4ZOzCQ1CN5W5wq9X6k0l2FBhB0bm/V9XWZ8/piNd1k28bQwWXl4F0I2DwULTtSzYaw/6Ho5x3lSaYo7zG1bA==
+"@brandocms/jupiter@^3.48.2":
+  version "3.48.2"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.2.tgz#2f594540992a40cd29bb3b987850047c4e73875d"
+  integrity sha512-h6O0Q91n7o+510MbeDyLk7iwZ2Gq6ppTFnhgdmGGKRDrt2rI/4ZvZcsJp+EoYVyzOHKPaGgjhEDhmAq3nTUfiA==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -1456,8 +1456,9 @@ postcss-font-variant@^5.0.0:
   resolved "https://registry.yarnpkg.com/postcss-font-variant/-/postcss-font-variant-5.0.0.tgz#efd59b4b7ea8bb06127f2d031bfbb7f24d32fa66"
   integrity sha512-1fmkBaCALD72CK2a9i468mA/+tr9/1cBxRRMXOUaZqO43oWPR5imcyPjXwuv7PXbCid4ndlP5zWhidQVVa3hmA==
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
