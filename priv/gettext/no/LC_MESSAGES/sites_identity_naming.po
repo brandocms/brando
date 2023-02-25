@@ -9,7 +9,7 @@
 msgid ""
 msgstr ""
 "Language: no\n"
-"Plural-Forms: nplurals=2\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/brando/sites/identity.ex:137
 #: lib/brando/sites/identity.ex:138

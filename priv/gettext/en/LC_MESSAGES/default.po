@@ -9,7 +9,7 @@
 msgid ""
 msgstr ""
 "Language: en\n"
-"Plural-Forms: nplurals=2\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/brando/upload.ex:150
 #, elixir-autogen, elixir-format
