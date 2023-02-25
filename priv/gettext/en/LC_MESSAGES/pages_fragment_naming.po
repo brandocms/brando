@@ -8,8 +8,8 @@
 ## to merge POT files into PO files.
 msgid ""
 msgstr ""
-"Language: en\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: en"
+"Plural-Forms: nplurals=2; plural=(n != 1);"
 
 #: lib/brando/pages/fragment.ex:65
 #, elixir-autogen, elixir-format
