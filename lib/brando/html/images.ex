@@ -129,9 +129,16 @@ defmodule Brando.HTML.Images do
   defp picture_tag(%{src: src, attrs: attrs, opts: opts} = assigns) do
     figcaption? = Keyword.get(opts, :caption) && src.title && src.title != ""
 
+    caption =
+      case Keyword.get(opts, :caption, false) do
+        false -> false
+        true -> src.title
+        caption -> caption
+      end
+
     assigns =
       assigns
-      |> assign(:figcaption?, figcaption?)
+      |> assign(:caption, caption)
       |> assign(:noscript_alt, Keyword.get(attrs.opts, :alt, Map.get(src, :alt, "")))
 
     ~H"""
@@ -142,9 +149,7 @@ defmodule Brando.HTML.Images do
         <img {@attrs.img} />
         <.noscript_tag attrs={@attrs.noscript_img} alt={@noscript_alt} />
       </picture>
-      <%= if @figcaption? do %>
-        <.figcaption_tag caption={@src.title} />
-      <% end %>
+      <.figcaption_tag :if={@caption} caption={@caption} />
     </figure>
     """
   end

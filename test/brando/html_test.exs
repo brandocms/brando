@@ -298,6 +298,28 @@ defmodule Brando.HTMLTest do
       |> Floki.parse_document!()
 
     assert Floki.find(doc, "figcaption") == [{"figcaption", [], ["Title!"]}]
+    # ---
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :small,
+      caption: "A custom caption",
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    assigns = %{user: user, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@user.avatar} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert Floki.find(doc, "figcaption") == [{"figcaption", [], ["A custom caption"]}]
 
     # ---
     opts = [
