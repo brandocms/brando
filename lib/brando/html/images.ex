@@ -154,7 +154,7 @@ defmodule Brando.HTML.Images do
 
   defp mq_sources(assigns) do
     ~H"""
-    <%= for {media, srcset} <- @mqs do %><source media={media} srcset={srcset} /><% end %>
+    <source :for={{media, srcset} <- @mqs} media={media} srcset={srcset} />
     """
   end
 
