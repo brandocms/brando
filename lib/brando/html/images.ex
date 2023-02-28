@@ -127,8 +127,6 @@ defmodule Brando.HTML.Images do
   end
 
   defp picture_tag(%{src: src, attrs: attrs, opts: opts} = assigns) do
-    figcaption? = Keyword.get(opts, :caption) && src.title && src.title != ""
-
     caption =
       case Keyword.get(opts, :caption, false) do
         false -> false

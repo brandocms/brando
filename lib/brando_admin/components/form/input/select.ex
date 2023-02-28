@@ -453,13 +453,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def handle_event(
         "select_option",
         %{"value" => value},
-        %{
-          assigns: %{
-            form: form,
-            input_options: input_options,
-            update_relation: update_relation
-          }
-        } = socket
+        %{assigns: %{form: form, update_relation: update_relation}} = socket
       ) do
     changeset = form.source
 
@@ -491,11 +485,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> push_event("b:validate", %{})}
   end
 
-  def handle_event(
-        "reset",
-        _,
-        %{assigns: %{input_options: input_options}} = socket
-      ) do
+  def handle_event("reset", _, socket) do
     {:noreply,
      socket
      |> assign(:selected_option, "")
