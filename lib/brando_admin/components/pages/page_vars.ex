@@ -28,8 +28,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     ~H"""
     <fieldset>
       <Form.field_base
-        form={}
-        field={@form[@subform.name]}
+        field={@field}
         label={@label}
         instructions={@instructions}
         class={"subform"}>

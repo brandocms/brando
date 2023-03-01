@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Utils do
   alias Phoenix.LiveView.JS
 
   def prepare_subform_component(%{assigns: assigns} = socket) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     socket =
       socket

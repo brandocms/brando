@@ -27,9 +27,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
         # can we sequence the subform? we can if it
         #   - is an embed
         #   - has a :sequenced trait
-        parent_schema = assigns.form.data.__struct__
+        parent_schema = assigns.field.form.data.__struct__
 
-        case parent_schema.__relation__(assigns.subform.field) do
+        case parent_schema.__relation__(assigns.subform.name) do
           %Brando.Blueprint.Relation{type: :has_many, opts: %{module: rel_module}} ->
             rel_module.has_trait(Brando.Trait.Sequenced)
 
@@ -41,25 +41,22 @@ defmodule BrandoAdmin.Components.Form.Subform do
         end
       end)
       |> assign_new(:embeds?, fn ->
-        parent_schema = assigns.form.data.__struct__
+        parent_schema = assigns.field.form.data.__struct__
 
-        case parent_schema.__relation__(assigns.subform.field) do
+        case parent_schema.__relation__(assigns.subform.name) do
           %Brando.Blueprint.Relation{type: :embeds_many} -> true
           _ -> false
         end
       end)
-      |> assign(
-        :indexed_sub_form_fields,
-        Enum.with_index(inputs_for(assigns.form, assigns.subform.field))
-      )
-      |> assign(:path, List.wrap(assigns.subform.field))
+      |> assign(:empty_subform_fields, assigns.field == [])
+      |> assign(:path, List.wrap(assigns.subform.name))
 
     {:ok, socket}
   end
 
   def render(%{subform: %{style: {:transformer, transform_field}}} = assigns) do
-    upload_key = :"#{assigns.subform.field}|#{transform_field}"
-    _ = :"#{assigns.subform.field}|#{transform_field}_id"
+    upload_key = :"#{assigns.subform.name}|#{transform_field}"
+    _ = :"#{assigns.subform.name}|#{transform_field}_id"
     upload_field = Map.get(assigns.uploads, upload_key)
 
     assigns =
@@ -71,51 +68,46 @@ defmodule BrandoAdmin.Components.Form.Subform do
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :many}
-        form={@form}
-        field={@subform.name}
+        field={@field}
         label={@label}
         instructions={@instructions}
         class={"subform"}>
         <div
-          id={"#{@form.id}-#{@subform.name}-sortable"}
+          id={"#{@field.id}-sortable"}
           data-embeds={@embeds?}
           phx-hook={@sequenced? && "Brando.SubFormSortable"}
         >
-          <.empty_subform
-            :if={@indexed_sub_form_fields == []}
-            form={@form}
-            subform_field={@subform.name}
-          />
-          <div
-            :for={{sub_form, index} <- @indexed_sub_form_fields}
-            class={render_classes(["subform-entry", "group", listing: index not in @open_entries])}
-            data-id={index}>
-            <div class="subform-tools">
-              <.subentry_edit on_click={JS.push("edit_subentry", value: %{index: index}, target: @myself)} open={index in @open_entries} />
-              <.subentry_sequence :if={@sequenced?} />
-              <.subentry_remove on_click={JS.push("remove_subentry", target: @myself, value: %{index: index})} />
+          <.empty_subform :if={@empty_subform_fields} field={@field} />
+          <.inputs_for :let={sub_form} field={@field}>
+            <div
+              class={render_classes(["subform-entry", "group", listing: sub_form.index not in @open_entries])}
+              data-id={sub_form.index}>
+              <div class="subform-tools">
+                <.subentry_edit on_click={JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)} open={sub_form.index in @open_entries} />
+                <.subentry_sequence :if={@sequenced?} />
+                <.subentry_remove on_click={JS.push("remove_subentry", target: @myself, value: %{index: sub_form.index})} />
+              </div>
+              <.listing subform={sub_form} subform_config={@subform} />
+              <div class="subform-fields">
+                <Input.hidden
+                  :if={@sequenced?}
+                  field={sub_form[:sequence]}
+                  value={sub_form.index}
+                />
+                <Subform.Field.render
+                  :for={input <- @subform.sub_fields}
+                  cardinality={:many}
+                  form={@form}
+                  sub_form={sub_form}
+                  input={input}
+                  path={@path ++ [sub_form.index]}
+                  uploads={@uploads}
+                  current_user={@current_user}
+                />
+              </div>
             </div>
-            <.listing subform={sub_form} subform_config={@subform} />
-            <div class="subform-fields">
-              <Input.hidden
-                :if={@sequenced?}
-                form={sub_form}
-                field={:sequence}
-                value={index}
-              />
-              <%= Phoenix.HTML.Form.hidden_inputs_for(sub_form) %>
-              <Subform.Field.render
-                :for={input <- @subform.sub_fields}
-                cardinality={:many}
-                form={@form}
-                sub_form={sub_form}
-                input={input}
-                path={@path ++ [index]}
-                uploads={@uploads}
-                current_user={@current_user}
-              />
-            </div>
-          </div>
+          </.inputs_for>
+
         </div>
         <div class="actions">
           <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
@@ -133,78 +125,69 @@ defmodule BrandoAdmin.Components.Form.Subform do
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :one}
-        form={@form}
-        field={@subform.name}
+        field={@field}
         label={@label}
         instructions={@instructions}
         class={"subform"}
       >
-        <div
-          :for={sub_form <- inputs_for(@form, @subform.name)}
-          class="subform-entry"
-        >
-          <Subform.Field.render
-            :for={input <- @subform.sub_fields}
-            cardinality={:one}
-            form={@form}
-            sub_form={sub_form}
-            label={@label}
-            instructions={@instructions}
-            placeholder={@placeholder}
-            input={input}
-            path={@path}
-            uploads={@uploads}
-            current_user={@current_user}
-          />
-        </div>
+        <.inputs_for :let={sub_form} field={@field}>
+          <div class="subform-entry">
+            <Subform.Field.render
+              :for={input <- @subform.sub_fields}
+              cardinality={:one}
+              sub_form={sub_form}
+              label={@label}
+              instructions={@instructions}
+              placeholder={@placeholder}
+              input={input}
+              path={@path}
+              uploads={@uploads}
+              current_user={@current_user}
+            />
+          </div>
+        </.inputs_for>
       </Form.field_base>
       <Form.field_base
         :if={@subform.cardinality == :many}
-        form={@form}
-        field={@subform.name}
+        field={@field}
         label={@label}
         instructions={@instructions}
-        class={"subform"}
-      >
+        class={"subform"}>
         <div
-          id={"#{@form.id}-#{@subform.name}-sortable"}
+          id={"#{@field.name}-sortable"}
           data-embeds={@embeds?}
-          phx-hook="Brando.SubFormSortable"
-        >
+          phx-hook="Brando.SubFormSortable">
           <.empty_subform
-            :if={@indexed_sub_form_fields == []}
-            form={@form}
-            subform_field={@subform.name}
+            :if={@empty_subform_fields}
+            field={@field}
           />
-          <div
-            :for={{sub_form, index} <- @indexed_sub_form_fields}
-            class={render_classes(["subform-entry", inline: @subform.style == :inline])}
-            data-id={index}
-          >
-            <div class="subform-tools">
-              <.subentry_sequence :if={@sequenced?} />
-              <.subentry_remove on_click={JS.push("remove_subentry", target: @myself, value: %{index: index})} />
-            </div>
-
-            <div class="subform-fields">
-              <Input.hidden
-                :if={@sequenced?}
-                form={sub_form}
-                field={:sequence}
-                value={index}
-              />
-              <%= Phoenix.HTML.Form.hidden_inputs_for(sub_form) %>
-              <Subform.Field.render
-                :for={input <- @subform.sub_fields}
-                cardinality={:many}
-                form={@form}
-                sub_form={sub_form}
-                input={input}
-                path={@path ++ [index]}
-                uploads={@uploads}
-                current_user={@current_user} />
+          <.inputs_for :let={sub_form} field={@field}>
+            <div
+              class={render_classes(["subform-entry", inline: @subform.style == :inline])}
+              data-id={sub_form.index}>
+              <div class="subform-tools">
+                <.subentry_sequence :if={@sequenced?} />
+                <.subentry_remove on_click={JS.push("remove_subentry", target: @myself, value: %{index: sub_form.index})} />
               </div>
-          </div>
+
+              <div class="subform-fields">
+                <Input.hidden
+                  :if={@sequenced?}
+                  form={sub_form}
+                  field={:sequence}
+                  value={sub_form.index}
+                />
+                <Subform.Field.render
+                  :for={input <- @subform.sub_fields}
+                  cardinality={:many}
+                  sub_form={sub_form}
+                  input={input}
+                  path={@path ++ [sub_form.index]}
+                  uploads={@uploads}
+                  current_user={@current_user} />
+                </div>
+            </div>
+          </.inputs_for>
         </div>
         <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
       </Form.field_base>
@@ -294,9 +277,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def empty_subform(assigns) do
     ~H"""
-    <input type="hidden" name={"#{@form.name}[#{@subform_field}]"} value="" />
+    <input type="hidden" name={@field.name} value="" />
     <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
     """
   end
@@ -352,7 +337,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         struct -> struct
       end
 
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -384,7 +369,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -416,7 +401,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   def handle_event("sort_by_filename", %{"transform_field" => transform_field}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     %{type: rel_type} = module.__relation__(field_name)
@@ -462,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"

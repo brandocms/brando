@@ -248,16 +248,25 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def password(assigns) do
     value = assigns.field.value
-    confirmation_field_atom = :"#{assigns.field}_confirmation"
+    confirmation_field_atom = :"#{assigns.field.field}_confirmation"
     confirmation_field = assigns.field.form[confirmation_field_atom]
     confirmation_value = confirmation_field.value || value
+
+    require Logger
+
+    Logger.error("""
+
+    confirmation_field: #{inspect(confirmation_field, pretty: true)}
+    confirmation_value: #{inspect(confirmation_value, pretty: true)}
+
+    """)
 
     assigns =
       assigns
       |> prepare_input_component()
       |> assign(:value, value)
       |> assign(:confirmation, Keyword.get(assigns.opts, :confirmation))
-      |> assign(:confirmation_field, confirmation_field)
+      |> assign(:confirmation_field, Map.put(confirmation_field, :value, confirmation_value))
       |> assign(:confirmation_value, confirmation_value)
 
     ~H"""
@@ -352,20 +361,22 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= if @input_options != [] do %>
-        <div class="radios-wrapper">
-          <%= for opt <- @input_options do %>
-            <div class="form-check">
-              <label class="form-check-label">
-                <input type="radio" id={@id || @field.id <> "-#{opt}"} name={@field.name <> "[]"} class="form-check-input" value={opt.value} checked={opt.value == @field.value}>
-                <span class="label-text">
-                  <%= g(@field.form.source.data.__struct__, to_string(opt.label)) %>
-                </span>
-              </label>
-            </div>
-          <% end %>
+      <div :if={@input_options != []} class="radios-wrapper">
+        <div :for={opt <- @input_options} class="form-check">
+          <label class="form-check-label">
+            <input
+              type="radio"
+              id={@id || @field.id <> "-#{Brando.Utils.slugify(to_string(opt.value))}"}
+              name={@field.name}
+              class="form-check-input"
+              value={opt.value}
+              checked={to_string(opt.value) == to_string(@field.value)} />
+            <span class="label-text">
+              <%= g(@field.form.source.data.__struct__, to_string(opt.label)) %>
+            </span>
+          </label>
         </div>
-      <% end %>
+      </div>
     </Form.field_base>
     """
   end
@@ -468,7 +479,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
-    assigns = assign(assigns, :checked, assigns.field.value == assigns.checked_value)
+    assigns =
+      assign(
+        assigns,
+        :checked,
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns.field.value)
+      )
 
     if assigns.hidden_input do
       ~H"""
@@ -710,6 +726,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> prepare_input_component()
       |> assign_new(:inner_block, fn -> nil end)
+
+    require Logger
+    Logger.error(inspect(assigns.field, pretty: true))
 
     ~H"""
     <Form.field_base

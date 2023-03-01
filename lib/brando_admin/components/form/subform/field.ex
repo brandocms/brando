@@ -23,9 +23,8 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
 
     ~H"""
     <Form.input
-      id={"#{@form.id}-#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
-      form={@sub_form}
-      field={@input.name}
+      id={"#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
+      field={@sub_form[@input.name]}
       label={@label}
       instructions={@instructions}
       placeholder={@placeholder}

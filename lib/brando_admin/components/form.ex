@@ -2191,6 +2191,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :field, Phoenix.HTML.FormField
   attr :relation, :boolean
   attr :compact, :boolean, default: false
+  attr :left_justify_meta, :boolean, default: false
   attr :instructions, :string
   attr :label, :any
   attr :class, :any

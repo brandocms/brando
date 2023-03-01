@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def update(assigns, socket) do
-    empty_subform = Enum.empty?(inputs_for_poly(assigns.form[assigns.subform.field], []))
+    empty_subform = Enum.empty?(inputs_for_poly(assigns.form[assigns.subform.name], []))
 
     {:ok,
      socket
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
       value: true
     }
 
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -141,13 +141,13 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("force_validate", _, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     event_id = "#{socket.assigns.form.id}-#{field_name}-add-entry"
     {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    field_name = socket.assigns.subform.field
+    field_name = socket.assigns.subform.name
     changeset = socket.assigns.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"

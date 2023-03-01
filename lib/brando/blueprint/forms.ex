@@ -460,7 +460,7 @@ defmodule Brando.Blueprint.Forms do
       var!(b_transformers) =
         case named_subform.style do
           {:transformer, field} ->
-            var!(b_transformers) ++ [{named_subform.field, field, named_subform.default}]
+            var!(b_transformers) ++ [{named_subform.name, field, named_subform.default}]
 
           _ ->
             var!(b_transformers)
