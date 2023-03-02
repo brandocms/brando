@@ -48,7 +48,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def update(assigns, socket) do
-    selected_option = get_selected_option(assigns.form, assigns.field)
+    selected_option = get_selected_option(assigns.field)
 
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
@@ -81,16 +81,16 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      end)}
   end
 
-  def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
+  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign_new(socket, :input_options, fn -> get_input_options(field, opts) end)
   end
 
-  def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(form, opts))
+  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign(socket, :input_options, get_input_options(field, opts))
   end
 
-  defp get_selected_option(form, field) do
-    case input_value(form, field) do
+  defp get_selected_option(field) do
+    case field.value do
       "" -> ""
       nil -> nil
       res when is_atom(res) -> to_string(res)
@@ -99,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     end
   end
 
-  defp get_input_options(form, opts) do
+  defp get_input_options(field, opts) do
     case Keyword.get(opts, :options) do
       :languages ->
         languages = Brando.config(:languages)
@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         []
 
       options_fun when is_function(options_fun) ->
-        options_fun.(form, opts)
+        options_fun.(field.form, opts)
 
       options when is_list(options) ->
         options
@@ -172,14 +172,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
         class={@class}
         compact={@compact}>
 
-        <Input.input type={:hidden} form={@form} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
+        <Input.input type={:hidden} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
         <div class="multiselect">
           <div>
             <span class="select-label">
