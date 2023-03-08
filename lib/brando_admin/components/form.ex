@@ -2491,6 +2491,46 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  @doc type: :component
+  attr :field, Phoenix.HTML.FormField,
+    required: true,
+    doc: "A %Phoenix.HTML.Form{}/field name tuple, for example: {@form[:email]}."
+
+  attr :id, :string,
+    doc: """
+    The id to be used in the form, defaults to the concatenation of the given
+    field to the parent form id.
+    """
+
+  attr :as, :atom,
+    doc: """
+    The name to be used in the form, defaults to the concatenation of the given
+    field to the parent form name.
+    """
+
+  attr :default, :any, doc: "The value to use if none is available."
+
+  attr :prepend, :list,
+    doc: """
+    The values to prepend when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :append, :list,
+    doc: """
+    The values to append when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :skip_hidden, :boolean,
+    default: false,
+    doc: """
+    Skip the automatic rendering of hidden fields to allow for more tight control
+    over the generated markup.
+    """
+
+  slot :inner_block, required: true, doc: "The content rendered for each nested form."
+
   def inputs_for_poly(assigns) do
     %Phoenix.HTML.FormField{form: form} = assigns.field
     options = assigns |> Map.take([:id, :as, :default, :append, :prepend]) |> Keyword.new()
