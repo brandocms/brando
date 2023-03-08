@@ -720,6 +720,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             uid={@uid}
             id_prefix="block_data"
             class={"h#{@level}"}
+            phx_update="ignore"
             phx_debounce={750}
             data_autosize={true}
             rows={1} />

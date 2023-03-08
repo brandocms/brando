@@ -455,7 +455,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :id, :any, default: nil
   attr :name, :any, default: nil
   attr :type, :atom, default: :text
-  attr :rows, :any
   attr :value, :any
   attr :disabled, :boolean
   attr :label, :string
@@ -464,7 +463,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class phx_hook phx_debounce data_slug_for data_autosize data_slug_type autocorrect spellcheck)
+      ~w(class phx_hook phx_debounce rows phx_update data_slug_for data_autosize data_slug_type autocorrect spellcheck)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -509,9 +508,11 @@ defmodule BrandoAdmin.Components.Form.Input do
         )
       end
 
-    assigns = assign(assigns, :id, assigns.id || assigns.field.id)
-    assigns = assign(assigns, :name, assigns.name || assigns.field.name)
-    assigns = process_input_id(assigns)
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> process_input_id()
 
     ~H"""
     <textarea type={@type} name={@name} id={@id} {@rest}><%= @value %></textarea>
