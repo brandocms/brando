@@ -178,7 +178,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <.inputs_for field={@form[:refs]} :let={ref}>
               <li class="padded">
                 <Form.inputs_for_block field={ref[:data]} :let={ref_data}>
-                <%!-- <%= for ref_data <- inputs_for_block(ref[:data]) do %> --%>
                   <div>
                     <span class="text-mono"><%= ref_data[:type].value %></span>
                     <span class="text-mono">- %&lcub;<%= ref[:name].value %>&rcub;</span>
@@ -202,32 +201,31 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
                 <Content.modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{ref.index}"} wide>
                   <div class="panels">
-                    <%= for ref_data <- inputs_for_block(ref[:data]) do %>
+                    <Form.inputs_for_block field={ref[:data]} :let={ref_data}>
                       <Input.input type={:hidden} field={ref_data[:type]} />
                       <div class="panel">
                         <h2 class="titlecase">Block template</h2>
                         <%= case input_value(ref_data, :type) do %>
                           <% "header" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:level]} label={gettext "Level"} />
                               <Input.text field={block_data[:text]} label={gettext "Text"} />
                               <Input.text field={block_data[:id]} label={gettext "ID"} />
                               <Input.text field={block_data[:link]} label={gettext "Link"} />
-
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "svg" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:class]} label={gettext "Class"} />
                               <Input.code
                                 id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-svg-code"}
                                 field={block_data[:code]}
                                 label={gettext "Code"}
                               />
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "text" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:text]} label={gettext "Text"} />
                               <Input.text field={block_data[:type]} label={gettext "Type"} />
                               <.live_component module={Input.MultiSelect}
@@ -252,10 +250,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <br>
 
                               <%= block_data[:extensions].value %>
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "picture" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.input type={:hidden} field={block_data[:cdn]} />
                               <Input.toggle field={block_data[:lazyload]} label={gettext "Lazyload"} />
                               <Input.toggle field={block_data[:moonwalk]} label={gettext "Moonwalk"} />
@@ -301,10 +299,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   </div>
                                 </div>
                               </Form.array_inputs_from_data>
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "gallery" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.radios
                                 field={block_data[:type]}
                                 label={gettext "Type"}
@@ -357,10 +355,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   </div>
                                 </div>
                               </Form.array_inputs_from_data>
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "video" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:url]} label={gettext "URL"} />
                               <Input.radios
                                 field={block_data[:source]}
@@ -380,10 +378,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.toggle field={block_data[:autoplay]} label={gettext "Autoplay"} />
                               <Input.toggle field={block_data[:preload]} label={gettext "Preload"} />
                               <Input.toggle field={block_data[:play_button]} label={gettext "Play button"} />
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "media" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Form.array_inputs_from_data
                                 :let={%{
                                   id: array_id,
@@ -515,17 +513,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.text field={tpl_data[:class]} label={gettext "Class"} />
                                 </.inputs_for>
                               <% end %>
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "datasource" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:description]} label={gettext "Description"} />
                               <Input.text field={block_data[:arg]} label={gettext "Arg"} />
                               <Input.text field={block_data[:limit]} label={gettext "Limit"} />
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% "table" -> %>
-                            <%= for block_data <- inputs_for_block(ref_data[:data]) do %>
+                            <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:key]} label={gettext "Key"} />
                               <Input.textarea field={block_data[:instructions]} label={gettext "Instructions"} />
 
@@ -596,7 +594,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <% end %>
                                 <% end %>
                               </.inputs_for>
-                            <% end %>
+                            </Form.inputs_for_block>
 
                           <% type -> %>
                             No matching block <%= type %> found
@@ -609,7 +607,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                         <Input.text field={ref[:description]} label={gettext "Description"} />
                         <Input.input type={:hidden} field={ref_data[:uid]} value={input_value(ref_data, :uid) || Brando.Utils.generate_uid()} />
                       </div>
-                    <% end %>
+                    </Form.inputs_for_block>
                   </div>
                 </Content.modal>
               </li>
