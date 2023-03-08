@@ -212,7 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <div class="select-modal">
                 <%= if @show_filter && !Enum.empty?(@input_options) do %>
                   <div
-                    id={"#{@form.id}-#{@field}-select-modal-filter"}
+                    id={"#{@field.id}-select-modal-filter"}
                     class="select-filter"
                     phx-hook="Brando.SelectFilter">
                     <div class="field-wrapper">
@@ -449,12 +449,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  def handle_event(
-        "select_option",
-        %{"value" => value},
-        %{assigns: %{form: form, update_relation: update_relation}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("select_option", %{"value" => value}, socket) do
+    update_relation = socket.assigns.update_relation
+    field = socket.assigns.field
+    changeset = field.form.source
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
