@@ -234,22 +234,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           </div>
         <% end %>
 
-        <Content.modal
-          title={gettext "Edit captions"}
-          id={"block-#{@uid}_captions"}>
+        <Content.modal title={gettext "Edit captions"} id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <div
-              :for={image <- inputs_for(@block_data, :images)}
-              class="caption-row">
-              <figure>
-                <Content.image image={image.data} size={:thumb} />
-              </figure>
-              <div>
-                <Input.rich_text form={image} field={:title} label={gettext "Title"} />
-                <Input.text form={image} field={:credits} label={gettext "Credits"} />
-                <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
+            <.inputs_for field={@block_data[:images]} :let={image}>
+              <div class="caption-row">
+                <figure>
+                  <Content.image image={image.data} size={:thumb} />
+                </figure>
+                <div>
+                  <Input.rich_text form={image} field={:title} label={gettext "Title"} />
+                  <Input.text form={image} field={:credits} label={gettext "Credits"} />
+                  <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
+                </div>
               </div>
-            </div>
+            </.inputs_for>
           </div>
         </Content.modal>
 

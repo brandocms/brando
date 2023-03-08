@@ -84,15 +84,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
             data-sortable-handle=".sort-handle"
             data-sortable-binary-keys="true"
             data-sortable-selector=".table-row">
-            <%= for row <- inputs_for(@block_data, :rows) do %>
-              <div class="table-row draggable" data-id={input_value(row, :uid)}>
+            <.inputs_for field={@block_data[:rows]} :let={row}>
+              <div class="table-row draggable" data-id={row[:uid].value}>
                 <div class="subform-tools">
                   <button type="button" class="sort-handle">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path class="s" d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z" fill="rgba(5,39,82,1)"/></svg>
                   </button>
                   <button
                     phx-click={JS.push("delete_row", target: @myself)}
-                    phx-value-id={input_value(row, :uid)}
+                    phx-value-id={row[:uid].value}
                     type="button"
                     class="subform-delete"
                     phx-page-loading>
@@ -103,16 +103,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                 <Form.inputs_for_poly :let={var} field={row[:cols]}>
                   <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{var.index}"} var={var} render={:only_important} />
                 </Form.inputs_for_poly>
-                <Input.input type={:hidden} field={row[:uid]} uid={input_value(row, :uid)} id_prefix="table_block_row" />
+                <Input.input type={:hidden} field={row[:uid]} uid={row[:uid].value} id_prefix="table_block_row" />
               </div>
               <div class="insert-row">
                 <button
                   type="button"
                   class="tiny"
-                  phx-click={JS.push("add_row", value: %{after_uid: input_value(row, :uid)}, target: @myself)}
+                  phx-click={JS.push("add_row", value: %{after_uid: row[:uid].value}, target: @myself)}
                   phx-page-loading><%= gettext "Add row" %></button>
               </div>
-            <% end %>
+            </.inputs_for>
           </div>
         <% end %>
 

@@ -198,12 +198,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       label="Options"
                       instructions=""
                       left_justify_meta>
-                      <Form.label
-                        field={@var[:options]}>
-                        <%= for opt <- inputs_for(@var, :options) do %>
+                      <Form.label field={@var[:options]}>
+                        <.inputs_for field={@var[:options]} :let={opt}>
                           <Input.text field={opt[:label]} label={gettext "Label"} />
                           <Input.text field={opt[:value]} label={gettext "Value"} />
-                        <% end %>
+                        </.inputs_for>
                       </Form.label>
                       <button
                         type="button"
@@ -290,10 +289,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             opts={[options: input_value(@var, :options) || []]}
           />
 
-          <%= for opt <- inputs_for(@var, :options) do %>
+          <.inputs_for field={@var[:options]} :let={opt}>
             <Input.hidden field={opt[:label]} />
             <Input.hidden field={opt[:value]} />
-          <% end %>
+          </.inputs_for>
 
         <% "image" -> %>
           <Form.field_base

@@ -26,8 +26,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   # data block_data, :map
   # data available_blocks, :list
 
-  def v(form, field), do: input_value(form, field)
-
   def update(assigns, socket) do
     block_data = List.first(inputs_for(assigns.block, :data))
 
@@ -35,12 +33,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
-     |> assign(:available_blocks, input_value(block_data, :available_blocks))
-     |> assign(:uid, v(assigns.block, :uid))
-     |> assign_new(:template_picture, fn -> input_value(block_data, :template_picture) end)
-     |> assign_new(:template_gallery, fn -> input_value(block_data, :template_gallery) end)
-     |> assign_new(:template_video, fn -> input_value(block_data, :template_video) end)
-     |> assign_new(:template_svg, fn -> input_value(block_data, :template_svg) end)}
+     |> assign(:available_blocks, block_data[:available_blocks].value)
+     |> assign(:uid, assigns.block[:uid].value)
+     |> assign_new(:template_picture, fn -> block_data[:template_picture].value end)
+     |> assign_new(:template_gallery, fn -> block_data[:template_gallery].value end)
+     |> assign_new(:template_video, fn -> block_data[:template_video].value end)
+     |> assign_new(:template_svg, fn -> block_data[:template_svg].value end)}
   end
 
   def render(assigns) do
@@ -75,59 +73,64 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             <div class="buttons">
               <Form.array_inputs
                 :let={%{value: array_value, name: array_name}}
-                form={@block_data}
-                for={:available_blocks}>
+                field={@block_data[:available_blocks]}>
                 <input type="hidden" name={array_name} value={array_value} />
               </Form.array_inputs>
 
               <%= if "picture" in @available_blocks do %>
-                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="picture"><%= gettext("Picture") %></button>
-                <%= for tpl_data <- inputs_for(@block_data, :template_picture) do %>
-                  <Input.input type={:hidden} form={tpl_data} field={:picture_class} uid={@uid} id_prefix="block_data_tpl_picture" />
-                  <Input.input type={:hidden} form={tpl_data} field={:img_class} uid={@uid} id_prefix="block_data_tpl_picture" />
-                  <Input.input type={:hidden} form={tpl_data} field={:placeholder} uid={@uid} id_prefix="block_data_tpl_picture" />
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="picture">
+                  <%= gettext("Picture") %>
+                </button>
+                <.inputs_for field={@block_data[:template_picture]} :let={tpl_data}>
+                  <Input.input type={:hidden} field={tpl_data[:picture_class]} uid={@uid} id_prefix="block_data_tpl_picture" />
+                  <Input.input type={:hidden} field={tpl_data[:img_class]} uid={@uid} id_prefix="block_data_tpl_picture" />
+                  <Input.input type={:hidden} field={tpl_data[:placeholder]} uid={@uid} id_prefix="block_data_tpl_picture" />
 
                   <Form.array_inputs
                     :let={%{value: array_value, name: array_name}}
-                    form={@block_data}
-                    for={:formats}>
+                    field={@block_data[:formats]}>
                     <input type="hidden" name={array_name} value={array_value} />
                   </Form.array_inputs>
-                <% end %>
+                </.inputs_for>
               <% end %>
 
               <%= if "video" in @available_blocks do %>
-                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="video"><%= gettext("Video") %></button>
-                <%= for tpl_data <- inputs_for(@block_data, :template_video) do %>
-                  <Input.input type={:hidden} form={tpl_data} field={:opacity} uid={@uid} id_prefix="block_data_tpl_video" />
-                  <Input.input type={:hidden} form={tpl_data} field={:autoplay} uid={@uid} id_prefix="block_data_tpl_video" />
-                  <Input.input type={:hidden} form={tpl_data} field={:preload} uid={@uid} id_prefix="block_data_tpl_video" />
-                  <Input.input type={:hidden} form={tpl_data} field={:play_button} uid={@uid} id_prefix="block_data_tpl_video" />
-                <% end %>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="video">
+                  <%= gettext("Video") %>
+                </button>
+                <.inputs_for field={@block_data[:template_video]} :let={tpl_data}>
+                  <Input.input type={:hidden} field={tpl_data[:opacity]} uid={@uid} id_prefix="block_data_tpl_video" />
+                  <Input.input type={:hidden} field={tpl_data[:autoplay]} uid={@uid} id_prefix="block_data_tpl_video" />
+                  <Input.input type={:hidden} field={tpl_data[:preload]} uid={@uid} id_prefix="block_data_tpl_video" />
+                  <Input.input type={:hidden} field={tpl_data[:play_button]} uid={@uid} id_prefix="block_data_tpl_video" />
+                </.inputs_for>
               <% end %>
 
               <%= if "gallery" in @available_blocks do %>
-                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="gallery"><%= gettext("Gallery") %></button>
-                <%= for tpl_data <- inputs_for(@block_data, :template_gallery) do %>
-                  <Input.input type={:hidden} form={tpl_data} field={:type} uid={@uid} id_prefix="block_data_tpl_gallery" />
-                  <Input.input type={:hidden} form={tpl_data} field={:display} uid={@uid} id_prefix="block_data_tpl_gallery" />
-                  <Input.input type={:hidden} form={tpl_data} field={:class} uid={@uid} id_prefix="block_data_tpl_gallery" />
-                  <Input.input type={:hidden} form={tpl_data} field={:series_slug} uid={@uid} id_prefix="block_data_tpl_gallery" />
-                  <Input.input type={:hidden} form={tpl_data} field={:lightbox} uid={@uid} id_prefix="block_data_tpl_gallery" />
-                  <Input.input type={:hidden} form={tpl_data} field={:placeholder} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="gallery">
+                  <%= gettext("Gallery") %>
+                </button>
+                <.inputs_for field={@block_data[:template_gallery]} :let={tpl_data}>
+                  <Input.input type={:hidden} field={tpl_data[:type]} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                  <Input.input type={:hidden} field={tpl_data[:display]} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                  <Input.input type={:hidden} field={tpl_data[:class]} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                  <Input.input type={:hidden} field={tpl_data[:series_slug]} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                  <Input.input type={:hidden} field={tpl_data[:lightbox]} uid={@uid} id_prefix="block_data_tpl_gallery" />
+                  <Input.input type={:hidden} field={tpl_data[:placeholder]} uid={@uid} id_prefix="block_data_tpl_gallery" />
                   <Form.array_inputs
                     :let={%{value: array_value, name: array_name}}
-                    form={@block_data}
-                    for={:formats}>
+                    field={@block_data[:formats]}>
                     <input type="hidden" name={array_name} value={array_value} />
                   </Form.array_inputs>
-                <% end %>
+                </.inputs_for>
               <% end %>
               <%= if "svg" in @available_blocks do %>
-                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="svg">SVG</button>
-                <%= for tpl_data <- inputs_for(@block_data, :template_svg) do %>
-                  <Input.input type={:hidden} form={tpl_data} field={:class} label={gettext "Class"} uid={@uid} id_prefix="block_data_tpl_svg" />
-                <% end %>
+                <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="svg">
+                  SVG
+                </button>
+                <.inputs_for field={@block_data[:template_svg]} :let={tpl_data}>
+                  <Input.input type={:hidden} field={tpl_data[:class]} label={gettext "Class"} uid={@uid} id_prefix="block_data_tpl_svg" />
+                </.inputs_for>
               <% end %>
             </div>
           </div>
@@ -153,7 +156,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
             type: "picture",
             data: socket.assigns.template_picture
           }
-          |> IO.inspect(pretty: true)
 
         "video" ->
           %Brando.Villain.Blocks.VideoBlock{
