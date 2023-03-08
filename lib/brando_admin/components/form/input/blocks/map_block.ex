@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:block_data, block_data)}
   end
 

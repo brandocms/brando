@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
      |> assign_new(:available_entries, fn -> [] end)
      |> assign_new(:indexed_available_entries, fn -> [] end)
      |> assign_new(:entry, fn -> Ecto.Changeset.apply_changes(assigns.base_form.source) end)
-     |> assign_new(:module_id, fn -> v(assigns.block, :data).module_id end)
+     |> assign_new(:module_id, fn -> assigns.block[:data].value.module_id end)
      |> assign_module_data()
      |> parse_module_code()
      |> assign_selected_entries()}
@@ -75,10 +75,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           |> List.first()
 
         refs_forms = Enum.with_index(inputs_for(block_data, :refs))
-        refs = v(block_data, :refs) || []
-        vars = v(block_data, :vars) || []
-        uid = v(block, :uid)
-        description = v(block, :description)
+        refs = block_data[:refs].value || []
+        vars = block_data[:vars].value || []
+        uid = block[:uid].value
+        description = block[:description].value
 
         module_datasource_module =
           if module.datasource and module.datasource_module do

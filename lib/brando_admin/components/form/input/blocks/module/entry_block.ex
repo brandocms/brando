@@ -51,12 +51,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       |> List.first()
 
     refs_forms = Enum.with_index(inputs_for(block_data, :refs))
-    refs = v(block_data, :refs) || []
-    vars = v(block_data, :vars) || []
-    description = v(block, :description)
+    refs = block_data[:refs].value || []
+    vars = block_data[:vars].value || []
+    description = block[:description].value
 
     socket
-    |> assign(:uid, v(block, :uid) || Brando.Utils.generate_uid())
+    |> assign(:uid, block[:uid].value || Brando.Utils.generate_uid())
     |> assign(:description, description)
     |> assign(:block_data, block_data)
     |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data[:vars])))

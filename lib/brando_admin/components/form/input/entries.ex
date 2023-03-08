@@ -349,16 +349,16 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <section class="cover-wrapper">
         <div class="cover">
-          <img src={input_value(@identifier_form, :cover) || "/images/admin/avatar.svg"}>
+          <img src={@identifier_form[:cover].value || "/images/admin/avatar.svg"}>
         </div>
       </section>
       <section class="content">
         <div class="info">
           <div class="name">
-            <%= input_value(@identifier_form, :title) %>
+            <%= @identifier_form[:title].value %>
           </div>
           <div class="meta-info">
-            <%= input_value(@identifier_form, :type) %>
+            <%= @identifier_form[:type].value %>
           </div>
         </div>
       </section>

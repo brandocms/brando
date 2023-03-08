@@ -53,7 +53,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     selected_images_paths = Enum.map(images, & &1.path)
 
     upload_formats =
-      case v(block_data, :formats) do
+      case block_data[:formats].value do
         nil -> ""
         formats -> Enum.join(formats, ",")
       end
@@ -65,10 +65,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:images, images)
      |> assign(:indexed_images, Enum.with_index(images))
      |> assign(:upload_formats, upload_formats)
-     |> assign(:display, v(block_data, :display))
+     |> assign(:display, block_data[:display].value)
      |> assign(:selected_images_paths, selected_images_paths)
      |> assign(:has_images?, !Enum.empty?(images))
-     |> assign(:uid, v(assigns.block, :uid))}
+     |> assign(:uid, assigns.block[:uid].value)}
   end
 
   def render(assigns) do
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
-          <%= input_value(@block_data, :type) %>
+          <%= @block_data[:type].value %>
           <%= if @ref_description do %>
             — <%= @ref_description %>
           <% end %>

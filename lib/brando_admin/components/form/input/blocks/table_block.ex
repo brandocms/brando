@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:block_data, block_data)}
   end
 
@@ -58,9 +58,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <:config></:config>
         <Input.input type={:hidden} field={@block_data[:key]} uid={@uid} id_prefix="block_data" />
         <Input.input type={:hidden} field={@block_data[:instructions]} uid={@uid} id_prefix="block_data" />
-        <%= if input_value(@block_data, :instructions) do %>
+        <%= if @block_data[:instructions].value do %>
           <div class="table-instructions">
-            <%= input_value(@block_data, :instructions) %>
+            <%= @block_data[:instructions].value %>
           </div>
         <% end %>
         <%= if Enum.empty?(v(@block_data, :rows)) do %>

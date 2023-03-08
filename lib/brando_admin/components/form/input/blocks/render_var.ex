@@ -101,7 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
      |> assign(:label, get_field(changeset, :label))
-     |> assign(:key, v(var, :key))
+     |> assign(:key, var[:key].value)
      |> assign(:type, type)
      |> assign(:value, value)
      |> assign_new(:images, fn -> nil end)
@@ -261,9 +261,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             placeholder={@placeholder}
             instructions={@instructions}
             opts={[
-              opacity: input_value(@var, :opacity),
-              picker: input_value(@var, :picker),
-              palette_id: input_value(@var, :palette_id),
+              opacity: @var[:opacity].value,
+              picker: @var[:picker].value,
+              palette_id: @var[:palette_id].value,
             ]} />
           <%= unless @edit do %>
             <Input.input type={:hidden} field={@var[:picker]} />
@@ -282,7 +282,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             id={"#{@var.id}-select"}
             label={@label}
             field={@var[:value]}
-            opts={[options: input_value(@var, :options) || []]}
+            opts={[options: @var[:options].value || []]}
           />
 
           <.inputs_for field={@var[:options]} :let={opt}>

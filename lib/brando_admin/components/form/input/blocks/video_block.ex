@@ -34,17 +34,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:type, assigns.block.data.data.source)
      |> assign(:block_data, block_data)
-     |> assign(:remote_id, v(block_data, :remote_id))
-     |> assign(:source, v(block_data, :source))
-     |> assign(:thumbnail_url, v(block_data, :thumbnail_url))
-     |> assign(:title, v(block_data, :title))
-     |> assign(:width, v(block_data, :width))
-     |> assign(:height, v(block_data, :height))
-     |> assign(:cover, v(block_data, :cover))
-     |> assign(:cover_image, v(block_data, :cover_image))}
+     |> assign(:remote_id, block_data[:remote_id].value)
+     |> assign(:source, block_data[:source].value)
+     |> assign(:thumbnail_url, block_data[:thumbnail_url].value)
+     |> assign(:title, block_data[:title].value)
+     |> assign(:width, block_data[:width].value)
+     |> assign(:height, block_data[:height].value)
+     |> assign(:cover, block_data[:cover].value)
+     |> assign(:cover_image, block_data[:cover_image].value)}
   end
 
   def render(assigns) do
