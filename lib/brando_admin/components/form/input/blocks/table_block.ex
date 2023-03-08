@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <!-- template row -->
         <%# TODO: key this with @id_prefix and @uid? %>
         <.inputs_for field={@block_data[:template_row]} :let={tpl_row}>
-          <Form.inputs_for_poly field={tpl_row[:cols]} :let={%{form: var}}>
+          <Form.inputs_for_poly field={tpl_row[:cols]} :let={var}>
             <Input.input type={:hidden} field={var[:key]} />
             <Input.input type={:hidden} field={var[:type]} />
             <Input.input type={:hidden} field={var[:important]} />
