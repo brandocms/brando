@@ -202,8 +202,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             <div class="module-datasource-selected">
               <Form.array_inputs
                 :let={%{value: array_value, name: array_name}}
-                form={@block_data}
-                for={:datasource_selected_ids}>
+                field={@block_data[:datasource_selected_ids]}>
                 <input type="hidden" name={array_name} value={array_value} />
               </Form.array_inputs>
 

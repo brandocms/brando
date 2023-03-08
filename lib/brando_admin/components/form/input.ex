@@ -318,6 +318,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :id, :any, default: nil
   attr :opts, :any, default: []
   attr :label, :string
+  attr :uid, :string
+  attr :id_prefix, :string
   attr :field, Phoenix.HTML.FormField
 
   def radios(assigns) do
@@ -456,11 +458,13 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :rows, :any
   attr :value, :any
   attr :disabled, :boolean
+  attr :label, :string
   attr :uid, :string
   attr :id_prefix, :string
 
   attr :rest, :global,
-    include: ~w(class phx_hook phx_debounce data_slug_for data_slug_type autocorrect spellcheck)
+    include:
+      ~w(class phx_hook phx_debounce data_slug_for data_autosize data_slug_type autocorrect spellcheck)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"

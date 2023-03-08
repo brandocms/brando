@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   import Ecto.Changeset
   import Phoenix.LiveView.HTMLEngine
 
-  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -721,9 +720,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             uid={@uid}
             id_prefix="block_data"
             class={"h#{@level}"}
-            data_autosize={true}
             phx_debounce={750}
-            phx_update={"ignore"}
+            data_autosize={true}
             rows={1} />
           <Input.input type={:hidden} field={@block_data[:class]} uid={@uid} id_prefix="block_data" />
           <Input.input type={:hidden} field={@block_data[:placeholder]} uid={@uid} id_prefix="block_data" />

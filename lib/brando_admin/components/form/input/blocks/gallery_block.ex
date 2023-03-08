@@ -128,8 +128,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <Form.map_inputs
             :let={%{value: value, name: name}}
-            form={image}
-            for={:sizes}>
+            field={image[:sizes]}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
@@ -242,9 +241,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   <Content.image image={image.data} size={:thumb} />
                 </figure>
                 <div>
-                  <Input.rich_text form={image} field={:title} label={gettext "Title"} />
-                  <Input.text form={image} field={:credits} label={gettext "Credits"} />
-                  <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
+                  <Input.rich_text field={image[:title]} label={gettext "Title"} />
+                  <Input.text field={image[:credits]} label={gettext "Credits"} />
+                  <Input.text field={image[:alt]} label={gettext "Alt. text"} />
                 </div>
               </div>
             </.inputs_for>

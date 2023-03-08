@@ -314,7 +314,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   relation_field={:value_id}
                   click={show_modal("#var-#{@var.id}-image-config")} />
               <% end %>
-              <.image_modal form={@var} image={@image} myself={@myself} />
+              <.image_modal field={@var} image={@image} myself={@myself} />
             </div>
           </Form.field_base>
       <% end %>
@@ -324,7 +324,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def image_modal(assigns) do
     ~H"""
-    <Content.modal title={gettext "Image"} id={"var-#{@form.id}-image-config"}>
+    <Content.modal title={gettext "Image"} id={"var-#{@field.id}-image-config"}>
       <div class="panels">
         <div class="panel">
           <%= if @image && @image.path do %>
@@ -340,11 +340,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
           <%= if !@image do %>
             <div
-              id={"#{@form.id}-legacy-uploader"}
+              id={"#{@field.id}-legacy-uploader"}
               class="input-image"
               phx-hook="Brando.LegacyImageUpload"
               data-text-uploading={gettext("Uploading...")}
-              data-block-uid={"var-#{@form.id}"}
+              data-block-uid={"var-#{@field.id}"}
               data-upload-event-target={@myself}>
               <input class="file-input" type="file" />
               <div class="img-placeholder empty upload-canvas">

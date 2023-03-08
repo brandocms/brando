@@ -204,15 +204,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
                   <Form.map_inputs
                     :let={%{value: value, name: name}}
-                    form={cover_image}
-                    for={:sizes}>
+                    field={cover_image[:sizes]}>
                     <input type="hidden" name={"#{name}"} value={"#{value}"} />
                   </Form.map_inputs>
 
                   <Form.array_inputs
                     :let={%{value: array_value, name: array_name}}
-                    form={cover_image}
-                    for={:formats}>
+                    field={cover_image[:formats]}>
                     <input type="hidden" name={array_name} value={array_value} />
                   </Form.array_inputs>
                 </.inputs_for>

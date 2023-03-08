@@ -199,15 +199,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
           <Form.map_inputs
             :let={%{value: value, name: name}}
-            form={@block_data}
-            for={:sizes}>
+            field={@block_data[:sizes]}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={@block_data}
-            for={:formats}>
+            field={@block_data[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
 

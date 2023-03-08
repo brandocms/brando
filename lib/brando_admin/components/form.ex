@@ -3,10 +3,8 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator, "forms"
 
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
-  import Phoenix.HTML.Form
   import Phoenix.LiveView.HTMLEngine
 
   alias Brando.Villain
@@ -2347,32 +2345,33 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  # attr :field, Phoenix.HTML.FormField
-  # attr :opts, :any
+  # # attr :field, Phoenix.HTML.FormField
+  # # attr :opts, :any
 
-  def inputs(assigns) do
-    assigns = assign_new(assigns, :opts, fn -> [] end)
+  # def inputs(assigns) do
+  #   assigns = assign_new(assigns, :opts, fn -> [] end)
 
-    assigns =
-      assign(
-        assigns,
-        :inputs,
-        assigns.field.form.impl.to_form(
-          assigns.field.form.source,
-          assigns.field.form,
-          assigns.field.name,
-          assigns.opts
-        )
-      )
+  #   assigns =
+  #     assign(
+  #       assigns,
+  #       :inputs,
+  #       assigns.field.form.impl.to_form(
+  #         assigns.field.form.source,
+  #         assigns.field.form,
+  #         assigns.field.name,
+  #         assigns.opts
+  #       )
+  #     )
 
-    ~H"""
-    <%= for form <- @inputs do %>
-      <%= render_slot(@inner_block, %{form: form, index: form.index}) %>
-    <% end %>
-    """
-  end
+  #   ~H"""
+  #   <%= for form <- @inputs do %>
+  #     <%= render_slot(@inner_block, %{form: form, index: form.index}) %>
+  #   <% end %>
+  #   """
+  # end
 
   attr :field, Phoenix.HTML.FormField
+  slot :default
 
   def map_inputs(assigns) do
     subform = Utils.form_for_map(assigns.field)
