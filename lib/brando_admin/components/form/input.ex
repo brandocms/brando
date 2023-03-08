@@ -631,8 +631,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns =
       assigns
       |> prepare_input_component()
-      |> assign(:current_status, input_value(assigns.form, assigns.field))
-      |> assign(:id, "status-dropdown-#{assigns.form.id}-#{assigns.form.index}-#{assigns.field}")
+      |> assign(:current_status, assigns.field.value)
+      |> assign(
+        :id,
+        "status-dropdown-#{assigns.field.id}-#{assigns.field.index}-#{assigns.field.field}"
+      )
 
     ~H"""
     <Form.field_base

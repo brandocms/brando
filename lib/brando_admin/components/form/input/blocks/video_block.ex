@@ -25,8 +25,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # data block_data, :any
   # data uid, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
-
   def update(assigns, socket) do
     block_data =
       assigns.block

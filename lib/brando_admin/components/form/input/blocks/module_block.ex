@@ -37,10 +37,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   # data uid, :string
   # data module_not_found, :boolean
 
-  def v(form, field) do
-    input_value(form, field)
-  end
-
   defp get_module(id) do
     {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
 
@@ -108,13 +104,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         |> assign(:module_class, module.class)
         |> assign(:module_code, module.code)
         |> assign(:module_code, module.code)
-        |> assign(:module_multi, input_value(block_data, :multi))
+        |> assign(:module_multi, block_data[:multi].value)
         |> assign(:module_datasource, module.datasource)
         |> assign(:module_datasource_module, module.datasource_module)
         |> assign(:module_datasource_module_label, module_datasource_module)
         |> assign(:module_datasource_type, module.datasource_type)
         |> assign(:module_datasource_query, module.datasource_query)
-        |> assign(:datasource_selected_ids, input_value(block_data, :datasource_selected_ids))
+        |> assign(:datasource_selected_ids, block_data[:datasource_selected_ids].value)
         |> assign(:entry_template, module.entry_template)
         |> assign(:refs_forms, refs_forms)
         |> assign(:refs, refs)
@@ -387,7 +383,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         } = socket
       ) do
     changeset = form.source
-    current_data = input_value(block, :data)
+    current_data = block[:data].value
     new_data = Map.put(current_data, :datasource_selected_ids, ordered_ids)
 
     updated_changeset =
@@ -426,7 +422,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     changeset = base_form.source
 
-    current_vars = input_value(block_data, :vars) || []
+    current_vars = block_data[:vars].value || []
     current_var_keys = Enum.map(current_vars, & &1.key)
 
     module_vars = module.vars || []
@@ -511,7 +507,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     changeset = base_form.source
 
     reset_var = Enum.find(module.vars, &(&1.key == var_id))
-    current_vars = input_value(block_data, :vars)
+    current_vars = block_data[:vars].value
 
     updated_vars =
       Enum.map(current_vars, fn
@@ -556,7 +552,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     changeset = base_form.source
 
-    current_refs = input_value(block_data, :refs)
+    current_refs = block_data[:refs].value
     current_ref_names = Enum.map(current_refs, & &1.name)
 
     module_refs = module.refs
@@ -645,7 +641,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     changeset = base_form.source
 
     reset_ref = Enum.find(module.refs, &(&1.name == ref_id))
-    current_refs = input_value(block_data, :refs)
+    current_refs = block_data[:refs].value
 
     updated_refs =
       Enum.map(current_refs, fn
@@ -689,7 +685,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
        ) do
     # replace block
     changeset = form.source
-    current_data = input_value(block, :data)
+    current_data = block[:data].value
 
     new_data =
       if action == :add do

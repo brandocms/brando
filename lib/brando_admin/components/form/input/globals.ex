@@ -35,18 +35,18 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
     ~H"""
     <fieldset>
       <Form.field_base
-        field={@form[@subform.name]}
+        field={@field}
         label={@label}
         instructions={@instructions}
         class={"subform"}>
         <div
-          id={"#{@form[@subform.name].id}-sortable"}
+          id={"#{@field.id}-sortable"}
           phx-hook="Brando.SubFormSortable">
-          <%= if Enum.empty?(inputs_for_poly(@form[@subform.name], [])) do %>
-            <input type="hidden" name={@form[@subform.name].name} value="" />
+          <%= if Enum.empty?(inputs_for_poly(@field, [])) do %>
+            <input type="hidden" name={@field.name} value="" />
             <div class="subform-empty">&rarr; <%= gettext "No associated entries" %></div>
           <% else %>
-            <Form.inputs_for_poly :let={var} field={@form[@subform.name]}>
+            <Form.inputs_for_poly :let={var} field={@field}>
               <div
                 class="subform-entry flex-row"
                 data-id={var.index}>
@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                 </div>
 
                 <.live_component module={RenderVar}
-                  id={"#{@form[@subform.name].id}-render-var-#{var.index}"}
+                  id={"#{@field.id}-render-var-#{var.index}"}
                   var={var}
                   render={:all}
                   edit />
@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           <% end %>
         </div>
         <button
-          id={"#{@form[@subform.name].id}-add-entry"}
+          id={"#{@field.id}-add-entry"}
           type="button"
           class="add-entry-button"
           phx-click={JS.push("add_subentry", target: @myself)}
@@ -87,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
 
     default = %Brando.Content.Var.Boolean{
       type: "boolean",
@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
     field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
 
   def handle_event("force_validate", _, socket) do
     field_name = socket.assigns.subform.name
-    event_id = "#{socket.assigns.form.id}-#{field_name}-add-entry"
+    event_id = "#{socket.assigns.field.id}-add-entry"
     {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
   end
 

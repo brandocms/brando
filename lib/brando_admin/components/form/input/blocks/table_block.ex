@@ -23,8 +23,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   # data block_data, :any
   # data uid, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
-
   def update(assigns, socket) do
     block_data =
       assigns.block
@@ -142,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
           socket
       ) do
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
 
     sorted_rows = Enum.map(order_indices, fn uid -> Enum.find(rows, &(&1.uid == uid)) end)
 
@@ -172,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
       ) do
     # replace block
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
 
     new_row =
       block_data
@@ -208,7 +206,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
       ) do
     # replace block
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
     new_rows = Enum.reject(rows, &(&1.uid == id))
 
     updated_changeset =

@@ -21,10 +21,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data value, :any
   # data visible, :boolean
 
-  def v(form, field) do
-    get_field(form.source, field)
-  end
-
   def preload(all_assigns) do
     {image_ids, cmp_imgs} =
       Enum.reduce(all_assigns, {[], []}, fn

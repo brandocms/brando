@@ -32,10 +32,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # data uid, :string
   # data module_not_found, :boolean
 
-  def v(form, field) do
-    input_value(form, field)
-  end
-
   def mount(socket) do
     {:ok, assign(socket, uploads: nil)}
   end
@@ -195,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     changeset = base_form.source
 
-    current_vars = input_value(block_data, :vars) || []
+    current_vars = block_data[:vars].value || []
     current_var_keys = Enum.map(current_vars, & &1.key)
 
     module_vars = entry_template.vars
@@ -278,7 +274,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
+    module_id = block_data[:module_id].value
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source

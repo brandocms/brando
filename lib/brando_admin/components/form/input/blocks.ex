@@ -288,7 +288,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   ## Function components
   def block(assigns) do
-    uid = input_value(assigns.block, :uid) || Brando.Utils.generate_uid()
+    uid = assigns.block[:uid].value || Brando.Utils.generate_uid()
 
     assigns =
       assigns
@@ -302,22 +302,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:is_datasource?, fn -> false end)
       |> assign_new(:datasource, fn -> nil end)
       |> assign_new(:block_type, fn ->
-        input_value(assigns.block, :type) || (assigns.is_entry? && "entry")
+        assigns.block[:type].value || (assigns.is_entry? && "entry")
       end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:render, fn -> nil end)
       |> assign_new(:initial_classes, fn ->
         %{
-          collapsed: input_value(assigns.block, :collapsed),
-          disabled: input_value(assigns.block, :hidden)
+          collapsed: assigns.block[:collapsed].value,
+          disabled: assigns.block[:hidden].value
         }
       end)
       |> assign(:bg_color, assigns[:bg_color])
       |> assign(:last_block?, last_block?(assigns))
       |> assign(:uid, uid)
-      |> assign(:hidden, input_value(assigns.block, :hidden))
-      |> assign(:collapsed, input_value(assigns.block, :collapsed))
-      |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))
+      |> assign(:hidden, assigns.block[:hidden].value)
+      |> assign(:collapsed, assigns.block[:collapsed].value)
+      |> assign(:marked_as_deleted, assigns.block[:marked_as_deleted].value)
 
     ~H"""
     <div
@@ -468,9 +468,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:opts, fn -> [] end)
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
-      |> assign_new(:block_id, fn -> input_value(assigns.block, :uid) end)
+      |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
       |> assign_new(:component_target, fn ->
-        type_atom = input_value(assigns.block, :type) |> String.to_existing_atom()
+        type_atom = assigns.block[:type].value |> String.to_existing_atom()
 
         block_type =
           (type_atom
@@ -528,7 +528,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   def text(assigns) do
     extensions =
-      case input_value(assigns.block, :data).extensions do
+      case assigns.block[:data].value.extensions do
         nil -> "all"
         extensions when is_list(extensions) -> Enum.join(extensions, "|")
         extensions -> extensions
@@ -537,8 +537,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     assigns =
       assigns
       |> assign(:text_block_data, List.first(inputs_for(assigns.block, :data)))
-      |> assign(:uid, input_value(assigns.block, :uid))
-      |> assign(:text_type, input_value(assigns.block, :data).type)
+      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:text_type, assigns.block[:data].value.type)
       |> assign(:extensions, extensions)
 
     ~H"""
@@ -616,14 +616,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     assigns = assign(assigns, :block_data, List.first(inputs_for(assigns.block, :data)))
 
     text =
-      case input_value(assigns.block_data, :text) do
+      case assigns.block_data[:text].value do
         nil -> nil
         text -> text |> Brando.HTML.nl2br() |> raw
       end
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:text, text)
 
     ~H"""
@@ -665,8 +665,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:level, input_value(block_data, :level))
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:level, block_data[:level].value)
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -737,7 +737,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -778,7 +778,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -819,10 +819,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
-      |> assign(:label, input_value(block_data, :label))
-      |> assign(:placeholder, input_value(block_data, :placeholder))
-      |> assign(:help_text, input_value(block_data, :help_text))
+      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:label, block_data[:label].value)
+      |> assign(:placeholder, block_data[:placeholder].value)
+      |> assign(:help_text, block_data[:help_text].value)
       |> assign(:block_data, block_data)
 
     ~H"""

@@ -190,10 +190,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}>
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="12" height="12" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                     </button>
-                    <button class="tiny" type="button" phx-click={@duplicate_ref} phx-value-id={input_value(ref, :name)}>
+                    <button class="tiny" type="button" phx-click={@duplicate_ref} phx-value-id={ref[:name].value}>
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="12" height="12" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
                     </button>
-                    <button class="tiny" type="button" phx-click={@delete_ref} phx-value-id={input_value(ref, :name)}>
+                    <button class="tiny" type="button" phx-click={@delete_ref} phx-value-id={ref[:name].value}>
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="12" height="12" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </div>
@@ -205,7 +205,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <Input.input type={:hidden} field={ref_data[:type]} />
                       <div class="panel">
                         <h2 class="titlecase">Block template</h2>
-                        <%= case input_value(ref_data, :type) do %>
+                        <%= case ref_data[:type].value do %>
                           <% "header" -> %>
                             <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:level]} label={gettext "Level"} />
@@ -218,7 +218,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                             <Form.inputs_for_block field={ref_data[:data]} :let={block_data}>
                               <Input.text field={block_data[:class]} label={gettext "Class"} />
                               <Input.code
-                                id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-svg-code"}
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-svg-code"}
                                 field={block_data[:code]}
                                 label={gettext "Code"}
                               />
@@ -229,7 +229,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:text]} label={gettext "Text"} />
                               <Input.text field={block_data[:type]} label={gettext "Type"} />
                               <.live_component module={Input.MultiSelect}
-                                id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-extensions"}
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-extensions"}
                                 label={gettext "Extensions"}
                                 field={block_data[:extensions]}
                                 opts={[options: [
@@ -264,7 +264,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:picture_class]} label={gettext "Picture class(es)"} />
                               <Input.text field={block_data[:img_class]} label={gettext "Img class(es)"} />
                               <.live_component module={Input.Select}
-                                id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-placeholder"}
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-placeholder"}
                                 form={block_data}
                                 field={:placeholder}
                                 opts={[options: [
@@ -415,7 +415,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.text form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
                                   <Input.text form={tpl_data} field={:img_class} label={gettext "Image class"} />
                                   <.live_component module={Input.Select}
-                                    id={"#{@form.id}-ref-#{@key}-#{input_value(ref, :name)}-tpl-placeholder"}
+                                    id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-tpl-placeholder"}
                                     field={tpl_data[:placeholder]}
                                     label={gettext "Placeholder"}
                                     opts={[options: [
@@ -587,7 +587,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       type="button"
                                       class="tiny"
                                       phx-click={@add_table_col}
-                                      phx-value-id={input_value(ref, :name)}
+                                      phx-value-id={ref[:name].value}
                                       phx-value-type={type}>
                                       <%= type %>
                                     </button>
@@ -602,10 +602,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       </div>
 
                       <div class="panel">
-                        <h2 class="titlecase">Ref config — <%= input_value(ref_data, :type) %></h2>
+                        <h2 class="titlecase">Ref config — <%= ref_data[:type].value %></h2>
                         <Input.text field={ref[:name]} label={gettext "Name"} />
                         <Input.text field={ref[:description]} label={gettext "Description"} />
-                        <Input.input type={:hidden} field={ref_data[:uid]} value={input_value(ref_data, :uid) || Brando.Utils.generate_uid()} />
+                        <Input.input type={:hidden} field={ref_data[:uid]} value={ref_data[:uid].value || Brando.Utils.generate_uid()} />
                       </div>
                     </Form.inputs_for_block>
                   </div>
@@ -776,8 +776,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   end
 
   def assign_available_queries(%{assigns: %{form: form}} = socket) do
-    module = input_value(form, :datasource_module)
-    type = input_value(form, :datasource_type)
+    module = form[:datasource_module].value
+    type = form[:datasource_type].value
     type = (is_binary(type) && String.to_existing_atom(type)) || type
 
     if module && type do

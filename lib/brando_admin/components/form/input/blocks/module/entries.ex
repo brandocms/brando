@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use Phoenix.HTML
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
 
   # prop block_data, :form, required: true
@@ -13,8 +12,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   # prop uid, :string, required: true
 
   # data entry_forms, :list
-
-  def v(form, field), do: input_value(form, field)
 
   def update(assigns, socket) do
     {:ok,
@@ -87,7 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       uid: generated_uid
     }
 
-    entries = input_value(block_data, :entries)
+    entries = block_data[:entries].value
     updated_entries = entries ++ [new_entry]
 
     updated_changeset =
@@ -116,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     changeset = form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
-    blocks = input_value(block_data, :entries)
+    blocks = block_data[:entries].value
 
     ordered_blocks = Enum.map(order_indices, &Enum.at(blocks, &1))
 

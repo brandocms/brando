@@ -39,8 +39,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data show_only_selected?, :boolean
   # data upload_formats, :string
 
-  def v(form, field), do: input_value(form, field)
-
   def mount(socket) do
     {:ok, assign(socket, available_images: [], show_only_selected?: false)}
   end
@@ -51,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       |> inputs_for(:data)
       |> List.first()
 
-    images = input_value(block_data, :images)
+    images = block_data[:images].value
     selected_images_paths = Enum.map(images, & &1.path)
 
     upload_formats =
@@ -306,7 +304,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    images = input_value(block_data, :images)
+    images = block_data[:images].value
     sorted_images = Enum.map(order_indices, &Enum.at(images, &1))
 
     updated_changeset =
@@ -338,7 +336,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(id)
     picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = input_value(block_data, :images) ++ [picture_data_tpl]
+    images = block_data[:images].value ++ [picture_data_tpl]
 
     changeset = base_form.source
     module = changeset.data.__struct__
@@ -398,7 +396,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(id)
     picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = input_value(block_data, :images) ++ [picture_data_tpl]
+    images = block_data[:images].value ++ [picture_data_tpl]
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -434,7 +432,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    images = Enum.reject(input_value(block_data, :images), &(&1.path == image.path))
+    images = Enum.reject(block_data[:images].value, &(&1.path == image.path))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -469,7 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           }
         } = socket
       ) do
-    images = Enum.reject(input_value(block_data, :images), &(&1.path == path))
+    images = Enum.reject(block_data[:images].value, &(&1.path == path))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",

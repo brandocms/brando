@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     value = assigns[:value]
 
     identifiers =
-      case input_value(assigns.form, assigns.field) do
+      case assigns.form[assigns.field].value do
         "" -> []
         val -> val
       end
