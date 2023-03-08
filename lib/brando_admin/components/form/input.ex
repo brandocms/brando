@@ -252,15 +252,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     confirmation_field = assigns.field.form[confirmation_field_atom]
     confirmation_value = confirmation_field.value || value
 
-    require Logger
-
-    Logger.error("""
-
-    confirmation_field: #{inspect(confirmation_field, pretty: true)}
-    confirmation_value: #{inspect(confirmation_value, pretty: true)}
-
-    """)
-
     assigns =
       assigns
       |> prepare_input_component()
@@ -308,7 +299,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -327,6 +317,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :id, :any, default: nil
   attr :opts, :any, default: []
+  attr :label, :string
+  attr :field, Phoenix.HTML.FormField
 
   def radios(assigns) do
     input_options =
@@ -462,7 +454,10 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :name, :any, default: nil
   attr :type, :atom, default: :text
   attr :rows, :any
+  attr :value, :any
   attr :disabled, :boolean
+  attr :uid, :string
+  attr :id_prefix, :string
 
   attr :rest, :global,
     include: ~w(class phx_hook phx_debounce data_slug_for data_slug_type autocorrect spellcheck)
@@ -488,12 +483,12 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@field.name} id={"#{@field.id}-unchecked"} value={@unchecked_value} {@rest}>
-      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} checked={@checked} {@rest}>
+      <input type={:hidden} name={@field.name} id={"#{@id}-unchecked"} value={@unchecked_value} {@rest}>
+      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} checked={@checked} {@rest}>
       """
     else
       ~H"""
-      <input type={@type} name={@field.name} id={"#{@field.id}"} value={@checked_value} {@rest}>
+      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} {@rest}>
       """
     end
   end
@@ -521,19 +516,17 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def input(assigns) do
     assigns =
-      if assigns[:value] do
-        assigns
-      else
-        assign(
-          assigns,
-          :value,
-          Phoenix.HTML.Form.normalize_value(assigns.type, assigns.field.value)
-        )
-      end
+      assign_new(
+        assigns,
+        :value,
+        fn -> Phoenix.HTML.Form.normalize_value(assigns.type, assigns.field.value) end
+      )
 
-    assigns = assign(assigns, :id, assigns.id || assigns.field.id)
-    assigns = assign(assigns, :name, assigns.name || assigns.field.name)
-    assigns = process_input_id(assigns)
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> process_input_id()
 
     ~H"""
     <input type={@type} name={@name} id={@id} value={@value} {@rest}>
@@ -541,12 +534,12 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns),
-    do: assigns
+    do: assign(assigns, :id, assigns.field.id)
 
   defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
     do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field.id}")
 
-  defp process_input_id(assigns), do: assigns
+  defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
 
   defp maybe_html_escape(nil), do: nil
   defp maybe_html_escape(value), do: html_escape(value)
@@ -726,9 +719,6 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> prepare_input_component()
       |> assign_new(:inner_block, fn -> nil end)
-
-    require Logger
-    Logger.error(inspect(assigns.field, pretty: true))
 
     ~H"""
     <Form.field_base

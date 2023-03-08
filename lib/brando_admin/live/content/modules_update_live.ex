@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         phx-submit="save">
         <div class="block-editor">
           <div class="code">
-            <Input.code form={form} field={:code} label={gettext "Code"} />
+            <Input.code field={form[:code]} label={gettext "Code"} />
           </div>
 
           <.live_component module={ModuleProps}
@@ -66,12 +66,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             add_table_template="add_table_template"
           />
         </div>
-        <Form.inputs
-          :if={input_value(form, :wrapper) in [true, "true"]}
-          :let={%{form: entry}}
-          form={form}
-          for={:entry_template}
-        >
+        <.inputs_for
+          :if={form[:wrapper].value in [true, "true"]}
+          :let={entry}
+          field={form[:entry_template]}>
           <div class="entry-template">
             <hr>
             <h2>Entry template</h2>
@@ -81,10 +79,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
             <div class="block-editor">
               <div class="code">
-                <Input.code form={entry} field={:code} label={gettext "Code"} />
+                <Input.code field={entry[:code]} label={gettext "Code"} />
               </div>
 
-              <Input.input type={:hidden} form={entry} field={:id} />
+              <Input.input type={:hidden} field={entry[:id]} />
 
               <.live_component module={ModuleProps}
                 id={"entry-module-props-#{entry.id}"}
@@ -100,7 +98,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
               />
             </div>
           </div>
-        </Form.inputs>
+        </.inputs_for>
 
         <div class="button-group">
           <Form.submit_button

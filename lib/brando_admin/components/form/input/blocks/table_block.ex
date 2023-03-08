@@ -58,8 +58,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         wide_config>
         <:description></:description>
         <:config></:config>
-        <Input.input type={:hidden} form={@block_data} field={:key} uid={@uid} id_prefix="block_data" />
-        <Input.input type={:hidden} form={@block_data} field={:instructions} uid={@uid} id_prefix="block_data" />
+        <Input.input type={:hidden} field={@block_data[:key]} uid={@uid} id_prefix="block_data" />
+        <Input.input type={:hidden} field={@block_data[:instructions]} uid={@uid} id_prefix="block_data" />
         <%= if input_value(@block_data, :instructions) do %>
           <div class="table-instructions">
             <%= input_value(@block_data, :instructions) %>
@@ -100,10 +100,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   </button>
                 </div>
 
-                <Form.poly_inputs form={row} for={:cols} :let={%{form: var, index: index}}>
-                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
-                </Form.poly_inputs>
-                <Input.input type={:hidden} form={row} field={:uid} uid={input_value(row, :uid)} id_prefix="table_block_row" />
+                <Form.inputs_for_poly :let={var} field={row[:cols]}>
+                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{var.index}"} var={var} render={:only_important} />
+                </Form.inputs_for_poly>
+                <Input.input type={:hidden} field={row[:uid]} uid={input_value(row, :uid)} id_prefix="table_block_row" />
               </div>
               <div class="insert-row">
                 <button
@@ -117,18 +117,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         <% end %>
 
         <!-- template row -->
-        <%# TODO: key this with @id_prefix and @uid %>
-        <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
-          <Form.poly_inputs form={tpl_row} for={:cols} :let={%{form: var}}>
-            <Input.input type={:hidden} form={var} field={:key} />
-            <Input.input type={:hidden} form={var} field={:type} />
-            <Input.input type={:hidden} form={var} field={:important} />
-            <Input.input type={:hidden} form={var} field={:label} />
-            <Input.input type={:hidden} form={var} field={:instructions} />
-            <Input.input type={:hidden} form={var} field={:placeholder} />
-            <Input.input type={:hidden} form={var} field={:value} />
-          </Form.poly_inputs>
-        <% end %>
+        <%# TODO: key this with @id_prefix and @uid? %>
+        <.inputs_for field={@block_data[:template_row]} :let={tpl_row}>
+          <Form.inputs_for_poly field={tpl_row[:cols]} :let={%{form: var}}>
+            <Input.input type={:hidden} field={var[:key]} />
+            <Input.input type={:hidden} field={var[:type]} />
+            <Input.input type={:hidden} field={var[:important]} />
+            <Input.input type={:hidden} field={var[:label]} />
+            <Input.input type={:hidden} field={var[:instructions]} />
+            <Input.input type={:hidden} field={var[:placeholder]} />
+            <Input.input type={:hidden} field={var[:value]} />
+          </Form.inputs_for_poly>
+        </.inputs_for>
         <!-- end template -->
       </Blocks.block>
     </div>

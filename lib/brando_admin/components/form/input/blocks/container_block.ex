@@ -31,8 +31,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   # data palette_options, :list
   # data first_color, :string
 
-  def v(form, field), do: input_value(form, field)
-
   def mount(socket) do
     {:ok, assign(socket, insert_index: 0)}
   end
@@ -47,14 +45,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       |> inputs_for(:data)
       |> List.first()
 
-    blocks = v(block_data, :blocks)
-    block_forms = inputs_for_blocks(block_data, :blocks) || []
+    blocks = block_data[:blocks].value
+    block_forms = inputs_for_blocks(block_data[:blocks]) || []
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(block, :uid))
-     |> assign(:target_id, v(block_data, :target_id))
+     |> assign(:uid, block[:uid].value)
+     |> assign(:target_id, block[:target_id].value)
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms)
      |> assign(:block_data, block_data)
@@ -121,7 +119,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   def assign_selected_palette(
         %{assigns: %{available_palettes: available_palettes, block_data: block_data}} = socket
       ) do
-    selected_palette = get_palette(v(block_data, :palette_id), available_palettes)
+    palette_id = block_data[:palette_id].value
+    selected_palette = get_palette(palette_id, available_palettes)
     first_color = List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
 
     socket
@@ -157,16 +156,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               <%= @selected_palette.name %>
             </button>
             <div class="circle-stack">
-              <%= for color <- Enum.reverse(@selected_palette.colors) do %>
-                <span
-                  class="circle tiny"
-                  style={"background-color:#{color.hex_value}"}
-                  data-popover={"#{color.name}"}></span>
-              <% end %>
+              <span
+                :for={color <- Enum.reverse(@selected_palette.colors)}
+                class="circle tiny"
+                style={"background-color:#{color.hex_value}"}
+                data-popover={"#{color.name}"}></span>
             </div>
-            <%= if @target_id do %>
-              <div class="container-target">#<%= @target_id %></div>
-            <% end %>
+            <div :if={@target_id} class="container-target">#<%= @target_id %></div>
           <% else %>
             <%= gettext "No palette selected" %>
           <% end %>
@@ -176,23 +172,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
             <div class="instructions mb-1"><%= gettext "Select a new palette" %>:</div>
             <.live_component module={Input.Select}
               id={"#{@block_data.id}-palette-select"}
-              form={@block_data}
-              field={:palette_id}
+              field={@block_data[:palette_id]}
               label={gettext "Palette"}
               opts={[options: @palette_options]}
             />
           <% end %>
-          <Input.text form={@block_data} field={:target_id} />
+          <Input.text field={@block_data[:target_id]} />
         </:config>
-        <%= if !@selected_palette do %>
-          <.live_component module={Input.Select}
-            id={"#{@block_data.id}-palette-select"}
-            form={@block_data}
-            field={:palette_id}
-            label={gettext "Palette"}
-            opts={[options: @palette_options]}
-          />
-        <% end %>
+        <.live_component
+          :if={!@selected_palette}
+          module={Input.Select}
+          id={"#{@block_data.id}-palette-select"}
+          field={@block_data[:palette_id]}
+          label={gettext "Palette"}
+          opts={[options: @palette_options]}
+        />
 
         <.live_component module={Blocks.BlockRenderer}
           id={"#{@block.id}-container-blocks"}
@@ -206,9 +200,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           hide_sections
           hide_fragments
           insert_index={@insert_index}
-          insert_module={JS.push("insert_module", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
-          insert_section={JS.push("insert_section", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
-          insert_fragment={JS.push("insert_fragment", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />

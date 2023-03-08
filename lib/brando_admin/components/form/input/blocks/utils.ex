@@ -54,10 +54,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
 
   def to_form_single(%{action: parent_action} = source_changeset, field, options) do
     id = field.id
-    name = field.name
+    name = field.field
 
-    params = Map.get(source_changeset.params || %{}, to_string(field.name), %{})
-    block = Ecto.Changeset.get_field(source_changeset, field.name)
+    params = Map.get(source_changeset.params || %{}, to_string(name), %{})
+    block = Ecto.Changeset.get_field(source_changeset, name)
 
     changeset =
       Ecto.Changeset.change(block)
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
       impl: Phoenix.HTML.FormData.Ecto.Changeset,
       id: id,
       index: nil,
-      name: to_string(name),
+      name: field.name,
       errors: errors,
       data: block,
       params: params,
@@ -89,12 +89,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
 
   def to_form_multi(%{action: parent_action} = source_changeset, field, options) do
     id = field.id
-    name = field.name
+    name = field.field
 
-    params = Map.get(source_changeset.params || %{}, to_string(field.name), %{}) |> List.wrap()
+    params = Map.get(source_changeset.params || %{}, to_string(name), %{}) |> List.wrap()
     params = if params == [""], do: [%{}], else: params
 
-    list_data = Ecto.Changeset.get_field(source_changeset, field.name) |> List.wrap()
+    list_data = Ecto.Changeset.get_field(source_changeset, name) |> List.wrap()
 
     list_data
     |> Enum.with_index()
@@ -121,7 +121,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
           id: id <> "_#{i}",
           index: i,
-          name: to_string(name <> "[#{i}]"),
+          name: to_string(field.name <> "[#{i}]"),
           errors: errors,
           data: block,
           params: params,
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
           id: id <> "_#{i}",
           index: i,
-          name: to_string(name <> "[#{i}]"),
+          name: to_string(field.name <> "[#{i}]"),
           errors: errors,
           data: changeset.data,
           params: changeset.params,

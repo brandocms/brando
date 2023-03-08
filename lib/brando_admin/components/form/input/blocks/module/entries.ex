@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
@@ -19,10 +20,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       :indexed_entry_forms,
-       Enum.with_index(inputs_for_blocks(assigns.block_data, :entries))
-     )
      |> assign(:entry_count, Enum.count(assigns.block_data.data.entries))}
   end
 
@@ -33,21 +30,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">
-      <%= for {entry_form, idx} <- @indexed_entry_forms do %>
+      <Form.inputs_for_poly field={@block_data[:entries]} :let={entry_form}>
         <.live_component module={EntryBlock}
-          id={v(entry_form, :uid)}
+          id={entry_form[:uid].value}
           block={entry_form}
           base_form={@base_form}
           data_field={@data_field}
           entry_template={@entry_template}
           belongs_to="module_entry"
           module_id={@module_id}
-          index={idx}
+          index={entry_form.index}
           block_count={@entry_count}
           insert_module=""
           duplicate_block=""
         />
-      <% end %>
+      </Form.inputs_for_poly>
 
       <button
         type="button"

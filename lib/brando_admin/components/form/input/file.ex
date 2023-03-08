@@ -71,7 +71,6 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -82,14 +81,12 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             <%= if @file && @file.filename do %>
               <.file_preview
                 file={@file}
-                form={@form}
                 field={@field}
                 relation_field={@relation_field}
                 click={open_file(@myself)}
                 file_name={@file_name} />
             <% else %>
               <.empty_preview
-                form={@form}
                 field={@field}
                 relation_field={@relation_field}
                 click={open_file(@myself)} />
@@ -154,10 +151,10 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def handle_event(
         "select_file",
         %{"id" => selected_file_id},
-        %{assigns: %{form: form}} = socket
+        %{assigns: %{field: field}} = socket
       ) do
     {:ok, file} = Brando.Files.get_file(selected_file_id)
-    module = form.source.data.__struct__
+    module = field.form.source.data.__struct__
 
     send_update(BrandoAdmin.Components.Form,
       id: "#{module.__naming__().singular}_form",
@@ -171,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def empty_preview(assigns) do
     ~H"""
     <div class="file-preview-empty">
-      <Input.input type={:hidden} form={@form} field={@relation_field} value={""} />
+      <Input.input type={:hidden} field={@relation_field} value={""} />
 
       <div>
         <%= gettext "No file associated with field" %>
@@ -181,7 +178,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         class="btn-small"
         type="button"
         phx-click={@click}
-        phx-value-id={"edit-file-#{@form.id}-#{@field}"}><%= gettext "Add file" %></button>
+        phx-value-id={"edit-file-#{@field.id}"}><%= gettext "Add file" %></button>
     </div>
     """
   end
@@ -190,13 +187,11 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   Show preview if we have a file with a filename
   """
   def file_preview(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:value, fn -> nil end)
+    assigns = assign_new(assigns, :value, fn -> nil end)
 
     ~H"""
     <div class="file-preview">
-      <Input.input type={:hidden} form={@form} field={@relation_field} value={@value || @file.id} />
+      <Input.input type={:hidden} field={@relation_field} value={@value || @file.id} />
       <div class="img-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/></svg>
       </div>

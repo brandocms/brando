@@ -236,7 +236,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         <:config>
           <div class="panels">
             <div class="panel">
-              <Input.text form={@block} field={:description} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
               <%= for {var, index} <- @indexed_vars do %>
                 <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
               <% end %>
@@ -323,9 +323,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <%= raw split %>
             <% end %>
           <% end %>
-          <Input.input type={:hidden} form={@block_data} field={:module_id} uid={@uid} id_prefix="module_data" />
-          <Input.input type={:hidden} form={@block_data} field={:sequence} uid={@uid} id_prefix="module_data" />
-          <Input.input type={:hidden} form={@block_data} field={:multi} uid={@uid} id_prefix="module_data" />
+          <Input.input type={:hidden} field={@block_data[:module_id]} uid={@uid} id_prefix="module_data" />
+          <Input.input type={:hidden} field={@block_data[:sequence]} uid={@uid} id_prefix="module_data" />
+          <Input.input type={:hidden} field={@block_data[:multi]} uid={@uid} id_prefix="module_data" />
         </div>
       </Blocks.block>
     </div>

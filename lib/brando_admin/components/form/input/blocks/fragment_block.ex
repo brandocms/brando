@@ -106,8 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
         <:config>
           <.live_component module={Input.Select}
             id={"#{@block_data.id}-fragment-select"}
-            form={@block_data}
-            field={:fragment_id}
+            field={@block_data[:fragment_id]}
             label={gettext "Fragment"}
             opts={[options: @fragment_options]}
           />

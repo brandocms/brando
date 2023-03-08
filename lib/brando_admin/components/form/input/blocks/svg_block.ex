@@ -22,8 +22,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   # data initial_props, :map
   # data block_data, :map
 
-  def v(form, field), do: input_value(form, field)
-
   def update(assigns, socket) do
     block_data = List.first(inputs_for(assigns.block, :data))
 
@@ -31,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
-     |> assign(:uid, v(assigns.block, :uid))}
+     |> assign(:uid, assigns.block[:uid].value)}
   end
 
   def render(assigns) do
@@ -56,13 +54,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <% end %>
         </:description>
         <:config>
-          <Input.code id={"block-#{@uid}-svg-code"} form={@block_data} field={:code} uid={@uid} id_prefix="block_data" label={gettext "Code"} />
-          <Input.text form={@block_data} field={:class} uid={@uid} id_prefix="block_data" label={gettext "Class"} />
+          <Input.code id={"block-#{@uid}-svg-code"} field={@block_data[:code]} uid={@uid} id_prefix="block_data" label={gettext "Code"} />
+          <Input.text field={@block_data[:class]} uid={@uid} id_prefix="block_data" label={gettext "Class"} />
         </:config>
         <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
-        <%= if v(@block_data, :code) do %>
+        <%= if @block_data[:code].value do %>
           <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
-            <%= v(@block_data, :code) |> raw %>
+            <%= @block_data[:code].value |> raw %>
           </div>
           <% else %>
             <div class="empty">

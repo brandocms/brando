@@ -227,10 +227,22 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
+    updated_form = to_form(updated_changeset, [])
+
+    require Logger
+
+    Logger.error("""
+
+    update_changeset
+
+    #{inspect(updated_form, pretty: true)}
+
+    """)
+
     {:ok,
      socket
      |> assign(:changeset, updated_changeset)
-     |> assign(:form, to_form(updated_changeset, []))}
+     |> assign(:form, updated_form)}
   end
 
   def update(
@@ -877,7 +889,7 @@ defmodule BrandoAdmin.Components.Form do
         </div>
 
         <div :if={@edit_file.file} class="brando-input">
-          <Input.text field={:title} form={file_form} label={gettext "Title"} />
+          <Input.text field={file_form[:title]} label={gettext "Title"} />
         </div>
       </.form>
     </Content.drawer>
@@ -975,15 +987,15 @@ defmodule BrandoAdmin.Components.Form do
         </div>
         <%= if @edit_image.image do %>
           <div class="brando-input">
-            <Input.text field={:title} form={image_form} label={gettext "Caption"} />
+            <Input.text field={image_form[:title]} label={gettext "Caption"} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={:credits} form={image_form} label={gettext "Credits"} />
+            <Input.text field={image_form[:credits]} label={gettext "Credits"} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={:alt} form={image_form} label={gettext "Alt. text"} />
+            <Input.text field={image_form[:alt]} label={gettext "Alt. text"} />
           </div>
         <% end %>
       </.form>
@@ -2339,9 +2351,7 @@ defmodule BrandoAdmin.Components.Form do
   # attr :opts, :any
 
   def inputs(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:opts, fn -> [] end)
+    assigns = assign_new(assigns, :opts, fn -> [] end)
 
     assigns =
       assign(
@@ -2410,32 +2420,121 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField
+  @doc type: :component
+  attr :field, Phoenix.HTML.FormField,
+    required: true,
+    doc: "A %Phoenix.HTML.Form{}/field name tuple, for example: {@form[:email]}."
 
-  def poly_inputs(assigns) do
-    assigns =
-      assigns
-      |> assign(:input_value, assigns.field.value)
-      |> assign_new(:opts, fn -> [] end)
+  attr :id, :string,
+    doc: """
+    The id to be used in the form, defaults to the concatenation of the given
+    field to the parent form id.
+    """
 
-    assigns =
-      assigns
-      |> assign(
-        :indexed_inputs,
-        assigns.field |> inputs_for_poly(assigns.opts) |> Enum.with_index()
+  attr :as, :atom,
+    doc: """
+    The name to be used in the form, defaults to the concatenation of the given
+    field to the parent form name.
+    """
+
+  attr :default, :any, doc: "The value to use if none is available."
+
+  attr :prepend, :list,
+    doc: """
+    The values to prepend when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :append, :list,
+    doc: """
+    The values to append when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :skip_hidden, :boolean,
+    default: false,
+    doc: """
+    Skip the automatic rendering of hidden fields to allow for more tight control
+    over the generated markup.
+    """
+
+  slot :inner_block, required: true, doc: "The content rendered for each nested form."
+
+  def inputs_for_block(assigns) do
+    %Phoenix.HTML.FormField{form: form} = assigns.field
+    options = assigns |> Map.take([:id, :as, :default, :append, :prepend]) |> Keyword.new()
+
+    options =
+      form.options
+      |> Keyword.take([:multipart])
+      |> Keyword.merge(options)
+
+    forms =
+      BrandoAdmin.Components.Form.Input.Blocks.Utils.to_form_single(
+        form.source,
+        assigns.field,
+        options
       )
 
+    assigns = assign(assigns, :forms, forms)
+
     ~H"""
-    <%= for {f, index} <- @indexed_inputs do %>
-      <%= render_slot @inner_block, %{
-        form: f,
-        index: index
-      } %>
+    <%= for finner <- @forms do %>
+      <%= unless @skip_hidden do %>
+        <%= for {name, value_or_values} <- finner.hidden,
+                name = name_for_value_or_values(finner, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+          <input type="hidden" name={name} value={value} />
+        <% end %>
+      <% end %>
+      <%= render_slot(@inner_block, finner) %>
     <% end %>
     """
   end
 
+  def inputs_for_poly(assigns) do
+    %Phoenix.HTML.FormField{form: form} = assigns.field
+    options = assigns |> Map.take([:id, :as, :default, :append, :prepend]) |> Keyword.new()
+
+    options =
+      form.options
+      |> Keyword.take([:multipart])
+      |> Keyword.merge(options)
+
+    forms =
+      BrandoAdmin.Components.Form.Input.Blocks.Utils.to_form_multi(
+        form.source,
+        assigns.field,
+        options
+      )
+
+    assigns = assign(assigns, :forms, forms)
+
+    ~H"""
+    <%= for finner <- @forms do %>
+      <%= unless @skip_hidden do %>
+        <%= for {name, value_or_values} <- finner.hidden,
+                name = name_for_value_or_values(finner, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+          <input type="hidden" name={name} value={value} />
+        <% end %>
+      <% end %>
+      <%= render_slot(@inner_block, finner) %>
+    <% end %>
+    """
+  end
+
+  defp name_for_value_or_values(form, field, values) when is_list(values) do
+    Phoenix.HTML.Form.input_name(form, field) <> "[]"
+  end
+
+  defp name_for_value_or_values(form, field, _value) do
+    Phoenix.HTML.Form.input_name(form, field)
+  end
+
   attr :field, Phoenix.HTML.FormField
+  slot :inner_block
+  slot :default
 
   def array_inputs(assigns) do
     assigns =
@@ -2457,6 +2556,7 @@ defmodule BrandoAdmin.Components.Form do
 
   attr :field, Phoenix.HTML.FormField
   attr :options, :any
+  slot :default
 
   def array_inputs_from_data(assigns) do
     checked_values = assigns.field.value || []

@@ -156,13 +156,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               </div>
 
               <div class={render_classes(["variable-content", hidden: !@visible])}>
-                <Input.toggle form={@var} field={:marked_as_deleted} label={gettext "Marked as deleted"} />
-                <Input.toggle form={@var} field={:important} label={gettext "Important"} />
-                <Input.text form={@var} field={:key} label={gettext "Key"} />
-                <Input.text form={@var} field={:label} label={gettext "Label"} />
-                <Input.text form={@var} field={:instructions} label={gettext "Instructions"} />
-                <Input.text form={@var} field={:placeholder} label={gettext "Placeholder"} />
-                <Input.radios form={@var} field={:type} label={gettext "Type"} opts={[options: [
+                <Input.toggle field={@var[:marked_as_deleted]} label={gettext "Marked as deleted"} />
+                <Input.toggle field={@var[:important]} label={gettext "Important"} />
+                <Input.text field={@var[:key]} label={gettext "Key"} />
+                <Input.text field={@var[:label]} label={gettext "Label"} />
+                <Input.text field={@var[:instructions]} label={gettext "Instructions"} />
+                <Input.text field={@var[:placeholder]} label={gettext "Placeholder"} />
+                <Input.radios field={@var[:type]} label={gettext "Type"} opts={[options: [
                   %{label: "Boolean", value: "boolean"},
                   %{label: "Color", value: "color"},
                   %{label: "Datetime", value: "datetime"},
@@ -188,23 +188,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
                 <%= case @type do %>
                   <% "color" -> %>
-                    <Input.toggle form={@var} field={:picker} label={gettext "Allow picking custom colors"} />
-                    <Input.toggle form={@var} field={:opacity} label={gettext "Allow setting opacity"} />
-                    <Input.number form={@var} field={:palette_id} label={gettext "ID of palette to choose colors from"} />
+                    <Input.toggle field={@var[:picker]} label={gettext "Allow picking custom colors"} />
+                    <Input.toggle field={@var[:opacity]} label={gettext "Allow setting opacity"} />
+                    <Input.number field={@var[:palette_id]} label={gettext "ID of palette to choose colors from"} />
 
                   <% "select" -> %>
                     <Form.field_base
-                      form={@var}
-                      field={:options}
+                      field={@var[:options]}
                       label="Options"
                       instructions=""
                       left_justify_meta>
                       <Form.label
-                        form={@var}
-                        field={:options}>
+                        field={@var[:options]}>
                         <%= for opt <- inputs_for(@var, :options) do %>
-                          <Input.text form={opt} field={:label} label={gettext "Label"} />
-                          <Input.text form={opt} field={:value} label={gettext "Value"} />
+                          <Input.text field={opt[:label]} label={gettext "Label"} />
+                          <Input.text field={opt[:value]} label={gettext "Value"} />
                         <% end %>
                       </Form.label>
                       <button
@@ -222,12 +220,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </div>
           <% else %>
             <div id={"#{@var.id}-value"}>
-              <Input.input type={:hidden} form={@var} field={:key} />
-              <Input.input type={:hidden} form={@var} field={:label} />
-              <Input.input type={:hidden} form={@var} field={:type} />
-              <Input.input type={:hidden} form={@var} field={:important} />
-              <Input.input type={:hidden} form={@var} field={:instructions} />
-              <Input.input type={:hidden} form={@var} field={:placeholder} />
+              <Input.input type={:hidden} field={@var[:key]} />
+              <Input.input type={:hidden} field={@var[:label]} />
+              <Input.input type={:hidden} field={@var[:type]} />
+              <Input.input type={:hidden} field={@var[:important]} />
+              <Input.input type={:hidden} field={@var[:instructions]} />
+              <Input.input type={:hidden} field={@var[:placeholder]} />
 
               <.render_value_inputs
                 type={@type}
@@ -253,18 +251,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <%= case @type do %>
         <% "string" -> %>
-          <Input.text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.text field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "text" -> %>
-          <Input.textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.textarea field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "boolean" -> %>
-          <Input.toggle form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "color" -> %>
           <Input.color
-            form={@var}
-            field={:value}
+            field={@var[:value]}
             label={@label}
             placeholder={@placeholder}
             instructions={@instructions}
@@ -274,51 +271,47 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               palette_id: input_value(@var, :palette_id),
             ]} />
           <%= unless @edit do %>
-            <Input.input type={:hidden} form={@var} field={:picker} />
-            <Input.input type={:hidden} form={@var} field={:opacity} />
-            <Input.input type={:hidden} form={@var} field={:palette_id} />
+            <Input.input type={:hidden} field={@var[:picker]} />
+            <Input.input type={:hidden} field={@var[:opacity]} />
+            <Input.input type={:hidden} field={@var[:palette_id]} />
           <% end %>
 
         <% "datetime" -> %>
-          <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "html" -> %>
-          <Input.rich_text form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.rich_text field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "select" -> %>
           <.live_component module={Input.Select}
             id={"#{@var.id}-select"}
             label={@label}
-            form={@var}
-            field={:value}
+            field={@var[:value]}
             opts={[options: input_value(@var, :options) || []]}
           />
 
           <%= for opt <- inputs_for(@var, :options) do %>
-            <Input.hidden form={opt} field={:label} />
-            <Input.hidden form={opt} field={:value} />
+            <Input.hidden field={opt[:label]} />
+            <Input.hidden field={opt[:value]} />
           <% end %>
 
         <% "image" -> %>
           <Form.field_base
-            form={@var}
-            field={:value_id}
+            field={@var[:value_id]}
             label={@label}
             instructions={@instructions}>
             <div class="input-image">
               <%= if @image do %>
                 <Input.Image.image_preview
                   image={@image}
-                  form={@var}
-                  field={:value}
+                  field={@var[:value]}
                   value={@value_id}
                   relation_field={:value_id}
                   click={show_modal("#var-#{@var.id}-image-config")}
                   file_name={(@image && @image.path) && Path.basename(@image.path)} />
               <% else %>
                 <Input.Image.empty_preview
-                  form={@var}
-                  field={:value}
+                  field={@var[:value]}
                   relation_field={:value_id}
                   click={show_modal("#var-#{@var.id}-image-config")} />
               <% end %>

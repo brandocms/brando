@@ -111,21 +111,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             multiple>
         </div>
 
-        <%= for image <- inputs_for(@block_data, :images) do %>
-          <Input.input type={:hidden} form={image} field={:placeholder} />
-          <Input.input type={:hidden} form={image} field={:cdn} />
-          <Input.input type={:hidden} form={image} field={:dominant_color} />
-          <Input.input type={:hidden} form={image} field={:height} />
-          <Input.input type={:hidden} form={image} field={:width} />
-          <Input.input type={:hidden} form={image} field={:path} />
+        <.inputs_for field={@block_data[:images]} :let={image}>
+          <Input.input type={:hidden} field={image[:placeholder]} />
+          <Input.input type={:hidden} field={image[:cdn]} />
+          <Input.input type={:hidden} field={image[:dominant_color]} />
+          <Input.input type={:hidden} field={image[:height]} />
+          <Input.input type={:hidden} field={image[:width]} />
+          <Input.input type={:hidden} field={image[:path]} />
 
-          <Form.inputs
-            form={image}
-            for={:focal}
-            :let={%{form: focal_form}}>
-            <Input.input type={:hidden} form={focal_form} field={:x} />
-            <Input.input type={:hidden} form={focal_form} field={:y} />
-          </Form.inputs>
+          <.inputs_for
+            field={image[:focal]}
+            :let={focal_form}>
+            <Input.input type={:hidden} field={focal_form[:x]} />
+            <Input.input type={:hidden} field={focal_form[:y]} />
+          </.inputs_for>
 
           <Form.map_inputs
             :let={%{value: value, name: name}}
@@ -136,11 +135,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={image}
-            for={:formats}>
+            field={image[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
-        <% end %>
+        </.inputs_for>
 
         <%= if @has_images? do %>
           <span
@@ -256,22 +254,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         </Content.modal>
 
         <:config>
-          <Input.input type={:hidden} form={@block_data} field={:type} />
+          <Input.input type={:hidden} field={@block_data[:type]} />
           <Input.radios
-            form={@block_data}
-            field={:display}
+            field={@block_data[:display]}
             label={gettext("Display")}
             opts={[options: [
               %{label: "Grid", value: :grid},
               %{label: "List", value: :list},
             ]]} />
-          <Input.text form={@block_data} field={:class} label={gettext "Class"} />
-          <Input.text form={@block_data} field={:series_slug} label={gettext "Series slug"} />
-          <Input.toggle form={@block_data} field={:lightbox} label={gettext "Lightbox"} />
+          <Input.text field={@block_data[:class]} label={gettext "Class"} />
+          <Input.text field={@block_data[:series_slug]} label={gettext "Series slug"} />
+          <Input.toggle field={@block_data[:lightbox]} label={gettext "Lightbox"} />
 
           <Input.radios
-            form={@block_data}
-            field={:placeholder}
+            field={@block_data[:placeholder]}
             label={gettext "Placeholder"}
             opts={[options: [
               %{label: "SVG", value: :svg},
@@ -282,8 +278,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={@block_data}
-            for={:formats}>
+            field={@block_data[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
 

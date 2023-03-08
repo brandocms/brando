@@ -65,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(:transform_field, transform_field)
 
     ~H"""
+    TRANSFORMER
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :many}
@@ -122,6 +123,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # inline
   def render(%{subform: _} = assigns) do
     ~H"""
+    INLINE
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :one}
