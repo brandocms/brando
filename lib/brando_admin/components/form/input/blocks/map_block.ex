@@ -52,7 +52,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         wide_config>
-        <:description><%= v(@block_data, :source) %></:description>
+        <:description><%= @block_data[:source].value %></:description>
         <:config>
           <Input.input type={:hidden} field={@block_data[:embed_url]} />
           <Input.input type={:hidden} field={@block_data[:source]} />
@@ -65,12 +65,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </button>
           </div>
         </:config>
-        <%= if v(@block_data, :embed_url) do %>
-          <%= case v(@block_data, :source) do %>
+        <%= if @block_data[:embed_url].value do %>
+          <%= case @block_data[:source].value do %>
             <% :gmaps -> %>
               <div class="map-content">
                 <iframe
-                  src={v(@block_data, :embed_url)}}
+                  src={@block_data[:embed_url].value}
                   width="600"
                   height="450"
                   frameborder="0"

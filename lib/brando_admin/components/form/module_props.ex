@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Datasource
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form

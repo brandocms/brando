@@ -2246,14 +2246,13 @@ defmodule BrandoAdmin.Components.Form do
           class={render_classes(["control-label", failed: @failed])}>
           <span><%= @label %></span>
         </label>
-        <%= if @field do %>
-          <.error_tag
-            field={@field}
-            relation={@relation}
-            id_prefix={@id_prefix}
-            uid={@uid}
-          />
-        <% end %>
+        <.error_tag
+          :if={@field}
+          field={@field}
+          relation={@relation}
+          id_prefix={@id_prefix}
+          uid={@uid}
+        />
         <div :if={@header != []} class="field-wrapper-header">
           <%= render_slot @header %>
         </div>
@@ -2287,14 +2286,14 @@ defmodule BrandoAdmin.Components.Form do
     label
   end
 
-  # defp has_error(field, true) do
-  #   field = :"#{field}_id"
+  defp has_error(field, true) do
+    relation_field = :"#{field.field}_id"
 
-  #   case Keyword.get_values(form.errors, field) do
-  #     [] -> false
-  #     _ -> true
-  #   end
-  # end
+    case Keyword.get_values(field.form.errors, relation_field) do
+      [] -> false
+      _ -> true
+    end
+  end
 
   defp has_error(%{errors: []}, _), do: false
   defp has_error(%{errors: _}, _), do: true

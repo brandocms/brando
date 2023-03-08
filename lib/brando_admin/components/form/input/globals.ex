@@ -137,7 +137,6 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def handle_event("force_validate", _, socket) do
-    field_name = socket.assigns.subform.name
     event_id = "#{socket.assigns.field.id}-add-entry"
     {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
   end

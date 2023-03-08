@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def update(assigns, socket) do
-    schema = assigns.form.data.__struct__
+    schema = assigns.field.form.data.__struct__
 
     {:ok,
      socket
@@ -95,7 +95,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+        relation>
         <div class="gallery-input">
           <%= if @gallery_images != [] do %>
             <.inputs_for field={@field} :let={gallery_form}>
@@ -120,8 +121,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <div class="actions">
             <button type="button" class="tiny upload-button">
               <%= gettext "Upload images" %>
-              <.live_file_input upload={@uploads[@field]} />
-
+              <.live_file_input upload={@uploads[@field.field]} />
             </button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}

@@ -59,7 +59,7 @@ defmodule Brando.Blueprint.Migrations do
         opts
       )
 
-    opts = Keyword.put(opts, :add_alternates, :language in attributes_to_add)
+    opts = Keyword.put(opts, :add_alternates, :language in Enum.map(attributes_to_add, & &1.name))
 
     up = perform_operations(:up, operations)
     down = perform_operations(:down, operations)
@@ -131,16 +131,16 @@ defmodule Brando.Blueprint.Migrations do
     {up_alternates, down_alternates} =
       if alternates? do
         {"""
-         create table(#{alternates_source}) do
-           add :entry_id, references(#{table_name}, on_delete: :nilify_all)
-           add :linked_entry_id, references(#{table_name}, on_delete: :nilify_all)
+         create table(:#{alternates_source}) do
+           add :entry_id, references(:#{table_name}, on_delete: :nilify_all)
+           add :linked_entry_id, references(:#{table_name}, on_delete: :nilify_all)
            timestamps()
          end
 
-         create unique_index(#{alternates_source}, [:entry_id, :linked_entry_id])
+         create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
          """,
          """
-         drop table(#{alternates_source})
+         drop table(:#{alternates_source})
          """}
       else
         {"", ""}

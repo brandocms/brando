@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     block_count =
       assigns.block_forms
-      |> Enum.map(&&1[:marked_as_deleted].value)
+      |> Enum.map(& &1[:marked_as_deleted].value)
       |> Enum.reject(&(&1 == true))
       |> Enum.count()
 
