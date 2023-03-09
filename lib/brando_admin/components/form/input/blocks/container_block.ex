@@ -271,6 +271,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
     module_id = String.to_integer(module_id_binary)
+    data_field_name = data_field.field
 
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
@@ -290,25 +291,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
-    sub_blocks = original_block.data.blocks || []
-    {index, ""} = Integer.parse(index_binary)
-    new_blocks = List.insert_at(sub_blocks, index, new_block)
+    case Brando.Villain.get_block_in_changeset(changeset, data_field_name, block_uid) do
+      nil ->
+        require Logger
 
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
-        data: %{blocks: new_blocks}
-      })
+        Logger.error("""
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+        => Block not found in changeset
+        :: uid: #{inspect(block_uid, pretty: true)}
+        :: data_field: #{inspect(data_field, pretty: true)}
 
-    selector = "[data-block-uid=\"#{new_block.uid}\"]"
+        """)
 
-    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+      original_block ->
+        sub_blocks = original_block.data.blocks || []
+        {index, ""} = Integer.parse(index_binary)
+        new_blocks = List.insert_at(sub_blocks, index, new_block)
+
+        updated_changeset =
+          Brando.Villain.update_block_in_changeset(changeset, data_field_name, block_uid, %{
+            data: %{blocks: new_blocks}
+          })
+
+        send_update(BrandoAdmin.Components.Form,
+          id: form_id,
+          action: :update_changeset,
+          changeset: updated_changeset
+        )
+
+        selector = "[data-block-uid=\"#{new_block.uid}\"]"
+
+        {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+    end
   end
 
   defp replace_uids(%Brando.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do

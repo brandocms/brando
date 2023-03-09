@@ -1294,7 +1294,7 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_image = Map.put(edit_image, :image, updated_image)
-    relation_full_path = path ++ [relation_field]
+    relation_full_path = path ++ [relation_field.field]
     field_full_path = path ++ [field]
 
     updated_changeset =
@@ -1836,7 +1836,7 @@ defmodule BrandoAdmin.Components.Form do
       updated_changeset = put_assoc(changeset, key, new_gallery)
 
       module = changeset.data.__struct__
-      form_id = "#{module.__naming__().singular}_form_form-#{key}"
+      form_id = "#{module.__naming__().singular}_#{key}"
 
       send_update(BrandoAdmin.Components.Form.Input.Gallery,
         id: form_id,

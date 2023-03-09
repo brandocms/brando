@@ -4,9 +4,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   import Brando.Gettext
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign_new(:z_index, fn -> 1100 end)}
+    {:ok, assign_new(socket, :z_index, fn -> 1100 end)}
   end
 
   def update(

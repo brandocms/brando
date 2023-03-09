@@ -222,8 +222,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def handle_event("open_image", _, socket) do
-    form = socket.assigns.form
     field = socket.assigns.field
+    field_name = field.field
+    form = field.form
     relation_field = socket.assigns.relation_field
     image_id = socket.assigns.image_id
     image = socket.assigns.image
@@ -241,7 +242,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: {"image", form.data.__struct__, field},
+      config_target: {"image", form.data.__struct__, field_name},
       event_target: myself,
       multi: false,
       selected_images: []
@@ -252,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     edit_image = %{
       id: image_id,
       path: path,
-      field: field,
+      field: field_name,
       relation_field: relation_field,
       schema: form.data.__struct__,
       form_id: form_id,

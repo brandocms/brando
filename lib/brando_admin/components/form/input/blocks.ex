@@ -94,12 +94,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, assign(socket, insert_index: index_binary)}
   end
 
-  def handle_event(
-        "insert_section",
-        %{"index" => index_binary},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("insert_section", %{"index" => index_binary}, socket) do
+    field = socket.assigns.field
+    changeset = field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -132,12 +129,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
-  def handle_event(
-        "insert_fragment",
-        %{"index" => index_binary},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("insert_fragment", %{"index" => index_binary}, socket) do
+    field = socket.assigns.field
+    changeset = field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -218,13 +212,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
-  def handle_event(
-        "duplicate_block",
-        %{"block_uid" => block_uid},
-        %{assigns: %{form: form, field: data_field}} = socket
-      ) do
-    changeset = form.source
-    data = get_field(changeset, data_field)
+  def handle_event("duplicate_block", %{"block_uid" => block_uid}, socket) do
+    field = socket.assigns.field
+    field_name = field.field
+    changeset = field.form.source
+    data = get_field(changeset, field_name)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
 
     module = changeset.data.__struct__
@@ -237,7 +229,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
 
-    updated_changeset = put_change(changeset, data_field, new_data)
+    updated_changeset = put_change(changeset, field_name, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

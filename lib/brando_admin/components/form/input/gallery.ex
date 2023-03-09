@@ -78,7 +78,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   defp get_gallery_images(_), do: []
 
   defp assign_value(%{assigns: %{field: field}} = socket) do
-    gallery = field.value
+    changeset = field.form.source
+    gallery = Ecto.Changeset.get_field(changeset, field.field)
     gallery_images = get_gallery_images(gallery)
 
     socket
@@ -95,8 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}
-        relation>
+        compact={@compact}>
         <div class="gallery-input">
           <%= if @gallery_images != [] do %>
             <.inputs_for field={@field} :let={gallery_form}>
@@ -185,9 +185,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           }
         } = socket
       ) do
+    field_name = field.field
+
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: {"gallery", schema, field},
+      config_target: {"gallery", schema, field_name},
       event_target: myself,
       multi: true,
       selected_images: selected_images
@@ -208,8 +210,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         } = socket
       ) do
     changeset = field.form.source
+    field_name = field.field
     schema = field.form.data.__struct__
-    gallery = field.value
+    gallery = Ecto.Changeset.get_field(changeset, field_name)
 
     {:ok, new_image} = Brando.Images.get_image(image_id)
 
@@ -235,7 +238,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         }
       else
         %{
-          config_target: "gallery:#{inspect(schema)}:#{field}",
+          config_target: "gallery:#{inspect(schema)}:#{field_name}",
           gallery_images: sequence(new_gallery_images)
         }
       end
@@ -250,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       selected_images: selected_images
     )
 
-    updated_changeset = put_assoc(changeset, field.field, new_gallery)
+    updated_changeset = put_assoc(changeset, field_name, new_gallery)
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -276,7 +279,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         } = socket
       ) do
     changeset = field.form.source
-    gallery = field.value
+    gallery = Ecto.Changeset.get_field(changeset, field.field)
+    field_name = field.field
 
     new_gallery_images =
       Enum.filter(gallery_images, &(&1.image_id != String.to_integer(image_id)))
@@ -300,7 +304,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       gallery_images: sequence(slimmed_gallery_images)
     }
 
-    updated_changeset = put_assoc(changeset, field.field, new_gallery)
+    updated_changeset = put_assoc(changeset, field_name, new_gallery)
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
