@@ -594,8 +594,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         class={@class}
         compact={@compact}>
         <div class="radios-wrapper status">
-          <%= for status <- @statuses do %>
-            <div class="form-check">
+            <div :for={status <- @statuses} class="form-check">
               <label class="form-check-label">
                 <input
                   type="radio"
@@ -620,7 +619,6 @@ defmodule BrandoAdmin.Components.Form.Input do
                 </span>
               </label>
             </div>
-          <% end %>
         </div>
       </Form.field_base>
       """

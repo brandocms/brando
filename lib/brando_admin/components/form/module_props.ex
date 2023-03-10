@@ -264,8 +264,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:img_class]} label={gettext "Img class(es)"} />
                               <.live_component module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-placeholder"}
-                                form={block_data}
-                                field={:placeholder}
+                                field={block_data[:placeholder]}
                                 opts={[options: [
                                   %{label: "SVG", value: :svg},
                                   %{label: "Dominant Color", value: :dominant_color},
@@ -409,10 +408,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "picture" in block_data[:available_blocks].value do %>
                                 <h2>Picture block template</h2>
                                 <.inputs_for field={block_data[:template_picture]} :let={tpl_data}>
-                                  <Input.toggle form={tpl_data} field={:lazyload} label={gettext "Lazyload"} />
-                                  <Input.toggle form={tpl_data} field={:moonwalk} label={gettext "Moonwalk"} />
-                                  <Input.text form={tpl_data} field={:picture_class} label={gettext "Picture class"} />
-                                  <Input.text form={tpl_data} field={:img_class} label={gettext "Image class"} />
+                                  <Input.toggle field={tpl_data[:lazyload]} label={gettext "Lazyload"} />
+                                  <Input.toggle field={tpl_data[:moonwalk]} label={gettext "Moonwalk"} />
+                                  <Input.text field={tpl_data[:picture_class]} label={gettext "Picture class"} />
+                                  <Input.text field={tpl_data[:img_class]} label={gettext "Image class"} />
                                   <.live_component module={Input.Select}
                                     id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-tpl-placeholder"}
                                     field={tpl_data[:placeholder]}

@@ -1820,7 +1820,8 @@ defmodule BrandoAdmin.Components.Form do
 
       unloaded_image_paths =
         if unloaded_image_ids != [] do
-          Brando.Images.list_images!(%{filter: %{ids: unloaded_image_ids}, select: [:path]})
+          %{filter: %{ids: unloaded_image_ids}, select: [:path]}
+          |> Brando.Images.list_images!()
           |> Enum.map(& &1.path)
         else
           []
@@ -2344,31 +2345,6 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  # # attr :field, Phoenix.HTML.FormField
-  # # attr :opts, :any
-
-  # def inputs(assigns) do
-  #   assigns = assign_new(assigns, :opts, fn -> [] end)
-
-  #   assigns =
-  #     assign(
-  #       assigns,
-  #       :inputs,
-  #       assigns.field.form.impl.to_form(
-  #         assigns.field.form.source,
-  #         assigns.field.form,
-  #         assigns.field.name,
-  #         assigns.opts
-  #       )
-  #     )
-
-  #   ~H"""
-  #   <%= for form <- @inputs do %>
-  #     <%= render_slot(@inner_block, %{form: form, index: form.index}) %>
-  #   <% end %>
-  #   """
-  # end
-
   attr :field, Phoenix.HTML.FormField
   slot :default
 
@@ -2607,7 +2583,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {option, idx} <- @indexed_options do %>
       <%= render_slot @inner_block, %{
-        name: "#{@field.name}][]",
+        name: "#{@field.name}[]",
         id: "#{@field.id}-#{idx}",
         index: idx,
         value: option.value,
