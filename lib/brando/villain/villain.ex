@@ -192,7 +192,7 @@ defmodule Brando.Villain do
 
   def parse_and_render(html, context) do
     with {:ok, parsed_doc} <- Liquex.parse(html, Brando.Villain.LiquexParser),
-         {result, _} <- Liquex.Render.render([], parsed_doc, context) do
+         {result, _} <- Liquex.Render.render!([], parsed_doc, context) do
       Enum.join(result)
     else
       {:error, "expected end of string", err} ->

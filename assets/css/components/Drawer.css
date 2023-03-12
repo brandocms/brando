@@ -410,7 +410,7 @@ figcaption.tiny {
           }
 
           ul li button:hover {
-            @color bg black;
+            @color bg #ffffff;
           }
         }
       }

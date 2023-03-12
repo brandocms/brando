@@ -22,7 +22,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
         context = Villain.get_base_context(entry)
 
         []
-        |> Liquex.Render.render(@parsed_absolute_url, context)
+        |> Liquex.Render.render!(@parsed_absolute_url, context)
         |> elem(0)
         |> Enum.join()
         |> String.trim()

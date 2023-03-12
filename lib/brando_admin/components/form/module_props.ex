@@ -730,13 +730,19 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               opts={[options: @available_sources]}
             />
 
-            <Input.radios field={@form[:datasource_type]} label={gettext "Type"} opts={[options: [
-              %{label: gettext("List"), value: :list},
-              %{label: gettext("Single"), value: :single},
-              %{label: gettext("Selection"), value: :selection},
-            ]]} />
+            <Input.radios
+              :if={@form[:datasource_module].value}
+              field={@form[:datasource_type]}
+              label={gettext "Type"}
+              opts={[options: [
+                %{label: gettext("List"), value: :list},
+                %{label: gettext("Single"), value: :single},
+                %{label: gettext("Selection"), value: :selection},
+              ]]} />
 
-            <.live_component module={Input.Select}
+            <.live_component
+              if={@form[:datasource_module].value}
+              module={Input.Select}
               id={"#{@form.id}-datasource-query"}
               field={@form[:datasource_query]}
               opts={[options: @available_queries]}

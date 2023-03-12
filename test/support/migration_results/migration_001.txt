@@ -18,6 +18,14 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
 
     create unique_index(:projects, [:slug, :language])
     create index(:projects, [:language])
+
+    create table(:projects_alternates) do
+      add :entry_id, references(:projects, on_delete: :nilify_all)
+      add :linked_entry_id, references(:projects, on_delete: :nilify_all)
+      timestamps()
+    end
+
+    create unique_index(:projects_alternates, [:entry_id, :linked_entry_id])
   end
 
   def down do
@@ -25,5 +33,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
 
     drop unique_index(:projects, [:slug, :language])
     drop index(:projects, [:language])
+
+    drop table(:projects_alternates)
   end
 end

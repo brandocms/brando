@@ -20,7 +20,7 @@ defmodule Brando.Blueprint.Identifier do
       def __identifier__(entry, opts \\ []) do
         skip_cover = Keyword.get(opts, :skip_cover, false)
         context = Villain.get_base_context(entry)
-        {result, _} = Liquex.Render.render([], @parsed_identifier, context)
+        {result, _} = Liquex.Render.render!([], @parsed_identifier, context)
         title = Enum.join(result)
 
         translated_type =

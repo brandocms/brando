@@ -65,7 +65,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(:transform_field, transform_field)
 
     ~H"""
-    TRANSFORMER
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :many}
@@ -123,7 +122,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # inline
   def render(%{subform: _} = assigns) do
     ~H"""
-    INLINE
     <fieldset>
       <Form.field_base
         :if={@subform.cardinality == :one}
@@ -330,7 +328,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     entry = Ecto.Changeset.apply_changes(changeset)
 
     default =
@@ -372,7 +370,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
     field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -404,7 +402,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("sort_by_filename", %{"transform_field" => transform_field}, socket) do
     field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     %{type: rel_type} = module.__relation__(field_name)
     form_id = "#{module.__naming__().singular}_form"
@@ -450,7 +448,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
     field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
     embed? = event_params["embeds"]

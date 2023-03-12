@@ -106,7 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <div
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
-        data-input={"##{@form.id}_#{@field}"}
+        data-input={"##{@field.id}"}
         data-color={@field.value || gettext("No color selected")}
         data-opacity={@opacity}
         data-picker={@picker}
