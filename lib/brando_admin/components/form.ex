@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
+     |> assign(:editing_image?, false)
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -114,6 +115,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
   end
 
@@ -126,6 +128,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
   end
 
@@ -226,16 +229,6 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
-
-    require Logger
-
-    Logger.error("""
-
-    update_changeset
-
-    #{inspect(updated_form, pretty: true)}
-
-    """)
 
     {:ok,
      socket
@@ -387,6 +380,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  # defp scan_and_preload_block_vars(entry, schema) do
+  #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
+  #     blocks = Map.get(updated_entry, field)
+  #     updated_blocks = Brando.Villain.preload_vars(blocks)
+  #     Map.put(updated_entry, field, updated_blocks)
+  #   end)
+  # end
+
   defp assign_refreshed_entry(
          %{
            assigns: %{
@@ -407,14 +408,6 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
   end
 
-  # defp scan_and_preload_block_vars(entry, schema) do
-  #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
-  #     blocks = Map.get(updated_entry, field)
-  #     updated_blocks = Brando.Villain.preload_vars(blocks)
-  #     Map.put(updated_entry, field, updated_blocks)
-  #   end)
-  # end
-
   defp maybe_query(id, form_blueprint) do
     if form_blueprint.query do
       form_blueprint.query.(id)
@@ -425,8 +418,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_initial_validate(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
-      socket
-      |> push_event("b:validate", %{})
+      push_event(socket, "b:validate", %{})
     else
       socket
     end
@@ -1339,6 +1331,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, false)
      |> push_event("b:validate", %{
        target: target_field_name,
        value: image.id
@@ -1347,7 +1340,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # without image in params
   def handle_event("save_image", _, socket) do
-    {:noreply, socket}
+    {:noreply, assign(socket, :editing_image?, false)}
   end
 
   def handle_event(
@@ -1496,6 +1489,18 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
+  end
+
+  def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Error"),
+       message:
+         gettext(
+           "You must close the image drawer before saving this form. You might have changes to an image that has not been processed, which might lead to broken image links. Close the image drawer, allow processing to finish (if any), then try to save again."
+         ),
+       type: "error"
+     })}
   end
 
   def handle_event("save", params, socket) do
