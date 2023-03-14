@@ -6,6 +6,12 @@ defmodule Brando.Trait.Sequenced do
   ## Options
 
       - `append: true`: Sequences the item to the last possible position.
+      - `strict: true`: Force absolute sequential sequencing.
+          The default behaviour is to set a new entry's sequence
+          to 0, and order by `[asc: :sequence, desc: :inserted_at]`. This means
+          we can have multiple entries with sequence 0. If you use `Query.next_entry/prev_entry`,
+          this can interfere with the results. By using `strict: true`, the new entry
+          will have sequence 0 and all other entries' sequences will be incremented by 1
 
   """
   use Brando.Trait
@@ -85,6 +91,18 @@ defmodule Brando.Trait.Sequenced do
     Datasource.update_datasource(module)
   end
 
+  def changeset_mutator(module, %{strict: true}, changeset, _user, _opts) do
+    Changeset.prepare_changes(changeset, fn
+      %{action: :insert} = cs ->
+        language = Changeset.get_field(cs, :language)
+        increase_sequence(module, language)
+        Changeset.force_change(cs, :sequence, 0)
+
+      cs ->
+        cs
+    end)
+  end
+
   def changeset_mutator(module, %{append: true}, changeset, _user, _opts) do
     Changeset.prepare_changes(changeset, fn
       %{action: :insert} = cs ->
@@ -99,6 +117,16 @@ defmodule Brando.Trait.Sequenced do
 
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
     changeset
+  end
+
+  def increase_sequence(module, nil) do
+    query = from t in module, update: [inc: [sequence: 1]]
+    Brando.repo().update_all(query, [])
+  end
+
+  def increase_sequence(module, language) do
+    query = from t in module, where: t.language == ^language, update: [inc: [sequence: 1]]
+    Brando.repo().update_all(query, [])
   end
 
   def get_highest_sequence(module) do
