@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form do
   import Brando.Gettext
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
-  import Phoenix.LiveView.HTMLEngine
+  import Phoenix.LiveView.TagEngine
 
   alias Brando.Villain
 

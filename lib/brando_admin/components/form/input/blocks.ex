@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
   import Ecto.Changeset
-  import Phoenix.LiveView.HTMLEngine
+  import Phoenix.LiveView.TagEngine
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
