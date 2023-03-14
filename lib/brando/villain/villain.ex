@@ -992,9 +992,9 @@ defmodule Brando.Villain do
   Switch out a block by uid in changeset
   """
   def replace_block_in_changeset(changeset, data_field, block_uid, new_block) do
-    blocks = Changeset.get_field(changeset, data_field)
+    blocks = Changeset.get_field(changeset, data_field.field)
     updated_blocks = Brando.Villain.replace_block(blocks, block_uid, new_block)
-    Changeset.put_change(changeset, data_field, updated_blocks)
+    Changeset.put_change(changeset, data_field.field, updated_blocks)
   end
 
   def update_block_in_changeset(
@@ -1004,15 +1004,15 @@ defmodule Brando.Villain do
         merge_data,
         merge_entry? \\ false
       ) do
-    blocks = Changeset.get_field(changeset, data_field)
+    blocks = Changeset.get_field(changeset, data_field.field)
     updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data, merge_entry?)
-    Changeset.put_change(changeset, data_field, updated_blocks)
+    Changeset.put_change(changeset, data_field.field, updated_blocks)
   end
 
   def delete_block_in_changeset(changeset, data_field, block_uid) do
-    blocks = Changeset.get_field(changeset, data_field)
+    blocks = Changeset.get_field(changeset, data_field.field)
     updated_blocks = Brando.Villain.delete_block(blocks, block_uid)
-    Changeset.put_change(changeset, data_field, updated_blocks)
+    Changeset.put_change(changeset, data_field.field, updated_blocks)
   end
 
   def add_uid_to_refs(nil), do: nil
