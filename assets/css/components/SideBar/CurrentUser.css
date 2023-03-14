@@ -37,6 +37,10 @@
         user-select: none;
         border-radius: 48px;
       }
+
+      .img-placeholder svg {
+        margin: 11px 0 0 18px;
+      }
     }
   }
 
