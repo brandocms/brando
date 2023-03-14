@@ -360,7 +360,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <label class="form-check-label">
             <input
               type="radio"
-              id={@id || @field.id <> "-#{Brando.Utils.slugify(to_string(opt.value))}"}
+              id={(@id && @id <> "-#{Brando.Utils.slugify(to_string(opt.value))}") || @field.id <> "-#{Brando.Utils.slugify(to_string(opt.value))}"}
               name={@field.name}
               class="form-check-input"
               value={opt.value}
