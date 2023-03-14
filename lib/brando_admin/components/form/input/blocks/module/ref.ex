@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   # prop module_refs, :list, required: true
   # prop module_ref_name, :string, required: true
   # prop base_form, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
 
   # data module_name, :string
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block_count={@block_count}
           block={@ref_block}
           base_form={@base_form}
-          uploads={@uploads} />
+          parent_uploads={@parent_uploads} />
         <Input.input type={:hidden} field={@ref_form[:description]} uid={@ref_uid} id_prefix="ref" />
         <Input.input type={:hidden} field={@ref_form[:name]} uid={@ref_uid} id_prefix="ref" />
       </section>

@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   # prop form, :form, required: true
   # prop blueprint, :any, required: true
-  # prop uploads, :any, required: true
+  # prop parent_uploads, :any, required: true
   # prop status, :atom, default: :closed
   # prop close, :event
 
@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
         <.live_component module={Input.Image}
           id={"#{@form.id}-meta-image"}
           field={@form[:meta_image]}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           label={gettext "META image"} />
       </div>
     </Content.drawer>

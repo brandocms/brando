@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # prop base_form, :any
   # prop index, :any
   # prop block_count, :integer
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
   # prop entry_template, :map
   # prop belongs_to, :string
@@ -33,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # data module_not_found, :boolean
 
   def mount(socket) do
-    {:ok, assign(socket, uploads: nil)}
+    {:ok, assign(socket, parent_uploads: nil)}
   end
 
   def update(assigns, socket) do
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
               <% {:ref, ref} -> %>
                 <Module.Ref.render
                   data_field={@data_field}
-                  uploads={@uploads}
+                  parent_uploads={@parent_uploads}
                   module_refs={@refs_forms}
                   module_ref_name={ref}
                   base_form={@base_form} />

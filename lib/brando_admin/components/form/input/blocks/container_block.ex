@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   # prop block, :any
   # prop base_form, :any
   # prop index, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
   # prop belongs_to, :string
 
@@ -194,7 +194,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           blocks={@blocks}
           block_forms={@block_forms}
           data_field={@data_field}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           type="container"
           uid={@uid}
           hide_sections

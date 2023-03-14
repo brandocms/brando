@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop subform, :any
   # prop form, :any
   # prop blueprint, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop current_user, :map
   # prop label, :string
   # prop instructions, :string
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def render(%{subform: %{style: {:transformer, transform_field}}} = assigns) do
     upload_key = :"#{assigns.subform.name}|#{transform_field}"
     _ = :"#{assigns.subform.name}|#{transform_field}_id"
-    upload_field = Map.get(assigns.uploads, upload_key)
+    upload_field = Map.get(assigns.parent_uploads, upload_key)
 
     assigns =
       assigns
@@ -101,7 +101,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   sub_form={sub_form}
                   input={input}
                   path={@path ++ [sub_form.index]}
-                  uploads={@uploads}
+                  parent_uploads={@parent_uploads}
                   current_user={@current_user}
                 />
               </div>
@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               placeholder={@placeholder}
               input={input}
               path={@path}
-              uploads={@uploads}
+              parent_uploads={@parent_uploads}
               current_user={@current_user}
             />
           </div>
@@ -183,7 +183,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   sub_form={sub_form}
                   input={input}
                   path={@path ++ [sub_form.index]}
-                  uploads={@uploads}
+                  parent_uploads={@parent_uploads}
                   current_user={@current_user} />
                 </div>
             </div>
@@ -300,7 +300,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         module={Input.Image}
         id={"#{@subform.id}-image_field"}
         field={@image_field}
-        uploads={[]}
+        parent_uploads={[]}
         form={@subform}
         label={:hidden}
         editable={false}

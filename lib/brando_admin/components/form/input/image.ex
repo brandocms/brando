@@ -8,7 +8,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
 
-  # prop form, :form
   # prop field, :atom
   # prop label, :string
   # prop placeholder, :string
@@ -153,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> prepare_input_component()
      |> assign(:file_name, file_name)
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:upload_field, fn -> socket.assigns.uploads[assigns.field.field] end)
+     |> assign_new(:upload_field, fn -> socket.assigns.parent_uploads[assigns.field.field] end)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
 
@@ -319,9 +318,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   Show preview if we have an image with a path
   """
   def image_preview(assigns) do
+    type_from_path = Brando.Images.Utils.image_type(assigns.image.path)
+
     assigns =
       assigns
-      |> assign(:type, Brando.Images.Utils.image_type(assigns.image.path))
+      |> assign(:type, type_from_path)
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:editable, fn -> true end)
 

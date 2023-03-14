@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
 
   # prop input, :map
   # prop form, :form
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop current_user, :any
   # prop translations, :any
 
@@ -32,14 +32,14 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           instructions={@instructions}
           placeholder={@placeholder}
           subform={@input}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           current_user={@current_user}
           opts={[]} />
       <% else %>
         <.live_component module={Subform}
           id={"#{@form.id}-subform-#{@input.name}"}
           field={@form[@input.name]}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           subform={@input}
           label={@label}
           relations={@relations}
@@ -53,7 +53,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         label={@label}
         instructions={@instructions}
         placeholder={@placeholder}
-        uploads={@uploads}
+        parent_uploads={@parent_uploads}
         opts={@input.opts || []}
         type={@input.type}
         current_user={@current_user} />

@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   # prop base_form, :any
   # prop index, :any
   # prop block_count, :integer
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
   # prop belongs_to, :string
 
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <% {:ref, ref} -> %>
                 <Blocks.Module.Ref.render
                   data_field={@data_field}
-                  uploads={@uploads}
+                  parent_uploads={@parent_uploads}
                   module_refs={@refs_forms}
                   module_ref_name={ref}
                   base_form={@base_form} />

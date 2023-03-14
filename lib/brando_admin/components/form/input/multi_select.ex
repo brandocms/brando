@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop uploads, :map
+  # prop parent_uploads, :map
 
   # data class, :string
   # data monospace, :boolean
@@ -394,7 +394,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                           :for={fieldset <- tab.fields}
                           translations={@form_translations}
                           form={entry_form}
-                          uploads={[]}
+                          parent_uploads={[]}
                           fieldset={fieldset} />
                       </div>
                     </div>

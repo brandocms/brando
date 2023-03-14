@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign(:file, file)
      |> assign(:file_id, file_id)
      |> assign(:file_name, file_name)
-     |> assign(:upload_field, assigns.uploads[assigns.field])
+     |> assign(:upload_field, assigns.parent_uploads[assigns.field])
      |> assign(:relation_field, relation_field)}
   end
 

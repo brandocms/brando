@@ -192,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
           <.inputs_for
             field={@block_data[:focal]}
-            :let={%{form: focal_form}}>
+            :let={focal_form}>
             <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:x]} />
             <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:y]} />
           </.inputs_for>

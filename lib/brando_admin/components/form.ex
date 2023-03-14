@@ -683,7 +683,7 @@ defmodule BrandoAdmin.Components.Form do
           <.file_drawer
             file_changeset={@file_changeset}
             myself={@myself}
-            uploads={@uploads}
+            parent_uploads={@uploads}
             edit_file={@edit_file}
             processing={@processing}
           />
@@ -691,7 +691,7 @@ defmodule BrandoAdmin.Components.Form do
           <.image_drawer
             image_changeset={@image_changeset}
             myself={@myself}
-            uploads={@uploads}
+            parent_uploads={@uploads}
             edit_image={@edit_image}
             processing={@processing}
           />
@@ -707,7 +707,7 @@ defmodule BrandoAdmin.Components.Form do
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
               form={@form}
-              uploads={@uploads}
+              parent_uploads={@uploads}
               close={toggle_drawer("##{@id}-meta-drawer")} />
 
             <.live_component module={RevisionsDrawer}
@@ -736,7 +736,7 @@ defmodule BrandoAdmin.Components.Form do
               tabs={@form_blueprint.tabs}
               active_tab={@active_tab}
               current_user={@current_user}
-              uploads={@uploads}
+              parent_uploads={@uploads}
               form={@form}
               schema={@schema}
             />
@@ -786,7 +786,7 @@ defmodule BrandoAdmin.Components.Form do
         <.tab_fields
           tab={tab}
           current_user={@current_user}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           schema={@schema}
           form={@form} />
       </div>
@@ -810,7 +810,7 @@ defmodule BrandoAdmin.Components.Form do
           relations={@schema.__relations__}
           form={@form}
           fieldset={fieldset}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           current_user={@current_user} />
       <% end %>
     <% end %>
@@ -837,7 +837,7 @@ defmodule BrandoAdmin.Components.Form do
           id="file-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="file-drawer-preview"
-          phx-drop-target={@uploads[@edit_file.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_file.field].ref}>
           <div :if={@processing} class="processing">
             <div>
               <%= gettext "Uploading" %><br>
@@ -859,7 +859,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext "Upload file" %>
             </span>
-            <.live_file_input upload={@uploads[@edit_file.field]} />
+            <.live_file_input upload={@parent_uploads[@edit_file.field]} />
           </div>
 
           <button
@@ -906,7 +906,7 @@ defmodule BrandoAdmin.Components.Form do
           id="image-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="image-drawer-preview"
-          phx-drop-target={@uploads[@edit_image.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_image.field].ref}>
           <div :if={@processing} class="processing">
             <div>
               <%= gettext "Uploading" %><br>
@@ -949,7 +949,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext "Upload image" %>
             </span>
-            <.live_file_input upload={@uploads[@edit_image.field]} />
+            <.live_file_input upload={@parent_uploads[@edit_image.field]} />
           </div>
           <button
             class="secondary"
@@ -1088,8 +1088,7 @@ defmodule BrandoAdmin.Components.Form do
           )
       end)
 
-    # fallback to nil if no uploads
-    assign_new(socket_with_transformers, :uploads, fn -> nil end)
+    socket_with_transformers
   end
 
   def handle_event(
@@ -2342,7 +2341,7 @@ defmodule BrandoAdmin.Components.Form do
           path={@path}
           placeholder={@placeholder}
           instructions={@instructions}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           opts={@opts}
           current_user={@current_user} />
       </div>

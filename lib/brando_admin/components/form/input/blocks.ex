@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop uploads, :map
+  # prop parent_uploads, :map
 
   # data blocks, :list
   # data block_forms, :list
@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
           base_form={@field.form}
           blocks={@blocks}
           block_forms={@block_forms}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           templates={@templates}
           data_field={@data_field}
           insert_index={@insert_index}
@@ -514,7 +514,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         block_count={@block_count}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
-        uploads={@uploads} />
+        parent_uploads={@parent_uploads} />
     <% end %>
     """
   end
