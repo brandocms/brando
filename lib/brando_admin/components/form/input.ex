@@ -472,8 +472,8 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns =
       assigns
       |> assign_new(:value, fn -> nil end)
-      |> assign_new(:checked_value, fn -> maybe_html_escape(true) end)
-      |> assign_new(:unchecked_value, fn -> maybe_html_escape(false) end)
+      |> assign_new(:checked_value, fn -> "true" end)
+      |> assign_new(:unchecked_value, fn -> "false" end)
       |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
@@ -524,7 +524,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       assign_new(
         assigns,
         :value,
-        fn -> Phoenix.HTML.Form.normalize_value(assigns.type, assigns.field.value) end
+        fn -> maybe_html_escape(assigns.field.value) end
       )
 
     assigns =
@@ -547,7 +547,9 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
 
   defp maybe_html_escape(nil), do: nil
-  defp maybe_html_escape(value), do: html_escape(value)
+  defp maybe_html_escape(true), do: "true"
+  defp maybe_html_escape(false), do: "false"
+  defp maybe_html_escape(value), do: value
 
   defp maybe_assign_url(assigns, true) do
     entry = Ecto.Changeset.apply_changes(assigns.field.form.source)
