@@ -66,7 +66,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         label={@label}
         instructions={@instructions}>
 
-        <.live_component module={Blocks.BlockRenderer}
+        <.live_component
+          module={Blocks.BlockRenderer}
           id={"#{@field.id}-blocks"}
           base_form={@field.form}
           blocks={@blocks}
