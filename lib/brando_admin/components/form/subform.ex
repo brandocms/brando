@@ -307,7 +307,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         square
       />
       <div class="subform-listing-row">
-        <%= Phoenix.LiveView.HTMLEngine.component(
+        <%= Phoenix.LiveView.TagEngine.component(
           @subform_config.listing,
           [entry: @entry],
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
