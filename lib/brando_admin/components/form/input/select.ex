@@ -64,21 +64,19 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign_input_options()
-     |> assign_new(:selected_option, fn -> selected_option end)
+     |> assign(:selected_option, selected_option)
      |> assign_label()
-     |> assign(:narrow, narrow)
-     |> assign(:resetable, resetable)
-     |> assign(:show_filter, show_filter)
-     |> assign(:changeset_fun, changeset_fun)
-     |> assign(:update_relation, update_relation)
-     |> assign(:default, default)
-     |> assign(:entry_form, entry_form)
+     |> assign_new(:narrow, fn -> narrow end)
+     |> assign_new(:resetable, fn -> resetable end)
+     |> assign_new(:show_filter, fn -> show_filter end)
+     |> assign_new(:changeset_fun, fn -> changeset_fun end)
+     |> assign_new(:update_relation, fn -> update_relation end)
+     |> assign_new(:default, fn -> default end)
+     |> assign_new(:entry_form, fn -> entry_form end)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
      |> assign_new(:inner_block, fn -> nil end)
-     |> assign_new(:modal_id, fn ->
-       "select-#{assigns.id}-modal"
-     end)}
+     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
   end
 
   def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
@@ -150,8 +148,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def maybe_assign_select_changeset(%{assigns: %{changeset_fun: nil}} = socket) do
-    socket
-    |> assign(:select_changeset, nil)
+    assign(socket, :select_changeset, nil)
   end
 
   def maybe_assign_select_changeset(
@@ -178,7 +175,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}>
 
-        <Input.input type={:hidden} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
+        <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -475,11 +472,18 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       )
     end
 
+    updated_changeset = Ecto.Changeset.put_change(changeset, field.field, value)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset
+    )
+
     {:noreply,
      socket
      |> assign(:selected_option, value)
-     |> assign_label()
-     |> push_event("b:validate", %{})}
+     |> assign_label()}
   end
 
   def handle_event("reset", _, socket) do
