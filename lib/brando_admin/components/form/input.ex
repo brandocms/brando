@@ -448,7 +448,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def hidden(assigns) do
     ~H"""
-    <.input type={:hidden} field={@form[@field]} />
+    <.input type={:hidden} field={@field} />
     """
   end
 
