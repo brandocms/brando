@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   alias BrandoAdmin.Components.Form
 
   # prop input, :map
-  # prop form, :form
   # prop sub_form, :form
   # prop parent_uploads, :any
   # prop current_user, :any
