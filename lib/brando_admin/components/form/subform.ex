@@ -97,7 +97,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 <Subform.Field.render
                   :for={input <- @subform.sub_fields}
                   cardinality={:many}
-                  form={@form}
                   sub_form={sub_form}
                   input={input}
                   path={@path ++ [sub_form.index]}
@@ -287,11 +286,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   def listing(assigns) do
-    {:transformer, image_field} = assigns.subform_config.style
+    {:transformer, image_field_atom} = assigns.subform_config.style
 
     assigns =
       assigns
-      |> assign(:image_field, image_field)
+      |> assign(:image_field, assigns.subform[image_field_atom])
       |> assign(:entry, Ecto.Changeset.apply_changes(assigns.subform.source))
 
     ~H"""
@@ -407,16 +406,13 @@ defmodule BrandoAdmin.Components.Form.Subform do
     %{type: rel_type} = module.__relation__(field_name)
     form_id = "#{module.__naming__().singular}_form"
 
+    # TODO: change to Ecto.Changeset.get_assoc(changeset, field_name)
+    # then we can skip the .change in extract_path too maybe?
     related_entries = get_change_or_field(changeset, field_name)
 
     order_indices =
       related_entries
-      |> Enum.map(fn entry ->
-        entry
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.get_field(String.to_existing_atom(transform_field))
-        |> Map.get(:path)
-      end)
+      |> Enum.map(&extract_path(&1, transform_field))
       |> Enum.with_index()
       |> Enum.sort()
       |> Enum.map(fn {_, idx} -> idx end)
@@ -425,9 +421,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       order_indices
       |> Enum.map(&Enum.at(related_entries, &1))
       |> Enum.with_index()
-      |> Enum.map(fn {entry, idx} ->
-        Ecto.Changeset.change(entry, %{sequence: idx})
-      end)
+      |> Enum.map(fn {entry, idx} -> Ecto.Changeset.change(entry, %{sequence: idx}) end)
 
     updated_changeset =
       if rel_type == :embeds_many do
@@ -487,5 +481,14 @@ defmodule BrandoAdmin.Components.Form.Subform do
     with nil <- Ecto.Changeset.get_change(changeset, field) do
       Ecto.Changeset.get_field(changeset, field, [])
     end
+  end
+
+  defp extract_path(entry, transform_field) do
+    field_map =
+      entry
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.get_field(String.to_existing_atom(transform_field), %{path: ""})
+
+    (is_map(field_map) && Brando.Utils.try_path(field_map, [:path])) || ""
   end
 end
