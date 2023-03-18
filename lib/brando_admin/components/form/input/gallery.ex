@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop uploads, :map
+  # prop parent_uploads, :map
 
   # data class, :string
   # data monospace, :boolean
@@ -117,7 +117,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <div class="actions">
             <button type="button" class="tiny upload-button">
               <%= gettext "Upload images" %>
-              <.live_file_input upload={@uploads[@field.field]} />
+              <.live_file_input upload={@parent_uploads[@field.field]} />
             </button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
@@ -173,18 +173,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
-  def handle_event(
-        "set_target",
-        _,
-        %{
-          assigns: %{
-            myself: myself,
-            selected_images: selected_images,
-            schema: schema,
-            field: field
-          }
-        } = socket
-      ) do
+  def handle_event("set_target", _, socket) do
+    myself = socket.assigns.myself
+    selected_images = socket.assigns.selected_images
+    schema = socket.assigns.schema
+    field = socket.assigns.field
     field_name = field.field
 
     send_update(BrandoAdmin.Components.ImagePicker,
@@ -261,7 +254,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
-      changeset: updated_changeset
+      changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply,
@@ -310,7 +304,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
-      changeset: updated_changeset
+      changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply,
