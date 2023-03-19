@@ -1027,9 +1027,13 @@ defmodule BrandoAdmin.Components.Form do
     gallery_fields = schema.__gallery_fields__()
     file_fields = schema.__file_fields__()
     transformers = socket.assigns.form_blueprint.transformers
+    # since LV changed to not allow us to set the :uploads assigns to [] or nil,
+    # we need to set a "fake" upload key to not error when passing @uploads to
+    # child components :(
+    default_socket = allow_upload(socket, :__dfu__, accept: :any)
 
     socket_with_image_uploads =
-      Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
+      Enum.reduce(image_fields, default_socket, fn img_field, updated_socket ->
         max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
 
         allow_upload(updated_socket, img_field.name,
