@@ -74,12 +74,14 @@
 }
 
 .ProseMirror {
+  line-height: 1.5;
+
   &:focus {
     outline: none;
   }
 
   strong {
-    font-weight: 500;
+    font-weight: 600;
   }
 
   p {
@@ -95,8 +97,10 @@
     }
 
     a {
-      border-bottom: 2px solid theme(colors.peachDarkest);
-      padding-bottom: 3px;
+      border-bottom: none;
+      text-decoration: underline;
+      text-decoration-color: var(--brando-color-blue);
+      text-decoration-thickness: 2px;
     }
   }
 
@@ -118,8 +122,9 @@
     @fontsize xl;
     margin-top: 30px;
     margin-bottom: 15px;
-    font-weight: 500 !important;
-    line-height: 1;
+    letter-spacing: -0.05em;
+    font-weight: 600 !important;
+    line-height: 1 !important;
 
     &:first-of-type {
       margin-top: 25px;
@@ -128,14 +133,17 @@
 
   h2 {
     @fontsize lg;
-    line-height: 1.05;
-    font-weight: 500;
+    line-height: 1.05 !important;
+    letter-spacing: -0.05em;
+    font-weight: 600;
     margin-top: 15px;
     margin-bottom: 15px;
 
     a {
-      border-bottom: 2px solid theme(colors.peachDarkest);
-      padding-bottom: 1px;
+      border-bottom: none;
+      text-decoration: underline;
+      text-decoration-color: var(--brando-color-blue);
+      text-decoration-thickness: 2px;
     }
   }
 
@@ -145,13 +153,17 @@
 
   h3 {
     @fontsize base(1.2);
-    font-weight: 500;
+    font-weight: 600 !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.05em;
     margin-top: 20px;
     margin-bottom: 5px;
 
     a {
-      border-bottom: 2px solid theme(colors.peachDarkest);
-      padding-bottom: 1px;
+      border-bottom: none;
+      text-decoration: underline;
+      text-decoration-color: var(--brando-color-blue);
+      text-decoration-thickness: 2px;
     }
   }
 
