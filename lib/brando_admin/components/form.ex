@@ -1391,7 +1391,7 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply,
            push_event(socket, "b:alert", %{
              title: "Live Preview error",
-             message: inspect(err),
+             message: err,
              type: "error"
            })}
       end
