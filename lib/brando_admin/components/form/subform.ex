@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               <.listing subform={sub_form} subform_config={@subform} />
               <div class="subform-fields">
                 <Input.hidden
-                  :if={@sequenced?}
+                  :if={@sequenced? and !@embeds?}
                   field={sub_form[:sequence]}
                   value={sub_form.index}
                 />
@@ -171,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
               <div class="subform-fields">
                 <Input.hidden
-                  :if={@sequenced?}
+                  :if={@sequenced? and !@embeds?}
                   form={sub_form}
                   field={:sequence}
                   value={sub_form.index}
