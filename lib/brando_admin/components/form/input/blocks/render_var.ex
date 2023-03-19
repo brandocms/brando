@@ -20,6 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data placeholder, :string
   # data value, :any
   # data visible, :boolean
+  # data in_block, :boolean
 
   def preload(all_assigns) do
     {image_ids, cmp_imgs} =
@@ -48,7 +49,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def mount(socket) do
-    {:ok, assign(socket, visible: false)}
+    {:ok,
+     socket
+     |> assign(:visible, false)
+     |> assign(:in_block, false)}
   end
 
   def update(%{var: var} = assigns, socket) do
@@ -95,6 +99,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:ok,
      socket
+     |> assign(assigns)
      |> assign(:id, assigns.id)
      |> assign(:edit, edit)
      |> assign(:target, target)
@@ -180,7 +185,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   value_id={@value_id}
                   placeholder={@placeholder}
                   instructions={@instructions}
-                  myself={@myself} />
+                  myself={@myself}
+                  in_block={@in_block} />
 
                 <%= case @type do %>
                   <% "color" -> %>
@@ -231,7 +237,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 value_id={@value_id}
                 placeholder={@placeholder}
                 instructions={@instructions}
-                myself={@myself} />
+                myself={@myself}
+                in_block={@in_block} />
             </div>
           <% end %>
         <% end %>
@@ -283,6 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             label={@label}
             field={@var[:value]}
             opts={[options: @var[:options].value || []]}
+            in_block={@in_block}
           />
 
           <.inputs_for field={@var[:options]} :let={opt}>

@@ -44,7 +44,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:ok,
      socket
      |> assign(:open, false)
-     |> assign(:filter_string, "")}
+     |> assign(:filter_string, "")
+     |> assign_new(:in_block, fn -> false end)}
   end
 
   def update(assigns, socket) do
@@ -168,6 +169,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def render(assigns) do
     ~H"""
     <div>
+      <!-- in_block: <%= @in_block %> -->
       <Form.field_base
         field={@field}
         label={@label}
@@ -175,7 +177,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}>
 
-        <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
+        <%= if @in_block do %>
+          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" value={@selected_option} />
+        <% else %>
+          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
+        <% end %>
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -474,16 +480,24 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     updated_changeset = Ecto.Changeset.put_change(changeset, field.field, value)
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    if socket.assigns.in_block do
+      {:noreply,
+       socket
+       |> assign(:selected_option, value)
+       |> assign_label()
+       |> push_event("b:validate", %{})}
+    else
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        action: :update_changeset,
+        changeset: updated_changeset
+      )
 
-    {:noreply,
-     socket
-     |> assign(:selected_option, value)
-     |> assign_label()}
+      {:noreply,
+       socket
+       |> assign(:selected_option, value)
+       |> assign_label()}
+    end
   end
 
   def handle_event("reset", _, socket) do

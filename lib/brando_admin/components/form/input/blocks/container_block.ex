@@ -116,9 +116,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     Enum.find(available_palettes, &(&1.id == palette_id))
   end
 
-  def assign_selected_palette(
-        %{assigns: %{available_palettes: available_palettes, block_data: block_data}} = socket
-      ) do
+  def assign_selected_palette(socket) do
+    available_palettes = socket.assigns.available_palettes
+    block_data = socket.assigns.block_data
     palette_id = block_data[:palette_id].value
     selected_palette = get_palette(palette_id, available_palettes)
     first_color = List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
@@ -186,6 +186,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           field={@block_data[:palette_id]}
           label={gettext "Palette"}
           opts={[options: @palette_options]}
+          in_block
         />
 
         <.live_component module={Blocks.BlockRenderer}
@@ -271,7 +272,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
     module_id = String.to_integer(module_id_binary)
-    data_field_name = data_field.field
 
     {:ok, modules} = Content.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
@@ -291,7 +291,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    case Brando.Villain.get_block_in_changeset(changeset, data_field_name, block_uid) do
+    case Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid) do
       nil ->
         require Logger
 
@@ -309,7 +309,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         new_blocks = List.insert_at(sub_blocks, index, new_block)
 
         updated_changeset =
-          Brando.Villain.update_block_in_changeset(changeset, data_field_name, block_uid, %{
+          Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
             data: %{blocks: new_blocks}
           })
 

@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
             <div class="panel">
               <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
               <%= for {var, index} <- @indexed_vars do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} in_block />
               <% end %>
             </div>
             <div class="panel">
@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data[:vars])) do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} in_block />
               <% end %>
             </div>
           <% end %>

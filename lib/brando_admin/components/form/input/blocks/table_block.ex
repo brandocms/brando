@@ -99,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                 </div>
 
                 <Form.inputs_for_poly :let={var} field={row[:cols]}>
-                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{var.index}"} var={var} render={:only_important} />
+                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{var.index}"} var={var} render={:only_important} in_block />
                 </Form.inputs_for_poly>
                 <Input.input type={:hidden} field={row[:uid]} uid={row[:uid].value} id_prefix="table_block_row" />
               </div>

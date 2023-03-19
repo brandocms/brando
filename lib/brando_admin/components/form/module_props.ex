@@ -698,7 +698,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     var={var}
                     render={:all}
                     target={@myself}
-                    edit />
+                    edit
+                    in_block />
                 </Content.modal>
                 <span class="text-mono"><%= var[:type].value %> - &lcub;&lcub; <%= var[:key].value %> &rcub;&rcub;</span>
                 <div class="actions">

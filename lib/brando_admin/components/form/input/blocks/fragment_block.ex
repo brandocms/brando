@@ -109,6 +109,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
             field={@block_data[:fragment_id]}
             label={gettext "Fragment"}
             opts={[options: @fragment_options]}
+            in_block
           />
         </:config>
         <div class="fragment-block" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
