@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   end
 
   def update(assigns, socket) do
-    empty_subform = Enum.empty?(inputs_for_poly(assigns.form[assigns.subform.name], []))
+    empty_subform = Enum.empty?(inputs_for_poly(assigns.field.form[assigns.subform.name], []))
 
     {:ok,
      socket
@@ -143,7 +143,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
     field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
