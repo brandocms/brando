@@ -131,7 +131,10 @@ defmodule BrandoAdmin.Components.Content do
               </button>
             </div>
           </header>
-          <section id={"#{@id}-body"} class="modal-body" phx-hook={@remember_scroll_position && "Brando.RememberScrollPosition"}>
+          <section
+            id={"#{@id}-body"}
+            class="modal-body"
+            phx-hook={@remember_scroll_position && "Brando.RememberScrollPosition"}>
             <%= render_slot @inner_block %>
           </section>
           <%= if @footer do %>
