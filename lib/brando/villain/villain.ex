@@ -984,7 +984,7 @@ defmodule Brando.Villain do
   Search for block in changeset
   """
   def get_block_in_changeset(changeset, data_field, block_uid) do
-    blocks = Changeset.get_field(changeset, data_field)
+    blocks = Changeset.get_field(changeset, data_field.field)
     find_block(blocks, block_uid)
   end
 
