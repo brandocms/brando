@@ -75,6 +75,7 @@ defmodule Brando.LivePreview do
       """
       def render(unquote(schema_module), entry, cache_key) do
         var!(cache_key) = cache_key
+        _ = var!(cache_key)
 
         var!(opts) = %Brando.LivePreview{
           mutate_data: fn e -> e end
