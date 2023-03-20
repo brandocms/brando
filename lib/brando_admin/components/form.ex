@@ -2248,6 +2248,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :instructions, :string
   attr :label, :any
   attr :class, :any
+  attr :fit_content, :boolean, default: false
   attr :uid, :string
   attr :id_prefix, :string
   slot :meta
@@ -2281,7 +2282,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <div
-      class={render_classes(["field-wrapper", @class])}
+      class={render_classes(["field-wrapper", @class, "fit-content": @fit_content])}
       id={"#{@f_id}-field-wrapper"}>
       <div class={render_classes(["label-wrapper", hidden: @hidden])}>
         <label
@@ -2347,6 +2348,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:path, fn -> [] end)
       |> assign_new(:component_id, fn -> assigns.field.id end)
       |> assign_new(:parent_form, fn -> nil end)
+      |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:component_target, fn ->
         case assigns.type do
           {:component, module} ->
@@ -2366,7 +2368,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <div class="brando-input" data-component={@type}>
+      <div class="brando-input" data-component={@type} data-compact={@compact}>
         <%= component(@component_target, assigns, {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}) %>
       </div>
     <% else %>

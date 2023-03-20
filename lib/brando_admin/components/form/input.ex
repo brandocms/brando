@@ -634,7 +634,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:current_status, assigns.field.value)
       |> assign(
         :id,
-        "status-dropdown-#{assigns.field.id}-#{assigns.field.index}-#{assigns.field.field}"
+        "status-dropdown-#{assigns.field.id}"
       )
 
     ~H"""
@@ -643,14 +643,21 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+      fit_content>
       <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
         <.status_circle status={@current_status} publish_at={nil} />
         <div class="status-dropdown hidden" id={@id}>
         <%= for status <- @statuses do %>
           <div class="form-check">
             <label class="form-check-label">
-              <input type="radio" id={@id || @field.id <> "-#{status.value}"} name={@field.name <> "[]"} class="form-check-input" value={status.value} checked={status.value == @field.value}>
+              <input
+              type="radio"
+              id={(@id || @field.id) <> "-#{status.value}"}
+              name={@field.name}
+              class="form-check-input"
+              value={status.value}
+              checked={status.value == to_string(@field.value)}>
               <span class={render_classes(["label-text", status.value])}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
