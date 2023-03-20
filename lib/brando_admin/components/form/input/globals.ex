@@ -67,7 +67,8 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                   id={"#{@field.id}-render-var-#{var.index}"}
                   var={var}
                   render={:all}
-                  edit />
+                  edit
+                  in_block />
               </div>
             </Form.inputs_for_poly>
           <% end %>

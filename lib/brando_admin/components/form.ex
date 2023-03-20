@@ -291,6 +291,40 @@ defmodule BrandoAdmin.Components.Form do
      |> force_svelte_remounts()}
   end
 
+  # only used for allowing global sets to add "select" options.
+  def update(
+        %{action: :add_select_var_option, var_key: var_key},
+        socket
+      ) do
+    changeset = socket.assigns.form.source
+    globals = Ecto.Changeset.get_field(changeset, :globals) || []
+
+    updated_globals =
+      Enum.reduce(globals, [], fn
+        %{key: ^var_key} = var, acc ->
+          acc ++
+            [
+              put_in(
+                var,
+                [Access.key(:options)],
+                (var.options || []) ++
+                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+              )
+            ]
+
+        var, acc ->
+          acc ++ [var]
+      end)
+
+    updated_changeset = Ecto.Changeset.put_change(changeset, :globals, updated_globals)
+    updated_form = to_form(updated_changeset, [])
+
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:form, updated_form)}
+  end
+
   def update(assigns, socket) do
     form_name = assigns[:name] || :default
 

@@ -194,6 +194,15 @@
           &[data-component="toggle"] {
             flex-grow: 0;
             flex-shrink: 0;
+
+            .field-base {
+              padding-top: 8px;
+            }
+          }
+
+          &[data-component="status"][data-compact] {
+            flex-grow: 0;
+            flex-shrink: 1;
           }
 
           .field-wrapper {

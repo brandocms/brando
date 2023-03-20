@@ -71,7 +71,8 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         <.live_component module={RenderVar}
           id={"set-#{@global_set.id}-#{var.id}-#{@index}"}
           var={var}
-          render={:all} />
+          render={:all}
+          in_block />
       <% end %>
 
       <button class="primary"><%= gettext("Save") %></button>

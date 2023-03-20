@@ -309,13 +309,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   image={@image}
                   field={@var[:value]}
                   value={@value_id}
-                  relation_field={:value_id}
+                  relation_field={@var[:value_id]}
                   click={show_modal("#var-#{@var.id}-image-config")}
                   file_name={(@image && @image.path) && Path.basename(@image.path)} />
               <% else %>
                 <Input.Image.empty_preview
                   field={@var[:value]}
-                  relation_field={:value_id}
+                  relation_field={@var[:value_id]}
                   click={show_modal("#var-#{@var.id}-image-config")} />
               <% end %>
               <.image_modal field={@var} image={@image} myself={@myself} />
