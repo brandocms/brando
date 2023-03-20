@@ -52,7 +52,6 @@ defmodule Brando.Navigation.Menu do
             size: :full,
             default: %Brando.Navigation.Item{} do
             input :status, :status, compact: true, label: :hidden
-
             input :title, :text, label: t("Title", Brando.Navigation.Item)
             input :key, :text, monospace: true, label: t("Key", Brando.Navigation.Item)
             input :url, :text, monospace: true, label: t("URL", Brando.Navigation.Item)
