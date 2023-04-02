@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     value = assigns[:value]
 
     identifiers =
-      case input_value(assigns.form, assigns.field) do
+      case assigns.form[assigns.field].value do
         "" -> []
         val -> val
       end
@@ -101,7 +101,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -113,19 +112,18 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
           <input type="hidden" name={"#{@form.name}[#{@field}]"} value="" />
         <% else %>
-          <Form.inputs
-            form={@form}
-            for={@field}
-            :let={%{form: identifier_form}}>
-            <Input.input type={:hidden} form={identifier_form} field={:id} />
-            <Input.input type={:hidden} form={identifier_form} field={:schema} />
-            <Input.input type={:hidden} form={identifier_form} field={:status} />
-            <Input.input type={:hidden} form={identifier_form} field={:title} />
-            <Input.input type={:hidden} form={identifier_form} field={:cover} />
-            <Input.input type={:hidden} form={identifier_form} field={:type} />
-            <Input.input type={:hidden} form={identifier_form} field={:absolute_url} />
-            <Input.input type={:hidden} form={identifier_form} field={:updated_at} />
-          </Form.inputs>
+          <.inputs_for
+            field={@field}
+            :let={identifier_form}>
+            <Input.input type={:hidden} field={identifier_form[:id]} />
+            <Input.input type={:hidden} field={identifier_form[:schema]} />
+            <Input.input type={:hidden} field={identifier_form[:status]} />
+            <Input.input type={:hidden} field={identifier_form[:title]} />
+            <Input.input type={:hidden} field={identifier_form[:cover]} />
+            <Input.input type={:hidden} field={identifier_form[:type]} />
+            <Input.input type={:hidden} field={identifier_form[:absolute_url]} />
+            <Input.input type={:hidden} field={identifier_form[:updated_at]} />
+          </.inputs_for>
         <% end %>
 
         <div
@@ -136,15 +134,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           data-sortable-id={"sortable-#{@form.id}-#{@field}-identifiers"}
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".identifier">
-          <%= for {selected_identifier, idx} <- Enum.with_index(@selected_identifiers) do %>
-            <.identifier
-              identifier={selected_identifier}
-              remove={JS.push("remove_identifier", target: @myself)}
-              param={idx}
-            />
-          <% end %>
+          <.identifier
+            :for={{selected_identifier, idx} <- Enum.with_index(@selected_identifiers)}
+            identifier={selected_identifier}
+            remove={JS.push("remove_identifier", target: @myself)}
+            param={idx}
+          />
         </div>
-
 
         <button type="button" class="add-entry-button" phx-click={show_modal("##{@form.id}-#{@field}-select-entries")}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
@@ -154,22 +150,24 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         <Content.modal title={gettext("Select entries")} id={"#{@form.id}-#{@field}-select-entries"} narrow>
           <h2 class="titlecase"><%= gettext("Select content type") %></h2>
           <div class="button-group-vertical">
-          <%= for {label, schema, _} <- @available_schemas do %>
-            <button type="button" class="secondary" phx-click={JS.push("select_schema", target: @myself)} phx-value-schema={schema}>
-              <%= label %>
-            </button>
-          <% end %>
+          <button
+            :for={{label, schema, _} <- @available_schemas}
+            type="button"
+            class="secondary"
+            phx-click={JS.push("select_schema", target: @myself)}
+            phx-value-schema={schema}>
+            <%= label %>
+          </button>
           </div>
           <%= if !Enum.empty?(@identifiers) do %>
             <h2 class="titlecase"><%= gettext("Available entries") %></h2>
-            <%= for {identifier, idx} <- Enum.with_index(@identifiers) do %>
-              <.identifier
-                identifier={identifier}
-                select={JS.push("select_identifier", target: @myself)}
-                selected_identifiers={@selected_identifiers}
-                param={idx}
-              />
-            <% end %>
+            <.identifier
+              :for={{identifier, idx} <- Enum.with_index(@identifiers)}
+              identifier={identifier}
+              select={JS.push("select_identifier", target: @myself)}
+              selected_identifiers={@selected_identifiers}
+              param={idx}
+            />
           <% end %>
         </Content.modal>
       </Form.field_base>
@@ -204,7 +202,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -230,7 +229,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -271,7 +271,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -348,16 +349,16 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <section class="cover-wrapper">
         <div class="cover">
-          <img src={input_value(@identifier_form, :cover) || "/images/admin/avatar.svg"}>
+          <img src={@identifier_form[:cover].value || "/images/admin/avatar.svg"}>
         </div>
       </section>
       <section class="content">
         <div class="info">
           <div class="name">
-            <%= input_value(@identifier_form, :title) %>
+            <%= @identifier_form[:title].value %>
           </div>
           <div class="meta-info">
-            <%= input_value(@identifier_form, :type) %>
+            <%= @identifier_form[:type].value %>
           </div>
         </div>
       </section>

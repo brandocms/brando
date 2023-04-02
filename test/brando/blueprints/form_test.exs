@@ -37,7 +37,7 @@ defmodule Brando.Blueprint.FormsTest do
                            cardinality: :many,
                            component: nil,
                            default: %{},
-                           field: :properties,
+                           name: :properties,
                            style: :inline,
                            sub_fields: [
                              %Brando.Blueprint.Forms.Input{
@@ -134,7 +134,7 @@ defmodule Brando.Blueprint.FormsTest do
                            cardinality: :many,
                            component: nil,
                            default: %{},
-                           field: :properties,
+                           name: :properties,
                            style: :inline,
                            sub_fields: [
                              %Brando.Blueprint.Forms.Input{

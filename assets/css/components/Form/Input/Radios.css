@@ -29,7 +29,7 @@
       svg {
         margin-right: 0;
         margin-top: 0;
-        border: 5px solid transparent;
+        border-right: 5px solid transparent;
         box-sizing: content-box;
 
         &:hover {

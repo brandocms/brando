@@ -35,8 +35,8 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.8"},
 
       # liveview
-      {:phoenix_live_view, "~> 0.18.11"},
-      {:phoenix_html, "~> 3.2"},
+      {:phoenix_live_view, "~> 0.18.17"},
+      {:phoenix_html, "~> 3.3"},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 3.0"},
@@ -68,7 +68,7 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Liquid templates
-      {:liquex, "~> 0.8"},
+      {:liquex, "~> 0.10.1"},
       {:html_sanitize_ex, "~> 1.3"},
 
       # Misc

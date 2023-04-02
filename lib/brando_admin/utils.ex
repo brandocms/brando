@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Utils do
   alias Phoenix.LiveView.JS
 
   def prepare_subform_component(%{assigns: assigns} = socket) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     socket =
       socket
@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def prepare_input_component(%{assigns: assigns} = socket) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     socket =
       socket
@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def prepare_input_component(assigns) do
-    schema = assigns.form.source.data.__struct__
+    schema = assigns.field.form.source.data.__struct__
 
     assigns =
       assigns
@@ -78,12 +78,12 @@ defmodule BrandoAdmin.Utils do
     )
   end
 
-  def make_uid(_form, _field, nil) do
+  def make_uid(_field, nil) do
     nil
   end
 
-  def make_uid(form, field, uid) do
-    "#{form.id}-#{field}-#{uid}"
+  def make_uid(field, uid) do
+    "#{field.id}-#{uid}"
   end
 
   def toggle_dropdown(js \\ %JS{}, dropdown_id) do

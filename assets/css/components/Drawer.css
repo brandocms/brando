@@ -81,6 +81,7 @@ figcaption.tiny {
     padding: 10px 20px;
     border-radius: 25px;
     transition: color 450ms ease, background-color 450ms ease;
+    font-size: 15px;
 
     &:hover {
       background-color: azure;
@@ -409,7 +410,7 @@ figcaption.tiny {
           }
 
           ul li button:hover {
-            @color bg black;
+            @color bg #ffffff;
           }
         }
       }

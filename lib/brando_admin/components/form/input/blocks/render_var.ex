@@ -20,10 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data placeholder, :string
   # data value, :any
   # data visible, :boolean
-
-  def v(form, field) do
-    get_field(form.source, field)
-  end
+  # data in_block, :boolean
 
   def preload(all_assigns) do
     {image_ids, cmp_imgs} =
@@ -52,7 +49,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def mount(socket) do
-    {:ok, assign(socket, visible: false)}
+    {:ok,
+     socket
+     |> assign(:visible, false)
+     |> assign(:in_block, false)}
   end
 
   def update(%{var: var} = assigns, socket) do
@@ -99,13 +99,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:ok,
      socket
+     |> assign(assigns)
      |> assign(:id, assigns.id)
      |> assign(:edit, edit)
      |> assign(:target, target)
      |> assign(:should_render?, should_render?)
      |> assign(:important, important)
      |> assign(:label, get_field(changeset, :label))
-     |> assign(:key, v(var, :key))
+     |> assign(:key, var[:key].value)
      |> assign(:type, type)
      |> assign(:value, value)
      |> assign_new(:images, fn -> nil end)
@@ -143,26 +144,26 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-      <div id={@id} class={render_classes(["variable", v(@var, :type)])}>
+      <div id={@id} class={render_classes(["variable", @var[:type].value])}>
         <%= if @should_render? do %>
           <%= if @edit do %>
             <div id={"#{@var.id}-edit"}>
               <div class="variable-header" phx-click={JS.push("toggle_visible", target: @myself)}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-2.29-2.333A17.9 17.9 0 0 1 8.027 13H4.062a8.008 8.008 0 0 0 5.648 6.667zM10.03 13c.151 2.439.848 4.73 1.97 6.752A15.905 15.905 0 0 0 13.97 13h-3.94zm9.908 0h-3.965a17.9 17.9 0 0 1-1.683 6.667A8.008 8.008 0 0 0 19.938 13zM4.062 11h3.965A17.9 17.9 0 0 1 9.71 4.333 8.008 8.008 0 0 0 4.062 11zm5.969 0h3.938A15.905 15.905 0 0 0 12 4.248 15.905 15.905 0 0 0 10.03 11zm4.259-6.667A17.9 17.9 0 0 1 15.973 11h3.965a8.008 8.008 0 0 0-5.648-6.667z"/></svg>
                 <div class="variable-key">
-                  <%= v(@var, :key) %>
-                  <span><%= v(@var, :type) %></span>
+                  <%= @var[:key].value %>
+                  <span><%= @var[:type].value %></span>
                 </div>
               </div>
 
               <div class={render_classes(["variable-content", hidden: !@visible])}>
-                <Input.toggle form={@var} field={:marked_as_deleted} label={gettext "Marked as deleted"} />
-                <Input.toggle form={@var} field={:important} label={gettext "Important"} />
-                <Input.text form={@var} field={:key} label={gettext "Key"} />
-                <Input.text form={@var} field={:label} label={gettext "Label"} />
-                <Input.text form={@var} field={:instructions} label={gettext "Instructions"} />
-                <Input.text form={@var} field={:placeholder} label={gettext "Placeholder"} />
-                <Input.radios form={@var} field={:type} label={gettext "Type"} opts={[options: [
+                <Input.toggle field={@var[:marked_as_deleted]} label={gettext "Marked as deleted"} />
+                <Input.toggle field={@var[:important]} label={gettext "Important"} />
+                <Input.text field={@var[:key]} label={gettext "Key"} />
+                <Input.text field={@var[:label]} label={gettext "Label"} />
+                <Input.text field={@var[:instructions]} label={gettext "Instructions"} />
+                <Input.text field={@var[:placeholder]} label={gettext "Placeholder"} />
+                <Input.radios field={@var[:type]} label={gettext "Type"} opts={[options: [
                   %{label: "Boolean", value: "boolean"},
                   %{label: "Color", value: "color"},
                   %{label: "Datetime", value: "datetime"},
@@ -184,28 +185,26 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   value_id={@value_id}
                   placeholder={@placeholder}
                   instructions={@instructions}
-                  myself={@myself} />
+                  myself={@myself}
+                  in_block={@in_block} />
 
                 <%= case @type do %>
                   <% "color" -> %>
-                    <Input.toggle form={@var} field={:picker} label={gettext "Allow picking custom colors"} />
-                    <Input.toggle form={@var} field={:opacity} label={gettext "Allow setting opacity"} />
-                    <Input.number form={@var} field={:palette_id} label={gettext "ID of palette to choose colors from"} />
+                    <Input.toggle field={@var[:picker]} label={gettext "Allow picking custom colors"} />
+                    <Input.toggle field={@var[:opacity]} label={gettext "Allow setting opacity"} />
+                    <Input.number field={@var[:palette_id]} label={gettext "ID of palette to choose colors from"} />
 
                   <% "select" -> %>
                     <Form.field_base
-                      form={@var}
-                      field={:options}
+                      field={@var[:options]}
                       label="Options"
                       instructions=""
                       left_justify_meta>
-                      <Form.label
-                        form={@var}
-                        field={:options}>
-                        <%= for opt <- inputs_for(@var, :options) do %>
-                          <Input.text form={opt} field={:label} label={gettext "Label"} />
-                          <Input.text form={opt} field={:value} label={gettext "Value"} />
-                        <% end %>
+                      <Form.label field={@var[:options]}>
+                        <.inputs_for field={@var[:options]} :let={opt}>
+                          <Input.text field={opt[:label]} label={gettext "Label"} />
+                          <Input.text field={opt[:value]} label={gettext "Value"} />
+                        </.inputs_for>
                       </Form.label>
                       <button
                         type="button"
@@ -222,12 +221,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </div>
           <% else %>
             <div id={"#{@var.id}-value"}>
-              <Input.input type={:hidden} form={@var} field={:key} />
-              <Input.input type={:hidden} form={@var} field={:label} />
-              <Input.input type={:hidden} form={@var} field={:type} />
-              <Input.input type={:hidden} form={@var} field={:important} />
-              <Input.input type={:hidden} form={@var} field={:instructions} />
-              <Input.input type={:hidden} form={@var} field={:placeholder} />
+              <Input.input type={:hidden} field={@var[:key]} />
+              <Input.input type={:hidden} field={@var[:label]} />
+              <Input.input type={:hidden} field={@var[:type]} />
+              <Input.input type={:hidden} field={@var[:important]} />
+              <Input.input type={:hidden} field={@var[:instructions]} />
+              <Input.input type={:hidden} field={@var[:placeholder]} />
 
               <.render_value_inputs
                 type={@type}
@@ -238,7 +237,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 value_id={@value_id}
                 placeholder={@placeholder}
                 instructions={@instructions}
-                myself={@myself} />
+                myself={@myself}
+                in_block={@in_block} />
             </div>
           <% end %>
         <% end %>
@@ -253,76 +253,72 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <%= case @type do %>
         <% "string" -> %>
-          <Input.text form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.text field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "text" -> %>
-          <Input.textarea form={@var} field={:value} label={@label} placeholder={@placeholder} instructions={@instructions} />
+          <Input.textarea field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
 
         <% "boolean" -> %>
-          <Input.toggle form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "color" -> %>
           <Input.color
-            form={@var}
-            field={:value}
+            field={@var[:value]}
             label={@label}
             placeholder={@placeholder}
             instructions={@instructions}
             opts={[
-              opacity: input_value(@var, :opacity),
-              picker: input_value(@var, :picker),
-              palette_id: input_value(@var, :palette_id),
+              opacity: @var[:opacity].value,
+              picker: @var[:picker].value,
+              palette_id: @var[:palette_id].value,
             ]} />
           <%= unless @edit do %>
-            <Input.input type={:hidden} form={@var} field={:picker} />
-            <Input.input type={:hidden} form={@var} field={:opacity} />
-            <Input.input type={:hidden} form={@var} field={:palette_id} />
+            <Input.input type={:hidden} field={@var[:picker]} />
+            <Input.input type={:hidden} field={@var[:opacity]} />
+            <Input.input type={:hidden} field={@var[:palette_id]} />
           <% end %>
 
         <% "datetime" -> %>
-          <Input.datetime form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "html" -> %>
-          <Input.rich_text form={@var} field={:value} label={@label} instructions={@instructions} />
+          <Input.rich_text field={@var[:value]} label={@label} instructions={@instructions} />
 
         <% "select" -> %>
           <.live_component module={Input.Select}
             id={"#{@var.id}-select"}
             label={@label}
-            form={@var}
-            field={:value}
-            opts={[options: input_value(@var, :options) || []]}
+            field={@var[:value]}
+            opts={[options: @var[:options].value || []]}
+            in_block={@in_block}
           />
 
-          <%= for opt <- inputs_for(@var, :options) do %>
-            <Input.hidden form={opt} field={:label} />
-            <Input.hidden form={opt} field={:value} />
-          <% end %>
+          <.inputs_for field={@var[:options]} :let={opt}>
+            <Input.hidden field={opt[:label]} />
+            <Input.hidden field={opt[:value]} />
+          </.inputs_for>
 
         <% "image" -> %>
           <Form.field_base
-            form={@var}
-            field={:value_id}
+            field={@var[:value_id]}
             label={@label}
             instructions={@instructions}>
             <div class="input-image">
               <%= if @image do %>
                 <Input.Image.image_preview
                   image={@image}
-                  form={@var}
-                  field={:value}
+                  field={@var[:value]}
                   value={@value_id}
-                  relation_field={:value_id}
+                  relation_field={@var[:value_id]}
                   click={show_modal("#var-#{@var.id}-image-config")}
                   file_name={(@image && @image.path) && Path.basename(@image.path)} />
               <% else %>
                 <Input.Image.empty_preview
-                  form={@var}
-                  field={:value}
-                  relation_field={:value_id}
+                  field={@var[:value]}
+                  relation_field={@var[:value_id]}
                   click={show_modal("#var-#{@var.id}-image-config")} />
               <% end %>
-              <.image_modal form={@var} image={@image} myself={@myself} />
+              <.image_modal field={@var} image={@image} myself={@myself} />
             </div>
           </Form.field_base>
       <% end %>
@@ -332,7 +328,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def image_modal(assigns) do
     ~H"""
-    <Content.modal title={gettext "Image"} id={"var-#{@form.id}-image-config"}>
+    <Content.modal title={gettext "Image"} id={"var-#{@field.id}-image-config"}>
       <div class="panels">
         <div class="panel">
           <%= if @image && @image.path do %>
@@ -348,11 +344,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
           <%= if !@image do %>
             <div
-              id={"#{@form.id}-legacy-uploader"}
+              id={"#{@field.id}-legacy-uploader"}
               class="input-image"
               phx-hook="Brando.LegacyImageUpload"
               data-text-uploading={gettext("Uploading...")}
-              data-block-uid={"var-#{@form.id}"}
+              data-block-uid={"var-#{@field.id}"}
               data-upload-event-target={@myself}>
               <input class="file-input" type="file" />
               <div class="img-placeholder empty upload-canvas">

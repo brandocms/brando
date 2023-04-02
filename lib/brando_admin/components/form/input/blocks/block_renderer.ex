@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   # prop insert_section, :event, required: true
   # prop duplicate_block, :event, required: true
   # prop show_module_picker, :event, required: true
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop templates, :any
   # prop type, :string, default: "root"
   # prop uid, :string
@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     block_count =
       assigns.block_forms
-      |> Enum.map(&input_value(&1, :marked_as_deleted))
+      |> Enum.map(& &1[:marked_as_deleted].value)
       |> Enum.reject(&(&1 == true))
       |> Enum.count()
 
@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
       <%= for {block_form, index} <- @indexed_block_forms do %>
         <Blocks.dynamic_block
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           index={index}
           data_field={@data_field}
           base_form={@base_form}
@@ -117,7 +117,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -140,7 +141,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -170,7 +172,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

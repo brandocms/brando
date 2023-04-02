@@ -19,8 +19,9 @@ defmodule Brando.LivePreview do
   ```
   """
   require Logger
-  alias Brando.Utils
+  alias Brando.Exception.LivePreviewError
   alias Brando.Worker
+  alias Brando.Utils
 
   @preview_coder Hashids.new(
                    alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -67,13 +68,14 @@ defmodule Brando.LivePreview do
 
   """
   defmacro preview_target(schema_module, do: block) do
-    quote location: :keep, generated: true do
+    quote do
       @doc """
       `prop` - the variable name we store the entry under
       `cache_key` - unique key for this live preview
       """
       def render(unquote(schema_module), entry, cache_key) do
         var!(cache_key) = cache_key
+        _ = var!(cache_key)
 
         var!(opts) = %Brando.LivePreview{
           mutate_data: fn e -> e end
@@ -354,8 +356,23 @@ defmodule Brando.LivePreview do
       cached_var =
         Brando.LivePreview.get_var(unquote(Macro.var(:cache_key, nil)), unquote(var_name), fn ->
           case :erlang.fun_info(unquote(var_value))[:arity] do
-            1 -> unquote(var_value).(var!(entry))
-            2 -> unquote(var_value).(var!(entry), var!(language))
+            0 ->
+              raise LivePreviewError,
+                message: """
+                assign for #{inspect(unquote(var_name))} was set with a 0 arity function.
+
+                It needs to be a 1 or 2 arity function, e.g:
+
+                    assign :f, fn _entry, _language ->
+                      # ...
+
+                """
+
+            1 ->
+              unquote(var_value).(var!(entry))
+
+            2 ->
+              unquote(var_value).(var!(entry), var!(language))
           end
         end)
 
@@ -426,7 +443,8 @@ defmodule Brando.LivePreview do
 
           """)
 
-          {:error, "Initialization failed. #{inspect(err)}"}
+          error_message = Map.get(err, :message, inspect(err))
+          {:error, "Initialization failed.\r\n\r\n#{error_message}"}
       end
     else
       {:error, "No render/3 function found in LivePreview module"}

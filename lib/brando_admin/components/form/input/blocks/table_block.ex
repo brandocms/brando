@@ -23,8 +23,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
   # data block_data, :any
   # data uid, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
-
   def update(assigns, socket) do
     block_data =
       assigns.block
@@ -34,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:block_data, block_data)}
   end
 
@@ -58,14 +56,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
         wide_config>
         <:description></:description>
         <:config></:config>
-        <Input.input type={:hidden} form={@block_data} field={:key} uid={@uid} id_prefix="block_data" />
-        <Input.input type={:hidden} form={@block_data} field={:instructions} uid={@uid} id_prefix="block_data" />
-        <%= if input_value(@block_data, :instructions) do %>
+        <Input.input type={:hidden} field={@block_data[:key]} uid={@uid} id_prefix="block_data" />
+        <Input.input type={:hidden} field={@block_data[:instructions]} uid={@uid} id_prefix="block_data" />
+        <%= if @block_data[:instructions].value do %>
           <div class="table-instructions">
-            <%= input_value(@block_data, :instructions) %>
+            <%= @block_data[:instructions].value %>
           </div>
         <% end %>
-        <%= if Enum.empty?(v(@block_data, :rows)) do %>
+        <%= if Enum.empty?(@block_data[:rows].value) do %>
           <div class="empty">
             <figure>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14 10h-4v4h4v-4zm2 0v4h3v-4h-3zm-2 9v-3h-4v3h4zm2 0h3v-3h-3v3zM14 5h-4v3h4V5zm2 0v3h3V5h-3zm-8 5H5v4h3v-4zm0 9v-3H5v3h3zM8 5H5v3h3V5zM4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>
@@ -84,15 +82,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
             data-sortable-handle=".sort-handle"
             data-sortable-binary-keys="true"
             data-sortable-selector=".table-row">
-            <%= for row <- inputs_for(@block_data, :rows) do %>
-              <div class="table-row draggable" data-id={input_value(row, :uid)}>
+            <.inputs_for field={@block_data[:rows]} :let={row}>
+              <div class="table-row draggable" data-id={row[:uid].value}>
                 <div class="subform-tools">
                   <button type="button" class="sort-handle">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path class="s" d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z" fill="rgba(5,39,82,1)"/></svg>
                   </button>
                   <button
                     phx-click={JS.push("delete_row", target: @myself)}
-                    phx-value-id={input_value(row, :uid)}
+                    phx-value-id={row[:uid].value}
                     type="button"
                     class="subform-delete"
                     phx-page-loading>
@@ -100,35 +98,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
                   </button>
                 </div>
 
-                <Form.poly_inputs form={row} for={:cols} :let={%{form: var, index: index}}>
-                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{index}"} var={var} render={:only_important} />
-                </Form.poly_inputs>
-                <Input.input type={:hidden} form={row} field={:uid} uid={input_value(row, :uid)} id_prefix="table_block_row" />
+                <Form.inputs_for_poly :let={var} field={row[:cols]}>
+                  <.live_component module={RenderVar} id={"#{row.id}-cols-render-var-#{var.index}"} var={var} render={:only_important} in_block />
+                </Form.inputs_for_poly>
+                <Input.input type={:hidden} field={row[:uid]} uid={row[:uid].value} id_prefix="table_block_row" />
               </div>
               <div class="insert-row">
                 <button
                   type="button"
                   class="tiny"
-                  phx-click={JS.push("add_row", value: %{after_uid: input_value(row, :uid)}, target: @myself)}
+                  phx-click={JS.push("add_row", value: %{after_uid: row[:uid].value}, target: @myself)}
                   phx-page-loading><%= gettext "Add row" %></button>
               </div>
-            <% end %>
+            </.inputs_for>
           </div>
         <% end %>
 
         <!-- template row -->
-        <%# TODO: key this with @id_prefix and @uid %>
-        <%= for tpl_row <- inputs_for(@block_data, :template_row) do %>
-          <Form.poly_inputs form={tpl_row} for={:cols} :let={%{form: var}}>
-            <Input.input type={:hidden} form={var} field={:key} />
-            <Input.input type={:hidden} form={var} field={:type} />
-            <Input.input type={:hidden} form={var} field={:important} />
-            <Input.input type={:hidden} form={var} field={:label} />
-            <Input.input type={:hidden} form={var} field={:instructions} />
-            <Input.input type={:hidden} form={var} field={:placeholder} />
-            <Input.input type={:hidden} form={var} field={:value} />
-          </Form.poly_inputs>
-        <% end %>
+        <%# TODO: key this with @id_prefix and @uid? %>
+        <.inputs_for field={@block_data[:template_row]} :let={tpl_row}>
+          <Form.inputs_for_poly field={tpl_row[:cols]} :let={var}>
+            <Input.input type={:hidden} field={var[:key]} />
+            <Input.input type={:hidden} field={var[:type]} />
+            <Input.input type={:hidden} field={var[:important]} />
+            <Input.input type={:hidden} field={var[:label]} />
+            <Input.input type={:hidden} field={var[:instructions]} />
+            <Input.input type={:hidden} field={var[:placeholder]} />
+            <Input.input type={:hidden} field={var[:value]} />
+          </Form.inputs_for_poly>
+        </.inputs_for>
         <!-- end template -->
       </Blocks.block>
     </div>
@@ -142,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
           socket
       ) do
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
 
     sorted_rows = Enum.map(order_indices, fn uid -> Enum.find(rows, &(&1.uid == uid)) end)
 
@@ -156,7 +154,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -171,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
       ) do
     # replace block
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
 
     new_row =
       block_data
@@ -191,7 +190,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -206,7 +206,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
       ) do
     # replace block
     changeset = form.source
-    rows = input_value(block_data, :rows)
+    rows = block_data[:rows].value
     new_rows = Enum.reject(rows, &(&1.uid == id))
 
     updated_changeset =
@@ -219,7 +219,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TableBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

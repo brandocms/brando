@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Relations do
-  @moduledoc ~S|
+  @moduledoc """
   WIP
 
   ## Has many
@@ -35,12 +35,12 @@ defmodule Brando.Blueprint.Relations do
 
       def default_client(image) do
         %Client{
-          name: "Default! #{Brando.Images.get_image_orientation(image)}"
+          name: Brando.Images.get_image_orientation(image)
         }
       end
 
       def client_listing(assigns) do
-        ~H"""
+        ~H\"""
         <div>
           <%= @entry.name %><br>
           <strong>Some classification</strong>
@@ -56,7 +56,7 @@ defmodule Brando.Blueprint.Relations do
             </div>
           </div>
         </div>
-        """
+        \"""
       end
 
 
@@ -83,8 +83,7 @@ defmodule Brando.Blueprint.Relations do
         relation_key: :contributor_id,
         resetable: true,
         label: t("Contributors")
-
-  |
+  """
 
   import Ecto.Changeset
   import Ecto.Query
@@ -94,14 +93,6 @@ defmodule Brando.Blueprint.Relations do
   alias Brando.Blueprint.Relation
 
   def build_relation(name, type, opts \\ [])
-
-  def build_relation(name, :image, opts) do
-    %Relation{
-      name: name,
-      type: :embeds_one,
-      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
-    }
-  end
 
   def build_relation(name, type, opts) do
     %Relation{name: name, type: type, opts: Enum.into(opts, %{})}

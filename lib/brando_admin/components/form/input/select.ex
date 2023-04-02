@@ -44,11 +44,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:ok,
      socket
      |> assign(:open, false)
-     |> assign(:filter_string, "")}
+     |> assign(:filter_string, "")
+     |> assign_new(:in_block, fn -> false end)}
   end
 
   def update(assigns, socket) do
-    selected_option = get_selected_option(assigns.form, assigns.field)
+    selected_option = get_selected_option(assigns.field)
 
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
@@ -64,33 +65,31 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign_input_options()
-     |> assign_new(:selected_option, fn -> selected_option end)
+     |> assign(:selected_option, selected_option)
      |> assign_label()
-     |> assign(:narrow, narrow)
-     |> assign(:resetable, resetable)
-     |> assign(:show_filter, show_filter)
-     |> assign(:changeset_fun, changeset_fun)
-     |> assign(:update_relation, update_relation)
-     |> assign(:default, default)
-     |> assign(:entry_form, entry_form)
+     |> assign_new(:narrow, fn -> narrow end)
+     |> assign_new(:resetable, fn -> resetable end)
+     |> assign_new(:show_filter, fn -> show_filter end)
+     |> assign_new(:changeset_fun, fn -> changeset_fun end)
+     |> assign_new(:update_relation, fn -> update_relation end)
+     |> assign_new(:default, fn -> default end)
+     |> assign_new(:entry_form, fn -> entry_form end)
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
      |> assign_new(:inner_block, fn -> nil end)
-     |> assign_new(:modal_id, fn ->
-       "select-#{assigns.id}-modal"
-     end)}
+     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
   end
 
-  def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
+  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign_new(socket, :input_options, fn -> get_input_options(field, opts) end)
   end
 
-  def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(form, opts))
+  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign(socket, :input_options, get_input_options(field, opts))
   end
 
-  defp get_selected_option(form, field) do
-    case input_value(form, field) do
+  defp get_selected_option(field) do
+    case field.value do
       "" -> ""
       nil -> nil
       res when is_atom(res) -> to_string(res)
@@ -99,7 +98,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     end
   end
 
-  defp get_input_options(form, opts) do
+  defp get_input_options(field, opts) do
     case Keyword.get(opts, :options) do
       :languages ->
         languages = Brando.config(:languages)
@@ -116,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         []
 
       options_fun when is_function(options_fun) ->
-        options_fun.(form, opts)
+        options_fun.(field.form, opts)
 
       options when is_list(options) ->
         options
@@ -150,8 +149,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def maybe_assign_select_changeset(%{assigns: %{changeset_fun: nil}} = socket) do
-    socket
-    |> assign(:select_changeset, nil)
+    assign(socket, :select_changeset, nil)
   end
 
   def maybe_assign_select_changeset(
@@ -171,15 +169,19 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def render(assigns) do
     ~H"""
     <div>
+      <!-- in_block: <%= @in_block %> -->
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
         class={@class}
         compact={@compact}>
 
-        <Input.input type={:hidden} form={@form} field={@field} uid={@uid} id_prefix="selected_option" value={@selected_option} />
+        <%= if @in_block do %>
+          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" value={@selected_option} />
+        <% else %>
+          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
+        <% end %>
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -213,7 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               <div class="select-modal">
                 <%= if @show_filter && !Enum.empty?(@input_options) do %>
                   <div
-                    id={"#{@form.id}-#{@field}-select-modal-filter"}
+                    id={"#{@field.id}-select-modal-filter"}
                     class="select-filter"
                     phx-hook="Brando.SelectFilter">
                     <div class="field-wrapper">
@@ -268,7 +270,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                             <Fieldset.render
                               translations={@form_translations}
                               form={entry_form}
-                              uploads={[]}
+                              parent_uploads={[]}
                               fieldset={fieldset} />
                           <% end %>
                         </div>
@@ -450,12 +452,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  def handle_event(
-        "select_option",
-        %{"value" => value},
-        %{assigns: %{form: form, update_relation: update_relation}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("select_option", %{"value" => value}, socket) do
+    update_relation = socket.assigns.update_relation
+    field = socket.assigns.field
+    changeset = field.form.source
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -478,11 +478,26 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       )
     end
 
-    {:noreply,
-     socket
-     |> assign(:selected_option, value)
-     |> assign_label()
-     |> push_event("b:validate", %{})}
+    updated_changeset = Ecto.Changeset.put_change(changeset, field.field, value)
+
+    if socket.assigns.in_block do
+      {:noreply,
+       socket
+       |> assign(:selected_option, value)
+       |> assign_label()
+       |> push_event("b:validate", %{})}
+    else
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        action: :update_changeset,
+        changeset: updated_changeset
+      )
+
+      {:noreply,
+       socket
+       |> assign(:selected_option, value)
+       |> assign_label()}
+    end
   end
 
   def handle_event("reset", _, socket) do

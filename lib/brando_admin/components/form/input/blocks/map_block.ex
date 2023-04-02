@@ -21,8 +21,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   # data block_data, :any
   # data uid, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
-
   def update(assigns, socket) do
     block_data =
       assigns.block
@@ -32,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:block_data, block_data)}
   end
 
@@ -54,10 +52,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         wide_config>
-        <:description><%= v(@block_data, :source) %></:description>
+        <:description><%= @block_data[:source].value %></:description>
         <:config>
-          <Input.input type={:hidden} form={@block_data} field={:embed_url} />
-          <Input.input type={:hidden} form={@block_data} field={:source} />
+          <Input.input type={:hidden} field={@block_data[:embed_url]} />
+          <Input.input type={:hidden} field={@block_data[:source]} />
 
           <div id={"block-#{@uid}-mapUrl"} phx-hook="Brando.MapURLParser" phx-update="ignore" data-target={@myself}>
             <%= gettext("Enter the map's embed URL:") %>
@@ -67,12 +65,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </button>
           </div>
         </:config>
-        <%= if v(@block_data, :embed_url) do %>
-          <%= case v(@block_data, :source) do %>
+        <%= if @block_data[:embed_url].value do %>
+          <%= case @block_data[:source].value do %>
             <% :gmaps -> %>
               <div class="map-content">
                 <iframe
-                  src={v(@block_data, :embed_url)}}
+                  src={@block_data[:embed_url].value}
                   width="600"
                   height="450"
                   frameborder="0"
@@ -116,7 +114,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

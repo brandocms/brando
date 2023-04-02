@@ -373,15 +373,40 @@ defmodule Brando.Blueprint.Forms do
   This creates a "dropbox" where you can drop or pick a bunch of images which
   then will be transformed into subforms with all the fields specified.
 
-      inputs_for :clients,
-        label: t("Clients"),
-        cardinality: :many,
-        style: {:transformer, :avatar},
-        default: %Client{} do
-        input :avatar, :image
-        input :name, :text, placeholder: "Client Name"
-        input :phone, :text, placeholder: "+47 900 00 000"
-        input :email, :text, placeholder: "my@email.co"
+  For instance, if you have a `Project` that has many `Client`s, and you wish to upload
+  a bunch of their logos before adding the rest of the information, you could start by
+  adding a relation to your `Project` blueprint:
+
+      relations do
+        relation :clients, :has_many, module: MyApp.Projects.Client, on_replace: :delete, cast: true
+      end
+
+  Then we add a corresponding relation at the other end (meaning the `Client` blueprint)
+
+      relations do
+        relation :project, :belongs_to, module: MyApp.Projects.Project
+      end
+
+  Finally we add the transformer input to our project form:
+
+      forms do
+        form do
+          # ...
+          fieldset size: :full do
+            inputs_for :clients,
+              label: t("Clients"),
+              cardinality: :many,
+              style: {:transformer, :logo},
+              default: %Client{} do
+              # add the Client schemas attributes
+              input :logo, :image
+              input :name, :text, placeholder: "Client Name"
+              input :phone, :text, placeholder: "+47 900 00 000"
+              input :email, :text, placeholder: "my@email.co"
+              input :creator_id, :hidden # <-- if the client schema has a creator
+            end
+          end
+        end
       end
 
   You can also specify a callback function for the `default` key:
@@ -390,9 +415,23 @@ defmodule Brando.Blueprint.Forms do
 
         def default_client(_entry, image) do
           orientation = Brando.Images.get_image_orientation(image)
-          %Client{
-            name: orientation
-          }
+          %Client{name: orientation}
+        end
+
+  As well as a custom listing:
+
+        listing: &__MODULE__.client_listing/1
+
+  `client_listing/1` should then be a function component:
+
+        def asset_listing(assigns) do
+          ~H\"""
+          <div>
+            <div>
+              Name: <%= @entry.name %>
+            </div>
+          </div>
+          \""
         end
   """
   defmacro inputs_for(field, {:component, component}) do
@@ -460,7 +499,7 @@ defmodule Brando.Blueprint.Forms do
       var!(b_transformers) =
         case named_subform.style do
           {:transformer, field} ->
-            var!(b_transformers) ++ [{named_subform.field, field, named_subform.default}]
+            var!(b_transformers) ++ [{named_subform.name, field, named_subform.default}]
 
           _ ->
             var!(b_transformers)
@@ -555,14 +594,14 @@ defmodule Brando.Blueprint.Forms do
     %__MODULE__.Tab{name: name, fields: fields}
   end
 
-  def build_subform(field, component, opts) when is_atom(component) do
+  def build_subform(name, component, opts) when is_atom(component) do
     mapped_opts = Enum.into(opts, %{})
-    Map.merge(%__MODULE__.Subform{field: field, component: component}, mapped_opts)
+    Map.merge(%__MODULE__.Subform{name: name, component: component}, mapped_opts)
   end
 
-  def build_subform(field, opts, sub_fields) when is_list(opts) do
+  def build_subform(name, opts, sub_fields) when is_list(opts) do
     mapped_opts = Enum.into(opts, %{})
-    Map.merge(%__MODULE__.Subform{field: field, sub_fields: sub_fields}, mapped_opts)
+    Map.merge(%__MODULE__.Subform{name: name, sub_fields: sub_fields}, mapped_opts)
   end
 
   def build_fieldset(opts, fields) do

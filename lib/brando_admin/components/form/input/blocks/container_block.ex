@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   # prop block, :any
   # prop base_form, :any
   # prop index, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
   # prop belongs_to, :string
 
@@ -31,8 +31,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   # data palette_options, :list
   # data first_color, :string
 
-  def v(form, field), do: input_value(form, field)
-
   def mount(socket) do
     {:ok, assign(socket, insert_index: 0)}
   end
@@ -47,14 +45,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       |> inputs_for(:data)
       |> List.first()
 
-    blocks = v(block_data, :blocks)
-    block_forms = inputs_for_blocks(block_data, :blocks) || []
+    blocks = block_data[:blocks].value
+    block_forms = inputs_for_blocks(block_data[:blocks]) || []
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(block, :uid))
-     |> assign(:target_id, v(block_data, :target_id))
+     |> assign(:uid, block[:uid].value)
+     |> assign(:target_id, block[:target_id].value)
      |> assign(:blocks, blocks || [])
      |> assign(:block_forms, block_forms)
      |> assign(:block_data, block_data)
@@ -118,10 +116,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     Enum.find(available_palettes, &(&1.id == palette_id))
   end
 
-  def assign_selected_palette(
-        %{assigns: %{available_palettes: available_palettes, block_data: block_data}} = socket
-      ) do
-    selected_palette = get_palette(v(block_data, :palette_id), available_palettes)
+  def assign_selected_palette(socket) do
+    available_palettes = socket.assigns.available_palettes
+    block_data = socket.assigns.block_data
+    palette_id = block_data[:palette_id].value
+    selected_palette = get_palette(palette_id, available_palettes)
     first_color = List.first((selected_palette && selected_palette.colors) || ["#FFFFFF"])
 
     socket
@@ -157,16 +156,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               <%= @selected_palette.name %>
             </button>
             <div class="circle-stack">
-              <%= for color <- Enum.reverse(@selected_palette.colors) do %>
-                <span
-                  class="circle tiny"
-                  style={"background-color:#{color.hex_value}"}
-                  data-popover={"#{color.name}"}></span>
-              <% end %>
+              <span
+                :for={color <- Enum.reverse(@selected_palette.colors)}
+                class="circle tiny"
+                style={"background-color:#{color.hex_value}"}
+                data-popover={"#{color.name}"}></span>
             </div>
-            <%= if @target_id do %>
-              <div class="container-target">#<%= @target_id %></div>
-            <% end %>
+            <div :if={@target_id} class="container-target">#<%= @target_id %></div>
           <% else %>
             <%= gettext "No palette selected" %>
           <% end %>
@@ -176,23 +172,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
             <div class="instructions mb-1"><%= gettext "Select a new palette" %>:</div>
             <.live_component module={Input.Select}
               id={"#{@block_data.id}-palette-select"}
-              form={@block_data}
-              field={:palette_id}
+              field={@block_data[:palette_id]}
               label={gettext "Palette"}
               opts={[options: @palette_options]}
             />
           <% end %>
-          <Input.text form={@block_data} field={:target_id} />
+          <Input.text field={@block_data[:target_id]} />
         </:config>
-        <%= if !@selected_palette do %>
-          <.live_component module={Input.Select}
-            id={"#{@block_data.id}-palette-select"}
-            form={@block_data}
-            field={:palette_id}
-            label={gettext "Palette"}
-            opts={[options: @palette_options]}
-          />
-        <% end %>
+        <.live_component
+          :if={!@selected_palette}
+          module={Input.Select}
+          id={"#{@block_data.id}-palette-select"}
+          field={@block_data[:palette_id]}
+          label={gettext "Palette"}
+          opts={[options: @palette_options]}
+          in_block
+        />
 
         <.live_component module={Blocks.BlockRenderer}
           id={"#{@block.id}-container-blocks"}
@@ -200,15 +195,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           blocks={@blocks}
           block_forms={@block_forms}
           data_field={@data_field}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           type="container"
           uid={@uid}
           hide_sections
           hide_fragments
           insert_index={@insert_index}
-          insert_module={JS.push("insert_module", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
-          insert_section={JS.push("insert_section", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
-          insert_fragment={JS.push("insert_fragment", target: @myself)|> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@block.id}-container-blocks-module-picker")}
           show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@block.id}-container-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)}
         />
@@ -254,7 +249,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -295,24 +291,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       uid: generated_uid
     }
 
-    original_block = Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid)
-    sub_blocks = original_block.data.blocks || []
-    {index, ""} = Integer.parse(index_binary)
-    new_blocks = List.insert_at(sub_blocks, index, new_block)
+    case Brando.Villain.get_block_in_changeset(changeset, data_field, block_uid) do
+      nil ->
+        require Logger
 
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
-        data: %{blocks: new_blocks}
-      })
+        Logger.error("""
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      updated_changeset: updated_changeset
-    )
+        => Block not found in changeset
+        :: uid: #{inspect(block_uid, pretty: true)}
+        :: data_field: #{inspect(data_field, pretty: true)}
 
-    selector = "[data-block-uid=\"#{new_block.uid}\"]"
+        """)
 
-    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+      original_block ->
+        sub_blocks = original_block.data.blocks || []
+        {index, ""} = Integer.parse(index_binary)
+        new_blocks = List.insert_at(sub_blocks, index, new_block)
+
+        updated_changeset =
+          Brando.Villain.update_block_in_changeset(changeset, data_field, block_uid, %{
+            data: %{blocks: new_blocks}
+          })
+
+        send_update(BrandoAdmin.Components.Form,
+          id: form_id,
+          action: :update_changeset,
+          changeset: updated_changeset
+        )
+
+        selector = "[data-block-uid=\"#{new_block.uid}\"]"
+
+        {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+    end
   end
 
   defp replace_uids(%Brando.Villain.Blocks.ModuleBlock{data: %{refs: refs}} = block) do

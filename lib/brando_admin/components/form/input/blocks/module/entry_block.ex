@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # prop base_form, :any
   # prop index, :any
   # prop block_count, :integer
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
   # prop entry_template, :map
   # prop belongs_to, :string
@@ -32,12 +32,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   # data uid, :string
   # data module_not_found, :boolean
 
-  def v(form, field) do
-    input_value(form, field)
-  end
-
   def mount(socket) do
-    {:ok, assign(socket, uploads: nil)}
+    {:ok, assign(socket, parent_uploads: nil)}
   end
 
   def update(assigns, socket) do
@@ -55,15 +51,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
       |> List.first()
 
     refs_forms = Enum.with_index(inputs_for(block_data, :refs))
-    refs = v(block_data, :refs) || []
-    vars = v(block_data, :vars) || []
-    description = v(block, :description)
+    refs = block_data[:refs].value || []
+    vars = block_data[:vars].value || []
+    description = block[:description].value
 
     socket
-    |> assign(:uid, v(block, :uid) || Brando.Utils.generate_uid())
+    |> assign(:uid, block[:uid].value || Brando.Utils.generate_uid())
     |> assign(:description, description)
     |> assign(:block_data, block_data)
-    |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data, :vars)))
+    |> assign(:indexed_vars, Enum.with_index(inputs_for_poly(block_data[:vars])))
     |> assign(:module_name, entry_template.name)
     |> assign(:module_class, entry_template.class)
     |> assign(:module_code, entry_template.code)
@@ -95,9 +91,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <:config>
           <div class="panels">
             <div class="panel">
-              <Input.text form={@block} field={:description} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
               <%= for {var, index} <- @indexed_vars do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} />
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} in_block />
               <% end %>
             </div>
             <div class="panel">
@@ -137,8 +133,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         <div class="module-block" b-editor-tpl={@module_class}>
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
-              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data, :vars)) do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} />
+              <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data[:vars])) do %>
+                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} in_block />
               <% end %>
             </div>
           <% end %>
@@ -148,7 +144,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
               <% {:ref, ref} -> %>
                 <Module.Ref.render
                   data_field={@data_field}
-                  uploads={@uploads}
+                  parent_uploads={@parent_uploads}
                   module_refs={@refs_forms}
                   module_ref_name={ref}
                   base_form={@base_form} />
@@ -167,9 +163,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                 <%= raw split %>
             <% end %>
           <% end %>
-          <Input.input type={:hidden} form={@block_data} field={:module_id} />
-          <Input.input type={:hidden} form={@block_data} field={:sequence} />
-          <Input.input type={:hidden} form={@block_data} field={:multi} />
+          <Input.input type={:hidden} field={@block_data[:module_id]} />
+          <Input.input type={:hidden} field={@block_data[:sequence]} />
+          <Input.input type={:hidden} field={@block_data[:multi]} />
         </div>
       </Blocks.block>
     </div>
@@ -195,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     changeset = base_form.source
 
-    current_vars = input_value(block_data, :vars) || []
+    current_vars = block_data[:vars].value || []
     current_var_keys = Enum.map(current_vars, & &1.key)
 
     module_vars = entry_template.vars
@@ -220,7 +216,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(new_vars, &(&1.important == true)))}
@@ -258,7 +255,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, assign(socket, :important_vars, Enum.filter(module_vars, &(&1.important == true)))}
@@ -276,7 +274,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           }
         } = socket
       ) do
-    module_id = input_value(block_data, :module_id)
+    module_id = block_data[:module_id].value
     {:ok, module} = Brando.Content.get_module(module_id)
 
     changeset = base_form.source
@@ -296,7 +294,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

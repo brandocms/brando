@@ -39,8 +39,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data show_only_selected?, :boolean
   # data upload_formats, :string
 
-  def v(form, field), do: input_value(form, field)
-
   def mount(socket) do
     {:ok, assign(socket, available_images: [], show_only_selected?: false)}
   end
@@ -51,11 +49,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       |> inputs_for(:data)
       |> List.first()
 
-    images = input_value(block_data, :images)
+    images = block_data[:images].value
     selected_images_paths = Enum.map(images, & &1.path)
 
     upload_formats =
-      case v(block_data, :formats) do
+      case block_data[:formats].value do
         nil -> ""
         formats -> Enum.join(formats, ",")
       end
@@ -67,10 +65,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:images, images)
      |> assign(:indexed_images, Enum.with_index(images))
      |> assign(:upload_formats, upload_formats)
-     |> assign(:display, v(block_data, :display))
+     |> assign(:display, block_data[:display].value)
      |> assign(:selected_images_paths, selected_images_paths)
      |> assign(:has_images?, !Enum.empty?(images))
-     |> assign(:uid, v(assigns.block, :uid))}
+     |> assign(:uid, assigns.block[:uid].value)}
   end
 
   def render(assigns) do
@@ -95,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}>
         <:description>
-          <%= input_value(@block_data, :type) %>
+          <%= @block_data[:type].value %>
           <%= if @ref_description do %>
             — <%= @ref_description %>
           <% end %>
@@ -111,36 +109,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             multiple>
         </div>
 
-        <%= for image <- inputs_for(@block_data, :images) do %>
-          <Input.input type={:hidden} form={image} field={:placeholder} />
-          <Input.input type={:hidden} form={image} field={:cdn} />
-          <Input.input type={:hidden} form={image} field={:dominant_color} />
-          <Input.input type={:hidden} form={image} field={:height} />
-          <Input.input type={:hidden} form={image} field={:width} />
-          <Input.input type={:hidden} form={image} field={:path} />
+        <.inputs_for field={@block_data[:images]} :let={image}>
+          <Input.input type={:hidden} field={image[:placeholder]} />
+          <Input.input type={:hidden} field={image[:cdn]} />
+          <Input.input type={:hidden} field={image[:dominant_color]} />
+          <Input.input type={:hidden} field={image[:height]} />
+          <Input.input type={:hidden} field={image[:width]} />
+          <Input.input type={:hidden} field={image[:path]} />
 
-          <Form.inputs
-            form={image}
-            for={:focal}
-            :let={%{form: focal_form}}>
-            <Input.input type={:hidden} form={focal_form} field={:x} />
-            <Input.input type={:hidden} form={focal_form} field={:y} />
-          </Form.inputs>
+          <.inputs_for
+            field={image[:focal]}
+            :let={focal_form}>
+            <Input.input type={:hidden} field={focal_form[:x]} />
+            <Input.input type={:hidden} field={focal_form[:y]} />
+          </.inputs_for>
 
           <Form.map_inputs
             :let={%{value: value, name: name}}
-            form={image}
-            for={:sizes}>
+            field={image[:sizes]}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={image}
-            for={:formats}>
+            field={image[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
-        <% end %>
+        </.inputs_for>
 
         <%= if @has_images? do %>
           <span
@@ -236,42 +231,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           </div>
         <% end %>
 
-        <Content.modal
-          title={gettext "Edit captions"}
-          id={"block-#{@uid}_captions"}>
+        <Content.modal title={gettext "Edit captions"} id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <div
-              :for={image <- inputs_for(@block_data, :images)}
-              class="caption-row">
-              <figure>
-                <Content.image image={image.data} size={:thumb} />
-              </figure>
-              <div>
-                <Input.rich_text form={image} field={:title} label={gettext "Title"} />
-                <Input.text form={image} field={:credits} label={gettext "Credits"} />
-                <Input.text form={image} field={:alt} label={gettext "Alt. text"} />
+            <.inputs_for field={@block_data[:images]} :let={image}>
+              <div class="caption-row">
+                <figure>
+                  <Content.image image={image.data} size={:thumb} />
+                </figure>
+                <div>
+                  <Input.rich_text field={image[:title]} label={gettext "Title"} />
+                  <Input.text field={image[:credits]} label={gettext "Credits"} />
+                  <Input.text field={image[:alt]} label={gettext "Alt. text"} />
+                </div>
               </div>
-            </div>
+            </.inputs_for>
           </div>
         </Content.modal>
 
         <:config>
-          <Input.input type={:hidden} form={@block_data} field={:type} />
+          <Input.input type={:hidden} field={@block_data[:type]} />
           <Input.radios
-            form={@block_data}
-            field={:display}
+            field={@block_data[:display]}
             label={gettext("Display")}
             opts={[options: [
               %{label: "Grid", value: :grid},
               %{label: "List", value: :list},
             ]]} />
-          <Input.text form={@block_data} field={:class} label={gettext "Class"} />
-          <Input.text form={@block_data} field={:series_slug} label={gettext "Series slug"} />
-          <Input.toggle form={@block_data} field={:lightbox} label={gettext "Lightbox"} />
+          <Input.text field={@block_data[:class]} label={gettext "Class"} />
+          <Input.text field={@block_data[:series_slug]} label={gettext "Series slug"} />
+          <Input.toggle field={@block_data[:lightbox]} label={gettext "Lightbox"} />
 
           <Input.radios
-            form={@block_data}
-            field={:placeholder}
+            field={@block_data[:placeholder]}
             label={gettext "Placeholder"}
             opts={[options: [
               %{label: "SVG", value: :svg},
@@ -282,8 +273,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={@block_data}
-            for={:formats}>
+            field={@block_data[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
 
@@ -314,7 +304,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    images = input_value(block_data, :images)
+    images = block_data[:images].value
     sorted_images = Enum.map(order_indices, &Enum.at(images, &1))
 
     updated_changeset =
@@ -324,7 +314,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -345,7 +336,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(id)
     picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = input_value(block_data, :images) ++ [picture_data_tpl]
+    images = block_data[:images].value ++ [picture_data_tpl]
 
     changeset = base_form.source
     module = changeset.data.__struct__
@@ -356,7 +347,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -382,7 +374,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -403,7 +396,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(id)
     picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = input_value(block_data, :images) ++ [picture_data_tpl]
+    images = block_data[:images].value ++ [picture_data_tpl]
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -419,7 +412,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -438,7 +432,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         } = socket
       ) do
     {:ok, image} = Brando.Images.get_image(id)
-    images = Enum.reject(input_value(block_data, :images), &(&1.path == image.path))
+    images = Enum.reject(block_data[:images].value, &(&1.path == image.path))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -454,7 +448,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -472,7 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           }
         } = socket
       ) do
-    images = Enum.reject(input_value(block_data, :images), &(&1.path == path))
+    images = Enum.reject(block_data[:images].value, &(&1.path == path))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -488,7 +483,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

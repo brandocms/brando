@@ -33,17 +33,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # data image, :any
   # data upload_formats, :string
 
-  def v(form, field), do: input_value(form, field)
-
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign(images: [])}
+    {:ok, assign(socket, images: [])}
   end
 
   def update(assigns, socket) do
     {extracted_path, extracted_filename} =
-      case v(assigns.block, :data) do
+      case assigns.block[:data].value do
         nil -> {nil, nil}
         %{path: nil} -> {nil, nil}
         %{path: path} -> {path, Path.basename(path)}
@@ -55,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> List.first()
 
     upload_formats =
-      case v(block_data, :formats) do
+      case assigns.block[:formats].value do
         nil -> ""
         formats -> Enum.join(formats, ",")
       end
@@ -64,13 +60,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
-     |> assign(:image, v(assigns.block, :data))
-     |> assign(:path, v(block_data, :path))
-     |> assign(:sizes, v(block_data, :sizes))
+     |> assign(:image, assigns.block[:data].value)
+     |> assign(:path, block_data[:path].value)
+     |> assign(:sizes, block_data[:sizes].value)
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
-     |> assign(:uid, v(assigns.block, :uid))}
+     |> assign(:uid, assigns.block[:uid].value)}
   end
 
   def render(assigns) do
@@ -141,34 +137,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             <div class="panel">
               <%= if @extracted_path do %>
                 <Content.image image={@image} size={:largest} />
-
                 <div class="image-info">
                   Path: <%= @image.path %><br>
                   Dimensions: <%= @image.width %>&times;<%= @image.height %><br>
                 </div>
               <% end %>
-              <%= if !@extracted_path do %>
-                <div class="img-placeholder empty upload-canvas">
-                  <div class="placeholder-wrapper">
-                    <div class="svg-wrapper">
-                      <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                        <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                        <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                        <circle cx="8" cy="9" r="2"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="instructions">
-                    <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+              <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
+                <div class="placeholder-wrapper">
+                  <div class="svg-wrapper">
+                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                      <circle cx="8" cy="9" r="2"/>
+                    </svg>
                   </div>
                 </div>
-              <% end %>
+                <div class="instructions">
+                  <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+                </div>
+              </div>
             </div>
             <div class="panel">
-              <Input.rich_text form={@block_data} field={:title} uid={@uid} id_prefix={"block_data"} label={gettext "Title"} />
-              <Input.text form={@block_data} field={:alt} uid={@uid} id_prefix={"block_data"} label={gettext "Alt"} />
-              <Input.text form={@block_data} field={:link} uid={@uid} id_prefix={"block_data"} label={gettext "Link"} />
+              <Input.rich_text field={@block_data[:title]} uid={@uid} id_prefix={"block_data"} label={gettext "Title"} />
+              <Input.text field={@block_data[:alt]} uid={@uid} id_prefix={"block_data"} label={gettext "Alt"} />
+              <Input.text field={@block_data[:link]} uid={@uid} id_prefix={"block_data"} label={gettext "Link"} />
 
               <div class="button-group-vertical">
                 <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
@@ -182,40 +175,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </div>
           </div>
 
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:placeholder} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:cdn} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:moonwalk} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:lazyload} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:credits} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:dominant_color} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:height} />
-          <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:width} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:placeholder]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:cdn]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:moonwalk]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:lazyload]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:credits]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:dominant_color]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:height]} />
+          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:width]} />
 
           <%= if is_nil(@path) and !is_nil(@sizes) do %>
-            <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} value={@extracted_path} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:path]} value={@extracted_path} />
           <% else %>
-            <Input.input type={:hidden} form={@block_data} uid={@uid} id_prefix={"block_data"} field={:path} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:path]} />
           <% end %>
 
-          <Form.inputs
-            form={@block_data}
-            for={:focal}
-            :let={%{form: focal_form}}>
-            <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:x} />
-            <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:y} />
-          </Form.inputs>
+          <.inputs_for
+            field={@block_data[:focal]}
+            :let={focal_form}>
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:x]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:y]} />
+          </.inputs_for>
 
           <Form.map_inputs
             :let={%{value: value, name: name}}
-            form={@block_data}
-            for={:sizes}>
+            field={@block_data[:sizes]}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={@block_data}
-            for={:formats}>
+            field={@block_data[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
 
@@ -240,7 +230,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ) do
     {:ok, image} = Brando.Images.get_image(id)
 
-    block_data = input_value(block, :data)
+    block_data = block[:data].value
 
     updated_data_map =
       block_data
@@ -266,7 +256,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -306,7 +297,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
@@ -350,7 +342,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

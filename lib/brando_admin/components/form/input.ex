@@ -35,15 +35,14 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div class={render_classes(["check-wrapper", small: @compact])}>
-        <.input type={:checkbox} form={@form} field={@field} />
-        <Form.label form={@form} field={@field} class={render_classes(["control-label", small: @compact])}><%= @text %></Form.label>
+        <.input type={:checkbox} field={@field} />
+        <Form.label field={@field} class={render_classes(["control-label", small: @compact])}><%= @text %></Form.label>
       </div>
     </Form.field_base>
     """
@@ -54,22 +53,20 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-code"}
+        id={"#{@field.id}-code"}
         class="code-editor"
         phx-hook="Brando.CodeEditor">
         <.input type={:textarea}
-          form={@form}
           field={@field}
           phx_debounce={750} />
         <div
-          id={"#{@form.id}-#{@field}-code-editor"}
+          id={"#{@field.id}-code-editor"}
           phx-update="ignore">
           <div class="editor"></div>
         </div>
@@ -101,24 +98,23 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-color-picker"}
+        id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
-        data-input={"##{@form.id}_#{@field}"}
-        data-color={input_value(@form, @field) || gettext("No color selected")}
+        data-input={"##{@field.id}"}
+        data-color={@field.value || gettext("No color selected")}
         data-opacity={@opacity}
         data-picker={@picker}
         data-palette={@palette_colors}>
         <div class="picker">
-          <.input type={:hidden} form={@form} field={@field} />
+          <.input type={:hidden} field={@field} />
           <div
-            id={"#{@form.id}-#{@field}-color-picker-target"}
+            id={"#{@field.id}-color-picker-target"}
             phx-update="ignore"
             class="picker-target">
             <div class="circle-and-hex">
@@ -140,35 +136,30 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def date(assigns) do
-    value = input_value(assigns.form, assigns.field) || get_default(assigns.opts)
+    value = assigns.field.value || get_default(assigns.opts)
     assigns = prepare_input_component(assigns)
-
-    assigns =
-      assign(assigns,
-        value: value
-      )
+    assigns = assign(assigns, value: value)
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-datepicker"}
+        id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DatePicker">
           <div
-            id={"#{@form.id}-#{@field}-datepicker-flatpickr"}
+            id={"#{@field.id}-datepicker-flatpickr"}
             phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
               <%= gettext "Clear" %>
             </button>
-            <.input type={:hidden} form={@form} field={@field} value={@value} class="flatpickr" />
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
           </div>
       </div>
     </Form.field_base>
@@ -180,33 +171,32 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assign(assigns,
-        value: input_value(assigns.form, assigns.field) || get_default(assigns.opts),
+        value: assigns.field.value || get_default(assigns.opts),
         class: assigns.opts[:class],
         locale: Gettext.get_locale()
       )
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <div
-        id={"#{@form.id}-#{@field}-datetimepicker"}
+        id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
         data-locale={@locale}>
           <div
-            id={"#{@form.id}-#{@field}-datetimepicker-flatpickr"}
+            id={"#{@field.id}-datetimepicker-flatpickr"}
             phx-update="ignore">
             <button
               type="button"
               class="clear-datetime">
               <%= gettext "Clear" %>
             </button>
-            <.input type={:hidden} form={@form} field={@field} value={@value} class="flatpickr" />
+            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
             <div class="timezone">&mdash; <%= gettext "Your timezone is" %>: <span>Unknown</span></div>
           </div>
       </div>
@@ -219,17 +209,18 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= email_input @form, @field,
-        placeholder: @placeholder,
-        disabled: @disabled,
-        phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}" %>
+      <.input
+        type={:email}
+        field={@field}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        phx-debounce={@debounce}
+        class={render_classes(["text", monospace: @monospace])} />
     </Form.field_base>
     """
   end
@@ -239,61 +230,65 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= number_input @form, @field,
-        placeholder: @placeholder,
-        disabled: @disabled,
-        phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}" %>
+      <.input
+        type={:number}
+        field={@field}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        phx-debounce={@debounce}
+        class={render_classes(["text", monospace: @monospace])} />
     </Form.field_base>
     """
   end
 
   def password(assigns) do
-    value = input_value(assigns.form, assigns.field)
-    confirmation_value = input_value(assigns.form, :"#{assigns.field}_confirmation") || value
+    value = assigns.field.value
+    confirmation_field_atom = :"#{assigns.field.field}_confirmation"
+    confirmation_field = assigns.field.form[confirmation_field_atom]
+    confirmation_value = confirmation_field.value || value
 
     assigns =
       assigns
       |> prepare_input_component()
       |> assign(:value, value)
       |> assign(:confirmation, Keyword.get(assigns.opts, :confirmation))
+      |> assign(:confirmation_field, Map.put(confirmation_field, :value, confirmation_value))
       |> assign(:confirmation_value, confirmation_value)
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= password_input @form, @field,
-        placeholder: @placeholder,
-        disabled: @disabled,
-        phx_debounce: @debounce,
-        value: @value,
-        class: "text#{@monospace && " monospace" || ""}" %>
+      <.input
+        type={:password}
+        field={@field}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        phx-debounce={@debounce}
+        class={render_classes(["text", monospace: @monospace])} />
     </Form.field_base>
     <%= if @confirmation do %>
       <Form.field_base
-        form={@form}
-        field={:"#{@field}_confirmation"}
+        field={@confirmation_field}
         label={"#{@label} [#{gettext("confirm")}]"}
         instructions={@instructions}
         class={@class}
         compact={@compact}>
-        <%= password_input @form, :"#{@field}_confirmation",
-          placeholder: @placeholder,
-          disabled: @disabled,
-          phx_debounce: @debounce,
-          value: @confirmation_value,
-          class: "text#{@monospace && " monospace" || ""}" %>
+        <.input
+          type={:password}
+          field={@confirmation_field}
+          placeholder={@placeholder}
+          disabled={@disabled}
+          phx-debounce={@debounce}
+          class={render_classes(["text", monospace: @monospace])} />
       </Form.field_base>
     <% end %>
     """
@@ -304,20 +299,28 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= telephone_input @form, @field,
-        placeholder: @placeholder,
-        disabled: @disabled,
-        phx_debounce: @debounce,
-        class: "text#{@monospace && " monospace" || ""}" %>
+      <.input
+        type={:phone}
+        field={@field}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        phx-debounce={@debounce}
+        class={render_classes(["text", monospace: @monospace])} />
     </Form.field_base>
     """
   end
+
+  attr :id, :any, default: nil
+  attr :opts, :any, default: []
+  attr :label, :string
+  attr :uid, :string
+  attr :id_prefix, :string
+  attr :field, Phoenix.HTML.FormField
 
   def radios(assigns) do
     input_options =
@@ -347,26 +350,27 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <%= if @input_options != [] do %>
-        <div class="radios-wrapper">
-          <%= for opt <- @input_options do %>
-            <div class="form-check">
-              <label class="form-check-label">
-                <%= radio_button @form, @field, opt.value, class: "form-check-input" %>
-                <span class="label-text">
-                  <%= g(@form.source.data.__struct__, to_string(opt.label)) %>
-                </span>
-              </label>
-            </div>
-          <% end %>
+      <div :if={@input_options != []} class="radios-wrapper">
+        <div :for={opt <- @input_options} class="form-check">
+          <label class="form-check-label">
+            <input
+              type="radio"
+              id={(@id && @id <> "-#{Brando.Utils.slugify(to_string(opt.value))}") || @field.id <> "-#{Brando.Utils.slugify(to_string(opt.value))}"}
+              name={@field.name}
+              class="form-check-input"
+              value={opt.value}
+              checked={to_string(opt.value) == to_string(@field.value)} />
+            <span class="label-text">
+              <%= g(@field.form.source.data.__struct__, to_string(opt.label)) %>
+            </span>
+          </label>
         </div>
-      <% end %>
+      </div>
     </Form.field_base>
     """
   end
@@ -376,27 +380,26 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div class="tiptap-wrapper" id={"#{@form.id}-#{@field}-rich-text-wrapper"}>
+      <div class="tiptap-wrapper" id={"#{@field.id}-rich-text-wrapper"}>
         <div
-          id={"#{@form.id}-#{@field}-rich-text"}
+          id={"#{@field.id}-rich-text"}
           phx-hook="Brando.TipTap"
           data-name="TipTap">
           <div
-            id={"#{@form.id}-#{@field}-rich-text-target-wrapper"}
+            id={"#{@field.id}-rich-text-target-wrapper"}
             class="tiptap-target-wrapper"
             phx-update="ignore">
             <div
-              id={"#{@form.id}-#{@field}-rich-text-target"}
+              id={"#{@field.id}-rich-text-target"}
               class="tiptap-target">
             </div>
           </div>
-          <.input type={:hidden} form={@form} field={@field} class="tiptap-text" phx_debounce={750} />
+          <.input type={:hidden} field={@field} class="tiptap-text" phx_debounce={750} />
         </div>
       </div>
     </Form.field_base>
@@ -409,7 +412,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_input_component()
       |> assign(:slug_for, assigns.opts[:for])
       |> assign_new(:url, fn -> nil end)
-      |> assign_new(:data_slug_for, fn -> prepare_slug_for(assigns.form, assigns.opts[:for]) end)
+      |> assign_new(:data_slug_for, fn -> prepare_slug_for(assigns.field, assigns.opts[:for]) end)
       |> assign_new(:data_slug_type, fn ->
         (Keyword.get(assigns.opts, :camel_case) && "camel") || "standard"
       end)
@@ -417,7 +420,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -425,7 +427,6 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}>
       <.input
         type={:text}
-        form={@form}
         field={@field}
         class="text monospace"
         phx_hook="Brando.Slug"
@@ -447,142 +448,111 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def hidden(assigns) do
     ~H"""
-    <.input
-      type={:hidden}
-      form={@form}
-      field={@field} />
+    <.input type={:hidden} field={@field} />
     """
   end
 
+  attr :id, :any, default: nil
+  attr :name, :any, default: nil
+  attr :type, :atom, default: :text
+  attr :value, :any
+  attr :disabled, :boolean
+  attr :label, :string
+  attr :uid, :string
+  attr :id_prefix, :string
+
+  attr :rest, :global,
+    include:
+      ~w(class phx_hook phx_debounce rows phx_update data_slug_for data_autosize data_slug_type autocorrect spellcheck)
+
+  attr :field, Phoenix.HTML.FormField,
+    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+
   def input(%{type: :checkbox} = assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :form,
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
-
     assigns =
       assigns
-      |> assign_new(:value, fn -> maybe_html_escape(input_value(assigns.form, assigns.field)) end)
-      |> assign_new(:id, fn -> input_id(assigns.form, assigns.field) end)
-      |> assign_new(:name, fn -> input_name(assigns.form, assigns.field) end)
-      |> assign_new(:checked_value, fn -> maybe_html_escape(true) end)
-      |> assign_new(:unchecked_value, fn -> maybe_html_escape(false) end)
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:checked_value, fn -> "true" end)
+      |> assign_new(:unchecked_value, fn -> "false" end)
       |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
-    assigns = assign(assigns, :checked, assigns.value == assigns.checked_value)
+    assigns =
+      assign(
+        assigns,
+        :checked,
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns.field.value)
+      )
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@name} id={"#{@id}-unchecked"} value={@unchecked_value} {@extra}>
-      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} checked={@checked} {@extra}>
+      <input type={:hidden} name={@field.name} id={"#{@id}-unchecked"} value={@unchecked_value} {@rest}>
+      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} checked={@checked} {@rest}>
       """
     else
       ~H"""
-      <input type={@type} name={@name} id={"#{@id}"} value={@checked_value} {@extra}>
+      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} {@rest}>
       """
     end
   end
 
   def input(%{type: :textarea} = assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :form,
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
-
     assigns =
       if assigns[:value] do
         assigns
       else
-        assign(assigns, :value, maybe_html_escape(input_value(assigns.form, assigns.field)))
+        assign(
+          assigns,
+          :value,
+          Phoenix.HTML.Form.normalize_value("textarea", assigns.field.value)
+        )
       end
 
     assigns =
-      if assigns[:id] do
-        assigns
-      else
-        assign(assigns, :id, input_id(assigns.form, assigns.field))
-      end
-
-    assigns =
-      if assigns[:name] do
-        assigns
-      else
-        assign(assigns, :name, input_name(assigns.form, assigns.field))
-      end
-
-    assigns = process_input_id(assigns)
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> process_input_id()
 
     ~H"""
-    <textarea type={@type} name={@name} id={@id} {@extra}><%= @value %></textarea>
+    <textarea type={@type} name={@name} id={@id} {@rest}><%= @value %></textarea>
     """
   end
 
   def input(assigns) do
-    extra =
-      assigns_to_attributes(assigns, [
-        :form,
-        :field,
-        :type,
-        :uid,
-        :id_prefix
-      ])
-
-    assigns = assign(assigns, :extra, extra)
+    assigns =
+      assign_new(
+        assigns,
+        :value,
+        fn -> maybe_html_escape(assigns.field.value) end
+      )
 
     assigns =
-      if assigns[:value] do
-        assigns
-      else
-        assign(assigns, :value, maybe_html_escape(input_value(assigns.form, assigns.field)))
-      end
-
-    assigns =
-      if assigns[:id] do
-        assigns
-      else
-        assign(assigns, :id, input_id(assigns.form, assigns.field))
-      end
-
-    assigns =
-      if assigns[:name] do
-        assigns
-      else
-        assign(assigns, :name, input_name(assigns.form, assigns.field))
-      end
-
-    assigns = process_input_id(assigns)
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> process_input_id()
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} {@extra}>
+    <input type={@type} name={@name} id={@id} value={@value} {@rest}>
     """
   end
 
   defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns),
-    do: assigns
+    do: assign(assigns, :id, assigns.field.id)
 
   defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
-    do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field}")
+    do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field.id}")
 
-  defp process_input_id(assigns), do: assigns
+  defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
 
   defp maybe_html_escape(nil), do: nil
-  defp maybe_html_escape(value), do: html_escape(value)
+  defp maybe_html_escape(true), do: "true"
+  defp maybe_html_escape(false), do: "false"
+  defp maybe_html_escape(value), do: value
 
   defp maybe_assign_url(assigns, true) do
-    entry = Ecto.Changeset.apply_changes(assigns.form.source)
+    entry = Ecto.Changeset.apply_changes(assigns.field.form.source)
     schema = entry.__struct__
     url = schema.__absolute_url__(entry)
     assign(assigns, :url, url)
@@ -592,19 +562,20 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns
   end
 
-  defp prepare_slug_for(form, slug_for) when is_list(slug_for) do
+  defp prepare_slug_for(%{form: form}, slug_for) when is_list(slug_for) do
     slug_for
     |> Enum.reduce([], fn sf, acc -> acc ++ List.wrap("#{form.name}[#{sf}]") end)
     |> Enum.join(",")
   end
 
   defp prepare_slug_for(_form, nil), do: false
-  defp prepare_slug_for(form, slug_for), do: "#{form.name}[#{slug_for}]"
+  defp prepare_slug_for(%{form: form}, slug_for), do: "#{form.name}[#{slug_for}]"
 
   def status(assigns) do
     assigns =
       assigns
       |> prepare_input_component()
+      |> assign_new(:id, fn -> nil end)
       |> assign_new(:statuses, fn ->
         [
           %{value: "draft", label: gettext("Draft")},
@@ -619,17 +590,21 @@ defmodule BrandoAdmin.Components.Form.Input do
     else
       ~H"""
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
         class={@class}
         compact={@compact}>
         <div class="radios-wrapper status">
-          <%= for status <- @statuses do %>
-            <div class="form-check">
+            <div :for={status <- @statuses} class="form-check">
               <label class="form-check-label">
-                <%= radio_button @form, @field, status.value, class: "form-check-input" %>
+                <input
+                  type="radio"
+                  id={(@id || @field.id) <> "-#{status.value}"}
+                  name={@field.name}
+                  class="form-check-input"
+                  value={status.value}
+                  checked={status.value == to_string(@field.value)}>
                 <span class={render_classes(["label-text", status.value])}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -646,7 +621,6 @@ defmodule BrandoAdmin.Components.Form.Input do
                 </span>
               </label>
             </div>
-          <% end %>
         </div>
       </Form.field_base>
       """
@@ -657,24 +631,33 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns =
       assigns
       |> prepare_input_component()
-      |> assign(:current_status, input_value(assigns.form, assigns.field))
-      |> assign(:id, "status-dropdown-#{assigns.form.id}-#{assigns.form.index}-#{assigns.field}")
+      |> assign(:current_status, assigns.field.value)
+      |> assign(
+        :id,
+        "status-dropdown-#{assigns.field.id}"
+      )
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+      fit_content>
       <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
         <.status_circle status={@current_status} publish_at={nil} />
         <div class="status-dropdown hidden" id={@id}>
         <%= for status <- @statuses do %>
           <div class="form-check">
             <label class="form-check-label">
-              <%= radio_button @form, @field, status.value, class: "form-check-input" %>
+              <input
+              type="radio"
+              id={(@id || @field.id) <> "-#{status.value}"}
+              name={@field.name}
+              class="form-check-input"
+              value={status.value}
+              checked={status.value == to_string(@field.value)}>
               <span class={render_classes(["label-text", status.value])}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -703,7 +686,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -711,7 +693,6 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}>
       <.input
         type={:text}
-        form={@form}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
@@ -731,21 +712,19 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
       class={@class}
       compact={@compact}>
       <.input type={:textarea}
-        form={@form}
         field={@field}
         class="text"
         placeholder={@placeholder}
         rows={@rows}
         disabled={@disabled}
         phx_debounce={@debounce}
-        id={make_uid(@form, @field, @uid)} />
+        id={make_uid(@field, @uid)} />
     </Form.field_base>
     """
   end
@@ -758,7 +737,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base
-      form={@form}
       field={@field}
       label={@label}
       instructions={@instructions}
@@ -766,13 +744,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       left_justify_meta>
       <Form.label
-        form={@form}
         field={@field}
         class={render_classes(["switch", small: @compact])}>
         <%= if @inner_block do %>
           <%= render_slot @inner_block %>
         <% else %>
-          <.input type={:checkbox} form={@form} field={@field} />
+          <.input type={:checkbox} field={@field} />
         <% end %>
         <div class="slider round"></div>
       </Form.label>

@@ -25,8 +25,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # data block_data, :any
   # data uid, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
-
   def update(assigns, socket) do
     block_data =
       assigns.block
@@ -36,17 +34,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, v(assigns.block, :uid))
+     |> assign(:uid, assigns.block[:uid].value)
      |> assign(:type, assigns.block.data.data.source)
      |> assign(:block_data, block_data)
-     |> assign(:remote_id, v(block_data, :remote_id))
-     |> assign(:source, v(block_data, :source))
-     |> assign(:thumbnail_url, v(block_data, :thumbnail_url))
-     |> assign(:title, v(block_data, :title))
-     |> assign(:width, v(block_data, :width))
-     |> assign(:height, v(block_data, :height))
-     |> assign(:cover, v(block_data, :cover))
-     |> assign(:cover_image, v(block_data, :cover_image))}
+     |> assign(:remote_id, block_data[:remote_id].value)
+     |> assign(:source, block_data[:source].value)
+     |> assign(:thumbnail_url, block_data[:thumbnail_url].value)
+     |> assign(:title, block_data[:title].value)
+     |> assign(:width, block_data[:width].value)
+     |> assign(:height, block_data[:height].value)
+     |> assign(:cover, block_data[:cover].value)
+     |> assign(:cover_image, block_data[:cover_image].value)}
   end
 
   def render(assigns) do
@@ -76,19 +74,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         </:description>
         <:config>
           <%= if @remote_id in [nil, ""] do %>
-            <Input.input type={:hidden} form={@block_data} field={:url} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:width} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:height} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:title} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" />
-            <Input.input type={:hidden} form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:url]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:source]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:width]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:height]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:remote_id]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:thumbnail_url]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:title]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:poster]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:cover]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:opacity]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:autoplay]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:preload]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={@block_data[:play_button]} uid={@uid} id_prefix="block_data" />
 
             <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
               <div class="video-loading hidden">
@@ -132,10 +130,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
               </div>
               <div class="panel">
-                <Input.input type={:hidden} form={@block_data} field={:source} uid={@uid} id_prefix="block_data" />
-                <Input.input type={:hidden} form={@block_data} field={:thumbnail_url} uid={@uid} id_prefix="block_data" />
-                <Input.text form={@block_data} field={:remote_id} uid={@uid} id_prefix="block_data" monospace label={gettext "Remote ID"} />
-                <Input.text form={@block_data} field={:title} uid={@uid} id_prefix="block_data" label={gettext "Title"} />
+                <Input.input type={:hidden} field={@block_data[:source]} uid={@uid} id_prefix="block_data" />
+                <Input.input type={:hidden} field={@block_data[:thumbnail_url]} uid={@uid} id_prefix="block_data" />
+                <Input.text field={@block_data[:remote_id]} uid={@uid} id_prefix="block_data" monospace label={gettext "Remote ID"} />
+                <Input.text field={@block_data[:title]} uid={@uid} id_prefix="block_data" label={gettext "Title"} />
 
                 <div
                   :if={!@cover_image}
@@ -152,75 +150,68 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   </button>
                 </div>
 
-                <Input.input type={:hidden} form={@block_data} field={:poster} uid={@uid} id_prefix="block_data" />
+                <Input.input type={:hidden} field={@block_data[:poster]} uid={@uid} id_prefix="block_data" />
                 <%= if @cover in ["false", "svg"] do %>
-                  <Input.input type={:hidden} form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" />
+                  <Input.input type={:hidden} field={@block_data[:cover]} uid={@uid} id_prefix="block_data" />
                 <% else %>
-                  <Input.text form={@block_data} field={:cover} uid={@uid} id_prefix="block_data" label={gettext "Cover"} />
+                  <Input.text field={@block_data[:cover]} uid={@uid} id_prefix="block_data" label={gettext "Cover"} />
                 <% end %>
 
-                <Input.input type={:hidden} form={@block_data} field={:opacity} uid={@uid} id_prefix="block_data" />
+                <Input.input type={:hidden} field={@block_data[:opacity]} uid={@uid} id_prefix="block_data" />
 
                 <div class="row">
                   <div class="half">
-                    <Input.number form={@block_data} field={:width} uid={@uid} id_prefix="block_data" label={gettext "Width"} />
+                    <Input.number field={@block_data[:width]} uid={@uid} id_prefix="block_data" label={gettext "Width"} />
                   </div>
                   <div class="half">
-                    <Input.number form={@block_data} field={:height} uid={@uid} id_prefix="block_data" label={gettext "Height"} />
+                    <Input.number field={@block_data[:height]} uid={@uid} id_prefix="block_data" label={gettext "Height"} />
                   </div>
                 </div>
 
                 <div class="row">
                   <div class="half">
-                    <Input.toggle compact form={@block_data} field={:play_button} uid={@uid} id_prefix="block_data" label={gettext "Play button"} />
+                    <Input.toggle compact field={@block_data[:play_button]} uid={@uid} id_prefix="block_data" label={gettext "Play button"} />
                   </div>
                   <div class="half">
-                    <Input.toggle compact form={@block_data} field={:autoplay} uid={@uid} id_prefix="block_data" label={gettext "Autoplay"} />
+                    <Input.toggle compact field={@block_data[:autoplay]} uid={@uid} id_prefix="block_data" label={gettext "Autoplay"} />
                   </div>
                 </div>
                 <div class="row">
                   <div class="half">
-                    <Input.toggle compact form={@block_data} field={:preload} uid={@uid} id_prefix="block_data" label={gettext "Preload"} />
+                    <Input.toggle compact field={@block_data[:preload]} uid={@uid} id_prefix="block_data" label={gettext "Preload"} />
                   </div>
                   <div class="half">
-                    <Input.toggle compact form={@block_data} field={:controls} uid={@uid} id_prefix="block_data" label={gettext "Show native player controls"} />
+                    <Input.toggle compact field={@block_data[:controls]} uid={@uid} id_prefix="block_data" label={gettext "Show native player controls"} />
                   </div>
                 </div>
-                <%= if @cover_image do %>
-                  <%= for cover_image <- inputs_for(@block_data, :cover_image) do %>
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:placeholder} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:cdn} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:moonwalk} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:lazyload} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:credits} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:dominant_color} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:height} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:width} />
-                    <Input.input type={:hidden} form={cover_image} uid={@uid} id_prefix={"block_data"} field={:path} />
+                <.inputs_for :if={@cover_image} field={@block_data[:cover_image]} :let={cover_image}>
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:placeholder]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:cdn]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:moonwalk]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:lazyload]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:credits]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:dominant_color]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:height]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:width]} />
+                  <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={cover_image[:path]} />
 
-                    <Form.inputs
-                      form={cover_image}
-                      for={:focal}
-                      :let={%{form: focal_form}}>
-                      <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:x} />
-                      <Input.input type={:hidden} form={focal_form} uid={@uid} id_prefix={"block_data_focal"} field={:y} />
-                    </Form.inputs>
+                  <.inputs_for field={cover_image[:focal]} :let={focal_form}>
+                    <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:x]} />
+                    <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:y]} />
+                  </.inputs_for>
 
-                    <Form.map_inputs
-                      :let={%{value: value, name: name}}
-                      form={cover_image}
-                      for={:sizes}>
-                      <input type="hidden" name={"#{name}"} value={"#{value}"} />
-                    </Form.map_inputs>
+                  <Form.map_inputs
+                    :let={%{value: value, name: name}}
+                    field={cover_image[:sizes]}>
+                    <input type="hidden" name={"#{name}"} value={"#{value}"} />
+                  </Form.map_inputs>
 
-                    <Form.array_inputs
-                      :let={%{value: array_value, name: array_name}}
-                      form={cover_image}
-                      for={:formats}>
-                      <input type="hidden" name={array_name} value={array_value} />
-                    </Form.array_inputs>
-                  <% end %>
-                <% end %>
+                  <Form.array_inputs
+                    :let={%{value: array_value, name: array_name}}
+                    field={cover_image[:formats]}>
+                    <input type="hidden" name={array_name} value={array_value} />
+                  </Form.array_inputs>
+                </.inputs_for>
               </div>
             </div>
           <% end %>
@@ -314,7 +305,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -372,7 +364,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -396,7 +389,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -439,7 +433,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 

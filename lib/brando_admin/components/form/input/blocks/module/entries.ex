@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use BrandoAdmin, :live_component
   use Phoenix.HTML
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
 
   # prop block_data, :form, required: true
@@ -13,16 +13,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
 
   # data entry_forms, :list
 
-  def v(form, field), do: input_value(form, field)
-
   def update(assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       :indexed_entry_forms,
-       Enum.with_index(inputs_for_blocks(assigns.block_data, :entries))
-     )
      |> assign(:entry_count, Enum.count(assigns.block_data.data.entries))}
   end
 
@@ -33,21 +27,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
       data-blocks-wrapper-type="module_entry">
-      <%= for {entry_form, idx} <- @indexed_entry_forms do %>
+      <Form.inputs_for_poly field={@block_data[:entries]} :let={entry_form}>
         <.live_component module={EntryBlock}
-          id={v(entry_form, :uid)}
+          id={entry_form[:uid].value}
           block={entry_form}
           base_form={@base_form}
           data_field={@data_field}
           entry_template={@entry_template}
           belongs_to="module_entry"
           module_id={@module_id}
-          index={idx}
+          index={entry_form.index}
           block_count={@entry_count}
           insert_module=""
           duplicate_block=""
         />
-      <% end %>
+      </Form.inputs_for_poly>
 
       <button
         type="button"
@@ -90,7 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       uid: generated_uid
     }
 
-    entries = input_value(block_data, :entries)
+    entries = block_data[:entries].value
     updated_entries = entries ++ [new_entry]
 
     updated_changeset =
@@ -103,7 +97,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}
@@ -118,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
     changeset = form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
-    blocks = input_value(block_data, :entries)
+    blocks = block_data[:entries].value
 
     ordered_blocks = Enum.map(order_indices, &Enum.at(blocks, &1))
 
@@ -134,7 +129,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     {:noreply, socket}

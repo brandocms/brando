@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   # prop module_refs, :list, required: true
   # prop module_ref_name, :string, required: true
   # prop base_form, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop data_field, :atom
 
   # data module_name, :string
@@ -21,13 +21,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   # data ref_form, :form
   # data block_count, :integer
 
-  def v(form, field), do: input_value(form, field)
-
   def assign_ref(%{module_refs: refs, module_ref_name: ref} = assigns) do
     # TODO: assign_new this stuff? do we need to process them every time?
     case Enum.find(refs, &(elem(&1, 0).data.name == ref)) do
       {ref_form, ref_index} ->
-        ref_block = inputs_for_block(ref_form, :data) |> List.first()
+        ref_block =
+          ref_form[:data]
+          |> inputs_for_block()
+          |> List.first()
 
         assigns =
           assigns
@@ -73,9 +74,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block_count={@block_count}
           block={@ref_block}
           base_form={@base_form}
-          uploads={@uploads} />
-        <Input.input type={:hidden} form={@ref_form} field={:description} uid={@ref_uid} id_prefix="ref" />
-        <Input.input type={:hidden} form={@ref_form} field={:name} uid={@ref_uid} id_prefix="ref" />
+          parent_uploads={@parent_uploads} />
+        <Input.input type={:hidden} field={@ref_form[:description]} uid={@ref_uid} id_prefix="ref" />
+        <Input.input type={:hidden} field={@ref_form[:name]} uid={@ref_uid} id_prefix="ref" />
       </section>
     <% else %>
       <section class="alert danger">

@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
   # prop fieldset, :any
   # prop form, :any
   # prop translations, :any
-  # prop uploads, :any
+  # prop parent_uploads, :any
 
   def render(assigns) do
     ~H"""
@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
           translations={@translations}
           relations={@relations}
           input={input}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           current_user={@current_user} />
       <% end %>
     </fieldset>

@@ -3,6 +3,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
   alias BrandoAdmin.Components.Content
   import Brando.Gettext
 
+  def mount(socket) do
+    {:ok, assign_new(socket, :z_index, fn -> 1100 end)}
+  end
+
   def update(
         %{
           config_target: config_target,
@@ -33,7 +37,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign_new(:images, fn -> [] end)
      |> assign_new(:config_target, fn -> nil end)
      |> assign_new(:event_target, fn -> nil end)
-     |> assign_new(:z_index, fn -> 1100 end)
      |> assign_new(:deselect_image, fn -> nil end)
      |> assign_new(:selected_images, fn -> [] end)}
   end

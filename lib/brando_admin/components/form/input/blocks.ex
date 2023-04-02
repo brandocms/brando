@@ -5,9 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
   import Ecto.Changeset
-  import Phoenix.LiveView.HTMLEngine
+  import Phoenix.LiveView.TagEngine
 
-  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -20,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop uploads, :map
+  # prop parent_uploads, :map
 
   # data blocks, :list
   # data block_forms, :list
@@ -37,10 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def update(assigns, socket) do
-    # TODO: when using input_value here, we sometimes end up
-    # with the whole block field as a params map %{"0" => ...}
-    blocks = Utils.iv(assigns.form, assigns.field) || []
-    block_forms = inputs_for_blocks(assigns.form, assigns.field) || []
+    blocks = assigns.field.value || []
+    block_forms = inputs_for_blocks(assigns.field) || []
 
     {:ok,
      socket
@@ -65,25 +62,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}>
 
-        <.live_component module={Blocks.BlockRenderer}
-          id={"#{@form.id}-#{@field}-blocks"}
-          base_form={@form}
+        <.live_component
+          module={Blocks.BlockRenderer}
+          id={"#{@field.id}-blocks"}
+          base_form={@field.form}
           blocks={@blocks}
           block_forms={@block_forms}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           templates={@templates}
           data_field={@data_field}
           insert_index={@insert_index}
           opts={@opts}
-          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@form.id}-#{@field}-blocks-module-picker")}
-          show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@form.id}-#{@field}-blocks-module-picker")}
+          insert_module={JS.push("insert_module", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          insert_section={JS.push("insert_section", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          insert_fragment={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@field.id}-blocks-module-picker")}
+          show_module_picker={JS.push("show_module_picker", target: @myself) |> show_modal("##{@field.id}-blocks-module-picker")}
           duplicate_block={JS.push("duplicate_block", target: @myself)} />
       </Form.field_base>
     </div>
@@ -98,12 +95,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, assign(socket, insert_index: index_binary)}
   end
 
-  def handle_event(
-        "insert_section",
-        %{"index" => index_binary},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("insert_section", %{"index" => index_binary}, socket) do
+    field = socket.assigns.field
+    changeset = field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -127,7 +121,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -135,12 +130,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
-  def handle_event(
-        "insert_fragment",
-        %{"index" => index_binary},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
+  def handle_event("insert_fragment", %{"index" => index_binary}, socket) do
+    field = socket.assigns.field
+    changeset = field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
@@ -163,7 +155,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -174,9 +167,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "insert_module",
         %{"index" => index_binary, "module-id" => module_id_binary},
-        %{assigns: %{form: form}} = socket
+        socket
       ) do
-    changeset = form.source
+    changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
     module_id = String.to_integer(module_id_binary)
@@ -211,7 +204,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset
+      action: :update_changeset,
+      changeset: updated_changeset
     )
 
     selector = "[data-block-uid=\"#{new_block.uid}\"]"
@@ -219,13 +213,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
-  def handle_event(
-        "duplicate_block",
-        %{"block_uid" => block_uid},
-        %{assigns: %{form: form, field: data_field}} = socket
-      ) do
-    changeset = form.source
-    data = get_field(changeset, data_field)
+  def handle_event("duplicate_block", %{"block_uid" => block_uid}, socket) do
+    field = socket.assigns.field
+    field_name = field.field
+    changeset = field.form.source
+    data = get_field(changeset, field_name)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
 
     module = changeset.data.__struct__
@@ -238,11 +230,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
 
-    updated_changeset = put_change(changeset, data_field, new_data)
+    updated_changeset = put_change(changeset, field_name, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      updated_changeset: updated_changeset,
+      action: :update_changeset,
+      changeset: updated_changeset,
       force_validation: true
     )
 
@@ -288,7 +281,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
   ## Function components
   def block(assigns) do
-    uid = input_value(assigns.block, :uid) || Brando.Utils.generate_uid()
+    uid = assigns.block[:uid].value || Brando.Utils.generate_uid()
 
     assigns =
       assigns
@@ -302,22 +295,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:is_datasource?, fn -> false end)
       |> assign_new(:datasource, fn -> nil end)
       |> assign_new(:block_type, fn ->
-        input_value(assigns.block, :type) || (assigns.is_entry? && "entry")
+        assigns.block[:type].value || (assigns.is_entry? && "entry")
       end)
       |> assign_new(:instructions, fn -> nil end)
       |> assign_new(:render, fn -> nil end)
       |> assign_new(:initial_classes, fn ->
         %{
-          collapsed: input_value(assigns.block, :collapsed),
-          disabled: input_value(assigns.block, :hidden)
+          collapsed: assigns.block[:collapsed].value,
+          disabled: assigns.block[:hidden].value
         }
       end)
       |> assign(:bg_color, assigns[:bg_color])
       |> assign(:last_block?, last_block?(assigns))
       |> assign(:uid, uid)
-      |> assign(:hidden, input_value(assigns.block, :hidden))
-      |> assign(:collapsed, input_value(assigns.block, :collapsed))
-      |> assign(:marked_as_deleted, input_value(assigns.block, :marked_as_deleted))
+      |> assign(:hidden, assigns.block[:hidden].value)
+      |> assign(:collapsed, assigns.block[:collapsed].value)
+      |> assign(:marked_as_deleted, assigns.block[:marked_as_deleted].value)
 
     ~H"""
     <div
@@ -328,11 +321,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         collapsed: @initial_classes.collapsed,
         disabled: @initial_classes.disabled
       ])}>
-      <%= if !@is_ref? and !@is_entry? do %>
-        <Blocks.Plus.render
-          index={@index}
-          click={@insert_module} />
-      <% end %>
+      <Blocks.Plus.render
+        :if={!@is_ref? and !@is_entry?}
+        index={@index}
+        click={@insert_module} />
 
       <Content.modal title={gettext "Configure"} id={"block-#{@uid}_config"} wide={@wide_config}>
         <%= if @config do %>
@@ -348,8 +340,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:footer>
       </Content.modal>
 
-      <Input.input type={:hidden} form={@block} field={:uid} uid={@uid} id_prefix="base_block" />
-      <Input.input type={:hidden} form={@block} field={:type} uid={@uid} id_prefix="base_block" />
+      <Input.input type={:hidden} field={@block[:uid]} uid={@uid} id_prefix="base_block" />
+      <Input.input type={:hidden} field={@block[:type]} uid={@uid} id_prefix="base_block" />
 
       <div
         id={"block-#{@uid}"}
@@ -361,59 +353,51 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
         <div class="block-description" id={"block-#{@uid}-block-description"}>
           <Form.label
-            form={@block}
-            field={:hidden}
+            field={@block[:hidden]}
             class="switch small inverse"
             uid={@uid}
             id_prefix="base_block"
             click={toggle_block(@hidden, @uid)}>
-            <Input.input type={:checkbox} form={@block} field={:hidden} uid={@uid} id_prefix="base_block" />
+            <Input.input type={:checkbox} field={@block[:hidden]} uid={@uid} id_prefix="base_block" />
             <div class="slider round"></div>
           </Form.label>
           <span class="block-type">
             <%= if @type do %><%= render_slot @type %><% else %><%= @block_type %><% end %>
           </span> <span class="arrow">&rarr;</span> <%= render_slot @description %>
         </div>
-        <%= if @is_datasource? do %>
-          <div class="block-datasource" id={"block-#{@uid}-block-datasource"}>
-            <%= render_slot(@datasource) %>
-          </div>
-        <% end %>
+        <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
+          <%= render_slot(@datasource) %>
+        </div>
         <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot @inner_block %>
         </div>
-        <%= if @render do %>
-          <div class="block-render">
-            <div class="block-render-preview">Preview &darr;</div>
-            <%= render_slot @render %>
-          </div>
-        <% end %>
+        <div :if={@render} class="block-render">
+          <div class="block-render-preview">Preview &darr;</div>
+          <%= render_slot @render %>
+        </div>
         <div class="block-actions" id={"block-#{@uid}-block-actions"}>
-          <%= if !@is_ref? do %>
           <div
+            :if={!@is_ref?}
             class="block-action move"
             data-sortable-group={@belongs_to}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5.828L9.172 7.657 7.757 6.243 12 2l4.243 4.243-1.415 1.414L13 5.828V11h5.172l-1.829-1.828 1.414-1.415L22 12l-4.243 4.243-1.414-1.415L18.172 13H13v5.172l1.828-1.829 1.415 1.414L12 22l-4.243-4.243 1.415-1.414L11 18.172V13H5.828l1.829 1.828-1.414 1.415L2 12l4.243-4.243 1.414 1.415L5.828 11z"/></svg>
           </div>
-          <% end %>
-          <%= if @instructions do %>
           <div
+            :if={@instructions}
             class="block-action help"
             phx-click={JS.push("toggle_help", target: @myself)}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm2-1.645V14h-2v-1.5a1 1 0 0 1 1-1 1.5 1.5 0 1 0-1.471-1.794l-1.962-.393A3.501 3.501 0 1 1 13 13.355z"/></svg>
           </div>
-          <% end %>
-          <%= if !@is_ref? do %>
           <button
+            if={!@is_ref?}
             type="button"
             phx-value-block_uid={@uid}
             class="block-action duplicate"
             phx-click={@duplicate_block}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1.001 1.001 0 0 1 3 21l.003-14c0-.552.45-1 1.007-1H7zM5.003 8L5 20h10V8H5.003zM9 6h8v10h2V4H9v2z"/></svg>
           </button>
-          <% end %>
-          <%= if @config do %>
           <button
+            :if={@config}
             type="button"
             class="block-action config"
             phx-click={show_modal("#block-#{@uid}_config")}>
@@ -423,22 +407,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8.686 4l2.607-2.607a1 1 0 0 1 1.414 0L15.314 4H19a1 1 0 0 1 1 1v3.686l2.607 2.607a1 1 0 0 1 0 1.414L20 15.314V19a1 1 0 0 1-1 1h-3.686l-2.607 2.607a1 1 0 0 1-1.414 0L8.686 20H5a1 1 0 0 1-1-1v-3.686l-2.607-2.607a1 1 0 0 1 0-1.414L4 8.686V5a1 1 0 0 1 1-1h3.686zM6 6v3.515L3.515 12 6 14.485V18h3.515L12 20.485 14.485 18H18v-3.515L20.485 12 18 9.515V6h-3.515L12 3.515 9.515 6H6zm6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
             <% end %>
           </button>
-          <% end %>
-          <%= if !@is_ref? do %>
           <Form.label
-            form={@block}
-            field={:marked_as_deleted}
+            :if={!@is_ref?}
+            field={@block[:marked_as_deleted]}
             class="block-action toggler"
             uid={@uid}
             id_prefix="base_block"
             click={toggle_deleted(@marked_as_deleted, @uid)}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>
-            <Input.input type={:checkbox} form={@block} field={:marked_as_deleted} uid={@uid} id_prefix="base_block" />
+            <Input.input type={:checkbox} field={@block[:marked_as_deleted]} uid={@uid} id_prefix="base_block" />
           </Form.label>
-          <% end %>
           <Form.label
-            form={@block}
-            field={:collapsed}
+            field={@block[:collapsed]}
             class="block-action toggler"
             click={toggle_collapsed(@collapsed, @uid)}
             uid={@uid}
@@ -448,7 +428,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             <% else %>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
             <% end %>
-            <Input.input type={:checkbox} form={@block} field={:collapsed} uid={@uid} id_prefix="base_block" />
+            <Input.input type={:checkbox} field={@block[:collapsed]} uid={@uid} id_prefix="base_block" />
           </Form.label>
         </div>
       </div>
@@ -481,9 +461,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> assign_new(:opts, fn -> [] end)
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
-      |> assign_new(:block_id, fn -> input_value(assigns.block, :uid) end)
+      |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
       |> assign_new(:component_target, fn ->
-        type_atom = input_value(assigns.block, :type) |> String.to_existing_atom()
+        type_atom = assigns.block[:type].value |> String.to_existing_atom()
 
         block_type =
           (type_atom
@@ -534,14 +514,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         block_count={@block_count}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
-        uploads={@uploads} />
+        parent_uploads={@parent_uploads} />
     <% end %>
     """
   end
 
   def text(assigns) do
     extensions =
-      case input_value(assigns.block, :data).extensions do
+      case assigns.block[:data].value.extensions do
         nil -> "all"
         extensions when is_list(extensions) -> Enum.join(extensions, "|")
         extensions -> extensions
@@ -550,8 +530,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     assigns =
       assigns
       |> assign(:text_block_data, List.first(inputs_for(assigns.block, :data)))
-      |> assign(:uid, input_value(assigns.block, :uid))
-      |> assign(:text_type, input_value(assigns.block, :data).type)
+      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:text_type, assigns.block[:data].value.type)
       |> assign(:extensions, extensions)
 
     ~H"""
@@ -578,8 +558,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <:config>
           <Input.radios
-            form={@text_block_data}
-            field={:type}
+            field={@text_block_data[:type]}
             label="Type"
             uid={@uid}
             id_prefix="block_data"
@@ -590,8 +569,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            form={@text_block_data}
-            for={:extensions}>
+            field={@text_block_data[:extensions]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
         </:config>
@@ -614,8 +592,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
               </div>
               <Input.input
                 type={:hidden}
-                form={@text_block_data}
-                field={:text}
+                field={@text_block_data[:text]}
                 uid={@uid}
                 id_prefix="block_data"
                 class="tiptap-text"
@@ -632,14 +609,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     assigns = assign(assigns, :block_data, List.first(inputs_for(assigns.block, :data)))
 
     text =
-      case input_value(assigns.block_data, :text) do
+      case assigns.block_data[:text].value do
         nil -> nil
         text -> text |> Brando.HTML.nl2br() |> raw
       end
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:text, text)
 
     ~H"""
@@ -663,7 +640,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <:config>
           <div id={"block-#{@uid}-conf-textarea"}>
-            <Input.textarea form={@block_data} field={:text} uid={@uid} id_prefix="block_data" />
+            <Input.textarea field={@block_data[:text]} uid={@uid} id_prefix="block_data" />
           </div>
         </:config>
         <div id={"block-#{@uid}-comment"}>
@@ -681,8 +658,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:level, input_value(block_data, :level))
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:level, block_data[:level].value)
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -703,8 +680,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         <:description>(H<%= @level %>)</:description>
         <:config>
           <Input.radios
-            form={@block_data}
-            field={:level}
+            field={@block_data[:level]}
             label="Level"
             uid={@uid}
             id_prefix="block_data"
@@ -719,15 +695,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             ]]} />
 
           <Input.text
-            form={@block_data}
-            field={:id}
+            field={@block_data[:id]}
             uid={@uid}
             id_prefix="block_data"
             label="ID" />
 
           <Input.text
-            form={@block_data}
-            field={:link}
+            field={@block_data[:link]}
             uid={@uid}
             id_prefix="block_data"
             label="Link" />
@@ -735,17 +709,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         <div class="header-block">
           <Input.input
             type={:textarea}
-            form={@block_data}
-            field={:text}
+            field={@block_data[:text]}
             uid={@uid}
             id_prefix="block_data"
             class={"h#{@level}"}
-            data_autosize={true}
+            phx_update="ignore"
             phx_debounce={750}
-            phx_update={"ignore"}
+            data_autosize={true}
             rows={1} />
-          <Input.input type={:hidden} form={@block_data} field={:class} uid={@uid} id_prefix="block_data" />
-          <Input.input type={:hidden} form={@block_data} field={:placeholder} uid={@uid} id_prefix="block_data" />
+          <Input.input type={:hidden} field={@block_data[:class]} uid={@uid} id_prefix="block_data" />
+          <Input.input type={:hidden} field={@block_data[:placeholder]} uid={@uid} id_prefix="block_data" />
         </div>
       </Blocks.block>
     </div>
@@ -757,7 +730,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -782,8 +755,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <div class="html-block">
           <Input.code
-            form={@block_data}
-            field={:text}
+            field={@block_data[:text]}
             uid={@uid}
             id_prefix="block_data"
             label={gettext "Text"}
@@ -799,7 +771,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
+      |> assign(:uid, assigns.block[:uid].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -824,8 +796,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <div class="markdown-block">
           <Input.code
-            form={@block_data}
-            field={:text}
+            field={@block_data[:text]}
             uid={@uid}
             id_prefix="block_data"
             label={gettext "Text"}
@@ -841,10 +812,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:uid, input_value(assigns.block, :uid))
-      |> assign(:label, input_value(block_data, :label))
-      |> assign(:placeholder, input_value(block_data, :placeholder))
-      |> assign(:help_text, input_value(block_data, :help_text))
+      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:label, block_data[:label].value)
+      |> assign(:placeholder, block_data[:placeholder].value)
+      |> assign(:help_text, block_data[:help_text].value)
       |> assign(:block_data, block_data)
 
     ~H"""
@@ -869,17 +840,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <div class="alert">
           <Input.text
-            form={@block_data}
-            field={:value}
+            field={@block_data[:value]}
             uid={@uid}
             id_prefix="block_data"
             label={@label}
             instructions={@help_text}
             placeholder={@placeholder} />
-            <Input.hidden form={@block_data} field={:placeholder} />
-            <Input.hidden form={@block_data} field={:label} />
-            <Input.hidden form={@block_data} field={:type} />
-            <Input.hidden form={@block_data} field={:help_text} />
+            <Input.hidden field={@block_data[:placeholder]} />
+            <Input.hidden field={@block_data[:label]} />
+            <Input.hidden field={@block_data[:type]} />
+            <Input.hidden field={@block_data[:help_text]} />
         </div>
       </Blocks.block>
     </div>

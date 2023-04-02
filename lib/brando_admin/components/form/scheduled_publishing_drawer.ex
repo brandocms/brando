@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </p>
       </:info>
       <div class="brando-input">
-        <Input.datetime field={:publish_at} form={@form} label={gettext "Publish at"} />
+        <Input.datetime field={@form[:publish_at]} label={gettext "Publish at"} />
       </div>
     </Content.drawer>
     """

@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
 
   # prop input, :map
   # prop form, :form
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop current_user, :any
   # prop translations, :any
 
@@ -26,20 +26,20 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
     <%= if @input.__struct__ == Brando.Blueprint.Forms.Subform do %>
       <%= if @input.component do %>
         <.live_component module={@input.component}
-          id={"#{@form.id}-#{@input.field}-custom-component"}
-          form={@form}
+          id={"#{@form.id}-#{@input.name}-custom-component"}
+          field={@form[@input.name]}
           label={@label}
           instructions={@instructions}
           placeholder={@placeholder}
           subform={@input}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           current_user={@current_user}
           opts={[]} />
       <% else %>
         <.live_component module={Subform}
-          id={"#{@form.id}-subform-#{@input.field}"}
-          form={@form}
-          uploads={@uploads}
+          id={"#{@form.id}-subform-#{@input.name}"}
+          field={@form[@input.name]}
+          parent_uploads={@parent_uploads}
           subform={@input}
           label={@label}
           relations={@relations}
@@ -49,13 +49,11 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       <% end %>
     <% else %>
       <Form.input
-        id={"#{@form.id}-#{@input.name}"}
-        form={@form}
-        field={@input.name}
+        field={@form[@input.name]}
         label={@label}
         instructions={@instructions}
         placeholder={@placeholder}
-        uploads={@uploads}
+        parent_uploads={@parent_uploads}
         opts={@input.opts || []}
         type={@input.type}
         current_user={@current_user} />

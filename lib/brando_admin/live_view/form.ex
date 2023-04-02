@@ -187,7 +187,7 @@ defmodule BrandoAdmin.LiveView.Form do
       ["gallery", _schema, field_name] ->
         schema = socket.assigns.schema
         singular = schema.__naming__().singular
-        target_id = "#{singular}_form_form-#{field_name}"
+        target_id = "#{singular}_#{field_name}"
 
         # update image in gallery input
         send_update(BrandoAdmin.Components.Form.Input.Gallery,
@@ -210,7 +210,7 @@ defmodule BrandoAdmin.LiveView.Form do
     singular = schema.__naming__().singular
 
     for %{name: field} <- schema.__villain_fields__() do
-      target_id = "#{singular}_form_form-#{field}-blocks-module-picker"
+      target_id = "#{singular}_#{field}-blocks-module-picker"
 
       send_update(BrandoAdmin.Components.Form.Input.Blocks.ModulePicker,
         id: target_id,

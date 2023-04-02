@@ -3,11 +3,9 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator, "forms"
 
   import Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 3]
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
-  import Phoenix.HTML.Form
-  import Phoenix.LiveView.HTMLEngine
+  import Phoenix.LiveView.TagEngine
 
   alias Brando.Villain
 
@@ -39,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
+     |> assign(:editing_image?, false)
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -116,6 +115,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
   end
 
@@ -128,6 +128,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
   end
 
@@ -160,6 +161,7 @@ defmodule BrandoAdmin.Components.Form do
         {:ok,
          socket
          |> assign(:changeset, updated_changeset)
+         |> assign(:form, to_form(changeset, []))
          |> force_svelte_remounts()}
     end
   end
@@ -209,19 +211,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:changeset, new_changeset)
+     |> assign(:form, to_form(new_changeset, []))
      |> force_svelte_remounts()}
-  end
-
-  def update(%{updated_changeset: updated_changeset, force_validation: true}, socket) do
-    {:ok,
-     socket
-     |> assign(:changeset, updated_changeset)
-     |> push_event("b:validate", %{})
-     |> force_svelte_remounts()}
-  end
-
-  def update(%{updated_changeset: updated_changeset}, socket) do
-    {:ok, assign(socket, :changeset, updated_changeset)}
   end
 
   def update(
@@ -231,12 +222,18 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
   end
 
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
-    {:ok, assign(socket, :changeset, updated_changeset)}
+    updated_form = to_form(updated_changeset, [])
+
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:form, updated_form)}
   end
 
   def update(
@@ -256,6 +253,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> assign(:processing, false)}
   end
 
@@ -267,15 +265,15 @@ defmodule BrandoAdmin.Components.Form do
             entry_id: entry_id,
             singular: singular,
             context: context,
-            form: form,
+            form_blueprint: form_blueprint,
             current_user: current_user
           }
         } = socket
       ) do
     query_params =
       entry_id
-      |> maybe_query(form)
-      |> add_preloads(schema, form)
+      |> maybe_query(form_blueprint)
+      |> add_preloads(schema, form_blueprint)
       |> Map.put(:with_deleted, true)
 
     updated_entry = apply(context, :"get_#{singular}!", [query_params])
@@ -289,7 +287,42 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset))
      |> force_svelte_remounts()}
+  end
+
+  # only used for allowing global sets to add "select" options.
+  def update(
+        %{action: :add_select_var_option, var_key: var_key},
+        socket
+      ) do
+    changeset = socket.assigns.form.source
+    globals = Ecto.Changeset.get_field(changeset, :globals) || []
+
+    updated_globals =
+      Enum.reduce(globals, [], fn
+        %{key: ^var_key} = var, acc ->
+          acc ++
+            [
+              put_in(
+                var,
+                [Access.key(:options)],
+                (var.options || []) ++
+                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+              )
+            ]
+
+        var, acc ->
+          acc ++ [var]
+      end)
+
+    updated_changeset = Ecto.Changeset.put_change(changeset, :globals, updated_globals)
+    updated_form = to_form(updated_changeset, [])
+
+    {:ok,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:form, updated_form)}
   end
 
   def update(assigns, socket) do
@@ -302,7 +335,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
      |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
-     |> assign_new(:form, fn ->
+     |> assign_new(:form_blueprint, fn ->
        case assigns.schema.__form__(form_name) do
          nil ->
            raise Brando.Exception.BlueprintError,
@@ -342,6 +375,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_default_params()
      |> extract_tab_names()
      |> assign_changeset()
+     |> assign_form()
      |> maybe_initial_validate()
      |> maybe_assign_uploads()}
   end
@@ -359,14 +393,14 @@ defmodule BrandoAdmin.Components.Form do
              entry_id: entry_id,
              singular: singular,
              context: context,
-             form: form
+             form_blueprint: form_blueprint
            }
          } = socket
        ) do
     query_params =
       entry_id
-      |> maybe_query(form)
-      |> add_preloads(schema, form)
+      |> maybe_query(form_blueprint)
+      |> add_preloads(schema, form_blueprint)
       |> Map.put(:with_deleted, true)
 
     assign_new(socket, :entry, fn ->
@@ -380,26 +414,6 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp assign_refreshed_entry(
-         %{
-           assigns: %{
-             schema: schema,
-             entry_id: entry_id,
-             singular: singular,
-             context: context,
-             form: form
-           }
-         } = socket
-       ) do
-    query_params =
-      entry_id
-      |> maybe_query(form)
-      |> add_preloads(schema, form)
-      |> Map.put(:with_deleted, true)
-
-    assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
-  end
-
   # defp scan_and_preload_block_vars(entry, schema) do
   #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
   #     blocks = Map.get(updated_entry, field)
@@ -408,9 +422,29 @@ defmodule BrandoAdmin.Components.Form do
   #   end)
   # end
 
-  defp maybe_query(id, form) do
-    if form.query do
-      form.query.(id)
+  defp assign_refreshed_entry(
+         %{
+           assigns: %{
+             schema: schema,
+             entry_id: entry_id,
+             singular: singular,
+             context: context,
+             form_blueprint: form_blueprint
+           }
+         } = socket
+       ) do
+    query_params =
+      entry_id
+      |> maybe_query(form_blueprint)
+      |> add_preloads(schema, form_blueprint)
+      |> Map.put(:with_deleted, true)
+
+    assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
+  end
+
+  defp maybe_query(id, form_blueprint) do
+    if form_blueprint.query do
+      form_blueprint.query.(id)
     else
       %{matches: %{id: id}}
     end
@@ -418,8 +452,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_initial_validate(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
-      socket
-      |> push_event("b:validate", %{})
+      push_event(socket, "b:validate", %{})
     else
       socket
     end
@@ -520,11 +553,13 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :default_params, fn -> initial_params end)
   end
 
-  defp assign_default_params(%{assigns: %{form: %{default_params: %{}}}} = socket) do
+  defp assign_default_params(%{assigns: %{form_blueprint: %{default_params: %{}}}} = socket) do
     assign_new(socket, :default_params, fn -> %{} end)
   end
 
-  defp assign_default_params(%{assigns: %{form: %{default_params: default_params}}} = socket) do
+  defp assign_default_params(
+         %{assigns: %{form_blueprint: %{default_params: default_params}}} = socket
+       ) do
     assign_new(socket, :default_params, fn ->
       default_params
       |> Code.eval_quoted()
@@ -541,7 +576,7 @@ defmodule BrandoAdmin.Components.Form do
     push_event(socket, "b:component:remount", %{})
   end
 
-  defp extract_tab_names(%{assigns: %{form: %{tabs: tabs}}} = socket) do
+  defp extract_tab_names(%{assigns: %{form_blueprint: %{tabs: tabs}}} = socket) do
     first_tab = List.first(tabs)
 
     socket
@@ -682,7 +717,7 @@ defmodule BrandoAdmin.Components.Form do
           <.file_drawer
             file_changeset={@file_changeset}
             myself={@myself}
-            uploads={@uploads}
+            parent_uploads={@uploads}
             edit_file={@edit_file}
             processing={@processing}
           />
@@ -690,15 +725,14 @@ defmodule BrandoAdmin.Components.Form do
           <.image_drawer
             image_changeset={@image_changeset}
             myself={@myself}
-            uploads={@uploads}
+            parent_uploads={@uploads}
             edit_image={@edit_image}
             processing={@processing}
           />
 
           <.form
             id={"#{@id}_form"}
-            for={@changeset}
-            :let={f}
+            for={@form}
             phx-target={@myself}
             phx-submit="save"
             phx-change="validate">
@@ -706,8 +740,8 @@ defmodule BrandoAdmin.Components.Form do
             <MetaDrawer.render
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
-              form={f}
-              uploads={@uploads}
+              form={@form}
+              parent_uploads={@uploads}
               close={toggle_drawer("##{@id}-meta-drawer")} />
 
             <.live_component module={RevisionsDrawer}
@@ -715,14 +749,14 @@ defmodule BrandoAdmin.Components.Form do
               id={"#{@id}-revisions-drawer"}
               current_user={@current_user}
               entry_id={@entry_id}
-              form={f}
+              form={@form}
               status={@status_revisions}
               close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
 
             <ScheduledPublishingDrawer.render
               :if={@has_scheduled_publishing?}
               id={"#{@id}-scheduled-publishing-drawer"}
-              form={f}
+              form={@form}
               close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
 
             <.live_component module={AlternatesDrawer}
@@ -733,11 +767,11 @@ defmodule BrandoAdmin.Components.Form do
               on_remove_link={JS.push("remove_link", target: @myself)} />
 
             <.form_tabs
-              tabs={@form.tabs}
+              tabs={@form_blueprint.tabs}
               active_tab={@active_tab}
               current_user={@current_user}
-              uploads={@uploads}
-              form={f}
+              parent_uploads={@uploads}
+              form={@form}
               schema={@schema}
             />
 
@@ -786,7 +820,7 @@ defmodule BrandoAdmin.Components.Form do
         <.tab_fields
           tab={tab}
           current_user={@current_user}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           schema={@schema}
           form={@form} />
       </div>
@@ -810,7 +844,7 @@ defmodule BrandoAdmin.Components.Form do
           relations={@schema.__relations__}
           form={@form}
           fieldset={fieldset}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           current_user={@current_user} />
       <% end %>
     <% end %>
@@ -837,7 +871,7 @@ defmodule BrandoAdmin.Components.Form do
           id="file-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="file-drawer-preview"
-          phx-drop-target={@uploads[@edit_file.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_file.field].ref}>
           <div :if={@processing} class="processing">
             <div>
               <%= gettext "Uploading" %><br>
@@ -859,7 +893,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext "Upload file" %>
             </span>
-            <.live_file_input upload={@uploads[@edit_file.field]} />
+            <.live_file_input upload={@parent_uploads[@edit_file.field]} />
           </div>
 
           <button
@@ -879,7 +913,7 @@ defmodule BrandoAdmin.Components.Form do
         </div>
 
         <div :if={@edit_file.file} class="brando-input">
-          <Input.text field={:title} form={file_form} label={gettext "Title"} />
+          <Input.text field={file_form[:title]} label={gettext "Title"} />
         </div>
       </.form>
     </Content.drawer>
@@ -906,7 +940,7 @@ defmodule BrandoAdmin.Components.Form do
           id="image-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="image-drawer-preview"
-          phx-drop-target={@uploads[@edit_image.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_image.field].ref}>
           <div :if={@processing} class="processing">
             <div>
               <%= gettext "Uploading" %><br>
@@ -949,7 +983,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext "Upload image" %>
             </span>
-            <.live_file_input upload={@uploads[@edit_image.field]} />
+            <.live_file_input upload={@parent_uploads[@edit_image.field]} />
           </div>
           <button
             class="secondary"
@@ -977,15 +1011,15 @@ defmodule BrandoAdmin.Components.Form do
         </div>
         <%= if @edit_image.image do %>
           <div class="brando-input">
-            <Input.text field={:title} form={image_form} label={gettext "Caption"} />
+            <Input.text field={image_form[:title]} label={gettext "Caption"} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={:credits} form={image_form} label={gettext "Credits"} />
+            <Input.text field={image_form[:credits]} label={gettext "Credits"} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={:alt} form={image_form} label={gettext "Alt. text"} />
+            <Input.text field={image_form[:alt]} label={gettext "Alt. text"} />
           </div>
         <% end %>
       </.form>
@@ -1026,10 +1060,14 @@ defmodule BrandoAdmin.Components.Form do
     image_fields = schema.__image_fields__()
     gallery_fields = schema.__gallery_fields__()
     file_fields = schema.__file_fields__()
-    transformers = socket.assigns.form.transformers
+    transformers = socket.assigns.form_blueprint.transformers
+    # since LV changed to not allow us to set the :uploads assigns to [] or nil,
+    # we need to set a "fake" upload key to not error when passing @uploads to
+    # child components :(
+    default_socket = allow_upload(socket, :__dfu__, accept: :any)
 
     socket_with_image_uploads =
-      Enum.reduce(image_fields, socket, fn img_field, updated_socket ->
+      Enum.reduce(image_fields, default_socket, fn img_field, updated_socket ->
         max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
 
         allow_upload(updated_socket, img_field.name,
@@ -1088,8 +1126,7 @@ defmodule BrandoAdmin.Components.Form do
           )
       end)
 
-    # fallback to nil if no uploads
-    assign_new(socket_with_transformers, :uploads, fn -> nil end)
+    socket_with_transformers
   end
 
   def handle_event(
@@ -1136,6 +1173,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:file_changeset, nil)
      |> assign(:edit_file, updated_edit_file)
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{target: "#{singular}[#{edit_file.relation_field}]", value: ""})}
   end
 
@@ -1161,6 +1199,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:edit_image, updated_edit_image)
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{target: "#{singular}[#{edit_image.relation_field}]", value: ""})}
   end
 
@@ -1225,6 +1264,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
      |> assign(:edit_file, edit_file)
      |> push_event("b:validate", %{
@@ -1283,7 +1323,7 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_image = Map.put(edit_image, :image, updated_image)
-    relation_full_path = path ++ [relation_field]
+    relation_full_path = path ++ [relation_field.field]
     field_full_path = path ++ [field]
 
     updated_changeset =
@@ -1325,8 +1365,10 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:changeset, updated_changeset)
+     |> assign(:form, to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
+     |> assign(:editing_image?, false)
      |> push_event("b:validate", %{
        target: target_field_name,
        value: image.id
@@ -1335,7 +1377,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # without image in params
   def handle_event("save_image", _, socket) do
-    {:noreply, socket}
+    {:noreply, assign(socket, :editing_image?, false)}
   end
 
   def handle_event(
@@ -1387,7 +1429,7 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply,
            push_event(socket, "b:alert", %{
              title: "Live Preview error",
-             message: inspect(err),
+             message: err,
              type: "error"
            })}
       end
@@ -1476,27 +1518,36 @@ defmodule BrandoAdmin.Components.Form do
       Brando.LivePreview.update(schema, changeset, live_preview_cache_key)
     end
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> assign(:form, to_form(changeset, []))}
   end
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
-  def handle_event(
-        "save",
-        params,
-        %{
-          assigns: %{
-            schema: schema,
-            entry: entry,
-            current_user: current_user,
-            singular: singular,
-            form: form,
-            save_redirect_target: save_redirect_target
-          }
-        } = socket
-      ) do
+  def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Error"),
+       message:
+         gettext(
+           "You must close the image drawer before saving this form. You might have changes to an image that has not been processed, which might lead to broken image links. Close the image drawer, allow processing to finish (if any), then try to save again."
+         ),
+       type: "error"
+     })}
+  end
+
+  def handle_event("save", params, socket) do
+    schema = socket.assigns.schema
+    entry = socket.assigns.entry
+    current_user = socket.assigns.current_user
+    singular = socket.assigns.singular
+    form_blueprint = socket.assigns.form_blueprint
+    save_redirect_target = socket.assigns.save_redirect_target
+
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
 
@@ -1504,10 +1555,7 @@ defmodule BrandoAdmin.Components.Form do
       entry_or_default
       |> schema.changeset(entry_params, current_user)
       |> Brando.Utils.set_action()
-      |> Brando.Trait.run_trait_before_save_callbacks(
-        schema,
-        current_user
-      )
+      |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
     # clear out deleted villain blocks
     # one day i will figure out why this is neccessary...
@@ -1520,7 +1568,7 @@ defmodule BrandoAdmin.Components.Form do
 
     # if redirect_on_save is set in form, use this
     redirect_fn =
-      form.redirect_on_save ||
+      form_blueprint.redirect_on_save ||
         fn socket, _entry, _mutation_type ->
           generated_list_view = schema.__modules__().admin_list_view
           Brando.routes().admin_live_path(socket, generated_list_view)
@@ -1535,7 +1583,7 @@ defmodule BrandoAdmin.Components.Form do
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
-        maybe_run_form_after_save(form, entry)
+        maybe_run_form_after_save(form_blueprint, entry)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
         maybe_redirected_socket =
@@ -1576,7 +1624,8 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:changeset, changeset)
-         |> push_errors(changeset, form, schema)}
+         |> assign(:form, to_form(changeset, []))
+         |> push_errors(changeset, form_blueprint, schema)}
     end
   end
 
@@ -1813,7 +1862,8 @@ defmodule BrandoAdmin.Components.Form do
 
       unloaded_image_paths =
         if unloaded_image_ids != [] do
-          Brando.Images.list_images!(%{filter: %{ids: unloaded_image_ids}, select: [:path]})
+          %{filter: %{ids: unloaded_image_ids}, select: [:path]}
+          |> Brando.Images.list_images!()
           |> Enum.map(& &1.path)
         else
           []
@@ -1829,7 +1879,7 @@ defmodule BrandoAdmin.Components.Form do
       updated_changeset = put_assoc(changeset, key, new_gallery)
 
       module = changeset.data.__struct__
-      form_id = "#{module.__naming__().singular}_form_form-#{key}"
+      form_id = "#{module.__naming__().singular}_#{key}"
 
       send_update(BrandoAdmin.Components.Form.Input.Gallery,
         id: form_id,
@@ -1837,7 +1887,10 @@ defmodule BrandoAdmin.Components.Form do
         selected_images: selected_images
       )
 
-      {:noreply, assign(socket, :changeset, updated_changeset)}
+      {:noreply,
+       socket
+       |> assign(:changeset, updated_changeset)
+       |> assign(:form, to_form(updated_changeset, []))}
     else
       {:noreply, socket}
     end
@@ -2052,6 +2105,12 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  def assign_form(socket) do
+    assign_new(socket, :form, fn ->
+      to_form(socket.assigns.changeset)
+    end)
+  end
+
   def assign_refreshed_changeset(
         %{
           assigns: %{
@@ -2061,12 +2120,14 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    changeset =
+    updated_changeset =
       entry
       |> schema.changeset(%{}, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
 
-    assign(socket, :changeset, changeset)
+    socket
+    |> assign(:changeset, updated_changeset)
+    |> assign(:form, to_form(updated_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: _}} = socket, [], key, arg) do
@@ -2081,7 +2142,9 @@ defmodule BrandoAdmin.Components.Form do
         Enum.map(list, &Map.from_struct/1)
       end)
 
-    assign(socket, :changeset, new_changeset)
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, map)
@@ -2089,7 +2152,9 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
-    assign(socket, :changeset, new_changeset)
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, value)
@@ -2105,24 +2170,36 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
-    assign(socket, :changeset, new_changeset)
+
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, list)
       when is_list(list) do
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
-    assign(socket, :changeset, new_changeset)
+
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value)
       when is_map(value) do
     new_changeset = put_change(changeset, key, Map.from_struct(value))
-    assign(socket, :changeset, new_changeset)
+
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value) do
     new_changeset = put_change(changeset, key, value)
-    assign(socket, :changeset, new_changeset)
+
+    socket
+    |> assign(:changeset, new_changeset)
+    |> assign(:form, to_form(new_changeset, []))
   end
 
   ##
@@ -2164,9 +2241,22 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :relation, :boolean
+  attr :compact, :boolean, default: false
+  attr :left_justify_meta, :boolean, default: false
+  attr :instructions, :string
+  attr :label, :any
+  attr :class, :any
+  attr :fit_content, :boolean, default: false
+  attr :uid, :string
+  attr :id_prefix, :string
+  slot :meta
+  slot :header
+
   def field_base(assigns) do
     relation = Map.get(assigns, :relation, false)
-    failed = assigns.form && has_error(assigns.form, assigns.field, relation)
+    failed = has_error(assigns.field, relation)
     label = get_label(assigns)
     hidden = label == :hidden
 
@@ -2174,8 +2264,6 @@ defmodule BrandoAdmin.Components.Form do
       assigns
       |> assign_new(:uid, fn -> nil end)
       |> assign_new(:id_prefix, fn -> "" end)
-      |> assign_new(:header, fn -> nil end)
-      |> assign_new(:meta, fn -> nil end)
       |> assign_new(:class, fn -> nil end)
       |> assign_new(:left_justify_meta, fn -> nil end)
       |> assign(:relation, relation)
@@ -2185,16 +2273,16 @@ defmodule BrandoAdmin.Components.Form do
 
     f_id =
       if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
     <div
-      class={render_classes(["field-wrapper", @class])}
+      class={render_classes(["field-wrapper", @class, "fit-content": @fit_content])}
       id={"#{@f_id}-field-wrapper"}>
       <div class={render_classes(["label-wrapper", hidden: @hidden])}>
         <label
@@ -2202,20 +2290,16 @@ defmodule BrandoAdmin.Components.Form do
           class={render_classes(["control-label", failed: @failed])}>
           <span><%= @label %></span>
         </label>
-        <%= if @form do %>
-          <.error_tag
-            form={@form}
-            field={@field}
-            relation={@relation}
-            id_prefix={@id_prefix}
-            uid={@uid}
-          />
-        <% end %>
-        <%= if @header do %>
-          <div class="field-wrapper-header">
-            <%= render_slot @header %>
-          </div>
-        <% end %>
+        <.error_tag
+          :if={@field}
+          field={@field}
+          relation={@relation}
+          id_prefix={@id_prefix}
+          uid={@uid}
+        />
+        <div :if={@header != []} class="field-wrapper-header">
+          <%= render_slot @header %>
+        </div>
       </div>
       <div class="field-base" id={"#{@f_id}-field-base"}>
         <%= render_slot @inner_block %>
@@ -2226,11 +2310,9 @@ defmodule BrandoAdmin.Components.Form do
             <div class="help-text">
               ↳ <span><%= raw @instructions %></span>
             </div>
-            <%= if @meta do %>
-              <div class="extra">
-                <%= render_slot @meta %>
-              </div>
-            <% end %>
+            <div :if={@meta != []} class="extra">
+              <%= render_slot @meta %>
+            </div>
           <% end %>
         </div>
       <% end %>
@@ -2239,7 +2321,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp get_label(%{label: nil} = assigns) do
-    assigns.field
+    assigns.field.field
     |> to_string
     |> Brando.Utils.humanize()
   end
@@ -2248,33 +2330,25 @@ defmodule BrandoAdmin.Components.Form do
     label
   end
 
-  defp has_error(form, field, true) do
-    field = :"#{field}_id"
+  defp has_error(field, true) do
+    relation_field = :"#{field.field}_id"
 
-    case Keyword.get_values(form.errors, field) do
+    case Keyword.get_values(field.form.errors, relation_field) do
       [] -> false
       _ -> true
     end
   end
 
-  defp has_error(form, field, _) do
-    case Keyword.get_values(form.errors, field) do
-      [] -> false
-      _ -> true
-    end
-  end
+  defp has_error(%{errors: []}, _), do: false
+  defp has_error(%{errors: _}, _), do: true
 
   def input(assigns) do
     assigns =
       assigns
       |> assign_new(:path, fn -> [] end)
-      |> assign_new(:component_id, fn ->
-        Enum.join(
-          [assigns.form.id, assigns.field],
-          "-"
-        )
-      end)
+      |> assign_new(:component_id, fn -> assigns.field.id end)
       |> assign_new(:parent_form, fn -> nil end)
+      |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:component_target, fn ->
         case assigns.type do
           {:component, module} ->
@@ -2294,21 +2368,20 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <div class="brando-input" data-component={@type}>
+      <div class="brando-input" data-component={@type} data-compact={@compact}>
         <%= component(@component_target, assigns, {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}) %>
       </div>
     <% else %>
       <div class="brando-input">
         <.live_component module={@component_target}
           id={@component_id}
-          form={@form}
           parent_form={@parent_form}
           field={@field}
           label={@label}
           path={@path}
           placeholder={@placeholder}
           instructions={@instructions}
-          uploads={@uploads}
+          parent_uploads={@parent_uploads}
           opts={@opts}
           current_user={@current_user} />
       </div>
@@ -2316,28 +2389,12 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  def inputs(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:opts, fn -> [] end)
-
-    assigns =
-      assigns
-      |> assign(
-        :indexed_inputs,
-        Enum.with_index(inputs_for(assigns.form, assigns.for, assigns.opts))
-      )
-
-    ~H"""
-    <%= for {form, index} <- @indexed_inputs do %>
-      <%= render_slot(@inner_block, %{form: form, index: index}) %>
-    <% end %>
-    """
-  end
+  attr :field, Phoenix.HTML.FormField
+  slot :default
 
   def map_inputs(assigns) do
-    subform = Utils.form_for_map(assigns.form, assigns.for)
-    input_value = input_value(assigns.form, assigns.for)
+    subform = Utils.form_for_map(assigns.field)
+    input_value = assigns.field.value
 
     assigns =
       assigns
@@ -2348,7 +2405,7 @@ defmodule BrandoAdmin.Components.Form do
     <%= if @input_value do %>
       <%= for {map_key, map_value} <- @input_value do %>
         <%= render_slot @inner_block, %{
-          name: "#{@form.name}[#{@for}][#{map_key}]",
+          name: "#{@field.name}[#{map_key}]",
           key: map_key,
           value: map_value,
           subform: @subform
@@ -2358,9 +2415,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+
   def map_value_inputs(assigns) do
-    subform = Utils.form_for_map_value(assigns.form, assigns.for)
-    input_value = subform.data
+    subform = Utils.form_for_map_value(assigns.field)
+    input_value = assigns.field.value
 
     assigns =
       assigns
@@ -2370,7 +2429,7 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {map_key, map_value} <- @input_value do %>
       <%= render_slot @inner_block, %{
-        name: "#{@subform.name}[#{map_key}]",
+        name: "#{@field.name}[#{map_key}]",
         key: map_key,
         value: map_value,
         subform: @subform
@@ -2379,43 +2438,173 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  def poly_inputs(assigns) do
-    assigns =
-      assigns
-      |> assign(:input_value, input_value(assigns.form, assigns.for))
-      |> assign_new(:opts, fn -> [] end)
+  @doc type: :component
+  attr :field, Phoenix.HTML.FormField,
+    required: true,
+    doc: "A %Phoenix.HTML.Form{}/field name tuple, for example: {@form[:email]}."
 
-    assigns =
-      assigns
-      |> assign(
-        :indexed_inputs,
-        Enum.with_index(inputs_for_poly(assigns.form, assigns.for, assigns.opts))
+  attr :id, :string,
+    doc: """
+    The id to be used in the form, defaults to the concatenation of the given
+    field to the parent form id.
+    """
+
+  attr :as, :atom,
+    doc: """
+    The name to be used in the form, defaults to the concatenation of the given
+    field to the parent form name.
+    """
+
+  attr :default, :any, doc: "The value to use if none is available."
+
+  attr :prepend, :list,
+    doc: """
+    The values to prepend when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :append, :list,
+    doc: """
+    The values to append when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :skip_hidden, :boolean,
+    default: false,
+    doc: """
+    Skip the automatic rendering of hidden fields to allow for more tight control
+    over the generated markup.
+    """
+
+  slot :inner_block, required: true, doc: "The content rendered for each nested form."
+
+  def inputs_for_block(assigns) do
+    %Phoenix.HTML.FormField{form: form} = assigns.field
+    options = assigns |> Map.take([:id, :as, :default, :append, :prepend]) |> Keyword.new()
+
+    options =
+      form.options
+      |> Keyword.take([:multipart])
+      |> Keyword.merge(options)
+
+    forms =
+      BrandoAdmin.Components.Form.Input.Blocks.Utils.to_form_single(
+        form.source,
+        assigns.field,
+        options
       )
 
+    assigns = assign(assigns, :forms, forms)
+
     ~H"""
-    <%= for {f, index} <- @indexed_inputs do %>
-      <%= render_slot @inner_block, %{
-        form: f,
-        index: index
-      } %>
+    <%= for finner <- @forms do %>
+      <%= unless @skip_hidden do %>
+        <%= for {name, value_or_values} <- finner.hidden,
+                name = name_for_value_or_values(finner, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+          <input type="hidden" name={name} value={value} />
+        <% end %>
+      <% end %>
+      <%= render_slot(@inner_block, finner) %>
     <% end %>
     """
   end
 
+  @doc type: :component
+  attr :field, Phoenix.HTML.FormField,
+    required: true,
+    doc: "A %Phoenix.HTML.Form{}/field name tuple, for example: {@form[:email]}."
+
+  attr :id, :string,
+    doc: """
+    The id to be used in the form, defaults to the concatenation of the given
+    field to the parent form id.
+    """
+
+  attr :as, :atom,
+    doc: """
+    The name to be used in the form, defaults to the concatenation of the given
+    field to the parent form name.
+    """
+
+  attr :default, :any, doc: "The value to use if none is available."
+
+  attr :prepend, :list,
+    doc: """
+    The values to prepend when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :append, :list,
+    doc: """
+    The values to append when rendering. This only applies if the field value
+    is a list and no parameters were sent through the form.
+    """
+
+  attr :skip_hidden, :boolean,
+    default: false,
+    doc: """
+    Skip the automatic rendering of hidden fields to allow for more tight control
+    over the generated markup.
+    """
+
+  slot :inner_block, required: true, doc: "The content rendered for each nested form."
+
+  def inputs_for_poly(assigns) do
+    %Phoenix.HTML.FormField{form: form} = assigns.field
+    options = assigns |> Map.take([:id, :as, :default, :append, :prepend]) |> Keyword.new()
+
+    options =
+      form.options
+      |> Keyword.take([:multipart])
+      |> Keyword.merge(options)
+
+    forms =
+      BrandoAdmin.Components.Form.Input.Blocks.Utils.to_form_multi(
+        form.source,
+        assigns.field,
+        options
+      )
+
+    assigns = assign(assigns, :forms, forms)
+
+    ~H"""
+    <%= for finner <- @forms do %>
+      <%= unless @skip_hidden do %>
+        <%= for {name, value_or_values} <- finner.hidden,
+                name = name_for_value_or_values(finner, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+          <input type="hidden" name={name} value={value} />
+        <% end %>
+      <% end %>
+      <%= render_slot(@inner_block, finner) %>
+    <% end %>
+    """
+  end
+
+  defp name_for_value_or_values(form, field, values) when is_list(values) do
+    Phoenix.HTML.Form.input_name(form, field) <> "[]"
+  end
+
+  defp name_for_value_or_values(form, field, _value) do
+    Phoenix.HTML.Form.input_name(form, field)
+  end
+
+  attr :field, Phoenix.HTML.FormField
+  slot :inner_block
+  slot :default
+
   def array_inputs(assigns) do
     assigns =
       assigns
-      |> assign(:input_value, input_value(assigns.form, assigns.for))
-      |> assign(
-        :indexed_inputs,
-        Enum.with_index(input_value(assigns.form, assigns.for) || [])
-      )
+      |> assign(:input_value, assigns.field.value)
+      |> assign(:indexed_inputs, Enum.with_index(assigns.field.value || []))
 
     ~H"""
     <%= if @input_value do %>
       <%= for {array_value, array_index} <- @indexed_inputs do %>
         <%= render_slot @inner_block, %{
-          name: "#{@form.name}[#{@for}][]",
+          name: "#{@field.name}[]",
           index: array_index,
           value: array_value} %>
       <% end %>
@@ -2423,8 +2612,12 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :options, :any
+  slot :default
+
   def array_inputs_from_data(assigns) do
-    checked_values = input_value(assigns.form, assigns.for) || []
+    checked_values = assigns.field.value || []
 
     assigns =
       assigns
@@ -2434,8 +2627,8 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= for {option, idx} <- @indexed_options do %>
       <%= render_slot @inner_block, %{
-        name: "#{@form.name}[#{@for}][]",
-        id: "#{@form.id}-#{@for}-#{idx}",
+        name: "#{@field.name}[]",
+        id: "#{@field.id}-#{idx}",
         index: idx,
         value: option.value,
         label: option.label,
@@ -2468,6 +2661,11 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :relation, :atom
+  attr :id_prefix, :string
+  attr :uid, :string
+
   def error_tag(assigns) do
     assigns =
       assigns
@@ -2479,29 +2677,29 @@ defmodule BrandoAdmin.Components.Form do
 
     assigns =
       if assigns.relation do
-        assign(assigns, :field, :"#{assigns.field}_id")
+        relation_field_atom = :"#{assigns.field.field}_id"
+        assign(assigns, :field, assigns.field.form[relation_field_atom])
       else
         assigns
       end
 
     f_id =
       if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <%= for error <- Keyword.get_values(@form.errors, @field) do %>
     <span
+      :for={error <- @field.errors}
       id={"#{@f_id}-error"}
       class="field-error"
       phx-feedback-for={@feedback_for || @f_id}>
       <%= @translate_fn.(error) %>
     </span>
-    <% end %>
     """
   end
 
@@ -2511,14 +2709,14 @@ defmodule BrandoAdmin.Components.Form do
   attr :id_prefix, :string, default: ""
   attr :class, :string, default: nil
   attr :click, :any, default: nil
-  slot(:default, default: nil)
+  slot :default, default: nil
 
   def label(assigns) do
     f_id =
-      if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field}"
+      if assigns.uid do
+        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
       else
-        "#{assigns.form.id}_#{assigns.field}"
+        "#{assigns.field.id}"
       end
 
     assigns = assign(assigns, :f_id, f_id)

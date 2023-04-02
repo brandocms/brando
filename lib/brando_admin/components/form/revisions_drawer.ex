@@ -164,7 +164,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   <% end %>
                 </td>
                 <td class="date fit">
-                  <%= Calendar.strftime(revision.inserted_at, "%d/%m/%y") %>, <%= Calendar.strftime(revision.inserted_at, "%H:%M") %>
+                  <%= Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M") %>
                 </td>
                 <td class="user"><%= revision.creator.name %></td>
                 <td class="activate fit">

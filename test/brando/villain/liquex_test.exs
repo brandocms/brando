@@ -62,7 +62,7 @@ defmodule Brando.Villain.LiquexTest do
            ]
 
     # render it
-    {result, _} = Liquex.Render.render([], parsed_tpl, Brando.Villain.get_base_context())
+    {result, _} = Liquex.Render.render!([], parsed_tpl, Brando.Villain.get_base_context())
     assert Enum.join(result) == "the route is /projects"
 
     tpl =
@@ -85,7 +85,7 @@ defmodule Brando.Villain.LiquexTest do
 
     entry = %{uri: "the-uri"}
     context = Brando.Villain.get_base_context(entry)
-    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+    {result, _} = Liquex.Render.render!([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri"
 
     tpl =
@@ -108,7 +108,7 @@ defmodule Brando.Villain.LiquexTest do
 
     entry = %{uri: "the-uri", id: 500}
     context = Brando.Villain.get_base_context(entry)
-    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+    {result, _} = Liquex.Render.render!([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri/500"
   end
 
@@ -150,7 +150,7 @@ defmodule Brando.Villain.LiquexTest do
 
     user = Factory.insert(:random_user)
     context = Brando.Villain.get_base_context(user)
-    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+    {result, _} = Liquex.Render.render!([], parsed_tpl, context)
 
     doc =
       result

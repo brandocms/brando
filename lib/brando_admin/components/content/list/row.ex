@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {:ok, parsed_template} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
           context = Brando.Villain.get_base_context(assigns.entry)
 
-          Liquex.Render.render([], parsed_template, context)
+          Liquex.Render.render!([], parsed_template, context)
           |> elem(0)
           |> Enum.join()
           |> Phoenix.HTML.raw()

@@ -5,9 +5,8 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   alias BrandoAdmin.Components.Form
 
   # prop input, :map
-  # prop form, :form
   # prop sub_form, :form
-  # prop uploads, :any
+  # prop parent_uploads, :any
   # prop current_user, :any
   # prop label, :string
   # prop instructions, :string
@@ -23,13 +22,12 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
 
     ~H"""
     <Form.input
-      id={"#{@form.id}-#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
-      form={@sub_form}
-      field={@input.name}
+      id={"#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
+      field={@sub_form[@input.name]}
       label={@label}
       instructions={@instructions}
       placeholder={@placeholder}
-      uploads={@uploads}
+      parent_uploads={@parent_uploads}
       path={@path}
       opts={@input.opts}
       type={@input.type}

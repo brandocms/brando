@@ -15,6 +15,11 @@
         user-select: none;
         border-radius: 38px;
       }
+
+      .img-placeholder svg {
+        width: 18px;
+        height: 18px;
+      }
     }
   }
 

@@ -63,7 +63,7 @@ defmodule BrandoAdmin do
           hide_modal: 1,
           hide_modal: 2,
           make_id: 1,
-          make_uid: 3
+          make_uid: 2
         ]
     end
   end
@@ -118,7 +118,7 @@ defmodule BrandoAdmin do
           hide_modal: 1,
           hide_modal: 2,
           make_id: 1,
-          make_uid: 3
+          make_uid: 2
         ]
 
       # Routes generation with the ~p sigil

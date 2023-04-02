@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop uploads, :map
+  # prop parent_uploads, :map
 
   # data class, :string
   # data monospace, :boolean
@@ -61,19 +61,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     default = Keyword.get(assigns.opts, :default)
     entry_form = Keyword.get(assigns.opts, :form)
     update_relation = Keyword.get(assigns.opts, :update_relation)
-    changeset = assigns.form.source
+    changeset = assigns.field.form.source
 
     {:ok,
      socket
      |> assign(assigns)
      |> prepare_input_component()
      |> assign(:relation_key, relation_key)
-     |> assign_relation_type(assigns.form, assigns.field)
+     |> assign_relation_type(assigns.field)
      |> assign_selected_options(changeset, assigns.field)
      |> assign_input_options()
-     |> assign_selected_options_forms(assigns.form, assigns.field)
-     |> assign_sequenced?(assigns.form, assigns.field)
-     |> assign_relation_fields(assigns.form, assigns.field)
+     |> assign_selected_options_forms(assigns.field)
+     |> assign_sequenced?(assigns.field)
+     |> assign_relation_fields(assigns.field)
      |> assign_label()
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
@@ -87,12 +87,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
   end
 
-  defp assign_relation_fields(socket, form, field) do
+  defp assign_relation_fields(socket, field) do
     assign_new(socket, :relation_fields, fn ->
-      module = form.data.__struct__
+      module = field.form.data.__struct__
 
       if {:__relations__, 0} in module.__info__(:functions) do
-        %{opts: %{module: rel_module}} = module.__relation__(field)
+        %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
         # the rel module must have `@allow_mark_as_deleted true`
         if not rel_module.__allow_mark_as_deleted__ do
@@ -117,12 +117,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  defp assign_sequenced?(socket, form, field) do
-    module = form.data.__struct__
+  defp assign_sequenced?(socket, field) do
+    module = field.form.data.__struct__
 
     sequenced? =
       if {:__relations__, 0} in module.__info__(:functions) do
-        %{opts: %{module: rel_module}} = module.__relation__(field)
+        %{opts: %{module: rel_module}} = module.__relation__(field.field)
         rel_module.has_trait(Brando.Trait.Sequenced)
       else
         false
@@ -131,10 +131,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assign(socket, :sequenced?, sequenced?)
   end
 
-  defp assign_selected_options_forms(socket, form, field) do
+  defp assign_selected_options_forms(socket, field) do
     selected_options_forms =
       if socket.assigns.relation_type == :has_many do
-        inputs_for(form, field)
+        inputs_for(field.form[field])
       else
         nil
       end
@@ -148,15 +148,15 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assign(socket, :selected_options, selected_options)
   end
 
-  defp assign_relation_type(socket, form, field) do
-    module = form.data.__struct__
+  defp assign_relation_type(socket, field) do
+    module = field.form.data.__struct__
 
     relation_type =
       if {:__relations__, 0} in module.__info__(:functions) do
-        relation = module.__relation__(field)
+        relation = module.__relation__(field.field)
         relation.type
       else
-        Map.get(module.__changeset__, field)
+        Map.get(module.__changeset__, field.field)
       end
 
     if relation_type == :has_many and socket.assigns.relation_key == :id do
@@ -178,32 +178,32 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp get_selected_options(changeset, field, {:array, _}) do
-    Ecto.Changeset.get_field(changeset, field) || []
+    Ecto.Changeset.get_field(changeset, field.field) || []
   end
 
   defp get_selected_options(changeset, field, :many_to_many) do
-    Ecto.Changeset.get_assoc(changeset, field, :struct)
+    Ecto.Changeset.get_assoc(changeset, field.field, :struct)
   end
 
   defp get_selected_options(changeset, field, :has_many) do
-    Ecto.Changeset.get_assoc(changeset, field)
+    Ecto.Changeset.get_assoc(changeset, field.field)
   end
 
   defp get_selected_options(changeset, field, :embeds_many) do
-    Ecto.Changeset.get_embed(changeset, field, :struct)
+    Ecto.Changeset.get_embed(changeset, field.field, :struct)
   end
 
-  def assign_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
+  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
     assign_new(socket, :input_options, fn ->
-      get_input_options(form, opts)
+      get_input_options(field, opts)
     end)
   end
 
-  def update_input_options(%{assigns: %{form: form, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(form, opts))
+  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign(socket, :input_options, get_input_options(field, opts))
   end
 
-  defp get_input_options(form, opts) do
+  defp get_input_options(field, opts) do
     case Keyword.get(opts, :options) do
       :languages ->
         languages = Brando.config(:languages)
@@ -220,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         []
 
       options_fun when is_function(options_fun) ->
-        options_fun.(form, opts)
+        options_fun.(field.form, opts)
 
       options ->
         options
@@ -279,7 +279,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <div>
       <Form.field_base
-        form={@form}
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -333,7 +332,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <% end %>
             </:header>
             <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
-              <div class="select-filter" id={"#{@form.id}-#{@field}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+              <div class="select-filter" id={"#{@field.id}-select-modal-filter"} phx-hook="Brando.SelectFilter">
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">
@@ -350,7 +349,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <div class="select-modal-wrapper">
               <%= if !@creating do %>
                 <div class="select-modal">
-                  <div id={"#{@form.name}-#{@field}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
+                  <div id={"#{@field.id}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                     <h2 class="titlecase"><%= gettext "Available options" %></h2>
                     <%= if Enum.empty?(@input_options) do %>
                       <%= gettext "No options found" %>
@@ -395,7 +394,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                           :for={fieldset <- tab.fields}
                           translations={@form_translations}
                           form={entry_form}
-                          uploads={[]}
+                          parent_uploads={[]}
                           fieldset={fieldset} />
                       </div>
                     </div>
@@ -439,10 +438,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <%= if Enum.empty?(@selected_options) do %>
           <Input.input
             type={:hidden}
-            form={@form}
             field={@field}
-            id={"#{@form.name}-#{@field}-empty"}
-            name={"#{@form.name}[#{@field}]"}
+            id={"#{@field.id}-empty"}
+            name={@field.name}
             value={""} />
         <% else %>
           <%= if @relation_type == :has_many do %>
@@ -450,24 +448,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <%= Phoenix.HTML.Form.hidden_inputs_for(eform) %>
               <Input.hidden
                 :if={@sequenced?}
-                form={eform}
-                field={:sequence}
+                field={eform[:sequence]}
                 value={index}
               />
               <Input.hidden
                 :for={efield <- @relation_fields}
-                form={eform}
-                field={efield}
+                field={eform[efield]}
               />
             <% end %>
           <% else %>
             <%= for opt <- @selected_options do %>
               <Input.input
                 type={:hidden}
-                form={@form}
                 field={@field}
-                id={"#{@form.name}-#{@field}-#{maybe_slug(opt)}"}
-                name={"#{@form.name}[#{@field}][]"}
+                id={"#{@field.id}-#{maybe_slug(opt)}"}
+                name={"#{@field.name}[]"}
                 value={extract_value(opt)} />
             <% end %>
           <% end %>
@@ -651,9 +646,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def handle_event("toggle_modal", _, %{assigns: %{relation_type: _}} = socket) do
     socket = assign(socket, :open, !socket.assigns.open)
 
-    socket =
-      (socket.assigns.open && update_input_options(socket)) ||
-        push_event(socket, "b:validate", %{})
+    socket = (socket.assigns.open && update_input_options(socket)) || socket
+    # || push_event(socket, "b:validate", %{})
 
     {:noreply, socket}
   end
