@@ -27,7 +27,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.7.0", override: true},
+      {:phoenix, "~> 1.7.0"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.16"},
@@ -69,7 +69,7 @@ defmodule Brando.Mixfile do
 
       # Liquid templates
       {:liquex, "~> 0.10.1"},
-      {:html_sanitize_ex, "~> 1.3"},
+      {:html_sanitize_ex, "~> 1.4", override: true},
 
       # Misc
       {:httpoison, "~> 1.0"},
