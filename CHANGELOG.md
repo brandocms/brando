@@ -58,13 +58,6 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   `selection_actions`
 * BREAKING: `@identity` now refers to the current language identity, instead 
   of a map of all languages
-* BREAKING: The tiptap dependency weirdness has returned... Add this dependency 
-  resolution to your `assets/backend/package.json`:
-```json
-"resolutions": {
-  "@codemirror/state": "6.0.0"
-}
-```
 * BREAKING: Remove datasource block and introduce module blocks with 
   datasource instead. Run `mix brando.upgrade && mix ecto.migrate` 
   to convert your existing datasource blocks to module blocks.
