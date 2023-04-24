@@ -265,6 +265,12 @@ figcaption.tiny {
     flex-basis: 100% !important;
     min-width: 100% !important;
 
+    .file-info {
+      font-family: 'Mono';
+      font-size: 10px;
+      margin-top: 1em;
+    }
+
     input,
     textarea {
       background-color: transparent;

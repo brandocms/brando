@@ -886,6 +886,12 @@ defmodule BrandoAdmin.Components.Form do
               </div>
             </div>
           </div>
+
+          <div :if={@edit_file && @edit_file[:file] && !is_struct(@edit_file[:file], Ecto.Association.NotLoaded)} class="file-info">
+            <div class="filename">&#x2B24; <%= @edit_file.file.filename %></div>
+            <div class="mimetype">&#x2B24; <%= @edit_file.file.mime_type %></div>
+            <div class="filesize">&#x2B24; <%= Brando.Utils.human_size(@edit_file.file.filesize) %></div>
+          </div>
         </div>
 
         <div class="button-group vertical">
@@ -1163,7 +1169,7 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    full_path = edit_file.path ++ [edit_file.relation_field]
+    full_path = edit_file.path ++ [edit_file.relation_field.field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_file = Map.put(edit_file, :file, nil)
 
@@ -1174,7 +1180,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_file, updated_edit_file)
      |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
-     |> push_event("b:validate", %{target: "#{singular}[#{edit_file.relation_field}]", value: ""})}
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{edit_file.relation_field.field}]",
+       value: ""
+     })}
   end
 
   def handle_event(
@@ -1189,7 +1198,7 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    full_path = edit_image.path ++ [edit_image.relation_field]
+    full_path = edit_image.path ++ [edit_image.relation_field.field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_image = Map.put(edit_image, :image, nil)
 
@@ -1200,7 +1209,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, updated_edit_image)
      |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
-     |> push_event("b:validate", %{target: "#{singular}[#{edit_image.relation_field}]", value: ""})}
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{edit_image.relation_field.field}]",
+       value: ""
+     })}
   end
 
   def handle_event("validate_file", _, socket) do
@@ -1248,9 +1260,14 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_file = Map.put(edit_file, :file, updated_file)
-    full_path = path ++ [relation_field]
+    full_path = path ++ [relation_field.field]
 
-    updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> file.id end)
+    updated_changeset =
+      changeset
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
+
     updated_entry = Map.put(entry_or_default, field, updated_file)
 
     # this is only for fresh uploads.
@@ -1268,7 +1285,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:file_changeset, validated_changeset)
      |> assign(:edit_file, edit_file)
      |> push_event("b:validate", %{
-       target: "#{singular}[#{edit_file.relation_field}]",
+       target: "#{singular}[#{edit_file.relation_field.field}]",
        value: file.id
      })}
   end

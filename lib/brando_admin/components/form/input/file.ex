@@ -1,9 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.File do
   use BrandoAdmin, :live_component
-
-  import Ecto.Changeset
   import Brando.Gettext
-
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
 
@@ -27,7 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   # data file, :any
   # data file_name, :any
   # data upload_field, :any
-  # data relation_field, :atom
+  # data relation_field, FormField
 
   def mount(socket) do
     {:ok,
@@ -42,15 +39,14 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   end
 
   def update(assigns, socket) do
-    relation_field = String.to_existing_atom("#{assigns.field}_id")
+    relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
+    relation_field = assigns.field.form[relation_field_atom]
+    file_id = try_force_int(assigns.field.value)
+    file = assigns.field.value
 
-    file_id =
-      assigns.form.source
-      |> get_field(relation_field)
-      |> try_force_int()
-
-    file = get_field(assigns.form.source, assigns.field)
-    file_name = (is_map(file) && file.filename) || "<unknown>"
+    file_name =
+      (is_map(file) && !is_struct(file, Ecto.Association.NotLoaded) && file.filename) ||
+        "<unknown>"
 
     {:ok,
      socket
@@ -59,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign(:file, file)
      |> assign(:file_id, file_id)
      |> assign(:file_name, file_name)
-     |> assign(:upload_field, assigns.parent_uploads[assigns.field])
+     |> assign(:upload_field, assigns.parent_uploads[assigns.field.field])
      |> assign(:relation_field, relation_field)}
   end
 
@@ -78,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         relation>
         <div>
           <div class="input-file">
-            <%= if @file && @file.filename do %>
+            <%= if @file && !is_struct(@file, Ecto.Association.NotLoaded) && @file.filename do %>
               <.file_preview
                 file={@file}
                 field={@field}
@@ -109,7 +105,6 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         _,
         %{
           assigns: %{
-            form: form,
             field: field,
             relation_field: relation_field,
             file_id: file_id,
@@ -120,14 +115,14 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       ) do
     path =
       ~r/\[(\w+)\]/
-      |> Regex.scan(form.name, capture: :all_but_first)
+      |> Regex.scan(field.form.name, capture: :all_but_first)
       |> Enum.map(&(List.first(&1) |> String.to_existing_atom()))
 
-    module = form.source.data.__struct__
+    module = field.form.source.data.__struct__
 
     send_update(BrandoAdmin.Components.FilePicker,
       id: "file-picker",
-      config_target: {"file", form.data.__struct__, field},
+      config_target: {"file", field.form.data.__struct__, field.field},
       event_target: myself,
       multi: false,
       selected_files: []
@@ -139,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       edit_file: %{
         id: file_id,
         path: path,
-        field: field,
+        field: field.field,
         relation_field: relation_field,
         file: file
       }
