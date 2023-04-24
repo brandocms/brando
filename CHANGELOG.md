@@ -87,13 +87,10 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   {:phoenix_view, "~> 2.0"},
   ```
 
-  You can use a prefab'ed MyAppWeb setup by replacing your `my_app_web.ex`
-  content with `use Brando.App`. If you need to customize the content, 
-  you can look at Brando's `lib/brando/web.ex`
+  You can use a prefab'ed MyAppWeb setup by replacing your `use MyAppWeb, :controller` (etc)
+  with `use BrandoWeb, :controller` (etc). You can also use 
 
-  This will add a `:legacy_controller` you can use with
-
-  `use MyAppWeb, :legacy_controller`
+  `use BrandoWeb, :legacy_controller`
 
   for utilizing the new layouts setup, but use regular template views.
 
