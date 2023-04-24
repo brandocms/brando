@@ -62,6 +62,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   def update(assigns, socket) do
     schema = assigns.field.form.data.__struct__
 
+    if assigns.parent_uploads[assigns.field.field] == nil do
+      raise Brando.Exception.BlueprintError,
+        message: """
+        Gallery input not found.
+
+        Form input name for gallery was given as `#{assigns.field.field}` — but no such asset was found.
+        Ensure that your input name matches your asset name in your blueprint.
+
+        """
+    end
+
     {:ok,
      socket
      |> assign(assigns)
