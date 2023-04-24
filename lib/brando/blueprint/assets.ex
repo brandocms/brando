@@ -10,15 +10,67 @@ defmodule Brando.Blueprint.Assets do
   #### Example
 
       assets do
-        asset :pdf, :file, required: true, cfg: [
+        asset :pdf, :file, required: true, cfg: %{
           allowed_mimetypes: ["application/pdf"],
           random_filename: false,
           upload_path: Path.join("files", "pdfs"),
           force_filename: "a_single_file.pdf",
           overwrite: true,
           size_limit: 16_000_000
-        ]
+        }
       end
+
+  ### Gallery
+
+  #### Example
+
+      asset :project_gallery, :gallery,
+        required: true,
+        cfg: %{
+          upload_path: Path.join(["images", "projects", "gallery"]),
+          sizes: %{
+            "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+            "thumb" => %{"size" => "300x300>", "quality" => 70, "crop" => true},
+            "small" => %{"size" => "700", "quality" => 70},
+            "medium" => %{"size" => "1100", "quality" => 70},
+            "large" => %{"size" => "1700", "quality" => 70},
+            "xlarge" => %{"size" => "2100", "quality" => 70}
+          },
+          srcset: %{
+            default: [
+              {"small", "700w"},
+              {"medium", "1100w"},
+              {"large", "1700w"},
+              {"xlarge", "2100w"}
+            ]
+          }
+        }
+
+  ### Image
+
+  #### Example
+
+      asset :cover, :image,
+        required: true,
+        cfg: %{
+          upload_path: Path.join(["images", "projects", "covers"]),
+          sizes: %{
+            "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+            "thumb" => %{"size" => "300x300>", "quality" => 70, "crop" => true},
+            "small" => %{"size" => "700", "quality" => 70},
+            "medium" => %{"size" => "1100", "quality" => 70},
+            "large" => %{"size" => "1700", "quality" => 70},
+            "xlarge" => %{"size" => "2100", "quality" => 70}
+          },
+          srcset: %{
+            default: [
+              {"small", "700w"},
+              {"medium", "1100w"},
+              {"large", "1700w"},
+              {"xlarge", "2100w"}
+            ]
+          }
+        }
   """
   alias Ecto.Changeset
   alias Brando.Blueprint
