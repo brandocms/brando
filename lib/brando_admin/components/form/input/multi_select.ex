@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp assign_selected_options_forms(socket, field) do
     selected_options_forms =
       if socket.assigns.relation_type == :has_many do
-        inputs_for(field.form[field])
+        inputs_for(field.form, field.field)
       else
         nil
       end
@@ -739,13 +739,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         %{"value" => value},
         %{assigns: %{relation_type: :has_many}} = socket
       ) do
-    form = socket.assigns.form
+    form = socket.assigns.field.form
     field = socket.assigns.field
     changeset = form.source
     module = form.data.__struct__
     sequenced? = socket.assigns.sequenced?
 
-    %{opts: %{module: rel_module}} = module.__relation__(field)
+    %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
     relation_type = socket.assigns.relation_type
     relation_key = socket.assigns.relation_key
@@ -783,7 +783,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         selected_options ++ [new_rel]
       end
 
-    updated_changeset = update_relation(changeset, field, selected_options, relation_type)
+    updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
     selected_options = get_selected_options(updated_changeset, field, relation_type)
 
     form_id = "#{module.__naming__().singular}_form"
