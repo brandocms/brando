@@ -129,6 +129,15 @@ defmodule Brando.Blueprint.Relations do
               module: Articles.Contributor,
               through: [:article_contributors, :contributor]
 
+        We can then set up a multi select for this relation:
+
+            # in a form:
+            input :article_contributors, :multi_select,
+              options: &__MODULE__.get_contributors/2,
+              relation_key: :contributor_id,
+              resetable: true,
+              label: t("Contributors")
+
         """
     end
 
