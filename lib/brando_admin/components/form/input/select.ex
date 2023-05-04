@@ -177,7 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}>
 
-        <%= if @in_block do %>
+        <%= if @in_block || @field.form.source.data.__struct__.__naming__().singular == "module" do %>
           <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" value={@selected_option} />
         <% else %>
           <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
@@ -454,8 +454,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
+
+    form = socket.assigns.field.form
     field = socket.assigns.field
-    changeset = field.form.source
+    changeset = form.source
 
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
@@ -478,9 +480,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       )
     end
 
-    updated_changeset = Ecto.Changeset.put_change(changeset, field.field, value)
+    updated_changeset = Ecto.Changeset.force_change(changeset, field.field, value)
 
-    if socket.assigns.in_block do
+    if socket.assigns.in_block || form_id == "module_form" do
+      # module_form isn't a Form component, so handle like a block
       {:noreply,
        socket
        |> assign(:selected_option, value)
@@ -490,6 +493,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       send_update(BrandoAdmin.Components.Form,
         id: form_id,
         action: :update_changeset,
+        force_validation: true,
         changeset: updated_changeset
       )
 

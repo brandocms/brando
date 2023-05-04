@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     ~H"""
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
-    <div id="module-form-el" phx-hook="Brando.Form">
+    <div id="module_form-el" phx-hook="Brando.Form">
       <.form
         for={@form}
         phx-change="validate"
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         <div class="button-group">
           <Form.submit_button
             processing={false}
-            form_id={"module-form"}
+            form_id={"module_form"}
             label={gettext("Save (⇧⌘S)")}
             class="primary submit-button" />
         </div>
@@ -137,7 +137,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, updated_refs)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -179,7 +182,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, updated_refs)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -237,7 +243,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, updated_refs)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -249,7 +258,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     vars = get_field(changeset, :vars)
     sorted_vars = Enum.map(order_indices, &Enum.at(vars, &1))
     updated_changeset = put_change(changeset, :vars, sorted_vars)
-
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -278,7 +286,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -304,7 +315,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, [new_ref | refs])
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -319,7 +333,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, filtered_refs)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -336,7 +353,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -365,6 +385,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply,
      socket
      |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)
      |> assign(:var_name, nil)}
   end
 
@@ -383,6 +404,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply,
      socket
      |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)
      |> assign(:var_name, nil)}
   end
 
@@ -403,6 +425,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply,
      socket
      |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)
      |> assign(:var_name, nil)}
   end
 
@@ -438,7 +461,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -461,7 +487,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -497,6 +526,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply,
      socket
      |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)
      |> push_event("b:validate", %{})}
   end
 
@@ -521,7 +551,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -544,7 +577,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -555,7 +591,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, assign(socket, :form, updated_form)}
+    {:noreply,
+     socket
+     |> assign(:form, updated_form)
+     |> assign(:changeset, updated_changeset)}
   end
 
   def handle_event(
@@ -585,7 +624,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
         form = to_form(changeset, [])
 
-        {:noreply, socket |> assign(:form, form)}
+        {:noreply,
+         socket
+         |> assign(:form, form)
+         |> assign(:changeset, changeset)}
     end
   end
 
