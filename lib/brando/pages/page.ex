@@ -328,13 +328,7 @@ defmodule Brando.Pages.Page do
       |> filter_self(Ecto.Changeset.get_field(form.source, :id))
       |> filter_language(Ecto.Changeset.get_field(form.source, :language))
 
-    Enum.map(
-      filtered_parents,
-      &%{
-        value: to_string(&1.id),
-        label: "[#{String.upcase(to_string(&1.language))}] #{&1.title}"
-      }
-    )
+    filtered_parents
   end
 
   defp filter_self(parents, id) when not is_nil(id), do: Enum.filter(parents, &(&1.id != id))
