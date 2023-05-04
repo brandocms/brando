@@ -134,10 +134,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    blocks = Ecto.Changeset.get_field(changeset, data_field)
+    blocks = Ecto.Changeset.get_field(changeset, data_field.field)
 
     new_data = Enum.map(order_indices, &Enum.at(blocks, &1))
-    updated_changeset = Ecto.Changeset.put_change(changeset, data_field, new_data)
+    updated_changeset = Ecto.Changeset.put_change(changeset, data_field.field, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
