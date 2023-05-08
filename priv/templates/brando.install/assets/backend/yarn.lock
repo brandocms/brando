@@ -447,10 +447,10 @@
   resolved "https://registry.yarnpkg.com/@sphinxxxx/color-conversion/-/color-conversion-2.2.2.tgz#03ecc29279e3c0c832f6185a5bfa3497858ac8ca"
   integrity sha512-XExJS3cLqgrmNBIP3bBw6+1oQ1ksGjFh0+oClDKFYpCCqx/hlqwWO5KO/S63fzUo67SxI9dMrF0y5T/Ey7h8Zw==
 
-"@sveltejs/vite-plugin-svelte@2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-2.0.4.tgz#607b6abe15e02e540249e3f47d47fb9f15952e80"
-  integrity sha512-pjqhW00KwK2uzDGEr+yJBwut+D+4XfJO/+bHHdHzPRXn9+1Jeq5JcFHyrUiYaXgHtyhX0RsllCTm4ssAx4ZY7Q==
+"@sveltejs/vite-plugin-svelte@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-2.2.0.tgz#6e78e912dc0cff5e92bcb936f194e96b849356f9"
+  integrity sha512-KDtdva+FZrZlyug15KlbXuubntAPKcBau0K7QhAIqC5SAy0uDbjZwoexDRx0L0J2T4niEfC6FnA9GuQQJKg+Aw==
   dependencies:
     debug "^4.3.4"
     deepmerge "^4.3.1"
