@@ -1,9 +1,9 @@
 import { Dom } from '@brandocms/jupiter'
 
-import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
+import { EditorView, basicSetup } from 'codemirror'
 import { html } from '@codemirror/lang-html'
 
 export default app => ({
@@ -45,7 +45,7 @@ export default app => ({
       state: EditorState.create({
         doc: this.$input.value,
         extensions: [
-          keymap.of([indentWithTab]),
+          basicSetup,
           EditorView.theme({
             '&': {
               fontSize: '13px',
@@ -63,8 +63,8 @@ export default app => ({
               maxHeight: '600px'
             }
           }),
-          EditorState.tabSize.of(16),
-          basicSetup,
+          keymap.of([indentWithTab]),
+          EditorState.tabSize.of(4),
           html()
         ]
       })
