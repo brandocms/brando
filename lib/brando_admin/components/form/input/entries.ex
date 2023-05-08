@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     value = assigns[:value]
 
     identifiers =
-      case assigns.form[assigns.field].value do
+      case assigns.field.value do
         "" -> []
         val -> val
       end
@@ -44,13 +44,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       identifiers
       |> process_identifiers()
 
-    selected_identifiers_forms = inputs_for(assigns.form, assigns.field)
+    selected_identifiers_forms = inputs_for(assigns.field.form, assigns.field.field)
     wanted_schemas = Keyword.get(assigns.opts, :for)
 
     if !wanted_schemas do
       raise Brando.Exception.BlueprintError,
         message: """
-        Missing `for` option for `:entries` field `#{inspect(assigns.field)}`
+        Missing `for` option for `:entries` field `#{inspect(assigns.field.field)}`
 
             input :related_entries, :entries, for: [
               {MyApp.Projects.Project, %{preload: [:category]}},
@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <div class="empty-list">
             <%= gettext("No selected entries") %>
           </div>
-          <input type="hidden" name={"#{@form.name}[#{@field}]"} value="" />
+          <input type="hidden" name={@field.name} value="" />
         <% else %>
           <.inputs_for
             field={@field}
@@ -127,11 +127,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         <% end %>
 
         <div
-          id={"sortable-#{@form.id}-#{@field}-identifiers"}
+          id={"sortable-#{@field.id}-identifiers"}
           class="selected-entries"
           phx-hook="Brando.Sortable"
           data-target={@myself}
-          data-sortable-id={"sortable-#{@form.id}-#{@field}-identifiers"}
+          data-sortable-id={"sortable-#{@field.id}-identifiers"}
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".identifier">
           <.identifier
@@ -142,12 +142,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           />
         </div>
 
-        <button type="button" class="add-entry-button" phx-click={show_modal("##{@form.id}-#{@field}-select-entries")}>
+        <button type="button" class="add-entry-button" phx-click={show_modal("##{@field.id}-select-entries")}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
           <%= gettext("Select entries") %>
         </button>
 
-        <Content.modal title={gettext("Select entries")} id={"#{@form.id}-#{@field}-select-entries"} narrow>
+        <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
           <h2 class="titlecase"><%= gettext("Select content type") %></h2>
           <div class="button-group-vertical">
           <button
@@ -180,13 +180,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{"param" => idx},
         %{
           assigns: %{
-            field: field_name,
-            form: %{source: changeset},
+            field: field,
             identifiers: identifiers,
             selected_identifiers: selected_identifiers
           }
         } = socket
       ) do
+    field_name = field.field
+    form = field.form
+    changeset = form.source
     selected_identifier = Enum.at(identifiers, String.to_integer(idx))
 
     updated_identifiers =
@@ -214,12 +216,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{"param" => idx},
         %{
           assigns: %{
-            field: field_name,
-            form: %{source: changeset},
+            field: field,
             selected_identifiers: selected_identifiers
           }
         } = socket
       ) do
+    field_name = field.field
+    form = field.form
+    changeset = form.source
     {_, new_list} = List.pop_at(selected_identifiers, String.to_integer(idx))
 
     module = changeset.data.__struct__
@@ -252,19 +256,20 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         %{"ids" => ordered_ids},
         %{
           assigns: %{
-            form: form,
             field: field,
             selected_identifiers: selected_identifiers
           }
         } = socket
       ) do
+    field_name = field.field
+    form = field.form
     changeset = form.source
-    current_data = Changeset.get_change(changeset, field)
+    current_data = Changeset.get_change(changeset, field_name)
     applied_data = Enum.map(current_data, &Changeset.apply_changes/1)
     deduped_data = Enum.dedup(applied_data)
     sorted_data = Enum.map(ordered_ids, fn id -> Enum.find(deduped_data, &(&1.id == id)) end)
 
-    updated_changeset = Changeset.put_change(changeset, field, sorted_data)
+    updated_changeset = Changeset.put_change(changeset, field_name, sorted_data)
 
     schema = changeset.data.__struct__
     form_id = "#{schema.__naming__().singular}_form"
