@@ -457,14 +457,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               />
             <% end %>
           <% else %>
-            <%= for opt <- @selected_options do %>
-              <Input.input
-                type={:hidden}
-                field={@field}
-                id={"#{@field.id}-#{maybe_slug(opt)}"}
-                name={"#{@field.name}[]"}
-                value={extract_value(opt)} />
-            <% end %>
+            <Input.input
+              :for={opt <- @selected_options}
+              type={:hidden}
+              field={@field}
+              id={"#{@field.id}-#{maybe_slug(opt)}"}
+              name={"#{@field.name}[]"}
+              value={extract_value(opt)} />
           <% end %>
         <% end %>
       </Form.field_base>
