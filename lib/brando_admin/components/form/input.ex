@@ -544,6 +544,9 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
     do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field.id}")
 
+  defp process_input_id(%{id: nil} = assigns), do: assign(assigns, :id, assigns.field.id)
+  defp process_input_id(%{id: ""} = assigns), do: assign(assigns, :id, assigns.field.id)
+  defp process_input_id(%{id: id} = assigns), do: assign(assigns, :id, id)
   defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
 
   defp maybe_html_escape(nil), do: nil
