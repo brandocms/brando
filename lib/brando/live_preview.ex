@@ -47,6 +47,7 @@ defmodule Brando.LivePreview do
   defmacro __before_compile__(_) do
     quote generated: true do
       def has_preview_target(_), do: false
+      defoverridable has_preview_target: 1
     end
   end
 
@@ -68,7 +69,7 @@ defmodule Brando.LivePreview do
 
   """
   defmacro preview_target(schema_module, do: block) do
-    quote do
+    quote location: :keep do
       @doc """
       `prop` - the variable name we store the entry under
       `cache_key` - unique key for this live preview
@@ -173,57 +174,68 @@ defmodule Brando.LivePreview do
              ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
-        inner_content = render_inner_content(tpl_type, tpl_module, template, render_assigns)
+        inner_content =
+          Brando.LivePreview.render_inner_content(
+            tpl_type,
+            tpl_module,
+            template,
+            render_assigns
+          )
 
         root_assigns =
           render_assigns
           |> Map.put(:inner_content, inner_content)
           |> Map.delete(:layout)
 
-        render_layout(layout_type, layout_module, layout_template, root_assigns)
-      end
-
-      def has_preview_target(unquote(schema_module)), do: true
-
-      defp render_layout(:html, layout_module, layout_tpl, root_assigns) do
-        layout_tpl = (is_binary(layout_tpl) && layout_tpl) || to_string(layout_tpl)
-
-        Phoenix.Template.render_to_string(
+        Brando.LivePreview.render_layout(
+          layout_type,
           layout_module,
-          layout_tpl,
-          "html",
+          layout_template,
           root_assigns
         )
       end
 
-      @deprecated "Use Phoenix.Template / html instead"
-      defp render_layout(:view, layout_module, layout_template, root_assigns) do
-        if Code.ensure_loaded?(Phoenix.View) do
-          Phoenix.View.render_to_string(
-            layout_module,
-            layout_template,
-            root_assigns
-          )
-        else
-          raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
-        end
-      end
+      def has_preview_target(unquote(schema_module)), do: true
+    end
+  end
 
-      defp render_inner_content(:html, tpl_module, tpl, render_assigns) do
-        tpl = (is_binary(tpl) && tpl) || to_string(tpl)
-        tpl_with_type = String.replace(tpl, ".html", "")
-        Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
-      end
+  def render_layout(:html, layout_module, layout_tpl, root_assigns) do
+    layout_tpl = (is_binary(layout_tpl) && layout_tpl) || to_string(layout_tpl)
 
-      @deprecated "Use Phoenix.Template / html instead"
-      defp render_inner_content(:view, tpl_module, tpl, render_assigns) do
-        if Code.ensure_loaded?(Phoenix.View) do
-          tpl = (is_binary(tpl) && tpl) || to_string(tpl)
-          Phoenix.View.render(tpl_module, tpl, render_assigns)
-        else
-          raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
-        end
-      end
+    Phoenix.Template.render_to_string(
+      layout_module,
+      layout_tpl,
+      "html",
+      root_assigns
+    )
+  end
+
+  @deprecated "Use Phoenix.Template / html instead"
+  def render_layout(:view, layout_module, layout_template, root_assigns) do
+    if Code.ensure_loaded?(Phoenix.View) do
+      Phoenix.View.render_to_string(
+        layout_module,
+        layout_template,
+        root_assigns
+      )
+    else
+      raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
+    end
+  end
+
+  def render_inner_content(:html, tpl_module, tpl, render_assigns) do
+    tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+    tpl_with_type = String.replace(tpl, ".html", "")
+    Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
+  end
+
+  @deprecated "Use Phoenix.Template / html instead"
+  def render_inner_content(:view, tpl_module, tpl, render_assigns) do
+    if Code.ensure_loaded?(Phoenix.View) do
+      tpl = (is_binary(tpl) && tpl) || to_string(tpl)
+      Phoenix.View.render(tpl_module, tpl, render_assigns)
+    else
+      raise "live preview is using :view without Phoenix.View installed. Add `:phoenix_view` to your deps"
     end
   end
 
@@ -341,7 +353,7 @@ defmodule Brando.LivePreview do
 
   ## Example
 
-      assign :latest_articles, fn _, language ->
+      assign :latest_articles, fn _entry, language ->
         # language is either the language found in the `entry` or the default site language
         MyApp.Articles.list_articles!(%{
           filter: %{featured: false, language: language},
@@ -388,7 +400,6 @@ defmodule Brando.LivePreview do
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
-  @spec initialize(any, any) :: {:error, <<_::384>>} | {:ok, <<_::64, _::_*8>>}
   def initialize(schema, changeset) do
     preview_module = Brando.live_preview()
 
