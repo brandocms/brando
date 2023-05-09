@@ -10,10 +10,14 @@ defmodule Brando.Router do
     {"permissions-policy",
      "accelerometer=(), camera=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"}
   ]
-  defmacro page_routes do
+  defmacro page_routes(opts \\ [root: true]) do
     quote do
       get "/robots.txt", Brando.SEOController, :robots
-      get "/", Brando.web_module(PageController), :index
+
+      if unquote(opts)[:root] do
+        get "/", Brando.web_module(PageController), :index
+      end
+
       get "/__p__/:preview_key", Brando.PreviewController, :show
       get "/*path", Brando.web_module(PageController), :show
     end
