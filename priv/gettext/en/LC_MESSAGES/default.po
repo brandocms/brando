@@ -1677,7 +1677,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex:1342
 #, elixir-autogen, elixir-format
-msgid "A shareable time limited URL has been created. The URL will expire 48 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
+msgid "A shareable time limited URL has been created. The URL will expire 72 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:1349

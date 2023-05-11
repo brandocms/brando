@@ -1394,8 +1394,8 @@ msgid "Save (⇧⌘S)"
 msgstr "Lagre (⇧⌘S)"
 
 #: lib/brando_admin/components/form.ex:1342
-msgid "A shareable time limited URL has been created. The URL will expire 48 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
-msgstr "En delbar lenke har blitt opprettet. Adressen utløper 48 timer fra nå.<br><br><a href=\"%{preview_url}\" target=\"_blank\">ÅPNE LENKE</a>"
+msgid "A shareable time limited URL has been created. The URL will expire 72 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>"
+msgstr "En delbar lenke har blitt opprettet. Adressen utløper 72 timer fra nå.<br><br><a href=\"%{preview_url}\" target=\"_blank\">ÅPNE LENKE</a>"
 
 #: lib/brando_admin/components/form.ex:1349
 msgid "Get shareable link"

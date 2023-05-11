@@ -1406,7 +1406,7 @@ defmodule BrandoAdmin.Components.Form do
 
     message =
       gettext(
-        "A shareable time limited URL has been created. The URL will expire 48 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
+        "A shareable time limited URL has been created. The URL will expire 72 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
         %{preview_url: preview_url}
       )
 
