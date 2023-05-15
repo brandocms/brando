@@ -406,7 +406,7 @@ defmodule Brando.HTML do
       0
 
       iex> ratio(%{height: 1000, width: 500})
-      #Decimal<200>
+      Decimal.new(\"200\")
 
       iex> ratio(nil)
       0
