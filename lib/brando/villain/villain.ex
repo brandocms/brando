@@ -172,11 +172,11 @@ defmodule Brando.Villain do
 
   def add_to_context(context, "globals" = key, global_sets) do
     parsed_globals =
-      Enum.map(global_sets, fn {g_key, g_category} ->
+      global_sets
+      |> Enum.map(fn {g_key, g_category} ->
         cat_globs =
-          Enum.map(g_category, fn
-            {key, %{value: value}} -> {key, value}
-          end)
+          g_category
+          |> Enum.map(fn {key, %{value: value}} -> {key, value} end)
           |> Enum.into(%{})
 
         {g_key, cat_globs}
@@ -463,7 +463,8 @@ defmodule Brando.Villain do
           end
         end
 
-      (Enum.any?(reduced_fors, &(&1 == :in_use)) && :in_use) || {:module, module.id, :unused}
+      (Enum.any?(reduced_fors, &(&1 == :in_use)) && :in_use) ||
+        {:module, module.id, module.name, :unused}
     end
     |> Enum.reject(&(&1 == :in_use))
   end
