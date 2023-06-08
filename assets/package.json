@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@brandocms/jupiter": "^3.48.3",
-    "@codemirror/lang-html": "^6.4.3",
+    "@codemirror/lang-html": "^6.4.4",
     "@codemirror/lang-markdown": "^6.1.1",
-    "@codemirror/state": "^6.2.0",
-    "@codemirror/view": "^6.12.0",
-    "@fontsource/jetbrains-mono": "^5.0.0",
+    "@codemirror/state": "^6.2.1",
+    "@codemirror/view": "^6.13.0",
+    "@fontsource/jetbrains-mono": "^5.0.2",
     "@shopify/draggable": "^1.0.0-beta.12",
     "@tiptap/core": "2.0.3",
     "@tiptap/extension-character-count": "2.0.3",
@@ -29,7 +29,7 @@
     "autosize": "^6.0.0",
     "codemirror": "^6.0.0",
     "flatpickr": "^4.6.13",
-    "gsap": "^3.11.5",
+    "gsap": "^3.12.1",
     "idle-js": "^1.2.0",
     "izitoast": "^1.4.0",
     "linkifyjs": "^4.1.1",
@@ -37,12 +37,12 @@
     "lodash.debounce": "^4.0.8",
     "lodash.throttle": "^4.1.1",
     "morphdom": "^2.7.0",
-    "phoenix": "1.7.2",
+    "phoenix": "1.7.3",
     "phoenix_html": "^3.2.0",
-    "phoenix_live_view": "0.18.18",
+    "phoenix_live_view": "0.19.1",
     "slugify": "^1.6.6",
     "sortablejs": "^1.15.0",
-    "sweetalert2": "^11.7.5",
+    "sweetalert2": "^11.7.11",
     "tippy.js": "^6.3.7",
     "vanilla-click-outside": "^2.1.0",
     "vanilla-picker": "^2.12.1",
@@ -50,11 +50,11 @@
     "vex-js": "^4.1.0"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.12.0",
-    "@sveltejs/vite-plugin-svelte": "2.3.0",
+    "@brandocms/europacss": "^0.12.1",
+    "@sveltejs/vite-plugin-svelte": "2.4.1",
     "autoprefixer": "^10.4.14",
     "svelte": "^3.59.1",
-    "svelte-preprocess": "^5.0.3",
-    "vite": "^4.3.8"
+    "svelte-preprocess": "^5.0.4",
+    "vite": "^4.3.9"
   }
 }
