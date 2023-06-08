@@ -241,7 +241,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <%= for var <- @vars do %>
                 <div class="var">
                   <div class="key"><%= var.key %></div>
-                  <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
+                  <div class="buttons">
+                    <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
+                    <button type="button" class="tiny" phx-click={JS.push("delete_var", target: @myself)} phx-value-id={var.key}><%= gettext "Delete" %></button>
+                  </div>
                 </div>
               <% end %>
 
@@ -514,6 +517,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         %{key: ^var_id} -> reset_var
         var -> var
       end)
+
+    updated_changeset =
+      Villain.update_block_in_changeset(
+        changeset,
+        data_field,
+        block_uid,
+        %{data: %{vars: updated_vars}}
+      )
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "delete_var",
+        %{"id" => var_id},
+        %{
+          assigns: %{
+            base_form: base_form,
+            uid: block_uid,
+            block_data: block_data,
+            data_field: data_field
+          }
+        } = socket
+      ) do
+    changeset = base_form.source
+    updated_vars = Enum.reject(block_data[:vars].value, &(&1.key == var_id))
 
     updated_changeset =
       Villain.update_block_in_changeset(
