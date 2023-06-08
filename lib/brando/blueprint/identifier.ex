@@ -88,17 +88,12 @@ defmodule Brando.Blueprint.Identifier do
 
   @spec identifiers_for([map]) :: {:ok, list}
   def identifiers_for(entries) do
-    {:ok,
-     entries
-     |> Enum.map(&identifier_for/1)
-     |> Enum.sort_by(&{&1.type, &1.language, &1.status, &1.title})}
+    {:ok, Enum.map(entries, &identifier_for/1)}
   end
 
   @spec identifiers_for([map]) :: list
   def identifiers_for!(entries) do
-    entries
-    |> Enum.map(&identifier_for/1)
-    |> Enum.sort_by(&{&1.type, &1.language, &1.status, &1.title})
+    Enum.map(entries, &identifier_for/1)
   end
 
   def identifier_for(%{__struct__: schema} = entry) do
