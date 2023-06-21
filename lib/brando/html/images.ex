@@ -21,6 +21,7 @@ defmodule Brando.HTML.Images do
     * `placeholder` - for lazyloading.
       - :svg for svg placeholder
       - :dominant_color
+      - :dominant_color_faded for dominant color but with low opacity
       - :micro for blur-up
       - :none for nothing
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
@@ -81,11 +82,11 @@ defmodule Brando.HTML.Images do
   def picture(%{src: %struct_type{} = image_struct, opts: opts} = assigns)
       when struct_type in [Brando.Images.Image, Brando.Villain.Blocks.PictureBlock.Data] do
     initial_map = %{
-      img: [],
-      picture: [],
-      figure: [],
-      source: [],
-      noscript_img: [],
+      img: %{},
+      picture: %{},
+      figure: %{},
+      source: %{},
+      noscript_img: %{},
       mq_sources: [],
       opts: opts
     }
@@ -102,12 +103,12 @@ defmodule Brando.HTML.Images do
       |> add_dims(image_struct)
       |> add_src(image_struct)
       |> add_dominant_color(image_struct)
-      |> add_attrs()
+      |> add_extra_attrs()
       |> add_classes()
       |> add_moonwalk()
 
     lightbox_src = Map.get(attrs, :src)
-    lightbox_srcset = Keyword.get(attrs.img, :data_srcset)
+    lightbox_srcset = Map.get(attrs.img, "data-srcset")
 
     assigns =
       assigns
@@ -161,7 +162,7 @@ defmodule Brando.HTML.Images do
   defp source_tags(%{src: %{formats: nil}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
-    if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
+    if Enum.all?(Map.drop(attrs.source, ["type"]), fn {_k, v} -> v == false end) do
       ~H||
     else
       ~H|<source {@attrs.source} />|
@@ -171,7 +172,7 @@ defmodule Brando.HTML.Images do
   defp source_tags(%{src: %{formats: formats}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
-    if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
+    if Enum.all?(Map.drop(attrs.source, ["type"]), fn {_k, v} -> v == false end) do
       ~H||
     else
       sizes_format = List.first(formats)
@@ -214,9 +215,9 @@ defmodule Brando.HTML.Images do
 
   defp replace_attrs(source_attrs, format) do
     Enum.map(source_attrs, fn
-      {:data_srcset, v} -> {:data_srcset, suffix_srcs(v, ".#{format}")}
-      {:srcset, v} -> {:srcset, suffix_srcs(v, ".#{format}")}
-      {:type, _} -> {:type, "image/#{format}"}
+      {"data-srcset", v} -> {"data-srcset", suffix_srcs(v, ".#{format}")}
+      {"srcset", v} -> {"srcset", suffix_srcs(v, ".#{format}")}
+      {"type", _} -> {"type", "image/#{format}"}
       {k, v} -> {k, v}
     end)
   end
@@ -228,7 +229,7 @@ defmodule Brando.HTML.Images do
 
   defp add_alt(attrs, image_struct) do
     alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, "") || "")
-    put_in(attrs, [:img, :alt], alt)
+    put_in(attrs, [:img, "alt"], alt)
   end
 
   defp add_lazyload(attrs) do
@@ -247,24 +248,30 @@ defmodule Brando.HTML.Images do
     picture_class = Keyword.get(attrs.opts, :picture_class, false)
 
     attrs
-    |> put_in([:picture, :class], picture_class)
-    |> put_in([:img, :class], img_class)
+    |> put_in([:picture, "class"], picture_class)
+    |> put_in([:img, "class"], img_class)
     |> put_in(
-      [:img, :data_ll_image],
-      lazyload && !Keyword.get(attrs.picture, :data_ll_srcset, false)
+      [:img, "data-ll-image"],
+      lazyload && !Map.get(attrs.picture, "data-ll-srcset", false)
     )
     |> put_in(
-      [:img, :data_ll_srcset_image],
-      lazyload && Keyword.get(attrs.picture, :data_ll_srcset, false)
+      [:img, "data-ll-srcset-image"],
+      lazyload && Map.get(attrs.picture, "data-ll-srcset", false)
     )
   end
 
-  defp add_attrs(attrs) do
-    img_attrs = Keyword.get(attrs.opts, :img_attrs, [])
-    picture_attrs = Keyword.get(attrs.opts, :picture_attrs, [])
+  defp add_extra_attrs(attrs) do
+    img_attrs = Keyword.get(attrs.opts, :img_attrs, %{})
+    picture_attrs = Keyword.get(attrs.opts, :picture_attrs, %{})
 
-    attrs = Enum.reduce(img_attrs, attrs, fn {k, v}, acc -> put_in(acc, [:img, k], v) end)
-    Enum.reduce(picture_attrs, attrs, fn {k, v}, acc -> put_in(acc, [:picture, k], v) end)
+    attrs =
+      Enum.reduce(img_attrs, attrs, fn {k, v}, acc ->
+        put_in(acc, [:img, String.replace(to_string(k), "_", "-")], v)
+      end)
+
+    Enum.reduce(picture_attrs, attrs, fn {k, v}, acc ->
+      put_in(acc, [:picture, String.replace(to_string(k), "_", "-")], v)
+    end)
   end
 
   defp add_sizes(attrs) do
@@ -276,9 +283,9 @@ defmodule Brando.HTML.Images do
       end
 
     attrs
-    |> put_in([:img, :sizes], sizes)
-    |> put_in([:img, :data_sizes], data_sizes)
-    |> put_in([:source, :sizes], sizes)
+    |> put_in([:img, "sizes"], sizes)
+    |> put_in([:img, "data-sizes"], data_sizes)
+    |> put_in([:source, "sizes"], sizes)
   end
 
   def add_original_type(attrs, %{path: path} = img) do
@@ -313,7 +320,7 @@ defmodule Brando.HTML.Images do
       end
 
     if type do
-      put_in(attrs, [:source, :type], type)
+      put_in(attrs, [:source, "type"], type)
     else
       attrs
     end
@@ -342,12 +349,12 @@ defmodule Brando.HTML.Images do
 
     attrs
     |> Map.put(:cropped_ratio, cropped_ratio)
-    |> put_in([:picture, :data_ll_srcset], !!srcset)
-    |> put_in([:img, :srcset], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
-    |> put_in([:img, :data_ll_placeholder], !!placeholder_srcset)
-    |> put_in([:img, :data_srcset], srcset)
-    |> put_in([:source, :srcset], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
-    |> put_in([:source, :data_srcset], srcset)
+    |> put_in([:picture, "data-ll-srcset"], !!srcset)
+    |> put_in([:img, "srcset"], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
+    |> put_in([:img, "data-ll-placeholder"], !!placeholder_srcset)
+    |> put_in([:img, "data-srcset"], srcset)
+    |> put_in([:source, "srcset"], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
+    |> put_in([:source, "data-srcset"], srcset)
   end
 
   defp add_srcset(%{lazyload: false} = attrs, image_struct) do
@@ -358,16 +365,18 @@ defmodule Brando.HTML.Images do
 
     attrs
     |> Map.put(:cropped_ratio, cropped_ratio)
-    |> put_in([:img, :srcset], srcset)
-    |> put_in([:img, :data_srcset], false)
-    |> put_in([:source, :srcset], srcset)
-    |> put_in([:source, :data_srcset], false)
+    |> put_in([:img, "srcset"], srcset)
+    |> put_in([:img, "data-srcset"], false)
+    |> put_in([:source, "srcset"], srcset)
+    |> put_in([:source, "data-srcset"], false)
   end
 
   defp srcset_placeholder?(:svg), do: true
   defp srcset_placeholder?(:dominant_color), do: true
+  defp srcset_placeholder?(:dominant_color_faded), do: true
   defp srcset_placeholder?("svg"), do: true
   defp srcset_placeholder?("dominant_color"), do: true
+  defp srcset_placeholder?("dominant_color_faded"), do: true
   defp srcset_placeholder?(false), do: true
   defp srcset_placeholder?(_), do: false
 
@@ -394,14 +403,16 @@ defmodule Brando.HTML.Images do
         "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
         :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
         "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
+        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts)
+        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
 
     attrs
-    |> put_in([:img, :src], fallback)
-    |> put_in([:img, :data_src], src)
-    |> put_in([:noscript_img, :src], src)
+    |> put_in([:img, "src"], fallback)
+    |> put_in([:img, "data-src"], src)
+    |> put_in([:noscript_img, "src"], src)
     |> Map.put(:src, src)
   end
 
@@ -409,9 +420,9 @@ defmodule Brando.HTML.Images do
     src = Utils.img_url(image_struct, :original, attrs.opts)
 
     attrs
-    |> put_in([:img, :src], src)
-    |> put_in([:img, :data_src], false)
-    |> put_in([:noscript_img, :src], src)
+    |> put_in([:img, "src"], src)
+    |> put_in([:img, "data-src"], false)
+    |> put_in([:noscript_img, "src"], src)
     |> Map.put(:src, src)
   end
 
@@ -427,14 +438,16 @@ defmodule Brando.HTML.Images do
         "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
         :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
         "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
+        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts)
+        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
 
     attrs
-    |> put_in([:img, :src], fallback)
-    |> put_in([:img, :data_src], (placeholder == :micro && src) || fallback)
-    |> put_in([:noscript_img, :src], src)
+    |> put_in([:img, "src"], fallback)
+    |> put_in([:img, "data-src"], (placeholder == :micro && src) || fallback)
+    |> put_in([:noscript_img, "src"], src)
     |> Map.put(:src, src)
   end
 
@@ -443,9 +456,9 @@ defmodule Brando.HTML.Images do
     src = Utils.img_url(image_struct, key, attrs.opts)
 
     attrs
-    |> put_in([:img, :src], src)
-    |> put_in([:img, :data_src], false)
-    |> put_in([:noscript_img, :src], src)
+    |> put_in([:img, "src"], src)
+    |> put_in([:img, "data-src"], false)
+    |> put_in([:noscript_img, "src"], src)
     |> Map.put(:src, src)
   end
 
@@ -455,8 +468,15 @@ defmodule Brando.HTML.Images do
         style = "background-color: #{image_struct.dominant_color || "transparent"}"
 
         attrs
-        |> put_in([:picture, :style], style)
-        |> put_in([:figure, :data_placeholder], "dominant_color")
+        |> put_in([:picture, "style"], style)
+        |> put_in([:figure, "data-placeholder"], "dominant_color")
+
+      pl when pl in [:dominant_color_faded, "dominant_color_faded"] ->
+        style = "background-color: #{image_struct.dominant_color <> "11" || "transparent"}"
+
+        attrs
+        |> put_in([:picture, "style"], style)
+        |> put_in([:figure, "data-placeholder"], "dominant_color")
 
       _ ->
         attrs
@@ -494,10 +514,10 @@ defmodule Brando.HTML.Images do
     orientation = Brando.Images.get_image_orientation(img_width, img_height)
 
     attrs
-    |> put_in([:img, :width], width)
-    |> put_in([:img, :height], height)
-    |> put_in([:figure, :data_orientation], orientation)
-    |> put_in([:picture, :data_orientation], orientation)
+    |> put_in([:img, "width"], width)
+    |> put_in([:img, "height"], height)
+    |> put_in([:figure, "data-orientation"], orientation)
+    |> put_in([:picture, "data-orientation"], orientation)
   end
 
   defp add_dims(%{cropped_ratio: cropped_ratio} = attrs, image_struct) do
@@ -519,14 +539,14 @@ defmodule Brando.HTML.Images do
     orientation = Brando.Images.get_image_orientation(width, height)
 
     attrs
-    |> put_in([:img, :width], width)
-    |> put_in([:img, :height], height)
-    |> put_in([:picture, :data_orientation], orientation)
+    |> put_in([:img, "width"], width)
+    |> put_in([:img, "height"], height)
+    |> put_in([:picture, "data-orientation"], orientation)
   end
 
   defp add_moonwalk(attrs) do
     moonwalk = Keyword.get(attrs.opts, :moonwalk, false)
-    put_in(attrs, [:figure, :data_moonwalk], moonwalk)
+    put_in(attrs, [:figure, "data-moonwalk"], moonwalk)
   end
 
   def svg_fallback(image_field, opacity \\ 0, attrs \\ []) do
