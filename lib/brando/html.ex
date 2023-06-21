@@ -355,7 +355,7 @@ defmodule Brando.HTML do
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
       <% end %>
-      <%= render_block(@inner_block) %>
+      <%= render_slot(@inner_block) %>
     </body>
     """
   end

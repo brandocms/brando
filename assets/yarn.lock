@@ -187,10 +187,10 @@
     style-mod "^4.0.0"
     w3c-keyname "^2.2.4"
 
-"@codemirror/view@^6.13.0":
-  version "6.13.0"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.13.0.tgz#a86c3c5e588a7e2fc0e8043c8ae9fdcc608f5eb7"
-  integrity sha512-oXTfJzHJ5Tl7f6T8ZO0HKf981zubxgKohjddLobbntbNZHlOZGMRL+pPZGtclDWFaFJWtGBYRGyNdjQ6Xsx5yA==
+"@codemirror/view@^6.13.2":
+  version "6.13.2"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.13.2.tgz#bb13e26c0e3ece2f9598d76de9ae9929a658795f"
+  integrity sha512-XA/jUuu1H+eTja49654QkrQwx2CuDMdjciHcdqyasfTVo4HRlvj87rD/Qmm4HfnhwX8234FQSSA8HxEzxihX/Q==
   dependencies:
     "@codemirror/state" "^6.1.4"
     style-mod "^4.0.0"
@@ -313,10 +313,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.17.12.tgz#3a11d13e9a5b0c05db88991b234d8baba1f96487"
   integrity sha512-JOOxw49BVZx2/5tW3FqkdjSD/5gXYeVGPDcB0lvap0gLQshkh1Nyel1QazC+wNxus3xPlsYAgqU1BUmrmCvWtw==
 
-"@fontsource/jetbrains-mono@^5.0.2":
-  version "5.0.2"
-  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.0.2.tgz#137d4cbd0841844b7f2901eebb1552278e892423"
-  integrity sha512-2otc4BSOJ94gFkG4o7fjmARaIcI76wmMIyyY7SbPnM2EqA8lr5I/cu9KofoAUSc5haBJExK6DlWGVMfRGKnDIA==
+"@fontsource/jetbrains-mono@^5.0.3":
+  version "5.0.3"
+  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.0.3.tgz#153f39f9200fd6d5c815ae7992e3c996205e6a12"
+  integrity sha512-0zbVAm0dVaBo7x9Q4ceX4VWe5VSM1Jaonb85bC+LR7fTpPeOpQs1nPDSdR55XMGSghl7ElsL12g8AaJKwXoutw==
 
 "@jridgewell/sourcemap-codec@^1.4.13", "@jridgewell/sourcemap-codec@^1.4.14":
   version "1.4.14"
@@ -1186,20 +1186,20 @@ path-is-absolute@^1.0.0:
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
   integrity sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==
 
-phoenix@1.7.3:
-  version "1.7.3"
-  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.3.tgz#4279e048eaf7d9050ac2d68144b6f6fe956ce0d2"
-  integrity sha512-PJ9dhv69qGgTf4dihWlriCUg7WLO769+KHCirONRgPctb790vuFDV5XENZYO2COXfkwuZ7oYzTsejIGnyL7bLw==
+phoenix@1.7.6:
+  version "1.7.6"
+  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.6.tgz#a58f5bf2727b734e9d0f754e0d30c3ec8cc56ffe"
+  integrity sha512-TOZmJqQaZIWDXMcRXo/qLSBcROFgfA0W/LlaJ9RpETGSYSTouGTJKw5ozR6dII6iPHpOXHagc9kV5WYO9LtTRQ==
 
 phoenix_html@^3.2.0:
   version "3.3.1"
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-3.3.1.tgz#87461c879a075cad6a7340e434e40f69a815f11b"
   integrity sha512-t/9Saqpe8vznZYHMDim7HS32Dd2/rKf3+uxuKKNRADLpGXVIDjselOY6pK8aNaLiY2gnlqsoz6yIpUBuoLT63w==
 
-phoenix_live_view@0.19.1:
-  version "0.19.1"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.19.1.tgz#f7caf7ba3af68f1400da5e2ce5786c799b4cfe74"
-  integrity sha512-itJyyEO5z0BNMcIQVhRGrdhx/d16sWgR3uQ+RXlw1tgs/eKGGqc9YnmIEf4cDgC/FIN++fjUse2CLRHfCXxRUQ==
+phoenix_live_view@0.19.3:
+  version "0.19.3"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.19.3.tgz#3b9b4af9b160ed9c62777e92d6f545608018b641"
+  integrity sha512-naXvQmIOfpV99+g+YdIFz8I2O79R3vFRziSVuyqmZ1bemMV0TZIHAAwOhsMjoXtkvM8GmGbTrxMU8hq/atRrnw==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1220,7 +1220,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
@@ -1578,15 +1578,15 @@ svelte-preprocess@^5.0.4:
     sorcery "^0.11.0"
     strip-indent "^3.0.0"
 
-svelte@^3.59.1:
-  version "3.59.1"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.59.1.tgz#3de3d56b9165748f32f3131589b8d183cabe7449"
-  integrity sha512-pKj8fEBmqf6mq3/NfrB9SLtcJcUvjYSWyePlfCqN9gujLB25RitWK8PvFzlwim6hD/We35KbPlRteuA6rnPGcQ==
+svelte@^3.59.2:
+  version "3.59.2"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.59.2.tgz#a137b28e025a181292b2ae2e3dca90bf8ec73aec"
+  integrity sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==
 
-sweetalert2@^11.7.11:
-  version "11.7.11"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.7.11.tgz#af85ced35907ea80cc94407c291053867e512307"
-  integrity sha512-kQ2wxdHq9OBCdVT7Ku8YYuNGKq2qwYMIBSfY13j/dsqVFh6th37SE0/hCLcrZ8LS/kIouiVKgWqYa9/UJ3RZTQ==
+sweetalert2@^11.7.12:
+  version "11.7.12"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.7.12.tgz#3ac15a3138159ccdcd2ec55ea7abe749cd528a80"
+  integrity sha512-TQJy8mQymJLzqWPQOMQErd81Zd/rSYr0UL4pEc7bqEihtjS+zt7LWJXLhfPp93e+Hf3Z2FHMB6QGNskAMCsdTg==
 
 throttle-debounce@^3.0.1:
   version "3.0.1"
