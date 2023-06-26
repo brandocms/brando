@@ -4,10 +4,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
 
-  def mount(_params, %{"user_token" => token} = assigns, socket) do
+  def mount(_params, %{"user_token" => token}, socket) do
     {:ok,
      socket
-     |> assign(assigns)
      |> assign_current_user(token)
      |> assign_entry_id()}
   end

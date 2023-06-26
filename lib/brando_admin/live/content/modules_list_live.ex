@@ -5,10 +5,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   alias BrandoAdmin.Content.ModuleUpdateLive
   alias Phoenix.LiveView.JS
 
-  def mount(_, assigns, socket) do
+  def mount(_, session, socket) do
     {:ok,
      socket
-     |> assign(assigns)
      |> assign(:base64_modules, nil)
      |> assign(:imported_modules, nil)}
   end
