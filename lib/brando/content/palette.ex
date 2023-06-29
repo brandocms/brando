@@ -22,6 +22,7 @@ defmodule Brando.Content.Palette do
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
 
   attributes do
@@ -40,6 +41,7 @@ defmodule Brando.Content.Palette do
     form do
       tab t("Content") do
         fieldset size: :half do
+          input :status, :status
           input :global, :toggle
           input :name, :text
           input :key, :slug, for: :name, camel_case: true

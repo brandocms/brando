@@ -596,7 +596,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
                 uid={@uid}
                 id_prefix="block_data"
                 class="tiptap-text"
-                phx_debounce={750} />
+                phx-debounce={750} />
             </div>
           </div>
         </div>
@@ -713,8 +713,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             uid={@uid}
             id_prefix="block_data"
             class={"h#{@level}"}
-            phx_update="ignore"
-            phx_debounce={750}
+            phx-update="ignore"
+            phx-debounce={750}
             data_autosize={true}
             rows={1} />
           <Input.input type={:hidden} field={@block_data[:class]} uid={@uid} id_prefix="block_data" />

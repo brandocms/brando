@@ -477,7 +477,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         changeset,
         data_field,
         block_uid,
-        %{data: %{vars: module.vars}}
+        %{data: %{vars: module.vars || []}}
       )
 
     schema = changeset.data.__struct__
@@ -489,7 +489,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       changeset: updated_changeset
     )
 
-    {:noreply, assign(socket, :important_vars, Enum.filter(module.vars, &(&1.important == true)))}
+    {:noreply,
+     assign(socket, :important_vars, Enum.filter(module.vars || [], &(&1.important == true)))}
   end
 
   def handle_event(

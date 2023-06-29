@@ -178,9 +178,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         compact={@compact}>
 
         <%= if @in_block || @field.form.source.data.__struct__.__naming__().singular == "module" do %>
-          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" value={@selected_option} />
+          <Input.input type={:hidden} field={@field} uid={@uid} phx-debounce={100} id_prefix="selected_option" value={@selected_option} />
         <% else %>
-          <Input.input type={:hidden} field={@field} uid={@uid} phx_debounce={100} id_prefix="selected_option" />
+          <Input.input type={:hidden} field={@field} uid={@uid} phx-debounce={100} id_prefix="selected_option" />
         <% end %>
         <div class="multiselect">
           <div>

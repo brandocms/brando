@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   alias BrandoAdmin.Content.ModuleUpdateLive
   alias Phoenix.LiveView.JS
 
-  def mount(_, session, socket) do
+  def mount(_, _session, socket) do
     {:ok,
      socket
      |> assign(:base64_modules, nil)
@@ -14,9 +14,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Content Modules")}
-      subtitle={gettext("Overview")}>
+    <Content.header title={gettext("Content Modules")} subtitle={gettext("Overview")}>
       <button class="stealth" phx-click={show_modal("#module-import-modal")}>
         <%= gettext "Import modules" %>
       </button>
