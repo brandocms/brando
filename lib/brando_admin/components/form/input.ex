@@ -399,7 +399,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               class="tiptap-target">
             </div>
           </div>
-          <.input type={:hidden} field={@field} class="tiptap-text" phx_debounce={750} />
+          <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={750} />
         </div>
       </div>
     </Form.field_base>
@@ -429,10 +429,10 @@ defmodule BrandoAdmin.Components.Form.Input do
         type={:text}
         field={@field}
         class="text monospace"
-        phx_hook="Brando.Slug"
-        phx_debounce={750}
-        data_slug_for={@data_slug_for}
-        data_slug_type={@data_slug_type}
+        phx-hook="Brando.Slug"
+        phx-debounce={750}
+        data-slug-for={@data_slug_for}
+        data-slug-type={@data_slug_type}
         autocorrect="off"
         spellcheck="false" />
       <%= if @url do %>
@@ -699,7 +699,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
-        phx_debounce={@debounce}
+        phx-debounce={@debounce}
         class={"text#{@monospace && " monospace" || ""}"} />
     </Form.field_base>
     """
@@ -726,7 +726,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         rows={@rows}
         disabled={@disabled}
-        phx_debounce={@debounce}
+        phx-debounce={@debounce}
         id={make_uid(@field, @uid)} />
     </Form.field_base>
     """
