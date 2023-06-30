@@ -389,6 +389,7 @@ defmodule Brando.VillainTest do
     {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
     palette_params = %{
+      status: :published,
       name: "green",
       key: "green",
       namespace: "general",

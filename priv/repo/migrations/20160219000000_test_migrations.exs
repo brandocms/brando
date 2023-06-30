@@ -213,6 +213,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :key, :text
       add :namespace, :text
       add :sequence, :integer
+      add :status, :integer
       add :global, :boolean, default: false
       add :instructions, :text
       add :colors, :jsonb

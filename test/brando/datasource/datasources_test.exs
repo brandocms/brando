@@ -218,6 +218,7 @@ defmodule Brando.DatasourcesTest do
     ]
 
     palette_params = %{
+      status: :published,
       name: "green",
       key: "green",
       namespace: "general",
