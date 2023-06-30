@@ -945,10 +945,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.48.2":
-  version "3.48.2"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.2.tgz#2f594540992a40cd29bb3b987850047c4e73875d"
-  integrity sha512-h6O0Q91n7o+510MbeDyLk7iwZ2Gq6ppTFnhgdmGGKRDrt2rI/4ZvZcsJp+EoYVyzOHKPaGgjhEDhmAq3nTUfiA==
+"@brandocms/jupiter@^3.49.0":
+  version "3.49.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.49.0.tgz#2a1118b6d9f1c4067e15a366e699e1963cb8c265"
+  integrity sha512-oIUIGH8ode43sG5EL9ekySfo4uTiCAG9CW90koLqMs+ql1S53qwXjDKCLKQ+PYiGAQT2a9JnqA/ojWWI286Abw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
