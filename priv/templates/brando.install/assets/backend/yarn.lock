@@ -64,20 +64,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.47.0":
-  version "3.47.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.47.0.tgz#a5a7aec048d7d019312a0f2432cdb428c15641b3"
-  integrity sha512-90mjFVVoHUtP7KiAanXk2m3olsRc6DHNiweb0t5DsErSi3c68Tm7k7Sf9a75IJiZZ8CbuFYB4khTnXNSg23Oyw==
-  dependencies:
-    "@egjs/hammerjs" "^2.0.17"
-    body-scroll-lock "^4.0.0-beta.0"
-    gsap "3.11.0"
-    lodash.defaultsdeep "^4.6.1"
-
-"@brandocms/jupiter@^3.48.2":
-  version "3.48.2"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.48.2.tgz#2f594540992a40cd29bb3b987850047c4e73875d"
-  integrity sha512-h6O0Q91n7o+510MbeDyLk7iwZ2Gq6ppTFnhgdmGGKRDrt2rI/4ZvZcsJp+EoYVyzOHKPaGgjhEDhmAq3nTUfiA==
+"@brandocms/jupiter@^3.47.0", "@brandocms/jupiter@^3.49.0":
+  version "3.49.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.49.0.tgz#2a1118b6d9f1c4067e15a366e699e1963cb8c265"
+  integrity sha512-oIUIGH8ode43sG5EL9ekySfo4uTiCAG9CW90koLqMs+ql1S53qwXjDKCLKQ+PYiGAQT2a9JnqA/ojWWI286Abw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -873,11 +863,6 @@ graceful-fs@^4.1.3:
   version "4.2.8"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.8.tgz#e412b8d33f5e006593cbd3cee6df9f2cebbe802a"
   integrity sha512-qkIilPUYcNhJpd33n0GBXTB1MMPp14TxEsEs0pTrsSVucApsYzW5V+Q8Qxhik6KU3evy+qkAAowTByymK0avdg==
-
-gsap@3.11.0:
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.11.0.tgz#5a45da0f35b49e2c479e1e274feb6ac51e86478b"
-  integrity sha512-TV5aFGqXht+0o/CelnhCikSe3QGeG+q1XA/fyFFsMzesILHgWgFWIz0NuXIgcMaL5h7MG2l+j0BTupS5YyYkrw==
 
 gsap@3.11.3:
   version "3.11.3"
