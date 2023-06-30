@@ -34,6 +34,7 @@ defmodule Brando.Blueprint.Attributes do
 
   @valid_attributes [
     {:array, :map},
+    {:array, :string},
     :array,
     :boolean,
     :date,
