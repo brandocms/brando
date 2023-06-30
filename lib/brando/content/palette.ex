@@ -68,6 +68,7 @@ defmodule Brando.Content.Palette do
   listings do
     listing do
       listing_query %{
+        status: :published,
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
