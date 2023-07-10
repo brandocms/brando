@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@brandocms/europacss": "^0.12.0",
-    "@vitejs/plugin-legacy": "^4.0.2",
+    "@vitejs/plugin-legacy": "^4.1.0",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.4.21",
     "postcss-import": "^15.1.0",
