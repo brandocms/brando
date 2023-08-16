@@ -175,6 +175,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
               field={@block_data[:palette_id]}
               label={gettext "Palette"}
               opts={[options: @palette_options]}
+              in_block
             />
           <% end %>
           <Input.text field={@block_data[:target_id]} />
