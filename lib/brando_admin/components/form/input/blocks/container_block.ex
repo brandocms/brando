@@ -90,24 +90,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def prepare_palettes(available_palettes) do
-    Enum.map(available_palettes, fn palette ->
-      colors =
-        Enum.map(Enum.reverse(palette.colors), fn color ->
-          """
-          <span
-            class="circle tiny"
-            style="background-color:#{color.hex_value}"></span>
-          """
-        end)
+    available_palettes
+    |> Enum.filter(&(&1.status == :published))
+    |> Enum.map(&extract_option_from_palette/1)
+  end
 
-      label = """
-      <div class="circle-stack mr-1">
-        #{colors}
-      </div><span class="text-mono">[#{palette.namespace}] #{palette.name}</span>
-      """
+  defp extract_option_from_palette(palette) do
+    colors =
+      Enum.map(Enum.reverse(palette.colors), fn color ->
+        """
+        <span
+          class="circle tiny"
+          style="background-color:#{color.hex_value}"></span>
+        """
+      end)
 
-      %{label: label, value: palette.id}
-    end)
+    label = """
+    <div class="circle-stack mr-1">
+      #{colors}
+    </div><span class="text-mono">[#{palette.namespace}] #{palette.name}</span>
+    """
+
+    %{label: label, value: palette.id}
   end
 
   def get_palette(nil), do: nil
@@ -126,6 +130,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
     socket
     |> assign(:selected_palette, selected_palette)
     |> assign(:first_color, first_color)
+    |> ensure_selected_palette_is_available()
+  end
+
+  defp ensure_selected_palette_is_available(socket) do
+    selected_palette = socket.assigns.selected_palette
+    palette_options = socket.assigns.palette_options
+
+    case Enum.find(palette_options, &(&1.value == selected_palette.id)) do
+      nil ->
+        assign(
+          socket,
+          :palette_options,
+          [extract_option_from_palette(selected_palette)] ++ palette_options
+        )
+
+      _ ->
+        socket
+    end
   end
 
   def render(assigns) do
