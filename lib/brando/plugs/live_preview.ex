@@ -47,6 +47,7 @@ defmodule Brando.Plug.LivePreview do
             html.is-updated-live-preview [data-moonwalk-section],
             html.is-updated-live-preview [data-moonwalk-run],
             html.is-updated-live-preview [data-moonwalk-children] > *,
+            html.is-updated-live-preview [data-ll-srcset],
             html.is-updated-live-preview [data-ll-srcset] img[data-ll-loaded] {
               opacity: 1 !important;
               visibility: visible !important;
