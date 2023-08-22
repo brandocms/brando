@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
     template = Enum.find(templates, &(&1.id == String.to_integer(template_id)))
 
-    updated_changeset = Ecto.Changeset.put_change(changeset, data_field, template.data)
+    updated_changeset = Ecto.Changeset.put_change(changeset, data_field.field, template.data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
