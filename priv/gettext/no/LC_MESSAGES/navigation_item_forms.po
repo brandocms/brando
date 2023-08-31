@@ -20,22 +20,22 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
 
-#: lib/brando/navigation/menu.ex:57
+#: lib/brando/navigation/menu.ex:56
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/navigation/menu.ex:59
+#: lib/brando/navigation/menu.ex:58
 #, elixir-autogen, elixir-format
 msgid "New window?"
 msgstr "Nytt vindu?"
 
-#: lib/brando/navigation/menu.ex:56
+#: lib/brando/navigation/menu.ex:55
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/navigation/menu.ex:58
+#: lib/brando/navigation/menu.ex:57
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr "URL"

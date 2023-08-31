@@ -20,12 +20,12 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
 
-#: lib/brando/content/palette.ex:74
+#: lib/brando/content/palette.ex:77
 #, elixir-autogen, elixir-format
 msgid "Color"
 msgstr "Farge"
 
-#: lib/brando/content/palette.ex:73
+#: lib/brando/content/palette.ex:76
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"

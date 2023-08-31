@@ -11,17 +11,17 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/navigation/menu.ex:78
+#: lib/brando/navigation/menu.ex:77
 #, elixir-autogen, elixir-format
 msgid "Create menu item"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:74
+#: lib/brando/navigation/menu.ex:73
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:108
+#: lib/brando/navigation/menu.ex:107
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr ""

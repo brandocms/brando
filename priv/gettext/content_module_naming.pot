@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/module.ex:129
+#: lib/brando/content/module.ex:131
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr ""
 
-#: lib/brando/content/module.ex:130
+#: lib/brando/content/module.ex:132
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr ""

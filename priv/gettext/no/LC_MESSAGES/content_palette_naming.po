@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit"
 "X-Generator: Poedit 3.0"
 
-#: lib/brando/content/palette.ex:112
+#: lib/brando/content/palette.ex:115
 #, elixir-autogen, elixir-format
 msgid "palette"
 msgstr "palett"
 
-#: lib/brando/content/palette.ex:113
+#: lib/brando/content/palette.ex:116
 #, elixir-autogen, elixir-format
 msgid "palettes"
 msgstr "paletter"

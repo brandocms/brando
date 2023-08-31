@@ -11,22 +11,22 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/navigation/menu.ex:57
+#: lib/brando/navigation/menu.ex:56
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:59
+#: lib/brando/navigation/menu.ex:58
 #, elixir-autogen, elixir-format
 msgid "New window?"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:56
+#: lib/brando/navigation/menu.ex:55
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:58
+#: lib/brando/navigation/menu.ex:57
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""

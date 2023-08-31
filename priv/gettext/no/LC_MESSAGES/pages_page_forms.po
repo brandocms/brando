@@ -8,79 +8,75 @@
 # # to merge POT files into PO files.
 msgid ""
 msgstr ""
-"Language: no"
-"Plural-Forms: nplurals=2; plural=(n != 1);;"
-"Project-Id-Version: "
-"POT-Creation-Date: "
-"PO-Revision-Date: "
-"Last-Translator: "
-"Language-Team: "
-"MIME-Version: 1.0"
-"Content-Type: text/plain; charset=UTF-8"
-"Content-Transfer-Encoding: 8bit"
-"X-Generator: Poedit 3.0"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: noplural\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.3.2\n"
 
-#: lib/brando/pages/page.ex:277
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:279
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando/pages/page.ex:273
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:275
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/pages/page.ex:284
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:290
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#: lib/brando/pages/page.ex:250
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:252
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/pages/page.ex:280
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:282
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#: lib/brando/pages/page.ex:264
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:266
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/pages/page.ex:289
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:295
 msgid "Page variables"
 msgstr "Sidevariabler"
 
-#: lib/brando/pages/page.ex:252
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:254
 msgid "Status"
 msgstr "Status"
 
-#: lib/brando/pages/page.ex:283
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:289
 msgid "Template"
 msgstr "Mal"
 
-#: lib/brando/pages/page.ex:256
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:258
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:257
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:259
 msgid "URI"
 msgstr "URI"
 
-#: lib/brando/pages/page.ex:269
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:271
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#: lib/brando/pages/page.ex:281
-#, elixir-autogen, elixir-format
+#: lib/brando/pages/page.ex:283
 msgid "Page is loaded at root address"
 msgstr "Siden lastes inn på rotadressen"
+
+#: lib/brando/pages/page.ex:286
+msgid "Has URL"
+msgstr "Har URL"
+
+#: lib/brando/pages/page.ex:287
+msgid "Page has an URL and should be included in sitemap"
+msgstr ""
+"Siden har en egen adresse og skal inkluderes i "
+"nettstedkartet"
