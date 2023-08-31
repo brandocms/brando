@@ -33,6 +33,7 @@ defmodule Brando.Pages do
 
   filters Page do
     fn
+      {:has_url, has_url}, query -> from q in query, where: q.has_url == ^has_url
       {:language, language}, query -> from q in query, where: q.language == ^language
       {:uri, uri}, query -> from q in query, where: ilike(q.uri, ^"%#{uri}%")
       {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")

@@ -43,6 +43,7 @@ defmodule Brando.Pages.Page do
     title
     data
     html
+    has_url
     is_homepage
     template
     status
@@ -65,6 +66,7 @@ defmodule Brando.Pages.Page do
     attribute :uri, :string, required: true, unique: [prevent_collision: :language]
     attribute :template, :string, required: true
     attribute :is_homepage, :boolean
+    attribute :has_url, :boolean, default: true
     attribute :data, :villain
     attribute :css_classes, :string
 
@@ -279,6 +281,10 @@ defmodule Brando.Pages.Page do
           input :is_homepage, :toggle,
             label: t("Homepage"),
             instructions: t("Page is loaded at root address")
+
+          input :has_url, :toggle,
+            label: t("Has URL"),
+            instructions: t("Page has an URL and should be included in sitemap")
 
           input :template, :select, options: &__MODULE__.get_templates/2, label: t("Template")
           input :css_classes, :text, label: t("CSS classes")
