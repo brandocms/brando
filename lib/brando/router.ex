@@ -12,13 +12,12 @@ defmodule Brando.Router do
   ]
   defmacro page_routes(opts \\ [root: true]) do
     quote do
-      get "/robots.txt", Brando.SEOController, :robots
-
       if unquote(opts)[:root] do
-        get "/", Brando.web_module(PageController), :index
+        get "/robots.txt", Brando.SEOController, :robots
+        get "/__p__/:preview_key", Brando.PreviewController, :show
       end
 
-      get "/__p__/:preview_key", Brando.PreviewController, :show
+      get "/", Brando.web_module(PageController), :index
       get "/*path", Brando.web_module(PageController), :show
     end
   end
