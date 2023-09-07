@@ -17,6 +17,12 @@ defmodule BrandoWeb.FallbackController do
         |> put_view(Brando.endpoint().config(:render_errors)[:formats])
         |> render(:"404")
 
+      {:ok, {:redirect, {_url, 410}}} ->
+        # 410 GONE
+        conn
+        |> resp(410, "Gone.")
+        |> halt()
+
       {:ok, {:redirect, {url, code}}} ->
         conn
         |> put_resp_header("location", url)
