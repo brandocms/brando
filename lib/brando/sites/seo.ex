@@ -71,7 +71,7 @@ defmodule Brando.Sites.SEO do
             style: :inline,
             cardinality: :many,
             size: :full,
-            default: %Brando.Sites.Redirect{from: "/example/:slug", to: "/new/:slug", code: 302} do
+            default: %Brando.Sites.Redirect{from: "/example/:slug", to: "/new/:slug", code: 301} do
             input :code, :number, label: t("Code", Brando.Sites.Redirect)
             input :from, :text, label: t("From", Brando.Sites.Redirect)
             input :to, :text, label: t("To", Brando.Sites.Redirect)
