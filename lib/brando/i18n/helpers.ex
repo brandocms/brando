@@ -37,7 +37,11 @@ defmodule Brando.I18n.Helpers do
         apply(Brando.helpers(), localized_fun, args)
       else
         # fallback to regular function (mostly used for page_path)
-        apply(Brando.helpers(), :"#{fun}", args)
+        if {:"#{fun}", Enum.count(args)} in Brando.helpers().__info__(:functions) do
+          apply(Brando.helpers(), :"#{fun}", args)
+        else
+          "/<url cannot be localized>"
+        end
       end
     end
   end
