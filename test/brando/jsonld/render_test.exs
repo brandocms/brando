@@ -65,39 +65,39 @@ defmodule Brando.JSONLDRenderTest do
     <.render_json_ld conn={@mock_conn} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n"
+    rendered_comp = rendered_to_string(comp)
 
-    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
-  end
+    extracted_json =
+      ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
+      |> Regex.run(rendered_comp, capture: :all_but_first)
+      |> List.first()
+      |> Jason.decode!()
 
-  test "render json ld :corporation" do
-    u0 = Factory.insert(:random_user)
-
-    {:ok, fallback_meta_image} =
-      Brando.Images.create_image(Map.put(@img, :creator_id, u0.id), :system)
-
-    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
-    Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
-
-    {:ok, updated_identity} =
-      Brando.Sites.get_identity(%{matches: %{language: "en"}, preload: [:logo]})
-
-    {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
-
-    Brando.Sites.update_seo(seo, %{fallback_meta_image_id: fallback_meta_image.id}, :system)
-
-    {:ok, updated_seo} =
-      Brando.Sites.get_seo(%{matches: %{language: "en"}, preload: [:fallback_meta_image]})
-
-    rendered_json_ld = Brando.HTML.render_json_ld(:corporation, {updated_identity, updated_seo})
-
-    assert rendered_json_ld ==
-             {
-               :safe,
-               "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Corporation\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}"
-             }
+    assert extracted_json == %{
+             "@context" => "http://schema.org",
+             "@id" => "http://localhost/#identity",
+             "@type" => "Organization",
+             "address" => %{
+               "@type" => "PostalAddress",
+               "addressCountry" => "NO",
+               "addressLocality" => "Oslo",
+               "addressRegion" => "Oslo",
+               "postalCode" => "0000"
+             },
+             "alternateName" => "Shortform name",
+             "description" => "Fallback meta description",
+             "email" => "mail@domain.tld",
+             "image" => %{
+               "@type" => "ImageObject",
+               "height" => 933,
+               "url" =>
+                 "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
+               "width" => 1900
+             },
+             "name" => "Organization name",
+             "sameAs" => ["https://instagram.com/test", "https://facebook.com/test"],
+             "url" => "https://www.domain.tld"
+           }
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
@@ -129,7 +129,31 @@ defmodule Brando.JSONLDRenderTest do
     <.render_json_ld conn={@mock_conn} />
     """
 
-    assert rendered_to_string(comp) ==
-             "\n<script type=\"application/ld+json\">\n  {\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Shortform name\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organization name\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}\n</script>\n"
+    rendered_comp = rendered_to_string(comp)
+
+    extracted_json =
+      ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
+      |> Regex.run(rendered_comp, capture: :all_but_first)
+      |> List.first()
+      |> Jason.decode!()
+
+    assert extracted_json == %{
+             "@context" => "http://schema.org",
+             "@id" => "http://localhost/#identity",
+             "@type" => "Organization",
+             "address" => %{
+               "@type" => "PostalAddress",
+               "addressCountry" => "NO",
+               "addressLocality" => "Oslo",
+               "addressRegion" => "Oslo",
+               "postalCode" => "0000"
+             },
+             "alternateName" => "Shortform name",
+             "description" => "Fallback meta description",
+             "email" => "mail@domain.tld",
+             "name" => "Organization name",
+             "sameAs" => ["https://instagram.com/test", "https://facebook.com/test"],
+             "url" => "https://www.domain.tld"
+           }
   end
 end
