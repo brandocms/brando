@@ -10,15 +10,20 @@ defmodule Brando.Router do
     {"permissions-policy",
      "accelerometer=(), camera=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"}
   ]
-  defmacro page_routes(opts \\ [root: true]) do
+  defmacro page_routes(opts \\ []) do
+    default = [root: true, catch_all: true]
+    options = Keyword.merge(default, opts)
+
     quote do
-      if unquote(opts)[:root] do
+      if unquote(options)[:root] do
         get "/robots.txt", Brando.SEOController, :robots
         get "/__p__/:preview_key", Brando.PreviewController, :show
       end
 
-      get "/", Brando.web_module(PageController), :index
-      get "/*path", Brando.web_module(PageController), :show
+      if unquote(options)[:catch_all] do
+        get "/", Brando.web_module(PageController), :index
+        get "/*path", Brando.web_module(PageController), :show
+      end
     end
   end
 
