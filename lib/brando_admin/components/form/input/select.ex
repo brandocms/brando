@@ -298,7 +298,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     <button
                       type="button"
                       class="secondary"
-                      phx-click={JS.push("reset", target: @myself)}>
+                      value={nil}
+                      phx-click={JS.push("select_option", target: @myself)}>
                       <%= gettext("Reset value") %>
                     </button>
                   </div>
@@ -454,7 +455,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
-
+    value = if value == "", do: nil, else: value
     form = socket.assigns.field.form
     field = socket.assigns.field
     changeset = form.source
@@ -466,9 +467,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       {update_field, fetcher_fn} = update_relation
 
       fetched_relation =
-        case fetcher_fn.(value) do
-          {:ok, fetched_relation} -> fetched_relation
-          _ -> nil
+        if is_nil(value) do
+          nil
+        else
+          case fetcher_fn.(value) do
+            {:ok, fetched_relation} -> fetched_relation
+            _ -> nil
+          end
         end
 
       send_update(BrandoAdmin.Components.Form,
@@ -507,7 +512,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def handle_event("reset", _, socket) do
     {:noreply,
      socket
-     |> assign(:selected_option, "")
+     |> assign(:selected_option, nil)
      |> assign_label()}
   end
 end
