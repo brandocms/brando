@@ -129,13 +129,7 @@ defmodule BrandoIntegrationWeb.Router do
     get "/project/:uri/:id", BrandoIntegration.ProjectController, :show
   end
 
-  scope "/en", as: :en, assigns: %{language: "en"} do
-    pipe_through :browser
-    page_routes()
-  end
-
-  scope "/no", as: :no, assigns: %{language: "no"} do
-    pipe_through :browser
+  scope "/" do
     page_routes()
   end
 end

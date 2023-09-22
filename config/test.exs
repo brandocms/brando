@@ -23,6 +23,7 @@ config :brando, BrandoIntegration.DummyRepo,
 
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Files, cdn: [enabled: false]
+config :brando, scope_default_language_routes: true
 
 config :brando, Brando.Images,
   cdn: [enabled: false],
@@ -101,4 +102,4 @@ config :bcrypt_elixir, log_rounds: 1
 
 config :phoenix, :stacktrace_depth, 30
 # Print only warnings and errors during test
-config :logger, level: :warn
+config :logger, level: :warning
