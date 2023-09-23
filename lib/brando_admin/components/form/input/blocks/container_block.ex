@@ -135,18 +135,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
   defp ensure_selected_palette_is_available(socket) do
     selected_palette = socket.assigns.selected_palette
-    palette_options = socket.assigns.palette_options
 
-    case Enum.find(palette_options, &(&1.value == selected_palette.id)) do
-      nil ->
-        assign(
-          socket,
-          :palette_options,
-          [extract_option_from_palette(selected_palette)] ++ palette_options
-        )
+    if selected_palette do
+      palette_options = socket.assigns.palette_options
 
-      _ ->
-        socket
+      case Enum.find(palette_options, &(&1.value == selected_palette.id)) do
+        nil ->
+          assign(
+            socket,
+            :palette_options,
+            [extract_option_from_palette(selected_palette)] ++ palette_options
+          )
+
+        _ ->
+          socket
+      end
+    else
+      socket
     end
   end
 
