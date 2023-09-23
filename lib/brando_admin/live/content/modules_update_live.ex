@@ -602,8 +602,22 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{"module" => module_params},
         %{assigns: %{current_user: user, entry: entry}} = socket
       ) do
-    updated_changeset = Brando.Content.Module.changeset(entry, module_params, user)
-    changeset = %{updated_changeset | action: :update}
+    changeset = Brando.Content.Module.changeset(entry, module_params, user)
+    updated_changeset = %{changeset | action: :update}
+
+    changeset =
+      if Ecto.Changeset.changed?(updated_changeset, :svg) do
+        svg = Ecto.Changeset.get_change(updated_changeset, :svg)
+
+        if String.starts_with?(svg, "<svg") do
+          updated_svg = Base.encode64(svg, padding: false)
+          put_change(updated_changeset, :svg, updated_svg)
+        else
+          updated_changeset
+        end
+      else
+        updated_changeset
+      end
 
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->

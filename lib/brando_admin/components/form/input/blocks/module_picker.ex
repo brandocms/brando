@@ -106,7 +106,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                     phx-value-index={@insert_index}
                     phx-value-module-id={module.id}>
                     <figure>
-                      <%= module.svg |> raw %>
+                      <%= if module.svg do %>
+                      <img src={"data:image/svg+xml;base64,#{module.svg}"}>
+                      <% end %>
                     </figure>
                     <div class="info">
                       <div class="name"><%= module.name %></div>

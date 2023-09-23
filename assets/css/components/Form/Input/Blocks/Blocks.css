@@ -182,7 +182,7 @@ section.alert.danger {
 
   figure {
     min-width: 115px;
-    svg {
+    img {
       width: 115px;
       height: auto;
     }

@@ -95,14 +95,14 @@ defmodule Brando.Content.Module do
 
       template(
         """
-        <div class="svg">{{ entry.svg }}</div><br>
+        <div class="svg">{% if entry.svg %}<img src="data:image/svg+xml;base64,{{ entry.svg }}">{% endif %}</div>
         """,
         columns: 2
       )
 
       template(
         """
-        <div class="badge">{{ entry.namespace }}</div><br>
+        <div class="badge">{{ entry.namespace }}</div>
         """,
         columns: 3
       )
