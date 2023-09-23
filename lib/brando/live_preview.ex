@@ -210,7 +210,7 @@ defmodule Brando.LivePreview do
     )
   end
 
-  @deprecated "Use Phoenix.Template / html instead"
+  # TODO: DEPRECATE. Use Phoenix.Template / html instead
   def render_layout(:view, layout_module, layout_template, root_assigns) do
     if Code.ensure_loaded?(Phoenix.View) do
       Phoenix.View.render_to_string(
@@ -229,7 +229,7 @@ defmodule Brando.LivePreview do
     Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
   end
 
-  @deprecated "Use Phoenix.Template / html instead"
+  # TODO: DEPRECATE. Use Phoenix.Template / html instead
   def render_inner_content(:view, tpl_module, tpl, render_assigns) do
     if Code.ensure_loaded?(Phoenix.View) do
       tpl = (is_binary(tpl) && tpl) || to_string(tpl)

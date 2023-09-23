@@ -2,6 +2,7 @@ defmodule Brando.Villain.LiquexTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
   alias Brando.Factory
+  doctest Brando.Villain.Filters
 
   test "if statement" do
     Brando.Cache.Globals.set()

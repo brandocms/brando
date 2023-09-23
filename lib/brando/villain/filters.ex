@@ -74,13 +74,13 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.abs(-1, %{})
+      iex> Brando.Villain.Filters.abs(-1, %{})
       1
 
-      iex> Liquex.Filter.abs(1, %{})
+      iex> Brando.Villain.Filters.abs(1, %{})
       1
 
-      iex> Liquex.Filter.abs("-1.1", %{})
+      iex> Brando.Villain.Filters.abs("-1.1", %{})
       1.1
   """
   @spec abs(String.t() | number, any) :: number
@@ -96,7 +96,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.append("myfile", ".html", %{})
+      iex> Brando.Villain.Filters.append("myfile", ".html", %{})
       "myfile.html"
   """
   @spec append(String.t(), String.t(), map()) :: String.t()
@@ -107,10 +107,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.at_least(3, 5, %{})
+      iex> Brando.Villain.Filters.at_least(3, 5, %{})
       5
 
-      iex> Liquex.Filter.at_least(5, 3, %{})
+      iex> Brando.Villain.Filters.at_least(5, 3, %{})
       5
   """
   @spec at_least(number, number, map()) :: number
@@ -122,10 +122,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.at_most(4, 5, %{})
+      iex> Brando.Villain.Filters.at_most(4, 5, %{})
       4
 
-      iex> Liquex.Filter.at_most(4, 3, %{})
+      iex> Brando.Villain.Filters.at_most(4, 3, %{})
       3
   """
   @spec at_most(number, number, map()) :: number
@@ -137,10 +137,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.capitalize("title", %{})
+      iex> Brando.Villain.Filters.capitalize("title", %{})
       "Title"
 
-      iex> Liquex.Filter.capitalize("my great title", %{})
+      iex> Brando.Villain.Filters.capitalize("my great title", %{})
       "My great title"
   """
   @spec capitalize(String.t(), map()) :: String.t()
@@ -151,16 +151,16 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.ceil(1.2, %{})
+      iex> Brando.Villain.Filters.ceil(1.2, %{})
       2
 
-      iex> Liquex.Filter.ceil(2.0, %{})
+      iex> Brando.Villain.Filters.ceil(2.0, %{})
       2
 
-      iex> Liquex.Filter.ceil(183.357, %{})
+      iex> Brando.Villain.Filters.ceil(183.357, %{})
       184
 
-      iex> Liquex.Filter.ceil("3.5", %{})
+      iex> Brando.Villain.Filters.ceil("3.5", %{})
       4
   """
   @spec ceil(number | String.t(), map()) :: number
@@ -176,10 +176,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.compact([1, 2, nil, 3], %{})
+      iex> Brando.Villain.Filters.compact([1, 2, nil, 3], %{})
       [1,2,3]
 
-      iex> Liquex.Filter.compact([1, 2, 3], %{})
+      iex> Brando.Villain.Filters.compact([1, 2, 3], %{})
       [1,2,3]
   """
   @spec compact([any], map()) :: [any]
@@ -191,7 +191,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.concat([1,2], [3,4], %{})
+      iex> Brando.Villain.Filters.concat([1,2], [3,4], %{})
       [1,2,3,4]
   """
   def concat(value, other, _) when is_list(value) and is_list(other),
@@ -203,10 +203,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.default("1.99", "2.99", %{})
+      iex> Brando.Villain.Filters.default("1.99", "2.99", %{})
       "1.99"
 
-      iex> Liquex.Filter.default("", "2.99", %{})
+      iex> Brando.Villain.Filters.default("", "2.99", %{})
       "2.99"
   """
   def default(value, def_value, _) when value in [nil, "", false, []], do: def_value
@@ -219,13 +219,13 @@ defmodule Brando.Villain.Filters do
 
   The result is rounded down to the nearest integer (that is, the floor) if the divisor is an integer.
 
-      iex> Liquex.Filter.divided_by(16, 4, %{})
+      iex> Brando.Villain.Filters.divided_by(16, 4, %{})
       4
 
-      iex> Liquex.Filter.divided_by(5, 3, %{})
+      iex> Brando.Villain.Filters.divided_by(5, 3, %{})
       1
 
-      iex> Liquex.Filter.divided_by(20, 7.0, %{})
+      iex> Brando.Villain.Filters.divided_by(20, 7.0, %{})
       2.857142857142857
   """
   def divided_by(value, divisor, _) when is_integer(divisor), do: trunc(value / divisor)
@@ -237,10 +237,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.downcase("Parker Moore", %{})
+      iex> Brando.Villain.Filters.downcase("Parker Moore", %{})
       "parker moore"
 
-      iex> Liquex.Filter.downcase("apple", %{})
+      iex> Brando.Villain.Filters.downcase("apple", %{})
       "apple"
   """
   def downcase(nil, _), do: nil
@@ -253,10 +253,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.escape("Have you read 'James & the Giant Peach'?", %{})
-      "Have you read &apos;James &amp; the Giant Peach&apos;?"
+      iex> Brando.Villain.Filters.escape("Have you read 'James & the Giant Peach'?", %{})
+      "Have you read &#39;James &amp; the Giant Peach&#39;?"
 
-      iex> Liquex.Filter.escape("Tetsuro Takara", %{})
+      iex> Brando.Villain.Filters.escape("Tetsuro Takara", %{})
       "Tetsuro Takara"
   """
   def escape(value, _),
@@ -269,7 +269,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.escape_once("1 &lt; 2 &amp; 3", %{})
+      iex> Brando.Villain.Filters.escape_once("1 &lt; 2 &amp; 3", %{})
       "1 &lt; 2 &amp; 3"
   """
   def escape_once(value, _),
@@ -280,10 +280,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.first([1, 2, 3], %{})
+      iex> Brando.Villain.Filters.first([1, 2, 3], %{})
       1
 
-      iex> Liquex.Filter.first([], %{})
+      iex> Brando.Villain.Filters.first([], %{})
       nil
   """
   def first([], _), do: nil
@@ -295,10 +295,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.floor(1.2, %{})
+      iex> Brando.Villain.Filters.floor(1.2, %{})
       1
 
-      iex> Liquex.Filter.floor(2.0, %{})
+      iex> Brando.Villain.Filters.floor(2.0, %{})
       2
   """
   def floor(value, _), do: Kernel.trunc(value)
@@ -308,7 +308,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.join(~w(John Paul George Ringo), " and ", %{})
+      iex> Brando.Villain.Filters.join(~w(John Paul George Ringo), " and ", %{})
       "John and Paul and George and Ringo"
   """
   def join(values, joiner, _), do: Enum.join(values, joiner)
@@ -318,10 +318,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.last([1, 2, 3], %{})
+      iex> Brando.Villain.Filters.last([1, 2, 3], %{})
       3
 
-      iex> Liquex.Filter.first([], %{})
+      iex> Brando.Villain.Filters.first([], %{})
       nil
   """
   @spec last(list, Liquex.Context.t()) :: any
@@ -333,7 +333,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.lstrip("          So much room for activities!          ", %{})
+      iex> Brando.Villain.Filters.lstrip("          So much room for activities!          ", %{})
       "So much room for activities!          "
   """
   @spec lstrip(String.t(), Context.t()) :: String.t()
@@ -344,7 +344,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.map([%{"a" => 1}, %{"a" => 2, "b" => 1}], "a", %{})
+      iex> Brando.Villain.Filters.map([%{"a" => 1}, %{"a" => 2, "b" => 1}], "a", %{})
       [1, 2]
   """
   @spec map([any], term, Context.t()) :: [any]
@@ -355,10 +355,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.minus(4, 2, %{})
+      iex> Brando.Villain.Filters.minus(4, 2, %{})
       2
 
-      iex> Liquex.Filter.minus(183.357, 12, %{})
+      iex> Brando.Villain.Filters.minus(183.357, 12, %{})
       171.357
   """
   @spec minus(number, number, Context.t()) :: number
@@ -369,10 +369,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.modulo(3, 2, %{})
+      iex> Brando.Villain.Filters.modulo(3, 2, %{})
       1
 
-      iex> Liquex.Filter.modulo(183.357, 12, %{})
+      iex> Brando.Villain.Filters.modulo(183.357, 12, %{})
       3.357
   """
   @spec modulo(number, number, Context.t()) :: number
@@ -386,7 +386,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.newline_to_br("\\nHello\\nthere\\n", %{})
+      iex> Brando.Villain.Filters.newline_to_br("\\nHello\\nthere\\n", %{})
       "<br />\\nHello<br />\\nthere<br />\\n"
   """
   @spec newline_to_br(String.t(), Context.t()) :: String.t()
@@ -399,10 +399,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.plus(4, 2, %{})
+      iex> Brando.Villain.Filters.plus(4, 2, %{})
       6
 
-      iex> Liquex.Filter.plus(183.357, 12, %{})
+      iex> Brando.Villain.Filters.plus(183.357, 12, %{})
       195.357
   """
   def plus(left, right, _), do: left + right
@@ -412,10 +412,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.prepend("apples, oranges, and bananas", "Some fruit: ", %{})
+      iex> Brando.Villain.Filters.prepend("apples, oranges, and bananas", "Some fruit: ", %{})
       "Some fruit: apples, oranges, and bananas"
 
-      iex> Liquex.Filter.prepend("/index.html", "example.com", %{})
+      iex> Brando.Villain.Filters.prepend("/index.html", "example.com", %{})
       "example.com/index.html"
   """
   def prepend(value, prepender, _), do: to_string(prepender) <> to_string(value)
@@ -425,7 +425,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.remove("I strained to see the train through the rain", "rain", %{})
+      iex> Brando.Villain.Filters.remove("I strained to see the train through the rain", "rain", %{})
       "I sted to see the t through the "
   """
   def remove(value, original, context), do: replace(value, original, "", context)
@@ -435,7 +435,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.remove_first("I strained to see the train through the rain", "rain", %{})
+      iex> Brando.Villain.Filters.remove_first("I strained to see the train through the rain", "rain", %{})
       "I sted to see the train through the rain"
   """
   def remove_first(value, original, context), do: replace_first(value, original, "", context)
@@ -445,7 +445,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.replace("Take my protein pills and put my helmet on", "my", "your", %{})
+      iex> Brando.Villain.Filters.replace("Take my protein pills and put my helmet on", "my", "your", %{})
       "Take your protein pills and put your helmet on"
   """
   def replace(value, original, replacement, _),
@@ -456,7 +456,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.replace_first("Take my protein pills and put my helmet on", "my", "your", %{})
+      iex> Brando.Villain.Filters.replace_first("Take my protein pills and put my helmet on", "my", "your", %{})
       "Take your protein pills and put my helmet on"
   """
   def replace_first(value, original, replacement, _),
@@ -468,7 +468,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.reverse(~w(apples oranges peaches plums), %{})
+      iex> Brando.Villain.Filters.reverse(~w(apples oranges peaches plums), %{})
       ["plums", "peaches", "oranges", "apples"]
   """
   def reverse(arr, _) when is_list(arr), do: Enum.reverse(arr)
@@ -478,16 +478,16 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.round(1, %{})
+      iex> Brando.Villain.Filters.round(1, %{})
       1
 
-      iex> Liquex.Filter.round(1.2, %{})
+      iex> Brando.Villain.Filters.round(1.2, %{})
       1
 
-      iex> Liquex.Filter.round(2.7, %{})
+      iex> Brando.Villain.Filters.round(2.7, %{})
       3
 
-      iex> Liquex.Filter.round(183.357, 2, %{})
+      iex> Brando.Villain.Filters.round(183.357, 2, %{})
       183.36
   """
   def round(value, precision \\ 0, context)
@@ -501,7 +501,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.rstrip("          So much room for activities!          ", %{})
+      iex> Brando.Villain.Filters.rstrip("          So much room for activities!          ", %{})
       "          So much room for activities!"
   """
   def rstrip(value, _), do: to_string(value) |> String.trim_trailing()
@@ -511,10 +511,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.size("Ground control to Major Tom.", %{})
+      iex> Brando.Villain.Filters.size("Ground control to Major Tom.", %{})
       28
 
-      iex> Liquex.Filter.size(~w(apples oranges peaches plums), %{})
+      iex> Brando.Villain.Filters.size(~w(apples oranges peaches plums), %{})
       4
   """
   def size(value, _) when is_list(value), do: length(value)
@@ -527,13 +527,13 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.slice("Liquid", 0, %{})
+      iex> Brando.Villain.Filters.slice("Liquid", 0, %{})
       "L"
 
-      iex> Liquex.Filter.slice("Liquid", 2, %{})
+      iex> Brando.Villain.Filters.slice("Liquid", 2, %{})
       "q"
 
-      iex> Liquex.Filter.slice("Liquid", 2, 5, %{})
+      iex> Brando.Villain.Filters.slice("Liquid", 2, 5, %{})
       "quid"
 
   If the first argument is a negative number, the indices are counted from
@@ -541,7 +541,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.slice("Liquid", -3, 2, %{})
+      iex> Brando.Villain.Filters.slice("Liquid", -3, 2, %{})
       "ui"
   """
   def slice(value, start, length \\ 1, _),
@@ -552,7 +552,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.sort(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
+      iex> Brando.Villain.Filters.sort(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["Sally Snake", "giraffe", "octopus", "zebra"]
   """
   def sort(list, _), do: Liquex.Collection.sort(list)
@@ -563,7 +563,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.sort_natural(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
+      iex> Brando.Villain.Filters.sort_natural(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["giraffe", "octopus", "Sally Snake", "zebra"]
   """
   def sort_natural(list, _), do: Liquex.Collection.sort_case_insensitive(list)
@@ -577,7 +577,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.split("John, Paul, George, Ringo", ", ", %{})
+      iex> Brando.Villain.Filters.split("John, Paul, George, Ringo", ", ", %{})
       ["John", "Paul", "George", "Ringo"]
   """
   def split(value, separator, _), do: String.split(to_string(value), to_string(separator))
@@ -588,7 +588,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.strip("          So much room for activities!          ", %{})
+      iex> Brando.Villain.Filters.strip("          So much room for activities!          ", %{})
       "So much room for activities!"
   """
   def strip(value, _), do: String.trim(to_string(value))
@@ -598,7 +598,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
+      iex> Brando.Villain.Filters.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
       "Have you read Ulysses?"
   """
   def strip_html(value, _), do: HtmlSanitizeEx.strip_tags(to_string(value))
@@ -608,7 +608,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.strip_newlines("Hello\\nthere", %{})
+      iex> Brando.Villain.Filters.strip_newlines("Hello\\nthere", %{})
       "Hellothere"
   """
   def strip_newlines(value, _) do
@@ -622,13 +622,13 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.times(3, 4, %{})
+      iex> Brando.Villain.Filters.times(3, 4, %{})
       12
 
-      iex> Liquex.Filter.times(24, 7, %{})
+      iex> Brando.Villain.Filters.times(24, 7, %{})
       168
 
-      iex> Liquex.Filter.times(183.357, 12, %{})
+      iex> Brando.Villain.Filters.times(183.357, 12, %{})
       2200.284
   """
   def times(value, divisor, _), do: value * divisor
@@ -641,13 +641,13 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.truncate("Ground control to Major Tom.", 20, %{})
+      iex> Brando.Villain.Filters.truncate("Ground control to Major Tom.", 20, %{})
       "Ground control to..."
 
-      iex> Liquex.Filter.truncate("Ground control to Major Tom.", 25, ", and so on", %{})
+      iex> Brando.Villain.Filters.truncate("Ground control to Major Tom.", 25, ", and so on", %{})
       "Ground control, and so on"
 
-      iex> Liquex.Filter.truncate("Ground control to Major Tom.", 20, "", %{})
+      iex> Brando.Villain.Filters.truncate("Ground control to Major Tom.", 20, "", %{})
       "Ground control to Ma"
   """
   def truncate(value, length, ellipsis \\ "...", _) do
@@ -672,13 +672,13 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.truncatewords("Ground control to Major Tom.", 3, %{})
+      iex> Brando.Villain.Filters.truncatewords("Ground control to Major Tom.", 3, %{})
       "Ground control to..."
 
-      iex> Liquex.Filter.truncatewords("Ground control to Major Tom.", 3, "--", %{})
+      iex> Brando.Villain.Filters.truncatewords("Ground control to Major Tom.", 3, "--", %{})
       "Ground control to--"
 
-      iex> Liquex.Filter.truncatewords("Ground control to Major Tom.", 3, "", %{})
+      iex> Brando.Villain.Filters.truncatewords("Ground control to Major Tom.", 3, "", %{})
       "Ground control to"
   """
   def truncatewords(value, length, ellipsis \\ "...", _) do
@@ -702,7 +702,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.uniq(~w(ants bugs bees bugs ants), %{})
+      iex> Brando.Villain.Filters.uniq(~w(ants bugs bees bugs ants), %{})
       ["ants", "bugs", "bees"]
   """
   def uniq(list, _), do: Enum.uniq(list)
@@ -713,10 +713,10 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.upcase("Parker Moore", %{})
+      iex> Brando.Villain.Filters.upcase("Parker Moore", %{})
       "PARKER MOORE"
 
-      iex> Liquex.Filter.upcase("APPLE", %{})
+      iex> Brando.Villain.Filters.upcase("APPLE", %{})
       "APPLE"
   """
   def upcase(value, _), do: String.upcase(to_string(value))
@@ -726,7 +726,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.url_decode("%27Stop%21%27+said+Fred", %{})
+      iex> Brando.Villain.Filters.url_decode("%27Stop%21%27+said+Fred", %{})
       "'Stop!' said Fred"
   """
   def url_decode(value, _), do: URI.decode_www_form(to_string(value))
@@ -736,13 +736,23 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.url_encode("john@liquid.com", %{})
+      iex> Brando.Villain.Filters.url_encode("john@liquid.com", %{})
       "john%40liquid.com"
 
-      iex> Liquex.Filter.url_encode("Tetsuro Takara", %{})
+      iex> Brando.Villain.Filters.url_encode("Tetsuro Takara", %{})
       "Tetsuro+Takara"
   """
   def url_encode(value, _), do: URI.encode_www_form(to_string(value))
+
+  @doc """
+  Base encode 64 string without padding
+
+  ## Examples
+
+      iex> Brando.Villain.Filters.base_encode64(~s(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 93 107"><path d='M74,74a42,42 0,1,0-57,0l28,29a42,41 0,0,0 0-57' fill='#00a3dc' fill-rule='evenodd'/></svg>), %{})
+      "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MyAxMDciPjxwYXRoIGQ9J003NCw3NGE0Miw0MiAwLDEsMC01NywwbDI4LDI5YTQyLDQxIDAsMCwwIDAtNTcnIGZpbGw9JyMwMGEzZGMnIGZpbGwtcnVsZT0nZXZlbm9kZCcvPjwvc3ZnPg"
+  """
+  def base_encode64(value, _), do: Base.encode64(value, padding: false)
 
   @doc """
   Creates an array including only the objects with a given property value, or
@@ -750,7 +760,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.where([%{"b" => 2}, %{"b" => 1}], "b", 1, %{})
+      iex> Brando.Villain.Filters.where([%{"b" => 2}, %{"b" => 1}], "b", 1, %{})
       [%{"b" => 1}]
   """
   def where(list, key, value, _), do: Liquex.Collection.where(list, key, value)
@@ -760,7 +770,7 @@ defmodule Brando.Villain.Filters do
 
   ## Examples
 
-      iex> Liquex.Filter.where([%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}, %{"b" => false, "value" => 3}], "b", %{})
+      iex> Brando.Villain.Filters.where([%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}, %{"b" => false, "value" => 3}], "b", %{})
       [%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}]
   """
   def where(list, key, _), do: Liquex.Collection.where(list, key)
@@ -773,15 +783,18 @@ defmodule Brando.Villain.Filters do
   Converts `value` timestamp into another date `format`.
   The format for this syntax is the same as strftime. The input uses the same format as Ruby’s Time.parse.
   ## Examples
-      iex> Brando.Lexer.Filter.date(~D[2000-01-01], "%m/%d/%Y", %{})
+      iex> Brando.Villain.Filters.date(~D[2000-01-01], "%m/%d/%Y", %{})
       "01/01/2000"
-      iex> Brando.Lexer.Filter.date(~N[2020-07-06 15:00:00.000000], "%m/%d/%Y", %{})
+      iex> Brando.Villain.Filters.date(~N[2020-07-06 15:00:00.000000], "%m/%d/%Y", %{})
       "07/06/2020"
-      iex> Brando.Lexer.Filter.date(~U[2020-07-06 15:00:00.000000Z], "%m/%d/%Y", %{})
+      iex> Brando.Villain.Filters.date(~U[2020-07-06 15:00:00.000000Z], "%m/%d/%Y", %{})
       "07/06/2020"
   """
 
-  def date(%Date{} = value, format, _), do: Utils.Datetime.format_datetime(value, format, nil)
+  def date(%Date{} = value, format, _) do
+    value
+    |> Utils.Datetime.format_datetime(format, nil)
+  end
 
   def date(%DateTime{} = value, format, _) do
     value
@@ -1040,8 +1053,8 @@ defmodule Brando.Villain.Filters do
   @doc """
   Converts from markdown
   ## Examples
-      iex> Brando.Lexer.Filter.markdown("this is a **string**", %{}) |> String.trim("\\n")
-      "<p>this is a <strong>string</strong></p>"
+      iex> Brando.Villain.Filters.markdown("this is a **string**", %{}) |> String.trim("\\n")
+      "<p>\\nthis is a <strong>string</strong></p>"
   """
   def markdown(%{value: str}, opts), do: markdown(str, opts)
 
