@@ -21,12 +21,12 @@
         justify-content: space-between;
 
         &.open {
-          svg {
+          > span {
             transform: rotate(45deg);
           }
         }
 
-        svg {
+        > span {
           transform: rotate(0deg);
           margin-left: 8px;
           transition: transform 500ms ease;

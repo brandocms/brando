@@ -31,7 +31,7 @@ topbar.config({
   shadowColor: 'rgba(0, 0, 0, .2)'
 })
 
-export default (hooks, enableDebug = true) => {
+export default hooks => {
   let app
   if (IS_LOGIN) {
     const MOONWALK_CONFIG = {
@@ -135,7 +135,7 @@ export default (hooks, enableDebug = true) => {
       app.toast = new Toast(app)
 
       app.registerCallback(Events.APPLICATION_READY, () => {
-        app.liveSocket = initializeLiveSocket({ ...hooks, ...brandoHooks(app) }, enableDebug)
+        app.liveSocket = initializeLiveSocket({ ...hooks, ...brandoHooks(app) })
       })
 
       window.addEventListener('phx:b:component:remount', () => {

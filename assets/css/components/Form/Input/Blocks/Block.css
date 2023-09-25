@@ -5,38 +5,13 @@
   justify-content: center;
   border: none;
 
-  svg {    
+  span {    
     width: 30px;
-    transition: transform 1s ease;
-    transform: rotateZ(0deg);
-
-    circle {
-      transition: fill 150ms ease;
-      fill: theme(colors.villain.plus);
-
-      &:hover {
-        fill: theme(colors.villain.main);
-      }
-    }
-
-    path {
-      pointer-events: none;
-      transition: fill 350ms ease;
-      fill: #fff;
-    }
-
-    &.open {
-      transform: rotateZ(135deg);
-
-      circle {
-        transition: fill 750ms ease;
-        fill: transparent;
-      }
-
-      path {
-        transition: fill 350ms ease;
-        fill: theme(colors.villain.main);
-      }
+    height: 30px;
+    transition: color 250ms ease;
+    
+    &:hover {
+      color: theme(colors.villain.main);
     }
   }
 }
@@ -399,10 +374,17 @@
       background-color: transparent;
       color: theme(colors.villain.mainFaded);
       border: 1px solid transparent;
+      display: flex;
+
+      span {
+        width: 18px;
+        height: 18px;
+      }
 
       &:hover {
         background-color: var(--brando-color-white);
         border: 1px solid var(--brando-color-dark);
+        color: var(--brando-color-dark);
         border-radius: 7px;
       }
 

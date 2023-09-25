@@ -204,7 +204,7 @@
         class:active={editor.isActive('paragraph')}
         type="button"
         title="Paragraph">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 6v15h-2v-5a6 6 0 1 1 0-12h10v2h-3v15h-2V6h-3zm-2 0a4 4 0 1 0 0 8V6z" fill="rgba(0,0,0,1)"/></svg>
+        <span class="tiptap-paragraph"></span>
       </button>
     {/if}
     {#if extensions.includes('h1')}
@@ -213,8 +213,8 @@
         class="menu-item"
         class:active={editor.isActive('heading', { level: 1 })}
         type="button"
-        title="Heading 1">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0H24V24H0z"/><path d="M13 20h-2v-7H4v7H2V4h2v7h7V4h2v16zm8-12v12h-2v-9.796l-2 .536V8.67L19.5 8H21z"/></svg>
+        title="Heading 1">        
+        <span class="tiptap-h1"></span>
       </button>
     {/if}
     {#if extensions.includes('h2')}
@@ -223,8 +223,8 @@
         class="menu-item"
         class:active={editor.isActive('heading', { level: 2 })}
         type="button"
-        title="Heading 2">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0H24V24H0z"/><path d="M4 4v7h7V4h2v16h-2v-7H4v7H2V4h2zm14.5 4c2.071 0 3.75 1.679 3.75 3.75 0 .857-.288 1.648-.772 2.28l-.148.18L18.034 18H22v2h-7v-1.556l4.82-5.546c.268-.307.43-.709.43-1.148 0-.966-.784-1.75-1.75-1.75-.918 0-1.671.707-1.744 1.606l-.006.144h-2C14.75 9.679 16.429 8 18.5 8z"/></svg>
+        title="Heading 2">        
+        <span class="tiptap-h2"></span>
       </button>
     {/if}
     {#if extensions.includes('h3')}
@@ -234,7 +234,7 @@
         class:active={editor.isActive('heading', { level: 3 })}
         type="button"
         title="Heading 3">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0H24V24H0z"/><path d="M22 8l-.002 2-2.505 2.883c1.59.435 2.757 1.89 2.757 3.617 0 2.071-1.679 3.75-3.75 3.75-1.826 0-3.347-1.305-3.682-3.033l1.964-.382c.156.806.866 1.415 1.718 1.415.966 0 1.75-.784 1.75-1.75s-.784-1.75-1.75-1.75c-.286 0-.556.069-.794.19l-1.307-1.547L19.35 10H15V8h7zM4 4v7h7V4h2v16h-2v-7H4v7H2V4h2z"/></svg>
+        <span class="tiptap-h3"></span>
       </button>
     {/if}
     {#if extensions.includes('list')}
@@ -244,7 +244,7 @@
         class:active={editor.isActive('bulletList')}
         type="button"
         title="Bullet list">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8 4h13v2H8V4zM4.5 6.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 6.9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM8 11h13v2H8v-2zm0 7h13v2H8v-2z"/></svg>
+        <span class="hero-list-bullet"></span>
       </button>
     {/if}
     {#if extensions.includes('link')}
@@ -254,7 +254,7 @@
         title="Link" 
         class="menu-item" 
         class:active={editor.isActive('link')}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M17.657 14.828l-1.414-1.414L17.657 12A4 4 0 1 0 12 6.343l-1.414 1.414-1.414-1.414 1.414-1.414a6 6 0 0 1 8.485 8.485l-1.414 1.414zm-2.829 2.829l-1.414 1.414a6 6 0 1 1-8.485-8.485l1.414-1.414 1.414 1.414L6.343 12A4 4 0 1 0 12 17.657l1.414-1.414 1.414 1.414zm0-9.9l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z"/></svg>
+        <span class="hero-link"></span>
       </button>
     {/if}
     {#if extensions.includes('button') || extensions.includes('action_button')}
@@ -264,7 +264,7 @@
         title="Link" 
         class="menu-item" 
         class:active={editor.isActive('button')}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v14h14V5H5z"/></svg>
+        <span class="hero-squares-plus"></span>
       </button>
     {/if}
     {#if extensions.includes('bold')}
@@ -274,7 +274,7 @@
         class:active={editor.isActive('bold')}
         type="button"
         title="Bold">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M8 11h4.5a2.5 2.5 0 1 0 0-5H8v5zm10 4.5a4.5 4.5 0 0 1-4.5 4.5H6V4h6.5a4.5 4.5 0 0 1 3.256 7.606A4.498 4.498 0 0 1 18 15.5zM8 13v5h5.5a2.5 2.5 0 1 0 0-5H8z" fill="rgba(0,0,0,1)"/></svg>
+        <span class="tiptap-bold"></span>
       </button>
     {/if}
     {#if extensions.includes('italic')}
@@ -284,7 +284,7 @@
         class:active={editor.isActive('italic')}
         type="button"
         title="Italic">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M15 20H7v-2h2.927l2.116-12H9V4h8v2h-2.927l-2.116 12H15z" fill="rgba(0,0,0,1)"/></svg>
+        <span class="tiptap-italic"></span>
       </button>
     {/if}
     {#if extensions.includes('sub')}
@@ -294,24 +294,22 @@
         class:active={editor.isActive('subscript')}
         type="button"
         title="Subscript">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 6v13H9V6H3V4h14v2h-6zm8.55 10.58a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 14a2 2 0 0 1 1.373 3.454L18.744 19H21v1h-4v-1l2.55-2.42z"/></svg>
+        <span class="tiptap-sub"></span>
       </button>
-    {/if}
-    {#if extensions.includes('sup')}
+      {/if}
+      {#if extensions.includes('sup')}
       <button 
-        on:click={() => editor.chain().focus().toggleSuperscript().run()}
-        class="menu-item"
-        class:active={editor.isActive('superscript')}
-        type="button"
-        title="Superscript">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 7v13H9V7H3V5h12v2h-4zm8.55-.42a.8.8 0 1 0-1.32-.36l-1.154.33A2.001 2.001 0 0 1 19 4a2 2 0 0 1 1.373 3.454L18.744 9H21v1h-4V9l2.55-2.42z"/></svg>
+      on:click={() => editor.chain().focus().toggleSuperscript().run()}
+      class="menu-item"
+      class:active={editor.isActive('superscript')}
+      type="button"
+      title="Superscript">
+        <span class="tiptap-sup"></span>        
       </button>
     {/if}
     {#if extensions.includes('color')}
       <label class="menu-item">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="18" height="18" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z" />
-        </svg>
+        <span class="hero-swatch"></span>
 
         <input
           type="color"
@@ -326,7 +324,7 @@
       type="button"
       title="Jump anchor"
       class:active={editor.isActive('jumpAnchor')}>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M2.05 11H7v2H4.062A8.004 8.004 0 0 0 11 19.938V9.874A4.002 4.002 0 0 1 12 2a4 4 0 0 1 1 7.874v10.064A8.004 8.004 0 0 0 19.938 13H17v-2h4.95c.033.329.05.663.05 1 0 5.523-4.477 10-10 10S2 17.523 2 12c0-.337.017-.671.05-1zM12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+      <span class="tiptap-anchor"></span>
     </button>
     {/if}
     <button 
@@ -334,7 +332,7 @@
       class="menu-item"
       type="button"
       title="Clear marks">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12.651 14.065L11.605 20H9.574l1.35-7.661-7.41-7.41L4.93 3.515 20.485 19.07l-1.414 1.414-6.42-6.42zm-.878-6.535l.27-1.53h-1.8l-2-2H20v2h-5.927L13.5 9.257 11.773 7.53z"/></svg>
+      <span class="tiptap-clear"></span>
     </button>
   </div>
   {/if}

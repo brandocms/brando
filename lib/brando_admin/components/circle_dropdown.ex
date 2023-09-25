@@ -17,7 +17,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         type="button"
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}>
-        <.icon />
+        <.dd_icon />
       </button>
       <ul data-testid="circle-dropdown-content" class="dropdown-content hidden" id={@id}>
         <%= render_slot @inner_block, @id %>
@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
     """
   end
 
-  def icon(assigns) do
+  def dd_icon(assigns) do
     ~H"""
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle"></circle>

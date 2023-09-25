@@ -27,17 +27,16 @@
       border: none;
       background-color: white;
       padding: .25rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
 
       &:hover {
         background-color: palegoldenrod;        
       }
 
       &.active {
-        background-color: #0d0d0d;
-
-        path:last-of-type {
-          fill: white;
-        }
+        background-color: gold;
       }
 
       &.disabled {
@@ -47,6 +46,12 @@
       svg {
         vertical-align: baseline;
         margin: 0 auto;
+      }
+
+      > span {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
       }
 
       input {

@@ -28,12 +28,12 @@ defmodule BrandoAdmin.Components.ChildrenButton do
   def render(assigns) do
     ~H"""
     <div
-      class={render_classes(["children-button", hidden: @count == 0])}>
+      class={["children-button", @count == 0 && "hidden"]}>
       <button
         phx-click={JS.push("toggle", target: @myself)}
         type="button"
         data-testid="children-button"
-        class={render_classes([active: @active, text: @text])}
+        class={[@active, @text]}
         phx-page-loading>
         <%= @active && gettext("Close") || "+ #{@count}" %>
         <%= if @text do %>
