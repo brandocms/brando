@@ -34,11 +34,16 @@ defmodule Brando.Villain.Tags.RouteI18n do
     evaled_args = prepare_args(args, context, function, action)
 
     rendered_route =
-      I18n.Helpers.localized_path(
-        evaled_locale,
-        :"#{function}",
-        [Brando.endpoint(), :"#{action}"] ++ evaled_args
-      )
+      if function == "page_path" do
+        # never localize the page path. it should live as a root route that passes on its prefix as language
+        apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"] ++ evaled_args)
+      else
+        I18n.Helpers.localized_path(
+          evaled_locale,
+          :"#{function}",
+          [Brando.endpoint(), :"#{action}"] ++ evaled_args
+        )
+      end
 
     {[rendered_route], context}
   end
@@ -47,7 +52,16 @@ defmodule Brando.Villain.Tags.RouteI18n do
     evaled_locale = Liquex.Argument.eval(locale, context)
 
     rendered_route =
-      I18n.Helpers.localized_path(evaled_locale, :"#{function}", [Brando.endpoint(), :"#{action}"])
+      if function == "page_path" do
+        # never localize the page path. it should live as a root route that passes on its prefix as language
+        apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"])
+      else
+        I18n.Helpers.localized_path(
+          evaled_locale,
+          :"#{function}",
+          [Brando.endpoint(), :"#{action}"]
+        )
+      end
 
     {[rendered_route], context}
   end
