@@ -12,7 +12,7 @@
     "@codemirror/lang-html": "^6.4.6",
     "@codemirror/lang-markdown": "^6.2.1",
     "@codemirror/state": "6.2.1",
-    "@codemirror/view": "6.16.0",
+    "@codemirror/view": "6.20.2",
     "@fontsource/jetbrains-mono": "^5.0.12",
     "@tiptap/core": "2.1.11",
     "@tiptap/extension-character-count": "2.1.11",

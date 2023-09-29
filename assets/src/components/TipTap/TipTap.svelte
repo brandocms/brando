@@ -66,10 +66,8 @@
 
     alertPrompt('ID/Anchor', currentId, ({ data }) => {
       if (!data) {
-        console.log('no data!')
         editor.chain().focus().unsetJumpAnchor().run()
       } else {
-        console.log('-- else', data)
         editor
           .chain()
           .focus()
