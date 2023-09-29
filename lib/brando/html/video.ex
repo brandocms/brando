@@ -167,6 +167,13 @@ defmodule Brando.HTML.Video do
     """
   end
 
+  def video(%{video: nil} = assigns) do
+    # catch if video is nil and just include a comment
+    ~H"""
+    <!-- empty video component -->
+    """
+  end
+
   defp validate_poster("/" <> _ = url), do: url
   defp validate_poster("http" <> _ = url), do: url
   defp validate_poster(_), do: false
