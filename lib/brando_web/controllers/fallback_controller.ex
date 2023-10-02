@@ -4,6 +4,7 @@ defmodule BrandoWeb.FallbackController do
     formats: [:html, :json]
 
   alias Brando.Sites.Redirects
+  alias Brando.Sites.FourOhFour
 
   @doc """
   Handle errors
@@ -15,6 +16,7 @@ defmodule BrandoWeb.FallbackController do
         |> put_status(:not_found)
         |> put_layout(false)
         |> put_view(Brando.endpoint().config(:render_errors)[:formats])
+        |> FourOhFour.add_404()
         |> render(:"404")
 
       {:ok, {:redirect, {_url, 410}}} ->

@@ -8,12 +8,14 @@ defmodule BrandoAdmin.Sites.SEOLive do
     {:ok,
      socket
      |> assign_current_user(token)
-     |> assign_entry_id()}
+     |> assign_entry_id()
+     |> assign_404s()}
   end
 
   def render(assigns) do
     ~H"""
-    <.live_component module={Form}
+    <.live_component
+      module={Form}
       id="seo_form"
       entry_id={@entry_id}
       current_user={@current_user}
@@ -22,6 +24,36 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <%= gettext("Update SEO") %>
       </:header>
     </.live_component>
+
+    <div class="cache-live">
+      <table>
+        <h1>404s</h1>
+        <tr>
+          <th><%= gettext "URL" %></th>
+          <th><%= gettext "Hits" %></th>
+          <th><%= gettext "Last hit" %></th>
+        </tr>
+        <%= for item <- @four_oh_fours do %>
+          <tr>
+            <td>
+              <div class="text-mono">
+                <%= item.url %>
+              </div>
+            </td>
+            <td>
+              <div class="text-mono">
+                <%= item.hits %>
+              </div>
+            </td>
+            <td>
+              <div class="text-mono">
+                <%= item.last_hit_at %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </table>
+    </div>
     """
   end
 
@@ -29,6 +61,10 @@ defmodule BrandoAdmin.Sites.SEOLive do
     assign_new(socket, :current_user, fn ->
       Brando.Users.get_user_by_session_token(token)
     end)
+  end
+
+  defp assign_404s(socket) do
+    assign_new(socket, :four_oh_fours, fn -> Brando.Sites.FourOhFour.list() end)
   end
 
   defp assign_entry_id(

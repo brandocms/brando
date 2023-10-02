@@ -15,6 +15,7 @@ defmodule Brando.Supervisor do
     children = [
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
+      %{id: :four_oh_four_cache, start: {Cachex, :start_link, [:four_oh_four, [limit: 500]]}},
       {Oban, oban_config()}
     ]
 
