@@ -358,7 +358,7 @@
   padding: 10px;
   border-radius: 12px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   top: 5px;
   position: sticky;
