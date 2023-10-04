@@ -71,7 +71,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
         field={@field}
         label={@label}
         instructions={@instructions}
-        class={"subform"}>
+        class={"subform"}
+        meta_top>
         <div
           id={"#{@field.id}-sortable"}
           data-embeds={@embeds?}
@@ -128,6 +129,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         label={@label}
         instructions={@instructions}
         class={"subform"}
+        meta_top
       >
         <.inputs_for :let={sub_form} field={@field}>
           <div class="subform-entry">
@@ -151,7 +153,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
         field={@field}
         label={@label}
         instructions={@instructions}
-        class={"subform"}>
+        class={"subform"}
+        meta_top
+      >
         <div
           id={"#{@field.name}-sortable"}
           data-embeds={@embeds?}

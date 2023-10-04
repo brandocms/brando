@@ -71,6 +71,7 @@ defmodule Brando.Sites.SEO do
             style: :inline,
             cardinality: :many,
             size: :full,
+            instructions: t("Use `$` at the end of test to prevent matching beyond string."),
             default: %Brando.Sites.Redirect{from: "/example/:slug", to: "/new/:slug", code: 301} do
             input :code, :number, label: t("Code", Brando.Sites.Redirect)
             input :from, :text, label: t("From", Brando.Sites.Redirect)

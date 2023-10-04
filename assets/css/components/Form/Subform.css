@@ -12,6 +12,12 @@
       }
     }
 
+    .meta {
+      position: static;
+      padding-bottom: 12px;
+      margin-top: -9px;
+    }
+
     .actions {
       display: flex;
       column-gap: 10px;

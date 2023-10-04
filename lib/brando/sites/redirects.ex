@@ -19,7 +19,7 @@ defmodule Brando.Sites.Redirects do
 
   defp match_redirect(test_url, from, to) do
     from_regex =
-      from
+      "^#{from}"
       |> String.split("/")
       |> Enum.map_join("/", fn
         ":" <> segment -> "(?<#{segment}>[a-z0-9\-\_]+)"

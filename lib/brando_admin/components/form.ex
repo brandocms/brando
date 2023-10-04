@@ -2262,6 +2262,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :relation, :boolean
   attr :compact, :boolean, default: false
   attr :left_justify_meta, :boolean, default: false
+  attr :meta_top, :boolean, default: false
   attr :instructions, :string
   attr :label, :any
   attr :class, :any
@@ -2318,11 +2319,23 @@ defmodule BrandoAdmin.Components.Form do
           <%= render_slot @header %>
         </div>
       </div>
+      <%= if @instructions || @meta do %>
+        <div :if={@meta_top} class={render_classes(["meta", left: @left_justify_meta])}>
+          <%= if @instructions do %>
+            <div class="help-text">
+              ↳ <span><%= raw @instructions %></span>
+            </div>
+            <div :if={@meta != []} class="extra">
+              <%= render_slot @meta %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
       <div class="field-base" id={"#{@f_id}-field-base"}>
         <%= render_slot @inner_block %>
       </div>
       <%= if @instructions || @meta do %>
-        <div class={render_classes(["meta", left: @left_justify_meta])}>
+        <div :if={!@meta_top} class={render_classes(["meta", left: @left_justify_meta])}>
           <%= if @instructions do %>
             <div class="help-text">
               ↳ <span><%= raw @instructions %></span>
