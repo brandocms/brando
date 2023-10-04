@@ -18,6 +18,7 @@ defmodule Brando.Router do
       if unquote(options)[:root] do
         get "/robots.txt", Brando.SEOController, :robots
         get "/__p__/:preview_key", Brando.PreviewController, :show
+        get "/sitemaps/:file", Brando.SitemapController, :show
       end
 
       if unquote(options)[:catch_all] do

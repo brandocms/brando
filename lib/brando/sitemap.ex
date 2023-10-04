@@ -67,10 +67,9 @@ defmodule Brando.Sitemap do
 
     sitemap_path = Path.join([Brando.config(:media_path), "sitemaps"])
     File.mkdir_p!(sitemap_path)
-    sitemap_url = Path.join([Brando.config(:media_url), "sitemaps"])
 
     opts = [
-      sitemap_url: Path.join(Brando.endpoint().url, sitemap_url),
+      sitemap_url: Path.join(Brando.endpoint().url, "sitemaps"),
       store: Sitemapper.FileStore,
       store_config: [
         path: sitemap_path
