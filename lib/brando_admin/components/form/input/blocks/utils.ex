@@ -103,7 +103,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
         params = Enum.at(params, i) || %{}
 
         changeset =
-          Ecto.Changeset.change(block)
+          block
+          |> Ecto.Changeset.change()
           |> maybe_apply_action(parent_action)
 
         errors = get_errors(changeset)
