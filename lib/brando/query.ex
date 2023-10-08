@@ -545,6 +545,13 @@ defmodule Brando.Query do
     end)
   end
 
+  def with_join(query, joins) do
+    Enum.reduce(joins, query, fn
+      join, query ->
+        from(t in query, left_join: c in assoc(t, ^join))
+    end)
+  end
+
   @doc """
   Hash query arguments
   """
@@ -583,6 +590,7 @@ defmodule Brando.Query do
       {:limit, 0}, q -> exclude(q, :limit)
       {:limit, limit}, q -> limit(q, ^limit)
       {:status, status}, q -> with_status(q, to_string(status))
+      {:join, join}, q -> with_join(q, join)
       {:preload, preload}, q -> with_preload(q, preload)
       {:language, language}, q -> with_language(q, language)
       {:exclude_language, language}, q -> with_exclude_language(q, language)
