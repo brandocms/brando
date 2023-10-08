@@ -86,5 +86,16 @@ defmodule Brando.AlternatesTest do
 
     assert rendered_to_string(comp) =~
              "<link rel=\"canonical\" href=\"http://localhost/en/test0\">\n<link rel=\"alternate\" href=\"http://localhost/en/test0\" hreflang=\"en\"><link rel=\"alternate\" href=\"http://localhost/no/test0\" hreflang=\"no\">"
+
+    mock_conn = %Plug.Conn{assigns: %{}, request_path: "en/test0"}
+
+    assigns = %{mock_conn: mock_conn}
+
+    comp = ~H"""
+    <Brando.HTML.render_hreflangs conn={@mock_conn} />
+    """
+
+    assert rendered_to_string(comp) =~
+             "<link rel=\"canonical\" href=\"http://localhost/en/test0\">"
   end
 end
