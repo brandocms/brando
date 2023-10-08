@@ -188,7 +188,11 @@ defmodule Brando.HTML do
   end
 
   def render_hreflangs(assigns) do
-    ~H""
+    assigns = assign(assigns, :canonical, Brando.Utils.current_url(assigns.conn))
+
+    ~H"""
+    <link rel="canonical" href={@canonical} />
+    """
   end
 
   @doc """
