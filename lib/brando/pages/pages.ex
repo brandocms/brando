@@ -79,6 +79,9 @@ defmodule Brando.Pages do
         from t in query,
           where: t.uri == ^uri,
           preload: [fragments: ^build_fragments_query()]
+
+      {:has_url, has_url}, query ->
+        from q in query, where: q.has_url == ^has_url
     end
   end
 

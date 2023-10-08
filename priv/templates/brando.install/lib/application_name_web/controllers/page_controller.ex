@@ -45,7 +45,7 @@ defmodule <%= application_module %>Web.PageController do
     {language, parsed_path} = I18n.parse_path(path)
 
     page_opts = %{
-      matches: %{path: parsed_path, language: language},
+      matches: %{path: parsed_path, language: language, has_url: true},
       status: :published,
       preload: [:alternate_entries],
       cache: {:ttl, :infinite}
