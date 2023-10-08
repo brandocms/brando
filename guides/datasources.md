@@ -6,7 +6,7 @@
 
 If you choose to parse and render the Villain field on every page load (or cache it) 
 by using `<.render_data conn={@conn} entry={@entry} />`, the datasource will receive
-an extra key in `vars` in its `list` callback:
+an extra `response` key in `vars` in its `list` callback:
 
     list :by_category, fn module, language, %{"response" => %{params: %{category_slug: slug}}} ->
       {:ok, Repo.all(from t in module, where: t.category_slug == ^slug)}
