@@ -42,6 +42,9 @@ config :brando,
   media_path: Path.expand("./media"),
   media_url: "/media",
 
+  # set to false if you want to serve errors from your `Brando.Pages`
+  use_default_errors: true,
+
   # if true, no text, but button is shown on autoplay: false
   video_play_button_text: true,
 
