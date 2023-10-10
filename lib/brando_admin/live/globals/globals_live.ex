@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
   alias BrandoAdmin.Components.GlobalTabs
   import Brando.Gettext
 
-  def mount(_params, _assigns, socket) do
-    {:ok, socket |> assign(:active_tab, nil)}
+  def mount(_params, _session, socket) do
+    {:ok, assign(socket, :active_tab, nil)}
   end
 
   def render(assigns) do

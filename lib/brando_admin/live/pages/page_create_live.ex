@@ -3,10 +3,9 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
-  def mount(%{"parent_id" => parent_id, "language" => language}, assigns, socket) do
+  def mount(%{"parent_id" => parent_id, "language" => language}, _session, socket) do
     {:ok,
      socket
-     |> assign(assigns)
      |> assign(:initial_params, %{
        parent_id: parent_id,
        language: language,
@@ -14,11 +13,8 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
      })}
   end
 
-  def mount(_, assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:initial_params, %{})}
+  def mount(_params, _session, socket) do
+    {:ok, assign(socket, :initial_params, %{})}
   end
 
   def render(assigns) do
