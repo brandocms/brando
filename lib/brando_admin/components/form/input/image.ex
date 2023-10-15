@@ -76,6 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       |> get_field(relation_field_atom)
       |> try_force_int()
 
+    image_from_changeset = get_field(changeset, assigns.field.field)
     image = socket.assigns.image
 
     {socket, image} =
@@ -131,6 +132,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           {socket
            |> assign(:image, image)
            |> assign(:focal, {image.focal.x, image.focal.y}), image}
+
+        image && image_from_changeset && socket.assigns.focal != {nil, nil} &&
+            {image_from_changeset.focal.x, image_from_changeset.focal.y} != socket.assigns.focal ->
+          # we have an image, and an image from the changeset where the changeset image
+          # has an updated focal value. lets just grab the image from changeset
+          {socket
+           |> assign(:image, image_from_changeset)
+           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image}
 
         true ->
           if image && image.status == :unprocessed do
