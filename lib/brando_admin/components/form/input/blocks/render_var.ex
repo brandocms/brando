@@ -22,30 +22,71 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data visible, :boolean
   # data in_block, :boolean
 
-  def preload(all_assigns) do
+  def update_many(assigns_sockets) do
     {image_ids, cmp_imgs} =
-      Enum.reduce(all_assigns, {[], []}, fn
-        %{id: id, var: %{data: %{type: "image", value_id: image_id}}}, {image_ids, cmp_imgs} ->
+      Enum.reduce(assigns_sockets, {[], []}, fn
+        {%{id: id, var: %{data: %{type: "image", value_id: image_id}}}, _sockets},
+        {image_ids, cmp_imgs} ->
           {[image_id | image_ids], [{id, image_id} | cmp_imgs]}
 
         _, acc ->
           acc
       end)
 
-    if image_ids == [] do
-      all_assigns
-    else
-      {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
-      mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
-      mapped_ids = Map.new(cmp_imgs)
+    {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
+    mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_ids = Map.new(cmp_imgs)
 
-      Enum.map(all_assigns, fn assigns ->
+    Enum.map(assigns_sockets, fn {assigns, socket} ->
+      updated_socket =
         case Map.get(mapped_ids, assigns.id) do
-          nil -> assigns
-          key -> Map.put(assigns, :original_image, Map.get(mapped_images, key))
+          nil -> assign_new(socket, :image, fn -> nil end)
+          key -> assign_new(socket, :image, fn -> Map.get(mapped_images, key) end)
         end
-      end)
-    end
+
+      var = assigns.var
+      changeset = var.source
+      important = get_field(changeset, :important)
+      render = Map.get(assigns, :render, :all)
+      edit = Map.get(assigns, :edit, false)
+      target = Map.get(assigns, :target, nil)
+
+      should_render? =
+        cond do
+          render == :all -> true
+          render == :only_important and important -> true
+          render == :only_regular and !important -> true
+          true -> false
+        end
+
+      type = get_field(changeset, :type)
+
+      value =
+        if type == "image" do
+          get_field(changeset, :value_id)
+        else
+          get_field(changeset, :value)
+        end
+
+      value = control_value(type, value)
+
+      updated_socket
+      |> assign(assigns)
+      |> assign(:id, assigns.id)
+      |> assign(:edit, edit)
+      |> assign(:target, target)
+      |> assign(:should_render?, should_render?)
+      |> assign(:important, important)
+      |> assign(:label, get_field(changeset, :label))
+      |> assign(:key, var[:key].value)
+      |> assign(:type, type)
+      |> assign(:value, value)
+      |> assign_new(:images, fn -> nil end)
+      |> assign_new(:value_id, fn -> value end)
+      |> assign(:instructions, get_field(changeset, :instructions))
+      |> assign(:placeholder, get_field(changeset, :placeholder))
+      |> assign(:var, var)
+    end)
   end
 
   def mount(socket) do
@@ -53,67 +94,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      socket
      |> assign(:visible, false)
      |> assign(:in_block, false)}
-  end
-
-  def update(%{var: var} = assigns, socket) do
-    changeset = var.source
-    important = get_field(changeset, :important)
-    render = Map.get(assigns, :render, :all)
-    edit = Map.get(assigns, :edit, false)
-    target = Map.get(assigns, :target, nil)
-
-    should_render? =
-      cond do
-        render == :all -> true
-        render == :only_important and important -> true
-        render == :only_regular and !important -> true
-        true -> false
-      end
-
-    type = get_field(changeset, :type)
-
-    value =
-      if type == "image" do
-        get_field(changeset, :value_id)
-      else
-        get_field(changeset, :value)
-      end
-
-    value = control_value(type, value)
-
-    socket =
-      if type == "image" do
-        assign_new(socket, :image, fn ->
-          if assigns[:original_image] do
-            assigns[:original_image]
-          else
-            case Brando.Images.get_image(value) do
-              {:ok, image} -> image
-              {:error, _} -> nil
-            end
-          end
-        end)
-      else
-        assign_new(socket, :image, fn -> nil end)
-      end
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:id, assigns.id)
-     |> assign(:edit, edit)
-     |> assign(:target, target)
-     |> assign(:should_render?, should_render?)
-     |> assign(:important, important)
-     |> assign(:label, get_field(changeset, :label))
-     |> assign(:key, var[:key].value)
-     |> assign(:type, type)
-     |> assign(:value, value)
-     |> assign_new(:images, fn -> nil end)
-     |> assign_new(:value_id, fn -> value end)
-     |> assign(:instructions, get_field(changeset, :instructions))
-     |> assign(:placeholder, get_field(changeset, :placeholder))
-     |> assign(:var, var)}
   end
 
   defp control_value("string", value) when is_binary(value), do: value

@@ -1166,4 +1166,51 @@ defmodule Brando.Utils do
     mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :create
     Map.put(changeset, :action, mutation_type)
   end
+
+  @persistent_id "_persistent_id"
+  def forms_from_field(field) do
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = field
+
+    options =
+      parent_form.options
+      |> Keyword.take([:multipart])
+
+    forms = parent_form.impl.to_form(parent_form.source, parent_form, field_name, options)
+    seen_ids = for f <- forms, vid = f.params[@persistent_id], into: %{}, do: {vid, true}
+
+    {forms, _} =
+      Enum.map_reduce(forms, seen_ids, fn %Phoenix.HTML.Form{params: params} = form, seen_ids ->
+        id =
+          case params do
+            %{@persistent_id => id} -> id
+            %{} -> next_id(map_size(seen_ids), seen_ids)
+          end
+
+        form_id = "#{parent_form.id}_#{field_name}_#{id}"
+        new_params = Map.put(params, @persistent_id, id)
+        new_hidden = [{@persistent_id, id} | form.hidden]
+        new_form = %Phoenix.HTML.Form{form | id: form_id, params: new_params, hidden: new_hidden}
+        {new_form, Map.put(seen_ids, id, true)}
+      end)
+
+    forms
+  end
+
+  def name_for_value_or_values(form, field, values) when is_list(values) do
+    Phoenix.HTML.Form.input_name(form, field) <> "[]"
+  end
+
+  def name_for_value_or_values(form, field, _value) do
+    Phoenix.HTML.Form.input_name(form, field)
+  end
+
+  defp next_id(idx, %{} = seen_ids) do
+    id_str = to_string(idx)
+
+    if Map.has_key?(seen_ids, id_str) do
+      next_id(idx + 1, seen_ids)
+    else
+      id_str
+    end
+  end
 end

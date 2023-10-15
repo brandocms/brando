@@ -45,12 +45,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   end
 
   defp assign_module_data(%{assigns: %{block: block, entry_template: entry_template}} = socket) do
-    block_data =
-      block
-      |> inputs_for(:data)
-      |> List.first()
+    block_data = Brando.Utils.forms_from_field(block[:data]) |> List.first()
 
-    refs_forms = Enum.with_index(inputs_for(block_data, :refs))
+    refs_forms =
+      block_data[:refs]
+      |> Brando.Utils.forms_from_field()
+      |> Enum.with_index()
+
     refs = block_data[:refs].value || []
     vars = block_data[:vars].value || []
     description = block[:description].value

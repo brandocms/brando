@@ -40,11 +40,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         val -> val
       end
 
-    selected_identifiers =
-      identifiers
-      |> process_identifiers()
+    selected_identifiers = process_identifiers(identifiers)
 
-    selected_identifiers_forms = inputs_for(assigns.field.form, assigns.field.field)
+    selected_identifiers_forms =
+      Brando.Utils.forms_from_field(assigns.field.form[assigns.field.field])
+
     wanted_schemas = Keyword.get(assigns.opts, :for)
 
     if !wanted_schemas do

@@ -69,12 +69,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         assign(socket, :module_not_found, true)
 
       module ->
-        block_data =
-          block
-          |> inputs_for(:data)
-          |> List.first()
+        block_data = Brando.Utils.forms_from_field(block[:data]) |> List.first()
 
-        refs_forms = Enum.with_index(inputs_for(block_data, :refs))
+        refs_forms = Enum.with_index(Brando.Utils.forms_from_field(block_data[:refs]))
         refs = block_data[:refs].value || []
         vars = block_data[:vars].value || []
         uid = block[:uid].value

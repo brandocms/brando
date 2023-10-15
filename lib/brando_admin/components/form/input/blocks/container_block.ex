@@ -40,11 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   end
 
   def update(%{block: block} = assigns, socket) do
-    block_data =
-      block
-      |> inputs_for(:data)
-      |> List.first()
-
+    block_data = Brando.Utils.forms_from_field(block[:data]) |> List.first()
     blocks = block_data[:blocks].value
     block_forms = inputs_for_blocks(block_data[:blocks]) || []
 

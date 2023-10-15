@@ -525,12 +525,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
 
     assigns =
       assigns
-      |> assign(:text_block_data, List.first(inputs_for(assigns.block, :data)))
       |> assign(:uid, assigns.block[:uid].value)
       |> assign(:text_type, assigns.block[:data].value.type)
       |> assign(:extensions, extensions)
 
     ~H"""
+    <.inputs_for field={@block[:data]} :let={text_block_data}>
     <div
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
@@ -554,7 +554,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </:description>
         <:config>
           <Input.radios
-            field={@text_block_data[:type]}
+            field={text_block_data[:type]}
             label="Type"
             uid={@uid}
             id_prefix="block_data"
@@ -562,10 +562,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
               %{label: "Paragraph", value: "paragraph"},
               %{label: "Lede", value: "lede"},
             ]]} />
-
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            field={@text_block_data[:extensions]}>
+            field={text_block_data[:extensions]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
         </:config>
@@ -588,7 +587,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
               </div>
               <Input.input
                 type={:hidden}
-                field={@text_block_data[:text]}
+                field={text_block_data[:text]}
                 uid={@uid}
                 id_prefix="block_data"
                 class="tiptap-text"
@@ -598,11 +597,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         </div>
       </Blocks.block>
     </div>
+    </.inputs_for>
     """
   end
 
   def comment(assigns) do
-    assigns = assign(assigns, :block_data, List.first(inputs_for(assigns.block, :data)))
+    assigns =
+      assign(
+        assigns,
+        :block_data,
+        assigns.block[:data]
+        |> Brando.Utils.forms_from_field()
+        |> List.first()
+      )
 
     text =
       case assigns.block_data[:text].value do
@@ -650,206 +657,185 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def header(assigns) do
-    block_data = List.first(inputs_for(assigns.block, :data))
-
     assigns =
       assigns
-      |> assign(:level, block_data[:level].value)
       |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:block_data, block_data)
 
     ~H"""
     <div
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Blocks.block
-        id={"block-#{@uid}-base"}
-        index={@index}
-        is_ref?={@is_ref?}
-        block_count={@block_count}
-        base_form={@base_form}
-        block={@block}
-        belongs_to={@belongs_to}
-        insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description>(H<%= @level %>)</:description>
-        <:config>
-          <Input.radios
-            field={@block_data[:level]}
-            label="Level"
-            uid={@uid}
-            id_prefix="block_data"
-            id={"block-#{@uid}-data-level"}
-            opts={[options: [
-              %{label: "H1", value: 1},
-              %{label: "H2", value: 2},
-              %{label: "H3", value: 3},
-              %{label: "H4", value: 4},
-              %{label: "H5", value: 5},
-              %{label: "H6", value: 6},
-            ]]} />
+      <.inputs_for field={@block[:data]} :let={block_data}>
+        <Blocks.block
+          id={"block-#{@uid}-base"}
+          index={@index}
+          is_ref?={@is_ref?}
+          block_count={@block_count}
+          base_form={@base_form}
+          block={@block}
+          belongs_to={@belongs_to}
+          insert_module={@insert_module}
+          duplicate_block={@duplicate_block}>
+          <:description>(H<%= block_data[:level].value %>)</:description>
+          <:config>
+            <Input.radios
+              field={block_data[:level]}
+              label="Level"
+              uid={@uid}
+              id_prefix="block_data"
+              id={"block-#{@uid}-data-level"}
+              opts={[options: [
+                %{label: "H1", value: 1},
+                %{label: "H2", value: 2},
+                %{label: "H3", value: 3},
+                %{label: "H4", value: 4},
+                %{label: "H5", value: 5},
+                %{label: "H6", value: 6},
+              ]]} />
 
-          <Input.text
-            field={@block_data[:id]}
-            uid={@uid}
-            id_prefix="block_data"
-            label="ID" />
+            <Input.text
+              field={block_data[:id]}
+              uid={@uid}
+              id_prefix="block_data"
+              label="ID" />
 
-          <Input.text
-            field={@block_data[:link]}
-            uid={@uid}
-            id_prefix="block_data"
-            label="Link" />
-        </:config>
-        <div class="header-block">
-          <Input.input
-            type={:textarea}
-            field={@block_data[:text]}
-            uid={@uid}
-            id_prefix="block_data"
-            class={"h#{@level}"}
-            phx-update="ignore"
-            phx-debounce={750}
-            data_autosize={true}
-            rows={1} />
-          <Input.input type={:hidden} field={@block_data[:class]} uid={@uid} id_prefix="block_data" />
-          <Input.input type={:hidden} field={@block_data[:placeholder]} uid={@uid} id_prefix="block_data" />
-        </div>
-      </Blocks.block>
+            <Input.text
+              field={block_data[:link]}
+              uid={@uid}
+              id_prefix="block_data"
+              label="Link" />
+          </:config>
+          <div class="header-block">
+            <Input.input
+              type={:textarea}
+              field={block_data[:text]}
+              uid={@uid}
+              id_prefix="block_data"
+              class={"h#{block_data[:level].value}"}
+              phx-update="ignore"
+              phx-debounce={750}
+              data_autosize={true}
+              rows={1} />
+            <Input.input type={:hidden} field={block_data[:class]} uid={@uid} id_prefix="block_data" />
+            <Input.input type={:hidden} field={block_data[:placeholder]} uid={@uid} id_prefix="block_data" />
+          </div>
+        </Blocks.block>
+      </.inputs_for>
     </div>
     """
   end
 
   def html(assigns) do
-    block_data = List.first(inputs_for(assigns.block, :data))
-
-    assigns =
-      assigns
-      |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:block_data, block_data)
-
     ~H"""
     <div
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
-      data-block-uid={@uid}>
-      <Blocks.block
-        id={"block-#{@uid}-base"}
-        index={@index}
-        is_ref?={@is_ref?}
-        block_count={@block_count}
-        base_form={@base_form}
-        block={@block}
-        belongs_to={@belongs_to}
-        insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description>
-          <%= if @ref_description do %>
-            <%= @ref_description %>
-          <% end %>
-        </:description>
-        <div class="html-block">
-          <Input.code
-            field={@block_data[:text]}
-            uid={@uid}
-            id_prefix="block_data"
-            label={gettext "Text"}
-          />
-        </div>
-      </Blocks.block>
+      data-block-uid={@block[:uid].value}>
+      <.inputs_for field={@block[:data]} :let={block_data}>
+        <Blocks.block
+          id={"block-#{@uid}-base"}
+          index={@index}
+          is_ref?={@is_ref?}
+          block_count={@block_count}
+          base_form={@base_form}
+          block={@block}
+          belongs_to={@belongs_to}
+          insert_module={@insert_module}
+          duplicate_block={@duplicate_block}>
+          <:description>
+            <%= if @ref_description do %>
+              <%= @ref_description %>
+            <% end %>
+          </:description>
+          <div class="html-block">
+            <Input.code
+              field={block_data[:text]}
+              uid={@uid}
+              id_prefix="block_data"
+              label={gettext "Text"}
+            />
+          </div>
+        </Blocks.block>
+      </.inputs_for>
     </div>
     """
   end
 
   def markdown(assigns) do
-    block_data = List.first(inputs_for(assigns.block, :data))
-
-    assigns =
-      assigns
-      |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:block_data, block_data)
-
     ~H"""
     <div
       id={"block-#{@uid}-wrapper"}
       data-block-index={@index}
-      data-block-uid={@uid}>
-      <Blocks.block
-        id={"block-#{@uid}-base"}
-        index={@index}
-        is_ref?={@is_ref?}
-        block_count={@block_count}
-        base_form={@base_form}
-        block={@block}
-        belongs_to={@belongs_to}
-        insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description>
-          <%= if @ref_description do %>
-            <%= @ref_description %>
-          <% end %>
-        </:description>
-        <div class="markdown-block">
-          <Input.code
-            field={@block_data[:text]}
-            uid={@uid}
-            id_prefix="block_data"
-            label={gettext "Text"}
-          />
-        </div>
-      </Blocks.block>
+      data-block-uid={@block[:uid].value}>
+      <.inputs_for field={@block[:data]} :let={block_data}>
+        <Blocks.block
+          id={"block-#{@uid}-base"}
+          index={@index}
+          is_ref?={@is_ref?}
+          block_count={@block_count}
+          base_form={@base_form}
+          block={@block}
+          belongs_to={@belongs_to}
+          insert_module={@insert_module}
+          duplicate_block={@duplicate_block}>
+          <:description>
+            <%= if @ref_description do %>
+              <%= @ref_description %>
+            <% end %>
+          </:description>
+          <div class="markdown-block">
+            <Input.code
+              field={block_data[:text]}
+              uid={@uid}
+              id_prefix="block_data"
+              label={gettext "Text"}
+            />
+          </div>
+        </Blocks.block>
+      </.inputs_for>
     </div>
     """
   end
 
   def input(assigns) do
-    block_data = List.first(inputs_for(assigns.block, :data))
-
-    assigns =
-      assigns
-      |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:label, block_data[:label].value)
-      |> assign(:placeholder, block_data[:placeholder].value)
-      |> assign(:help_text, block_data[:help_text].value)
-      |> assign(:block_data, block_data)
-
     ~H"""
     <div
-      id={"block-#{@uid}-wrapper"}
+      id={"block-#{@block[:uid].value}-wrapper"}
       data-block-index={@index}
-      data-block-uid={@uid}>
-      <Blocks.block
-        id={"block-#{@uid}-base"}
-        index={@index}
-        is_ref?={@is_ref?}
-        block_count={@block_count}
-        base_form={@base_form}
-        block={@block}
-        belongs_to={@belongs_to}
-        insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description>
-          <%= if @ref_description do %>
-            <%= @ref_description %>
-          <% end %>
-        </:description>
-        <div class="alert">
-          <Input.text
-            field={@block_data[:value]}
-            uid={@uid}
-            id_prefix="block_data"
-            label={@label}
-            instructions={@help_text}
-            placeholder={@placeholder} />
-            <Input.hidden field={@block_data[:placeholder]} />
-            <Input.hidden field={@block_data[:label]} />
-            <Input.hidden field={@block_data[:type]} />
-            <Input.hidden field={@block_data[:help_text]} />
-        </div>
-      </Blocks.block>
+      data-block-uid={@block[:uid].value}>
+      <.inputs_for field={@block[:data]} :let={block_data}>
+        <Blocks.block
+          id={"block-#{@block[:uid].value}-base"}
+          index={@index}
+          is_ref?={@is_ref?}
+          block_count={@block_count}
+          base_form={@base_form}
+          block={@block}
+          belongs_to={@belongs_to}
+          insert_module={@insert_module}
+          duplicate_block={@duplicate_block}>
+          <:description>
+            <%= if @ref_description do %>
+              <%= @ref_description %>
+            <% end %>
+          </:description>
+          <div class="alert">
+            <Input.text
+              field={block_data[:value]}
+              uid={@block[:uid].value}
+              id_prefix="block_data"
+              label={block_data[:label].value}
+              instructions={block_data[:help_text].value}
+              placeholder={block_data[:placeholder].value} />
+              <Input.hidden field={block_data[:placeholder]} />
+              <Input.hidden field={block_data[:label]} />
+              <Input.hidden field={block_data[:type]} />
+              <Input.hidden field={block_data[:help_text]} />
+          </div>
+        </Blocks.block>
+      </.inputs_for>
     </div>
-
     """
   end
 

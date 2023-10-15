@@ -45,11 +45,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         %{path: path} -> {path, Path.basename(path)}
       end
 
-    block_data =
-      assigns.block
-      |> inputs_for(:data)
-      |> List.first()
-
     upload_formats =
       case assigns.block[:formats].value do
         nil -> ""
@@ -59,10 +54,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:block_data, block_data)
      |> assign(:image, assigns.block[:data].value)
-     |> assign(:path, block_data[:path].value)
-     |> assign(:sizes, block_data[:sizes].value)
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
@@ -79,157 +71,152 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       data-block-index={@index}
       data-block-uid={@uid}>
 
-      <Blocks.block
-        id={"block-#{@uid}-base"}
-        index={@index}
-        is_ref?={@is_ref?}
-        block_count={@block_count}
-        base_form={@base_form}
-        block={@block}
-        belongs_to={@belongs_to}
-        insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description>
-          <%= if @ref_description do %>
-            <%= @ref_description %>
-          <% else %>
-            <%= @extracted_filename %>
-          <% end %>
-        </:description>
-        <input class="file-input" type="file" />
-        <div
-          :if={@extracted_path}
-          class="preview"
-          phx-click={show_modal("#block-#{@uid}_config")}>
-          <Content.image image={@image} size={:largest} />
-          <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-            <div id={"block-#{@uid}-figcaption-title"}>
-              <span><%= gettext("Caption") %></span> <%= (@image.title |> raw) || "—" %><br>
-            </div>
-            <div id={"block-#{@uid}-figcaption-alt"}>
-              <span><%= gettext("Alt. text") %></span> <%= @image.alt || "—" %>
-            </div>
-          </figcaption>
-        </div>
-
-        <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
-          <figure>
-            <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-              <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-              <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-              <circle cx="8" cy="9" r="2"/>
-            </svg>
-          </figure>
-          <div class="instructions">
-            <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
-            <button
-              type="button"
-              class="tiny"
-              phx-click={show_modal("#block-#{@uid}_config")}>
-              <%= gettext "Pick an existing image" %>
-            </button>
+      <.inputs_for field={@block[:data]} :let={block_data}>
+        <Blocks.block
+          id={"block-#{@uid}-base"}
+          index={@index}
+          is_ref?={@is_ref?}
+          block_count={@block_count}
+          base_form={@base_form}
+          block={@block}
+          belongs_to={@belongs_to}
+          insert_module={@insert_module}
+          duplicate_block={@duplicate_block}>
+          <:description>
+            <%= if @ref_description do %>
+              <%= @ref_description %>
+            <% else %>
+              <%= @extracted_filename %>
+            <% end %>
+          </:description>
+          <input class="file-input" type="file" />
+          <div
+            :if={@extracted_path}
+            class="preview"
+            phx-click={show_modal("#block-#{@uid}_config")}>
+            <Content.image image={@image} size={:largest} />
+            <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
+              <div id={"block-#{@uid}-figcaption-title"}>
+                <span><%= gettext("Caption") %></span> <%= (@image.title |> raw) || "—" %><br>
+              </div>
+              <div id={"block-#{@uid}-figcaption-alt"}>
+                <span><%= gettext("Alt. text") %></span> <%= @image.alt || "—" %>
+              </div>
+            </figcaption>
           </div>
-        </div>
 
-        <:config>
-          <div class="panels">
-            <div class="panel">
-              <%= if @extracted_path do %>
-                <Content.image image={@image} size={:largest} />
-                <div class="image-info">
-                  Path: <%= @image.path %><br>
-                  Dimensions: <%= @image.width %>&times;<%= @image.height %><br>
-                </div>
-              <% end %>
-              <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                      <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                      <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                      <circle cx="8" cy="9" r="2"/>
-                    </svg>
+          <div class={render_classes(["empty", "upload-canvas", hidden: @extracted_path])}>
+            <figure>
+              <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                <circle cx="8" cy="9" r="2"/>
+              </svg>
+            </figure>
+            <div class="instructions">
+              <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span><br>
+              <button
+                type="button"
+                class="tiny"
+                phx-click={show_modal("#block-#{@uid}_config")}>
+                <%= gettext "Pick an existing image" %>
+              </button>
+            </div>
+          </div>
+
+          <:config>
+            <div class="panels">
+              <div class="panel">
+                <%= if @extracted_path do %>
+                  <Content.image image={@image} size={:largest} />
+                  <div class="image-info">
+                    Path: <%= @image.path %><br>
+                    Dimensions: <%= @image.width %>&times;<%= @image.height %><br>
+                  </div>
+                <% end %>
+                <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
+                  <div class="placeholder-wrapper">
+                    <div class="svg-wrapper">
+                      <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
+                        <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
+                        <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
+                        <circle cx="8" cy="9" r="2"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="instructions">
+                    <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
                   </div>
                 </div>
-                <div class="instructions">
-                  <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+              </div>
+              <div class="panel">
+                <Input.rich_text field={block_data[:title]} uid={@uid} id_prefix={"block_data"} label={gettext "Title"} />
+                <Input.text field={block_data[:alt]} uid={@uid} id_prefix={"block_data"} label={gettext "Alt"} />
+                <Input.text field={block_data[:link]} uid={@uid} id_prefix={"block_data"} label={gettext "Link"} />
+
+                <div class="button-group-vertical">
+                  <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
+                    <%= gettext("Select image") %>
+                  </button>
+
+                  <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
+                    <%= gettext("Reset image") %>
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="panel">
-              <Input.rich_text field={@block_data[:title]} uid={@uid} id_prefix={"block_data"} label={gettext "Title"} />
-              <Input.text field={@block_data[:alt]} uid={@uid} id_prefix={"block_data"} label={gettext "Alt"} />
-              <Input.text field={@block_data[:link]} uid={@uid} id_prefix={"block_data"} label={gettext "Link"} />
 
-              <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}>
-                  <%= gettext("Select image") %>
-                </button>
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:placeholder]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:cdn]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:moonwalk]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:lazyload]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:credits]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:dominant_color]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:height]} />
+            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:width]} />
 
-                <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
-                  <%= gettext("Reset image") %>
-                </button>
-              </div>
-            </div>
-          </div>
+            <%= if is_nil(block_data[:path].value) and !is_nil(block_data[:sizes].value) do %>
+              <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:path]} value={@extracted_path} />
+            <% else %>
+              <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={block_data[:path]} />
+            <% end %>
 
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:placeholder]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:cdn]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:moonwalk]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:lazyload]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:credits]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:dominant_color]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:height]} />
-          <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:width]} />
+            <.inputs_for
+              field={block_data[:focal]}
+              :let={focal_form}>
+              <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:x]} />
+              <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:y]} />
+            </.inputs_for>
 
-          <%= if is_nil(@path) and !is_nil(@sizes) do %>
-            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:path]} value={@extracted_path} />
-          <% else %>
-            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data"} field={@block_data[:path]} />
-          <% end %>
+            <Form.map_inputs
+              :let={%{value: value, name: name}}
+              field={block_data[:sizes]}>
+              <input type="hidden" name={"#{name}"} value={"#{value}"} />
+            </Form.map_inputs>
 
-          <.inputs_for
-            field={@block_data[:focal]}
-            :let={focal_form}>
-            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:x]} />
-            <Input.input type={:hidden} uid={@uid} id_prefix={"block_data_focal"} field={focal_form[:y]} />
-          </.inputs_for>
+            <Form.array_inputs
+              :let={%{value: array_value, name: array_name}}
+              field={block_data[:formats]}>
+              <input type="hidden" name={array_name} value={array_value} />
+            </Form.array_inputs>
 
-          <Form.map_inputs
-            :let={%{value: value, name: name}}
-            field={@block_data[:sizes]}>
-            <input type="hidden" name={"#{name}"} value={"#{value}"} />
-          </Form.map_inputs>
-
-          <Form.array_inputs
-            :let={%{value: array_value, name: array_name}}
-            field={@block_data[:formats]}>
-            <input type="hidden" name={array_name} value={array_value} />
-          </Form.array_inputs>
-
-          <input type="hidden" data-upload-formats={@upload_formats} />
-        </:config>
-      </Blocks.block>
+            <input type="hidden" data-upload-formats={@upload_formats} />
+          </:config>
+        </Blocks.block>
+      </.inputs_for>
     </div>
     """
   end
 
-  def handle_event(
-        "image_uploaded",
-        %{"id" => id},
-        %{
-          assigns: %{
-            block: block,
-            base_form: base_form,
-            uid: uid,
-            data_field: data_field
-          }
-        } = socket
-      ) do
-    {:ok, image} = Brando.Images.get_image(id)
+  def handle_event("image_uploaded", %{"id" => id}, socket) do
+    block = socket.assigns.block
+    base_form = socket.assigns.base_form
+    uid = socket.assigns.uid
+    data_field = socket.assigns.data_field
 
+    {:ok, image} = Brando.Images.get_image(id)
     block_data = block[:data].value
 
     updated_data_map =
@@ -238,7 +225,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.from_struct()
 
     updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-
     updated_picture_block = Map.put(block.data, :data, updated_data_struct)
 
     changeset = base_form.source
@@ -264,15 +250,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "set_target",
-        _,
-        %{assigns: %{myself: myself}} = socket
-      ) do
+  def handle_event("set_target", _, socket) do
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: "default",
-      event_target: myself,
+      event_target: socket.assigns.myself,
       multi: false,
       selected_images: []
     )
@@ -280,11 +262,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_image",
-        _,
-        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
-      ) do
+  def handle_event("reset_image", _, socket) do
+    base_form = socket.assigns.base_form
+    data_field = socket.assigns.data_field
+    uid = socket.assigns.uid
     changeset = base_form.source
 
     updated_changeset =
@@ -304,23 +285,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => id},
-        %{
-          assigns: %{
-            base_form: base_form,
-            uid: uid,
-            block: block,
-            block_data: block_data,
-            data_field: data_field
-          }
-        } = socket
-      ) do
+  def handle_event("select_image", %{"id" => id}, socket) do
+    base_form = socket.assigns.base_form
+    uid = socket.assigns.uid
+    block = socket.assigns.block
+    data_field = socket.assigns.data_field
     {:ok, image} = Brando.Images.get_image(id)
 
+    block_data = block[:data].value
+
     updated_data_map =
-      block_data.data
+      block_data
       |> Map.merge(image)
       |> Map.from_struct()
 

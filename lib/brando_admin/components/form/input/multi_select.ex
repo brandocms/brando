@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp assign_selected_options_forms(socket, field) do
     selected_options_forms =
       if socket.assigns.relation_type == :has_many do
-        inputs_for(field.form, field.field)
+        Brando.Utils.forms_from_field(field.form[field.field])
       else
         nil
       end
@@ -445,7 +445,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <% else %>
           <%= if @relation_type == :has_many do %>
             <%= for {eform, index} <- Enum.with_index(@selected_options_forms) do %>
-              <%= Phoenix.HTML.Form.hidden_inputs_for(eform) %>
+              <%= for {name, value_or_values} <- eform.hidden,
+                name = Brando.Utils.name_for_value_or_values(eform, name, value_or_values),
+                value <- List.wrap(value_or_values) do %>
+                <input type="hidden" name={name} value={value} />
+              <% end %>
+
               <Input.hidden
                 :if={@sequenced?}
                 field={eform[:sequence]}
