@@ -42,4 +42,36 @@ defmodule Brando.Blueprint.Utils do
     do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
 
   def to_changeset_opts(_type, opts), do: Map.to_list(opts)
+
+  def translate_error_keys(error_keys, form, schema) do
+    gettext_module = schema.__modules__().gettext
+
+    gettext_domain =
+      String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}_forms")
+
+    for error_key <- error_keys do
+      case Brando.Blueprint.Forms.get_field(error_key, form) do
+        nil ->
+          require Logger
+
+          Logger.error("""
+          (!) Could not get field `#{inspect(error_key)}` from form:
+
+          #{inspect(form, pretty: true)}
+          """)
+
+          String.capitalize(to_string(error_key))
+
+        field ->
+          msgid =
+            if field.__struct__ == Brando.Blueprint.Forms.Subform do
+              field.label
+            else
+              Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
+            end
+
+          Gettext.dgettext(gettext_module, gettext_domain, msgid)
+      end
+    end
+  end
 end

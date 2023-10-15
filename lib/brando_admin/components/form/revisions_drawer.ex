@@ -374,18 +374,27 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
      |> assign_refreshed_revisions()}
   end
 
-  def handle_event(
-        "store_revision",
-        _,
-        %{assigns: %{form: %{source: changeset}, current_user: current_user}} = socket
-      ) do
-    entry = Ecto.Changeset.apply_changes(changeset)
-    {:ok, revision} = Brando.Revisions.create_revision(entry, current_user, false)
+  def handle_event("store_revision", _, socket) do
+    changeset = socket.assigns.form.source
+    current_user = socket.assigns.current_user
 
-    {:noreply,
-     socket
-     |> assign_refreshed_revisions()
-     |> assign(:active_revision, revision.revision)}
+    if changeset.errors != [] do
+      error_title = gettext("Error")
+
+      error_notice =
+        gettext("Error while saving form. Please correct marked fields and resubmit")
+
+      {:noreply,
+       push_event(socket, "b:alert", %{title: error_title, message: error_notice, type: "error"})}
+    else
+      entry = Ecto.Changeset.apply_changes(changeset)
+      {:ok, revision} = Brando.Revisions.create_revision(entry, current_user, false)
+
+      {:noreply,
+       socket
+       |> assign_refreshed_revisions()
+       |> assign(:active_revision, revision.revision)}
+    end
   end
 
   def handle_event(

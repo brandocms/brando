@@ -1683,7 +1683,7 @@ defmodule BrandoAdmin.Components.Form do
       |> List.first()
       |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
-    translated_error_keys = translate_error_keys(error_keys, form, schema)
+    translated_error_keys = Brando.Blueprint.Utils.translate_error_keys(error_keys, form, schema)
 
     error_list =
       for key <- translated_error_keys do
@@ -1710,38 +1710,6 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
-  end
-
-  defp translate_error_keys(error_keys, form, schema) do
-    gettext_module = schema.__modules__().gettext
-
-    gettext_domain =
-      String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}_forms")
-
-    for error_key <- error_keys do
-      case Brando.Blueprint.Forms.get_field(error_key, form) do
-        nil ->
-          require Logger
-
-          Logger.error("""
-          (!) Could not get field `#{inspect(error_key)}` from form:
-
-          #{inspect(form, pretty: true)}
-          """)
-
-          String.capitalize(to_string(error_key))
-
-        field ->
-          msgid =
-            if field.__struct__ == Brando.Blueprint.Forms.Subform do
-              field.label
-            else
-              Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
-            end
-
-          Gettext.dgettext(gettext_module, gettext_domain, msgid)
-      end
-    end
   end
 
   def handle_image_progress(key, upload_entry, socket) do
