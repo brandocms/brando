@@ -225,6 +225,9 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   defp attach_listing_info_hooks(socket, nil) do
     attach_hook(socket, :b_listing_infos, :handle_info, fn
+      {:modal, type, title, message}, socket ->
+        {:halt, push_event(socket, "b:alert", %{title: title, message: message, type: type})}
+
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}
@@ -275,6 +278,9 @@ defmodule BrandoAdmin.LiveView.Listing do
         )
 
         {:halt, socket}
+
+      {:modal, type, title, message}, socket ->
+        {:halt, push_event(socket, "b:alert", %{title: title, message: message, type: type})}
 
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
