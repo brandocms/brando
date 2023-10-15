@@ -97,6 +97,10 @@ defmodule BrandoAdmin.LiveView.Listing do
         {:halt, socket}
 
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
+        if {:before_delete, 3} in schema.__info__(:functions) do
+          schema.before_delete(entry_id, socket, self())
+        end
+
         singular = schema.__naming__().singular
         domain = schema.__naming__().domain
         context = schema.__modules__().context
