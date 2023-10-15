@@ -155,6 +155,7 @@ defmodule Brando.Villain.LiquexTest do
 
     doc =
       result
+      |> Enum.join()
       |> Floki.parse_document!()
 
     assert doc
