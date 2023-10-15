@@ -26,10 +26,10 @@
 
   .rendered-variable {
     @font mono;
-    background-color: #e9e9e9;
-    padding: 0.2em 0.7em;
+    background-color: #f2f2f2;
+    padding: 14px 16px;
     width: fit-content;
-    border-radius: 50px;
+    border-radius: 15px;
     display: inline-block;
     margin-top: 5px;
     margin-bottom: 5px;
