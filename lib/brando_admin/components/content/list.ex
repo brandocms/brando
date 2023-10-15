@@ -370,7 +370,16 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp maybe_preload_alternates(list_opts, schema) do
     if schema.has_trait(Translatable) and schema.has_alternates?() do
-      add_preload(list_opts, :alternate_entries)
+      preloads =
+        case Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(schema) do
+          nil ->
+            :alternate_entries
+
+          extracted_preloads ->
+            [alternate_entries: extracted_preloads]
+        end
+
+      add_preload(list_opts, preloads)
     else
       list_opts
     end

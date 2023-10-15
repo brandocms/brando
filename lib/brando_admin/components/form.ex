@@ -503,7 +503,13 @@ defmodule BrandoAdmin.Components.Form do
 
     alternates_preload =
       if schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() do
-        [:alternate_entries]
+        case Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(schema) do
+          nil ->
+            [:alternate_entries]
+
+          extracted_preloads ->
+            [alternate_entries: extracted_preloads]
+        end
       else
         []
       end

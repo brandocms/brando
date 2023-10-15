@@ -40,6 +40,33 @@ defmodule Brando.Blueprint.AbsoluteURL do
       def __absolute_url_template__ do
         unquote(tpl)
       end
+
+      def __absolute_url_parsed__ do
+        unquote(parsed_absolute_url)
+      end
+    end
+  end
+
+  @doc """
+  Attempt to extract necessary preloads from absolute_url template
+  """
+  def extract_preloads_from_absolute_url(schema) do
+    tpl = schema.__absolute_url_template__()
+    regex = ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
+
+    matches =
+      regex
+      |> Regex.scan(tpl, capture: :all_but_first)
+      |> Enum.map(&String.split(List.first(&1), "."))
+      |> Enum.filter(&(Enum.count(&1) > 2))
+
+    if matches != [] do
+      for [_, rel, _] <- matches do
+        %Brando.Blueprint.Relation{name: rel_name} =
+          schema.__relation__(String.to_existing_atom(rel))
+
+        rel_name
+      end
     end
   end
 end
