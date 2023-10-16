@@ -58,15 +58,23 @@ defmodule Brando.Blueprint.AbsoluteURL do
       regex
       |> Regex.scan(tpl, capture: :all_but_first)
       |> Enum.map(&String.split(List.first(&1), "."))
-      |> Enum.filter(&(Enum.count(&1) > 2))
+      |> Enum.filter(&(Enum.count(&1) > 1))
 
-    if matches != [] do
-      for [_, rel, _] <- matches do
-        %Brando.Blueprint.Relation{name: rel_name} =
-          schema.__relation__(String.to_existing_atom(rel))
+    matches
+    |> Enum.map(fn
+      [_, rel, _] -> try_relation(schema, rel)
+      [_, rel] -> try_relation(schema, rel)
+    end)
+    |> Enum.reject(&is_nil(&1))
+    |> Enum.uniq()
+  end
 
-        rel_name
-      end
-    end
+  defp try_relation(schema, rel) do
+    %Brando.Blueprint.Relation{name: rel_name} =
+      schema.__relation__(String.to_existing_atom(rel))
+
+    rel_name
+  rescue
+    FunctionClauseError -> nil
   end
 end

@@ -12,6 +12,10 @@ defmodule Brando.MigrationTest.Project do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
 
+  absolute_url """
+  /{{ entry.creator.slug }}/{{ entry.non_existing.slug }}/{{ entry.properties[0].slug }}/{{ entry.properties[0].title }}/{{ entry.slug }}
+  """
+
   attributes do
     attribute :title, :string
     attribute :status, :status, required: true

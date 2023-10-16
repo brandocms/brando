@@ -6,7 +6,11 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
              Brando.BlueprintTest.Project
            ) == [:creator, :properties]
 
+    assert Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(
+             Brando.MigrationTest.Project
+           ) == [:creator, :properties]
+
     assert Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(Brando.Pages.Page) ==
-             nil
+             []
   end
 end
