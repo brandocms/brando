@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
             <div>
               <div class="field-base">
                 <label
-                  class={render_classes(["switch", "small", toggled: @advanced])}
+                  class={["switch", "small", @advanced && "toggled"]}
                   phx-click={JS.push("toggle_advanced", target: @myself)}>
                   <div class="slider round"></div>
                 </label>

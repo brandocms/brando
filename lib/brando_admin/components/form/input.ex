@@ -40,9 +40,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}>
-      <div class={render_classes(["check-wrapper", small: @compact])}>
+      <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
-        <Form.label field={@field} class={render_classes(["control-label", small: @compact])}><%= @text %></Form.label>
+        <Form.label
+          field={@field}
+          class={[
+            "control-label",
+            @compact && "small"
+          ]}><%= @text %></Form.label>
       </div>
     </Form.field_base>
     """
@@ -220,7 +225,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={render_classes(["text", monospace: @monospace])} />
+        class={["text", @monospace && "monospace"]} />
     </Form.field_base>
     """
   end
@@ -241,7 +246,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={render_classes(["text", monospace: @monospace])} />
+        class={["text", @monospace && "monospace"]} />
     </Form.field_base>
     """
   end
@@ -273,7 +278,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={render_classes(["text", monospace: @monospace])} />
+        class={["text", @monospace && "monospace"]} />
     </Form.field_base>
     <%= if @confirmation do %>
       <Form.field_base
@@ -288,7 +293,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           placeholder={@placeholder}
           disabled={@disabled}
           phx-debounce={@debounce}
-          class={render_classes(["text", monospace: @monospace])} />
+          class={["text", @monospace && "monospace"]} />
       </Form.field_base>
     <% end %>
     """
@@ -310,7 +315,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={render_classes(["text", monospace: @monospace])} />
+        class={["text", @monospace && "monospace"]} />
     </Form.field_base>
     """
   end
@@ -608,7 +613,7 @@ defmodule BrandoAdmin.Components.Form.Input do
                   class="form-check-input"
                   value={status.value}
                   checked={status.value == to_string(@field.value)}>
-                <span class={render_classes(["label-text", status.value])}>
+                <span class={["label-text", status.value]}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="12"
@@ -661,7 +666,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               class="form-check-input"
               value={status.value}
               checked={status.value == to_string(@field.value)}>
-              <span class={render_classes(["label-text", status.value])}>
+              <span class={["label-text", status.value]}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="12"
@@ -748,7 +753,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       left_justify_meta>
       <Form.label
         field={@field}
-        class={render_classes(["switch", small: @compact])}>
+        class={["switch", @compact && "small"]}>
         <%= if @inner_block do %>
           <%= render_slot @inner_block %>
         <% else %>

@@ -853,16 +853,4 @@ defmodule Brando.HTMLTest do
 
     "<div class=\"dbg-grid\"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>"
   end
-
-  test "render_classes" do
-    assert render_classes(["test"]) == ["test"]
-    assert render_classes([:test]) == ["test"]
-    assert render_classes(["test", "test2"]) == ["test", "test2"]
-    assert render_classes(["test", test2: false]) == ["test"]
-    assert render_classes(["test", test2: nil]) == ["test"]
-    assert render_classes(["test", test2: true]) == ["test", "test2"]
-    assert render_classes(["test", test2: true, test2: false]) == ["test", "test2"]
-    assert render_classes(["test", test2: true, test3: true]) == ["test", "test2", "test3"]
-    assert render_classes(test2: true, test3: true) == ["test2", "test3"]
-  end
 end

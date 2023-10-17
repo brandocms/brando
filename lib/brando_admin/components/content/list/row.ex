@@ -45,7 +45,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <div
       id={"list-row-#{@entry.id}"}
-      class={render_classes(["list-row", "draggable", selected: @selected?])}
+      class={[
+        "list-row",
+        "draggable",
+        @selected? && "selected"
+      ]}
       data-id={@entry.id}
       phx-click={@click}
       phx-value-id={@entry.id}
@@ -131,7 +135,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       end)
 
     ~H"""
-    <div class={render_classes([@class, "col-#{@columns}": @columns])}>
+    <div class={[
+      @class,
+      @columns && "col-#{@columns}"
+    ]}>
       <%= @rendered_tpl %>
     </div>
     """
@@ -157,13 +164,20 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <%= case @field.type do %>
       <% :image -> %>
-        <div class={render_classes([@class, "col-#{@columns}": @columns, "offset-#{@offset}": @offset])}>
+        <div class={[
+          @class,
+          @columns && "col-#{@columns}",
+          @offset && "offset-#{@offset}"
+        ]}>
           <Content.image image={@entry_field} size={@size || :thumb} />
         </div>
 
       <% :children_button -> %>
-        <div
-          class={render_classes([@class, "col-#{@columns}": @columns, "offset-#{@offset}": @offset])}>
+        <div class={[
+          @class,
+          @columns && "col-#{@columns}",
+          @offset && "offset-#{@offset}"
+        ]}>
           <.live_component module={ChildrenButton}
             id={"#{@entry.id}-children-button"}
             fields={@field.name}
@@ -172,14 +186,20 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </div>
 
       <% :language -> %>
-        <div
-          class={render_classes([@class, {:"col-#{@columns}", @columns}, {:"offset-#{@offset}", @offset}])}>
+        <div class={[
+          @class,
+          @columns && "col-#{@columns}",
+          @offset && "offset-#{@offset}"
+        ]}>
           <Badge.language language={@entry_field} />
         </div>
 
       <% :url -> %>
-        <div
-          class={render_classes([@class, "col-1", {:"offset-#{@offset}", @offset}])}>
+        <div class={[
+          @class,
+          "col-1",
+          @offset && "offset-#{@offset}"
+        ]}>
           <a href={@schema.__absolute_url__(@entry)} target="_blank">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z"/></svg>
           </a>
@@ -396,7 +416,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="col-1">
-      <button type="button" class={render_classes(["btn-icon-subtle"])} disabled={!@alternate_entries?} phx-click={show_modal("#entry-#{@entry.id}-alternates")}>
+      <button type="button" class={"btn-icon-subtle"} disabled={!@alternate_entries?} phx-click={show_modal("#entry-#{@entry.id}-alternates")}>
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
           <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
           <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />

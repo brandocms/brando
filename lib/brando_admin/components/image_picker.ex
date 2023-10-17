@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         <div class="image-picker grid" id={"image-picker-drawer-#{@id}"}>
           <%= for image <- @images do %>
           <div
-            class={render_classes(["image-picker__image": true, selected: image.path in @selected_images])}
+            class={["image-picker__image", image.path in @selected_images && "selected"]}
             phx-click={if @multi, do: JS.push("select_image", target: @event_target), else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")}
             phx-value-id={image.id}
             phx-value-selected={image.path in @selected_images && "true" || "false"}

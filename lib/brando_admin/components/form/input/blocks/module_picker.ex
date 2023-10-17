@@ -85,7 +85,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
             <%= unless namespace == "general" do %>
               <button
                 type="button"
-                class={render_classes(["namespace-button", active: @active_namespace == namespace])}
+                class={[
+                  "namespace-button",
+                  @active_namespace == namespace && "active"
+                ]}
                 phx-click={JS.push("toggle_namespace", target: @myself)}
                 phx-value-id={namespace}>
                 <figure>
@@ -95,9 +98,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                   <div class="name"><%= namespace %></div>
                 </div>
               </button>
-              <div class={render_classes([
+              <div class={[
                 "namespace-modules",
-                active: @active_namespace == namespace])}>
+                @active_namespace == namespace && "active"
+              ]}>
                 <%= for module <- modules do %>
                   <button
                     type="button"

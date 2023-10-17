@@ -466,7 +466,10 @@ defmodule BrandoAdmin.Components.Content.List do
         — <%= gettext("Per page:") %>
         <button
           type="button"
-          class={render_classes(["limit-button", active: @page_size == 25])}
+          class={[
+            "limit-button",
+            @page_size == 25 && "active"
+          ]}
           phx-click={@change_limit}
           phx-value-limit={25}>
           25
@@ -474,7 +477,10 @@ defmodule BrandoAdmin.Components.Content.List do
         /
         <button
           type="button"
-          class={render_classes(["limit-button", active: @page_size == 50])}
+          class={[
+            "limit-button",
+            @page_size == 50 && "active"
+          ]}
           phx-click={@change_limit}
           phx-value-limit={50}>
           50
@@ -482,7 +488,10 @@ defmodule BrandoAdmin.Components.Content.List do
         /
         <button
           type="button"
-          class={render_classes(["limit-button", active: @page_size == 0])}
+          class={[
+            "limit-button",
+            @page_size == 0 && "active"
+          ]}
           phx-click={@change_limit}
           phx-value-limit={0}>
           <%= gettext("All") %>
@@ -492,7 +501,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <button
           :for={p <- 0..@total_pages - 1}
           type="button"
-          class={render_classes([active: p + 1 == @current_page])}
+          class={[p + 1 == @current_page && "active"]}
           phx-click={@change_page}
           phx-value-page={p}>
           <%= p + 1 %>
@@ -526,12 +535,13 @@ defmodule BrandoAdmin.Components.Content.List do
               <button
                 phx-click={@update_status}
                 phx-value-status={status}
-                class={render_classes([
+                class={[
                   "status",
                   active_status_class(@list_opts, status)
-                ])}
+                ]}
                 type="button"
                 phx-page-loading>
+                <%!-- TODO: remove active_status_class --%>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="12"
@@ -551,10 +561,10 @@ defmodule BrandoAdmin.Components.Content.List do
 
         <div class="filters">
           <%= for filter <- @filters do %>
-            <div class={render_classes([
+            <div class={[
               "filter",
-              visible: filter[:filter] == @active_filter[:filter]
-            ])}>
+              filter[:filter] == @active_filter[:filter] && "visible"
+            ]}>
               <button
                 class="filter-key"
                 phx-click={@next_filter_key}>
@@ -656,7 +666,9 @@ defmodule BrandoAdmin.Components.Content.List do
       )
 
     ~H"""
-    <div class={render_classes(["selected-rows", {:hidden, Enum.empty?(@selected_rows)}])}>
+    <div class={[
+        "selected-rows",
+        @selected_rows == [] && "hidden"]}>
       <div class="clear-selection">
         <button
           phx-click="clear_selection"

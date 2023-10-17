@@ -548,10 +548,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="7.5" cy="1.5" r="1.5"></circle><circle cx="13.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="7.5" cy="7.5" r="1.5"></circle><circle cx="13.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle><circle cx="13.5" cy="13.5" r="1.5"></circle></svg>
                                           </div>
                                         </div>
-                                        <div class={render_classes([
-                                          "col-var-form": true,
-                                          hidden: var[:key].value not in @open_col_vars
-                                        ])}>
+                                        <div class={[
+                                          "col-var-form",
+                                          var[:key].value not in @open_col_vars && "hidden"
+                                        ]}>
                                           <Input.input type={:hidden} field={var[:key]} />
                                           <Input.input type={:hidden} field={var[:type]} />
                                           <Input.input type={:hidden} field={var[:important]} />

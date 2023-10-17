@@ -23,7 +23,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   # data block_data, :map
 
   def update(assigns, socket) do
-    block_data = List.first(inputs_for(assigns.block, :data))
+    block = assigns.block
+    block_data = Brando.Utils.forms_from_field(block[:data]) |> List.first()
 
     {:ok,
      socket

@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:dark, fn -> false end)
 
     ~H"""
-    <div id={@id} class={render_classes(["drawer", "hidden", narrow: @narrow, dark: @dark])} style={"z-index: #{@z}"}>
+    <div id={@id} class={["drawer", "hidden", @narrow && "narrow", @dark && "dark"]} style={"z-index: #{@z}"}>
       <div class="inner">
         <div class="drawer-header">
           <h2>
@@ -109,13 +109,22 @@ defmodule BrandoAdmin.Components.Content do
     ~H"""
     <div
       id={@id}
-      class={render_classes([modal: true, narrow: @narrow, medium: @medium, wide: @wide])}
+      class={[
+        "modal",
+        @narrow && "narrow",
+        @medium && "medium",
+        @wide && "wide"
+      ]}
       phx-window-keydown={hide_modal("##{@id}")}
-      phx-key="escape">
+      phx-key="escape"
+    >
       <div class="modal-backdrop" phx-click={hide_modal("##{@id}")} />
       <div class="modal-dialog" role="document">
         <div class="modal-content">
-          <header class={render_classes(["modal-header": true, centered: @center_header])}>
+          <header class={[
+            "modal-header",
+            @center_header && "centered"
+          ]}>
             <h2><%= @title %></h2>
             <div class="header-wrap">
               <%= if @header do %>

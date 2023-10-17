@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         class={@class}
         relation>
         <div>
-          <div class={render_classes(["input-image", small: @small, square: @square])}>
+          <div class={["input-image", @small && "small", @square && "square"]}>
             <%= if @image && @image.path do %>
               <.image_preview
                 image={@image}
@@ -201,7 +201,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       </Form.field_base>
       <div
         :if={!@editable}
-        class={render_classes(["input-image", small: @small, square: @square])}
+        class={["input-image", @small && "small", @square && "square"]}
       >
         <%= if @image && @image.path do %>
           <.image_preview

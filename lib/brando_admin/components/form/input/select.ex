@@ -239,13 +239,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   <%= for opt <- @input_options do %>
                     <button
                       type="button"
-                      class={render_classes([
+                      class={[
                         "options-option",
-                        "option-selected": is_selected?(opt, @selected_option)
-                      ])}
+                        is_selected?(opt, @selected_option) && "option-selected"
+                      ]}
                       data-label={extract_label(opt)}
                       value={extract_value(opt)}
                       phx-click={JS.push("select_option", target: @myself) |> JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                      <%!-- TODO: get rid of is_selected? --%>
                       <.get_label opt={opt} />
                     </button>
                   <% end %>

@@ -22,10 +22,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   # data uid, :string
 
   def update(assigns, socket) do
-    block_data =
-      assigns.block
-      |> inputs_for(:data)
-      |> List.first()
+    block = assigns.block
+    block_data = Brando.Utils.forms_from_field(block[:data]) |> List.first()
 
     {:ok,
      socket

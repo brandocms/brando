@@ -331,7 +331,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create <%= @singular %></button>
               <% end %>
             </:header>
-            <%= if @show_filter && !Enum.empty?(@input_options) && !@creating do %>
+            <%= if @show_filter && !Enum.empty?(@input_options) && !@creating && @open do %>
               <div class="select-filter" id={"#{@field.id}-select-modal-filter"} phx-hook="Brando.SelectFilter">
                 <div class="field-wrapper">
                   <div class="label-wrapper">
@@ -347,7 +347,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <% end %>
 
             <div class="select-modal-wrapper">
-              <%= if !@creating do %>
+              <%= if !@creating && @open do %>
                 <div class="select-modal">
                   <div id={"#{@field.id}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                     <h2 class="titlecase"><%= gettext "Available options" %></h2>
@@ -357,13 +357,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <button
                       :for={opt <- @input_options}
                       type="button"
-                      class={render_classes([
+                      class={[
                         "options-option",
-                        "option-selected": is_selected?(opt, @selected_options, @relation_key, @relation_type)
-                      ])}
+                        is_selected?(opt, @selected_options, @relation_key, @relation_type) && "option-selected"
+                      ]}
                       data-label={extract_label(opt)}
                       value={extract_value(opt)}
                       phx-click={JS.push("select_option", target: @myself)}>
+                      <%!-- TODO: get rid of is_selected? --%>
                       <.get_label opt={opt} />
                     </button>
                   </div>
@@ -387,7 +388,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     :let={entry_form}>
                     <div
                       :for={tab <- @select_form.tabs}
-                      class={render_classes(["form-tab", active: true])}
+                      class={["form-tab", "active"]}
                       data-tab-name={tab.name}>
                       <div class="row">
                         <Fieldset.render

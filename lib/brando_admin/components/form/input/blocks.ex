@@ -316,11 +316,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     <div
       id={"base-block-#{@uid}"}
       data-block-uid={@uid}
-      class={render_classes([
+      class={[
         "base-block",
-        collapsed: @initial_classes.collapsed,
-        disabled: @initial_classes.disabled
-      ])}>
+        @initial_classes.collapsed && "collapsed",
+        @initial_classes.disabled && "disabled"
+      ]}>
       <Blocks.Plus.render
         :if={!@is_ref? and !@is_entry?}
         index={@index}
@@ -348,7 +348,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         data-block-uid={@uid}
         data-block-type={@block_type}
         style={"background-color: #{@bg_color}"}
-        class={render_classes(["block", ref_block: @is_ref?])}
+        class={["block", @is_ref? && "ref_block"]}
         phx-hook="Brando.Block">
 
         <div class="block-description" id={"block-#{@uid}-block-description"}>
@@ -568,7 +568,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
         </:config>
-        <div class={render_classes(["text-block", @text_type])}>
+        <div class={["text-block", @text_type]}>
           <div class="tiptap-wrapper" id={"block-#{@uid}-rich-text-wrapper"}>
             <div
               id={"block-#{@uid}-rich-text"}

@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
               <button
                 id={"set-#{global_set.key}-#{global_set.language}"}
                 type="button"
-                class={render_classes([active: @active_tab == index])}
+                class={[@active_tab == index && "active"]}
                 phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}><%= global_set.label %></button>
             </div>
           </div>

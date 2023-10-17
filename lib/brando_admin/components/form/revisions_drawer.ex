@@ -146,7 +146,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           <table class="revisions-table">
             <%= for revision <- @revisions do %>
               <tr
-                class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}
+                class={[
+                  "revisions-line",
+                  @active_revision == revision.revision && "active"
+                ]}
                 phx-click={JS.push("select_revision", target: @myself)}
                 phx-value-revision={revision.revision}
                 phx-page-loading>
@@ -246,7 +249,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               </tr>
               <%= if @show_publish_at == revision.revision do %>
                 <tr
-                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}>
+                  class={[
+                    "revisions-line",
+                    @active_revision == revision.revision && "active"
+                  ]}>
                   <td colspan="3"></td>
                   <td colspan="3" class="revision-publish_at">
                     <div class="field-wrapper">
@@ -276,7 +282,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               <% end %>
               <%= if revision.description do %>
                 <tr
-                  class={render_classes(["revisions-line": true, active: @active_revision == revision.revision])}>
+                  class={[
+                    "revisions-line",
+                    @active_revision == revision.revision && "active"
+                  ]}>
                   <td colspan="3"></td>
                   <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
                 </tr>

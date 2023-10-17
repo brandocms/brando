@@ -13,12 +13,12 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
 
   def render(assigns) do
     ~H"""
-    <fieldset class={render_classes([
+    <fieldset class={[
       @fieldset.size,
-      "align-end": @fieldset.align == :end,
-      inline: @fieldset.style == :inline,
-      shaded: @fieldset.shaded
-    ])}>
+      @fieldset.align == :end && "align-end",
+      @fieldset.style == :inline && "inline",
+      @fieldset.shaded && "shaded"
+    ]}>
       <%= for input <- @fieldset.fields do %>
         <Fieldset.Field.render
           form={@form}

@@ -298,17 +298,17 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
-      class={render_classes([
-        draggable: true,
-        identifier: true,
-        selectable: @select,
-        selected: @identifier in @selected_identifiers,
-        "sort-handle": true
-      ])}
+      class={[
+        "draggable",
+        "identifier",
+        "sort-handle",
+        @select && "selectable",
+        @identifier in @selected_identifiers && "selected"
+      ]}
       phx-page-loading
       phx-click={@select}
-      phx-value-param={@param}>
-
+      phx-value-param={@param}
+    >
       <section class="cover-wrapper">
         <div class="cover">
           <img src={@has_cover? && @identifier.cover || "/images/admin/avatar.svg"}>
@@ -347,7 +347,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     ~H"""
     <article
-      class={render_classes([identifier: true, selected: @identifier_form in @selected_identifiers])}
+      class={["identifier", @identifier_form in @selected_identifiers && "selected"]}
       phx-page-loading
       phx-click={@select}
       phx-value-param={@param}>

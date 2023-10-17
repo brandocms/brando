@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.FilePicker do
         <div class="file-picker list" id={"file-picker-drawer-#{@id}"}>
           <%= for file <- @files do %>
           <div
-            class={render_classes(["file-picker__file": true, selected: file.filename in @selected_files])}
+            class={["file-picker__file", file.filename in @selected_files && "selected"]}
             phx-click={if @multi, do: JS.push("select_file", target: @event_target), else: JS.push("select_file", target: @event_target) |> toggle_drawer("#file-picker")}
             phx-value-id={file.id}
             phx-value-selected={file.filename in @selected_files && "true" || "false"}

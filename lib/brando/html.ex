@@ -77,7 +77,7 @@ defmodule Brando.HTML do
         :for={lang <- @available_languages}
         conn={@conn}
         language={lang}
-        class={render_classes(["language-switch", active: lang == @language])
+        class={["language-switch", lang == @language && "active"])
         fallback="/">
         {{ lang }}
       </.alternate_url>
@@ -619,6 +619,8 @@ defmodule Brando.HTML do
   def absolute_url(_), do: ""
 
   def render_classes(list) do
+    IO.warn("render_classes/1 is deprecated. use a list of classes instead.")
+
     Enum.reduce(list, [], fn
       {k, v}, acc -> (v && acc ++ (k |> to_string() |> List.wrap())) || acc
       nil, acc -> acc

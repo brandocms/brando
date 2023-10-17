@@ -81,7 +81,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field}>
             <div
-              class={render_classes(["subform-entry", "group", listing: sub_form.index not in @open_entries])}
+              class={[
+                "subform-entry",
+                "group",
+                sub_form.index not in @open_entries && "listing"
+              ]}
               data-id={sub_form.index}>
               <div class="subform-tools">
                 <.subentry_edit on_click={JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)} open={sub_form.index in @open_entries} />
@@ -166,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           />
           <.inputs_for :let={sub_form} field={@field}>
             <div
-              class={render_classes(["subform-entry", inline: @subform.style == :inline])}
+              class={["subform-entry", @subform.style == :inline && "inline"]}
               data-id={sub_form.index}>
               <div class="subform-tools">
                 <.subentry_sequence :if={@sequenced?} />
