@@ -705,7 +705,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={"text#{@monospace && " monospace" || ""}"} />
+        class={["text", @monospace && "monospace"]} />
     </Form.field_base>
     """
   end
@@ -714,9 +714,10 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     assigns =
-      assign(assigns,
-        rows: assigns.opts[:rows] || 3
-      )
+      assigns
+      |> assign(:rows, assigns.opts[:rows] || 3)
+      |> assign(:generated_uid, make_uid(assigns.field, assigns.uid))
+      |> assign(:monospace, assigns.opts[:monospace])
 
     ~H"""
     <Form.field_base
@@ -727,12 +728,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}>
       <.input type={:textarea}
         field={@field}
-        class="text"
+        class={["text", @monospace && "monospace"]}
         placeholder={@placeholder}
         rows={@rows}
         disabled={@disabled}
         phx-debounce={@debounce}
-        id={make_uid(@field, @uid)} />
+        id={@generated_uid} />
     </Form.field_base>
     """
   end

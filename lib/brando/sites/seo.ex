@@ -62,7 +62,7 @@ defmodule Brando.Sites.SEO do
             placeholder: t("Fallback META image")
 
           input :base_url, :text, label: t("Base URL"), placeholder: t("https://yoursite.com")
-          input :robots, :code, label: t("Robots"), placeholder: t("Robots")
+          input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
         end
 
         fieldset size: :full do
