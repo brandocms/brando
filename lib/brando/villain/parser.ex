@@ -379,7 +379,13 @@ defmodule Brando.Villain.Parser do
         width = Map.get(data, :width, 420)
         height = Map.get(data, :height, 315)
 
-        aspect_ratio = height / width
+        aspect_ratio =
+          if height > 0 && width > 0 do
+            height / width
+          else
+            0.5625
+          end
+
         orientation = (width > height && "landscape") || "portrait"
 
         params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
@@ -400,7 +406,7 @@ defmodule Brando.Villain.Parser do
         orientation = (width > height && "landscape") || "portrait"
 
         aspect_ratio =
-          if height && width do
+          if height > 0 && width > 0 do
             height / width
           else
             0.5625
