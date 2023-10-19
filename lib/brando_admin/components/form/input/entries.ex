@@ -234,7 +234,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
-      changeset: updated_changeset
+      changeset: updated_changeset,
+      force_validation: true
     )
 
     {:noreply, socket}
