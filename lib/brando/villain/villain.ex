@@ -883,7 +883,7 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
+  Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
   """
   def merge_block(blocks, uid, merge_data, merge_entry? \\ false) do
     Enum.reduce(blocks || [], [], fn
@@ -959,32 +959,45 @@ defmodule Brando.Villain do
   Recursively search a list of blocks for block matching `uid`
   """
   @spec find_block(list(), binary()) :: map | nil
-  def find_block(_, nil), do: nil
-  def find_block(nil, _), do: nil
+  def find_block(blocks, uid, acc \\ nil)
+  def find_block(_, nil, _), do: nil
+  def find_block(nil, _, acc), do: acc
 
-  def find_block(blocks, uid) do
-    Enum.reduce_while(blocks, nil, fn
+  def find_block(blocks, uid, acc) do
+    Enum.reduce_while(blocks, acc, fn
       %{uid: ^uid} = block, _ ->
         {:halt, block}
 
       %{type: "container", data: %{blocks: blocks}}, _ ->
-        {:cont, find_block(blocks, uid)}
+        ret = find_block(blocks, uid, acc)
+
+        if ret do
+          {:halt, ret}
+        else
+          {:cont, acc}
+        end
 
       %{type: "module", data: %{refs: refs}}, _ ->
-        {:cont, find_block(refs, uid)}
+        ret = find_block(refs, uid, acc)
+
+        if ret do
+          {:halt, ret}
+        else
+          {:cont, acc}
+        end
 
       %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
         {:halt, block}
 
-      _, _ ->
-        {:cont, nil}
-    end)
+      _, acc ->
+        {:cont, acc}
+    end) || acc
   end
 
   @doc """
   Search for block in changeset
   """
-  def get_block_in_changeset(changeset, data_field, block_uid) do
+  def get_block_in_changeset(changeset, %Phoenix.HTML.FormField{} = data_field, block_uid) do
     blocks = Changeset.get_field(changeset, data_field.field)
     find_block(blocks, block_uid)
   end
@@ -992,7 +1005,12 @@ defmodule Brando.Villain do
   @doc """
   Switch out a block by uid in changeset
   """
-  def replace_block_in_changeset(changeset, data_field, block_uid, new_block) do
+  def replace_block_in_changeset(
+        changeset,
+        %Phoenix.HTML.FormField{} = data_field,
+        block_uid,
+        new_block
+      ) do
     blocks = Changeset.get_field(changeset, data_field.field)
     updated_blocks = Brando.Villain.replace_block(blocks, block_uid, new_block)
     Changeset.put_change(changeset, data_field.field, updated_blocks)
@@ -1000,7 +1018,7 @@ defmodule Brando.Villain do
 
   def update_block_in_changeset(
         changeset,
-        data_field,
+        %Phoenix.HTML.FormField{} = data_field,
         block_uid,
         merge_data,
         merge_entry? \\ false
@@ -1010,7 +1028,7 @@ defmodule Brando.Villain do
     Changeset.put_change(changeset, data_field.field, updated_blocks)
   end
 
-  def delete_block_in_changeset(changeset, data_field, block_uid) do
+  def delete_block_in_changeset(changeset, %Phoenix.HTML.FormField{} = data_field, block_uid) do
     blocks = Changeset.get_field(changeset, data_field.field)
     updated_blocks = Brando.Villain.delete_block(blocks, block_uid)
     Changeset.put_change(changeset, data_field.field, updated_blocks)
