@@ -1440,21 +1440,33 @@ defmodule BrandoAdmin.Components.Form do
     if live_preview_active? do
       {:noreply, push_event(socket, "b:live_preview", %{cache_key: live_preview_cache_key})}
     else
-      case Brando.LivePreview.initialize(schema, changeset) do
-        {:ok, cache_key} ->
-          {:noreply,
-           socket
-           |> assign(:live_preview_active?, true)
-           |> assign(:live_preview_cache_key, cache_key)
-           |> push_event("b:live_preview", %{cache_key: cache_key})}
+      if changeset.errors != [] do
+        error_msg =
+          gettext("There are errors in your form. Fix these before activating Live Preview")
 
-        {:error, err} ->
-          {:noreply,
-           push_event(socket, "b:alert", %{
-             title: "Live Preview error",
-             message: err,
-             type: "error"
-           })}
+        {:noreply,
+         push_event(socket, "b:alert", %{
+           title: "Error",
+           message: error_msg,
+           type: "error"
+         })}
+      else
+        case Brando.LivePreview.initialize(schema, changeset) do
+          {:ok, cache_key} ->
+            {:noreply,
+             socket
+             |> assign(:live_preview_active?, true)
+             |> assign(:live_preview_cache_key, cache_key)
+             |> push_event("b:live_preview", %{cache_key: cache_key})}
+
+          {:error, err} ->
+            {:noreply,
+             push_event(socket, "b:alert", %{
+               title: "Live Preview error",
+               message: err,
+               type: "error"
+             })}
+        end
       end
     end
   end
