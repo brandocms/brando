@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
               <div class="buttons">
                 <Form.array_inputs
                   :let={%{value: array_value, name: array_name}}
-                  field={@block_data[:available_blocks]}>
+                  field={block_data[:available_blocks]}>
                   <input type="hidden" name={array_name} value={array_value} />
                 </Form.array_inputs>
 
@@ -71,14 +71,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="picture">
                     <%= gettext("Picture") %>
                   </button>
-                  <.inputs_for field={@block_data[:template_picture]} :let={tpl_data}>
+                  <.inputs_for field={block_data[:template_picture]} :let={tpl_data}>
                     <Input.input type={:hidden} field={tpl_data[:picture_class]} uid={@block[:uid].value} id_prefix="block_data_tpl_picture" />
                     <Input.input type={:hidden} field={tpl_data[:img_class]} uid={@block[:uid].value} id_prefix="block_data_tpl_picture" />
                     <Input.input type={:hidden} field={tpl_data[:placeholder]} uid={@block[:uid].value} id_prefix="block_data_tpl_picture" />
 
                     <Form.array_inputs
                       :let={%{value: array_value, name: array_name}}
-                      field={@block_data[:formats]}>
+                      field={block_data[:formats]}>
                       <input type="hidden" name={array_name} value={array_value} />
                     </Form.array_inputs>
                   </.inputs_for>
@@ -88,7 +88,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="video">
                     <%= gettext("Video") %>
                   </button>
-                  <.inputs_for field={@block_data[:template_video]} :let={tpl_data}>
+                  <.inputs_for field={block_data[:template_video]} :let={tpl_data}>
                     <Input.input type={:hidden} field={tpl_data[:opacity]} uid={@block[:uid].value} id_prefix="block_data_tpl_video" />
                     <Input.input type={:hidden} field={tpl_data[:autoplay]} uid={@block[:uid].value} id_prefix="block_data_tpl_video" />
                     <Input.input type={:hidden} field={tpl_data[:preload]} uid={@block[:uid].value} id_prefix="block_data_tpl_video" />
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="gallery">
                     <%= gettext("Gallery") %>
                   </button>
-                  <.inputs_for field={@block_data[:template_gallery]} :let={tpl_data}>
+                  <.inputs_for field={block_data[:template_gallery]} :let={tpl_data}>
                     <Input.input type={:hidden} field={tpl_data[:type]} uid={@block[:uid].value} id_prefix="block_data_tpl_gallery" />
                     <Input.input type={:hidden} field={tpl_data[:display]} uid={@block[:uid].value} id_prefix="block_data_tpl_gallery" />
                     <Input.input type={:hidden} field={tpl_data[:class]} uid={@block[:uid].value} id_prefix="block_data_tpl_gallery" />
@@ -109,7 +109,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                     <Input.input type={:hidden} field={tpl_data[:placeholder]} uid={@block[:uid].value} id_prefix="block_data_tpl_gallery" />
                     <Form.array_inputs
                       :let={%{value: array_value, name: array_name}}
-                      field={@block_data[:formats]}>
+                      field={block_data[:formats]}>
                       <input type="hidden" name={array_name} value={array_value} />
                     </Form.array_inputs>
                   </.inputs_for>
@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                   <button type="button" class="tiny" phx-click={JS.push("select_block", target: @myself)} phx-value-block="svg">
                     SVG
                   </button>
-                  <.inputs_for field={@block_data[:template_svg]} :let={tpl_data}>
+                  <.inputs_for field={block_data[:template_svg]} :let={tpl_data}>
                     <Input.input type={:hidden} field={tpl_data[:class]} label={gettext "Class"} uid={@block[:uid].value} id_prefix="block_data_tpl_svg" />
                   </.inputs_for>
                 <% end %>
@@ -134,11 +134,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def handle_event(
         "select_block",
         %{"block" => block},
-        %{assigns: %{uid: uid, data_field: data_field, base_form: form}} = socket
+        %{assigns: %{data_field: data_field, base_form: form, block: block_form}} =
+          socket
       ) do
     # replace block
     changeset = form.source
-    block_data = socket.assigns.block[:data]
+    uid = block_form[:uid].value
+    block_data = block_form[:data].value
 
     new_block =
       case block do
