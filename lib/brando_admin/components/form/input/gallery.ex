@@ -248,7 +248,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       end
 
     new_gallery_images =
-      gallery_images ++ List.wrap(%GalleryImage{image_id: new_image.id, image: new_image})
+      gallery_images ++
+        List.wrap(%GalleryImage{
+          image_id: new_image.id,
+          image: new_image,
+          creator_id: current_user.id
+        })
 
     selected_images = Enum.map(new_gallery_images, & &1.image.path)
 
