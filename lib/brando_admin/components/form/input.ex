@@ -362,21 +362,39 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}>
       <div :if={@input_options != []} class="radios-wrapper">
         <div :for={opt <- @input_options} class="form-check">
-          <label class="form-check-label">
-            <input
-              type="radio"
-              id={(@id && @id <> "-#{Brando.Utils.slugify(to_string(opt.value))}") || @field.id <> "-#{Brando.Utils.slugify(to_string(opt.value))}"}
-              name={@field.name}
-              class="form-check-input"
-              value={opt.value}
-              checked={to_string(opt.value) == to_string(@field.value)} />
-            <span class="label-text">
-              <%= g(@field.form.source.data.__struct__, to_string(opt.label)) %>
-            </span>
-          </label>
+          <.radio_opt id={@id} opt={opt} field={@field} />
         </div>
       </div>
     </Form.field_base>
+    """
+  end
+
+  def radio_opt(assigns) do
+    id =
+      (assigns.id && assigns.id <> "-#{Brando.Utils.slugify(to_string(assigns.opt.value))}") ||
+        assigns.field.id <> "-#{Brando.Utils.slugify(to_string(assigns.opt.value))}"
+
+    label = g(assigns.field.form.source.data.__struct__, to_string(assigns.opt.label))
+
+    assigns =
+      assigns
+      |> assign(:id, id)
+      |> assign(:checked, to_string(assigns.opt.value) == to_string(assigns.field.value))
+      |> assign(:label, label)
+
+    ~H"""
+    <label class="form-check-label">
+      <input
+        type="radio"
+        id={@id}
+        name={@field.name}
+        class="form-check-input"
+        value={@opt.value}
+        checked={@checked} />
+      <span class="label-text">
+        <%= @label %>
+      </span>
+    </label>
     """
   end
 
