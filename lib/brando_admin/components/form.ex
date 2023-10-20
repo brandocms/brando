@@ -2274,6 +2274,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:failed, failed)
       |> assign(:hidden, hidden)
       |> assign(:label, label)
+      |> assign(:raw_instructions, assigns[:instructions])
 
     f_id =
       if assigns[:uid] do
@@ -2309,7 +2310,7 @@ defmodule BrandoAdmin.Components.Form do
         <div :if={@meta_top} class={["meta", @left_justify_meta && "left"]}>
           <%= if @instructions do %>
             <div class="help-text">
-              ↳ <span><%= raw @instructions %></span>
+              ↳ <span><%= @raw_instructions %></span>
             </div>
             <div :if={@meta != []} class="extra">
               <%= render_slot @meta %>
@@ -2324,7 +2325,7 @@ defmodule BrandoAdmin.Components.Form do
         <div :if={!@meta_top} class={["meta", @left_justify_meta && "left"]}>
           <%= if @instructions do %>
             <div class="help-text">
-              ↳ <span><%= raw @instructions %></span>
+              ↳ <span><%= @raw_instructions %></span>
             </div>
             <div :if={@meta != []} class="extra">
               <%= render_slot @meta %>
