@@ -354,19 +354,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <%= if Enum.empty?(@input_options) do %>
                       <%= gettext "No options found" %>
                     <% end %>
-                    <button
+                    <.option_button
                       :for={opt <- @input_options}
-                      type="button"
-                      class={[
-                        "options-option",
-                        is_selected?(opt, @selected_options, @relation_key, @relation_type) && "option-selected"
-                      ]}
-                      data-label={extract_label(opt)}
-                      value={extract_value(opt)}
-                      phx-click={JS.push("select_option", target: @myself)}>
-                      <%!-- TODO: get rid of is_selected? --%>
-                      <.get_label opt={opt} />
-                    </button>
+                      opt={opt}
+                      click={JS.push("select_option", target: @myself)}
+                      selected_options={@selected_options}
+                      relation_type={@relation_type}
+                      relation_key={@relation_key}
+                    />
                   </div>
                 </div>
                 <div class="selected-labels">
@@ -444,6 +439,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             name={@field.name}
             value={""} />
         <% else %>
+          <%!-- TODO: Clean up this to components --%>
           <%= if @relation_type == :has_many do %>
             <%= for {eform, index} <- Enum.with_index(@selected_options_forms) do %>
               <%= for {name, value_or_values} <- eform.hidden,
@@ -474,6 +470,33 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <% end %>
       </Form.field_base>
     </div>
+    """
+  end
+
+  def option_button(assigns) do
+    opt = assigns.opt
+    selected_options = assigns.selected_options
+    relation_key = assigns.relation_key
+    relation_type = assigns.relation_type
+
+    assigns =
+      assigns
+      |> assign(:selected?, is_selected?(opt, selected_options, relation_key, relation_type))
+      |> assign(:label, extract_label(opt))
+      |> assign(:value, extract_value(opt))
+
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "options-option",
+        @selected? && "option-selected"
+      ]}
+      data-label={@label}
+      value={@value}
+      phx-click={@click}>
+      <.get_label opt={@opt} />
+    </button>
     """
   end
 
