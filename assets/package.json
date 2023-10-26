@@ -11,9 +11,9 @@
     "@brandocms/jupiter": "^3.49.0",
     "@codemirror/lang-html": "^6.4.6",
     "@codemirror/lang-markdown": "^6.2.2",
-    "@codemirror/state": "6.3.0",
-    "@codemirror/view": "6.21.3",
-    "@fontsource/jetbrains-mono": "^5.0.15",
+    "@codemirror/state": "6.3.1",
+    "@codemirror/view": "6.21.4",
+    "@fontsource/jetbrains-mono": "^5.0.17",
     "@tiptap/core": "2.1.12",
     "@tiptap/extension-character-count": "2.1.12",
     "@tiptap/extension-color": "^2.1.12",
@@ -49,11 +49,11 @@
     "vex-js": "^4.1.0"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.12.1",
+    "@brandocms/europacss": "^0.12.2",
     "@sveltejs/vite-plugin-svelte": "2.4.6",
     "autoprefixer": "^10.4.16",
-    "svelte": "^4.2.1",
+    "svelte": "^4.2.2",
     "svelte-preprocess": "^5.0.4",
-    "vite": "^4.4.11"
+    "vite": "^4.5.0"
   }
 }
