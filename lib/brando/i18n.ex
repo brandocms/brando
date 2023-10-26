@@ -28,14 +28,14 @@ defmodule Brando.I18n do
          scope "/en", as: :en, assigns: %{language: "en"} do
            get "/news", MyAppWeb.PostController, :list
            get "/news/:slug", MyAppWeb.PostController, :detail
-           page_routes()
          end
 
          scope "/no", as: :no, assigns: %{language: "no"} do
            get "/nyheter", MyAppWeb.PostController, :list
            get "/nyheter/:slug", MyAppWeb.PostController, :detail
-           page_routes()
          end
+
+        page_routes()
        end
 
   In your controller:
