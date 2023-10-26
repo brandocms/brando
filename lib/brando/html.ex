@@ -170,20 +170,20 @@ defmodule Brando.HTML do
   end
 
   def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
+    canonical =
+      hreflangs
+      |> List.first()
+      |> elem(1)
+
     assigns =
       assigns
-      |> assign(:canonical, elem(List.first(hreflangs), 1))
+      |> assign(:canonical, canonical)
       |> assign(:hreflangs, hreflangs)
       |> assign(:multilang, Enum.count(hreflangs) > 1)
 
     ~H"""
     <link rel="canonical" href={@canonical} />
-    <link
-      :if={@multilang}
-      :for={{lang, url} <- @hreflangs}
-      rel="alternate"
-      href={url}
-      hreflang={lang} />
+    <link :if={@multilang} :for={{lang, url} <- @hreflangs} rel="alternate" href={url} type="text/html" hreflang={lang} />
     """
   end
 
