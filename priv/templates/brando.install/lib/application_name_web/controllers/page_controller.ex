@@ -44,28 +44,32 @@ defmodule <%= application_module %>Web.PageController do
   def show(conn, %{"path" => path}) when is_list(path) do
     {language, parsed_path} = I18n.parse_path(path)
 
-    page_opts = %{
-      matches: %{path: parsed_path, language: language, has_url: true},
-      status: :published,
-      preload: [:alternate_entries],
-      cache: {:ttl, :infinite}
-    }
+    if parsed_path == ["index"] do
+      index(conn, params)
+    else
+      page_opts = %{
+        matches: %{path: parsed_path, language: language, has_url: true},
+        status: :published,
+        preload: [:alternate_entries],
+        cache: {:ttl, :infinite}
+      }
 
-    fragment_opts = %{
-      filter: %{parent_key: "partials", language: language},
-      cache: {:ttl, :infinite}
-    }
+      fragment_opts = %{
+        filter: %{parent_key: "partials", language: language},
+        cache: {:ttl, :infinite}
+      }
 
-    with {:ok, page} <- Pages.get_page(page_opts),
-         {:ok, partials} <- Pages.get_fragments(fragment_opts) do
-      conn
-      |> put_section(page.uri)
-      |> put_meta(Pages.Page, page)
-      |> put_hreflang(page)
-      |> put_title(page.title)
-      |> assign(:partials, partials)
-      |> assign(:page, page)
-      |> render(page.template)
+      with {:ok, page} <- Pages.get_page(page_opts),
+          {:ok, partials} <- Pages.get_fragments(fragment_opts) do
+        conn
+        |> put_section(page.uri)
+        |> put_meta(Pages.Page, page)
+        |> put_hreflang(page)
+        |> put_title(page.title)
+        |> assign(:partials, partials)
+        |> assign(:page, page)
+        |> render(page.template)
+      end
     end
   end
 end
