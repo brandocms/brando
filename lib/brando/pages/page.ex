@@ -88,9 +88,15 @@ defmodule Brando.Pages.Page do
 
   absolute_url """
   {%- assign language = entry.language|strip -%}
-  {%- if language != config.default_language or config.scope_default_language_routes == true -%}/{{ entry.language }}{%- endif -%}
-  {%- if entry.uri == "index" -%}{%- route_i18n entry.language page_path index -%}
-  {%- else -%}{%- route_i18n entry.language page_path show { entry.uri } -%}
+  {%- if config.scope_default_language_routes == true -%}
+    /{{ entry.language }}
+  {%- else -%}
+    {%- if language != config.default_language -%}/{{ entry.language }}{%- endif -%}
+  {%- endif -%}
+  {%- if entry.uri == "index" -%}
+    {%- route_i18n entry.language page_path index -%}
+  {%- else -%}
+    {%- route_i18n entry.language page_path show { entry.uri } -%}
   {%- endif -%}
   """
 
