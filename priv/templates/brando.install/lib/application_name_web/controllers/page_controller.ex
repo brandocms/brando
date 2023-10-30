@@ -41,7 +41,7 @@ defmodule <%= application_module %>Web.PageController do
 
   @doc false
   @spec show(conn, map) :: page_not_found | conn
-  def show(conn, %{"path" => path}) when is_list(path) do
+  def show(conn, %{"path" => path} = params) when is_list(path) do
     {language, parsed_path} = I18n.parse_path(path)
 
     if parsed_path == ["index"] do
