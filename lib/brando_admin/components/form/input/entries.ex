@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   import Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
+  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -27,23 +28,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   # data class, :string
   # data compact, :boolean
 
-  def mount(socket) do
-    {:ok, assign(socket, identifiers: [])}
-  end
-
   def update(assigns, socket) do
-    value = assigns[:value]
-
-    identifiers =
-      case assigns.field.value do
-        "" -> []
-        val -> val
-      end
-
-    selected_identifiers = process_identifiers(identifiers)
-
-    selected_identifiers_forms =
-      Brando.Utils.forms_from_field(assigns.field.form[assigns.field.field])
+    join_field_name = :"#{assigns.field.field}_identifiers"
+    join_field = assigns.field.form[join_field_name]
 
     wanted_schemas = Keyword.get(assigns.opts, :for)
 
@@ -60,26 +47,35 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         """
     end
 
+    delete_field_name =
+      String.replace(
+        assigns.field.name,
+        "#{assigns.field.field}",
+        "#{assigns.field.field}_delete"
+      ) <>
+        "[]"
+
+    sort_field_name =
+      String.replace(
+        assigns.field.name,
+        "#{assigns.field.field}",
+        "#{assigns.field.field}_sequence"
+      ) <>
+        "[]"
+
     {:ok,
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign(:selected_identifiers, selected_identifiers)
-     |> assign(:selected_identifiers_forms, selected_identifiers_forms)
+     |> assign_new(:selected_schema, fn -> nil end)
+     |> assign(:identifiers_field, join_field)
+     |> assign(:join_field_name, join_field_name)
+     |> assign_new(:selected_identifiers, fn -> Enum.map(join_field.value, & &1.identifier) end)
+     |> assign_new(:identifiers, fn %{selected_identifiers: ids} -> ids end)
+     |> assign(:delete_field_name, delete_field_name)
+     |> assign(:sort_field_name, sort_field_name)
      |> assign_available_schemas(wanted_schemas)
-     |> assign_selected_schema()
-     |> assign(value: value)}
-  end
-
-  defp process_identifiers(identifiers) do
-    identifiers
-    |> Enum.map(fn
-      %Brando.Content.Identifier{} = identifier -> identifier
-      %Changeset{action: :replace} -> nil
-      %Changeset{} = changeset -> Changeset.apply_changes(changeset)
-      _ -> nil
-    end)
-    |> Enum.reject(&(&1 == nil))
+     |> assign_selected_schema()}
   end
 
   def assign_available_schemas(socket, wanted_schemas) do
@@ -101,72 +97,87 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Form.field_base
-        field={@field}
+        field={@identifiers_field}
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+      >
+        <input type="hidden" name={@delete_field_name} />
+
         <%= if Enum.empty?(@selected_identifiers) do %>
           <div class="empty-list">
             <%= gettext("No selected entries") %>
           </div>
-          <input type="hidden" name={@field.name} value="" />
         <% else %>
-          <.inputs_for
-            field={@field}
-            :let={identifier_form}>
-            <Input.input type={:hidden} field={identifier_form[:id]} />
-            <Input.input type={:hidden} field={identifier_form[:schema]} />
-            <Input.input type={:hidden} field={identifier_form[:status]} />
-            <Input.input type={:hidden} field={identifier_form[:title]} />
-            <Input.input type={:hidden} field={identifier_form[:cover]} />
-            <Input.input type={:hidden} field={identifier_form[:type]} />
-            <Input.input type={:hidden} field={identifier_form[:absolute_url]} />
-            <Input.input type={:hidden} field={identifier_form[:updated_at]} />
-          </.inputs_for>
+          <div
+            id={"sortable-#{@field.id}-identifiers"}
+            class="selected-entries"
+            phx-hook="Brando.SortableInputsFor"
+            data-target={@myself}
+            data-sortable-id={"sortable-#{@field.id}-identifiers"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".identifier"
+          >
+            <.inputs_for :let={identifier_form} field={@identifiers_field}>
+              <Input.input type={:hidden} field={identifier_form[:identifier_id]} />
+              <.identifier
+                identifier_id={identifier_form[:identifier_id].value}
+                available_identifiers={@identifiers}
+                sortable
+              >
+                <:delete>
+                  <input type="hidden" name={@sort_field_name} value={identifier_form.index} />
+                  <label>
+                    <input
+                      type="checkbox"
+                      name={@delete_field_name}
+                      value={identifier_form.index}
+                      class="hidden"
+                    />
+                    <.icon name="hero-x-mark" />
+                  </label>
+                </:delete>
+              </.identifier>
+            </.inputs_for>
+          </div>
         <% end %>
 
-        <div
-          id={"sortable-#{@field.id}-identifiers"}
-          class="selected-entries"
-          phx-hook="Brando.Sortable"
-          data-target={@myself}
-          data-sortable-id={"sortable-#{@field.id}-identifiers"}
-          data-sortable-handle=".sort-handle"
-          data-sortable-selector=".identifier">
-          <.identifier
-            :for={{selected_identifier, idx} <- Enum.with_index(@selected_identifiers)}
-            identifier={selected_identifier}
-            remove={JS.push("remove_identifier", target: @myself)}
-            param={idx}
-          />
-        </div>
-
-        <button type="button" class="add-entry-button" phx-click={show_modal("##{@field.id}-select-entries")}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z" fill="rgba(252,245,243,1)"/></svg>
+        <button
+          type="button"
+          class="add-entry-button"
+          phx-click={show_modal("##{@field.id}-select-entries")}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="none" d="M0 0h24v24H0z" /><path
+              d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z"
+              fill="rgba(252,245,243,1)"
+            />
+          </svg>
           <%= gettext("Select entries") %>
         </button>
 
         <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
           <h2 class="titlecase"><%= gettext("Select content type") %></h2>
           <div class="button-group-vertical">
-          <button
-            :for={{label, schema, _} <- @available_schemas}
-            type="button"
-            class="secondary"
-            phx-click={JS.push("select_schema", target: @myself)}
-            phx-value-schema={schema}>
-            <%= label %>
-          </button>
+            <button
+              :for={{label, schema, _} <- @available_schemas}
+              type="button"
+              class="secondary"
+              phx-click={JS.push("select_schema", target: @myself)}
+              phx-value-schema={schema}
+            >
+              <%= label %>
+            </button>
           </div>
-          <%= if !Enum.empty?(@identifiers) do %>
+          <%= if @selected_schema do %>
             <h2 class="titlecase"><%= gettext("Available entries") %></h2>
             <.identifier
-              :for={{identifier, idx} <- Enum.with_index(@identifiers)}
-              identifier={identifier}
-              select={JS.push("select_identifier", target: @myself)}
+              :for={identifier <- @identifiers}
+              identifier_id={identifier.id}
+              select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
               selected_identifiers={@selected_identifiers}
-              param={idx}
+              available_identifiers={@identifiers}
             />
           <% end %>
         </Content.modal>
@@ -177,7 +188,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def handle_event(
         "select_identifier",
-        %{"param" => idx},
+        %{"id" => identifier_id},
         %{
           assigns: %{
             field: field,
@@ -189,7 +200,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     field_name = field.field
     form = field.form
     changeset = form.source
-    selected_identifier = Enum.at(identifiers, String.to_integer(idx))
+    selected_identifier = Enum.find(identifiers, &(to_string(&1.id) == to_string(identifier_id)))
 
     updated_identifiers =
       case Enum.find(selected_identifiers, &(&1 == selected_identifier)) do
@@ -197,48 +208,36 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         _ -> Enum.reject(selected_identifiers, &(&1 == selected_identifier))
       end
 
+    require Logger
+
+    Logger.error("""
+
+    updated_identifiers:
+    #{inspect(updated_identifiers, pretty: true)}
+
+    """)
+
+    built_join_entries =
+      Enum.map(updated_identifiers, fn identifier ->
+        %{}
+        |> Map.put(:identifier_id, identifier.id)
+        |> Map.put(:sequence, Enum.count(updated_identifiers))
+      end)
+
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    updated_changeset = Changeset.put_embed(changeset, field_name, updated_identifiers)
+    updated_changeset =
+      Changeset.put_assoc(changeset, :"#{field_name}_identifiers", built_join_entries)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
       changeset: updated_changeset
+      # force_validation:
     )
 
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "remove_identifier",
-        %{"param" => idx},
-        %{
-          assigns: %{
-            field: field,
-            selected_identifiers: selected_identifiers
-          }
-        } = socket
-      ) do
-    field_name = field.field
-    form = field.form
-    changeset = form.source
-    {_, new_list} = List.pop_at(selected_identifiers, String.to_integer(idx))
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_changeset = Changeset.put_embed(changeset, field_name, new_list)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, socket}
+    {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
   end
 
   def handle_event(
@@ -248,8 +247,31 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       ) do
     schema_module = Module.concat([schema])
     {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
+    field_opts = socket.assigns.opts
+
+    list_opts =
+      case Keyword.get(field_opts, :filter_language, false) do
+        false ->
+          list_opts
+
+        true ->
+          form = socket.assigns.field.form
+          language = form[:language]
+
+          if language do
+            language_atom = String.to_existing_atom(language.value)
+            Map.put(list_opts, :language, language_atom)
+          else
+            list_opts
+          end
+      end
+
     {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
-    {:noreply, assign(socket, :identifiers, identifiers)}
+
+    {:noreply,
+     socket
+     |> assign(:identifiers, identifiers)
+     |> assign(:selected_schema, schema_module)}
   end
 
   def handle_event(
@@ -288,13 +310,30 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
   end
 
-  def identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
+  attr :identifier_id, :integer, required: true
+  attr :available_identifiers, :list, default: []
+  attr :selected_identifiers, :list, default: []
+  attr :select, :any, default: false
+  attr :sortable, :boolean, default: false
+  slot :delete
+
+  def identifier(%{identifier_id: identifier_id} = assigns) when not is_nil(identifier_id) do
+    available_identifiers = assigns.available_identifiers
+
+    identifier =
+      Enum.find(available_identifiers, &(to_string(&1.id) == to_string(identifier_id)))
+
+    schema = identifier.schema
+
+    translated_type =
+      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
     assigns =
       assigns
+      |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign_new(:select, fn -> false end)
-      |> assign_new(:remove, fn -> false end)
-      |> assign_new(:selected_identifiers, fn -> [] end)
+      |> assign(:type, String.upcase(translated_type))
 
     ~H"""
     <article
@@ -302,17 +341,37 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       class={[
         "draggable",
         "identifier",
-        "sort-handle",
         @select && "selectable",
         @identifier in @selected_identifiers && "selected"
       ]}
       phx-page-loading
       phx-click={@select}
-      phx-value-param={@param}
+      phx-value-param={@identifier.id}
     >
+      <%= if @sortable do %>
+        <section class="sort-handle">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="1.5" cy="1.5" r="1.5"></circle>
+            <circle cx="7.5" cy="1.5" r="1.5"></circle>
+            <circle cx="13.5" cy="1.5" r="1.5"></circle>
+            <circle cx="1.5" cy="7.5" r="1.5"></circle>
+            <circle cx="7.5" cy="7.5" r="1.5"></circle>
+            <circle cx="13.5" cy="7.5" r="1.5"></circle>
+            <circle cx="1.5" cy="13.5" r="1.5"></circle>
+            <circle cx="7.5" cy="13.5" r="1.5"></circle>
+            <circle cx="13.5" cy="13.5" r="1.5"></circle>
+          </svg>
+        </section>
+      <% end %>
       <section class="cover-wrapper">
         <div class="cover">
-          <img src={@has_cover? && @identifier.cover || "/images/admin/avatar.svg"}>
+          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
         </div>
       </section>
       <section class="content">
@@ -321,62 +380,73 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @identifier.type %>#<%= Brando.HTML.zero_pad(@identifier.id) %> <span>|</span> <%= format_datetime(@identifier.updated_at) %>
+            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+              @identifier.entry_id
+            ) %>
+            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
           </div>
         </div>
       </section>
-      <%= if @remove do %>
-        <div class="remove">
-          <button type="button" phx-page-loading phx-click={@remove} phx-value-param={@param}>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      <% end %>
+      <div class="remove">
+        <%= render_slot(@delete) %>
+      </div>
     </article>
     """
   end
 
-  def identifier(%{identifier_form: identifier_form} = assigns)
-      when not is_nil(identifier_form) do
+  @doc """
+  Dumb identifier is used to display identifiers we've made on the fly, instead of
+  referencing identifiers stored in the database.
+  """
+  attr :identifier, :map, required: true
+  attr :select, :any, default: false
+  slot :delete
+
+  def dumb_identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
+    schema = identifier.schema
+
+    translated_type =
+      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
     assigns =
       assigns
-      |> assign_new(:select, fn -> false end)
-      |> assign_new(:remove, fn -> false end)
-      |> assign_new(:selected_identifiers, fn -> [] end)
+      |> assign(:identifier, identifier)
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:type, String.upcase(translated_type))
 
     ~H"""
     <article
-      class={["identifier", @identifier_form in @selected_identifiers && "selected"]}
+      data-id={@identifier.entry_id}
+      class={[
+        "draggable",
+        "identifier",
+        @select && "selectable"
+      ]}
       phx-page-loading
       phx-click={@select}
-      phx-value-param={@param}>
-
+    >
       <section class="cover-wrapper">
         <div class="cover">
-          <img src={@identifier_form[:cover].value || "/images/admin/avatar.svg"}>
+          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
         </div>
       </section>
       <section class="content">
         <div class="info">
           <div class="name">
-            <%= @identifier_form[:title].value %>
+            <%= @identifier.title %>
           </div>
           <div class="meta-info">
-            <%= @identifier_form[:type].value %>
+            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+              @identifier.entry_id
+            ) %>
+            <span>|</span> <%= format_datetime(@identifier.updated_at) %>
           </div>
         </div>
       </section>
-      <%= if @remove do %>
-        <div class="remove">
-          <button type="button" phx-page-loading phx-click={@remove} phx-value-param={@param}>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      <% end %>
+      <div class="remove">
+        <%= render_slot(@delete) %>
+      </div>
     </article>
     """
   end

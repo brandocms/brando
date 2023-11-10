@@ -92,9 +92,20 @@ defmodule Brando.Blueprint.Relations do
   alias Brando.Exception
   alias Brando.Blueprint.Relation
 
-  def build_relation(name, type, opts \\ [])
+  def build_relation(caller, name, type, opts \\ [])
 
-  def build_relation(name, type, opts) do
+  def build_relation(caller, name, :entries, opts) do
+    join_module =
+      Module.concat([
+        caller,
+        "#{Phoenix.Naming.camelize(to_string(name))}Identifier"
+      ])
+
+    opts = Keyword.put(opts, :module, join_module)
+    %Relation{name: name, type: :entries, opts: Enum.into(opts, %{})}
+  end
+
+  def build_relation(_caller, name, type, opts) do
     %Relation{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
@@ -123,6 +134,7 @@ defmodule Brando.Blueprint.Relations do
             relation :article_contributors, :has_many,
               module: Articles.ArticleContributor,
               preload_order: [asc: :sequence],
+              on_replace: :delete,
               cast: true
 
             relation :contributors, :has_many,
@@ -141,13 +153,14 @@ defmodule Brando.Blueprint.Relations do
         """
     end
 
-    relation(__CALLER__, name, type, opts)
+    relation(__CALLER__.module, name, type, opts)
   end
 
-  defp relation(_caller, name, type, opts) do
+  defp relation(caller, name, type, opts) do
     quote location: :keep do
       rel =
         build_relation(
+          unquote(caller),
           unquote(name),
           unquote(type),
           unquote(opts)
@@ -293,22 +306,30 @@ defmodule Brando.Blueprint.Relations do
   end
 
   ##
-  ## embeds_many
+  ## entries
   def run_cast_relation(
-        %{type: :entries, name: name, opts: opts},
+        %{type: :entries, name: name, opts: %{module: module} = opts},
         changeset,
         _user
       ) do
-    case Map.get(changeset.params, to_string(name)) do
+    required = Map.get(opts, :required, false)
+    opts = Map.put(opts, :required, required)
+
+    case Map.get(changeset.params, "#{to_string(name)}_identifiers") do
       "" ->
-        if Map.get(opts, :required) do
-          cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
-        else
-          put_embed(changeset, name, [])
-        end
+        put_assoc(changeset, :"#{name}_identifiers", [])
 
       _ ->
-        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+        cast_assoc(
+          changeset,
+          :"#{name}_identifiers",
+          to_changeset_opts(:has_many, opts) ++
+            [
+              with: &module.changeset/3,
+              sort_param: :"#{to_string(name)}_sequence",
+              drop_param: :"#{to_string(name)}_delete"
+            ]
+        )
     end
   end
 

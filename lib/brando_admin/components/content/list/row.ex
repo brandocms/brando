@@ -53,37 +53,21 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       data-id={@entry.id}
       phx-click={@click}
       phx-value-id={@entry.id}
-      phx-page-loading>
+      phx-page-loading
+    >
       <div class="main-content">
-        <.status
-          :if={@status?}
-          entry={@entry}
-          soft_delete?={@soft_delete?} />
-
+        <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
         <.handle :if={@sortable?} />
-
-        <.field
-          :for={field <- @listing.fields}
-          field={field}
-          entry={@entry}
-          schema={@schema} />
-
-        <.alternates
-          :if={@alternates?}
-          entry={@entry}
-          target={@myself}
-          schema={@schema} />
-
-        <.creator
-          :if={@creator?}
-          entry={@entry}
-          soft_delete?={@soft_delete?}/>
+        <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+        <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
+        <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
 
         <.entry_menu
           schema={@schema}
           content_language={@content_language}
           entry={@entry}
-          listing={@listing} />
+          listing={@listing}
+        />
       </div>
 
       <%= if @show_children do %>
@@ -96,14 +80,16 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           phx-hook="Brando.Sortable"
           data-sortable-id={"child_listing|#{@entry.id}|#{child_field}"}
           data-sortable-handle=".sequence-handle"
-          data-sortable-selector=".child-row">
+          data-sortable-selector=".child-row"
+        >
           <.child_row
             :for={child_entry <- Map.get(@entry, child_field, [])}
             entry={child_entry}
             schema={@schema}
             target={@myself}
             content_language={@content_language}
-            child_listing={@listing.child_listing} />
+            child_listing={@listing.child_listing}
+          />
         </div>
       <% end %>
     </div>
@@ -171,20 +157,20 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         ]}>
           <Content.image image={@entry_field} size={@size || :thumb} />
         </div>
-
       <% :children_button -> %>
         <div class={[
           @class,
           @columns && "col-#{@columns}",
           @offset && "offset-#{@offset}"
         ]}>
-          <.live_component module={ChildrenButton}
+          <.live_component
+            module={ChildrenButton}
             id={"#{@entry.id}-children-button"}
             fields={@field.name}
             entry={@entry}
-            {@field.opts} />
+            {@field.opts}
+          />
         </div>
-
       <% :language -> %>
         <div class={[
           @class,
@@ -193,7 +179,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         ]}>
           <Badge.language language={@entry_field} />
         </div>
-
       <% :url -> %>
         <div class={[
           @class,
@@ -201,7 +186,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           @offset && "offset-#{@offset}"
         ]}>
           <a href={@schema.__absolute_url__(@entry)} target="_blank">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z" />
+            </svg>
           </a>
         </div>
     <% end %>
@@ -260,8 +247,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
             phx-value-id={@entry.id}
             phx-value-language={@language}
-            phx-click="edit_entry">
-            <%= gettext "Edit" %> <%= @translated_singular %>
+            phx-click="edit_entry"
+          >
+            <%= gettext("Edit") %> <%= @translated_singular %>
           </button>
         </li>
         <li>
@@ -271,8 +259,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
             phx-confirm-click={JS.push("delete_entry")}
             phx-value-language={@language}
-            phx-value-id={@entry.id}>
-            <%= gettext "Delete" %> <%= @translated_singular %>
+            phx-value-id={@entry.id}
+          >
+            <%= gettext("Delete") %> <%= @translated_singular %>
           </button>
         </li>
         <li :if={@has_duplicate_fn?}>
@@ -280,17 +269,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
             phx-value-id={@entry.id}
             phx-value-language={@language}
-            phx-click="duplicate_entry">
-            <%= gettext "Duplicate" %> <%= @translated_singular %>
+            phx-click="duplicate_entry"
+          >
+            <%= gettext("Duplicate") %> <%= @translated_singular %>
           </button>
         </li>
-        <li :if={@duplicate_langs?} :for={lang <- @duplicate_langs}>
+        <li :for={lang <- @duplicate_langs} :if={@duplicate_langs?}>
           <button
             id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
             phx-value-id={@entry.id}
             phx-value-language={lang}
-            phx-click="duplicate_entry_to_language">
-            <%= gettext "Duplicate to" %> [<%= String.upcase(lang) %>]
+            phx-click="duplicate_entry_to_language"
+          >
+            <%= gettext("Duplicate to") %> [<%= String.upcase(lang) %>]
           </button>
         </li>
       <% end %>
@@ -302,7 +293,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             phx-confirm-click-message={action[:confirm]}
             phx-confirm-click={event}
             phx-value-language={@language}
-            phx-value-id={@entry.id}>
+            phx-value-id={@entry.id}
+          >
             <%= g(@schema, label) %>
           </button>
         <% else %>
@@ -310,7 +302,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
             phx-value-id={@entry.id}
             phx-value-language={@language}
-            phx-click={event}>
+            phx-click={event}
+          >
             <%= g(@schema, label) %>
           </button>
         <% end %>
@@ -320,8 +313,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           id={"action_#{@listing.name}_undelete_#{@entry.id}"}
           phx-value-id={@entry.id}
           phx-value-language={@language}
-          phx-click="undelete_entry">
-          <%= gettext "Undelete" %> <%= @translated_singular %>
+          phx-click="undelete_entry"
+        >
+          <%= gettext("Undelete") %> <%= @translated_singular %>
         </button>
       </li>
     </CircleDropdown.render>
@@ -332,7 +326,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <div class="col-1 seq">
       <div class="center sequence-handle">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1.5" cy="1.5" r="1.5"></circle><circle cx="7.5" cy="1.5" r="1.5"></circle><circle cx="13.5" cy="1.5" r="1.5"></circle><circle cx="1.5" cy="7.5" r="1.5"></circle><circle cx="7.5" cy="7.5" r="1.5"></circle><circle cx="13.5" cy="7.5" r="1.5"></circle><circle cx="1.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle><circle cx="13.5" cy="13.5" r="1.5"></circle></svg>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="1.5" cy="1.5" r="1.5"></circle>
+          <circle cx="7.5" cy="1.5" r="1.5"></circle>
+          <circle cx="13.5" cy="1.5" r="1.5"></circle>
+          <circle cx="1.5" cy="7.5" r="1.5"></circle>
+          <circle cx="7.5" cy="7.5" r="1.5"></circle>
+          <circle cx="13.5" cy="7.5" r="1.5"></circle>
+          <circle cx="1.5" cy="13.5" r="1.5"></circle>
+          <circle cx="7.5" cy="13.5" r="1.5"></circle>
+          <circle cx="13.5" cy="13.5" r="1.5"></circle>
+        </svg>
       </div>
     </div>
     """
@@ -340,20 +344,36 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def status(assigns) do
     publish_at = Map.get(assigns.entry, :publish_at, nil)
-    assigns = assign(assigns, :publish_at, publish_at)
+
+    assigns =
+      assigns
+      |> assign(:publish_at, publish_at)
+      |> assign(:entry_id, make_id(assigns.entry))
 
     ~H"""
     <%= if @soft_delete? and @entry.deleted_at do %>
       <div class="status">
         <div center="true">
-          <svg data-testid="status-deleted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15"><circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle></svg>
+          <svg
+            data-testid="status-deleted"
+            xmlns="http://www.w3.org/2000/svg"
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+          >
+            <circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle>
+          </svg>
         </div>
       </div>
     <% else %>
       <div class="status">
-        <div phx-click={toggle_dropdown("#status-dropdown-#{make_id(@entry)}")}>
+        <div phx-click={toggle_dropdown("#status-dropdown-#{@entry_id}")}>
           <.status_circle status={@entry.status} publish_at={@publish_at} />
-          <.status_dropdown id={"status-dropdown-#{make_id(@entry)}"} entry_id={@entry.id} schema={@entry.__struct__} />
+          <.status_dropdown
+            id={"status-dropdown-#{@entry_id}"}
+            entry_id={@entry.id}
+            schema={@entry.__struct__}
+          />
         </div>
       </div>
     <% end %>
@@ -368,7 +388,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <button
         :for={status <- @statuses}
         type="button"
-        phx-click={JS.push("set_status", value: %{id: @entry_id, status: status, schema: @schema}) |> toggle_dropdown("##{@id}")}>
+        phx-click={
+          "set_status"
+          |> JS.push(value: %{id: @entry_id, status: status, schema: @schema})
+          |> toggle_dropdown("##{@id}")
+        }
+      >
         <.status_circle status={status} /> <%= render_status_label(status) %>
       </button>
     </div>
@@ -384,7 +409,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       height="15"
       viewBox="0 0 15 15"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg">
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <circle class="pending" cx="7.5" cy="7.5" r="7.5" />
       <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="white" />
       <line x1="3.5" y1="7.5" x2="8" y2="7.5" stroke="white" />
@@ -399,7 +425,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       xmlns="http://www.w3.org/2000/svg"
       width="15"
       height="15"
-      viewBox="0 0 15 15">
+      viewBox="0 0 15 15"
+    >
       <circle r="7.5" cy="7.5" cx="7.5" class={@status} />
     </svg>
     """
@@ -416,20 +443,54 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="col-1">
-      <button type="button" class={"btn-icon-subtle"} disabled={!@alternate_entries?} phx-click={show_modal("#entry-#{@entry.id}-alternates")}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+      <button
+        type="button"
+        class="btn-icon-subtle"
+        disabled={!@alternate_entries?}
+        phx-click={show_modal("#entry-#{@entry.id}-alternates")}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          class="w-5 h-5"
+        >
           <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
-          <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
+          <path
+            fill-rule="evenodd"
+            d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z"
+            clip-rule="evenodd"
+          />
         </svg>
       </button>
-      <Content.modal title={gettext "Alternates"} narrow id={"entry-#{@entry.id}-alternates"}>
-        <Entries.identifier
+      <Content.modal title={gettext("Alternates")} narrow id={"entry-#{@entry.id}-alternates"}>
+        <Entries.dumb_identifier
           :for={identifier <- @identifiers}
           identifier={identifier}
-          select={JS.push("update_entry", value: %{url: identifier.admin_url}, target: @target)}
-          remove={JS.push("remove_entry", value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.id}, target: @target)}
-          param={identifier.id}
-        />
+          select={
+            JS.push("update_entry",
+              value: %{entry_id: identifier.entry_id, schema: identifier.schema},
+              target: @target
+            )
+          }
+        >
+          <:delete>
+            <button
+              type="button"
+              phx-page-loading
+              phx-click={
+                JS.push("remove_entry",
+                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id},
+                  target: @target
+                )
+              }
+            >
+              <.icon name="hero-x-mark" />
+            </button>
+          </:delete>
+        </Entries.dumb_identifier>
       </Content.modal>
     </div>
     """
@@ -448,6 +509,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def creator(%{entry: %{creator: %{avatar: _avatar}}} = assigns) do
+    assigns = assign(assigns, :entry_id, make_id(assigns.entry))
+
     ~H"""
     <div class="col-4">
       <article class="item-meta">
@@ -464,12 +527,15 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
             <div
               class="time"
-              id={"entry_creator_time_icon_#{make_id(@entry)}"}
-              data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}>
+              id={"entry_creator_time_icon_#{@entry_id}"}
+              data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}
+            >
               <%= if @soft_delete? and @entry.deleted_at do %>
-                <%= format_datetime(@entry.deleted_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(@entry.deleted_at, "%H:%M") %>
+                <%= format_datetime(@entry.deleted_at, "%d/%m/%y") %>
+                <span>•</span> <%= format_datetime(@entry.deleted_at, "%H:%M") %>
               <% else %>
-                <%= format_datetime(@entry.updated_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(@entry.updated_at, "%H:%M") %>
+                <%= format_datetime(@entry.updated_at, "%d/%m/%y") %>
+                <span>•</span> <%= format_datetime(@entry.updated_at, "%H:%M") %>
               <% end %>
             </div>
           </div>
@@ -481,6 +547,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def creator(assigns) do
     ~H"""
+
     """
   end
 
@@ -516,38 +583,27 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       end)
 
     ~H"""
-    <div
-      class="child-row draggable"
-      data-id={@entry.id}>
-      <.status
-        :if={@status?}
-        entry={@entry}
-        soft_delete?={@soft_delete?} />
+    <div class="child-row draggable" data-id={@entry.id}>
+      <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
       <.handle :if={@sortable?} />
-      <.field
-        :for={field <- @listing.fields}
-        field={field}
-        entry={@entry}
-        schema={@schema} />
-      <.alternates
-        :if={@alternates?}
-        entry={@entry}
-        target={@target}
-        schema={@schema} />
-      <.creator
-        :if={@creator?}
-        entry={@entry}
-        soft_delete?={@soft_delete?}/>
+      <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+      <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
+      <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
       <.entry_menu
         schema={@schema}
         entry={@entry}
         content_language={@content_language}
-        listing={@listing} />
+        listing={@listing}
+      />
     </div>
     """
   end
 
-  def handle_event("update_entry", %{"url" => url}, socket) do
+  def handle_event("update_entry", %{"entry_id" => entry_id, "schema" => schema}, socket) do
+    # extract admin url from identifier
+    schema = Module.concat([schema])
+    url = schema.__admin_url__(%{id: entry_id})
+
     {:noreply, push_navigate(socket, to: url)}
   end
 

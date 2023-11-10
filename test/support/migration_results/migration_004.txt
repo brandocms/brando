@@ -23,6 +23,15 @@ defmodule Brando.Migrations.Persons.Person.Blueprint001 do
     end
 
     create unique_index(:persons_alternates, [:entry_id, :linked_entry_id])
+
+    create table(:persons_related_entries_identifiers) do
+      add :parent_id, references(:persons, on_delete: :delete_all)
+      add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
+      add :sequence, :integer
+      timestamps()
+    end
+
+    create unique_index(:persons_related_entries_identifiers, [:parent_id, :identifier_id])
   end
 
   def down do
@@ -31,5 +40,7 @@ defmodule Brando.Migrations.Persons.Person.Blueprint001 do
     drop index(:persons, [:language])
 
     drop table(:persons_alternates)
+
+    drop table(:persons_related_entries_identifiers)
   end
 end

@@ -10,9 +10,15 @@ defmodule Brando.Trait.Status do
   end
 
   def update_status(schema, id, status) do
-    query = from q in schema, where: q.id == ^id, update: [set: [status: ^status]]
-    Brando.repo().update_all(query, [])
+    entry = Brando.repo().one(from q in schema, where: q.id == ^id)
+
+    {:ok, updated_entry} =
+      entry
+      |> Ecto.Changeset.cast(%{status: status}, [:status])
+      |> Brando.repo().update()
+
     Brando.Datasource.update_datasource(schema)
+    Brando.Content.update_identifier(schema, updated_entry)
     Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})
   end
 end

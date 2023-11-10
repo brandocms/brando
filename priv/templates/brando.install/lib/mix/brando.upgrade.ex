@@ -47,17 +47,29 @@ defmodule Mix.Tasks.Brando.Upgrade do
     Mix.shell().info([:green, "\n==> Brando checking BRANDO upgrade migration directory...\n"])
 
     {:ok, brando_migrations} = File.ls(brando_migrations_dir)
-    brando_migrations = Enum.sort(brando_migrations)
 
-    for m <- brando_migrations do
+    brando_migrations =
+      brando_migrations
+      |> Enum.map(fn m ->
+        [[id]] = Regex.scan(~r/^brando_(\d+)_/, m, capture: :all_but_first)
+        {String.to_integer(id), m}
+      end)
+      |> Enum.sort(&(elem(&1, 0) <= elem(&2, 0)))
+
+    for {_, m} <- brando_migrations do
       Mix.shell().info("* #{m}")
     end
 
     # check what's missing
-    missing_migrations = brando_migrations -- app_migrations
+
+    missing_migrations =
+      Enum.filter(brando_migrations, fn {_, m} ->
+        m not in app_migrations
+      end)
+
     Mix.shell().info([:green, "\n==> Finding missing migrations...\n"])
 
-    for m <- missing_migrations do
+    for {_, m} <- missing_migrations do
       Mix.shell().info([:red, "* #{m}"])
     end
 
@@ -65,7 +77,7 @@ defmodule Mix.Tasks.Brando.Upgrade do
       # copy migrations
       Mix.shell().info([:green, "\n==> Copying missing migrations...\n"])
 
-      for m <- missing_migrations do
+      for {_, m} <- missing_migrations do
         src_file = Path.join([brando_migrations_dir, m])
         target_file = Path.join([app_migrations_dir, Enum.join([timestamp(), m], "_")])
 

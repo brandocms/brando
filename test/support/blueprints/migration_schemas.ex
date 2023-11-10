@@ -149,7 +149,7 @@ defmodule Brando.MigrationTest.Profile do
   end
 end
 
-defmodule Brando.MigrationTest.Person do
+defmodule Brando.Persons.Person do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Persons",
@@ -172,5 +172,7 @@ defmodule Brando.MigrationTest.Person do
 
   relations do
     relation :profile, :belongs_to, module: Brando.MigrationTest.Profile, type: :binary_id
+
+    relation :related_entries, :entries, constraints: [max_length: 3]
   end
 end

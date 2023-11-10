@@ -40,7 +40,7 @@ export default class Toast {
   mutation(level, payload) {
     this.izitoast.show({
       title: payload.user.name || '',
-      message: `${payload.action} [${payload.identifier.type}#<strong>${payload.identifier.id}</strong>] &raquo; "${payload.identifier.title}"`,
+      message: `${payload.action} [${payload.identifier.type}#<strong>${payload.identifier.entry_id}</strong>] &raquo; "${payload.identifier.title}"`,
       theme: 'mutations',
       displayMode: 2,
       position: 'bottomRight',

@@ -167,6 +167,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(deleted_at: nil)
         |> maybe_obfuscate()
         |> update()
+        |> maybe_create_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -175,8 +176,17 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(deleted_at: nil)
         |> maybe_obfuscate()
         |> update!()
+        |> maybe_create_identifier()
         |> Brando.Cache.Query.evict()
       end
+
+      def maybe_create_identifier({:ok, entry}) do
+        module = entry.__struct__
+        Brando.Content.create_identifier(module, entry)
+        {:ok, entry}
+      end
+
+      def maybe_create_identifier(other), do: other
 
       defp utc_now, do: DateTime.truncate(DateTime.utc_now(), :second)
     end

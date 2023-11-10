@@ -14,11 +14,11 @@ defmodule Brando.SoftDelete.QueryTest do
              Brando.Files.File,
              Brando.Images.Gallery,
              Brando.Images.Image,
-             Brando.MigrationTest.Person,
              Brando.MigrationTest.Profile,
              Brando.MigrationTest.Project,
              Brando.Pages.Fragment,
              Brando.Pages.Page,
+             Brando.Persons.Person,
              Brando.Users.User,
              Brando.Videos.Video
            ]
@@ -33,11 +33,11 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Files.File, 0},
              {Brando.Images.Gallery, 0},
              {Brando.Images.Image, 0},
-             {Brando.MigrationTest.Person, 0},
              {Brando.MigrationTest.Profile, 0},
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 0},
              {Brando.Pages.Page, 0},
+             {Brando.Persons.Person, 0},
              {Brando.Users.User, 0},
              {Brando.Videos.Video, 0}
            ]
@@ -71,11 +71,11 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Files.File, 0},
              {Brando.Images.Gallery, 0},
              {Brando.Images.Image, 1},
-             {Brando.MigrationTest.Person, 0},
              {Brando.MigrationTest.Profile, 0},
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 1},
+             {Brando.Persons.Person, 0},
              {Brando.Users.User, 2},
              {Brando.Videos.Video, 0}
            ]
@@ -96,11 +96,11 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Files.File, 0},
              {Brando.Images.Gallery, 0},
              {Brando.Images.Image, 0},
-             {Brando.MigrationTest.Person, 0},
              {Brando.MigrationTest.Profile, 0},
              {Brando.MigrationTest.Project, 0},
              {Brando.Pages.Fragment, 1},
              {Brando.Pages.Page, 0},
+             {Brando.Persons.Person, 0},
              {Brando.Users.User, 0},
              {Brando.Videos.Video, 0}
            ]

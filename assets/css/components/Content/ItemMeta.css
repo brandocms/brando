@@ -107,6 +107,27 @@
     }
   }
 
+  .sort-handle {
+    cursor: move;
+    width: 15px;
+    margin-right: 10px;
+    margin-left: 5px;
+    
+    svg {
+      opacity: 0.5;
+      circle {
+        fill: var(--brando-color-dark);
+      }
+
+      &:hover {
+        opacity: 1;
+        circle {
+          fill: theme(colors.blue);
+        }
+      }
+    }
+  }
+
   .content {
     flex-grow: 1;
     .name {

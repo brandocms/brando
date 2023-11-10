@@ -142,11 +142,10 @@ defmodule BrandoIntegrationWeb.Layouts do
   def app(assigns) do
     ~H"""
     <html>
-    <head>
-    </head>
-    <body>
-    <%= @inner_content %>
-    </body>
+      <head></head>
+      <body>
+        <%= @inner_content %>
+      </body>
     </html>
     """
   end
@@ -207,10 +206,10 @@ defmodule BrandoIntegration.ModuleWithDatasource do
     list :all, fn _, _, _ -> {:ok, [1, 2, 3]} end
 
     selection :featured,
-              fn _, _, _ ->
+              fn _schema, _language, _vars ->
                 {:ok, [%{id: 1, label: "label 1"}, %{id: 2, label: "label 2"}]}
               end,
-              fn _, _ ->
+              fn _identifiers ->
                 {:ok,
                  [%{id: 1, label: "label 1", more: true}, %{id: 2, label: "label 2", more: true}]}
               end

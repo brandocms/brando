@@ -2,6 +2,17 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: Datasources — selection list callback should return identifiers instead of entries:
+
+  ```elixir
+  selection :featured, fn schema, language, _vars ->
+    Brando.Content.list_identifiers_for(schema, %{language: language})
+  end, # ...
+  ```
+
+* BREAKING: Updated `mix brando.upgrade` script. Copy the new script into your 
+  application: `cp deps/brando/priv/templates/brando.install/lib/mix/brando.upgrade.ex lib/mix/brando.upgrade.ex`
+
 * BREAKING: Deprecated `:many_to_many` for now. This might return later if
   there's a usecase for it. Right now it is replaced by `:has_many` `through`
   associations instead. 

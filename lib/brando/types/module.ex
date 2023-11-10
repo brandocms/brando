@@ -45,16 +45,11 @@ defmodule Brando.Type.Module do
   other options as well.
   """
   def dump(binary) when is_binary(binary) do
-    module =
-      binary
-      |> List.wrap()
-      |> Module.concat()
-
-    {:ok, module}
+    {:ok, binary}
   end
 
   def dump(module) when is_atom(module) do
-    {:ok, module}
+    {:ok, to_string(module)}
   end
 
   def dump(_), do: :error

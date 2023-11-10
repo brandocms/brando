@@ -45,11 +45,23 @@ defmodule Brando.Blueprint.Constraints do
     end
   end
 
+  defp run_validation({:min_length, length}, validated_changeset, %{name: name, type: :entries}) do
+    validate_length(validated_changeset, :"#{name}_identifiers", min: length)
+  end
+
   defp run_validation({:min_length, min_length}, validated_changeset, %{name: name}),
     do: validate_length(validated_changeset, name, min: min_length)
 
+  defp run_validation({:max_length, length}, validated_changeset, %{name: name, type: :entries}) do
+    validate_length(validated_changeset, :"#{name}_identifiers", max: length)
+  end
+
   defp run_validation({:max_length, max_length}, validated_changeset, %{name: name}),
     do: validate_length(validated_changeset, name, max: max_length)
+
+  defp run_validation({:length, length}, validated_changeset, %{name: name, type: :entries}) do
+    validate_length(validated_changeset, :"#{name}_identifiers", is: length)
+  end
 
   defp run_validation({:length, length}, validated_changeset, %{name: name}),
     do: validate_length(validated_changeset, name, is: length)

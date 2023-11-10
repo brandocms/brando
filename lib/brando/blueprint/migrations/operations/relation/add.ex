@@ -31,11 +31,11 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
     """
   end
 
+  # entries are handled as a m2m now
   def up(%{
-        relation: %{type: :entries, name: name}
+        relation: %{type: :entries, name: _name}
       }) do
     """
-    add #{inspect(name)}, :jsonb
     """
   end
 
@@ -75,11 +75,11 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
     """
   end
 
+  # entries are handled as an m2m now
   def down(%{
-        relation: %{type: :entries, name: name}
+        relation: %{type: :entries, name: _}
       }) do
     """
-    remove #{inspect(name)}
     """
   end
 

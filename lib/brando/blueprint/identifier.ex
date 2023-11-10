@@ -14,8 +14,13 @@ defmodule Brando.Blueprint.Identifier do
 
   defmacro identifier(tpl) when is_binary(tpl) do
     {:ok, parsed_identifier} = Liquex.parse(tpl, LiquexParser)
+    fields = extract_fields_from_identifier(tpl)
 
     quote location: :keep do
+      def __identifier_fields__ do
+        unquote(fields)
+      end
+
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
         skip_cover = Keyword.get(opts, :skip_cover, false)
@@ -28,21 +33,26 @@ defmodule Brando.Blueprint.Identifier do
 
         status = Map.get(entry, :status, nil)
         language = Map.get(entry, :language, nil)
-        absolute_url = __MODULE__.__absolute_url__(entry)
-        admin_url = __MODULE__.__admin_url__(entry)
-        cover = if skip_cover, do: nil, else: Brando.Blueprint.Identifier.extract_cover(entry)
+
+        language =
+          (is_nil(language) && nil) || (is_binary(language) && String.to_existing_atom(language)) ||
+            language
+
+        first_image_asset = Enum.find(__MODULE__.__assets__(), &(&1.type == :image))
+
+        cover =
+          if skip_cover,
+            do: nil,
+            else: Brando.Blueprint.Identifier.extract_cover(first_image_asset, entry)
 
         %Brando.Content.Identifier{
-          id: entry.id,
+          entry_id: entry.id,
           title: title,
-          type: String.capitalize(translated_type),
           status: status,
           language: language,
-          absolute_url: absolute_url,
-          admin_url: admin_url,
           cover: cover,
           schema: __MODULE__,
-          updated_at: entry.updated_at
+          updated_at: Brando.Utils.ensure_utc(entry.updated_at)
         }
       end
     end
@@ -72,17 +82,13 @@ defmodule Brando.Blueprint.Identifier do
   end
 
   def list_entries_for(schema, list_opts) when is_atom(schema) do
-    context = schema.__modules__().context
-    plural = schema.__naming__().plural
-
-    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
-    identifiers_for(entries)
+    Brando.Content.list_identifiers(schema, list_opts)
   end
 
-  def get_entry_for_identifier(%Brando.Content.Identifier{id: id, schema: schema}) do
+  def get_entry_for_identifier(%Brando.Content.Identifier{entry_id: entry_id, schema: schema}) do
     context = schema.__modules__().context
     singular = schema.__naming__().singular
-    opts = %{matches: %{id: id}}
+    opts = %{matches: %{id: entry_id}}
     apply(context, :"get_#{singular}", [opts])
   end
 
@@ -100,33 +106,42 @@ defmodule Brando.Blueprint.Identifier do
     schema.__identifier__(entry)
   end
 
-  def extract_cover(%{cover: nil}) do
-    nil
+  def extract_cover(nil, _), do: nil
+  def extract_cover(_, nil), do: nil
+
+  def extract_cover(%{name: field_name} = field, entry) do
+    case Map.get(entry, field_name) do
+      nil ->
+        nil
+
+      %Ecto.Association.NotLoaded{} ->
+        entry = Brando.repo().preload(entry, field_name)
+        extract_cover(field, entry)
+
+      cover ->
+        Utils.img_url(cover, :thumb, prefix: Utils.media_url())
+    end
   end
 
-  def extract_cover(%{listing_image: nil}) do
-    nil
-  end
+  @doc """
+  Attempt to extract necessary fields from identifier template
+  """
+  def extract_fields_from_identifier(tpl) do
+    regex = ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
 
-  def extract_cover(%{cover: %Ecto.Association.NotLoaded{}} = entry) do
-    entry = Brando.repo().preload(entry, :cover)
-    extract_cover(entry)
-  end
+    matches =
+      regex
+      |> Regex.scan(tpl, capture: :all_but_first)
+      |> Enum.map(&String.split(List.first(&1), "."))
+      |> Enum.filter(&(Enum.count(&1) > 1))
 
-  def extract_cover(%{cover: cover}) do
-    Utils.img_url(cover, :thumb, prefix: Utils.media_url())
-  end
-
-  def extract_cover(%{listing_image: %Ecto.Association.NotLoaded{}} = entry) do
-    entry = Brando.repo().preload(entry, :listing_image)
-    extract_cover(entry)
-  end
-
-  def extract_cover(%{listing_image: listing_image}) do
-    Utils.img_url(listing_image, :thumb, prefix: Utils.media_url())
-  end
-
-  def extract_cover(_) do
-    nil
+    matches
+    |> Enum.map(fn
+      [_, rel, f] -> [{rel, f}]
+      [_, f] -> f
+    end)
+    |> Enum.reject(&is_nil(&1))
+    |> Enum.uniq()
+    |> Enum.map(&String.to_existing_atom/1)
   end
 end

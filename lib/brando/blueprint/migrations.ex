@@ -59,7 +59,10 @@ defmodule Brando.Blueprint.Migrations do
         opts
       )
 
-    opts = Keyword.put(opts, :add_alternates, :language in Enum.map(attributes_to_add, & &1.name))
+    opts =
+      opts
+      |> Keyword.put(:add_alternates, :language in Enum.map(attributes_to_add, & &1.name))
+      |> Keyword.put(:add_entries, Enum.filter(relations_to_add, &(&1.type == :entries)))
 
     up = perform_operations(:up, operations)
     down = perform_operations(:down, operations)
@@ -108,9 +111,11 @@ defmodule Brando.Blueprint.Migrations do
     table_name = module.__naming__().table_name
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
 
-    uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
     alternates_source = "#{table_name}_alternates"
     alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
+    entries? = opts[:add_entries] != []
+
+    uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
 
     create_table =
       if uuid? do
@@ -146,6 +151,40 @@ defmodule Brando.Blueprint.Migrations do
         {"", ""}
       end
 
+    {up_entries, down_entries} =
+      if entries? do
+        up =
+          for f <- opts[:add_entries] do
+            entries_source = "#{table_name}_#{f.name}_identifiers"
+
+            """
+            create table(:#{entries_source}) do
+              add :parent_id, references(:#{table_name}, on_delete: :delete_all)
+              add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
+              add :sequence, :integer
+              timestamps()
+            end
+
+            create unique_index(:#{entries_source}, [:parent_id, :identifier_id])
+            """
+          end
+          |> Enum.join("\r\n\r\n")
+
+        down =
+          for f <- opts[:add_entries] do
+            entries_source = "#{table_name}_#{f.name}_identifiers"
+
+            """
+            drop table(:#{entries_source})
+            """
+          end
+          |> Enum.join("\r\n\r\n")
+
+        {up, down}
+      else
+        {"", ""}
+      end
+
     """
     defmodule #{migration_module} do
       use Ecto.Migration
@@ -156,6 +195,8 @@ defmodule Brando.Blueprint.Migrations do
         #{up_indexes}
 
         #{up_alternates}
+
+        #{up_entries}
       end
 
       def down do
@@ -164,6 +205,8 @@ defmodule Brando.Blueprint.Migrations do
         #{down_indexes}
 
         #{down_alternates}
+
+        #{down_entries}
       end
     end
     """

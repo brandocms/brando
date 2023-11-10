@@ -1,6 +1,7 @@
 defmodule Brando.Query.Mutations do
   import Brando.Gettext
 
+  alias Brando.Content
   alias Brando.Datasource
   alias Brando.Notifications
   alias Brando.Publisher
@@ -23,6 +24,7 @@ defmodule Brando.Query.Mutations do
       {:ok, entry} ->
         {:ok, entry} = maybe_preload(entry, preloads)
         {:ok, _} = Datasource.update_datasource(module, entry)
+        {:ok, _} = Content.create_identifier(module, entry)
         {:ok, _} = Publisher.schedule_publishing(entry, changeset, user)
 
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -51,6 +53,7 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.insert(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Content.create_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       revisioned? = module.__trait__(Trait.Revisioned)
 
@@ -97,6 +100,7 @@ defmodule Brando.Query.Mutations do
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Content.update_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -128,6 +132,7 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Content.update_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -234,6 +239,7 @@ defmodule Brando.Query.Mutations do
         Query.delete(entry)
       end
 
+    Content.delete_identifier(module, entry)
     Datasource.update_datasource(module, entry)
 
     case Brando.Blueprint.Identifier.identifier_for(entry) do

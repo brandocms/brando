@@ -514,12 +514,21 @@ defmodule BrandoAdmin.Components.Form do
         []
       end
 
+    identifiers_preloads =
+      schema.__relations__()
+      |> Enum.filter(&(&1.type == :entries))
+      |> Enum.map(fn rel ->
+        rel_identifiers_field = :"#{rel.name}_identifiers"
+        [rel.name, {rel_identifiers_field, :identifier}]
+      end)
+
     preloads =
       Enum.uniq(
         asset_preloads ++
           gallery_preloads ++
           rel_preloads ++
           alternates_preload ++
+          identifiers_preloads ++
           default_preloads
       )
 
@@ -600,7 +609,7 @@ defmodule BrandoAdmin.Components.Form do
   def nil_relations(entry, schema) do
     relations =
       (schema.__relations__() ++ schema.__assets__())
-      |> Enum.filter(&(&1.type in [:belongs_to, :has_many, :image, :file, :video]))
+      |> Enum.filter(&(&1.type in [:belongs_to, :has_many, :image, :file, :video, :entries]))
       |> Enum.map(& &1.name)
 
     Brando.repo().preload(entry, relations)
@@ -617,10 +626,7 @@ defmodule BrandoAdmin.Components.Form do
   def render(assigns) do
     ~H"""
     <div>
-      <div
-        id={"#{@id}-el"}
-        class="brando-form"
-        phx-hook="Brando.Form">
+      <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form">
         <div class="form-content">
           <div :if={@header} class="form-header">
             <h1>
@@ -639,7 +645,8 @@ defmodule BrandoAdmin.Components.Form do
                 type="button"
                 class={[@active_tab == tab && "active"]}
                 phx-click={JS.push("select_tab", target: @myself)}
-                phx-value-name={tab}>
+                phx-value-name={tab}
+              >
                 <%= g(@schema, tab) %>
               </button>
             </div>
@@ -647,70 +654,92 @@ defmodule BrandoAdmin.Components.Form do
             <.form_presences presences={@presences} />
 
             <div class="form-tab-builtins">
-              <button
-                :if={@has_meta?}
-                phx-click={toggle_drawer("##{@id}-meta-drawer")}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z"/></svg>
+              <button :if={@has_meta?} phx-click={toggle_drawer("##{@id}-meta-drawer")} type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M10.9 2.1l9.899 1.415 1.414 9.9-9.192 9.192a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414L10.9 2.1zm.707 2.122L3.828 12l8.486 8.485 7.778-7.778-1.06-7.425-7.425-1.06zm2.12 6.364a2 2 0 1 1 2.83-2.829 2 2 0 0 1-2.83 2.829z" />
+                </svg>
                 <span class="tab-text">Meta</span>
               </button>
               <button
                 :if={@has_revisioning?}
-                phx-click={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-                <span class="tab-text"><%= gettext "Revisions" %></span>
+                phx-click={
+                  JS.push("toggle_revisions_drawer_status", target: @myself)
+                  |> toggle_drawer("##{@id}-revisions-drawer")
+                }
+                type="button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M7.105 15.21A3.001 3.001 0 1 1 5 15.17V8.83a3.001 3.001 0 1 1 2 0V12c.836-.628 1.874-1 3-1h4a3.001 3.001 0 0 0 2.895-2.21 3.001 3.001 0 1 1 2.032.064A5.001 5.001 0 0 1 14 13h-4a3.001 3.001 0 0 0-2.895 2.21zM6 17a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+                </svg>
+                <span class="tab-text"><%= gettext("Revisions") %></span>
               </button>
               <button
                 :if={@has_scheduled_publishing?}
                 phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
-                <span class="tab-text"><%= gettext "Scheduled publishing" %></span>
+                type="button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M17 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4V1h2v2h6V1h2v2zm-2 2H9v2H7V5H4v4h16V5h-3v2h-2V5zm5 6H4v8h16v-8zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z" />
+                </svg>
+                <span class="tab-text"><%= gettext("Scheduled publishing") %></span>
               </button>
               <button
                 :if={@has_alternates?}
                 phx-click={toggle_drawer("##{@id}-alternates-drawer")}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                type="button"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
-                  <path fill-rule="evenodd" d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z" clip-rule="evenodd" />
+                  <path
+                    fill-rule="evenodd"
+                    d="M13 8a.75.75 0 01.671.415l4.25 8.5a.75.75 0 11-1.342.67L15.787 16h-5.573l-.793 1.585a.75.75 0 11-1.342-.67l4.25-8.5A.75.75 0 0113 8zm2.037 6.5L13 10.427 10.964 14.5h4.073z"
+                    clip-rule="evenodd"
+                  />
                 </svg>
               </button>
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("open_live_preview", target: @myself)}
                 class={[@live_preview_active? && "active"]}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+                type="button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
+                </svg>
               </button>
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("share_link", target: @myself)}
-                type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z"/></svg>
+                type="button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z" />
+                </svg>
               </button>
               <div class="split-dropdown">
-                <button
-                  phx-click={JS.push("push_submit_redirect", target: @myself)}
-                  type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
+                <button phx-click={JS.push("push_submit_redirect", target: @myself)} type="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="none" d="M0 0h24v24H0z" /><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z" />
+                  </svg>
                 </button>
-                <SplitDropdown.render id={"save-dropdown"}>
+                <SplitDropdown.render id="save-dropdown">
                   <Button.dropdown
                     value={false}
-                    event={JS.push("push_submit_redirect", target: @myself)}>
-                    <%= gettext "Save" %><span class="shortcut">⇧⌘S</span>
+                    event={JS.push("push_submit_redirect", target: @myself)}
+                  >
+                    <%= gettext("Save") %><span class="shortcut">⇧⌘S</span>
                   </Button.dropdown>
-                  <Button.dropdown
-                    value={false}
-                    event={JS.push("push_submit", target: @myself)}>
-                    <%= gettext "Save and continue editing" %><span class="shortcut">⌘S</span>
+                  <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
+                    <%= gettext("Save and continue editing") %><span class="shortcut">⌘S</span>
                   </Button.dropdown>
-                  <Button.dropdown
-                    value={false}
-                    event={JS.push("push_submit_new", target: @myself)}>
-                    <%= gettext "Save and create new" %>
+                  <Button.dropdown value={false} event={JS.push("push_submit_new", target: @myself)}>
+                    <%= gettext("Save and create new") %>
                   </Button.dropdown>
                 </SplitDropdown.render>
               </div>
@@ -741,36 +770,45 @@ defmodule BrandoAdmin.Components.Form do
             for={@form}
             phx-target={@myself}
             phx-submit="save"
-            phx-change="validate">
-
+            phx-change="validate"
+          >
             <MetaDrawer.render
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
               form={@form}
               parent_uploads={@uploads}
-              close={toggle_drawer("##{@id}-meta-drawer")} />
+              close={toggle_drawer("##{@id}-meta-drawer")}
+            />
 
-            <.live_component module={RevisionsDrawer}
+            <.live_component
               :if={@has_revisioning?}
+              module={RevisionsDrawer}
               id={"#{@id}-revisions-drawer"}
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
               status={@status_revisions}
-              close={JS.push("toggle_revisions_drawer_status", target: @myself) |> toggle_drawer("##{@id}-revisions-drawer")} />
+              close={
+                JS.push("toggle_revisions_drawer_status", target: @myself)
+                |> toggle_drawer("##{@id}-revisions-drawer")
+              }
+            />
 
             <ScheduledPublishingDrawer.render
               :if={@has_scheduled_publishing?}
               id={"#{@id}-scheduled-publishing-drawer"}
               form={@form}
-              close={toggle_drawer("##{@id}-scheduled-publishing-drawer")} />
+              close={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
+            />
 
-            <.live_component module={AlternatesDrawer}
+            <.live_component
               :if={@has_alternates?}
+              module={AlternatesDrawer}
               id={"#{@id}-alternates-drawer"}
               entry={@entry}
               on_close={toggle_drawer("##{@id}-alternates-drawer")}
-              on_remove_link={JS.push("remove_link", target: @myself)} />
+              on_remove_link={JS.push("remove_link", target: @myself)}
+            />
 
             <.form_tabs
               tabs={@form_blueprint.tabs}
@@ -785,7 +823,8 @@ defmodule BrandoAdmin.Components.Form do
               processing={@processing}
               form_id={@id}
               label={gettext("Save (⇧⌘S)")}
-              class="primary submit-button" />
+              class="primary submit-button"
+            />
           </.form>
         </div>
 
@@ -805,9 +844,7 @@ defmodule BrandoAdmin.Components.Form do
   def form_presences(assigns) do
     ~H"""
     <div class="page-presences">
-      <div
-        :for={{_, user} <- @presences}
-        class="user-presence visible">
+      <div :for={{_, user} <- @presences} class="user-presence visible">
         <div class="avatar" data-popover={user.name}>
           <Content.image image={user.avatar} size={:thumb} />
         </div>
@@ -821,14 +858,16 @@ defmodule BrandoAdmin.Components.Form do
     <div
       :for={tab <- @tabs}
       class={["form-tab", @active_tab == tab.name && "active"]}
-      data-tab-name={tab.name}>
+      data-tab-name={tab.name}
+    >
       <div class="row">
         <.tab_fields
           tab={tab}
           current_user={@current_user}
           parent_uploads={@parent_uploads}
           schema={@schema}
-          form={@form} />
+          form={@form}
+        />
       </div>
     </div>
     """
@@ -851,7 +890,8 @@ defmodule BrandoAdmin.Components.Form do
           form={@form}
           fieldset={fieldset}
           parent_uploads={@parent_uploads}
-          current_user={@current_user} />
+          current_user={@current_user}
+        />
       <% end %>
     <% end %>
     """
@@ -859,28 +899,25 @@ defmodule BrandoAdmin.Components.Form do
 
   def file_drawer(assigns) do
     ~H"""
-    <Content.drawer
-      id={"file-drawer"}
-      title={gettext "File"}
-      close={close_file()}
-      z={1001}
-      narrow>
+    <Content.drawer id="file-drawer" title={gettext("File")} close={close_file()} z={1001} narrow>
       <.form
+        :let={file_form}
         :if={@file_changeset}
         id="file-drawer-form"
         for={@file_changeset}
-        :let={file_form}
         phx-submit="save_file"
         phx-change="validate_file"
-        phx-target={@myself}>
+        phx-target={@myself}
+      >
         <div
           id="file-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="file-drawer-preview"
-          phx-drop-target={@parent_uploads[@edit_file.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_file.field].ref}
+        >
           <div :if={@processing} class="processing">
             <div>
-              <%= gettext "Uploading" %><br>
+              <%= gettext("Uploading") %><br />
               <progress value={@processing} max="100"><%= @processing %>%</progress>
             </div>
           </div>
@@ -888,44 +925,52 @@ defmodule BrandoAdmin.Components.Form do
           <div class="img-placeholder">
             <div class="placeholder-wrapper">
               <div class="svg-wrapper">
-                <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z"/></svg>
+                <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z" />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div :if={@edit_file && @edit_file[:file] && !is_struct(@edit_file[:file], Ecto.Association.NotLoaded)} class="file-info">
+          <div
+            :if={
+              @edit_file && @edit_file[:file] &&
+                !is_struct(@edit_file[:file], Ecto.Association.NotLoaded)
+            }
+            class="file-info"
+          >
             <div class="filename">&#x2B24; <%= @edit_file.file.filename %></div>
             <div class="mimetype">&#x2B24; <%= @edit_file.file.mime_type %></div>
-            <div class="filesize">&#x2B24; <%= Brando.Utils.human_size(@edit_file.file.filesize) %></div>
+            <div class="filesize">
+              &#x2B24; <%= Brando.Utils.human_size(@edit_file.file.filesize) %>
+            </div>
           </div>
         </div>
 
         <div class="button-group vertical">
           <div class="file-input-button">
             <span class="label">
-              <%= gettext "Upload file" %>
+              <%= gettext("Upload file") %>
             </span>
             <.live_file_input upload={@parent_uploads[@edit_file.field]} />
           </div>
 
-          <button
-            class="secondary"
-            type="button"
-            phx-click={toggle_drawer("#file-picker")}>
-            <%= gettext "Select existing file" %>
+          <button class="secondary" type="button" phx-click={toggle_drawer("#file-picker")}>
+            <%= gettext("Select existing file") %>
           </button>
 
           <button
             class="secondary"
             type="button"
             phx-page-loading
-            phx-click={reset_file_field(@myself)}>
-            <%= gettext "Reset file field" %>
+            phx-click={reset_file_field(@myself)}
+          >
+            <%= gettext("Reset file field") %>
           </button>
         </div>
 
         <div :if={@edit_file.file} class="brando-input">
-          <Input.text field={file_form[:title]} label={gettext "Title"} />
+          <Input.text field={file_form[:title]} label={gettext("Title")} />
         </div>
       </.form>
     </Content.drawer>
@@ -934,44 +979,46 @@ defmodule BrandoAdmin.Components.Form do
 
   def image_drawer(assigns) do
     ~H"""
-    <Content.drawer
-      id={"image-drawer"}
-      title={gettext "Image"}
-      close={close_image()}
-      z={1001}
-      narrow>
+    <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
       <.form
+        :let={image_form}
         :if={@image_changeset}
         id="image-drawer-form"
         for={@image_changeset}
-        :let={image_form}
         phx-submit="save_image"
         phx-change="validate_image"
-        phx-target={@myself}>
+        phx-target={@myself}
+      >
         <div
           id="image-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="image-drawer-preview"
-          phx-drop-target={@parent_uploads[@edit_image.field].ref}>
+          phx-drop-target={@parent_uploads[@edit_image.field].ref}
+        >
           <div :if={@processing} class="processing">
             <div>
-              <%= gettext "Uploading" %><br>
+              <%= gettext("Uploading") %><br />
               <progress value={@processing} max="100"><%= @processing %>%</progress>
             </div>
           </div>
           <%= if @edit_image.image do %>
             <figure class="grid-overlay">
               <div class="drop-indicator">
-                <div><%= gettext "+ Drop here to upload" %></div>
+                <div><%= gettext("+ Drop here to upload") %></div>
               </div>
-              <.live_component module={FocalPoint}
+              <.live_component
+                module={FocalPoint}
                 id={"image-drawer-focal-#{@edit_image.id}"}
                 image={@edit_image}
-                form={image_form} />
+                form={image_form}
+              />
               <img
                 width={@edit_image.image.width}
                 height={@edit_image.image.height}
-                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())} />
+                src={
+                  Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())
+                }
+              />
             </figure>
             <figcaption class="tiny"><%= @edit_image.image.path %></figcaption>
           <% else %>
@@ -979,10 +1026,16 @@ defmodule BrandoAdmin.Components.Form do
               <div class="placeholder-wrapper">
                 <div class="svg-wrapper">
                   <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none"/>
-                    <polygon class="plus" points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"/>
-                    <path d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z" transform="translate(0 0)"/>
-                    <circle cx="8" cy="9" r="2"/>
+                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
+                    <polygon
+                      class="plus"
+                      points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
+                    />
+                    <path
+                      d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
+                      transform="translate(0 0)"
+                    />
+                    <circle cx="8" cy="9" r="2" />
                   </svg>
                 </div>
               </div>
@@ -993,15 +1046,12 @@ defmodule BrandoAdmin.Components.Form do
         <div class="button-group vertical">
           <div class="file-input-button">
             <span class="label">
-              <%= gettext "Upload image" %>
+              <%= gettext("Upload image") %>
             </span>
             <.live_file_input upload={@parent_uploads[@edit_image.field]} />
           </div>
-          <button
-            class="secondary"
-            type="button"
-            phx-click={toggle_drawer("#image-picker")}>
-            <%= gettext "Select existing image" %>
+          <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
+            <%= gettext("Select existing image") %>
           </button>
 
           <button
@@ -1009,29 +1059,31 @@ defmodule BrandoAdmin.Components.Form do
             class="secondary"
             type="button"
             phx-click={duplicate_image(@edit_image, @myself)}
-            phx-page-loading>
-            <%= gettext "Duplicate image" %>
+            phx-page-loading
+          >
+            <%= gettext("Duplicate image") %>
           </button>
 
           <button
             class="secondary"
             type="button"
             phx-page-loading
-            phx-click={reset_image_field(@myself)}>
-            <%= gettext "Reset image field" %>
+            phx-click={reset_image_field(@myself)}
+          >
+            <%= gettext("Reset image field") %>
           </button>
         </div>
         <%= if @edit_image.image do %>
           <div class="brando-input">
-            <Input.text field={image_form[:title]} label={gettext "Caption"} />
+            <Input.text field={image_form[:title]} label={gettext("Caption")} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={image_form[:credits]} label={gettext "Credits"} />
+            <Input.text field={image_form[:credits]} label={gettext("Credits")} />
           </div>
 
           <div class="brando-input">
-            <Input.text field={image_form[:alt]} label={gettext "Alt. text"} />
+            <Input.text field={image_form[:alt]} label={gettext("Alt. text")} />
           </div>
         <% end %>
       </.form>
@@ -2076,7 +2128,7 @@ defmodule BrandoAdmin.Components.Form do
         %{
           assigns: %{
             default_params: default_params,
-            entry: %{id: nil},
+            entry: %{id: nil} = default_entry,
             schema: schema,
             current_user: current_user
           }
@@ -2085,8 +2137,7 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :changeset, fn ->
       # this is the initial assignment of changeset with an empty entry,
       # so we add default_params here
-      schema
-      |> struct()
+      default_entry
       |> schema.changeset(default_params, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
     end)
@@ -2211,24 +2262,39 @@ defmodule BrandoAdmin.Components.Form do
   def live_preview(assigns) do
     ~H"""
     <%= if @live_preview_active? do %>
-      <div class="live-preview-wrapper" phx-update="ignore" id="live-preview" phx-hook="Brando.LivePreview">
+      <div
+        class="live-preview-wrapper"
+        phx-update="ignore"
+        id="live-preview"
+        phx-hook="Brando.LivePreview"
+      >
         <div class="live-preview">
           <div class="live-preview-targets">
             <div class="live-preview-divider"></div>
-            <a class="tiny live-preview-blank" href={"/__livepreview?key=#{@live_preview_cache_key}"} target="_blank">
+            <a
+              class="tiny live-preview-blank"
+              href={"/__livepreview?key=#{@live_preview_cache_key}"}
+              target="_blank"
+            >
               <%= gettext("Open preview in new window") %>
             </a>
             <div class="live-preview-targets-buttons">
               <button type="button" data-live-preview-target="desktop">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4 5v11h16V5H4zm-2-.993C2 3.451 2.455 3 2.992 3h18.016c.548 0 .992.449.992 1.007V18H2V4.007zM1 19h22v2H1v-2z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M4 5v11h16V5H4zm-2-.993C2 3.451 2.455 3 2.992 3h18.016c.548 0 .992.449.992 1.007V18H2V4.007zM1 19h22v2H1v-2z" />
+                </svg>
                 <span>1440px</span>
               </button>
               <button type="button" data-live-preview-target="tablet">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M6 4v16h12V4H6zM5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm7 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M6 4v16h12V4H6zM5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm7 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                </svg>
                 <span>768px</span>
               </button>
               <button type="button" data-live-preview-target="mobile">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M7 4v16h10V4H7zM6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm6 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M7 4v16h10V4H7zM6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm6 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                </svg>
                 <span>375px</span>
               </button>
             </div>
@@ -2236,7 +2302,9 @@ defmodule BrandoAdmin.Components.Form do
           <div class="live-preview-iframe-wrapper">
             <iframe
               data-live-preview-device={@live_preview_target}
-              src={"/__livepreview?key=#{@live_preview_cache_key}"}></iframe>
+              src={"/__livepreview?key=#{@live_preview_cache_key}"}
+            >
+            </iframe>
           </div>
         </div>
       </div>
@@ -2288,11 +2356,10 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <div
       class={["field-wrapper", @class, @fit_content && "fit-content"]}
-      id={"#{@f_id}-field-wrapper"}>
+      id={"#{@f_id}-field-wrapper"}
+    >
       <div class={["label-wrapper", @hidden && "hidden"]}>
-        <label
-          for={"#{@f_id}"}
-          class={["control-label", @failed && "failed"]}>
+        <label for={"#{@f_id}"} class={["control-label", @failed && "failed"]}>
           <span><%= @label %></span>
         </label>
         <.error_tag
@@ -2303,7 +2370,7 @@ defmodule BrandoAdmin.Components.Form do
           uid={@uid}
         />
         <div :if={@header != []} class="field-wrapper-header">
-          <%= render_slot @header %>
+          <%= render_slot(@header) %>
         </div>
       </div>
       <%= if @instructions || @meta do %>
@@ -2313,13 +2380,13 @@ defmodule BrandoAdmin.Components.Form do
               ↳ <span><%= @raw_instructions %></span>
             </div>
             <div :if={@meta != []} class="extra">
-              <%= render_slot @meta %>
+              <%= render_slot(@meta) %>
             </div>
           <% end %>
         </div>
       <% end %>
       <div class="field-base" id={"#{@f_id}-field-base"}>
-        <%= render_slot @inner_block %>
+        <%= render_slot(@inner_block) %>
       </div>
       <%= if @instructions || @meta do %>
         <div :if={!@meta_top} class={["meta", @left_justify_meta && "left"]}>
@@ -2328,7 +2395,7 @@ defmodule BrandoAdmin.Components.Form do
               ↳ <span><%= @raw_instructions %></span>
             </div>
             <div :if={@meta != []} class="extra">
-              <%= render_slot @meta %>
+              <%= render_slot(@meta) %>
             </div>
           <% end %>
         </div>
@@ -2386,11 +2453,16 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= if is_function(@component_target) do %>
       <div class="brando-input" data-component={@type} data-compact={@compact}>
-        <%= component(@component_target, assigns, {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}) %>
+        <%= component(
+          @component_target,
+          assigns,
+          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+        ) %>
       </div>
     <% else %>
       <div class="brando-input">
-        <.live_component module={@component_target}
+        <.live_component
+          module={@component_target}
           id={@component_id}
           parent_form={@parent_form}
           field={@field}
@@ -2400,7 +2472,8 @@ defmodule BrandoAdmin.Components.Form do
           instructions={@instructions}
           parent_uploads={@parent_uploads}
           opts={@opts}
-          current_user={@current_user} />
+          current_user={@current_user}
+        />
       </div>
     <% end %>
     """
@@ -2421,12 +2494,12 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= if @input_value do %>
       <%= for {map_key, map_value} <- @input_value do %>
-        <%= render_slot @inner_block, %{
+        <%= render_slot(@inner_block, %{
           name: "#{@field.name}[#{map_key}]",
           key: map_key,
           value: map_value,
           subform: @subform
-        } %>
+        }) %>
       <% end %>
     <% end %>
     """
@@ -2445,12 +2518,12 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {map_key, map_value} <- @input_value do %>
-      <%= render_slot @inner_block, %{
+      <%= render_slot(@inner_block, %{
         name: "#{@field.name}[#{map_key}]",
         key: map_key,
         value: map_value,
         subform: @subform
-      } %>
+      }) %>
     <% end %>
     """
   end
@@ -2620,10 +2693,11 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <%= if @input_value do %>
       <%= for {array_value, array_index} <- @indexed_inputs do %>
-        <%= render_slot @inner_block, %{
+        <%= render_slot(@inner_block, %{
           name: "#{@field.name}[]",
           index: array_index,
-          value: array_value} %>
+          value: array_value
+        }) %>
       <% end %>
     <% end %>
     """
@@ -2643,14 +2717,14 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= for {option, idx} <- @indexed_options do %>
-      <%= render_slot @inner_block, %{
+      <%= render_slot(@inner_block, %{
         name: "#{@field.name}[]",
         id: "#{@field.id}-#{idx}",
         index: idx,
         value: option.value,
         label: option.label,
         checked: option.value in @checked_values
-      } %>
+      }) %>
     <% end %>
     """
   end
@@ -2665,10 +2739,19 @@ defmodule BrandoAdmin.Components.Form do
       data-form-id={@form_id}
       data-testid="submit"
       class={@class}
-      phx-hook="Brando.Submit">
+      phx-hook="Brando.Submit"
+    >
       <%= if @processing do %>
         <div class="processing">
-          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z"/></svg>
+          <svg
+            class="spin"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+          >
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
+          </svg>
           Processing image(s)
         </div>
       <% else %>
@@ -2714,7 +2797,8 @@ defmodule BrandoAdmin.Components.Form do
       :for={error <- @field.errors}
       id={"#{@f_id}-error"}
       class="field-error"
-      phx-feedback-for={@feedback_for || @f_id}>
+      phx-feedback-for={@feedback_for || @f_id}
+    >
       <%= @translate_fn.(error) %>
     </span>
     """
@@ -2739,8 +2823,8 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <label class={@class} for={@f_id} phx-click={@click} phx-page-loading={@click && true || false}>
-      <%= render_slot @inner_block %>
+    <label class={@class} for={@f_id} phx-click={@click} phx-page-loading={(@click && true) || false}>
+      <%= render_slot(@inner_block) %>
     </label>
     """
   end

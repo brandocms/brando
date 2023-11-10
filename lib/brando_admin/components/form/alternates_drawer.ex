@@ -4,15 +4,14 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input.Entries
 
-  alias Brando.Blueprint.Identifier
-
   def update(assigns, socket) do
     socket =
       socket
       |> assign(assigns)
       |> assign_new(:new_identifiers, fn -> [] end)
       |> assign_new(:identifiers, fn ->
-        Identifier.identifiers_for!(assigns.entry.alternate_entries)
+        {:ok, identifiers} = Brando.Content.list_identifiers_for(assigns.entry.alternate_entries)
+        identifiers
       end)
 
     {:ok, socket}
@@ -30,41 +29,70 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
       <Content.drawer id={@id} title={gettext("Alternates")} close={@on_close}>
         <:info>
           <p>
-            <%= gettext "A list of entries connected to this entry. Usually this is used to link translations together for search engines." %>
+            <%= gettext(
+              "A list of entries connected to this entry. Usually this is used to link translations together for search engines."
+            ) %>
           </p>
         </:info>
-        <h3 class="mb-1"><%= gettext "Currently linked entries" %></h3>
+        <h3 class="mb-1"><%= gettext("Currently linked entries") %></h3>
         <Entries.identifier
           :for={identifier <- @identifiers}
-          identifier={identifier}
-          remove={JS.push("remove_entry", target: @myself, value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.id})}
-          param={identifier.id} />
+          identifier_id={identifier.id}
+          available_identifiers={@identifiers}
+        >
+          <:delete>
+            <button
+              type="button"
+              phx-page-loading
+              phx-click={
+                JS.push("remove_entry",
+                  target: @myself,
+                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                )
+              }
+            >
+              <.icon name="hero-x-mark" />
+            </button>
+          </:delete>
+        </Entries.identifier>
 
-        <button class="secondary mt-1" type="button" phx-click={JS.push("get_entries_identifiers", target: @myself)}>
-          <%= gettext "Select entries to link" %>
+        <button
+          class="secondary mt-1"
+          type="button"
+          phx-click={JS.push("get_entries_identifiers", target: @myself)}
+        >
+          <%= gettext("Select entries to link") %>
         </button>
 
-        <div
-          :if={Enum.count(@new_identifiers) > 1}
-          class="mt-3">
+        <div :if={Enum.count(@new_identifiers) > 1} class="mt-3">
           <p>
-            <%= gettext("When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well.") %>
+            <%= gettext(
+              "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
+            ) %>
           </p>
-          <button type="button" class="primary mt-1" phx-click={JS.push("store_alternates", target: @myself)}>
+          <button
+            type="button"
+            class="primary mt-1"
+            phx-click={JS.push("store_alternates", target: @myself)}
+          >
             <%= gettext("Link children") %>
           </button>
         </div>
 
-        <div
-          :if={@entries_identifiers != []}
-          class="entries-identifiers mt-3">
-          <h3 class="mb-1"><%= gettext "Available entries" %></h3>
+        <div :if={@entries_identifiers != []} class="entries-identifiers mt-3">
+          <h3 class="mb-1"><%= gettext("Available entries") %></h3>
           <Entries.identifier
             :for={identifier <- @entries_identifiers}
-            identifier={identifier}
+            identifier_id={identifier.id}
             selected_identifiers={@identifiers}
-            select={JS.push("select_entry", target: @myself, value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.id})}
-            param={identifier.id} />
+            available_identifiers={@entries_identifiers}
+            select={
+              JS.push("select_entry",
+                target: @myself,
+                value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+              )
+            }
+          />
         </div>
       </Content.drawer>
     </div>
@@ -80,7 +108,11 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
       })
 
     socket =
-      assign(socket, :entries_identifiers, Enum.reject(entries_identifiers, &(&1.id == entry.id)))
+      assign(
+        socket,
+        :entries_identifiers,
+        Enum.reject(entries_identifiers, &(&1.entry_id == entry.id))
+      )
 
     {:noreply, socket}
   end
@@ -122,18 +154,21 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   end
 
   def add_identifier(socket, identifier_id) do
-    identifier = Enum.find(socket.assigns.entries_identifiers, &(&1.id == identifier_id))
+    identifier = Enum.find(socket.assigns.entries_identifiers, &(&1.entry_id == identifier_id))
 
     socket
     |> assign(:identifiers, socket.assigns.identifiers ++ [identifier])
-    |> update(:new_identifiers, fn new_identifiers -> new_identifiers ++ [identifier.id] end)
+    |> update(:new_identifiers, fn new_identifiers -> new_identifiers ++ [identifier.entry_id] end)
   end
 
   def delete_identifier(socket, identifier_id) do
     socket
-    |> assign(:identifiers, Enum.reject(socket.assigns.identifiers, &(&1.id == identifier_id)))
+    |> assign(
+      :identifiers,
+      Enum.reject(socket.assigns.identifiers, &(&1.entry_id == identifier_id))
+    )
     |> update(:new_identifiers, fn new_identifiers ->
-      Enum.reject(new_identifiers, &(&1.id == identifier_id))
+      Enum.reject(new_identifiers, &(&1 == identifier_id))
     end)
   end
 

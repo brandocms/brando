@@ -69,39 +69,20 @@ defmodule Brando.DatasourcesTest do
       selection(
         :featured,
         fn _, _, _ ->
-          {:ok,
-           [
-             %{id: 1, label: "The first entry"},
-             %{id: 2, label: "The second entry"},
-             %{id: 3, label: "The third entry"}
-           ]}
+          Brando.Content.list_identifiers(Brando.Pages.Page, %{
+            language: "en",
+            order: "asc language, asc entry_id"
+          })
         end,
-        fn _, ids ->
-          all = [
-            %Brando.Pages.Page{
-              id: 1,
-              status: :draft,
-              uri: "test1",
-              language: "en",
-              title: "The actual entry"
-            },
-            %Brando.Pages.Page{
-              id: 2,
-              status: :published,
-              uri: "test2",
-              language: "en",
-              title: "The actual entry 2"
-            },
-            %Brando.Pages.Page{
-              id: 3,
-              status: :published,
-              uri: "test3",
-              language: "en",
-              title: "The actual entry 3"
-            }
-          ]
+        fn identifiers ->
+          entry_ids = Enum.map(identifiers, & &1.entry_id)
 
-          {:ok, Enum.filter(all, &(&1.id in ids)) |> Enum.reverse()}
+          results =
+            from t in Brando.Pages.Page,
+              where: t.id in ^entry_ids,
+              order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
+
+          {:ok, Brando.repo().all(results)}
         end
       )
     end
@@ -134,20 +115,34 @@ defmodule Brando.DatasourcesTest do
   end
 
   test "list_selection" do
-    list_result =
-      {:ok,
-       [
-         %{id: 1, label: "The first entry"},
-         %{id: 2, label: "The second entry"},
-         %{id: 3, label: "The third entry"}
-       ]}
+    usr = Factory.insert(:random_user)
 
-    assert Brando.Datasource.list_selection(TestDatasource, "featured", nil, nil) == list_result
+    {:ok, p1} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 1"), usr)
+    {:ok, p2} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 2"), usr)
+    {:ok, p3} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 3"), usr)
+
+    {:ok, identifiers} =
+      Brando.Datasource.list_selection(TestDatasource, "featured", nil, nil)
+
+    assert Enum.map(identifiers, & &1.entry_id) == [p1.id, p2.id, p3.id]
   end
 
   test "get_selection" do
-    {:ok, entries} = Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1])
-    assert Enum.map(entries, & &1.id) == [3, 1]
+    usr = Factory.insert(:random_user)
+
+    {:ok, p1} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 1"), usr)
+    {:ok, p2} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 2"), usr)
+    {:ok, p3} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 3"), usr)
+
+    # get identifier ids
+    {:ok, identifiers} =
+      Brando.Pages.Page
+      |> Brando.Content.list_identifiers(%{order: "asc id"})
+
+    {:ok, entries} =
+      Brando.Datasource.get_selection(TestDatasource, "featured", Enum.map(identifiers, & &1.id))
+
+    assert Enum.map(entries, & &1.id) == [p1.id, p2.id, p3.id]
   end
 
   test "update_datasource" do

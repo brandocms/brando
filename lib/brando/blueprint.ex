@@ -206,6 +206,49 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro maybe_build_related_identifiers_modules(module, _name, relations) do
+    # check if we have any :entries fields
+    quote do
+      entries_rels = Enum.filter(unquote(relations), &(&1.type == :entries))
+
+      if entries_rels != [] do
+        for entries_rel <- entries_rels do
+          parent_table_name = @table_name
+          parent_module = Module.concat([@application, @domain, @schema])
+
+          defmodule Module.concat([
+                      unquote(module),
+                      "#{Phoenix.Naming.camelize(to_string(entries_rel.name))}Identifier"
+                    ]) do
+            use Ecto.Schema
+            import Ecto.Query
+
+            schema "#{parent_table_name}_#{entries_rel.name}_identifiers" do
+              Ecto.Schema.belongs_to(
+                :parent,
+                parent_module
+              )
+
+              Ecto.Schema.belongs_to(
+                :identifier,
+                Brando.Content.Identifier
+              )
+
+              Ecto.Schema.field(:sequence, :integer)
+              Ecto.Schema.timestamps()
+            end
+
+            def changeset(struct, attrs, sequence) do
+              struct
+              |> cast(attrs, [:parent_id, :identifier_id])
+              |> change(sequence: sequence)
+            end
+          end
+        end
+      end
+    end
+  end
+
   defmacro build_attrs(attrs) do
     quote do
       Enum.map(unquote(attrs), fn
@@ -271,6 +314,7 @@ defmodule Brando.Blueprint do
             Ecto.Schema.has_many(
               :alternates,
               alternate_module,
+              on_replace: :delete,
               foreign_key: :linked_entry_id
             ),
             Ecto.Schema.has_many(
@@ -301,11 +345,21 @@ defmodule Brando.Blueprint do
           )
 
         %{type: :entries, name: name, opts: opts} ->
-          Ecto.Schema.embeds_many(
-            name,
-            Brando.Content.Identifier,
-            to_ecto_opts(:embeds_many, opts) ++ [on_replace: :delete]
-          )
+          entries_module = opts.module
+
+          [
+            Ecto.Schema.has_many(
+              :"#{name}_identifiers",
+              entries_module,
+              foreign_key: :parent_id,
+              preload_order: [asc: :sequence],
+              on_replace: :delete
+            ),
+            Ecto.Schema.has_many(
+              name,
+              through: [:"#{name}_identifiers", :identifier]
+            )
+          ]
 
         relation ->
           require Logger
@@ -363,6 +417,8 @@ defmodule Brando.Blueprint do
 
   defmacro build_schema(module, name, attrs, relations, assets) do
     quote location: :keep do
+      maybe_build_related_identifiers_modules(unquote(module), unquote(name), unquote(relations))
+
       schema unquote(name) do
         build_attrs(unquote(attrs))
         build_assets(unquote(assets))
@@ -656,13 +712,9 @@ defmodule Brando.Blueprint do
           ])
 
         admin_module =
-          if @application == "Brando" do
-            BrandoAdmin
-          else
-            Module.concat([
-              :"#{@application}Admin"
-            ])
-          end
+          Module.concat([
+            :"#{@application}Admin"
+          ])
 
         web_module =
           if @application == "Brando" do

@@ -1213,4 +1213,14 @@ defmodule Brando.Utils do
       id_str
     end
   end
+
+  def ensure_utc(nil), do: nil
+
+  def ensure_utc(%NaiveDateTime{} = dt) do
+    dt
+    |> DateTime.from_naive!("Etc/UTC")
+    |> DateTime.truncate(:second)
+  end
+
+  def ensure_utc(%DateTime{} = dt), do: dt
 end

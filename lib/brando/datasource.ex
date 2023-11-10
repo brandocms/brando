@@ -47,20 +47,30 @@ defmodule Brando.Datasource do
 
   User can pick entries manually.
 
-  Requires both a `list` function and a `get` function. The `list` function must return a list of maps in
-  the shape of `[%{id: 1, label: "Label"}]`.
+  Requires both a `list` function and a `get` function.
 
-  The get function queries by a supplied list of `ids`:
+  - The `list` function receives the module, language and datasource arguments and
+    must return a list of identifiers (`Brando.Content.Identifier`)
 
-  ```
-  fn _module, ids ->
-    results =
-      from t in Post,
-        where: t.id in ^ids,
-        order_by: fragment("array_position(?, ?)", ^ids, t.id)
+    ```
+    fn module, language, _vars ->
+      Brando.Content.list_identifiers(module, %{language: language, order: "asc language, asc entry_id"})
+    end,
+    ```
 
-    {:ok, Repo.all(results)}
-  ```
+  - The get function receives selected identifiers as an argument and must return
+    the ordered selected entries
+
+    ```
+    fn identifiers ->
+      entry_ids = Enum.map(identifiers, &(&1.entry_id))
+      results =
+        from t in Post,
+          where: t.id in ^entry_ids,
+          order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
+
+      {:ok, Repo.all(results)}
+    ```
 
   The `order_by: fragment(...)` sorts the returned results in the same order as the supplied `ids`
 
@@ -80,13 +90,14 @@ defmodule Brando.Datasource do
         selection
           :featured,
             fn _module, language, _vars ->
-              {:ok, posts} = Posts.list_posts(%{filter: %{language: language}})
+              {Brando.Content.list_identifiers(module, %{language: language, order: "asc language, asc entry_id"})
             end,
-            fn _module, ids ->
+            fn identifiers ->
+              entry_ids = Enum.map(identifiers, &(&1.entry_id))
               results =
                 from t in Post,
-                  where: t.id in ^ids,
-                  order_by: fragment("array_position(?, ?)", ^ids, t.id)
+                  where: t.id in ^entry_ids,
+                  order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
 
               {:ok, Repo.all(results)}
             end
@@ -142,7 +153,6 @@ defmodule Brando.Datasource do
   mutations, you can move the datasource to the `Grantee` schema instead!
   """
   alias Brando.Villain
-  alias Brando.Blueprint.Identifier
 
   @doc """
   List all registered data sources
@@ -240,7 +250,13 @@ defmodule Brando.Datasource do
     {_, _, [{_, _, [list_args, _]}]} = list_fun
 
     if Enum.count(list_args) == 2 do
-      raise "datasource :selection list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+      raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+    end
+
+    {_, _, [{_, _, [get_args, _]}]} = get_fun
+
+    if Enum.count(get_args) == 2 do
+      raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
     end
 
     quote do
@@ -299,20 +315,11 @@ defmodule Brando.Datasource do
   def list_selection(module_binary, query, language, vars) do
     module = Module.concat([module_binary])
 
-    available_entries =
-      module.__datasource__(:list_selection, String.to_atom(query)).(
-        module_binary,
-        language,
-        vars
-      )
-
-    case available_entries do
-      {:ok, [%{label: _} | _] = options} ->
-        {:ok, options}
-
-      {:ok, entries} ->
-        Identifier.identifiers_for(entries)
-    end
+    module.__datasource__(:list_selection, String.to_atom(query)).(
+      module_binary,
+      language,
+      vars
+    )
   end
 
   @doc """
@@ -324,7 +331,8 @@ defmodule Brando.Datasource do
 
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
-    module.__datasource__(:get_selection, String.to_atom(query)).(module_binary, ids)
+    {:ok, identifiers} = Brando.Content.list_identifiers(ids)
+    module.__datasource__(:get_selection, String.to_atom(query)).(identifiers)
   end
 
   @doc """

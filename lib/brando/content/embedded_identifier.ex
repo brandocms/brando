@@ -1,4 +1,4 @@
-defmodule Brando.Content.Identifier do
+defmodule Brando.Content.EmbeddedIdentifier do
   @moduledoc """
   Schema for content identifiers
 
@@ -7,9 +7,13 @@ defmodule Brando.Content.Identifier do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key false
   @fields ~w(
-    entry_id
+    id
     title
+    type
+    absolute_url
+    admin_url
     status
     language
     cover
@@ -18,19 +22,20 @@ defmodule Brando.Content.Identifier do
   )a
 
   @derive {Jason.Encoder, only: @fields}
-  schema "content_identifiers" do
-    field :entry_id, :id
-    field :schema, Brando.Type.Module
+  embedded_schema do
+    field :id, :id
     field :title, :string
+    field :type, :string
     field :status, Brando.Type.Status
-    field :language, Brando.Type.Atom
+    field :language, :string
+    field :absolute_url, :string
+    field :admin_url, :string
     field :cover, :string
+    field :schema, Brando.Type.Module
     field :updated_at, :utc_datetime
   end
 
   def changeset(struct, params \\ %{}) do
     cast(struct, params, @fields)
   end
-
-  def has_trait(Brando.Trait.SoftDelete), do: false
 end

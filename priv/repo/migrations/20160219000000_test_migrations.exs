@@ -371,6 +371,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create unique_index(:revisions, [:entry_type, :entry_id, :revision])
+
+    create table(:content_identifiers) do
+      add :entry_id, :id
+      add :schema, :string
+      add :title, :string
+      add :status, :integer
+      add :language, :string
+      add :cover, :string
+      add :updated_at, :utc_datetime
+    end
+
+    create unique_index(:content_identifiers, [:entry_id, :schema])
   end
 
   def down do

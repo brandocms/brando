@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  alias Brando.Blueprint.Identifier
   alias Brando.Villain
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -51,16 +50,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:available_entries, fn -> [] end)
-     |> assign_new(:indexed_available_entries, fn -> [] end)
-     |> assign_new(:entry, fn -> Ecto.Changeset.apply_changes(assigns.base_form.source) end)
-     |> assign_new(:module_id, fn -> assigns.block[:data].value.module_id end)
-     |> assign_module_data()
-     |> parse_module_code()
-     |> assign_selected_entries()}
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign_new(:available_identifiers, fn -> [] end)
+      |> assign_new(:entry, fn -> Ecto.Changeset.apply_changes(assigns.base_form.source) end)
+      |> assign_new(:module_id, fn -> assigns.block[:data].value.module_id end)
+      |> assign_module_data()
+      |> parse_module_code()
+      |> assign_selected_identifiers()
+
+    {:ok, socket}
   end
 
   defp assign_module_data(%{assigns: %{block: block, module_id: module_id}} = socket) do
@@ -116,12 +116,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     end
   end
 
-  def assign_available_entries(%{assigns: assigns} = socket) do
+  def assign_available_identifiers(%{assigns: assigns} = socket) do
     module = assigns.module_datasource_module
     query = assigns.module_datasource_query
     entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
 
-    {:ok, available_entries} =
+    {:ok, available_identifiers} =
       Brando.Datasource.list_selection(
         module,
         query,
@@ -129,31 +129,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         assigns.vars
       )
 
-    socket
-    |> assign(:available_entries, available_entries)
-    |> assign(:indexed_available_entries, Enum.with_index(available_entries))
+    assign(socket, :available_identifiers, available_identifiers)
   end
 
-  def assign_selected_entries(
+  def assign_selected_identifiers(
         %{assigns: %{module_datasource_type: :selection} = assigns} = socket
       ) do
     module = assigns.module_datasource_module
     query = assigns.module_datasource_query
     ids = assigns.datasource_selected_ids
 
-    assign_new(socket, :selected_entries, fn ->
+    assign_new(socket, :selected_identifiers, fn ->
       {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
-      {:ok, identifiers} = Identifier.identifiers_for(selected_entries)
+      {:ok, identifiers} = Brando.Content.list_identifiers_for(selected_entries)
       identifiers
     end)
   end
 
-  def assign_selected_entries(socket), do: assign(socket, :selected_entries, [])
+  def assign_selected_identifiers(socket) do
+    assign(socket, :selected_identifiers, [])
+  end
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
     <section class="alert danger">
-      Module <code>#<%= @module_id %></code> is missing!<br><br>
+      Module <code>#<%= @module_id %></code> is missing!<br /><br />
     </section>
     """
   end
@@ -164,8 +164,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       id={"block-#{@uid}-wrapper"}
       class="module-block"
       data-block-index={@index}
-      data-block-uid={@uid}>
-
+      data-block-uid={@uid}
+    >
       <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
@@ -175,27 +175,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         belongs_to={@belongs_to}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
-        is_datasource?={@module_datasource}>
-        <:type><%= if @module_datasource do %><%= gettext "DATAMODULE" %><% else %><%= gettext "MODULE" %><% end %></:type>
+        is_datasource?={@module_datasource}
+      >
+        <:type>
+          <%= if @module_datasource do %>
+            <%= gettext("DATAMODULE") %>
+          <% else %>
+            <%= gettext("MODULE") %>
+          <% end %>
+        </:type>
         <:datasource>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z"/></svg><%= @module_datasource_module_label %> | <%= @module_datasource_type %> | <%= @module_datasource_query %>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z" />
+          </svg>
+          <%= @module_datasource_module_label %> | <%= @module_datasource_type %> | <%= @module_datasource_query %>
           <%= if @module_datasource_type == :selection do %>
-            <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} remember_scroll_position>
+            <Content.modal
+              title={gettext("Select entries")}
+              id={"select-entries-#{@uid}"}
+              remember_scroll_position
+            >
               <h2 class="titlecase"><%= gettext("Available entries") %></h2>
-              <%= for {identifier, idx} <- @indexed_available_entries do %>
-                <Entries.identifier
-                  identifier={identifier}
-                  select={JS.push("select_identifier", target: @myself)}
-                  selected_identifiers={@selected_entries}
-                  param={idx}
-                />
-              <% end %>
+              <Entries.identifier
+                :for={identifier <- @available_identifiers}
+                identifier_id={identifier.id}
+                select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
+                available_identifiers={@available_identifiers}
+                selected_identifiers={@selected_identifiers}
+              />
             </Content.modal>
 
             <div class="module-datasource-selected">
               <Form.array_inputs
                 :let={%{value: array_value, name: array_name}}
-                field={@block_data[:datasource_selected_ids]}>
+                field={@block_data[:datasource_selected_ids]}
+              >
                 <input type="hidden" name={array_name} value={array_value} />
               </Form.array_inputs>
 
@@ -206,31 +220,62 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 data-target={@myself}
                 data-sortable-id={"sortable-#{@uid}-identifiers"}
                 data-sortable-handle=".sort-handle"
-                data-sortable-selector=".identifier">
-                <%= for {identifier, idx} <- Enum.with_index(@selected_entries) do %>
-                  <Entries.identifier
-                    identifier={identifier}
-                    remove={JS.push("remove_identifier", target: @myself)}
-                    param={idx} />
-                <% end %>
+                data-sortable-selector=".identifier"
+              >
+                <Entries.identifier
+                  :for={identifier <- @selected_identifiers}
+                  identifier_id={identifier.id}
+                  available_identifiers={@selected_identifiers}
+                  sortable
+                >
+                  <:delete>
+                    <button
+                      type="button"
+                      phx-page-loading
+                      phx-click={
+                        JS.push("remove_identifier", value: %{id: identifier.id}, target: @myself)
+                      }
+                    >
+                      <.icon name="hero-x-mark" />
+                    </button>
+                  </:delete>
+                </Entries.identifier>
               </div>
 
               <button
                 class="tiny select-button"
                 type="button"
-                phx-click={JS.push("select_entries", target: @myself) |> show_modal("#select-entries-#{@uid}")}>
-                <%= gettext "Select entries" %>
+                phx-click={
+                  JS.push("select_entries", target: @myself) |> show_modal("#select-entries-#{@uid}")
+                }
+              >
+                <%= gettext("Select entries") %>
               </button>
             </div>
           <% end %>
         </:datasource>
-        <:description><%= if @description do %><strong><%= @description %></strong>&nbsp;| <% end %><%= @module_name %></:description>
+        <:description>
+          <%= if @description do %>
+            <strong><%= @description %></strong>&nbsp;|
+          <% end %>
+          <%= @module_name %>
+        </:description>
         <:config>
           <div class="panels">
             <div class="panel">
-              <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <Input.text
+                field={@block[:description]}
+                label={gettext("Block description")}
+                instructions={gettext("Helpful for collapsed blocks")}
+              />
               <%= for {var, index} <- @indexed_vars do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} in_block />
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-#{index}"}
+                  var={var}
+                  render={:only_regular}
+                  in_block
+                />
               <% end %>
             </div>
             <div class="panel">
@@ -239,8 +284,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <div class="var">
                   <div class="key"><%= var.key %></div>
                   <div class="buttons">
-                    <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
-                    <button type="button" class="tiny" phx-click={JS.push("delete_var", target: @myself)} phx-value-id={var.key}><%= gettext "Delete" %></button>
+                    <button
+                      type="button"
+                      class="tiny"
+                      phx-click={JS.push("reset_var", target: @myself)}
+                      phx-value-id={var.key}
+                    >
+                      <%= gettext("Reset") %>
+                    </button>
+                    <button
+                      type="button"
+                      class="tiny"
+                      phx-click={JS.push("delete_var", target: @myself)}
+                      phx-value-id={var.key}
+                    >
+                      <%= gettext("Delete") %>
+                    </button>
                   </div>
                 </div>
               <% end %>
@@ -249,22 +308,45 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
               <%= for ref <- @refs do %>
                 <div class="ref">
                   <div class="key"><%= ref.name %></div>
-                  <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("reset_ref", target: @myself)}
+                    phx-value-id={ref.name}
+                  >
+                    <%= gettext("Reset") %>
+                  </button>
                 </div>
               <% end %>
-              <h2 class="titlecase"><%= gettext "Advanced" %></h2>
+              <h2 class="titlecase"><%= gettext("Advanced") %></h2>
               <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @myself)}>
-                  <%= gettext "Fetch missing refs" %>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("fetch_missing_refs", target: @myself)}
+                >
+                  <%= gettext("Fetch missing refs") %>
                 </button>
-                <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @myself)}>
-                  <%= gettext "Reset all block refs" %>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reset_refs", target: @myself)}
+                >
+                  <%= gettext("Reset all block refs") %>
                 </button>
-                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
-                  <%= gettext "Fetch missing vars" %>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("fetch_missing_vars", target: @myself)}
+                >
+                  <%= gettext("Fetch missing vars") %>
                 </button>
-                <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @myself)}>
-                  <%= gettext "Reset all variables" %>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reset_vars", target: @myself)}
+                >
+                  <%= gettext("Reset all variables") %>
                 </button>
               </div>
             </div>
@@ -275,7 +357,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- @indexed_vars do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} in_block />
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-blk-#{index}"}
+                  var={var}
+                  render={:only_important}
+                  in_block
+                />
               <% end %>
             </div>
           <% end %>
@@ -287,11 +375,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                   parent_uploads={@parent_uploads}
                   module_refs={@refs_forms}
                   module_ref_name={ref}
-                  base_form={@base_form} />
-
+                  base_form={@base_form}
+                />
               <% {:content, _} -> %>
                 <%= if @module_multi do %>
-                  <.live_component module={Blocks.Module.Entries}
+                  <.live_component
+                    module={Blocks.Module.Entries}
                     id={"block-#{@uid}-entries"}
                     uid={@uid}
                     entry_template={@entry_template}
@@ -303,23 +392,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                 <% else %>
                   <%= "{{ content }}" %>
                 <% end %>
-
               <% {:variable, var_name, variable_value} -> %>
-                <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
+                <div
+                  class="rendered-variable"
+                  data-popover={
+                    gettext("Edit the entry directly to affect this variable [%{var_name}]",
+                      var_name: var_name
+                    )
+                  }
+                >
                   <%= variable_value %>
                 </div>
-
               <% {:picture, _, img_src} -> %>
                 <figure>
                   <img src={img_src} />
                 </figure>
-
               <% _ -> %>
-                <%= raw split %>
+                <%= raw(split) %>
             <% end %>
           <% end %>
-          <Input.input type={:hidden} field={@block_data[:module_id]} uid={@uid} id_prefix="module_data" />
-          <Input.input type={:hidden} field={@block_data[:sequence]} uid={@uid} id_prefix="module_data" />
+          <Input.input
+            type={:hidden}
+            field={@block_data[:module_id]}
+            uid={@uid}
+            id_prefix="module_data"
+          />
+          <Input.input
+            type={:hidden}
+            field={@block_data[:sequence]}
+            uid={@uid}
+            id_prefix="module_data"
+          />
           <Input.input type={:hidden} field={@block_data[:multi]} uid={@uid} id_prefix="module_data" />
         </div>
       </Blocks.block>
@@ -328,43 +431,48 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   def handle_event("select_entries", _, socket) do
-    {:noreply, assign_available_entries(socket)}
+    {:noreply, assign_available_identifiers(socket)}
   end
 
   def handle_event(
         "select_identifier",
-        %{"param" => idx},
-        %{assigns: %{available_entries: available_entries, selected_entries: selected_entries}} =
+        %{"id" => id},
+        %{
+          assigns: %{
+            available_identifiers: available_identifiers,
+            selected_identifiers: selected_identifiers
+          }
+        } =
           socket
       ) do
-    picked_entry = Enum.at(available_entries, String.to_integer(idx))
+    picked_entry = Enum.find(available_identifiers, &(to_string(&1.id) == to_string(id)))
 
     # deselect if already selected
-    selected_entries =
-      if Enum.find(selected_entries, &(&1 == picked_entry)) do
-        Enum.filter(selected_entries, &(&1 != picked_entry))
+    selected_identifiers =
+      if Enum.find(selected_identifiers, &(&1 == picked_entry)) do
+        Enum.filter(selected_identifiers, &(&1 != picked_entry))
       else
-        selected_entries ++ List.wrap(picked_entry)
+        selected_identifiers ++ List.wrap(picked_entry)
       end
 
     {:noreply,
      socket
-     |> assign(:selected_entries, selected_entries)
+     |> assign(:selected_identifiers, selected_identifiers)
      |> update_ids(:add, picked_entry)
      |> push_event("b:validate", %{})}
   end
 
   def handle_event(
         "remove_identifier",
-        %{"param" => idx},
-        %{assigns: %{selected_entries: selected_entries}} = socket
+        %{"id" => id},
+        %{assigns: %{selected_identifiers: selected_identifiers}} = socket
       ) do
-    picked_entry = Enum.at(selected_entries, String.to_integer(idx))
-    new_entries = selected_entries |> Enum.filter(&(&1 != picked_entry))
+    picked_entry = Enum.find(selected_identifiers, &(to_string(&1.id) == to_string(id)))
+    new_entries = selected_identifiers |> Enum.filter(&(&1 != picked_entry))
 
     {:noreply,
      socket
-     |> assign(:selected_entries, new_entries)
+     |> assign(:selected_identifiers, new_entries)
      |> update_ids(:remove, picked_entry)
      |> push_event("b:validate", %{})}
   end
@@ -378,12 +486,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             uid: uid,
             block: block,
             data_field: data_field,
-            selected_entries: selected_entries
+            selected_identifiers: selected_identifiers
           }
         } = socket
       ) do
     changeset = form.source
     current_data = block[:data].value
+
+    require Logger
+
+    Logger.error(
+      "== datasource_selected_ids was #{inspect(Map.get(current_data, :datasource_selected_ids))}"
+    )
+
+    Logger.error("== ordered_ids received #{inspect(ordered_ids, pretty: true)}")
+
     new_data = Map.put(current_data, :datasource_selected_ids, ordered_ids)
 
     updated_changeset =
@@ -400,9 +517,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     )
 
     updated_entries =
-      Enum.map(ordered_ids, fn id -> Enum.find(selected_entries, &(&1.id == id)) end)
+      Enum.map(ordered_ids, fn id -> Enum.find(selected_identifiers, &(&1.id == id)) end)
 
-    {:noreply, assign(socket, :selected_entries, updated_entries)}
+    {:noreply, assign(socket, :selected_identifiers, updated_entries)}
   end
 
   def handle_event(

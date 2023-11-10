@@ -25,10 +25,10 @@
   dependencies:
     regenerator-runtime "^0.13.11"
 
-"@brandocms/europacss@^0.12.2":
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.12.2.tgz#b39d19059fb4e6451b0e1a704955ce1d7b4c0418"
-  integrity sha512-dgvrKCK18Q0ncujMeC+HS3fySszM6Vd9BtoTjcrYsd5W00+JjKdq7aSFcKhKHOUMsZTMN8Kz7qhpPQsjPcu/AA==
+"@brandocms/europacss@^0.13.0":
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.13.0.tgz#9d1810a073061d8e3d193a1270119bed0702e6f1"
+  integrity sha512-wqEuPNAhmRrqSXrfXdQLwGjwPlZkWbtWD4EFejjetLgG0mvoXbmbEWerVhcCd7enxmNvYgsp5nEZGnHAAuDxSg==
   dependencies:
     lodash "^4.17.21"
     normalize.css "^8.0.1"
@@ -39,14 +39,14 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.49.0":
-  version "3.49.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.49.0.tgz#2a1118b6d9f1c4067e15a366e699e1963cb8c265"
-  integrity sha512-oIUIGH8ode43sG5EL9ekySfo4uTiCAG9CW90koLqMs+ql1S53qwXjDKCLKQ+PYiGAQT2a9JnqA/ojWWI286Abw==
+"@brandocms/jupiter@^3.50.0":
+  version "3.50.0"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.50.0.tgz#46f687bedff1b57d988db0c1f4e074a712f091dc"
+  integrity sha512-9UK5K5ysC0DUMsfYL1K2IXQfU+ONv6/5qXy8cQM2HpYJ+1Wjlsk8Gcd2uA8oeQg1ZebA+xgxgGI0TzASPY1/9g==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
-    gsap "3.11.3"
+    gsap "3.12.2"
     lodash.defaultsdeep "^4.6.1"
 
 "@codemirror/autocomplete@^6.0.0":
@@ -197,10 +197,10 @@
   resolved "https://registry.yarnpkg.com/@codemirror/state/-/state-6.1.4.tgz#2b654ae233ac4f41ee89ce095509ea35ecdf1031"
   integrity sha512-g+3OJuRylV5qsXuuhrc6Cvs1NQluNioepYMM2fhnpYkNk7NgX+j0AFuevKSVKzTDmDyt9+Puju+zPdHNECzCNQ==
 
-"@codemirror/view@6.21.4":
-  version "6.21.4"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.21.4.tgz#6ec83ea238e16b2e1fc149ef9d1a36db2b1f3863"
-  integrity sha512-WKVZ7nvN0lwWPfAf05WxWqTpwjC8YN3q5goj3CsSig7//DD81LULgOx3nBegqpqP0iygBqRmW8z0KSc2QTAdAg==
+"@codemirror/view@6.22.0":
+  version "6.22.0"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.22.0.tgz#5a5214a04f149ecf54c4803b7fec9bdac56d0d74"
+  integrity sha512-6zLj4YIoIpfTGKrDMTbeZRpa8ih4EymMCKmddEDcJWrCdp/N1D46B38YEz4creTb4T177AVS9EyXkLeC/HL2jA==
   dependencies:
     "@codemirror/state" "^6.1.4"
     style-mod "^4.1.0"
@@ -1068,12 +1068,7 @@ graceful-fs@^4.1.3:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.10.tgz#147d3a006da4ca3ce14728c7aefc287c367d7a6c"
   integrity sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==
 
-gsap@3.11.3:
-  version "3.11.3"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.11.3.tgz#ca5be827f56fe8d5720e08343390f74fb89a05f3"
-  integrity sha512-xc/iIJy+LWiMbRa4IdMtdnnKa/7PXEK6NNzV71gdOYUVeTZN7UWnLU0fB7Hi1iwiz4ZZoYkBZPPYGg+2+zzFHA==
-
-gsap@^3.12.2:
+gsap@3.12.2, gsap@^3.12.2:
   version "3.12.2"
   resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.12.2.tgz#6e88203eed360761cbf2a2cb3a8d702aa87f3f6d"
   integrity sha512-EkYnpG8qHgYBFAwsgsGEqvT1WUidX0tt/ijepx7z8EUJHElykg91RvW1XbkT59T0gZzzszOpjQv7SE41XuIXyQ==
@@ -1334,10 +1329,10 @@ periscopic@^3.1.0:
     estree-walker "^3.0.0"
     is-reference "^3.0.0"
 
-phoenix@1.7.9:
-  version "1.7.9"
-  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.9.tgz#dde09b4232e90bc11711a2aa888098571d2611a2"
-  integrity sha512-oHBka/WCKVtFHNCCqnVDxiSHQZ0vvV0pU1I4oBmm68rNvGH3lVjdNGLRhK0+c3zcfsrqgpRS2p+Et6N4QAd2LQ==
+phoenix@1.7.10:
+  version "1.7.10"
+  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.10.tgz#e7951219e3128c6f9d1fe8e551180097623c6498"
+  integrity sha512-akfr/QvLPFRB8sORyc8FQFY/YoGwjWhka/YRcu45sKlBOZHvA80EkLYBUsYlW63UicxgrXABZdrjDkv54LTE+g==
 
 phoenix_html@^3.3.3:
   version "3.3.3"
@@ -1750,10 +1745,10 @@ svelte@^4.2.2:
     magic-string "^0.30.4"
     periscopic "^3.1.0"
 
-sweetalert2@^11.7.32:
-  version "11.7.32"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.7.32.tgz#366fde9eaa1fc8d7a8993400d7582715647a31cf"
-  integrity sha512-44tNNe2oLe7T94mT6dus4hc9G7qg6jZU/K5qZzpNS6e5HGPrSF6Kie6oZ7B5puIJydB34V2h/8f5EhIFivYo4A==
+sweetalert2@^11.9.0:
+  version "11.9.0"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.9.0.tgz#c761c9ed6773f22f5c97edfef0c51944f1e70280"
+  integrity sha512-PA3qinKZMNGAhA+AUu2wU7yQOpeZCgOaYWRcg26f4cZN6f7M9iPBuobsxOhR9EHs7ihUIxT6vhAMiB4kcmk1SA==
 
 throttle-debounce@^3.0.1:
   version "3.0.1"

@@ -36,7 +36,7 @@ defmodule Brando.Content do
   alias Brando.Content.Var
   alias Brando.Villain
 
-  query :list, Module, do: fn query -> from(q in query) end
+  query(:list, Module, do: fn query -> from(q in query) end)
 
   filters Module do
     fn
@@ -70,20 +70,20 @@ defmodule Brando.Content do
         end
 
       {:datasource, datasource}, query ->
-        from q in query, where: q.datasource == ^datasource
+        from(q in query, where: q.datasource == ^datasource)
 
       {:datasource_module, datasource_module}, query ->
-        from q in query, where: q.datasource_module == ^datasource_module
+        from(q in query, where: q.datasource_module == ^datasource_module)
 
       {:datasource_type, datasource_type}, query ->
-        from q in query, where: q.datasource_type == ^datasource_type
+        from(q in query, where: q.datasource_type == ^datasource_type)
 
       {:datasource_query, datasource_query}, query ->
-        from q in query, where: q.datasource_query == ^datasource_query
+        from(q in query, where: q.datasource_query == ^datasource_query)
     end
   end
 
-  query :single, Module, do: fn query -> from(q in query) end
+  query(:single, Module, do: fn query -> from(q in query) end)
 
   matches Module do
     fn
@@ -128,8 +128,8 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :delete, Module
-  mutation :duplicate, {Module, change_fields: [:name, :class]}
+  mutation(:delete, Module)
+  mutation(:duplicate, {Module, change_fields: [:name, :class]})
 
   @doc """
   Find module with `id` in `modules`
@@ -146,7 +146,7 @@ defmodule Brando.Content do
   ## Palettes
   ##
 
-  query :list, Palette, do: fn query -> from(q in query) end
+  query(:list, Palette, do: fn query -> from(q in query) end)
 
   filters Palette do
     fn
@@ -157,7 +157,7 @@ defmodule Brando.Content do
         from(q in query, where: ilike(q.key, ^"%#{key}%"))
 
       {:color, color}, query ->
-        from q in query, where: jsonb_contains(q, :colors, [%{hex_value: color}])
+        from(q in query, where: jsonb_contains(q, :colors, [%{hex_value: color}]))
 
       {:namespace, namespace}, query ->
         namespace =
@@ -176,7 +176,7 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Palette, do: fn query -> from(q in query) end
+  query(:single, Palette, do: fn query -> from(q in query) end)
 
   matches Palette do
     fn
@@ -212,8 +212,8 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :delete, Palette
-  mutation :duplicate, {Palette, change_fields: [:name, :key]}
+  mutation(:delete, Palette)
+  mutation(:duplicate, {Palette, change_fields: [:name, :key]})
 
   @doc """
   Find palette with `id` in `palettes`
@@ -246,7 +246,7 @@ defmodule Brando.Content do
   ## Templates
   ##
 
-  query :list, Template, do: fn query -> from(q in query) end
+  query(:list, Template, do: fn query -> from(q in query) end)
 
   filters Template do
     fn
@@ -275,7 +275,7 @@ defmodule Brando.Content do
     end
   end
 
-  query :single, Template, do: fn query -> from(q in query) end
+  query(:single, Template, do: fn query -> from(q in query) end)
 
   matches Template do
     fn
@@ -289,10 +289,136 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Template
-  mutation :update, Template
-  mutation :delete, Template
-  mutation :duplicate, {Template, change_fields: [:name]}
+  mutation(:create, Template)
+  mutation(:update, Template)
+  mutation(:delete, Template)
+  mutation(:duplicate, {Template, change_fields: [:name]})
+
+  def list_identifiers(schema, list_opts) do
+    initial_query =
+      from(t in Brando.Content.Identifier,
+        where: t.schema == ^schema
+      )
+
+    query =
+      Brando.Query.run_list_query_reducer(
+        Brando.Query,
+        list_opts,
+        initial_query,
+        Brando.Content.Identifier
+      )
+
+    # query = (language && from(t in query, where: t.language == ^language)) || query
+
+    query =
+      from(t in query,
+        order_by: [asc: t.schema, asc: t.language, asc: t.title]
+      )
+
+    {:ok, Brando.repo().all(query)}
+  end
+
+  def list_identifiers(ids) when is_list(ids) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.id in ^ids,
+        order_by: fragment("array_position(?, ?)", ^ids, t.id)
+      )
+
+    {:ok, Brando.repo().all(query)}
+  end
+
+  def list_identifiers_for(entries) when is_list(entries) do
+    ids_and_schemas =
+      entries
+      |> Enum.with_index()
+      |> Enum.map(&%{id: elem(&1, 0).id, schema: elem(&1, 0).__struct__, sequence: elem(&1, 1)})
+
+    query =
+      from(x in Brando.Content.Identifier,
+        inner_join:
+          j in fragment(
+            "SELECT distinct * from jsonb_to_recordset(?) AS j(id int,schema text,sequence int)",
+            ^ids_and_schemas
+          ),
+        on: x.entry_id == j.id and x.schema == j.schema,
+        order_by: [asc: j.sequence]
+      )
+
+    identifiers = Brando.repo().all(query)
+    {:ok, identifiers}
+  end
+
+  def has_identifier(module) do
+    case {:__identifier__, 2} in module.__info__(:functions) do
+      true -> {:ok, :has_identifier}
+      false -> {:error, :no_identifier}
+    end
+  end
+
+  def delete_identifier(module, entry) do
+    with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, identifier} <- get_identifier(module, entry) do
+      Brando.repo().delete(identifier)
+    else
+      _ ->
+        {:ok, false}
+    end
+  end
+
+  def create_identifier(module, entry) do
+    with {:ok, :has_identifier} <- has_identifier(module) do
+      new_identifier = module.__identifier__(entry)
+      changeset = Ecto.Changeset.change(new_identifier)
+
+      Brando.repo().insert(changeset,
+        on_conflict: {:replace_all_except, [:id]},
+        conflict_target: [:entry_id, :schema],
+        returning: true
+      )
+    else
+      _ ->
+        {:ok, false}
+    end
+  end
+
+  def update_identifier(module, entry) do
+    with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, identifier} <- get_identifier(module, entry) do
+      new_identifier = module.__identifier__(entry)
+      language = new_identifier.language && to_string(new_identifier.language)
+
+      updated_identifier_data = %{
+        title: new_identifier.title,
+        language: language,
+        status: new_identifier.status,
+        cover: new_identifier.cover,
+        updated_at: new_identifier.updated_at
+      }
+
+      changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
+      Brando.repo().update(changeset)
+    else
+      _err ->
+        {:ok, false}
+    end
+  end
+
+  def get_identifier(module, entry) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.schema == ^module and t.entry_id == ^entry.id,
+        limit: 1
+      )
+
+    case Brando.repo().one(query) do
+      nil ->
+        {:error, {:identifier, :not_found}}
+
+      identifier ->
+        {:ok, identifier}
+    end
+  end
 
   def get_var_by_type(var_type), do: Keyword.get(Var.types(), var_type)
 

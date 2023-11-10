@@ -118,11 +118,11 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.Files.File,
                Brando.Images.Gallery,
                Brando.Images.Image,
-               Brando.MigrationTest.Person,
                Brando.MigrationTest.Profile,
                Brando.MigrationTest.Project,
                Brando.Pages.Fragment,
                Brando.Pages.Page,
+               Brando.Persons.Person,
                Brando.Users.User,
                Brando.Videos.Video
              ]
