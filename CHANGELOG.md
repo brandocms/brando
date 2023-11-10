@@ -2,16 +2,48 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
-* BREAKING: Datasources — selection list callback should return identifiers instead of entries:
+* BREAKING: Rewritten `:entries` (related entries). Now stores identifiers in a table and 
+  references this table for related entries.
+
+  Blueprint setup is same as before:
+
+      relation :related_entries, :entries, constraints: [max_length: 3]
+
+  and form setup:
+
+      input :related_entries, :entries,
+        label: t("Related entries"),
+        for: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
+        filter_language: true
+
+
+* BREAKING: Datasources — selection list callback should return identifiers 
+  instead of entries, and the select callback itself receives identifiers as the 
+  sole argument:
 
   ```elixir
-  selection :featured, fn schema, language, _vars ->
-    Brando.Content.list_identifiers_for(schema, %{language: language})
-  end, # ...
+  selection :featured, 
+    fn schema, language, _vars ->
+      Brando.Content.list_identifiers_for(schema, %{language: language})
+    end,
+    fn identifiers ->
+      entry_ids = Enum.map(identifiers, & &1.entry_id)
+
+      results =
+        from t in __MODULE__,
+          where: t.id in ^entry_ids,
+          order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
+
+      {:ok, MyApp.Repo.all(results)}
+    end
   ```
 
-* BREAKING: Updated `mix brando.upgrade` script. Copy the new script into your 
-  application: `cp deps/brando/priv/templates/brando.install/lib/mix/brando.upgrade.ex lib/mix/brando.upgrade.ex`
+* BREAKING: Updated `mix brando.upgrade` script. Copy the new script into 
+  your application: 
+  
+  ```zsh
+  $ cp deps/brando/priv/templates/brando.install/lib/mix/brando.upgrade.ex lib/mix/brando.upgrade.ex
+  ```
 
 * BREAKING: Deprecated `:many_to_many` for now. This might return later if
   there's a usecase for it. Right now it is replaced by `:has_many` `through`
