@@ -208,15 +208,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         _ -> Enum.reject(selected_identifiers, &(&1 == selected_identifier))
       end
 
-    require Logger
-
-    Logger.error("""
-
-    updated_identifiers:
-    #{inspect(updated_identifiers, pretty: true)}
-
-    """)
-
     built_join_entries =
       Enum.map(updated_identifiers, fn identifier ->
         %{}
@@ -234,7 +225,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       id: form_id,
       action: :update_changeset,
       changeset: updated_changeset
-      # force_validation:
     )
 
     {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
