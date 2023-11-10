@@ -501,10 +501,10 @@
   dependencies:
     debug "^4.3.4"
 
-"@sveltejs/vite-plugin-svelte@2.4.6":
-  version "2.4.6"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-2.4.6.tgz#ea6844d8a5c58aef718b931fb42e7e668e7f11b7"
-  integrity sha512-zO79p0+DZnXPnF0ltIigWDx/ux7Ni+HRaFOw720Qeivc1azFUrJxTl0OryXVibYNx1hCboGia1NRV3x8RNv4cA==
+"@sveltejs/vite-plugin-svelte@2.5.2":
+  version "2.5.2"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-2.5.2.tgz#de9e9cab3d9614407788702514bc57258a3cac77"
+  integrity sha512-Dfy0Rbl+IctOVfJvWGxrX/3m6vxPLH8o0x+8FA5QEyMUQMo4kGOVIojjryU7YomBAexOTAuYf1RT7809yDziaA==
   dependencies:
     "@sveltejs/vite-plugin-svelte-inspector" "^1.0.4"
     debug "^4.3.4"
@@ -1146,10 +1146,10 @@ linkifyjs@^4.1.0:
   resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-4.1.0.tgz#0460bfcc37d3348fa80e078d92e7bbc82588db15"
   integrity sha512-Ffv8VoY3+ixI1b3aZ3O+jM6x17cOsgwfB1Wq7pkytbo1WlyRp6ZO0YDMqiWT/gQPY/CmtiGuKfzDIVqxh1aCTA==
 
-linkifyjs@^4.1.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-4.1.1.tgz#73d427e3bbaaf4ca8e71c589ad4ffda11a9a5fde"
-  integrity sha512-zFN/CTVmbcVef+WaDXT63dNzzkfRBKT1j464NJQkV7iSgJU0sLBus9W0HBwnXK13/hf168pbrx/V/bjEHOXNHA==
+linkifyjs@^4.1.2:
+  version "4.1.2"
+  resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-4.1.2.tgz#48fadb05ddf5a5f7065510a385a500ca1ac4e65e"
+  integrity sha512-1elJrH8MwUgr77Rgmx4JgB/nBgISYVoGossH6pAfCeHG+07TblTn6RWKx0MKozEMJU6NCFYHRih9M8ZtV3YZ+Q==
 
 locate-character@^3.0.0:
   version "3.0.0"
@@ -1363,7 +1363,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
@@ -1715,10 +1715,10 @@ svelte-hmr@^0.15.3:
   resolved "https://registry.yarnpkg.com/svelte-hmr/-/svelte-hmr-0.15.3.tgz#df54ccde9be3f091bf5f18fc4ef7b8eb6405fbe6"
   integrity sha512-41snaPswvSf8TJUhlkoJBekRrABDXDMdpNpT2tfHIv4JuhgvHqLMhEPGtaQn0BmbNSTkuz2Ed20DF2eHw0SmBQ==
 
-svelte-preprocess@^5.0.4:
-  version "5.0.4"
-  resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-5.0.4.tgz#2123898e079a074f7f4ef1799e10e037f5bcc55b"
-  integrity sha512-ABia2QegosxOGsVlsSBJvoWeXy1wUKSfF7SWJdTjLAbx/Y3SrVevvvbFNQqrSJw89+lNSsM58SipmZJ5SRi5iw==
+svelte-preprocess@^5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-5.1.0.tgz#824a1b072da118cba46ad2e5e88a568083acad4b"
+  integrity sha512-EkErPiDzHAc0k2MF5m6vBNmRUh338h2myhinUw/xaqsLs7/ZvsgREiLGj03VrSzbY/TB5ZXgBOsKraFee5yceA==
   dependencies:
     "@types/pug" "^2.0.6"
     detect-indent "^6.1.0"
@@ -1726,10 +1726,10 @@ svelte-preprocess@^5.0.4:
     sorcery "^0.11.0"
     strip-indent "^3.0.0"
 
-svelte@^4.2.2:
-  version "4.2.2"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-4.2.2.tgz#07d42eefc1bce46e48d2056c5f11dc4cc1e06555"
-  integrity sha512-My2tytF2e2NnHSpn2M7/3VdXT4JdTglYVUuSuK/mXL2XtulPYbeBfl8Dm1QiaKRn0zoULRnL+EtfZHHP0k4H3A==
+svelte@^4.2.3:
+  version "4.2.3"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-4.2.3.tgz#4e77f7d528a543a0d516af00bc9b3131f01a2721"
+  integrity sha512-sqmG9KC6uUc7fb3ZuWoxXvqk6MI9Uu4ABA1M0fYDgTlFYu1k02xp96u6U9+yJZiVm84m9zge7rrA/BNZdFpOKw==
   dependencies:
     "@ampproject/remapping" "^2.2.1"
     "@jridgewell/sourcemap-codec" "^1.4.15"
