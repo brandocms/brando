@@ -12,8 +12,6 @@ defmodule Brando.Blueprint.Forms do
       - `template_namespace`: Show templates from this namespace as starting
         points when presented with a blank editor
 
-  ### `multi_select`: Multiple select field
-
   ### `color`: Color picker
 
   #### Options
@@ -22,6 +20,18 @@ defmodule Brando.Blueprint.Forms do
       - `picker`: `bool` — Allow picking custom colors. You could set this to false
          and use a `palette_id` to only allow picking from a locked set of colors
       - `palette_id`: `int` — Allow to pick from colors in this palette
+
+  ### `entries`: Related entries
+
+  #### Options
+
+      - `for`: List of tuples with {module, listing_opts}. I.e:
+        ```elixir
+        for: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
+        ```
+      - `filter_language`: `bool` — Only show entries in same language as main entry
+
+  ### `multi_select`: Multiple select field
 
   ### `rich_text`: Rich text editor (TipTap)
 
