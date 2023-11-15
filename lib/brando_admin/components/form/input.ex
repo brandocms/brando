@@ -39,7 +39,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
         <Form.label
@@ -47,7 +48,10 @@ defmodule BrandoAdmin.Components.Form.Input do
           class={[
             "control-label",
             @compact && "small"
-          ]}><%= @text %></Form.label>
+          ]}
+        >
+          <%= @text %>
+        </Form.label>
       </div>
     </Form.field_base>
     """
@@ -62,17 +66,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
-      <div
-        id={"#{@field.id}-code"}
-        class="code-editor"
-        phx-hook="Brando.CodeEditor">
-        <.input type={:textarea}
-          field={@field}
-          phx_debounce={750} />
-        <div
-          id={"#{@field.id}-code-editor"}
-          phx-update="ignore">
+      compact={@compact}
+    >
+      <div id={"#{@field.id}-code"} class="code-editor" phx-hook="Brando.CodeEditor">
+        <.input type={:textarea} field={@field} phx_debounce={750} />
+        <div id={"#{@field.id}-code-editor"} phx-update="ignore">
           <div class="editor"></div>
         </div>
       </div>
@@ -107,7 +105,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <div
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
@@ -115,13 +114,11 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-color={@field.value || gettext("No color selected")}
         data-opacity={@opacity}
         data-picker={@picker}
-        data-palette={@palette_colors}>
+        data-palette={@palette_colors}
+      >
         <div class="picker">
           <.input type={:hidden} field={@field} />
-          <div
-            id={"#{@field.id}-color-picker-target"}
-            phx-update="ignore"
-            class="picker-target">
+          <div id={"#{@field.id}-color-picker-target"} phx-update="ignore" class="picker-target">
             <div class="circle-and-hex">
               <span class="circle tiny"></span>
               <span class="color-hex"></span>
@@ -151,21 +148,15 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
-      <div
-        id={"#{@field.id}-datepicker"}
-        class="datetime-wrapper"
-        phx-hook="Brando.DatePicker">
-          <div
-            id={"#{@field.id}-datepicker-flatpickr"}
-            phx-update="ignore">
-            <button
-              type="button"
-              class="clear-datetime">
-              <%= gettext "Clear" %>
-            </button>
-            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
-          </div>
+      compact={@compact}
+    >
+      <div id={"#{@field.id}-datepicker"} class="datetime-wrapper" phx-hook="Brando.DatePicker">
+        <div id={"#{@field.id}-datepicker-flatpickr"} phx-update="ignore">
+          <button type="button" class="clear-datetime">
+            <%= gettext("Clear") %>
+          </button>
+          <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
+        </div>
       </div>
     </Form.field_base>
     """
@@ -187,23 +178,21 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <div
         id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
-        data-locale={@locale}>
-          <div
-            id={"#{@field.id}-datetimepicker-flatpickr"}
-            phx-update="ignore">
-            <button
-              type="button"
-              class="clear-datetime">
-              <%= gettext "Clear" %>
-            </button>
-            <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
-            <div class="timezone">&mdash; <%= gettext "Your timezone is" %>: <span>Unknown</span></div>
-          </div>
+        data-locale={@locale}
+      >
+        <div id={"#{@field.id}-datetimepicker-flatpickr"} phx-update="ignore">
+          <button type="button" class="clear-datetime">
+            <%= gettext("Clear") %>
+          </button>
+          <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
+          <div class="timezone">&mdash; <%= gettext("Your timezone is") %>: <span>Unknown</span></div>
+        </div>
       </div>
     </Form.field_base>
     """
@@ -218,14 +207,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:email}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={["text", @monospace && "monospace"]} />
+        class={["text", @monospace && "monospace"]}
+      />
     </Form.field_base>
     """
   end
@@ -239,14 +230,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:number}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={["text", @monospace && "monospace"]} />
+        class={["text", @monospace && "monospace"]}
+      />
     </Form.field_base>
     """
   end
@@ -271,14 +264,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:password}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={["text", @monospace && "monospace"]} />
+        class={["text", @monospace && "monospace"]}
+      />
     </Form.field_base>
     <%= if @confirmation do %>
       <Form.field_base
@@ -286,14 +281,16 @@ defmodule BrandoAdmin.Components.Form.Input do
         label={"#{@label} [#{gettext("confirm")}]"}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+      >
         <.input
           type={:password}
           field={@confirmation_field}
           placeholder={@placeholder}
           disabled={@disabled}
           phx-debounce={@debounce}
-          class={["text", @monospace && "monospace"]} />
+          class={["text", @monospace && "monospace"]}
+        />
       </Form.field_base>
     <% end %>
     """
@@ -308,14 +305,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:phone}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={["text", @monospace && "monospace"]} />
+        class={["text", @monospace && "monospace"]}
+      />
     </Form.field_base>
     """
   end
@@ -359,7 +358,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <div :if={@input_options != []} class="radios-wrapper">
         <div :for={opt <- @input_options} class="form-check">
           <.radio_opt id={@id} opt={opt} field={@field} />
@@ -390,7 +390,8 @@ defmodule BrandoAdmin.Components.Form.Input do
         name={@field.name}
         class="form-check-input"
         value={@opt.value}
-        checked={@checked} />
+        checked={@checked}
+      />
       <span class="label-text">
         <%= @label %>
       </span>
@@ -407,20 +408,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <div class="tiptap-wrapper" id={"#{@field.id}-rich-text-wrapper"}>
-        <div
-          id={"#{@field.id}-rich-text"}
-          phx-hook="Brando.TipTap"
-          data-name="TipTap">
+        <div id={"#{@field.id}-rich-text"} phx-hook="Brando.TipTap" data-name="TipTap">
           <div
             id={"#{@field.id}-rich-text-target-wrapper"}
             class="tiptap-target-wrapper"
-            phx-update="ignore">
-            <div
-              id={"#{@field.id}-rich-text-target"}
-              class="tiptap-target">
-            </div>
+            phx-update="ignore"
+          >
+            <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>
           </div>
           <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={750} />
         </div>
@@ -447,7 +444,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:text}
         field={@field}
@@ -457,13 +455,17 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-slug-for={@data_slug_for}
         data-slug-type={@data_slug_type}
         autocorrect="off"
-        spellcheck="false" />
+        spellcheck="false"
+      />
       <%= if @url do %>
-      <div class="badge no-case no-border">
-        <a href={@url} target="_blank">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M6.235 6.453a8 8 0 0 0 8.817 12.944c.115-.75-.137-1.47-.24-1.722-.23-.56-.988-1.517-2.253-2.844-.338-.355-.316-.628-.195-1.437l.013-.091c.082-.554.22-.882 2.085-1.178.948-.15 1.197.228 1.542.753l.116.172c.328.48.571.59.938.756.165.075.37.17.645.325.652.373.652.794.652 1.716v.105c0 .391-.038.735-.098 1.034a8.002 8.002 0 0 0-3.105-12.341c-.553.373-1.312.902-1.577 1.265-.135.185-.327 1.132-.95 1.21-.162.02-.381.006-.613-.009-.622-.04-1.472-.095-1.744.644-.173.468-.203 1.74.356 2.4.09.105.107.3.046.519-.08.287-.241.462-.292.498-.096-.056-.288-.279-.419-.43-.313-.365-.705-.82-1.211-.96-.184-.051-.386-.093-.583-.135-.549-.115-1.17-.246-1.315-.554-.106-.226-.105-.537-.105-.865 0-.417 0-.888-.204-1.345a1.276 1.276 0 0 0-.306-.43zM12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-        </a> <%= @url %>
-      </div>
+        <div class="badge no-case no-border">
+          <a href={@url} target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M6.235 6.453a8 8 0 0 0 8.817 12.944c.115-.75-.137-1.47-.24-1.722-.23-.56-.988-1.517-2.253-2.844-.338-.355-.316-.628-.195-1.437l.013-.091c.082-.554.22-.882 2.085-1.178.948-.15 1.197.228 1.542.753l.116.172c.328.48.571.59.938.756.165.075.37.17.645.325.652.373.652.794.652 1.716v.105c0 .391-.038.735-.098 1.034a8.002 8.002 0 0 0-3.105-12.341c-.553.373-1.312.902-1.577 1.265-.135.185-.327 1.132-.95 1.21-.162.02-.381.006-.613-.009-.622-.04-1.472-.095-1.744.644-.173.468-.203 1.74.356 2.4.09.105.107.3.046.519-.08.287-.241.462-.292.498-.096-.056-.288-.279-.419-.43-.313-.365-.705-.82-1.211-.96-.184-.051-.386-.093-.583-.135-.549-.115-1.17-.246-1.315-.554-.106-.226-.105-.537-.105-.865 0-.417 0-.888-.204-1.345a1.276 1.276 0 0 0-.306-.43zM12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+            </svg>
+          </a>
+          <%= @url %>
+        </div>
       <% end %>
     </Form.field_base>
     """
@@ -509,12 +511,19 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     if assigns.hidden_input do
       ~H"""
-      <input type={:hidden} name={@field.name} id={"#{@id}-unchecked"} value={@unchecked_value} {@rest}>
-      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} checked={@checked} {@rest}>
+      <input type={:hidden} name={@field.name} id={"#{@id}-unchecked"} value={@unchecked_value} {@rest} />
+      <input
+        type={@type}
+        name={@field.name}
+        id={"#{@id}"}
+        value={@checked_value}
+        checked={@checked}
+        {@rest}
+      />
       """
     else
       ~H"""
-      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} {@rest}>
+      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} {@rest} />
       """
     end
   end
@@ -557,7 +566,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> process_input_id()
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} {@rest}>
+    <input type={@type} name={@name} id={@id} value={@value} {@rest} />
     """
   end
 
@@ -620,33 +629,27 @@ defmodule BrandoAdmin.Components.Form.Input do
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+      >
         <div class="radios-wrapper status">
-            <div :for={status <- @statuses} class="form-check">
-              <label class="form-check-label">
-                <input
-                  type="radio"
-                  id={(@id || @field.id) <> "-#{status.value}"}
-                  name={@field.name}
-                  class="form-check-input"
-                  value={status.value}
-                  checked={status.value == to_string(@field.value)}>
-                <span class={["label-text", status.value]}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12">
-                    <circle
-                      class={status.value}
-                      r="6"
-                      cy="6"
-                      cx="6" />
-                  </svg>
-                  <%= status.label %>
-                </span>
-              </label>
-            </div>
+          <div :for={status <- @statuses} class="form-check">
+            <label class="form-check-label">
+              <input
+                type="radio"
+                id={(@id || @field.id) <> "-#{status.value}"}
+                name={@field.name}
+                class="form-check-input"
+                value={status.value}
+                checked={status.value == to_string(@field.value)}
+              />
+              <span class={["label-text", status.value]}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+                  <circle class={status.value} r="6" cy="6" cx="6" />
+                </svg>
+                <%= status.label %>
+              </span>
+            </label>
+          </div>
         </div>
       </Form.field_base>
       """
@@ -670,37 +673,31 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}
-      fit_content>
+      fit_content
+    >
       <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
         <.status_circle status={@current_status} publish_at={nil} />
         <div class="status-dropdown hidden" id={@id}>
-        <%= for status <- @statuses do %>
-          <div class="form-check">
-            <label class="form-check-label">
-              <input
-              type="radio"
-              id={(@id || @field.id) <> "-#{status.value}"}
-              name={@field.name}
-              class="form-check-input"
-              value={status.value}
-              checked={status.value == to_string(@field.value)}>
-              <span class={["label-text", status.value]}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12">
-                  <circle
-                    class={status.value}
-                    r="6"
-                    cy="6"
-                    cx="6" />
-                </svg>
-                <%= status.label %>
-              </span>
-            </label>
-          </div>
-        <% end %>
+          <%= for status <- @statuses do %>
+            <div class="form-check">
+              <label class="form-check-label">
+                <input
+                  type="radio"
+                  id={(@id || @field.id) <> "-#{status.value}"}
+                  name={@field.name}
+                  class="form-check-input"
+                  value={status.value}
+                  checked={status.value == to_string(@field.value)}
+                />
+                <span class={["label-text", status.value]}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+                    <circle class={status.value} r="6" cy="6" cx="6" />
+                  </svg>
+                  <%= status.label %>
+                </span>
+              </label>
+            </div>
+          <% end %>
         </div>
       </div>
     </Form.field_base>
@@ -716,14 +713,16 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
+      compact={@compact}
+    >
       <.input
         type={:text}
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
-        class={["text", @monospace && "monospace"]} />
+        class={["text", @monospace && "monospace"]}
+      />
     </Form.field_base>
     """
   end
@@ -743,15 +742,18 @@ defmodule BrandoAdmin.Components.Form.Input do
       label={@label}
       instructions={@instructions}
       class={@class}
-      compact={@compact}>
-      <.input type={:textarea}
+      compact={@compact}
+    >
+      <.input
+        type={:textarea}
         field={@field}
         class={["text", @monospace && "monospace"]}
         placeholder={@placeholder}
         rows={@rows}
         disabled={@disabled}
         phx-debounce={@debounce}
-        id={@generated_uid} />
+        id={@generated_uid}
+      />
     </Form.field_base>
     """
   end
@@ -769,12 +771,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}
-      left_justify_meta>
-      <Form.label
-        field={@field}
-        class={["switch", @compact && "small"]}>
+      left_justify_meta
+    >
+      <Form.label field={@field} class={["switch", @compact && "small"]}>
         <%= if @inner_block do %>
-          <%= render_slot @inner_block %>
+          <%= render_slot(@inner_block) %>
         <% else %>
           <.input type={:checkbox} field={@field} />
         <% end %>

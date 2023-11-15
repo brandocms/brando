@@ -2433,6 +2433,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:component_id, fn -> assigns.field.id end)
       |> assign_new(:parent_form, fn -> nil end)
       |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
+      |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
       |> assign_new(:component_target, fn ->
         case assigns.type do
           {:component, module} ->
@@ -2452,7 +2453,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <div class="brando-input" data-component={@type} data-compact={@compact}>
+      <div class="brando-input" data-component={@type} data-compact={@compact} data-size={@size}>
         <%= component(
           @component_target,
           assigns,
@@ -2460,7 +2461,7 @@ defmodule BrandoAdmin.Components.Form do
         ) %>
       </div>
     <% else %>
-      <div class="brando-input">
+      <div class="brando-input" data-component={@type} data-compact={@compact} data-size={@size}>
         <.live_component
           module={@component_target}
           id={@component_id}

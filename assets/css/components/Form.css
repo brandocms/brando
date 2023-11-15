@@ -131,6 +131,28 @@
     }
   }
 
+
+
+.brando-input[data-size="full"] {
+  width: 100%;
+  clear: both;
+}
+
+.brando-input[data-size="half"] {
+  width: 50%;
+  float: left;
+  padding-right: 5px;
+}
+
+.brando-input[data-size="half"] + .brando-input[data-size="half"] {
+  padding-right: 0;
+}
+
+.brando-input[data-size="third"] {
+  width: 33.33333%;
+  float: left;
+}
+
   .form-tab {
     display: none;
     &.active {

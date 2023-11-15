@@ -17,7 +17,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
         filter_language: true
 
 
-* BREAKING: Datasources — selection list callback should return identifiers 
+* BREAKING: Datasources — *selection* list callback should return identifiers 
   instead of entries, and the select callback itself receives identifiers as the 
   sole argument:
 
