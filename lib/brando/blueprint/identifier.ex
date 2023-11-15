@@ -45,6 +45,8 @@ defmodule Brando.Blueprint.Identifier do
             do: nil,
             else: Brando.Blueprint.Identifier.extract_cover(first_image_asset, entry)
 
+        updated_at = Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)
+
         %Brando.Content.Identifier{
           entry_id: entry.id,
           title: title,
@@ -52,7 +54,7 @@ defmodule Brando.Blueprint.Identifier do
           language: language,
           cover: cover,
           schema: __MODULE__,
-          updated_at: Brando.Utils.ensure_utc(entry.updated_at)
+          updated_at: updated_at
         }
       end
     end
@@ -137,11 +139,10 @@ defmodule Brando.Blueprint.Identifier do
 
     matches
     |> Enum.map(fn
-      [_, rel, f] -> [{rel, f}]
-      [_, f] -> f
+      [_, rel, f] -> [{String.to_existing_atom(rel), String.to_existing_atom(f)}]
+      [_, f] -> String.to_existing_atom(f)
     end)
     |> Enum.reject(&is_nil(&1))
     |> Enum.uniq()
-    |> Enum.map(&String.to_existing_atom/1)
   end
 end
