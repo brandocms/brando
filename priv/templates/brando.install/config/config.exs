@@ -11,6 +11,7 @@ config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
 
 # Configures the endpoint
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
+  adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],
   render_errors: [formats: [html: <%= application_module %>Web.ErrorHTML], layout: false],
   pubsub_server: <%= application_module %>.PubSub,
