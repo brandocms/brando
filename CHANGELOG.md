@@ -2,6 +2,9 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: If updating to Vite 5, you need to explicitly set the manifest path. So change
+  `manifest: true`, to `manifest: 'manifest.json'`
+
 * BREAKING: Rewritten `:entries` (related entries). Now stores identifiers in a table and 
   references this table for related entries.
 
