@@ -236,9 +236,9 @@ defmodule Brando.Content do
       "#ef00aa"
 
   """
-  def get_color(%Palette{} = palette, color_key) do
+  def get_color(%Palette{} = palette, color_key, fallback \\ "") do
     case Enum.find(palette.colors, &(&1.key == color_key)) do
-      nil -> ""
+      nil -> fallback
       color -> color.hex_value
     end
   end
