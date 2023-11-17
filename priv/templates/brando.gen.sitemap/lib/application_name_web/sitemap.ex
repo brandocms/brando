@@ -5,15 +5,26 @@ defmodule <%= web_module %>.Sitemap do
   alias <%= web_module %>.Router.Helpers, as: Routes
 
   sitemap "pages" do
-    Pages.list_pages(%{status: :published, select: [:slug, :updated_at]}, :stream)
-    |> Stream.map(fn e ->
-      page_url = Routes.page_url(Endpoint, :show, [e.slug])
+    Pages.list_pages(
+      %{
+        filter: %{has_url: true},
+        status: :published,
+        select: {:struct, [:title, :uri, :updated_at, :language]},
+        order: "asc language, asc title"
+      },
+      :stream
+    )
+    |> Stream.map(fn page ->
+      page_url = Brando.HTML.absolute_url(page, :with_host)
 
       url(%{
         priority: 0.7,
         changefreq: :weekly,
         loc: page_url,
-        lastmod: e.updated_at
+        lastmod:
+          page.updated_at
+          |> DateTime.from_naive!("Etc/UTC")
+          |> DateTime.shift_zone!(Brando.timezone())
       })
     end)
   end
