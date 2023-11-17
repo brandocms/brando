@@ -396,6 +396,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   options: [
                                     %{label: "SVG", value: :svg},
                                     %{label: "Dominant Color", value: :dominant_color},
+                                    %{label: "Dominant Color Faded", value: :dominant_color_faded},
                                     %{label: "Micro", value: :micro},
                                     %{label: "None", value: :none}
                                   ]
@@ -471,6 +472,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 opts={[
                                   options: [
                                     %{label: gettext("Dominant color"), value: "dominant_color"},
+                                    %{
+                                      label: gettext("Dominant color faded"),
+                                      value: "dominant_color_faded"
+                                    },
                                     %{label: gettext("SVG"), value: "svg"},
                                     %{label: gettext("Micro"), value: "micro"},
                                     %{label: gettext("None"), value: "none"}
@@ -604,6 +609,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       options: [
                                         %{label: "SVG", value: :svg},
                                         %{label: "Dominant Color", value: :dominant_color},
+                                        %{
+                                          label: "Dominant Color faded",
+                                          value: :dominant_color_faded
+                                        },
                                         %{label: "Micro", value: :micro},
                                         %{label: "None", value: :none}
                                       ]
@@ -701,6 +710,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     opts={[
                                       options: [
                                         %{label: "Dominant color", value: "dominant_color"},
+                                        %{
+                                          label: "Dominant color faded",
+                                          value: "dominant_color_faded"
+                                        },
                                         %{label: "SVG", value: "svg"},
                                         %{label: "Micro", value: "micro"},
                                         %{label: "None", value: "none"}

@@ -20,7 +20,7 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
       attribute :lightbox, :boolean, default: false
 
       attribute :placeholder, :enum,
-        values: [:svg, :dominant_color, :micro, :none],
+        values: [:svg, :dominant_color, :dominant_color_faded, :micro, :none],
         default: :dominant_color
 
       attribute :display, :enum,

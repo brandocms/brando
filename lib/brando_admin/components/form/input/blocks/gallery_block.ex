@@ -77,8 +77,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       data-upload-multi="true"
       data-text-uploading={gettext("Uploading...")}
       data-block-index={@index}
-      data-block-uid={@uid}>
-
+      data-block-uid={@uid}
+    >
       <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
@@ -88,7 +88,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         block={@block}
         belongs_to={@belongs_to}
         insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
+        duplicate_block={@duplicate_block}
+      >
         <:description>
           <%= @block_data[:type].value %>
           <%= if @ref_description do %>
@@ -96,17 +97,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <% end %>
         </:description>
 
-        <div
-          id={"block-#{@uid}-base-f-in"}
-          phx-update="ignore">
-          <input
-            name={"block-#{@uid}-f-in"}
-            class="file-input"
-            type="file"
-            multiple>
+        <div id={"block-#{@uid}-base-f-in"} phx-update="ignore">
+          <input name={"block-#{@uid}-f-in"} class="file-input" type="file" multiple />
         </div>
 
-        <.inputs_for field={@block_data[:images]} :let={image}>
+        <.inputs_for :let={image} field={@block_data[:images]}>
           <Input.input type={:hidden} field={image[:placeholder]} />
           <Input.input type={:hidden} field={image[:cdn]} />
           <Input.input type={:hidden} field={image[:dominant_color]} />
@@ -114,45 +109,54 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <Input.input type={:hidden} field={image[:width]} />
           <Input.input type={:hidden} field={image[:path]} />
 
-          <.inputs_for
-            field={image[:focal]}
-            :let={focal_form}>
+          <.inputs_for :let={focal_form} field={image[:focal]}>
             <Input.input type={:hidden} field={focal_form[:x]} />
             <Input.input type={:hidden} field={focal_form[:y]} />
           </.inputs_for>
 
-          <Form.map_inputs
-            :let={%{value: value, name: name}}
-            field={image[:sizes]}>
+          <Form.map_inputs :let={%{value: value, name: name}} field={image[:sizes]}>
             <input type="hidden" name={"#{name}"} value={"#{value}"} />
           </Form.map_inputs>
 
-          <Form.array_inputs
-            :let={%{value: array_value, name: array_name}}
-            field={image[:formats]}>
+          <Form.array_inputs :let={%{value: array_value, name: array_name}} field={image[:formats]}>
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
         </.inputs_for>
 
         <%= if @has_images? do %>
-          <span
-            id={"block-#{@uid}-base-file-upload-btn"}
-            phx-update="ignore">
-            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
+          <span id={"block-#{@uid}-base-file-upload-btn"} phx-update="ignore">
+            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>
+              <%= gettext("Upload images") %>
+            </button>
           </span>
-          <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}><%= gettext "Select images" %></button>
-          <button type="button" class="tiny" phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}><%= gettext "Edit captions" %></button>
+          <button
+            type="button"
+            class="tiny"
+            phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+          >
+            <%= gettext("Select images") %>
+          </button>
+          <button
+            type="button"
+            class="tiny"
+            phx-click={
+              JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
+            }
+          >
+            <%= gettext("Edit captions") %>
+          </button>
           <div
             id={"sortable-#{@block_data.id}-images"}
             class={[
               "images",
-              @display == :grid && "images-grid" || "images-list"
+              (@display == :grid && "images-grid") || "images-list"
             ]}
             phx-hook="Brando.Sortable"
             data-target={@myself}
             data-sortable-id={"sortable-#{@block_data.id}-images"}
             data-sortable-handle=".sort-handle"
-            data-sortable-selector=".preview">
+            data-sortable-selector=".preview"
+          >
             <%= if @display == :grid do %>
               <div
                 :for={{img, idx} <- @indexed_images}
@@ -161,16 +165,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   "sort-handle",
                   "draggable"
                 ]}
-                data-id={idx}>
+                data-id={idx}
+              >
                 <Content.image image={img} size={:thumb} />
-                <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
+                <figcaption phx-click={
+                  JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
+                }>
                   <div>
                     <span><%= gettext("Caption") %></span>
-                    <%= raw(img.title || "{ #{gettext"No caption"} }") %>
+                    <%= raw(img.title || "{ #{gettext("No caption")} }") %>
                   </div>
                   <div>
                     <span><%= gettext("Alt. text") %></span>
-                    <%= img.alt || "{ #{gettext"No alt text"} }" %>
+                    <%= img.alt || "{ #{gettext("No alt text")} }" %>
                   </div>
                 </figcaption>
               </div>
@@ -182,26 +189,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   "sort-handle",
                   "draggable"
                 ]}
-                data-id={idx}>
+                data-id={idx}
+              >
                 <figure>
                   <Content.image image={img} size={:smallest} />
                 </figure>
                 <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
                   <div>
                     <span><%= gettext("Caption") %></span>
-                    <%= raw(img.title || "{ #{gettext"No caption"} }") %>
+                    <%= raw(img.title || "{ #{gettext("No caption")} }") %>
                   </div>
                   <div>
                     <span><%= gettext("Alt. text") %></span>
-                    <%= img.alt || "{ #{gettext"No alt text"} }" %>
+                    <%= img.alt || "{ #{gettext("No alt text")} }" %>
                   </div>
                   <div>
                     <span><%= gettext("Dimensions") %></span>
                     <%= img.width %>&times;<%= img.height %>
                   </div>
                 </figcaption>
-                <button class="tiny" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={img.path}>
-                  <%= gettext "Delete" %>
+                <button
+                  class="tiny"
+                  type="button"
+                  phx-click={JS.push("remove_image", target: @myself)}
+                  phx-value-path={img.path}
+                >
+                  <%= gettext("Delete") %>
                 </button>
               </div>
             <% end %>
@@ -214,31 +227,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           ]}>
             <figure>
               <svg class="icon-add-gallery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path fill="none" d="M0 0h24v24H0z"/><path d="M8 1v4H4v14h16V3h1.008c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3H6V1h2zm4 7l4 4h-3v4h-2v-4H8l4-4zm6-7v4h-8V3h6V1h2z"/>
+                <path fill="none" d="M0 0h24v24H0z" /><path d="M8 1v4H4v14h16V3h1.008c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3H6V1h2zm4 7l4 4h-3v4h-2v-4H8l4-4zm6-7v4h-8V3h6V1h2z" />
               </svg>
             </figure>
             <div class="instructions">
-              <span
-                id={"block-#{@uid}-base-file-upload-btn"}
-                phx-update="ignore">
-                <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}><%= gettext "Upload images" %></button>
+              <span id={"block-#{@uid}-base-file-upload-btn"} phx-update="ignore">
+                <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>
+                  <%= gettext("Upload images") %>
+                </button>
               </span>
-              <button type="button" class="tiny" phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}><%= gettext "Pick existing images" %></button>
+              <button
+                type="button"
+                class="tiny"
+                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+              >
+                <%= gettext("Pick existing images") %>
+              </button>
             </div>
           </div>
         <% end %>
 
-        <Content.modal title={gettext "Edit captions"} id={"block-#{@uid}_captions"}>
+        <Content.modal title={gettext("Edit captions")} id={"block-#{@uid}_captions"}>
           <div class="caption-editor">
-            <.inputs_for field={@block_data[:images]} :let={image}>
+            <.inputs_for :let={image} field={@block_data[:images]}>
               <div class="caption-row">
                 <figure>
                   <Content.image image={image.data} size={:thumb} />
                 </figure>
                 <div>
-                  <Input.rich_text field={image[:title]} label={gettext "Title"} />
-                  <Input.text field={image[:credits]} label={gettext "Credits"} />
-                  <Input.text field={image[:alt]} label={gettext "Alt. text"} />
+                  <Input.rich_text field={image[:title]} label={gettext("Title")} />
+                  <Input.text field={image[:credits]} label={gettext("Credits")} />
+                  <Input.text field={image[:alt]} label={gettext("Alt. text")} />
                 </div>
               </div>
             </.inputs_for>
@@ -250,27 +269,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <Input.radios
             field={@block_data[:display]}
             label={gettext("Display")}
-            opts={[options: [
-              %{label: "Grid", value: :grid},
-              %{label: "List", value: :list},
-            ]]} />
-          <Input.text field={@block_data[:class]} label={gettext "Class"} />
-          <Input.text field={@block_data[:series_slug]} label={gettext "Series slug"} />
-          <Input.toggle field={@block_data[:lightbox]} label={gettext "Lightbox"} />
+            opts={[
+              options: [
+                %{label: "Grid", value: :grid},
+                %{label: "List", value: :list}
+              ]
+            ]}
+          />
+          <Input.text field={@block_data[:class]} label={gettext("Class")} />
+          <Input.text field={@block_data[:series_slug]} label={gettext("Series slug")} />
+          <Input.toggle field={@block_data[:lightbox]} label={gettext("Lightbox")} />
 
           <Input.radios
             field={@block_data[:placeholder]}
-            label={gettext "Placeholder"}
-            opts={[options: [
-              %{label: "SVG", value: :svg},
-              %{label: "Dominant Color", value: :dominant_color},
-              %{label: "Micro", value: :micro},
-              %{label: "None", value: :none}
-            ]]} />
+            label={gettext("Placeholder")}
+            opts={[
+              options: [
+                %{label: "SVG", value: :svg},
+                %{label: "Dominant Color", value: :dominant_color},
+                %{label: "Dominant Color faded", value: :dominant_color_faded},
+                %{label: "Micro", value: :micro},
+                %{label: "None", value: :none}
+              ]
+            ]}
+          />
 
           <Form.array_inputs
             :let={%{value: array_value, name: array_name}}
-            field={@block_data[:formats]}>
+            field={@block_data[:formats]}
+          >
             <input type="hidden" name={array_name} value={array_value} />
           </Form.array_inputs>
 
