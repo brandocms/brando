@@ -11,8 +11,12 @@ defmodule Brando.Sites.Redirects do
 
     Enum.reduce_while(redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
       case match_redirect(test_url, redirect.from, redirect.to) do
-        {:error, _} -> {:cont, {:error, {:redirects, :no_match}}}
-        url -> {:halt, {:ok, {:redirect, {url, redirect.code}}}}
+        {:error, _} ->
+          {:cont, {:error, {:redirects, :no_match}}}
+
+        url ->
+          url = Brando.HTML.replace_timestamp(url)
+          {:halt, {:ok, {:redirect, {url, redirect.code}}}}
       end
     end)
   end
