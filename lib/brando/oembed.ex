@@ -14,10 +14,8 @@ defmodule Brando.OEmbed do
   end
 
   def fetch(url) do
-    with {:ok, %HTTPoison.Response{body: body}} <-
-           HTTPoison.get(url, [], follow_redirect: true, ssl: [{:versions, [:"tlsv1.2"]}]),
-         {:ok, struct} <- Jason.decode(body) do
-      {:ok, struct}
+    with %{body: body, status: 200} <- Req.get!(url) do
+      {:ok, body}
     else
       _ -> {:error, "oEmbed url not found"}
     end
