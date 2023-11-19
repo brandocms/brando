@@ -238,6 +238,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           </h2>
 
           <ul>
+            <input type="hidden" name={@form[:refs].name} value="" />
             <.inputs_for :let={ref} field={@form[:refs]}>
               <li class="padded">
                 <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
@@ -1014,6 +1015,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-selector=".var"
             data-sortable-handle=".sort-handle"
           >
+            <input type="hidden" name={@form[:vars].name} value="" />
             <Form.inputs_for_poly :let={var} field={@form[:vars]}>
               <li class="var padded sort-handle draggable" data-id={var.index}>
                 <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>

@@ -25,7 +25,7 @@ export default defineConfig({
     port: 3000
   },
   build: {
-    manifest: true,
+    manifest: 'manifest.json',
     emptyOutDir: false,
     target: 'es2015',
     outDir: '../../priv/static', // <- Phoenix expects our files here

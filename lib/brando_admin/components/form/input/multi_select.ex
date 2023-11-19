@@ -17,6 +17,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # prop opts, :list, default: []
   # prop current_user, :map
   # prop parent_uploads, :map
+  # prop parent_form_id, :string # might not be needed?
+  # prop subform_id, :string
 
   # data class, :string
   # data monospace, :boolean
@@ -46,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:ok,
      socket
      |> assign_new(:inner_block, fn -> nil end)
+     |> assign_new(:subform_id, fn -> nil end)
      |> assign(:open, false)
      |> assign(:creating, false)
      |> assign(:filter_string, "")}
@@ -133,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp assign_selected_options_forms(socket, field) do
     selected_options_forms =
-      if socket.assigns.relation_type == :has_many do
+      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
         Brando.Utils.forms_from_field(field.form[field.field])
       else
         nil
@@ -154,15 +157,20 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     relation_type =
       if {:__relations__, 0} in module.__info__(:functions) do
         relation = module.__relation__(field.field)
-        relation.type
+
+        if socket.assigns.parent_form_id do
+          {:subform, relation.type}
+        else
+          relation.type
+        end
       else
         Map.get(module.__changeset__, field.field)
       end
 
-    if relation_type == :has_many and socket.assigns.relation_key == :id do
+    if relation_type in [:has_many, {:subform, :has_many}] and socket.assigns.relation_key == :id do
       raise BlueprintError,
         message: """
-        Multi selects for a :has_many relation needs a `relation_key`.
+        Multi selects for a #{inspect(relation_type)} relation needs a `relation_key`.
 
         Set this in your form:
 
@@ -186,6 +194,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp get_selected_options(changeset, field, :has_many) do
+    Ecto.Changeset.get_assoc(changeset, field.field)
+  end
+
+  defp get_selected_options(changeset, field, {:subform, :has_many}) do
     Ecto.Changeset.get_assoc(changeset, field.field)
   end
 
@@ -283,15 +295,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+      >
         <%= if !Enum.empty?(@selected_options) do %>
           <div class="selected-labels">
             <.labels
+              :let={opt}
               selected_options={@selected_options}
               input_options={@input_options}
               relation_type={@relation_type}
               relation_key={@relation_key}
-              :let={opt}>
+            >
               <.get_label opt={opt} />
             </.labels>
           </div>
@@ -301,7 +315,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <div>
             <span>
               <%= if @inner_block do %>
-                <%= render_slot @inner_block %>
+                <%= render_slot(@inner_block) %>
               <% else %>
                 <%= if @selected_options != [] do %>
                   <%= @count_label |> raw %>
@@ -314,33 +328,45 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <button
             type="button"
             class="button-edit"
-            phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}>
+            phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}
+          >
             <%= if @open do %>
-              <%= gettext "Close" %>
+              <%= gettext("Close") %>
             <% else %>
-              <%= gettext "Select" %>
+              <%= gettext("Select") %>
             <% end %>
           </button>
           <Content.modal
-            title={gettext "Select options"}
+            title={gettext("Select options")}
             id={@modal_id}
             narrow={@narrow}
-            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+          >
             <:header>
               <%= if @select_form && !@creating do %>
-                <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>Create <%= @singular %></button>
+                <button
+                  class="header-button"
+                  type="button"
+                  phx-click={JS.push("show_form", target: @myself)}
+                >
+                  Create <%= @singular %>
+                </button>
               <% end %>
             </:header>
             <%= if @show_filter && !Enum.empty?(@input_options) && !@creating && @open do %>
-              <div class="select-filter" id={"#{@field.id}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+              <div
+                class="select-filter"
+                id={"#{@field.id}-select-modal-filter"}
+                phx-hook="Brando.SelectFilter"
+              >
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">
-                      <span><%= gettext "Filter options" %></span>
+                      <span><%= gettext("Filter options") %></span>
                     </label>
                   </div>
                   <div class="field-base">
-                    <input class="text" name="select-modal-search" type="text" value={@filter_string}>
+                    <input class="text" name="select-modal-search" type="text" value={@filter_string} />
                   </div>
                 </div>
               </div>
@@ -349,10 +375,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <div class="select-modal-wrapper">
               <%= if !@creating && @open do %>
                 <div class="select-modal">
-                  <div id={"#{@field.id}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
-                    <h2 class="titlecase"><%= gettext "Available options" %></h2>
+                  <div
+                    id={"#{@field.id}-options"}
+                    class="options"
+                    phx-hook="Brando.RememberScrollPosition"
+                  >
+                    <h2 class="titlecase"><%= gettext("Available options") %></h2>
                     <%= if Enum.empty?(@input_options) do %>
-                      <%= gettext "No options found" %>
+                      <%= gettext("No options found") %>
                     <% end %>
                     <.option_button
                       :for={opt <- @input_options}
@@ -365,43 +395,51 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   </div>
                 </div>
                 <div class="selected-labels">
-                  <h2 class="titlecase"><%= gettext "Currently selected" %></h2>
+                  <h2 class="titlecase"><%= gettext("Currently selected") %></h2>
                   <.labels
+                    :let={opt}
                     selected_options={@selected_options}
                     input_options={@input_options}
                     relation_type={@relation_type}
                     relation_key={@relation_key}
-                    :let={opt}>
+                  >
                     <.get_label opt={opt} target={@myself} deletable />
                   </.labels>
                 </div>
               <% else %>
                 <%= if @select_form do %>
                   <.form
+                    :let={entry_form}
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
-                    :let={entry_form}>
+                  >
                     <div
                       :for={tab <- @select_form.tabs}
                       class={["form-tab", "active"]}
-                      data-tab-name={tab.name}>
+                      data-tab-name={tab.name}
+                    >
                       <div class="row">
                         <Fieldset.render
                           :for={fieldset <- tab.fields}
                           translations={@form_translations}
                           form={entry_form}
                           parent_uploads={[]}
-                          fieldset={fieldset} />
+                          fieldset={fieldset}
+                        />
                       </div>
                     </div>
                     <button
                       phx-click={JS.push("save_new_entry", target: @myself)}
-                      type="button" class="primary">
+                      type="button"
+                      class="primary"
+                    >
                       Save
                     </button>
                     <button
                       phx-click={JS.push("hide_form", target: @myself)}
-                      type="button" class="secondary">
+                      type="button"
+                      class="secondary"
+                    >
                       Cancel
                     </button>
                   </.form>
@@ -413,16 +451,16 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <button
                   type="button"
                   class="primary"
-                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+                >
                   OK
                 </button>
-                <div
-                  :if={@resetable}
-                  class="reset">
+                <div :if={@resetable} class="reset">
                   <button
                     type="button"
                     class="secondary"
-                    phx-click={JS.push("reset", target: @myself)}>
+                    phx-click={JS.push("reset", target: @myself)}
+                  >
                     <%= gettext("Reset value") %>
                   </button>
                 </div>
@@ -437,10 +475,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             field={@field}
             id={"#{@field.id}-empty"}
             name={@field.name}
-            value={""} />
+            value=""
+          />
         <% else %>
           <%!-- TODO: Clean up this to components --%>
-          <%= if @relation_type == :has_many do %>
+          <%= if @relation_type in [:has_many, {:subform, :has_many}] do %>
             <%= for {eform, index} <- Enum.with_index(@selected_options_forms) do %>
               <%= for {name, value_or_values} <- eform.hidden,
                 name = Brando.Utils.name_for_value_or_values(eform, name, value_or_values),
@@ -448,15 +487,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <input type="hidden" name={name} value={value} />
               <% end %>
 
-              <Input.hidden
-                :if={@sequenced?}
-                field={eform[:sequence]}
-                value={index}
-              />
-              <Input.hidden
-                :for={efield <- @relation_fields}
-                field={eform[efield]}
-              />
+              <Input.hidden :if={@sequenced?} field={eform[:sequence]} value={index} />
+              <Input.hidden :for={efield <- @relation_fields} field={eform[efield]} />
             <% end %>
           <% else %>
             <Input.input
@@ -465,7 +497,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               field={@field}
               id={"#{@field.id}-#{maybe_slug(opt)}"}
               name={"#{@field.name}[]"}
-              value={extract_value(opt)} />
+              value={extract_value(opt)}
+            />
           <% end %>
         <% end %>
       </Form.field_base>
@@ -494,21 +527,24 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       ]}
       data-label={@label}
       value={@value}
-      phx-click={@click}>
+      phx-click={@click}
+    >
       <.get_label opt={@opt} />
     </button>
     """
   end
 
-  def labels(%{relation_type: :has_many} = assigns) do
+  def labels(%{relation_type: relation_type} = assigns)
+      when relation_type in [:has_many, {:subform, :has_many}] do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label"><%= gettext "None selected" %></div>
+      <div class="empty-label"><%= gettext("None selected") %></div>
     <% else %>
       <div
         :for={opt <- @selected_options}
         :if={Ecto.Changeset.get_change(opt, :marked_as_deleted) in [false, nil]}
-        class="selected-label">
+        class="selected-label"
+      >
         <div class="selected-label-text">
           <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
         </div>
@@ -520,11 +556,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def labels(%{relation_type: {:array, _}} = assigns) do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label"><%= gettext "None selected" %></div>
+      <div class="empty-label"><%= gettext("None selected") %></div>
     <% else %>
-      <div
-        :for={opt <- @selected_options}
-        class="selected-label">
+      <div :for={opt <- @selected_options} class="selected-label">
         <div class="selected-label-text">
           <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
         </div>
@@ -535,7 +569,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_opt(%{id: _id} = opt, _opts, _relation_key, _relation_type), do: opt
 
-  defp get_opt(changeset, opts, relation_key, :has_many) do
+  defp get_opt(changeset, opts, relation_key, relation_type)
+       when relation_type in [:has_many, {:subform, :has_many}] do
     wanted_id = Ecto.Changeset.get_field(changeset, relation_key)
     Enum.find(opts, &(to_string(&1.id) == to_string(wanted_id)))
   end
@@ -547,7 +582,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  defp is_selected?(%{id: id}, selected_opts, relation_key, :has_many) do
+  defp is_selected?(%{id: id}, selected_opts, relation_key, relation_type)
+       when relation_type in [:has_many, {:subform, :has_many}] do
     Enum.find_index(
       selected_opts,
       &(to_string(Ecto.Changeset.get_field(&1, relation_key)) == to_string(id) &&
@@ -590,7 +626,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_label(%{opt: nil} = assigns) do
     ~H"""
-    <%= gettext "Missing option" %>
+    <%= gettext("Missing option") %>
     """
   end
 
@@ -608,10 +644,15 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <.status_circle status={@identifier.status} /> <%= @identifier.title %>
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@entry_id}
+        phx-click={JS.push("select_option", target: @target)}
+      >
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
         </svg>
       </button>
     <% end %>
@@ -631,10 +672,15 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <.status_circle status={@identifier.status} /> <%= @identifier.title %>
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@entry_id}
+        phx-click={JS.push("select_option", target: @target)}
+      >
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
         </svg>
       </button>
     <% end %>
@@ -650,7 +696,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     gettext("<None selected>")
   end
 
-  defp get_count_label(_, selected_options, :has_many) do
+  defp get_count_label(_, selected_options, relation_type)
+       when relation_type in [:has_many, {:subform, :has_many}] do
     count =
       selected_options
       |> Enum.reject(&Ecto.Changeset.get_change(&1, :marked_as_deleted))
@@ -665,7 +712,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     gettext("%{count} selected", count: count)
   end
 
-  def handle_event("toggle_modal", _, %{assigns: %{relation_type: :has_many}} = socket) do
+  def handle_event("toggle_modal", _, %{assigns: %{relation_type: relation_type}} = socket)
+      when relation_type in [:has_many, {:subform, :has_many}] do
     socket = assign(socket, :open, !socket.assigns.open)
 
     {:noreply, socket}
@@ -765,10 +813,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def handle_event(
         "select_option",
         %{"value" => value},
-        %{assigns: %{relation_type: :has_many}} = socket
-      ) do
+        %{assigns: %{relation_type: relation_type}} = socket
+      )
+      when relation_type in [:has_many, {:subform, :has_many}] do
     form = socket.assigns.field.form
     field = socket.assigns.field
+    subform_id = socket.assigns.subform_id
     changeset = form.source
     module = form.data.__struct__
     sequenced? = socket.assigns.sequenced?
@@ -814,13 +864,22 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
     selected_options = get_selected_options(updated_changeset, field, relation_type)
 
-    form_id = "#{module.__naming__().singular}_form"
+    # if we have a subform, throw the updated changeset that way
+    if subform_id do
+      send_update(subform_id,
+        index: form.index,
+        action: :update_changeset,
+        updated_changeset: updated_changeset
+      )
+    else
+      form_id = "#{module.__naming__().singular}_form"
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        action: :update_changeset,
+        changeset: updated_changeset
+      )
+    end
 
     {:noreply, assign(socket, :selected_options, selected_options)}
   end
@@ -843,11 +902,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, :creating, false)}
   end
 
-  defp update_relation(changeset, field, updated_relation, :has_many) do
-    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
-  end
-
-  defp update_relation(changeset, field, updated_relation, :many_to_many) do
+  defp update_relation(changeset, field, updated_relation, relation_type)
+       when relation_type in [:has_many, :many_to_many, {:subform, :has_many}] do
     Ecto.Changeset.put_assoc(changeset, field, updated_relation)
   end
 

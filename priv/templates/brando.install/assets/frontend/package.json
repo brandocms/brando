@@ -8,19 +8,19 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.12.0",
-    "@vitejs/plugin-legacy": "^4.0.2",
+    "@brandocms/europacss": "^0.13.0",
+    "@vitejs/plugin-legacy": "^5.0.0",
     "css-mqgroup": "^7.1.0",
-    "postcss": "^8.4.21",
+    "postcss": "^8.4.31",
     "postcss-import": "^15.1.0",
-    "postcss-preset-env": "^8.3.0",
+    "postcss-preset-env": "^9.3.0",
     "postcss-reporter": "^7.0.5",
-    "stylelint": "^15.4.0",
-    "terser": "^5.16.8",
-    "vite": "^4.2.1"
+    "stylelint": "^15.11.0",
+    "terser": "^5.24.0",
+    "vite": "^5.0.0"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.48.2",
+    "@brandocms/jupiter": "^3.50.1",
     "css-vars-ponyfill": "^2.4.8",
     "custom-event-polyfill": "^1.0.7",
     "element-polyfill": "^1.1.0",

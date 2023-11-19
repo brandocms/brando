@@ -11,14 +11,7 @@ defmodule Brando.Utils do
   @type uri :: URI.t()
 
   @filtered_deps [
-    :brando,
-    :brando_analytics,
-    :brando_blog,
-    :brando_instagram,
-    :brando_news,
-    :brando_pages,
-    :brando_portfolio,
-    :brando_villain
+    :brando
   ]
 
   @kb_size 1024
@@ -142,6 +135,7 @@ defmodule Brando.Utils do
   """
   @spec try_path(data :: map | list, keys :: [atom | integer] | nil) :: any | nil
   def try_path(_, nil), do: nil
+  def try_path(nil, _), do: nil
 
   def try_path(map, keys) when is_map(map) do
     Enum.reduce(keys, map, fn

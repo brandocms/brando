@@ -197,7 +197,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 ```elixir
 forms do
   form :password,
-    after_save: &__MODULE__.update_password_config/1,
+    after_save: &__MODULE__.update_password_config/2,
     tab t("Content") do
       alert :info,
             t(
@@ -211,7 +211,7 @@ forms do
   end
 end
 
-def update_password_config(entry) do
+def update_password_config(entry, _current_user) do
   Brando.Users.update_user(
     entry.id,
     %{config: %{reset_password_on_first_login: false}},

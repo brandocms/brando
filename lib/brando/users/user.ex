@@ -136,7 +136,7 @@ defmodule Brando.Users.User do
 
   forms do
     form :password,
-      after_save: &__MODULE__.update_password_config/1 do
+      after_save: &__MODULE__.update_password_config/2 do
       tab t("Content") do
         alert :info,
               t(
@@ -149,7 +149,7 @@ defmodule Brando.Users.User do
       end
     end
 
-    form do
+    form :default, after_save: &__MODULE__.maybe_update_current_user/2 do
       tab t("Content") do
         fieldset size: :half do
           input :name, :text, label: t("Name")
@@ -194,7 +194,17 @@ defmodule Brando.Users.User do
     config: %{prefers_reduced_motion: true, content_language: "en"}
   }
 
-  def update_password_config(entry) do
+  def maybe_update_current_user(entry, current_user) do
+    if entry.id == current_user.id do
+      send(
+        self(),
+        {:toast,
+         gettext("Current user updated. You should reload your application to see the changes.")}
+      )
+    end
+  end
+
+  def update_password_config(entry, _current_user) do
     Brando.Users.update_user(
       entry.id,
       %{config: %{reset_password_on_first_login: false}},

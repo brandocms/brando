@@ -32,6 +32,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   def render(%{socket_connected: false} = assigns) do
     ~H"""
+
     """
   end
 
@@ -40,16 +41,14 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
     <div id="module_form-el" phx-hook="Brando.Form">
-      <.form
-        for={@form}
-        phx-change="validate"
-        phx-submit="save">
+      <.form for={@form} phx-change="validate" phx-submit="save">
         <div class="block-editor">
           <div class="code">
-            <Input.code field={@form[:code]} label={gettext "Code"} />
+            <Input.code field={@form[:code]} label={gettext("Code")} />
           </div>
 
-          <.live_component module={ModuleProps}
+          <.live_component
+            module={ModuleProps}
             id="module-props"
             form={@form}
             create_ref={JS.push("create_ref")}
@@ -64,11 +63,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           />
         </div>
         <.inputs_for
-          :if={@form[:wrapper].value in [true, "true"]}
           :let={entry}
-          field={@form[:entry_template]}>
+          :if={@form[:wrapper].value in [true, "true"]}
+          field={@form[:entry_template]}
+        >
           <div class="entry-template">
-            <hr>
+            <hr />
             <h2>Entry template</h2>
             <p>
               This module will be used as a template when generating new entries inside the wrapper module
@@ -76,12 +76,13 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
             <div class="block-editor">
               <div class="code">
-                <Input.code field={entry[:code]} label={gettext "Code"} />
+                <Input.code field={entry[:code]} label={gettext("Code")} />
               </div>
 
               <Input.input type={:hidden} field={entry[:id]} />
 
-              <.live_component module={ModuleProps}
+              <.live_component
+                module={ModuleProps}
                 id={"entry-module-props-#{entry.id}"}
                 form={entry}
                 entry_form
@@ -100,9 +101,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         <div class="button-group">
           <Form.submit_button
             processing={false}
-            form_id={"module_form"}
+            form_id="module_form"
             label={gettext("Save (⇧⌘S)")}
-            class="primary submit-button" />
+            class="primary submit-button"
+          />
         </div>
       </.form>
     </div>
@@ -199,13 +201,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     ref = Enum.find(refs, &(&1.name == ref_name))
     update_in(ref, [Access.key(:data), Access.key(:data), Access.key(:rows)], &[new_row | &1])
 
-    # filtered_vars = Enum.reject(vars, &(&1.key == var_key))
-    # updated_changeset = put_change(changeset, :vars, filtered_vars)
-
-    # {:noreply, assign(socket, :changeset, updated_changeset)}
-
-    require Logger
-    Logger.error("==> add_table_row #{ref_name}")
     {:noreply, socket}
   end
 

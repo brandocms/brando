@@ -286,6 +286,10 @@ defmodule BrandoAdmin.LiveView.Listing do
       {:modal, type, title, message}, socket ->
         {:halt, push_event(socket, "b:alert", %{title: title, message: message, type: type})}
 
+      {:alert, message}, %{assigns: %{current_user: current_user}} = socket ->
+        BrandoAdmin.Alert.send_to(current_user, message)
+        {:halt, socket}
+
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}

@@ -978,6 +978,25 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def image_drawer(assigns) do
+    upload_field =
+      case Map.get(assigns.parent_uploads, assigns.edit_image.field) do
+        nil ->
+          # if we have a path with length > 1
+          if Enum.count(assigns.edit_image.path) > 1 do
+            [sub | _] = assigns.edit_image.path
+            nested_field = :"#{to_string(sub)}|#{to_string(assigns.edit_image.field)}"
+            get_in(assigns.parent_uploads, [Access.key(nested_field)])
+          end
+
+        upload ->
+          upload
+      end
+
+    assigns =
+      assigns
+      |> assign(:upload_field, upload_field)
+      |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
+
     ~H"""
     <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
       <.form
@@ -993,7 +1012,7 @@ defmodule BrandoAdmin.Components.Form do
           id="image-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="image-drawer-preview"
-          phx-drop-target={@parent_uploads[@edit_image.field].ref}
+          phx-drop-target={@drop_target}
         >
           <div :if={@processing} class="processing">
             <div>
@@ -1048,7 +1067,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext("Upload image") %>
             </span>
-            <.live_file_input upload={@parent_uploads[@edit_image.field]} />
+            <.live_file_input :if={@upload_field} upload={@upload_field} />
           </div>
           <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
             <%= gettext("Select existing image") %>
@@ -1177,10 +1196,17 @@ defmodule BrandoAdmin.Components.Form do
           img_field = relation_module.__asset__(field)
           max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
           key = :"#{relation_key}|#{field}"
+          transformer_key = :"#{relation_key}|#{field}|transformer"
 
           updated_socket
           |> update(:transformer_defaults, &Map.put(&1, key, default))
           |> allow_upload(key,
+            accept: ~w(.jpg .jpeg .png .gif .webp .svg),
+            max_file_size: max_size,
+            auto_upload: true,
+            progress: &__MODULE__.handle_image_progress/3
+          )
+          |> allow_upload(transformer_key,
             accept: ~w(.jpg .jpeg .png .gif .webp .svg),
             max_entries: 50,
             max_file_size: max_size,
@@ -1670,7 +1696,7 @@ defmodule BrandoAdmin.Components.Form do
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)
-        maybe_run_form_after_save(form_blueprint, entry)
+        maybe_run_form_after_save(form_blueprint, entry, current_user)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
         maybe_redirected_socket =
@@ -1716,10 +1742,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp maybe_run_form_after_save(%{after_save: nil}, _), do: nil
+  defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil
 
-  defp maybe_run_form_after_save(%{after_save: after_save}, entry) do
-    after_save.(entry)
+  defp maybe_run_form_after_save(%{after_save: after_save}, entry, current_user) do
+    after_save.(entry, current_user)
   end
 
   defp validate(schema, entry, params, user) do
@@ -1789,6 +1815,14 @@ defmodule BrandoAdmin.Components.Form do
 
     if upload_entry.done? do
       socket = assign(socket, :processing, false)
+
+      # if we have a concat'ed key (from a subform) we split out our field and schema
+      key =
+        case String.split(to_string(key), "|") do
+          [_, string_key] -> String.to_existing_atom(string_key)
+          [_string_key] -> key
+        end
+
       relation_key = String.to_existing_atom("#{key}_id")
 
       %{cfg: cfg} = edit_image.schema.__asset_opts__(key)
@@ -1960,7 +1994,9 @@ defmodule BrandoAdmin.Components.Form do
       entries = get_in(socket.assigns.uploads, [key, Access.key(:entries)])
       all_done? = Enum.all?(entries, &(&1.progress == 100))
 
-      [relation_key, asset_key] = String.split(to_string(key), "|")
+      [relation_key, asset_key, _] = String.split(to_string(key), "|")
+      original_key = key
+      key = Enum.join([relation_key, asset_key], "|") |> String.to_existing_atom()
       relation = schema.__relation__(String.to_existing_atom(relation_key))
       relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
       %{cfg: cfg} = relation_module.__asset_opts__(String.to_existing_atom(asset_key))
@@ -1992,7 +2028,7 @@ defmodule BrandoAdmin.Components.Form do
 
         image ->
           socket =
-            case uploaded_entries(socket, key) do
+            case uploaded_entries(socket, original_key) do
               {[_ | _], []} ->
                 assign(socket, :processing, false)
 
@@ -2040,8 +2076,7 @@ defmodule BrandoAdmin.Components.Form do
             end
 
           if all_done? do
-            require Logger
-            Logger.error("== ALL done. how do we refresh?")
+            # hmm
           end
 
           {:noreply,
@@ -2432,6 +2467,8 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:path, fn -> [] end)
       |> assign_new(:component_id, fn -> assigns.field.id end)
       |> assign_new(:parent_form, fn -> nil end)
+      |> assign_new(:parent_form_id, fn -> nil end)
+      |> assign_new(:subform_id, fn -> nil end)
       |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
       |> assign_new(:component_target, fn ->
@@ -2466,6 +2503,8 @@ defmodule BrandoAdmin.Components.Form do
           module={@component_target}
           id={@component_id}
           parent_form={@parent_form}
+          parent_form_id={@parent_form_id}
+          subform_id={@subform_id}
           field={@field}
           label={@label}
           path={@path}

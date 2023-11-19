@@ -169,24 +169,26 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def render(assigns) do
     ~H"""
     <div>
-      <!-- in_block: <%= @in_block %> -->
       <Form.field_base
         field={@field}
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
-
-        <%= if @in_block || @field.form.source.data.__struct__.__naming__().singular == "module" do %>
-          <Input.input type={:hidden} field={@field} uid={@uid} phx-debounce={100} id_prefix="selected_option" value={@selected_option} />
-        <% else %>
-          <Input.input type={:hidden} field={@field} uid={@uid} phx-debounce={100} id_prefix="selected_option" />
-        <% end %>
+        compact={@compact}
+      >
+        <Input.input
+          type={:hidden}
+          field={@field}
+          uid={@uid}
+          phx-debounce={100}
+          id_prefix="selected_option"
+          value={@selected_option}
+        />
         <div class="multiselect">
           <div>
             <span class="select-label">
               <%= if @inner_block do %>
-                <%= render_slot @inner_block %>
+                <%= render_slot(@inner_block) %>
               <% else %>
                 <%= if @selected_option do %>
                   <%= @select_label |> raw %>
@@ -199,25 +201,28 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           <button
             type="button"
             class="button-edit"
-            phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}>
+            phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}
+          >
             <%= if @open do %>
-              <%= gettext "Close" %>
+              <%= gettext("Close") %>
             <% else %>
-              <%= gettext "Select" %>
+              <%= gettext("Select") %>
             <% end %>
           </button>
           <Content.modal
             id={@modal_id}
-            title={gettext "Select option"}
+            title={gettext("Select option")}
             narrow={@narrow}
-            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+          >
             <%= if @open do %>
               <div class="select-modal">
                 <%= if @show_filter && !Enum.empty?(@input_options) do %>
                   <div
                     id={"#{@field.id}-select-modal-filter"}
                     class="select-filter"
-                    phx-hook="Brando.SelectFilter">
+                    phx-hook="Brando.SelectFilter"
+                  >
                     <div class="field-wrapper">
                       <div class="label-wrapper">
                         <label for="select-modal-search" class="control-label">
@@ -225,14 +230,19 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                         </label>
                       </div>
                       <div class="field-base">
-                        <input class="text" name="select-modal-search" type="text" value={@filter_string}>
+                        <input
+                          class="text"
+                          name="select-modal-search"
+                          type="text"
+                          value={@filter_string}
+                        />
                       </div>
                     </div>
                   </div>
                 <% end %>
 
                 <div class="options">
-                  <h2 class="titlecase"><%= gettext "Available options" %></h2>
+                  <h2 class="titlecase"><%= gettext("Available options") %></h2>
                   <%= if Enum.empty?(@input_options) do %>
                     <%= gettext("No options found") %>
                   <% end %>
@@ -245,7 +255,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       ]}
                       data-label={extract_label(opt)}
                       value={extract_value(opt)}
-                      phx-click={JS.push("select_option", target: @myself) |> JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                      phx-click={
+                        JS.push("select_option", target: @myself)
+                        |> JS.push("toggle_modal", target: @myself)
+                        |> hide_modal("##{@modal_id}")
+                      }
+                    >
                       <%!-- TODO: get rid of is_selected? --%>
                       <.get_label opt={opt} />
                     </button>
@@ -254,32 +269,36 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
                 <%= if @select_form do %>
                   <.form
+                    :let={entry_form}
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
-                    :let={entry_form}>
+                  >
                     <%= gettext("Create entry") %>
-                    <code style="font-family: monospace; font-size: 11px"><pre>
+                    <code style="font-family: monospace; font-size: 11px">
+                      <pre>
                     <%= inspect @select_changeset, pretty: true %>
-                    </pre></code>
-                    <br>
+                    </pre>
+                    </code>
+                    <br />
                     <%= for tab <- @select_form.tabs do %>
-                      <div
-                        class={"form-tab active"}
-                        data-tab-name={tab.name}>
+                      <div class="form-tab active" data-tab-name={tab.name}>
                         <div class="row">
                           <%= for fieldset <- tab.fields do %>
                             <Fieldset.render
                               translations={@form_translations}
                               form={entry_form}
                               parent_uploads={[]}
-                              fieldset={fieldset} />
+                              fieldset={fieldset}
+                            />
                           <% end %>
                         </div>
                       </div>
                     <% end %>
                     <button
                       phx-click={JS.push("save_new_entry", target: @myself)}
-                      type="button" class="primary">
+                      type="button"
+                      class="primary"
+                    >
                       <%= gettext("Save") %>
                     </button>
                   </.form>
@@ -291,7 +310,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <button
                   type="button"
                   class="primary"
-                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}>
+                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+                >
                   OK
                 </button>
                 <%= if @resetable do %>
@@ -300,7 +320,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       type="button"
                       class="secondary"
                       value={nil}
-                      phx-click={JS.push("select_option", target: @myself)}>
+                      phx-click={JS.push("select_option", target: @myself)}
+                    >
                       <%= gettext("Reset value") %>
                     </button>
                   </div>
@@ -358,7 +379,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp get_label(%{opt: nil} = assigns) do
     ~H"""
-    <%= gettext "Missing option" %>
+    <%= gettext("Missing option") %>
     """
   end
 
@@ -375,10 +396,15 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     ~H"""
     <.status_circle status={@identifier.status} /> <%= @identifier.title %>
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@entry_id}
+        phx-click={JS.push("select_option", target: @target)}
+      >
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333"/>
-          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333"/>
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
         </svg>
       </button>
     <% end %>
@@ -456,9 +482,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
+
     value = if value == "", do: nil, else: value
     form = socket.assigns.field.form
-    field = socket.assigns.field
     changeset = form.source
 
     module = changeset.data.__struct__
@@ -486,28 +512,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       )
     end
 
-    updated_changeset = Ecto.Changeset.force_change(changeset, field.field, value)
-
-    if socket.assigns.in_block || form_id == "module_form" do
-      # module_form isn't a Form component, so handle like a block
-      {:noreply,
-       socket
-       |> assign(:selected_option, value)
-       |> assign_label()
-       |> push_event("b:validate", %{})}
-    else
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        action: :update_changeset,
-        force_validation: true,
-        changeset: updated_changeset
-      )
-
-      {:noreply,
-       socket
-       |> assign(:selected_option, value)
-       |> assign_label()}
-    end
+    {:noreply,
+     socket
+     |> assign(:selected_option, value)
+     |> assign_label()
+     |> push_event("b:validate", %{})}
   end
 
   def handle_event("reset", _, socket) do

@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:instructions, fn -> nil end)
+      |> assign_new(:subform_id, fn -> nil end)
 
     ~H"""
     <Form.input
@@ -28,10 +29,13 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
       instructions={@instructions}
       placeholder={@placeholder}
       parent_uploads={@parent_uploads}
+      parent_form_id={@parent_form_id}
+      subform_id={@subform_id}
       path={@path}
       opts={@input.opts}
       type={@input.type}
-      current_user={@current_user} />
+      current_user={@current_user}
+    />
     """
   end
 end

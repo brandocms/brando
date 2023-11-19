@@ -221,6 +221,11 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
+  defp handle_info({:alert, message}, %{assigns: %{current_user: current_user}} = socket) do
+    BrandoAdmin.Alert.send_to(current_user, message)
+    {:halt, socket}
+  end
+
   defp handle_info({:toast, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.Toast.send_to(current_user, message)
     {:halt, socket}

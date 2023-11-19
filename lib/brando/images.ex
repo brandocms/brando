@@ -141,11 +141,7 @@ defmodule Brando.Images do
   end
 
   def list_generated_sizes(image) do
-    {:ok, %{formats: formats, sizes: sizes}} = get_config_for(image)
-
-    require Logger
-    Logger.error(inspect(formats, pretty: true))
-    Logger.error(inspect(sizes, pretty: true))
+    {:ok, %{formats: _formats, sizes: _sizes}} = get_config_for(image)
   end
 
   def duplicate_image(image_id, user) do
