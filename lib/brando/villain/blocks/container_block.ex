@@ -19,6 +19,7 @@ defmodule Brando.Villain.Blocks.ContainerBlock do
     attributes do
       attribute :target_id, :string
       attribute :palette_id, :id
+      attribute :description, :string
 
       attribute :blocks, {:array, Brando.PolymorphicEmbed},
         types: Blocks.list_blocks(),
