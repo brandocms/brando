@@ -6,7 +6,6 @@ defmodule Brando.System do
   require Logger
   alias Brando.Exception.ConfigError
   alias Brando.Cache
-  alias Brando.CDN
   alias Brando.System.Log
   alias Brando.Villain
 
@@ -30,7 +29,6 @@ defmodule Brando.System do
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:seo, :exists}} = check_seo_exists()
-    {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
@@ -171,14 +169,6 @@ defmodule Brando.System do
         end
 
         {:ok, {:seo, :exists}}
-    end
-  end
-
-  defp check_cdn_bucket_exists do
-    if CDN.enabled?(Brando.Images) do
-      CDN.ensure_bucket_exists(Brando.Images)
-    else
-      {:ok, {:bucket, :exists}}
     end
   end
 
