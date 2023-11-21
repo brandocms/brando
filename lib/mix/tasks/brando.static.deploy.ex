@@ -4,12 +4,14 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
 
   @shortdoc "Upload static files to CDN"
 
-  def run(_args) do
+  def run(args) do
+    {parsed_opts, _, _} = OptionParser.parse(args, switches: [purge: :boolean])
+    Mix.Task.run("app.config")
+
     unless Brando.CDN.enabled?(Brando.Static) do
       raise "CDN not enabled in config."
     end
 
-    Mix.Task.run("app.config")
     :erlang.system_flag(:backtrace_depth, 20)
 
     Application.ensure_all_started(:ex_aws)
@@ -18,7 +20,15 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
 
     Mix.shell().info("=> Preparing bucket")
 
-    s3_config = Brando.CDN.config(Brando.Static, :s3)
+    s3_config =
+      Brando.Static
+      |> Brando.CDN.config(:s3)
+      |> Map.from_struct()
+      |> Map.to_list()
+
+    require Logger
+    Logger.error(inspect(s3_config, pretty: true))
+
     bucket = Brando.CDN.config(Brando.Static, :bucket)
 
     bucket
@@ -35,6 +45,19 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
         bucket
         |> ExAws.S3.put_bucket(s3_config.region)
         |> ExAws.request(s3_config)
+    end
+
+    require Logger
+
+    if parsed_opts[:purge] == true do
+      stream =
+        ExAws.S3.list_objects(bucket, prefix: "static/")
+        |> ExAws.stream!(s3_config)
+        |> Stream.map(& &1.key)
+
+      bucket
+      |> ExAws.S3.delete_all_objects(stream)
+      |> ExAws.request(s3_config)
     end
 
     static_dir = "priv/static"

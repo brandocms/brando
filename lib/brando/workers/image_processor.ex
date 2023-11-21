@@ -35,8 +35,12 @@ defmodule Brando.Worker.ImageProcessor do
       }
 
       case Images.update_image(image, image_params, user) do
-        {:ok, image} -> broadcast_status(image, field_full_path, :updated)
-        err -> err
+        {:ok, image} ->
+          Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
+          broadcast_status(image, field_full_path, :updated)
+
+        err ->
+          err
       end
     else
       err ->

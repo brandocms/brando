@@ -539,6 +539,7 @@
   margin-left: 5px;
   width: fit-content;
   padding: 0 12px;
+  height: 48px;
 
   .circle-dropdown {
     margin-left: 8px;

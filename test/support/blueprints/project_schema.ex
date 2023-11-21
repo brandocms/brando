@@ -39,6 +39,30 @@ defmodule Brando.BlueprintTest.Project do
       ]
     }
   ]
+  @image_cdn_cfg [
+    cdn: %{
+      enabled: true,
+      s3: :default,
+      media_url: "https://mycustomcdn.com"
+    },
+    allowed_mimetypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif"
+    ],
+    default_size: "medium",
+    upload_path: Path.join("images", "avatars"),
+    random_filename: true,
+    size_limit: 10_240_000,
+    sizes: %{
+      "thumb" => %{"size" => "150x150", "quality" => 65, "crop" => true}
+    },
+    srcset: %{
+      default: [
+        {"xlarge", "900w"}
+      ]
+    }
+  ]
 
   @file_cfg %{
     allowed_mimetypes: ["application/pdf"],
@@ -68,6 +92,7 @@ defmodule Brando.BlueprintTest.Project do
 
   assets do
     asset :cover, :image, cfg: @image_cfg
+    asset :cover_cdn, :image, cfg: @image_cdn_cfg
     asset :pdf, :file, cfg: @file_cfg
   end
 

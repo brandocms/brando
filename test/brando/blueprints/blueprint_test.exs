@@ -115,6 +115,32 @@ defmodule Brando.Blueprint.BlueprintTest do
                type: :image
              },
              %Brando.Blueprint.Asset{
+               name: :cover_cdn,
+               type: :image,
+               opts: %{
+                 module: Brando.Images.Image,
+                 cfg: %Brando.Type.ImageConfig{
+                   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                   default_size: "medium",
+                   random_filename: true,
+                   size_limit: 10_240_000,
+                   sizes: %{
+                     "large" => %{"quality" => 75, "size" => "1700"},
+                     "medium" => %{"quality" => 75, "size" => "1100"},
+                     "micro" => %{"crop" => false, "quality" => 20, "size" => "25"},
+                     "small" => %{"quality" => 75, "size" => "700"},
+                     "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
+                     "xlarge" => %{"quality" => 75, "size" => "2100"}
+                   },
+                   srcset: %{default: [{"xlarge", "900w"}]},
+                   cdn: %{media_url: "https://mycustomcdn.com", s3: :default, enabled: true},
+                   formats: [:original],
+                   overwrite: false,
+                   upload_path: "images/avatars"
+                 }
+               }
+             },
+             %Brando.Blueprint.Asset{
                name: :pdf,
                opts: %{
                  cfg: %Brando.Type.FileConfig{
@@ -197,6 +223,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              :inserted_at,
              :updated_at,
              :cover_id,
+             :cover_cdn_id,
              :pdf_id,
              :properties,
              :creator_id

@@ -248,6 +248,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :bio_data, :jsonb
       add :bio_html, :text
       add :cover_id, references(:images)
+      add :cover_cdn_id, references(:images)
       add :pdf_id, references(:files)
       add :properties, :map
       add :creator_id, references(:users, on_delete: :nilify_all)

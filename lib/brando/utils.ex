@@ -542,10 +542,7 @@ defmodule Brando.Utils do
   def media_url, do: Brando.config(:media_url)
   @spec media_url(binary | nil) :: binary | nil
   def media_url(nil), do: Brando.config(:media_url)
-
-  def media_url(%Ecto.Association.NotLoaded{}) do
-    ""
-  end
+  def media_url(%Ecto.Association.NotLoaded{}), do: ""
 
   def media_url(%Brando.Files.File{} = file) do
     {:ok, config} = Brando.Files.get_config_for(file.config_target)
@@ -727,6 +724,10 @@ defmodule Brando.Utils do
       "" <> add_cache_string(opts)
   end
 
+  def img_url(image_field, "largest", opts) do
+    img_url(image_field, :largest, opts)
+  end
+
   def img_url(image_field, :largest, opts) do
     {:ok, cfg} = Brando.Images.get_config_for(image_field)
 
@@ -737,6 +738,10 @@ defmodule Brando.Utils do
       |> List.first()
 
     img_url(image_field, largest_key, opts)
+  end
+
+  def img_url(image_field, "smallest", opts) do
+    img_url(image_field, :smallest, opts)
   end
 
   def img_url(image_field, :smallest, opts) do
@@ -758,17 +763,7 @@ defmodule Brando.Utils do
 
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-
-    prefix =
-      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
-        if prefix do
-          Path.join([Brando.CDN.get_prefix(Brando.Images), prefix])
-        else
-          Brando.CDN.get_prefix(Brando.Images)
-        end
-      else
-        prefix
-      end
+    prefix = build_prefix(image_field, prefix)
 
     (prefix && Path.join([prefix, image_field.path])) ||
       image_field.path <> add_cache_string(opts)
@@ -779,22 +774,38 @@ defmodule Brando.Utils do
     size_dir = extract_size_dir(image_field, size)
 
     prefix = Keyword.get(opts, :prefix, nil)
-
-    prefix =
-      if image_field.cdn && Brando.CDN.enabled?(Brando.Images) do
-        cdn_prefix = Brando.CDN.get_prefix(Brando.Images)
-
-        if prefix do
-          Path.join([cdn_prefix, prefix])
-        else
-          cdn_prefix
-        end
-      else
-        prefix
-      end
+    prefix = build_prefix(image_field, prefix)
 
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
     url <> add_cache_string(opts)
+  end
+
+  defp get_cdn_config(image_field) do
+    case Brando.Images.get_config_for(image_field) do
+      {:ok, %{cdn: %{enabled: true}} = cdn_config} -> cdn_config
+      _ -> nil
+    end
+  end
+
+  defp build_prefix(image_field, prefix) do
+    if image_field.cdn do
+      # check if we have a cdn config for the field
+      cdn_config = get_cdn_config(image_field)
+
+      if cdn_config do
+        cdn_prefix = Brando.CDN.get_prefix(cdn_config)
+        (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
+      else
+        if Brando.CDN.enabled?(Brando.Images) do
+          cdn_prefix = Brando.CDN.get_prefix(Brando.Images)
+          (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
+        else
+          prefix
+        end
+      end
+    else
+      prefix
+    end
   end
 
   def file_url(%{filename: filename, config_target: config_target})

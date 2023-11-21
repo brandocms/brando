@@ -10,10 +10,18 @@ defmodule BrandoAdmin.UserSessionController do
     |> render(:new, error_message: nil)
   end
 
-  def create(conn, %{"user" => %{"email" => email, "password" => _password} = user_params}) do
+  def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
     case Users.get_user(%{matches: %{email: email, active: true}}) do
       {:ok, user} ->
-        UserAuth.log_in_user(conn, user, user_params)
+        if Bcrypt.verify_pass(password, user.password) do
+          UserAuth.log_in_user(conn, user, user_params)
+        else
+          Bcrypt.no_user_verify()
+
+          conn
+          |> put_root_layout(:auth)
+          |> render(:new, error_message: "Invalid email or password")
+        end
 
       _ ->
         conn

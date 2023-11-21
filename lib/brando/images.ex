@@ -116,7 +116,8 @@ defmodule Brando.Images do
           |> Map.get(:cfg)
 
         ["default"] ->
-          struct(Brando.Type.ImageConfig, Brando.config(Brando.Images)[:default_config])
+          default_config = Keyword.get(Brando.config(Brando.Images), :default_config, %{})
+          struct(Brando.Type.ImageConfig, default_config)
       end
 
     {:ok, config}

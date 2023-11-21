@@ -10,6 +10,7 @@ defmodule Brando.Type.ImageConfig do
 
   use Ecto.Type
 
+  @type cdn_config :: Brando.CDN.Config
   @type t :: %__MODULE__{
           allowed_mimetypes: [binary],
           default_size: binary,
@@ -17,6 +18,7 @@ defmodule Brando.Type.ImageConfig do
           size_limit: non_neg_integer,
           sizes: %{optional(binary) => map},
           srcset: %{optional(binary) => map} | nil,
+          cdn: cdn_config | nil,
           formats: [atom],
           overwrite: boolean,
           upload_path: binary
@@ -29,6 +31,7 @@ defmodule Brando.Type.ImageConfig do
             size_limit: 10_240_000,
             sizes: %{},
             srcset: nil,
+            cdn: nil,
             formats: [:original],
             overwrite: false,
             upload_path: Path.join("images", "default")

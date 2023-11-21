@@ -58,7 +58,7 @@ defmodule Brando.Images.Image do
           <img
             width="25"
             height="25"
-            src="{{ entry|src:"original" }}" />
+            src="{{ entry|src:"smallest" }}" />
         </div>
         """,
         columns: 2

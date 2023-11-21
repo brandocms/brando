@@ -63,7 +63,7 @@ defmodule Brando.HTML.Images do
     ~H"""
     <div>
       <code>
-        Trying to call `picture` tag on an unloaded association<br><br>
+        Trying to call `picture` tag on an unloaded association<br /><br />
         <%= inspect(@src, structs: false, pretty: true) %>
       </code>
     </div>
@@ -185,7 +185,13 @@ defmodule Brando.HTML.Images do
         """
       else
         ~H"""
-        <%= for format <- Enum.reverse(@src.formats) do %><%= if format == @sizes_format do %><source {@attrs.source} /><% else %><source {replace_attrs(@attrs.source, format)} /><% end %><% end %>
+        <%= for format <- Enum.reverse(@src.formats) do %>
+          <%= if format == @sizes_format do %>
+            <source {@attrs.source} />
+          <% else %>
+            <source {replace_attrs(@attrs.source, format)} />
+          <% end %>
+        <% end %>
         """
       end
     end
@@ -394,7 +400,6 @@ defmodule Brando.HTML.Images do
 
   defp add_src(%{type: :svg, lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
-
     src = Utils.img_url(image_struct, :original, attrs.opts)
 
     fallback =

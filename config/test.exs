@@ -26,7 +26,7 @@ config :brando, Brando.Files, cdn: [enabled: false]
 config :brando, scope_default_language_routes: true
 
 config :brando, Brando.Images,
-  cdn: [enabled: false],
+  cdn: %{enabled: false},
   processor_module: Brando.Images.Processor.Dummy,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

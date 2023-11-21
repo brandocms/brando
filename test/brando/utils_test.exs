@@ -200,15 +200,48 @@ defmodule Brando.UtilsTest do
 
     org_cfg = Brando.config(Brando.Images)
 
-    Application.put_env(:brando, Brando.Images,
-      cdn: [
-        enabled: true,
-        media_url: "https://cdn.com"
-      ]
-    )
+    cdn_cfg = %Brando.CDN.Config{
+      enabled: true,
+      media_url: "https://cdn.com"
+    }
+
+    new_cfg = Keyword.put(org_cfg, :cdn, cdn_cfg)
+    Application.put_env(:brando, Brando.Images, new_cfg)
 
     assert img_url(%{img | cdn: true}, :thumb, prefix: "prefix") ==
              "https://cdn.com/prefix/images/thumb/file.jpg"
+
+    img_without_cdn = %{
+      path: "images/file.jpg",
+      cdn: true,
+      config_target: "image:Brando.BlueprintTest.Project:cover",
+      sizes: %{"thumb" => "images/thumb/file.jpg"}
+    }
+
+    img_with_cdn = %{
+      path: "images/file.jpg",
+      cdn: true,
+      config_target: "image:Brando.BlueprintTest.Project:cover_cdn",
+      sizes: %{"thumb" => "images/thumb/file.jpg"}
+    }
+
+    assert img_url(img_without_cdn, :thumb, prefix: "prefix") ==
+             "https://cdn.com/prefix/images/thumb/file.jpg"
+
+    assert img_url(img_without_cdn, :original, prefix: "prefix") ==
+             "https://cdn.com/prefix/images/file.jpg"
+
+    assert img_url(img_with_cdn, :original, prefix: "prefix") ==
+             "https://mycustomcdn.com/prefix/images/file.jpg"
+
+    assert img_url(img_with_cdn, :thumb, prefix: "prefix") ==
+             "https://mycustomcdn.com/prefix/images/thumb/file.jpg"
+
+    assert img_url(img_with_cdn, :original) ==
+             "https://mycustomcdn.com/images/file.jpg"
+
+    assert img_url(img_with_cdn, :thumb) ==
+             "https://mycustomcdn.com/images/thumb/file.jpg"
 
     Application.put_env(:brando, Brando.Images, org_cfg)
 

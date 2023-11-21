@@ -23,7 +23,7 @@ defmodule Brando.Worker.FileUploader do
     with {:ok, file} <- Files.get_file(file_id),
          {:ok, user} <- Users.get_user(user_id),
          {:ok, config} <- Files.get_config_for(config_target),
-         {:ok, _s3_key} <- CDN.upload_file(file, config) do
+         {:ok, _s3_key} <- CDN.upload_file(file, config, user_id) do
       file_params = %{cdn: true}
 
       case Files.update_file(file, file_params, user) do
