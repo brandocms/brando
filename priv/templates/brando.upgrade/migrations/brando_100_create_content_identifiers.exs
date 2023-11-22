@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
   use Ecto.Migration
-  alias Brando.Content.Identifier
   import Ecto.Query
 
   def change do
@@ -21,6 +20,8 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
     Application.load(:cachex)
     Application.ensure_all_started(:cachex)
     Cachex.start_link(name: :cache)
+    Application.load(:gettext)
+    Application.ensure_all_started(:gettext)
     Brando.Cache.Identity.set()
     Brando.Cache.SEO.set()
     Brando.Cache.Globals.set()
@@ -50,7 +51,6 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
           end
 
         assets = Enum.map(blueprint.__assets__, & &1.name)
-        all_fields = fields ++ assets
 
         base_query =
           from(t in blueprint.__schema__(:source))
@@ -87,7 +87,7 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
 
         for entry <- entries do
           identifier = blueprint.__identifier__(entry)
-          user = Brando.repo().insert!(identifier)
+          Brando.repo().insert!(identifier)
         end
       end
     end
