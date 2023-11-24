@@ -225,6 +225,13 @@ defmodule Brando.UtilsTest do
       sizes: %{"thumb" => "images/thumb/file.jpg"}
     }
 
+    img_with_cdn_cfg_but_cdn_false = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: "image:Brando.BlueprintTest.Project:cover_cdn",
+      sizes: %{"thumb" => "images/thumb/file.jpg"}
+    }
+
     assert img_url(img_without_cdn, :thumb, prefix: "prefix") ==
              "https://cdn.com/prefix/images/thumb/file.jpg"
 
@@ -242,6 +249,12 @@ defmodule Brando.UtilsTest do
 
     assert img_url(img_with_cdn, :thumb) ==
              "https://mycustomcdn.com/images/thumb/file.jpg"
+
+    assert img_url(img_with_cdn_cfg_but_cdn_false, :thumb, prefix: media_url()) ==
+             "/media/images/thumb/file.jpg"
+
+    assert img_url(img_with_cdn_cfg_but_cdn_false, :thumb) ==
+             "/images/thumb/file.jpg"
 
     Application.put_env(:brando, Brando.Images, org_cfg)
 
