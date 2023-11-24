@@ -178,7 +178,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         label={@label}
         instructions={@instructions}
         class={@class}
-        relation>
+        relation
+      >
         <div>
           <div class={["input-image", @small && "small", @square && "square"]}>
             <%= if @image && @image.path do %>
@@ -188,21 +189,20 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                 relation_field={@relation_field}
                 click={@editable && open_image(@myself)}
                 editable={@editable}
-                file_name={@file_name} />
+                file_name={@file_name}
+              />
             <% else %>
               <.empty_preview
                 field={@field}
                 relation_field={@relation_field}
                 editable={@editable}
-                click={@editable && open_image(@myself)} />
+                click={@editable && open_image(@myself)}
+              />
             <% end %>
           </div>
         </div>
       </Form.field_base>
-      <div
-        :if={!@editable}
-        class={["input-image", @small && "small", @square && "square"]}
-      >
+      <div :if={!@editable} class={["input-image", @small && "small", @square && "square"]}>
         <%= if @image && @image.path do %>
           <.image_preview
             image={@image}
@@ -210,13 +210,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             relation_field={@relation_field}
             click={@editable && open_image(@myself)}
             editable={@editable}
-            file_name={@file_name} />
+            file_name={@file_name}
+          />
         <% else %>
           <.empty_preview
             field={@field}
             relation_field={@relation_field}
             editable={@editable}
-            click={@editable && open_image(@myself)} />
+            click={@editable && open_image(@myself)}
+          />
         <% end %>
       </div>
     </div>
@@ -301,23 +303,23 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     ~H"""
     <div class="image-wrapper-compact">
-      <Input.input
-        :if={@editable}
-        type={:hidden}
-        field={@relation_field}
-        value={""}
-      />
+      <Input.input :if={@editable} type={:hidden} field={@relation_field} value="" />
       <div class="img-placeholder">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+        </svg>
       </div>
 
       <div :if={@editable} class="image-info">
-        <%= gettext "No image associated with field" %>
+        <%= gettext("No image associated with field") %>
         <button
           class="btn-small"
           type="button"
           phx-click={@click}
-          phx-value-id={"edit-image-#{@field.id}"}><%= gettext "Add image" %></button>
+          phx-value-id={"edit-image-#{@field.id}"}
+        >
+          <%= gettext("Add image") %>
+        </button>
       </div>
     </div>
     """
@@ -337,29 +339,29 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     ~H"""
     <div class="image-wrapper-compact">
-      <Input.input
-        :if={@editable}
-        type={:hidden}
-        field={@relation_field}
-        value={@value || @image.id}
-      />
+      <Input.input :if={@editable} type={:hidden} field={@relation_field} value={@value || @image.id} />
       <%= if @image.status == :processed do %>
-        <Content.image image={@image} size={@editable && :thumb || :smallest} />
+        <Content.image image={@image} size={(@editable && :thumb) || :smallest} />
       <% else %>
         <div class="img-placeholder">
-          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z"/></svg>
+          <svg
+            class="spin"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+          >
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
+          </svg>
         </div>
       <% end %>
       <div :if={@editable} class="image-info">
         <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
         <div :if={@image.title} class="title">
-          <%= gettext "Caption" %>: <%= @image.title %>
+          <%= gettext("Caption") %>: <%= @image.title %>
         </div>
-        <button
-          class="btn-small"
-          type="button"
-          phx-click={@click}>
-          <%= gettext "Edit image" %>
+        <button class="btn-small" type="button" phx-click={@click}>
+          <%= gettext("Edit image") %>
         </button>
       </div>
     </div>
