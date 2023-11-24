@@ -45,7 +45,8 @@ defmodule Brando.Blueprint.Identifier do
             do: nil,
             else: Brando.Blueprint.Identifier.extract_cover(first_image_asset, entry)
 
-        updated_at = Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)
+        updated_at =
+          (Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)) || nil
 
         %Brando.Content.Identifier{
           entry_id: entry.id,
