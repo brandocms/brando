@@ -1,19 +1,22 @@
 defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
   use Ecto.Migration
+  alias Brando.Content.Identifier
   import Ecto.Query
+
+  # Logger.configure(level: :error)
 
   def change do
     create table(:content_identifiers) do
-      add :entry_id, :id
-      add :schema, :string
-      add :title, :string
-      add :status, :integer
-      add :language, :string
-      add :cover, :string
-      add :updated_at, :utc_datetime
+      add(:entry_id, :id)
+      add(:schema, :string)
+      add(:title, :string)
+      add(:status, :integer)
+      add(:language, :string)
+      add(:cover, :string)
+      add(:updated_at, :utc_datetime)
     end
 
-    create unique_index(:content_identifiers, [:entry_id, :schema])
+    create(unique_index(:content_identifiers, [:entry_id, :schema]))
 
     flush()
 
@@ -53,7 +56,9 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
         assets = Enum.map(blueprint.__assets__, & &1.name)
 
         base_query =
-          from(t in blueprint.__schema__(:source))
+          from(t in blueprint.__schema__(:source),
+            select: %{id: t.id}
+          )
 
         query =
           Enum.reduce(assets, base_query, fn asset, updated_query ->
@@ -73,15 +78,55 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
           |> Enum.map(fn asset -> {asset, dynamic([{^asset, tbl2}], tbl2)} end)
           |> Enum.into(%{})
 
+        {fields, preload_fields} =
+          Enum.reduce(fields, {[], []}, fn
+            [{j, field}], {f_acc, j_acc} ->
+              {[{j, [field]} | f_acc], [j | j_acc]}
+
+            f, {f_acc, j_acc} ->
+              {[f | f_acc], j_acc}
+          end)
+
+        query =
+          Enum.reduce(preload_fields, query, fn preload_field, updated_query ->
+            preload_field_id = :"#{to_string(preload_field)}_id"
+
+            d_on =
+              dynamic(
+                [t, {^preload_field, tbl2}],
+                field(t, ^preload_field_id) == field(tbl2, :id)
+              )
+
+            {:assoc, assoc} = blueprint.__changeset__ |> Map.get(preload_field)
+            mod = assoc.queryable
+
+            from(t in updated_query,
+              left_join: b in ^mod,
+              as: ^preload_field,
+              on: ^d_on
+            )
+          end)
+
+        preloads =
+          preload_fields
+          |> Enum.map(fn preload -> {preload, dynamic([{^preload, tbl2}], tbl2)} end)
+          |> Enum.into(%{})
+
         query =
           from(t in query,
-            select: %{
-              id: t.id,
-              updated_at: t.updated_at
-            },
             select_merge: map(t, ^fields),
-            select_merge: ^joins
+            select_merge: ^joins,
+            select_merge: ^preloads
           )
+
+        query =
+          if Map.has_key?(blueprint.__changeset__, :updated_at) do
+            from(t in query,
+              select_merge: %{updated_at: t.updated_at}
+            )
+          else
+            query
+          end
 
         entries = Brando.repo().all(query)
 
