@@ -138,9 +138,13 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def date(assigns) do
-    value = assigns.field.value || get_default(assigns.opts)
     assigns = prepare_input_component(assigns)
-    assigns = assign(assigns, value: value)
+
+    assigns =
+      assign(assigns,
+        value: assigns.field.value || get_default(assigns.opts),
+        locale: Gettext.get_locale()
+      )
 
     ~H"""
     <Form.field_base
@@ -150,7 +154,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       class={@class}
       compact={@compact}
     >
-      <div id={"#{@field.id}-datepicker"} class="datetime-wrapper" phx-hook="Brando.DatePicker">
+      <div
+        id={"#{@field.id}-datepicker"}
+        class="datetime-wrapper"
+        phx-hook="Brando.DatePicker"
+        data-locale={@locale}
+      >
         <div id={"#{@field.id}-datepicker-flatpickr"} phx-update="ignore">
           <button type="button" class="clear-datetime">
             <%= gettext("Clear") %>

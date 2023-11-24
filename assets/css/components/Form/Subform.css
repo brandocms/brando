@@ -191,6 +191,8 @@
         .brando-input {
           flex-grow: 1;
           margin-right: 5px;
+          flex-shrink: 1;
+          width: auto;
 
           &.full-width {
             flex-basis: 100%;

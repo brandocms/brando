@@ -593,6 +593,16 @@ p:last-of-type {
   }
 }
 
+.bb-link {
+  text-decoration: underline;
+  text-decoration-color: var(--brando-color-blue);
+  transition: text-decoration-color 250ms ease;
+  
+  &:hover {
+    text-decoration-color: transparent;
+  }
+}
+
 h1 {
   @fontsize h1;
   @space margin-bottom 0;
@@ -1045,6 +1055,14 @@ h3 {
 
 .text-small {
   @fontsize sm;
+}
+
+.text-tiny {
+  @fontsize 12px;
+}
+
+.text-uc {
+  text-transform: uppercase;
 }
 
 .inline {

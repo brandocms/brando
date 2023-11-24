@@ -4,6 +4,7 @@ import BlockHook from './hooks/Block'
 import CodeEditorHook from './hooks/CodeEditor'
 import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
+import DatePickerHook from './hooks/DatePicker'
 import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
 import FocalPointHook from './hooks/FocalPoint'
@@ -35,6 +36,7 @@ export default app => {
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
+    'Brando.DatePicker': DatePickerHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
     'Brando.DragDrop': DragDropHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
