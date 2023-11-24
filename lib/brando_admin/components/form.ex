@@ -376,7 +376,6 @@ defmodule BrandoAdmin.Components.Form do
      |> extract_tab_names()
      |> assign_changeset()
      |> assign_form()
-     |> maybe_initial_validate()
      |> maybe_assign_uploads()}
   end
 
@@ -447,14 +446,6 @@ defmodule BrandoAdmin.Components.Form do
       form_blueprint.query.(id)
     else
       %{matches: %{id: id}}
-    end
-  end
-
-  defp maybe_initial_validate(socket) do
-    if connected?(socket) && socket.assigns[:initial_update] do
-      push_event(socket, "b:validate", %{})
-    else
-      socket
     end
   end
 
