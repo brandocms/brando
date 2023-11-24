@@ -395,6 +395,18 @@ defmodule Brando.Villain.Filters do
   def nl2br(value, ctx), do: newline_to_br(value, ctx)
 
   @doc """
+  Partition list into `size`
+
+  ## Examples
+
+      iex> Brando.Villain.Filters.partition(["a", "b", "c", "d", "e"], 3, %{})
+      [["a", "b", "c"], ["d", "e"]]
+  """
+  def partition(arr, size, _ctx) when is_list(arr) do
+    Enum.chunk_every(arr, size)
+  end
+
+  @doc """
   Adds a number to another number.
 
   ## Examples
