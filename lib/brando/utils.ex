@@ -780,15 +780,15 @@ defmodule Brando.Utils do
     url <> add_cache_string(opts)
   end
 
-  defp get_cdn_config(%Brando.Images.Image{} = image_field) do
-    case Brando.Images.get_config_for(image_field) do
+  defp get_cdn_config(%Brando.Files.File{} = file_field) do
+    case Brando.Files.get_config_for(file_field) do
       {:ok, %{cdn: %{enabled: true}} = cdn_config} -> cdn_config
       _ -> nil
     end
   end
 
-  defp get_cdn_config(%Brando.Files.File{} = file_field) do
-    case Brando.Files.get_config_for(file_field) do
+  defp get_cdn_config(image_field) do
+    case Brando.Images.get_config_for(image_field) do
       {:ok, %{cdn: %{enabled: true}} = cdn_config} -> cdn_config
       _ -> nil
     end
