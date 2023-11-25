@@ -254,7 +254,7 @@ defmodule Brando.UtilsTest do
              "/media/images/thumb/file.jpg"
 
     assert img_url(img_with_cdn_cfg_but_cdn_false, :thumb) ==
-             "/images/thumb/file.jpg"
+             "images/thumb/file.jpg"
 
     Application.put_env(:brando, Brando.Images, org_cfg)
 
