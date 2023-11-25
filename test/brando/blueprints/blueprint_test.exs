@@ -1,6 +1,5 @@
 defmodule Brando.Blueprint.BlueprintTest do
   use ExUnit.Case
-  alias Brando.Blueprint.Asset
   alias Brando.Blueprint.Attribute
   alias Brando.Blueprint.Relation
 
@@ -79,25 +78,26 @@ defmodule Brando.Blueprint.BlueprintTest do
     assets = Brando.BlueprintTest.Project.__assets__()
 
     assert assets == [
-             %Asset{
+             %Brando.Blueprint.Asset{
                name: :cover,
                opts: %{
                  cfg: %Brando.Type.ImageConfig{
                    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                   cdn: nil,
                    default_size: "medium",
                    formats: [:original],
                    overwrite: false,
                    random_filename: true,
                    size_limit: 10_240_000,
                    sizes: %{
+                     "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+                     "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
                      "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
                      "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
                      "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
                      "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
                      "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"},
-                     "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
-                     "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"}
+                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
                    },
                    srcset: %{
                      cropped: [{"crop_small", "300w"}, {"crop_medium", "500w"}],
@@ -116,12 +116,13 @@ defmodule Brando.Blueprint.BlueprintTest do
              },
              %Brando.Blueprint.Asset{
                name: :cover_cdn,
-               type: :image,
                opts: %{
-                 module: Brando.Images.Image,
                  cfg: %Brando.Type.ImageConfig{
                    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                   cdn: %{enabled: true, media_url: "https://mycustomcdn.com", s3: :default},
                    default_size: "medium",
+                   formats: [:original],
+                   overwrite: false,
                    random_filename: true,
                    size_limit: 10_240_000,
                    sizes: %{
@@ -129,16 +130,16 @@ defmodule Brando.Blueprint.BlueprintTest do
                      "medium" => %{"quality" => 75, "size" => "1100"},
                      "micro" => %{"crop" => false, "quality" => 20, "size" => "25"},
                      "small" => %{"quality" => 75, "size" => "700"},
-                     "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                     "xlarge" => %{"quality" => 75, "size" => "2100"}
+                     "thumb" => %{"crop" => true, "quality" => 75, "size" => "400x400>"},
+                     "xlarge" => %{"quality" => 65, "size" => "2800"},
+                     "crop_xlarge" => %{"crop" => true, "quality" => 65, "size" => "1000x500"}
                    },
-                   srcset: %{default: [{"xlarge", "900w"}]},
-                   cdn: %{media_url: "https://mycustomcdn.com", s3: :default, enabled: true},
-                   formats: [:original],
-                   overwrite: false,
+                   srcset: %{cropped: [{"crop_xlarge", "900w"}], default: [{"xlarge", "900w"}]},
                    upload_path: "images/avatars"
-                 }
-               }
+                 },
+                 module: Brando.Images.Image
+               },
+               type: :image
              },
              %Brando.Blueprint.Asset{
                name: :pdf,
@@ -146,6 +147,7 @@ defmodule Brando.Blueprint.BlueprintTest do
                  cfg: %Brando.Type.FileConfig{
                    accept: :any,
                    allowed_mimetypes: ["application/pdf"],
+                   force_filename: nil,
                    overwrite: false,
                    random_filename: false,
                    size_limit: 10_240_000,

@@ -38,7 +38,10 @@ defmodule Brando.HTMLTest do
              ~s(<body id="top" class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
 
     comp = ~H"""
-    <.body_tag conn={%{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}} id="top">
+    <.body_tag
+      conn={%{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}}
+      id="top"
+    >
       hello!
     </.body_tag>
     """
@@ -114,7 +117,7 @@ defmodule Brando.HTMLTest do
     assigns = %{opts: opts}
 
     comp = ~H"""
-    <.video video={"https://src.vid"} opts={@opts} />
+    <.video video="https://src.vid" opts={@opts} />
     """
 
     assert rendered_to_string(comp) ==
@@ -135,7 +138,7 @@ defmodule Brando.HTMLTest do
     assigns = %{opts: opts}
 
     comp = ~H"""
-    <.video video={"https://src.vid"} opts={@opts} />
+    <.video video="https://src.vid" opts={@opts} />
     """
 
     assert rendered_to_string(comp) ==
@@ -588,15 +591,6 @@ defmodule Brando.HTMLTest do
            ])
 
     # ---
-    opts = [
-      srcset: {Brando.BlueprintTest.Project, :cover, :cropped},
-      prefix: media_url(),
-      key: :small,
-      picture_class: "avatar",
-      img_class: "img-fluid",
-      placeholder: :dominant_color,
-      lazyload: true
-    ]
 
     project_cover = %Brando.Images.Image{
       alt: nil,
@@ -624,8 +618,18 @@ defmodule Brando.HTMLTest do
       status: :processed,
       title: nil,
       updated_at: ~N[2022-02-28 16:41:24],
-      width: 2000
+      width: 1000
     }
+
+    opts = [
+      srcset: {Brando.BlueprintTest.Project, :cover, :cropped},
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      placeholder: :dominant_color,
+      lazyload: true
+    ]
 
     assigns = %{project_cover: project_cover, opts: opts}
 
@@ -652,11 +656,46 @@ defmodule Brando.HTMLTest do
            |> Floki.find("picture > img")
            |> assert_attr("data-ll-placeholder", ["data-ll-placeholder"])
            |> assert_attr("data-ll-srcset-image", ["data-ll-srcset-image"])
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["1000"])
            |> assert_attr("data-src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%272000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%271000%27%20height%3D%271000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
            ])
            |> assert_attr("src", [
-             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%272000%27%20height%3D%272000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%271000%27%20height%3D%271000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+           ])
+
+    # default cropped srcset
+    opts = [
+      srcset: {Brando.BlueprintTest.Project, :cover, :default},
+      prefix: media_url(),
+      key: :small,
+      picture_class: "avatar",
+      img_class: "img-fluid",
+      placeholder: :dominant_color,
+      lazyload: true
+    ]
+
+    assigns = %{project_cover: project_cover, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@project_cover} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["1000"])
+           |> assert_attr("data-src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%271000%27%20height%3D%271000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+           ])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%271000%27%20height%3D%271000%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
            ])
 
     # ---
@@ -747,6 +786,142 @@ defmodule Brando.HTMLTest do
     assert doc
            |> Floki.find("noscript > img")
            |> assert_attr("alt", ["hepp!"])
+
+    # width height srcsets
+
+    srcset = {Brando.BlueprintTest.Project, :cover_cdn}
+
+    project_cover_cdn = %Brando.Images.Image{
+      alt: nil,
+      cdn: false,
+      config_target: "image:Brando.BlueprintTest.Project:cover_cdn",
+      credits: nil,
+      deleted_at: nil,
+      dominant_color: "#080808",
+      focal: %Brando.Images.Focal{x: 50, y: 50},
+      formats: [:jpg],
+      height: 2000,
+      id: 30,
+      inserted_at: ~N[2022-02-28 16:41:22],
+      path: "projects/covers/1qn45539cgnh.png",
+      sizes: %{
+        "xlarge" => "projects/covers/xlarge/1qn45539cgnh.jpg",
+        "crop_xlarge" => "projects/covers/crop_xlarge/1qn45539cgnh.jpg"
+      },
+      status: :processed,
+      title: nil,
+      updated_at: ~N[2022-02-28 16:41:24],
+      width: 1000
+    }
+
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :xlarge,
+      lazyload: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    assigns = %{project_cover_cdn: project_cover_cdn, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@project_cover_cdn} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("img")
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["2000"])
+
+    # with cropped srcset
+    srcset = {Brando.BlueprintTest.Project, :cover_cdn, :cropped}
+
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :xlarge,
+      lazyload: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    assigns = %{project_cover_cdn: project_cover_cdn, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@project_cover_cdn} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("img")
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["500"])
+
+    srcset = "Brando.BlueprintTest.Project:cover_cdn.cropped"
+
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :xlarge,
+      lazyload: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    assigns = %{project_cover_cdn: project_cover_cdn, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@project_cover_cdn} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> IO.inspect(pretty: true)
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("img")
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["500"])
+
+    # with default cropped srcset!
+    srcset = {Brando.BlueprintTest.Project, :cover}
+
+    opts = [
+      srcset: srcset,
+      prefix: media_url(),
+      key: :xlarge,
+      lazyload: true,
+      picture_class: "avatar",
+      img_class: "img-fluid"
+    ]
+
+    assigns = %{project_cover: project_cover, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@project_cover} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("img")
+           |> assert_attr("width", ["1000"])
+           |> assert_attr("height", ["1000"])
   end
 
   test "svg_fallback" do

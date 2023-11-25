@@ -55,11 +55,15 @@ defmodule Brando.BlueprintTest.Project do
     random_filename: true,
     size_limit: 10_240_000,
     sizes: %{
-      "thumb" => %{"size" => "150x150", "quality" => 65, "crop" => true}
+      "xlarge" => %{"size" => "2800", "quality" => 65},
+      "crop_xlarge" => %{"size" => "1000x500", "quality" => 65, "crop" => true}
     },
     srcset: %{
       default: [
         {"xlarge", "900w"}
+      ],
+      cropped: [
+        {"crop_xlarge", "900w"}
       ]
     }
   ]
