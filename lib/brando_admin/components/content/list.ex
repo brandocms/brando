@@ -72,7 +72,11 @@ defmodule BrandoAdmin.Components.Content.List do
 
     csv_content = Brando.CSVParser.dump_to_iodata(rows)
 
-    date = Brando.config(:timezone) |> DateTime.now!() |> Calendar.strftime("%Y%m%d_%H%M%S")
+    date =
+      :timezone
+      |> Brando.config()
+      |> DateTime.now!()
+      |> Calendar.strftime("%Y%m%d_%H%M%S")
 
     exports_path =
       Path.join([
@@ -422,13 +426,10 @@ defmodule BrandoAdmin.Components.Content.List do
   defp active_filters(assigns) do
     ~H"""
     <div class="active-filters">
-      <%= gettext "Active filters" %> &rarr;
+      <%= gettext("Active filters") %> &rarr;
       <%= for {name, value} <- @active_filters do %>
-        <button
-          class="filter"
-          phx-click={@delete}
-          phx-value-filter={name}>
-          &times; <%= name %>: <%= inspect value %>
+        <button class="filter" phx-click={@delete} phx-value-filter={name}>
+          &times; <%= name %>: <%= inspect(value) %>
         </button>
       <% end %>
     </div>
@@ -461,7 +462,8 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="pagination-entries">
         &rarr; <%= @total_entries %> <%= gettext("entries") %>
         <%= if @total_entries > 0 do %>
-        | <%= gettext("showing") %> <%= @showing_start %>-<%= @showing_end == 0 && @total_entries || @showing_end %>
+          | <%= gettext("showing") %> <%= @showing_start %>-<%= (@showing_end == 0 && @total_entries) ||
+            @showing_end %>
         <% end %>
         — <%= gettext("Per page:") %>
         <button
@@ -471,7 +473,8 @@ defmodule BrandoAdmin.Components.Content.List do
             @page_size == 25 && "active"
           ]}
           phx-click={@change_limit}
-          phx-value-limit={25}>
+          phx-value-limit={25}
+        >
           25
         </button>
         /
@@ -482,7 +485,8 @@ defmodule BrandoAdmin.Components.Content.List do
             @page_size == 50 && "active"
           ]}
           phx-click={@change_limit}
-          phx-value-limit={50}>
+          phx-value-limit={50}
+        >
           50
         </button>
         /
@@ -493,17 +497,19 @@ defmodule BrandoAdmin.Components.Content.List do
             @page_size == 0 && "active"
           ]}
           phx-click={@change_limit}
-          phx-value-limit={0}>
+          phx-value-limit={0}
+        >
           <%= gettext("All") %>
         </button>
       </div>
       <div class="pagination-buttons">
         <button
-          :for={p <- 0..@total_pages - 1}
+          :for={p <- 0..(@total_pages - 1)}
           type="button"
           class={[p + 1 == @current_page && "active"]}
           phx-click={@change_page}
-          phx-value-page={p}>
+          phx-value-page={p}
+        >
           <%= p + 1 %>
         </button>
       </div>
@@ -540,18 +546,11 @@ defmodule BrandoAdmin.Components.Content.List do
                   active_status_class(@list_opts, status)
                 ]}
                 type="button"
-                phx-page-loading>
+                phx-page-loading
+              >
                 <%!-- TODO: remove active_status_class --%>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12">
-                  <circle
-                    class={status}
-                    r="6"
-                    cy="6"
-                    cx="6" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+                  <circle class={status} r="6" cy="6" cx="6" />
                 </svg>
                 <span class="label"><%= render_status_label(status) %></span>
               </button>
@@ -565,16 +564,15 @@ defmodule BrandoAdmin.Components.Content.List do
               "filter",
               filter[:filter] == @active_filter[:filter] && "visible"
             ]}>
-              <button
-                class="filter-key"
-                phx-click={@next_filter_key}>
+              <button class="filter-key" phx-click={@next_filter_key}>
                 <span><%= g(@schema, filter[:label]) %></span>
               </button>
               <.form
                 for={%{}}
                 as={:filter_form}
                 phx-change={@update_filter}
-                onkeydown="return event.key != 'Enter';">
+                onkeydown="return event.key != 'Enter';"
+              >
                 <input
                   type="text"
                   name="q"
@@ -583,24 +581,17 @@ defmodule BrandoAdmin.Components.Content.List do
                   autocomplete="off"
                   phx-debounce="400"
                 />
-                <input
-                  type="hidden"
-                  name="filter"
-                  value={@active_filter[:filter]}
-                />
+                <input type="hidden" name="filter" value={@active_filter[:filter]} />
               </.form>
             </div>
           <% end %>
         </div>
 
         <div :if={@exports != []} class="exports">
-          <%= gettext "Export" %>
+          <%= gettext("Export") %>
           <CircleDropdown.render id="listing-exports-dropdown">
             <li :for={export <- @exports}>
-              <button
-                type="button"
-                phx-value-name={export.name}
-                phx-click={@select_export}>
+              <button type="button" phx-value-name={export.name} phx-click={@select_export}>
                 <%= g(@schema, export.label) %> <span class="shortcut"><%= export.type %></span>
               </button>
             </li>
@@ -612,7 +603,8 @@ defmodule BrandoAdmin.Components.Content.List do
         <.active_filters
           active_filters={@list_opts[:filter]}
           filters={@filters}
-          delete={@delete_filter} />
+          delete={@delete_filter}
+        />
       <% end %>
     </div>
     """
@@ -630,7 +622,8 @@ defmodule BrandoAdmin.Components.Content.List do
       data-sortable-id={"content_listing|#{@listing_name}"}
       data-sortable-handle=".sequence-handle"
       data-sortable-offset={@pagination_meta.offset}
-      data-sortable-selector=".list-row">
+      data-sortable-selector=".list-row"
+    >
       <%= if Enum.empty?(@entries) do %>
         <%= render_slot(@empty) %>
       <% end %>
@@ -667,14 +660,16 @@ defmodule BrandoAdmin.Components.Content.List do
 
     ~H"""
     <div class={[
-        "selected-rows",
-        @selected_rows == [] && "hidden"]}>
+      "selected-rows",
+      @selected_rows == [] && "hidden"
+    ]}>
       <div class="clear-selection">
         <button
           phx-click="clear_selection"
           phx-target={@target}
           type="button"
-          class="btn-outline-primary inverted">
+          class="btn-outline-primary inverted"
+        >
           <%= gettext("Clear selection") %>
         </button>
       </div>
@@ -682,16 +677,21 @@ defmodule BrandoAdmin.Components.Content.List do
         <%= gettext("With") %>
         <div class="circle"><span><%= @selected_rows_count %></span></div>
         <%= gettext("selected, perform action") %>: →
-        <div
-          id="selected_rows_dropdown"
-          class="circle-dropdown wrapper">
+        <div id="selected_rows_dropdown" class="circle-dropdown wrapper">
           <button
             class="circle-dropdown-button"
             data-testid="circle-dropdown-button"
             phx-click={toggle_dropdown("#selected-actions-dropdown-content")}
             phx-click-away={hide_dropdown("#selected-actions-dropdown-content")}
-            type="button">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            type="button"
+          >
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 40 40"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
               <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white" class="inverted"></line>
               <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white" class="inverted"></line>
@@ -699,29 +699,30 @@ defmodule BrandoAdmin.Components.Content.List do
               <circle cx="13.5" cy="26.5" r="1.5" fill="white" class="inverted"></circle>
             </svg>
           </button>
-          <ul data-testid="circle-dropdown-content" class="dropdown-content hidden over" id="selected-actions-dropdown-content">
+          <ul
+            data-testid="circle-dropdown-content"
+            class="dropdown-content hidden over"
+            id="selected-actions-dropdown-content"
+          >
             <%= for lang <- @duplicate_langs do %>
               <li>
                 <button
                   phx-click="duplicate_selected_to_language"
                   phx-value-language={lang}
-                  phx-value-ids={@encoded_selected_rows}>
-                  <%= gettext "Duplicate selected to" %> [<%= String.upcase(lang) %>]
+                  phx-value-ids={@encoded_selected_rows}
+                >
+                  <%= gettext("Duplicate selected to") %> [<%= String.upcase(lang) %>]
                 </button>
               </li>
             <% end %>
             <li>
-              <button
-                phx-click="delete_selected"
-                phx-value-ids={@encoded_selected_rows}>
-                <%= gettext "Delete selected" %>
+              <button phx-click="delete_selected" phx-value-ids={@encoded_selected_rows}>
+                <%= gettext("Delete selected") %>
               </button>
             </li>
             <%= for %{event: event, label: label} <- @selection_actions do %>
               <li>
-                <button
-                  phx-click={event}
-                  phx-value-ids={@encoded_selected_rows}>
+                <button phx-click={event} phx-value-ids={@encoded_selected_rows}>
                   <%= g(@schema, label) %>
                 </button>
               </li>
