@@ -404,12 +404,12 @@ defmodule Brando.HTML.Images do
 
     fallback =
       case placeholder do
-        :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
-        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
-        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
-        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
-        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts)
-        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts)
+        :svg -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
+        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
+        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
@@ -439,12 +439,12 @@ defmodule Brando.HTML.Images do
 
     fallback =
       case placeholder do
-        :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
-        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts)
-        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
-        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts)
-        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts)
-        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts)
+        :svg -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
+        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
+        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
@@ -554,7 +554,7 @@ defmodule Brando.HTML.Images do
     put_in(attrs, [:figure, "data-moonwalk"], moonwalk)
   end
 
-  def svg_fallback(image_field, opacity \\ 0, attrs \\ []) do
+  def svg_fallback(image_field, opacity \\ 0, attrs \\ [], cropped_ratio \\ false) do
     width =
       case Keyword.fetch(attrs, :width) do
         :error ->
@@ -577,6 +577,13 @@ defmodule Brando.HTML.Images do
 
         {:ok, height} ->
           height
+      end
+
+    height =
+      if cropped_ratio do
+        round(width / cropped_ratio)
+      else
+        height
       end
 
     "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" <>
@@ -643,8 +650,11 @@ defmodule Brando.HTML.Images do
 
     {cropped_ratio, list} =
       case cfg.srcset do
-        %{default: list} -> {check_cropped(cfg, :default), list}
-        list when is_list(list) -> {false, list}
+        %{default: list} ->
+          {check_cropped(cfg, :default), list}
+
+        list when is_list(list) ->
+          {false, list}
       end
 
     srcset_values =
