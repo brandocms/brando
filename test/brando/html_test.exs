@@ -887,7 +887,6 @@ defmodule Brando.HTMLTest do
     doc =
       comp
       |> rendered_to_string()
-      |> IO.inspect(pretty: true)
       |> Floki.parse_document!()
 
     assert doc
