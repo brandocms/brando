@@ -763,6 +763,9 @@ defmodule Brando.VillainTest do
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "<div class=\"paragraph\">So identity.name says: 'Eddie Hazel Inc'.</div>"
+
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+    Brando.Sites.update_identity(identity, %{name: "Organization name"}, user)
   end
 
   test "ensure villains update on link changes", %{user: user} do
