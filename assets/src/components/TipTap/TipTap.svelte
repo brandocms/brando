@@ -312,7 +312,7 @@
         <input
           type="color"
           on:input={ev => editor.chain().focus().setColor(ev.target.value).run()}
-          :value={editor.getAttributes('textStyle').color}>
+          value={editor.getAttributes('textStyle').color}>
       </label>
     {/if}
     {#if extensions.includes('jumpAnchor')}
