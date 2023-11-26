@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
     >
       <div id={"#{@field.id}-code"} class="code-editor" phx-hook="Brando.CodeEditor">
-        <.input type={:textarea} field={@field} phx_debounce={750} />
+        <.input type={:textarea} field={@field} phx-debounce={750} />
         <div id={"#{@field.id}-code-editor"} phx-update="ignore">
           <div class="editor"></div>
         </div>
@@ -497,7 +497,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class phx_hook phx_debounce rows phx_update data_slug_for data_autosize data_slug_type autocorrect spellcheck)
+      ~w(class phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
