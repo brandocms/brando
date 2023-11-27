@@ -7,12 +7,9 @@
 </p>
 
 <p align="center">
-    <img src="https://github.com/brandocms/brando/workflows/CI/badge.svg">
+    [![CI](https://github.com/brandocms/brando/actions/workflows/ci.yml/badge.svg)](https://github.com/brandocms/brando/actions/workflows/ci.yml)
     <a href="https://coveralls.io/github/brandocms/brando?branch=master">
       <img src="https://coveralls.io/repos/github/brandocms/brando/badge.svg?branch=master">
-    </a>
-    <a href="http://inch-ci.org/github/brandocms/brando">
-      <img src="http://inch-ci.org/github/brandocms/brando.svg?branch=master">
     </a>
 </p>
 
