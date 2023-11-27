@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 on: [push, pull_request]
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
         include:
           - elixir: 1.14.1
             otp: 25.1.2
-            
+
           - elixir: 1.15.5
             otp: 26.0
 
