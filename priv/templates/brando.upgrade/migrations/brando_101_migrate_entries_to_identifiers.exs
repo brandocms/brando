@@ -10,7 +10,6 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
       # create a join table
       table_name = blueprint.__schema__(:source)
       join_source = "#{table_name}_#{field_name}_identifiers"
-      singular = blueprint.__naming__().singular
 
       create table(join_source) do
         add :parent_id, references(table_name, on_delete: :delete_all)

@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
   use Ecto.Migration
-  alias Brando.Content.Identifier
   import Ecto.Query
 
   # Logger.configure(level: :error)
