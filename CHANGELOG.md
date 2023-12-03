@@ -2,8 +2,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
-* BREAKING: If updating to Vite 5, you need to explicitly set the manifest path. So change
-  `manifest: true`, to `manifest: 'manifest.json'`
+* BREAKING: If updating frontend to Vite 5, you need to explicitly set the manifest path. 
+  So change `manifest: true`, to `manifest: 'manifest.json'`
 
 * BREAKING: Rewritten `:entries` (related entries). Now stores identifiers in a table and 
   references this table for related entries.
@@ -99,7 +99,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   ```elixir
   |> put_view(html: <%= application_module %>Web.ErrorHTML)
   ```
-* BREAKING: Add `delete_selected` as a default action for listing selections.
+* BREAKING: Add `delete_selected` as a built-in action for listing selections.
   This means you should remove your own `delete_selected` from your listing's
   `selection_actions`
 * BREAKING: `@identity` now refers to the current language identity, instead 

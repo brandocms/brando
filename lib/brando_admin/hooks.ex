@@ -36,9 +36,9 @@ defmodule BrandoAdmin.Hooks do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "url:#{uri.path}")
       Brando.presence().track_url(uri.path, user_id)
 
-      {:cont, assign_uri_presences(socket, uri)}
+      {:halt, assign_uri_presences(socket, uri)}
     else
-      {:cont, socket}
+      {:halt, socket}
     end
   end
 
