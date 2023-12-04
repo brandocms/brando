@@ -30,6 +30,12 @@ defmodule BrandoAdmin do
 
       on_mount {BrandoAdmin.Hooks, :urls}
 
+      def handle_params(_, _, socket) do
+        {:noreply, socket}
+      end
+
+      defoverridable handle_params: 3
+
       unquote(html_helpers())
     end
   end
