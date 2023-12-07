@@ -308,7 +308,7 @@ defmodule BrandoAdmin.Components.Form do
                 var,
                 [Access.key(:options)],
                 (var.options || []) ++
-                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+                  [%Brando.Content.OldVar.Select.Option{label: "label", value: "option"}]
               )
             ]
 
@@ -494,6 +494,13 @@ defmodule BrandoAdmin.Components.Form do
           name
       end)
 
+    blocks_preload =
+      if schema.has_trait(Brando.Trait.Villain) do
+        [entry_blocks: [block: [:parent, :module, :vars, :children]]]
+      else
+        []
+      end
+
     alternates_preload =
       if schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() do
         case Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(schema) do
@@ -520,6 +527,7 @@ defmodule BrandoAdmin.Components.Form do
         asset_preloads ++
           gallery_preloads ++
           rel_preloads ++
+          blocks_preload ++
           alternates_preload ++
           identifiers_preloads ++
           default_preloads

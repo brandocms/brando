@@ -9,7 +9,7 @@ defmodule Brando.Villain.Blocks.TableBlock do
       gettext_module: Brando.Gettext
 
     alias Brando.Villain.Blocks
-    alias Brando.Content.Var
+    alias Brando.Content.OldVar
 
     trait Brando.Trait.CastPolymorphicEmbeds
 
@@ -21,7 +21,7 @@ defmodule Brando.Villain.Blocks.TableBlock do
       attribute :uid, :string
 
       attribute :cols, {:array, Brando.PolymorphicEmbed},
-        types: Var.types(),
+        types: OldVar.types(),
         type_field: :type,
         on_type_not_found: :raise,
         on_replace: :delete

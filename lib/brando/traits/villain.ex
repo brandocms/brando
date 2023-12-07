@@ -10,44 +10,50 @@ defmodule Brando.Trait.Villain do
   @type changeset :: Changeset.t()
   @type config :: list()
 
-  @impl true
-  def trait_attributes(attributes, _assets, _relations) do
-    attributes
-    |> Enum.filter(&(&1.type == :villain))
-    |> Enum.map(fn
-      %{name: :data} ->
-        Attributes.build_attr(:html, :text, [])
+  # @impl true
+  # def trait_attributes(attributes, _assets, _relations) do
+  #   attributes
+  #   |> Enum.filter(&(&1.type == :villain))
+  #   |> Enum.map(fn
+  #     %{name: :data} ->
+  #       Attributes.build_attr(:html, :text, [])
 
-      %{name: data_name} ->
-        data_name
-        |> to_string
-        |> String.replace("_data", "_html")
-        |> String.to_atom()
-        |> Attributes.build_attr(:text, [])
-    end)
-  end
+  #     %{name: data_name} ->
+  #       data_name
+  #       |> to_string
+  #       |> String.replace("_data", "_html")
+  #       |> String.to_atom()
+  #       |> Attributes.build_attr(:text, [])
+  #   end)
+  # end
 
-  @impl true
-  def validate(module, _config) do
-    if module.__villain_fields__ == [] do
-      raise ConfigError,
-        message: """
-        Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no attributes of type `:villain` found.
+  # @impl true
+  # def validate(module, _config) do
+  #   if module.__villain_fields__ == [] do
+  #     raise ConfigError,
+  #       message: """
+  #       Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no attributes of type `:villain` found.
 
-            attributes do
-              attribute :data, :villain
-            end
-        """
-    end
+  #           attributes do
+  #             attribute :data, :villain
+  #           end
+  #       """
+  #   end
 
-    true
-  end
+  #   true
+  # end
 
   @doc """
   Generate HTML
   """
   @impl true
   def changeset_mutator(module, _config, changeset, _user, opts) do
+    # |> cast_assoc(:book_authors,
+    #   with: &AuthorBook.changeset/3,
+    #   sort_param: :authors_order,
+    #   drop_param: :authors_delete
+    # )
+
     case Keyword.get(opts, :skip_villain) do
       true ->
         cast_poly(changeset, module.__villain_fields__())
@@ -69,5 +75,42 @@ defmodule Brando.Trait.Villain do
     Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
       Brando.PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
     end)
+  end
+
+  @impl true
+  def generate_code(parent_module, _config) do
+    quote generated: true do
+      parent_module = unquote(parent_module)
+      parent_table_name = @table_name
+
+      relations do
+        relation :blocks, :has_many, module: :blocks
+      end
+
+      defmodule Blocks do
+        use Ecto.Schema
+        import Ecto.Query
+
+        schema "#{parent_table_name}_blocks" do
+          Ecto.Schema.belongs_to(:entry, parent_module)
+          Ecto.Schema.belongs_to(:block, Brando.Content.Block)
+          Ecto.Schema.field(:sequence, :integer)
+        end
+
+        @parent_table_name parent_table_name
+        def changeset(entry_block, attrs, sequence) do
+          entry_block
+          |> cast(attrs, [:entry_id, :block_id])
+          |> change(sequence: sequence)
+          |> unique_constraint([:entry, :block],
+            name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
+          )
+        end
+      end
+    end
+  end
+
+  attributes do
+    attribute :html, :text
   end
 end

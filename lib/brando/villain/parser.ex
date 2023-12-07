@@ -940,7 +940,7 @@ defmodule Brando.Villain.Parser do
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var(
-             %Brando.Content.Var.Image{
+             %Brando.Content.OldVar.Image{
                key: key,
                label: _,
                type: _,

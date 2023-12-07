@@ -1,6 +1,6 @@
 defmodule Brando.Villain.Blocks.ModuleBlock do
   alias Brando.Content.Module
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
 
   defmodule Data do
     use Brando.Blueprint,
@@ -25,7 +25,7 @@ defmodule Brando.Villain.Blocks.ModuleBlock do
       attribute :datasource_selected_ids, {:array, :id}
 
       attribute :vars, {:array, Brando.PolymorphicEmbed},
-        types: Var.types(),
+        types: OldVar.types(),
         type_field: :type,
         on_type_not_found: :raise,
         on_replace: :delete

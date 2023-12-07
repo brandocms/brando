@@ -308,6 +308,24 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:has_many, opts)
           )
 
+        %{type: :has_many, name: :blocks, opts: %{module: :blocks}} ->
+          main_module = unquote(module)
+          block_module = Module.concat([main_module, Blocks])
+
+          [
+            Ecto.Schema.has_many(
+              :entry_blocks,
+              block_module,
+              preload_order: [asc: :sequence],
+              on_replace: :delete,
+              foreign_key: :entry_id
+            ),
+            Ecto.Schema.has_many(
+              :blocks,
+              through: [:entry_blocks, :block]
+            )
+          ]
+
         %{type: :has_many, name: :alternates, opts: %{module: :alternates}} ->
           main_module = unquote(module)
           alternate_module = Module.concat([main_module, Alternate])

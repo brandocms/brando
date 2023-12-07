@@ -1,4 +1,5 @@
-defmodule Brando.Content.Var.Select do
+# TODO: DELETE
+defmodule Brando.Content.OldVar.Select do
   defmodule Option do
     use Brando.Blueprint,
       application: "Brando",

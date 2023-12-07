@@ -1,4 +1,5 @@
-defmodule Brando.Content.Var.Datetime do
+# TODO: DELETE
+defmodule Brando.Content.OldVar.Datetime do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",

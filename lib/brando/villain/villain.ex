@@ -804,7 +804,7 @@ defmodule Brando.Villain do
 
   def preload_vars(blocks) do
     Enum.reduce(blocks, [], fn
-      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}} = var, acc ->
+      %Brando.Content.OldVar.Image{value: %Ecto.Association.NotLoaded{}} = var, acc ->
         [Brando.repo().preload(var, :value) | acc]
 
       %{type: "module", data: %{vars: vars, entries: entries}} = module, acc ->

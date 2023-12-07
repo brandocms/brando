@@ -35,7 +35,7 @@ defmodule Brando.Content.Module do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
   alias Phoenix.LiveView.JS
 
   identifier "{{ entry.name }}"
@@ -63,7 +63,7 @@ defmodule Brando.Content.Module do
     attribute :datasource_query, :string
 
     attribute :vars, {:array, Brando.PolymorphicEmbed},
-      types: Var.types(),
+      types: OldVar.types(),
       type_field: :type,
       on_type_not_found: :raise,
       on_replace: :delete

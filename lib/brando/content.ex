@@ -33,7 +33,7 @@ defmodule Brando.Content do
   alias Brando.Content.Module
   alias Brando.Content.Palette
   alias Brando.Content.Template
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
   alias Brando.Villain
 
   query(:list, Module, do: fn query -> from(q in query) end)
@@ -496,7 +496,7 @@ defmodule Brando.Content do
     end
   end
 
-  def get_var_by_type(var_type), do: Keyword.get(Var.types(), var_type)
+  def get_var_by_type(var_type), do: Keyword.get(OldVar.types(), var_type)
 
   def render_var(%{type: "string", value: value}), do: value
   def render_var(%{type: "text", value: value}), do: value

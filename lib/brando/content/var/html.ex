@@ -1,4 +1,5 @@
-defmodule Brando.Content.Var.Html do
+# TODO: DELETE
+defmodule Brando.Content.OldVar.Html do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",

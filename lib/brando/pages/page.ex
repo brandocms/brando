@@ -13,7 +13,7 @@ defmodule Brando.Pages.Page do
     plural: "pages",
     gettext_module: Brando.Gettext
 
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
   alias Brando.Pages
   alias Brando.Pages.Fragment
 
@@ -71,7 +71,7 @@ defmodule Brando.Pages.Page do
     attribute :css_classes, :string
 
     attribute :vars, {:array, Brando.PolymorphicEmbed},
-      types: Var.types(),
+      types: OldVar.types(),
       type_field: :type,
       on_type_not_found: :raise,
       on_replace: :delete

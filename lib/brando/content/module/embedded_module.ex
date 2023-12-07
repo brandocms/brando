@@ -15,7 +15,7 @@ defmodule Brando.Content.Module.EmbeddedModule do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
   alias Brando.Content.Module
 
   data_layer :embedded
@@ -39,7 +39,7 @@ defmodule Brando.Content.Module.EmbeddedModule do
     attribute :wrapper, :boolean
 
     attribute :vars, {:array, Brando.PolymorphicEmbed},
-      types: Var.types(),
+      types: OldVar.types(),
       type_field: :type,
       on_type_not_found: :raise,
       on_replace: :delete

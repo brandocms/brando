@@ -8,7 +8,7 @@ defmodule Brando.Content.Module.Entry do
       plural: "module_entry_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Content.Var
+    alias Brando.Content.OldVar
     alias Brando.Content.Module
 
     @primary_key false
@@ -21,7 +21,7 @@ defmodule Brando.Content.Module.Entry do
       attribute :sequence, :integer
 
       attribute :vars, {:array, Brando.PolymorphicEmbed},
-        types: Var.types(),
+        types: OldVar.types(),
         type_field: :type,
         on_type_not_found: :raise,
         on_replace: :delete

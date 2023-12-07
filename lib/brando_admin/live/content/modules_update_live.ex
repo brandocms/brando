@@ -656,7 +656,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                 var,
                 [Access.key(:options)],
                 (var.options || []) ++
-                  [%Brando.Content.Var.Select.Option{label: "label", value: "option"}]
+                  [%Brando.Content.OldVar.Select.Option{label: "label", value: "option"}]
               )
             ]
 

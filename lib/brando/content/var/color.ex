@@ -1,4 +1,5 @@
-defmodule Brando.Content.Var.Color do
+# TODO: DELETE
+defmodule Brando.Content.OldVar.Color do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",

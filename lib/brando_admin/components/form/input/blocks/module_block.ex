@@ -959,10 +959,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     # of replacing/inserting new every time.
 
     case Enum.find(vars, &(&1.key == var_name)) do
-      %Brando.Content.Var.Image{value_id: nil} ->
+      %Brando.Content.OldVar.Image{value_id: nil} ->
         ""
 
-      %Brando.Content.Var.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} ->
+      %Brando.Content.OldVar.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} ->
         case Brando.Cache.get("var_image_#{image_id}") do
           nil ->
             image = Brando.Images.get_image!(image_id)
@@ -974,7 +974,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             media_path
         end
 
-      %Brando.Content.Var.Image{value: image, value_id: image_id} ->
+      %Brando.Content.OldVar.Image{value: image, value_id: image_id} ->
         media_path = Brando.Utils.media_url(image.path)
         Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
         media_path

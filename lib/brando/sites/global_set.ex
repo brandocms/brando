@@ -8,7 +8,7 @@ defmodule Brando.Sites.GlobalSet do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  alias Brando.Content.Var
+  alias Brando.Content.OldVar
 
   trait Brando.Trait.Creator
   trait Brando.Trait.CastPolymorphicEmbeds
@@ -22,7 +22,7 @@ defmodule Brando.Sites.GlobalSet do
     attribute :key, :string, unique: [prevent_collision: :language], required: true
 
     attribute :globals, {:array, Brando.PolymorphicEmbed},
-      types: Var.types(),
+      types: OldVar.types(),
       type_field: :type,
       on_type_not_found: :raise,
       on_replace: :delete
