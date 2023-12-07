@@ -1,8 +1,6 @@
 .brando-form {
   display: flex;
-  @responsive $mobile {
-    flex-direction: column;
-  }
+  flex-direction: column;
 
   .form-content {
     flex-shrink: 1;

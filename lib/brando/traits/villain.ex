@@ -3,9 +3,7 @@ defmodule Brando.Trait.Villain do
   Villain parsing
   """
   use Brando.Trait
-  alias Brando.Exception.ConfigError
   alias Ecto.Changeset
-  alias Brando.Blueprint.Attributes
 
   @type changeset :: Changeset.t()
   @type config :: list()

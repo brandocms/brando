@@ -18,10 +18,11 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
+  alias BrandoAdmin.Components.Form.AlternatesDrawer
+  alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
-  alias BrandoAdmin.Components.Form.AlternatesDrawer
 
   def mount(socket) do
     if connected?(socket) do
@@ -547,6 +548,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
     assign(socket,
+      has_blocks?: schema.has_trait(Brando.Trait.Villain),
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
@@ -820,15 +822,23 @@ defmodule BrandoAdmin.Components.Form do
               form={@form}
               schema={@schema}
             />
-
-            <.submit_button
-              processing={@processing}
-              form_id={@id}
-              label={gettext("Save (⇧⌘S)")}
-              class="primary submit-button"
-            />
           </.form>
         </div>
+
+        <.live_component
+          :if={@has_blocks?}
+          module={BlockField}
+          id={"#{@id}-blocks"}
+          entry={@entry}
+          current_user={@current_user}
+        />
+
+        <.submit_button
+          processing={@processing}
+          form_id={@id}
+          label={gettext("Save (⌘S)")}
+          class="primary submit-button"
+        />
 
         <.live_preview
           live_preview_active?={@live_preview_active?}

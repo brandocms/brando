@@ -67,15 +67,13 @@ defmodule Brando.Content.Template do
 
   forms do
     form do
+      blocks :blocks, label: t("Blocks")
+
       tab t("Content") do
         fieldset size: :half do
           input :name, :text
           input :namespace, :text, monospace: true
           input :instructions, :textarea
-        end
-
-        fieldset size: :full do
-          input :data, :blocks
         end
       end
     end

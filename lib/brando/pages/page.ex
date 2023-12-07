@@ -257,6 +257,8 @@ defmodule Brando.Pages.Page do
 
   forms do
     form default_params: %{status: :draft, template: "default.html"} do
+      blocks :blocks, label: t("Blocks")
+
       tab t("Content") do
         fieldset size: :full do
           input :status, :status, label: t("Status")
@@ -277,10 +279,6 @@ defmodule Brando.Pages.Page do
             options: &__MODULE__.get_parents/2,
             resetable: true,
             label: t("Parent page")
-        end
-
-        fieldset size: :full do
-          input :data, :blocks, label: t("Blocks")
         end
       end
 

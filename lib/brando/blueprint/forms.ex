@@ -66,6 +66,7 @@ defmodule Brando.Blueprint.Forms do
             after_save: nil,
             default_params: %{},
             tabs: [],
+            blocks: [],
             transformers: [],
             redirect_on_save: nil
 
@@ -131,6 +132,7 @@ defmodule Brando.Blueprint.Forms do
 
       var!(b_tab) = []
       var!(b_fieldset) = []
+      var!(b_blocks) = []
       var!(b_subform) = []
       var!(b_form) = []
       var!(b_transformers) = []
@@ -145,6 +147,7 @@ defmodule Brando.Blueprint.Forms do
       named_form = %Brando.Blueprint.Forms{
         name: unquote(name),
         tabs: Enum.reverse(var!(b_form)),
+        blocks: Enum.reverse(var!(b_blocks)),
         default_params: default_params,
         redirect_on_save: var!(b_redirect_on_save),
         query: var!(b_query),
@@ -157,6 +160,7 @@ defmodule Brando.Blueprint.Forms do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
       _ = var!(b_tab)
+      _ = var!(b_blocks)
     end
   end
 
@@ -550,6 +554,22 @@ defmodule Brando.Blueprint.Forms do
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
+      if type == :blocks do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          input :blocks cannot be set in tabs/fieldsets anymore due to how we split out block processing to individual forms.
+
+          Declare the blocks at the top of the form instead:
+
+              forms do
+                form do
+                  blocks #{inspect(name)}, #{inspect(opts)}
+                  # ...
+                end
+              end
+          """
+      end
+
       if @brando_macro_context == :tab do
         raise Brando.Exception.BlueprintError,
           message: """
@@ -571,6 +591,20 @@ defmodule Brando.Blueprint.Forms do
               List.wrap(build_input(name, type, opts)) ++ var!(b_fieldset)
             }
         end
+    end
+  end
+
+  defmacro blocks(name, opts \\ []) do
+    quote location: :keep,
+          bind_quoted: [name: name, opts: opts] do
+      unless @brando_macro_context == :form do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          `blocks` must be nested directly under `form`
+          """
+      end
+
+      var!(b_blocks) = List.wrap(build_input(name, :blocks, opts)) ++ var!(b_blocks)
     end
   end
 

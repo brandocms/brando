@@ -71,6 +71,8 @@ defmodule Brando.Pages.Fragment do
     form do
       redirect_on_save &__MODULE__.redirect/3
 
+      blocks :blocks, label: t("Blocks")
+
       tab "Content" do
         fieldset size: :full do
           input :status, :status, label: t("Status")
@@ -93,10 +95,6 @@ defmodule Brando.Pages.Fragment do
         fieldset size: :half do
           input :language, :select, options: :languages, narrow: true
           input :page_id, :select, options: &__MODULE__.get_pages/2, resetable: true
-        end
-
-        fieldset size: :full do
-          input :data, :blocks, label: t("Content")
         end
       end
 
