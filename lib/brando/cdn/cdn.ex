@@ -83,29 +83,44 @@ defmodule Brando.CDN do
     |> Map.get(key, nil)
   end
 
-  def get_s3_config(%{cdn: %{enabled: true, s3: :default}}) do
+  def get_s3_config(%{cdn: %{enabled: true, s3: :default}}, as: type) do
     s3_config = Brando.config(Brando.CDN.S3Config)
 
     if !s3_config do
       raise "Missing default Brando.CDN.S3Config, and CDN config referenced `s3: :default`. Either insert a custom config under the `s3` key, or set `Brando.CDN.S3Config`. See `Brando.CDN` moduledocs for more info"
     end
 
-    s3_config
-    |> Map.from_struct()
-    |> Map.to_list()
+    if type == :keyword_list do
+      s3_config
+      |> Map.from_struct()
+      |> Map.to_list()
+    else
+      s3_config
+    end
   end
 
-  def get_s3_config(%{cdn: %{enabled: true, s3: s3_config}}) do
-    s3_config
-    |> Map.from_struct()
-    |> Map.to_list()
+  def get_s3_config(%{cdn: %{enabled: true, s3: s3_config}}, as: type) do
+    if type == :keyword_list do
+      s3_config
+      |> Map.from_struct()
+      |> Map.to_list()
+    else
+      s3_config
+    end
   end
 
-  def get_s3_config(_) do
-    Brando.Images
-    |> config(:s3)
-    |> Map.from_struct()
-    |> Map.to_list()
+  def get_s3_config(_, as: type) do
+    s3_config =
+      Brando.Images
+      |> config(:s3)
+
+    if type == :keyword_list do
+      s3_config
+      |> Map.from_struct()
+      |> Map.to_list()
+    else
+      s3_config
+    end
   end
 
   def get_prefix(%{cdn: %{media_url: media_url}}), do: media_url
@@ -222,7 +237,7 @@ defmodule Brando.CDN do
 
   def upload_image(src_key, dest_key, config, user_id) do
     s3_bucket = get_bucket_for_image_config(config)
-    s3_config = get_s3_config(config)
+    s3_config = get_s3_config(config, as: :keyword_list)
 
     if !s3_bucket do
       raise """
@@ -318,6 +333,20 @@ defmodule Brando.CDN do
     end
 
     {:ok, {:bucket, :exists}}
+  end
+
+  def key_exists?(object_key, field_cfg) do
+    s3_config = get_s3_config(field_cfg, as: :keyword_list)
+    cdn_config = Map.get(field_cfg, :cdn)
+    bucket = cdn_config.bucket
+
+    bucket
+    |> ExAws.S3.head_object(object_key)
+    |> ExAws.request(s3_config)
+    |> case do
+      {:ok, _} -> true
+      _ -> false
+    end
   end
 
   @doc """

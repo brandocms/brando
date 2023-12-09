@@ -1268,4 +1268,48 @@ defmodule Brando.Utils do
   end
 
   def ensure_utc(%DateTime{} = dt), do: dt
+
+  def build_upload_key(filename, file_cfg) do
+    filename =
+      filename
+      |> ensure_correct_extension()
+      |> get_valid_filename(file_cfg)
+
+    key = concat_with_upload_path(filename, file_cfg)
+
+    if Brando.CDN.key_exists?(key, file_cfg) do
+      unique_filename(key)
+    else
+      key
+    end
+  end
+
+  defp concat_with_upload_path(filename, file_cfg) do
+    Brando.config(:media_url)
+    |> Path.join(Map.get(file_cfg, :upload_path))
+    |> Path.join(filename)
+    |> strip_leading_slash()
+  end
+
+  defp get_valid_filename("", _) do
+    {:error, :empty_filename}
+  end
+
+  defp get_valid_filename(_, %{force_filename: forced_filename, overwrite: true})
+       when is_binary(forced_filename) do
+    forced_filename
+  end
+
+  defp get_valid_filename(filename, cfg) do
+    case Map.get(cfg, :random_filename, false) do
+      true ->
+        random_filename(filename)
+
+      _ ->
+        slugify_filename(filename)
+    end
+  end
+
+  def strip_leading_slash("/" <> rest), do: rest
+  def strip_leading_slash(rest), do: rest
 end

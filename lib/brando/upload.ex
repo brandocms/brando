@@ -34,6 +34,12 @@ defmodule Brando.Upload do
 
   Finally returns an image struct
   """
+  def handle_upload(%{uploader: "S3"} = meta, upload_entry, cfg, user) do
+    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg) do
+      handle_upload_type(upload, user, :direct_to_s3)
+    end
+  end
+
   def handle_upload(meta, upload_entry, cfg, user) do
     with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
@@ -65,6 +71,19 @@ defmodule Brando.Upload do
 
   Image or file
   """
+  def handle_upload_type(%{cfg: %FileConfig{}} = upload, user, :direct_to_s3) do
+    file_params = %{
+      title: upload.upload_entry.client_name,
+      mime_type: upload.upload_entry.client_type,
+      filesize: upload.upload_entry.client_size,
+      filename: extract_filename_from_key(upload.meta.key),
+      config_target: upload.meta.config_target,
+      cdn: true
+    }
+
+    Files.create_file(file_params, user)
+  end
+
   def handle_upload_type(%{upload_entry: %{client_type: "image/svg+xml"}} = upload, user) do
     svg_size = Brando.Images.Utils.svg_size(upload.meta.uploaded_file)
     dominant_color = Images.Operations.Info.get_dominant_color(upload.meta.media_path)
@@ -261,5 +280,10 @@ defmodule Brando.Upload do
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}
     end
+  end
+
+  defp extract_filename_from_key(key) do
+    {_, filename} = Brando.Utils.split_path(key)
+    filename
   end
 end

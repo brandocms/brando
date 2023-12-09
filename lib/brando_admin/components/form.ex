@@ -1170,13 +1170,26 @@ defmodule BrandoAdmin.Components.Form do
       Enum.reduce(file_fields, socket_with_gallery_uploads, fn file_field, updated_socket ->
         max_size = Brando.Utils.try_path(file_field, [:opts, :cfg, :size_limit]) || 4_000_000
         accept = Brando.Utils.try_path(file_field, [:opts, :cfg, :accept]) || :any
+        cdn_enabled = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :enabled])
+        cdn_direct = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :direct])
 
-        allow_upload(updated_socket, file_field.name,
+        upload_options = [
           accept: accept,
           max_file_size: max_size,
           auto_upload: true,
           progress: &__MODULE__.handle_file_progress/3
-        )
+        ]
+
+        cfg = Brando.Utils.try_path(file_field, [:opts, :cfg])
+
+        upload_options =
+          if cdn_enabled && cdn_direct do
+            upload_options ++ [external: &presign_upload(&1, &2, cfg)]
+          else
+            upload_options
+          end
+
+        allow_upload(updated_socket, file_field.name, upload_options)
       end)
 
     socket_with_transformers =
@@ -1208,6 +1221,35 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     socket_with_transformers
+  end
+
+  defp presign_upload(entry, socket, cfg) do
+    s3_config = Brando.CDN.get_s3_config(cfg, as: :struct)
+
+    uploads = socket.assigns.uploads
+    bucket = cfg.cdn.bucket
+
+    key =
+      entry.client_name
+      |> Brando.Utils.build_upload_key(cfg)
+      |> Brando.Utils.strip_leading_slash()
+
+    {:ok, fields} =
+      Brando.SimpleS3Upload.sign_form_upload(s3_config, bucket,
+        key: key,
+        content_type: entry.client_type,
+        max_file_size: uploads[entry.upload_config].max_file_size,
+        expires_in: :timer.hours(1)
+      )
+
+    meta = %{
+      uploader: "S3",
+      key: key,
+      url: cfg.cdn.media_url,
+      fields: fields
+    }
+
+    {:ok, meta, socket}
   end
 
   def handle_event(
