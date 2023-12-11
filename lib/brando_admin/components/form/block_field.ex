@@ -25,6 +25,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       data-sortable-handle=".sort-handle"
       data-sortable-selector=".block"
     >
+      <button type="button">
+        Add block
+      </button>
       <div
         :for={{id, entry_block_form} <- @streams.entry_blocks_forms}
         id={id}
