@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   # prop form, :form
   # prop field_name, :atom
@@ -36,7 +36,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
       class="focus-point"
       phx-hook="Brando.FocalPoint"
       data-x={"#{@x}"}
-      data-y={"#{@y}"}>
+      data-y={"#{@y}"}
+    >
       <input type="hidden" name={"#{@form.name}[focal][x]"} value={@x} />
       <input type="hidden" name={"#{@form.name}[focal][y]"} value={@y} />
 

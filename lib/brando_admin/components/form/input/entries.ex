@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Entries do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   import Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Subform do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input

@@ -4,7 +4,6 @@ defmodule Brando.HTMLTest do
   use RouterHelper
   import Brando.HTML
   import Brando.Utils, only: [media_url: 0]
-  import Phoenix.HTML, only: [safe_to_string: 1]
   import Phoenix.LiveViewTest
   import Phoenix.Component
   alias Brando.Factory
@@ -64,14 +63,13 @@ defmodule Brando.HTMLTest do
   end
 
   test "google_analytics" do
-    code = "asdf123"
+    assigns = %{}
 
-    html =
-      code
-      |> google_analytics
-      |> safe_to_string
+    comp = ~H"""
+    <.google_analytics code="asdf123" />
+    """
 
-    assert html =~ "ga('create','#{code}','auto')"
+    assert rendered_to_string(comp) =~ "ga('create','asdf123','auto')"
   end
 
   test "truncate" do

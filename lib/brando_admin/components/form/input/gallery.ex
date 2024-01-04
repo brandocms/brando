@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   import Ecto.Changeset
   import Brando.Gettext

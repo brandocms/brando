@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
   use BrandoAdmin, :component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -74,17 +74,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Ref do
           block_count={@block_count}
           block={@ref_block}
           base_form={@base_form}
-          parent_uploads={@parent_uploads} />
+          parent_uploads={@parent_uploads}
+        />
         <Input.input type={:hidden} field={@ref_form[:description]} uid={@ref_uid} id_prefix="ref" />
         <Input.input type={:hidden} field={@ref_form[:name]} uid={@ref_uid} id_prefix="ref" />
       </section>
     <% else %>
       <section class="alert danger">
-        Ref <code><%= @ref_name %></code> is missing!<br><br>
-        If the module has been changed, this block might be out of sync!<br><br>
-        Available refs are:<br><br>
+        Ref <code><%= @ref_name %></code>
+        is missing!<br /><br />
+        If the module has been changed, this block might be out of sync!<br /><br />
+        Available refs are:<br /><br />
         <%= for {%{data: %{name: ref_name}}, _} <- @module_refs do %>
-          &rarr; <%= ref_name %><br>
+          &rarr; <%= ref_name %><br />
         <% end %>
       </section>
     <% end %>

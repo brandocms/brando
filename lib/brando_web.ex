@@ -96,14 +96,12 @@ defmodule BrandoWeb do
   end
 
   def html_helpers do
-    error_module = Brando.web_module(ErrorHelpers)
     gettext_module = Brando.web_module(Gettext)
     routes_module = Brando.web_module(Router.Helpers)
 
     quote do
       import Phoenix.HTML
       import Phoenix.HTML.Form
-      import Phoenix.HTML.Tag, only: [csrf_meta_tag: 0]
       alias Phoenix.LiveView.JS
 
       import Brando.Utils,
@@ -118,7 +116,6 @@ defmodule BrandoWeb do
       import Phoenix.Component
       import Plug.Conn, only: [get_session: 2]
 
-      import unquote(error_module)
       import unquote(gettext_module)
       alias unquote(routes_module), as: Routes
 
@@ -133,7 +130,9 @@ defmodule BrandoWeb do
 
     quote do
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      # use PhoenixHTMLHelpers
       import Phoenix.Component
 
       import Brando.HTML
@@ -141,7 +140,6 @@ defmodule BrandoWeb do
       import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_var: 2]
       import Brando.I18n.Helpers
 
-      import BrandoAdmin.ErrorHelpers
       import unquote(gettext_module)
       alias unquote(routes_module), as: Routes
     end

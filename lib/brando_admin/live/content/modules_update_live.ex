@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Content.ModuleUpdateLive do
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   import Brando.Gettext
   import Ecto.Changeset

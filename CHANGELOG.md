@@ -2,6 +2,12 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: Switch out `<%= google_analytics(...) %>` calls in your code with
+  `<.google_analytics code="...." />
+
+* BREAKING: Dropped `use Phoenix.HTML` so your `error_tag` in `error_helpers.ex` won't
+  work anymore. Check out https://github.com/phoenixframework/phoenix/blob/main/installer/templates/phx_web/components/core_components.ex for how to implement errors in the frontend.
+
 * BREAKING: If updating frontend to Vite 5, you need to explicitly set the manifest path. 
   So change `manifest: true`, to `manifest: 'manifest.json'`
 

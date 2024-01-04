@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock
   import Brando.Gettext
@@ -26,9 +26,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
       id={"block-#{@uid}-module-entries"}
       class="module-entries"
       phx-hook="Brando.SortableBlocks"
-      data-blocks-wrapper-type="module_entry">
-      <Form.inputs_for_poly field={@block_data[:entries]} :let={entry_form}>
-        <.live_component module={EntryBlock}
+      data-blocks-wrapper-type="module_entry"
+    >
+      <Form.inputs_for_poly :let={entry_form} field={@block_data[:entries]}>
+        <.live_component
+          module={EntryBlock}
           id={entry_form[:uid].value}
           block={entry_form}
           base_form={@base_form}
@@ -47,8 +49,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.Entries do
         type="button"
         class="add-module-entry"
         phx-click={JS.push("add_entry", target: @myself)}
-        phx-page-loading>
-        <%= gettext "Add" %> [<%= @entry_template.name %>]
+        phx-page-loading
+      >
+        <%= gettext("Add") %> [<%= @entry_template.name %>]
       </button>
     </div>
     """

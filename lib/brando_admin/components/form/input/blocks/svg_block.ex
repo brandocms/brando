@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
@@ -35,10 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
 
   def render(assigns) do
     ~H"""
-    <div
-      id={"block-#{@uid}-wrapper"}
-      data-block-index={@index}
-      data-block-uid={@uid}>
+    <div id={"block-#{@uid}-wrapper"} data-block-index={@index} data-block-uid={@uid}>
       <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
@@ -48,28 +45,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
         block={@block}
         belongs_to={@belongs_to}
         insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
+        duplicate_block={@duplicate_block}
+      >
         <:description>
           <%= if @ref_description do %>
             <%= @ref_description %>
           <% end %>
         </:description>
         <:config>
-          <Input.code id={"block-#{@uid}-svg-code"} field={@block_data[:code]} uid={@uid} id_prefix="block_data" label={gettext "Code"} />
-          <Input.text field={@block_data[:class]} uid={@uid} id_prefix="block_data" label={gettext "Class"} />
+          <Input.code
+            id={"block-#{@uid}-svg-code"}
+            field={@block_data[:code]}
+            uid={@uid}
+            id_prefix="block_data"
+            label={gettext("Code")}
+          />
+          <Input.text
+            field={@block_data[:class]}
+            uid={@uid}
+            id_prefix="block_data"
+            label={gettext("Class")}
+          />
         </:config>
-        <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
-        <%= if @block_data[:code].value do %>
-          <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
-            <%= @block_data[:code].value |> raw %>
-          </div>
+        <div
+          class="svg-block"
+          phx-hook="Brando.SVGDrop"
+          id={"block-#{@uid}-svg-drop"}
+          data-target={@myself}
+        >
+          <%= if @block_data[:code].value do %>
+            <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
+              <%= @block_data[:code].value |> raw %>
+            </div>
           <% else %>
             <div class="empty">
               <figure>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M24 12l-5.657 5.657-1.414-1.414L21.172 12l-4.243-4.243 1.414-1.414L24 12zM2.828 12l4.243 4.243-1.414 1.414L0 12l5.657-5.657L7.07 7.757 2.828 12zm6.96 9H7.66l6.552-18h2.128L9.788 21z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M24 12l-5.657 5.657-1.414-1.414L21.172 12l-4.243-4.243 1.414-1.414L24 12zM2.828 12l4.243 4.243-1.414 1.414L0 12l5.657-5.657L7.07 7.757 2.828 12zm6.96 9H7.66l6.552-18h2.128L9.788 21z" />
+                </svg>
               </figure>
               <div class="instructions">
-                <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>Configure SVG block</button>
+                <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
+                  Configure SVG block
+                </button>
               </div>
             </div>
           <% end %>

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input do
   use BrandoAdmin, :component
   use BrandoAdmin.Translator, "forms"
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   import Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]

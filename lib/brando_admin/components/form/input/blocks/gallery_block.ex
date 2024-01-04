@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   import Brando.Gettext
 
   alias Brando.Villain.Blocks.GalleryBlock

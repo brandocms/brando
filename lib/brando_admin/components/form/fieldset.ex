@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Fieldset do
   use BrandoAdmin.Translator, "forms"
   use BrandoAdmin, :component
-  use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form.Fieldset
 
@@ -26,7 +25,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
           relations={@relations}
           input={input}
           parent_uploads={@parent_uploads}
-          current_user={@current_user} />
+          current_user={@current_user}
+        />
       <% end %>
     </fieldset>
     """

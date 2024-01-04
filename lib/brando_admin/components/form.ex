@@ -403,8 +403,10 @@ defmodule BrandoAdmin.Components.Form do
       |> Map.put(:with_deleted, true)
 
     assign_new(socket, :entry, fn ->
-      context
-      |> apply(:"get_#{singular}!", [query_params])
+      case apply(context, :"get_#{singular}", [query_params]) do
+        {:ok, entry} -> entry
+        {:error, _err} -> raise Brando.Exception.EntryNotFoundError
+      end
 
       # FIXME: When we have sorted out poly changesets clobbering the image var's
       # `value` field, we can re-enable this. Currently it just adds a preload that
@@ -2834,6 +2836,34 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  @doc """
+  Translates an error message using gettext.
+  """
+  def translate_error({msg, opts}) do
+    # When using gettext, we typically pass the strings we want
+    # to translate as a static argument:
+    #
+    #     # Translate "is invalid" in the "errors" domain
+    #     dgettext("errors", "is invalid")
+    #
+    #     # Translate the number of files with plural rules
+    #     dngettext("errors", "1 file", "%{count} files", count)
+    #
+    # Because the error messages we show in our forms and APIs
+    # are defined inside Ecto, we need to translate them dynamically.
+    # This requires us to call the Gettext module passing our gettext
+    # backend as first argument.
+    #
+    # Note we use the "errors" domain, which means translations
+    # should be written to the errors.po file. The :count option is
+    # set by Ecto and indicates we should also apply plural rules.
+    if count = opts[:count] do
+      Gettext.dngettext(Brando.web_module(Gettext), "errors", msg, msg, count, opts)
+    else
+      Gettext.dgettext(Brando.web_module(Gettext), "errors", msg, opts)
+    end
+  end
+
   attr :field, Phoenix.HTML.FormField
   attr :relation, :atom
   attr :id_prefix, :string
@@ -2844,7 +2874,7 @@ defmodule BrandoAdmin.Components.Form do
       assigns
       |> assign_new(:feedback_for, fn -> nil end)
       |> assign_new(:translate_fn, fn ->
-        {mod, fun} = assigns[:translator] || {Brando.web_module(ErrorHelpers), :translate_error}
+        {mod, fun} = assigns[:translator] || {__MODULE__, :translate_error}
         &apply(mod, fun, [&1])
       end)
 

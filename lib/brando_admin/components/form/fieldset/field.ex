@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   use BrandoAdmin, :component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
@@ -25,7 +25,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
     ~H"""
     <%= if @input.__struct__ == Brando.Blueprint.Forms.Subform do %>
       <%= if @input.component do %>
-        <.live_component module={@input.component}
+        <.live_component
+          module={@input.component}
           id={"#{@form.id}-#{@input.name}-custom-component"}
           field={@form[@input.name]}
           label={@label}
@@ -34,9 +35,11 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           subform={@input}
           parent_uploads={@parent_uploads}
           current_user={@current_user}
-          opts={[]} />
+          opts={[]}
+        />
       <% else %>
-        <.live_component module={Subform}
+        <.live_component
+          module={Subform}
           id={"#{@form.id}-subform-#{@input.name}"}
           field={@form[@input.name]}
           parent_uploads={@parent_uploads}
@@ -45,7 +48,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           relations={@relations}
           instructions={@instructions}
           placeholder={@placeholder}
-          current_user={@current_user} />
+          current_user={@current_user}
+        />
       <% end %>
     <% else %>
       <Form.input
@@ -56,7 +60,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         parent_uploads={@parent_uploads}
         opts={@input.opts || []}
         type={@input.type}
-        current_user={@current_user} />
+        current_user={@current_user}
+      />
     <% end %>
     """
   end

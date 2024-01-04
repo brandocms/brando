@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input.Blocks
@@ -53,26 +53,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
       id={"#{@id}-blocks-wrapper"}
       class="blocks-wrapper"
       phx-hook="Brando.SortableBlocks"
-      data-blocks-wrapper-type={@type}>
-
-      <.live_component module={Blocks.ModulePicker}
+      data-blocks-wrapper-type={@type}
+    >
+      <.live_component
+        module={Blocks.ModulePicker}
         id={"#{@id}-module-picker"}
         insert_module={@insert_module}
         insert_section={@insert_section}
         insert_fragment={@insert_fragment}
         insert_index={@insert_index}
         hide_sections={@hide_sections}
-        hide_fragments={@hide_fragments} />
+        hide_fragments={@hide_fragments}
+      />
 
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
-          <%= gettext "Click the plus to start adding content blocks" %>
+          <%= gettext("Click the plus to start adding content blocks") %>
           <%= if @templates && @templates != [] do %>
-            <br><%= gettext "or get started with a prefab'ed template" %>:<br>
+            <br /><%= gettext("or get started with a prefab'ed template") %>:<br />
             <div class="blocks-templates">
               <%= for template <- @templates do %>
-                <button type="button" phx-click={JS.push("use_template", target: @myself)} phx-value-id={template.id}>
-                  <%= template.name %><br>
+                <button
+                  type="button"
+                  phx-click={JS.push("use_template", target: @myself)}
+                  phx-value-id={template.id}
+                >
+                  <%= template.name %><br />
                   <small><%= template.instructions %></small>
                 </button>
               <% end %>
@@ -92,12 +98,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
           belongs_to={@type}
           opts={@opts}
           insert_module={@show_module_picker}
-          duplicate_block={@duplicate_block} />
+          duplicate_block={@duplicate_block}
+        />
       <% end %>
 
-      <Blocks.Plus.render
-        index={@block_count}
-        click={@show_module_picker} />
+      <Blocks.Plus.render index={@block_count} click={@show_module_picker} />
     </div>
     """
   end

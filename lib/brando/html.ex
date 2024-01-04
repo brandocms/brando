@@ -10,7 +10,6 @@ defmodule Brando.HTML do
   use Phoenix.Component
   import Brando.Gettext
   import Phoenix.HTML
-  import Phoenix.HTML.Tag
   alias Brando.Utils
 
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
@@ -84,7 +83,7 @@ defmodule Brando.HTML do
   """
   attr :conn, :map
   attr :class, :string, default: nil
-  attr :language, :string
+  attr :language, :any
   attr :fallback, :string, default: "/"
   attr :rest, :global
   slot :default
@@ -92,9 +91,7 @@ defmodule Brando.HTML do
   def alternate_url(assigns) do
     href = get_alternate_url(assigns)
 
-    assigns =
-      assigns
-      |> assign(:href, href)
+    assigns = assign(assigns, :href, href)
 
     ~H"""
     <a href={@href} class={@class} {@rest}>
@@ -133,7 +130,8 @@ defmodule Brando.HTML do
       href={font}
       as="font"
       type={"font/#{type}"}
-      crossorigin={true} />
+      crossorigin={true}
+    />
     """
   end
 
@@ -165,7 +163,9 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
     ~H"""
-    <style :if={@palettes_css != ""}><%= @palettes_css %></style>
+    <style :if={@palettes_css != ""}>
+      <%= @palettes_css %>
+    </style>
     """
   end
 
@@ -183,7 +183,14 @@ defmodule Brando.HTML do
 
     ~H"""
     <link rel="canonical" href={@canonical} />
-    <link :if={@multilang} :for={{lang, url} <- @hreflangs} rel="alternate" href={url} type="text/html" hreflang={lang} />
+    <link
+      :for={{lang, url} <- @hreflangs}
+      :if={@multilang}
+      rel="alternate"
+      href={url}
+      type="text/html"
+      hreflang={lang}
+    />
     """
   end
 
@@ -297,23 +304,22 @@ defmodule Brando.HTML do
 
   ## Example
 
-      google_analytics("UA-XXXXX-X")
+      <.google_analytics code="..." />
 
   """
-  @spec google_analytics(ua_code :: binary) :: safe_string()
-  def google_analytics(ua_code) when is_binary(ua_code) do
-    content =
-      """
+  attr :code, :string, required: true
+
+  def google_analytics(assigns) do
+    ~H"""
+    <script>
       (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
       function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
       e=o.createElement(i);r=o.getElementsByTagName(i)[0];
       e.src='https://www.google-analytics.com/analytics.js';
       r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
-      ga('create','#{ua_code}','auto');ga('set','anonymizeIp',true);ga('send','pageview');
-      """
-      |> raw
-
-    content_tag(:script, content)
+      ga('create','<%= @code %>','auto');ga('set','anonymizeIp',true);ga('send','pageview');
+    </script>
+    """
   end
 
   @doc """
@@ -378,7 +384,13 @@ defmodule Brando.HTML do
       |> assign(:extra, extra)
 
     ~H"""
-    <body id={@id} class={[@classes, "unloaded"]} data-script={@data_script} data-vsn={@data_vsn} {@extra}>
+    <body
+      id={@id}
+      class={[@classes, "unloaded"]}
+      data-script={@data_script}
+      data-vsn={@data_vsn}
+      {@extra}
+    >
       <%= if @show_breakpoint_debug? do %>
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
@@ -393,7 +405,9 @@ defmodule Brando.HTML do
 
     ~H"""
     <i class="dbg-breakpoints">
-      <%= if @agency_brand do %><div class="brand"><%= raw(@agency_brand) %></div><% end %>
+      <%= if @agency_brand do %>
+        <div class="brand"><%= raw(@agency_brand) %></div>
+      <% end %>
       <div class="breakpoint"></div>
       <div class="user-agent"></div>
     </i>
@@ -403,7 +417,9 @@ defmodule Brando.HTML do
   def grid_debug_tag(assigns) do
     ~H"""
     <div class="dbg-grid">
-      <%= for _ <- 1..24 do %><b></b><% end %>
+      <%= for _ <- 1..24 do %>
+        <b></b>
+      <% end %>
     </div>
     """
   end
@@ -414,7 +430,9 @@ defmodule Brando.HTML do
   def alert(%{type: :info} = assigns) do
     ~H"""
     <div class="alert info">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
+        <path fill="none" d="M0 0h24v24H0z" /><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z" />
+      </svg>
       <div class="content">
         <%= render_slot(@inner_block) %>
       </div>
@@ -455,7 +473,9 @@ defmodule Brando.HTML do
   Inject critical css
   """
   def inject_critical_css(assigns) do
-    ~H|<style><%= Brando.Assets.Vite.Manifest.critical_css() %></style>|
+    ~H|<style>
+  <%= Brando.Assets.Vite.Manifest.critical_css() %>
+</style>|
   end
 
   @doc """
@@ -471,8 +491,10 @@ defmodule Brando.HTML do
     else
       ~H"""
       <!-- admin dev/test -->
-      <script type="module" src="http://localhost:3333/@vite/client"></script>
-      <script type="module" src="http://localhost:3333/src/main.js"></script>
+      <script type="module" src="http://localhost:3333/@vite/client">
+      </script>
+      <script type="module" src="http://localhost:3333/src/main.js">
+      </script>
       <!-- end admin dev/test -->
       """
     end
@@ -499,9 +521,12 @@ defmodule Brando.HTML do
       else
         ~H"""
         <!-- dev/test -->
-        <script type="module" src="http://localhost:3000/@vite/client"></script>
-        <script type="module" src="http://localhost:3000/js/critical.js"></script>
-        <script type="module" src="http://localhost:3000/js/index.js"></script>
+        <script type="module" src="http://localhost:3000/@vite/client">
+        </script>
+        <script type="module" src="http://localhost:3000/js/critical.js">
+        </script>
+        <script type="module" src="http://localhost:3000/js/index.js">
+        </script>
         <!-- end dev/test -->
         """
       end
@@ -525,7 +550,8 @@ defmodule Brando.HTML do
   Run JS init code
   """
   def init_js(assigns) do
-    ~H|<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>|
+    ~H[<%= "<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
+|> raw() %>]
   end
 
   @doc """

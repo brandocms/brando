@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
   import Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias Brando.Villain
@@ -73,11 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
 
   def render(assigns) do
     ~H"""
-    <div
-      id={"block-#{@uid}-wrapper"}
-      data-block-index={@index}
-      data-block-uid={@uid}>
-
+    <div id={"block-#{@uid}-wrapper"} data-block-index={@index} data-block-uid={@uid}>
       <Blocks.block
         id={"block-#{@uid}-base"}
         index={@index}
@@ -87,14 +83,30 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
         belongs_to={@belongs_to}
         is_entry?={true}
         insert_module={@insert_module}
-        duplicate_block={@duplicate_block}>
-        <:description><%= if @description do %><strong><%= @description %></strong>&nbsp;| <% end %><%= @module_name %></:description>
+        duplicate_block={@duplicate_block}
+      >
+        <:description>
+          <%= if @description do %>
+            <strong><%= @description %></strong>&nbsp;|
+          <% end %>
+          <%= @module_name %>
+        </:description>
         <:config>
           <div class="panels">
             <div class="panel">
-              <Input.text field={@block[:description]} label={gettext "Block description"} instructions={gettext "Helpful for collapsed blocks"} />
+              <Input.text
+                field={@block[:description]}
+                label={gettext("Block description")}
+                instructions={gettext("Helpful for collapsed blocks")}
+              />
               <%= for {var, index} <- @indexed_vars do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-#{index}"} var={var} render={:only_regular} in_block />
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-#{index}"}
+                  var={var}
+                  render={:only_regular}
+                  in_block
+                />
               <% end %>
             </div>
             <div class="panel">
@@ -102,7 +114,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
               <%= for var <- @vars do %>
                 <div class="var">
                   <div class="key"><%= var.key %></div>
-                  <button type="button" class="tiny" phx-click={JS.push("reset_var", target: @myself)} phx-value-id={var.key}><%= gettext "Reset" %></button>
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("reset_var", target: @myself)}
+                    phx-value-id={var.key}
+                  >
+                    <%= gettext("Reset") %>
+                  </button>
                 </div>
               <% end %>
 
@@ -110,20 +129,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
               <%= for ref <- @refs do %>
                 <div class="ref">
                   <div class="key"><%= ref.name %></div>
-                  <button type="button" class="tiny" phx-click={JS.push("reset_ref", target: @myself)} phx-value-id={ref.name}><%= gettext "Reset" %></button>
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("reset_ref", target: @myself)}
+                    phx-value-id={ref.name}
+                  >
+                    <%= gettext("Reset") %>
+                  </button>
                 </div>
               <% end %>
-              <h2 class="titlecase"><%= gettext "Advanced" %></h2>
+              <h2 class="titlecase"><%= gettext("Advanced") %></h2>
               <div class="button-group-vertical">
-                <button type="button" class="secondary" phx-click={JS.push("reinit_vars", target: @myself)}>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reinit_vars", target: @myself)}
+                >
                   Reinitialize variables
                 </button>
 
-                <button type="button" class="secondary" phx-click={JS.push("reinit_refs", target: @myself)}>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reinit_refs", target: @myself)}
+                >
                   Reset block refs
                 </button>
 
-                <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @myself)}>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("fetch_missing_vars", target: @myself)}
+                >
                   Fetch missing vars
                 </button>
               </div>
@@ -135,7 +173,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
           <%= unless Enum.empty?(@important_vars) do %>
             <div class="important-vars">
               <%= for {var, index} <- Enum.with_index(inputs_for_poly(@block_data[:vars])) do %>
-                <.live_component module={RenderVar} id={"block-#{@uid}-render-var-blk-#{index}"} var={var} render={:only_important} in_block />
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-blk-#{index}"}
+                  var={var}
+                  render={:only_important}
+                  in_block
+                />
               <% end %>
             </div>
           <% end %>
@@ -148,20 +192,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Module.EntryBlock do
                   parent_uploads={@parent_uploads}
                   module_refs={@refs_forms}
                   module_ref_name={ref}
-                  base_form={@base_form} />
-
+                  base_form={@base_form}
+                />
               <% {:variable, var_name, variable_value} -> %>
-                <div class="rendered-variable" data-popover={gettext "Edit the entry directly to affect this variable [%{var_name}]", var_name: var_name}>
+                <div
+                  class="rendered-variable"
+                  data-popover={
+                    gettext("Edit the entry directly to affect this variable [%{var_name}]",
+                      var_name: var_name
+                    )
+                  }
+                >
                   <%= variable_value %>
                 </div>
-
               <% {:picture, _, img_src} -> %>
                 <figure>
                   <img src={img_src} />
                 </figure>
-
               <% _ -> %>
-                <%= raw split %>
+                <%= raw(split) %>
             <% end %>
           <% end %>
           <Input.input type={:hidden} field={@block_data[:module_id]} />

@@ -17,7 +17,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
     quote do
       use BrandoAdmin, :live_view
-      use Phoenix.HTML
+      # use Phoenix.HTML
       import Phoenix.Component
 
       on_mount({__MODULE__, :hooks})
@@ -210,8 +210,11 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
 
-        # link the entries together
-        _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+        # the entry is translatable, but might not have alternates setup
+        if schema.has_alternates?() do
+          # link the entries together
+          _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+        end
 
         send(
           self(),

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks do
   use BrandoAdmin, :live_component
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
   import Brando.Gettext
