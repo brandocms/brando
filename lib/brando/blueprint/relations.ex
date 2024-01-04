@@ -122,6 +122,8 @@ defmodule Brando.Blueprint.Relations do
   end
 
   defmacro relation(name, type, opts \\ []) do
+    opts = expand_literals(opts, __CALLER__)
+
     if type == :many_to_many do
       raise Exception.BlueprintError,
         message: """
@@ -362,4 +364,25 @@ defmodule Brando.Blueprint.Relations do
 
     Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads)
   end
+
+  defp expand_literals(ast, env) do
+    if Macro.quoted_literal?(ast) do
+      Macro.prewalk(ast, &expand_alias(&1, env))
+    else
+      ast
+    end
+  end
+
+  defp expand_alias({:__aliases__, _, _} = alias, env),
+    do: Macro.expand(alias, %{env | function: {:relation, 3}})
+
+  defp expand_alias(other, _env), do: other
+
+  # defp expand_nested_module_alias({:__aliases__, _, [Elixir, _ | _] = alias}, _env),
+  #   do: Module.concat(alias)
+
+  # defp expand_nested_module_alias({:__aliases__, _, [h | t]}, env) when is_atom(h),
+  #   do: Module.concat([env.module, h | t])
+
+  # defp expand_nested_module_alias(other, _env), do: other
 end
