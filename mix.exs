@@ -44,7 +44,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # monitoring
-      {:sentry, "~> 8.0"},
+      {:sentry, "~> 10.1"},
 
       # cache
       {:cachex, "~> 3.5"},
