@@ -12,6 +12,8 @@ defmodule Brando.Supervisor do
   end
 
   def init([]) do
+    Calendar.put_time_zone_database(Tzdata.TimeZoneDatabase)
+
     children = [
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
