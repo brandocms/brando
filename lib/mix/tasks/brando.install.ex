@@ -135,8 +135,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Layouts
-    {:eex, "lib/application_name_web/components/error_helpers.ex",
-     "lib/application_name_web/components/error_helpers.ex"},
     {:eex, "lib/application_name_web/components/layouts.ex",
      "lib/application_name_web/components/layouts.ex"},
     {:eex, "lib/application_name_web/components/layouts/app.html.heex",
