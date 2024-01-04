@@ -1,4 +1,3 @@
-
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
@@ -7,15 +6,18 @@ export default defineConfig({
   server: {
     port: 3333
   },
+  css: {
+    devSourcemap: true
+  },
   build: {
     manifest: false,
     emptyOutDir: false,
-    target: "es2015",
-    outDir: "../../priv/static", // <- Phoenix expects our files here
+    target: 'es2015',
+    outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        admin: "src/main.js"
+        admin: 'src/main.js'
       },
       output: {
         entryFileNames: `assets/[name].js`,
@@ -38,7 +40,5 @@ export default defineConfig({
     }
   },
 
-  plugins: [
-    svelte()
-  ]
+  plugins: [svelte()]
 })
