@@ -65,7 +65,6 @@ defmodule Brando.Navigation.Menu do
   listings do
     listing do
       listing_query %{
-        status: :published,
         order: [{:asc, :language}, {:asc, :key}]
       }
 
