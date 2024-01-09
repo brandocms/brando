@@ -1,14 +1,15 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { Editor } from '@tiptap/core'
+  import { Editor, mergeAttributes } from '@tiptap/core'
   import StarterKit from '@tiptap/starter-kit'
   import Color from '@tiptap/extension-color'
   import TextStyle from '@tiptap/extension-text-style'
   import Typography from '@tiptap/extension-typography'
   import Subscript from '@tiptap/extension-subscript'
   import Superscript from '@tiptap/extension-superscript'
-  import Link from './extensions/Link'
-  import Button from './extensions/Button'
+  import Link from '@tiptap/extension-link'
+  import SmartText from './extensions/SmartText'
+  import HTMLInputParser from './extensions/PasteCleaner/HTMLInputParser'
   import JumpAnchor from './extensions/JumpAnchor'
   import PreventDrop from './extensions/PreventDrop'
   import Focus from '@tiptap/extension-focus'
@@ -42,7 +43,8 @@
       'sup',
       'color',
       'unsetMarks',
-      'jumpAnchor'
+      'jumpAnchor',
+      'smartText'
     ]
 
     if (extensions) {
@@ -50,6 +52,7 @@
         return allExtensions
       }
 
+      // TODO: add smartText no matter what?
       return extensions.split('|')
     } else {
       return allExtensions
@@ -90,11 +93,20 @@
       if (!data) {
         editor.chain().focus().unsetLink().run()
       } else {
+        let opts = { href: data }
+
+        if (data.startsWith('/') || data.startsWith('#')) {
+          opts = { ...opts,
+            target: null,
+            rel: null
+          }
+        }
+
         editor
           .chain()
           .focus()
           .extendMarkRange('link')
-          .setLink({ href: data })
+          .setLink(opts)
           .run()
       }
     })
@@ -110,13 +122,25 @@
 
     alertPrompt('URL/Link', currentHref, ({ data }) => {
       if (!data) {
-        editor.chain().focus().unsetButton().run()
+        editor.chain().focus().unsetLink().run()
       } else {
+        let opts = { 
+          href: data, 
+          class: 'action-button' 
+        }
+
+        if (data.startsWith('/') || data.startsWith('#')) {
+          opts = { ...opts,
+            target: null,
+            rel: null
+          }
+        }
+
         editor
           .chain()
           .focus()
           .extendMarkRange('button')
-          .setButton({ href: data })
+          .setLink(opts)
           .run()
       }
     })
@@ -131,24 +155,49 @@
     tiptapInput = element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector('.tiptap-text')
 
     editor = new Editor({
-      element: element,
+      editorProps: {
+        transformPastedHTML: (html, editorView) => {
+          const htmlCleaner = new HTMLInputParser({ editorView })
+          const cleanedHtml = htmlCleaner.prepareHTML(html)
+          return cleanedHtml
+        }
+      },
+      element: element,      
       extensions: [        
         StarterKit.configure({
           dropcursor: false
         }),
         Typography,
         Link.configure({
-          openOnClick: false
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true
         }),
         Subscript,
         Superscript,
-        Button,
+        Link.extend({
+          name: 'button',
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'action-button',
+            target: '_blank',
+            rel: 'noopener noreferrer nofollow'
+          },
+          parseHTML() {
+            return [{ tag: 'a[class="action-button"]' }]
+          },
+
+          renderHTML({ HTMLAttributes }) {
+            return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
+          }
+        }),
         JumpAnchor,
         Focus.configure({
           className: 'has-focus',
           mode: 'shallowest',
         }),
         PreventDrop,
+        SmartText,
         TextStyle,
         Color
       ],
