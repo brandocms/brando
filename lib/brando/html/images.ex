@@ -477,7 +477,10 @@ defmodule Brando.HTML.Images do
         |> put_in([:figure, "data-placeholder"], "dominant_color")
 
       pl when pl in [:dominant_color_faded, "dominant_color_faded"] ->
-        style = "background-color: #{image_struct.dominant_color <> "11" || "transparent"}"
+        color =
+          (image_struct.dominant_color && image_struct.dominant_color <> "11") || "transparent"
+
+        style = "background-color: #{color}"
 
         attrs
         |> put_in([:picture, "style"], style)
