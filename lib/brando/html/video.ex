@@ -14,6 +14,10 @@ defmodule Brando.HTML.Video do
       - `:svg`
       - `html` -> for instance, provide a rendered picture_tag
     - `poster` -> url to poster, i.e. on vimeo.
+    - `autoplay`
+    - `controls`
+    - `width`
+    - `height`
   """
   def video(assigns)
 
@@ -35,15 +39,17 @@ defmodule Brando.HTML.Video do
       |> assign(:height, height)
 
     ~H"""
-      <iframe src={"https://player.vimeo.com/video/#{@remote_id}?dnt=1"}
-              width={@width}
-              height={@height}
-              frameborder="0"
-              allow="autoplay; encrypted-media"
-              webkitallowfullscreen
-              mozallowfullscreen
-              allowfullscreen>
-      </iframe>
+    <iframe
+      src={"https://player.vimeo.com/video/#{@remote_id}?dnt=1"}
+      width={@width}
+      height={@height}
+      frameborder="0"
+      allow="autoplay; encrypted-media"
+      webkitallowfullscreen
+      mozallowfullscreen
+      allowfullscreen
+    >
+    </iframe>
     """
   end
 
@@ -71,15 +77,17 @@ defmodule Brando.HTML.Video do
       |> assign(:height, height)
 
     ~H"""
-      <iframe src={"https://www.youtube.com/embed/#{@remote_id}?#{@params}"}
-              width={@width}
-              height={@height}
-              frameborder="0"
-              allow="autoplay; encrypted-media"
-              webkitallowfullscreen
-              mozallowfullscreen
-              allowfullscreen>
-      </iframe>
+    <iframe
+      src={"https://www.youtube.com/embed/#{@remote_id}?#{@params}"}
+      width={@width}
+      height={@height}
+      frameborder="0"
+      allow="autoplay; encrypted-media"
+      webkitallowfullscreen
+      mozallowfullscreen
+      allowfullscreen
+    >
+    </iframe>
     """
   end
 
@@ -119,8 +127,8 @@ defmodule Brando.HTML.Video do
       class="video-wrapper video-file"
       data-smart-video
       data-orientation={@orientation}
-      style={@aspect_ratio}>
-
+      style={@aspect_ratio}
+    >
       <video
         width={@width}
         height={@height}
@@ -137,7 +145,9 @@ defmodule Brando.HTML.Video do
         poster={@poster}
         style={@width && "--aspect-ratio-division: #{@width}/#{@height}"}
         data-src={@preload && @src}
-        src={!@preload && @src}></video>
+        src={!@preload && @src}
+      >
+      </video>
       <noscript>
         <video
           width={@width}
@@ -149,7 +159,9 @@ defmodule Brando.HTML.Video do
           muted={@autoplay}
           loop
           playsinline
-          src={@src}></video>
+          src={@src}
+        >
+        </video>
       </noscript>
 
       <%= get_play_button(@play_button) %>
