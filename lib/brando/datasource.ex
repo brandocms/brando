@@ -89,8 +89,8 @@ defmodule Brando.Datasource do
 
         selection
           :featured,
-            fn _module, language, _vars ->
-              {Brando.Content.list_identifiers(module, %{language: language, order: "asc language, asc entry_id"})
+            fn schema, language, _vars ->
+              Brando.Content.list_identifiers(schema, %{language: language})
             end,
             fn identifiers ->
               entry_ids = Enum.map(identifiers, &(&1.entry_id))

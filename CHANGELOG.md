@@ -33,7 +33,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   ```elixir
   selection :featured, 
     fn schema, language, _vars ->
-      Brando.Content.list_identifiers_for(schema, %{language: language})
+      Brando.Content.list_identifiers(schema, %{language: language})
     end,
     fn identifiers ->
       entry_ids = Enum.map(identifiers, & &1.entry_id)
