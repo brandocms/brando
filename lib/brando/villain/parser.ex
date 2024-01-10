@@ -401,9 +401,12 @@ defmodule Brando.Villain.Parser do
       end
 
       def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
-        width = Map.get(data, :width, 500)
-        height = Map.get(data, :height, 281)
+        width = Map.get(data, :width, 500) || 500
+        height = Map.get(data, :height, 281) || 281
         orientation = (width > height && "landscape") || "portrait"
+
+        width = (is_integer(width) && width) || String.to_integer(width)
+        height = (is_integer(height) && height) || String.to_integer(height)
 
         aspect_ratio =
           if height > 0 && width > 0 do
@@ -1007,14 +1010,10 @@ defmodule Brando.Villain.Parser do
       <div class="picture-wrapper" data-orientation={@orientation}>
         <%= if @link != "" do %>
           <.link href={@link} rel={@rel} target={@target}>
-            <.picture
-              src={@src}
-              opts={@opts} />
+            <.picture src={@src} opts={@opts} />
           </.link>
         <% else %>
-          <.picture
-            src={@src}
-            opts={@opts} />
+          <.picture src={@src} opts={@opts} />
         <% end %>
       </div>
     <% end %>
@@ -1023,19 +1022,18 @@ defmodule Brando.Villain.Parser do
 
   def video_tag(%{cover_image: cover_image} = assigns) when not is_nil(cover_image) do
     ~H"""
-    <.video
-      video={@video}
-      opts={@opts}>
+    <.video video={@video} opts={@opts}>
       <:cover>
         <.picture
-        src={@cover_image}
-        opts={[
-          lazyload: true,
-          sizes: "auto",
-          srcset: :default,
-          placeholder: :dominant_color,
-          prefix: Brando.Utils.media_url()
-        ]} />
+          src={@cover_image}
+          opts={[
+            lazyload: true,
+            sizes: "auto",
+            srcset: :default,
+            placeholder: :dominant_color,
+            prefix: Brando.Utils.media_url()
+          ]}
+        />
       </:cover>
     </.video>
     """
