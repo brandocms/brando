@@ -10,7 +10,6 @@ defmodule Mix.Tasks.Brando.Ssg do
 
   """
   @default_host "http://localhost:4000"
-  @spec run(any) :: no_return
   def run(_) do
     Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
