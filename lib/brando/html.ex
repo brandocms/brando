@@ -507,7 +507,7 @@ defmodule Brando.HTML do
   end
 
   def include_assets(assigns) do
-    if Brando.env() == :prod do
+    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
       <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
       <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
