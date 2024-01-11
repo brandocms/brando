@@ -1,5 +1,4 @@
-header[data-nav] {
-  @space container;
+header[data-nav] {  
   @unpack theme.header.padding.large;
 
   position: fixed;
@@ -15,6 +14,7 @@ header[data-nav] {
   }
 
   nav {
+    @space container;
     height: auto;
     position: relative;
     display: flex;

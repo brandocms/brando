@@ -35,12 +35,12 @@ module.exports = {
       link: {
         regular: {
           text: '#000000',
-          border: '#000000',
+          border: '#000000'
         },
         hover: {
           text: '#000000',
-          border: '#000000',
-        },
+          border: '#000000'
+        }
       },
 
       gray: {
@@ -69,8 +69,8 @@ module.exports = {
     container: {
       maxWidth: {
         iphone: '100%',
-        mobile: '100%',
-        ipad_portrait: '100%',
+        mobile: '560px',
+        ipad_portrait: '810px',
         ipad_landscape: '100%',
         desktop_md: '100%',
         desktop_lg: '100%',
@@ -171,22 +171,9 @@ module.exports = {
           'sans-serif'
         ],
 
-        serif: [
-          'Georgia',
-          'Cambria',
-          '"Times New Roman"',
-          'Times',
-          'serif'
-        ],
+        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
 
-        mono: [
-          'Menlo',
-          'Monaco',
-          'Consolas',
-          '"Liberation Mono"',
-          '"Courier New"',
-          'monospace'
-        ]
+        mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
       }
     },
 
