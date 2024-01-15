@@ -50,16 +50,16 @@
     vex-dialog "^1.1.0"
     vex-js "^4.1.0"
 
-"@brandocms/europacss@^0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.13.0.tgz#9d1810a073061d8e3d193a1270119bed0702e6f1"
-  integrity sha512-wqEuPNAhmRrqSXrfXdQLwGjwPlZkWbtWD4EFejjetLgG0mvoXbmbEWerVhcCd7enxmNvYgsp5nEZGnHAAuDxSg==
+"@brandocms/europacss@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.13.1.tgz#3cf74feee2fb7260300972139c4f64fcce853b6c"
+  integrity sha512-SzoAe/F9jtJQPLTyLCgUADaV2UIGejHK+xi5OZgkteGihiyZtsDK20/iD6+6vX75hCnqP72MC/v6kVGe15vZig==
   dependencies:
     lodash "^4.17.21"
     normalize.css "^8.0.1"
     postcss "^7.0.30"
     postcss-extend-rule "^3.0.0"
-    postcss-functions twined/postcss-functions
+    postcss-functions "github:twined/postcss-functions"
     postcss-nested "^4.2.1"
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
