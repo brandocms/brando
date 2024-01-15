@@ -13,7 +13,8 @@ defmodule Brando.Plug.SSG do
           render_path = Path.join([root_path, conn.request_path])
           render_file = Path.join([render_path, "index.html"])
           File.mkdir_p!(render_path)
-          File.write!(render_file, conn.resp_body)
+          formatted_body = Phoenix.LiveView.HTMLFormatter.format(to_string(conn.resp_body), [])
+          File.write!(render_file, formatted_body)
           Mix.shell().info([:green, "* ok 200 writing `#{conn.request_path}` -> `#{render_file}"])
           conn
 
