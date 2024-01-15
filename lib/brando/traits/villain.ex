@@ -75,6 +75,7 @@ defmodule Brando.Trait.Villain do
     end)
   end
 
+  # TODO: drop sequence from join table(?)
   @impl true
   def generate_code(parent_module, _config) do
     quote generated: true do

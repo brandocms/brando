@@ -44,8 +44,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           children={entry_block_form.data.block.children}
           parent_id={entry_block_form.data.block.parent_id}
           form={entry_block_form}
+          current_user_id={@current_user.id}
+          belongs_to={:root}
         >
-          BLOCK CONTENT: <%= entry_block_form.data.block.uid %> -- <%= entry_block_form.data.block.type %> [multi:<%= entry_block_form.data.block.multi %>]
         </.live_component>
       </div>
     </div>
