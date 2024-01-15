@@ -31,10 +31,6 @@ defmodule Mix.Tasks.Brando.Ssg do
     Application.put_env(Brando.config(:otp_app), :hmr, false)
     Application.put_env(Brando.config(:otp_app), :show_breakpoint_debug, false)
 
-    if Brando.web_module(Endpoint).config(:code_reloader) do
-      raise ":code_reloader in your Endpoint config must be set to false while running the SSG"
-    end
-
     if Mix.shell().yes?("\nGenerate static files? (cleans priv/static first)") do
       # delete static
       static_path = Path.join([File.cwd!(), "priv", "static"])
