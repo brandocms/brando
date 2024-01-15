@@ -1,16 +1,15 @@
 defmodule Brando.Plug.SSG do
   def init(_) do
-    if Application.get_env(:brando, :ssg_run, false) do
-      :ssg_run
-    end
+    Application.get_env(:brando, :ssg_run, :normal)
   end
-  def call(conn, :ssg_run) do
+
+  def call(conn, :html) do
     {:ok, ssg_urls} = Brando.SSG.get_urls()
 
     Plug.Conn.register_before_send(conn, fn conn ->
       cond do
         conn.request_path in ssg_urls and conn.status == 200 ->
-          root_path = Path.join([File.cwd!(), "ssg"])
+          root_path = Brando.SSG.get_root_path()
           render_path = Path.join([root_path, conn.request_path])
           render_file = Path.join([render_path, "index.html"])
           File.mkdir_p!(render_path)
@@ -28,5 +27,11 @@ defmodule Brando.Plug.SSG do
     end)
   end
 
-  def call(conn, _), do: conn
+  def call(conn, :normal) do
+    conn
+  end
+
+  def call(conn, _) do
+    conn |> Plug.Conn.halt() |> Plug.Conn.send_resp(200, "")
+  end
 end
