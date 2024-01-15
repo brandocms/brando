@@ -15,6 +15,7 @@ defmodule Mix.Tasks.Brando.Ssg do
     Application.put_env(:logger, :level, :error)
 
     Mix.Tasks.Run.run([])
+    :inets.start()
 
     Mix.shell().info("""
 
@@ -23,12 +24,16 @@ defmodule Mix.Tasks.Brando.Ssg do
     ------------------------------
     """)
 
-    ssg_path = Path.join([File.cwd!(), "ssg"])
+    ssg_path = Brando.SSG.get_root_path()
     {:ok, ssg_urls} = Brando.SSG.get_urls()
 
-    Application.put_env(:brando, :ssg_run, true)
+    Application.put_env(:brando, :ssg_run, :css)
     Application.put_env(Brando.config(:otp_app), :hmr, false)
     Application.put_env(Brando.config(:otp_app), :show_breakpoint_debug, false)
+
+    if Brando.web_module(Endpoint).config(:code_reloader) do
+      raise ":code_reloader in your Endpoint config must be set to false while running the SSG"
+    end
 
     if Mix.shell().yes?("\nGenerate static files? (cleans priv/static first)") do
       # delete static
@@ -41,9 +46,9 @@ defmodule Mix.Tasks.Brando.Ssg do
       File.cp_r!(static_path, ssg_path)
     end
 
-    :inets.start()
-
     if Mix.shell().yes?("\nGenerate HTML?") do
+      Application.put_env(:brando, :ssg_run, :html)
+
       for url <- ssg_urls do
         # we just need to access the url to generate html
         full_url = Path.join([@default_host, url])
@@ -51,9 +56,13 @@ defmodule Mix.Tasks.Brando.Ssg do
       end
     end
 
+    Application.put_env(:brando, :ssg_run, :media)
+
     if Mix.shell().yes?("\nCopy media directory?") do
       media_path = Path.join([File.cwd!(), "media"])
       File.cp_r!(media_path, Path.join([ssg_path, "media"]))
     end
+
+    Application.put_env(:brando, :ssg_run, :normal)
   end
 end

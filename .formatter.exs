@@ -24,6 +24,7 @@ locals_without_parens = [
   mutation: 3,
   # live preview
   preview_target: 2,
+  render_path: 1,
   assign: 2,
   schema_module: 1,
   schema_preloads: 1,

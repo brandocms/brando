@@ -46,22 +46,50 @@ defmodule Brando.SSG do
     end
   end
 
+  defmacro render_path(path) do
+    quote do
+      def __render_path__ do
+        unquote(path)
+      end
+    end
+  end
+
+  defp has_custom_render_path(module) do
+    {:__render_path__, 0} in module.__info__(:functions)
+  end
+
+  def get_root_path do
+    ssg_module = Brando.web_module(SSG)
+
+    case Code.ensure_compiled(ssg_module) do
+      {:module, _} ->
+        if has_custom_render_path(ssg_module) do
+          ssg_module.__render_path__()
+        else
+          Path.join([File.cwd!(), "ssg"])
+        end
+
+      {:error, _} ->
+        raise "Missing SSG module `#{ssg_module}`"
+    end
+  end
+
   def get_urls do
     ssg_module = Brando.web_module(SSG)
 
     case Code.ensure_compiled(ssg_module) do
       {:module, _} ->
-        ssg_functions = ssg_module.__info__(:functions)
+        ssg_functions =
+          :functions
+          |> ssg_module.__info__()
+          |> Enum.reject(&(&1 == {:__render_path__, 0}))
+
         entries = Stream.flat_map(ssg_functions, &apply(ssg_module, elem(&1, 0), []))
 
-        Brando.repo().transaction(fn ->
-          entries
-          |> Enum.to_list()
-        end)
+        Brando.repo().transaction(fn -> Enum.to_list(entries) end)
+
       {:error, _} ->
         raise "Missing SSG module `#{ssg_module}`"
     end
-
-
   end
 end
