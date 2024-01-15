@@ -36,7 +36,7 @@ import '../css/app.css'
 const app = new Application({
   breakpointConfig: configureBreakpoints,
   faderOpts: {
-    fadeIn: (callback) => {
+    fadeIn: callback => {
       document.body.classList.remove('unloaded')
       callback()
     }
@@ -45,10 +45,10 @@ const app = new Application({
 
 app.registerCallback(Events.APPLICATION_READY, () => {
   app.links = new Links(app)
+  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
 })
 
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
-  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
   app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
   app.header = new FixedHeader(app, configureHeader(app))
   app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
@@ -61,7 +61,9 @@ app.registerCallback(Events.APPLICATION_REVEALED, () => {
 })
 
 // trigger ready state
-if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
+if (
+  document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading'
+) {
   app.initialize()
 } else {
   document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
