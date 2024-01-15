@@ -159,16 +159,6 @@ defmodule Brando.HTML do
     """
   end
 
-  def render_palettes_css(assigns) do
-    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
-
-    ~H"""
-    <style :if={@palettes_css != ""}>
-      <%= @palettes_css %>
-    </style>
-    """
-  end
-
   def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
     canonical =
       hreflangs
@@ -491,9 +481,9 @@ defmodule Brando.HTML do
     else
       ~H"""
       <!-- admin dev/test -->
-      <script type="module" src="http://localhost:3333/@vite/client">
+      <script type="module" src="http://localhost:3333/@vite/client" phx-no-format>
       </script>
-      <script type="module" src="http://localhost:3333/src/main.js">
+      <script type="module" src="http://localhost:3333/src/main.js" phx-no-format>
       </script>
       <!-- end admin dev/test -->
       """
@@ -521,11 +511,11 @@ defmodule Brando.HTML do
       else
         ~H"""
         <!-- dev/test -->
-        <script type="module" src="http://localhost:3000/@vite/client">
+        <script type="module" src="http://localhost:3000/@vite/client" phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/critical.js">
+        <script type="module" src="http://localhost:3000/js/critical.js" phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/index.js">
+        <script type="module" src="http://localhost:3000/js/index.js" phx-no-format>
         </script>
         <!-- end dev/test -->
         """
@@ -595,7 +585,7 @@ defmodule Brando.HTML do
   """
   attr :entry, :map, required: true
   attr :conn, :map, required: true
-  slot(:inner_block, default: nil)
+  slot :inner_block, default: nil
 
   def render_data(assigns) do
     parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, conn: assigns.conn)
@@ -652,6 +642,16 @@ defmodule Brando.HTML do
       nil, acc -> acc
       k, acc -> acc ++ (k |> to_string() |> List.wrap())
     end)
+  end
+
+  def render_palettes_css(assigns) do
+    assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
+
+    ~H"""
+    <style :if={@palettes_css != {:safe, ""}} phx-no-format>
+      <%= @palettes_css %>
+    </style>
+    """
   end
 
   defdelegate global(lang, category, key), to: Brando.Sites, as: :render_global
