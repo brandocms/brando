@@ -1,6 +1,6 @@
 /**
  * Application-specific CSS.
- * (c) 2022
+ * (c) 2024
  */
 
 /**
@@ -104,7 +104,6 @@ body {
 }
 
 p {
-  @fontsize base;
   @space margin-bottom vertical-rhythm(theme.typography.sizes.base);
 
   &:last-of-type {
@@ -198,13 +197,21 @@ p {
 
 /** Lazyload **/
 [data-ll-srcset] {
+  opacity: 0;
+  transition: opacity 350ms ease-in;
+  
+  &[data-ll-srcset-initialized] {
+    opacity: 1;
+  }
+
   img {
     opacity: 0;
     will-change: opacity;
 
     &[data-ll-loaded] {
-      transition: opacity 350ms ease-in;
+      transition: opacity 350ms ease-in 50ms;
       opacity: 1;
+      background-color: rgba(0,0,0,0);
     }
   }
 }
