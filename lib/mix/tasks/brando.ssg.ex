@@ -25,6 +25,7 @@ defmodule Mix.Tasks.Brando.Ssg do
     """)
 
     ssg_path = Brando.SSG.get_root_path()
+    File.mkdir_p!(ssg_path)
     {:ok, ssg_urls} = Brando.SSG.get_urls()
 
     Application.put_env(:brando, :ssg_run, :css)
