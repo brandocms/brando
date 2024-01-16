@@ -134,7 +134,6 @@ defmodule Brando.HTML.Video do
         height={@height}
         alt=""
         tabindex="0"
-        role="presentation"
         preload="auto"
         autoplay={@autoplay}
         muted={@autoplay}
@@ -154,7 +153,6 @@ defmodule Brando.HTML.Video do
           height={@height}
           alt=""
           tabindex="0"
-          role="presentation"
           preload="metadata"
           muted={@autoplay}
           loop
