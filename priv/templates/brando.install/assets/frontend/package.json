@@ -16,7 +16,7 @@
     "postcss-preset-env": "^9.3.0",
     "postcss-reporter": "^7.0.5",
     "stylelint": "^15.11.0",
-    "terser": "^5.24.0",
+    "terser": "^5.27.0",
     "vite": "^5.0.0"
   },
   "dependencies": {
