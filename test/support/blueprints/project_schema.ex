@@ -76,9 +76,7 @@ defmodule Brando.BlueprintTest.Project do
     size_limit: 10_240_000
   }
 
-  absolute_url """
-  {%- route page_path show { entry.slug, entry.creator.slug, entry.properties.name } -%}
-  """
+  absolute_url {:i18n, :page_path, :show, [[:slug], [:creator, :slug], [:properties, :name]]}
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
