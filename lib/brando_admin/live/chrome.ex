@@ -38,27 +38,60 @@ defmodule BrandoAdmin.Chrome do
   def render(assigns) do
     ~H"""
     <div :if={@socket_connected && @presences} class="presences">
-      <div
+      <.presence
         :for={{id, presence} <- @presences}
-        class="user-presence visible"
-        data-user-id={id}
-        data-user-url={presence.urls}
-        data-user-status={presence.status}
-        phx-mounted={JS.add_class("visible")}
-        phx-click={JS.push("select_presence", value: %{id: id}) |> show_modal("#presence-modal")}>
-        <div class="avatar">
-          <Content.image image={presence.avatar} size={:thumb} />
+        presence={presence}
+        id={id}
+        selected_presence={@selected_presence}
+      />
+    </div>
+    """
+  end
+
+  attr :presence, :map, required: true
+  attr :id, :integer, required: true
+  attr :selected_presence, :map
+
+  def presence(assigns) do
+    last_active =
+      if assigns.presence.last_active do
+        assigns.presence.last_active
+        |> String.to_integer()
+        |> DateTime.from_unix!()
+        |> DateTime.shift_zone!(Brando.timezone())
+        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+      else
+        nil
+      end
+
+    assigns = assign(assigns, :last_active, last_active)
+
+    ~H"""
+    <div
+      class="user-presence visible"
+      data-user-id={@id}
+      data-user-status={@presence.status}
+      phx-mounted={JS.add_class("visible")}
+      phx-click={
+        "select_presence"
+        |> JS.push(value: %{id: @id})
+        |> show_modal("#presence-modal-#{@id}")
+      }
+    >
+      <div class="avatar">
+        <Content.image image={@presence.avatar} size={:thumb} />
+      </div>
+    </div>
+    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"} narrow>
+      <div :if={@selected_presence && @selected_presence.id == @id}>
+        <%= @selected_presence.name %><br />
+        <%= @presence.status %><br />
+        <%= @last_active %><br />
+        <div :for={url <- @presence.urls} class="text-mono">
+          <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
         </div>
       </div>
-      <Content.modal title={gettext("Presence details")} id="presence-modal">
-        <div :if={@selected_presence}>
-          <%= @selected_presence.name %><br>
-          <%= @selected_presence.status %><br>
-          <%= @selected_presence.last_active %><br>
-          <%= @selected_presence.urls %><br>
-        </div>
-      </Content.modal>
-    </div>
+    </Content.modal>
     """
   end
 
@@ -72,7 +105,7 @@ defmodule BrandoAdmin.Chrome do
         socket
       ) do
     last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-    urls = metas |> Enum.map(& &1.url) |> Jason.encode!()
+    urls = metas |> Enum.map(& &1.url)
     status = (Enum.any?(metas, & &1.active) && "online") || "idle"
 
     presence = %{
@@ -101,7 +134,7 @@ defmodule BrandoAdmin.Chrome do
       {:noreply, assign_presence(socket, presence)}
     else
       last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-      urls = metas |> Enum.map(& &1.url) |> Jason.encode!()
+      urls = metas |> Enum.map(& &1.url)
       status = (Enum.any?(metas, & &1.active) && "online") || "idle"
 
       presence = %{
@@ -158,7 +191,7 @@ defmodule BrandoAdmin.Chrome do
 
         %{user: user, metas: metas} ->
           last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-          urls = metas |> Enum.map(& &1.url) |> Jason.encode!()
+          urls = metas |> Enum.map(& &1.url)
           status = (Enum.any?(metas, & &1.active) && "online") || "idle"
 
           {id,

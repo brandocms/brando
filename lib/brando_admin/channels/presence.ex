@@ -81,16 +81,6 @@ defmodule BrandoAdmin.Presence do
         for {user_id, presence} <- joins do
           metas = Map.fetch!(presences, user_id)
 
-          updated_fields =
-            if metas == [] do
-              %{last_active: nil, urls: nil, status: "offline"}
-            else
-              last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-              urls = metas |> Enum.map(& &1.url) |> Jason.encode!()
-              status = (Enum.any?(metas, & &1.active) && "online") || "idle"
-              %{last_active: last_active, urls: urls, status: status}
-            end
-
           user_data = %{
             user: %{
               id: presence.user.id,
