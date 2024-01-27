@@ -14,7 +14,8 @@ defmodule Brando.LobbyChannel do
   @doc """
   Join lobby channel
   """
-  def join("lobby", _params, socket) do
+  def join("lobby", %{"url" => url}, socket) do
+    socket = assign(socket, :url, url)
     send(self(), :after_join)
     {:ok, %{}, socket}
   end
@@ -42,7 +43,7 @@ defmodule Brando.LobbyChannel do
       Brando.presence().track(socket, socket.assigns.user_id, %{
         online_at: inspect(System.system_time(:second)),
         active: true,
-        url: nil
+        url: socket.assigns.url
       })
 
     {:noreply, socket}

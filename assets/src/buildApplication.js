@@ -184,7 +184,7 @@ export default hooks => {
       app.userSocket.connect()
 
       app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
-      app.lobbyChannel = app.userSocket.channel('lobby', {})
+      app.lobbyChannel = app.userSocket.channel('lobby', { url: window.location.pathname })
 
       app.lobbyChannel.on('toast', data => {
         app.toast.mutation(data.level, data.payload)
