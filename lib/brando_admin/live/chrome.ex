@@ -17,9 +17,9 @@ defmodule BrandoAdmin.Chrome do
   import BrandoAdmin.Utils, only: [show_modal: 2]
 
   def mount(_params, _session, socket) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
-
     if connected?(socket) do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
+
       {:ok,
        socket
        |> assign(:socket_connected, true)
