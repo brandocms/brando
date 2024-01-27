@@ -229,7 +229,7 @@ def bootstrap_release():
     upload_release(version)
     unpack_release(version)
 
-    upload_media()
+    # upload_media()
     upload_etc()
     createdb()
 
@@ -940,22 +940,28 @@ def setup_pgbackup():
     """
     Copies postgresql backup script to host and adds to crontab
     """
-    sudo('mkdir -p /backups/postgres')
-    sudo('chown -R postgres:postgres /backups')
-    put('etc/pgbkup.sh', '/backups/postgres', use_sudo=True)
-    sudo('chmod +x /backups/postgres/pgbkup.sh')
-    sudo('echo "0 3 * * * /backups/postgres/pgbkup.sh" | crontab -', user='postgres')
+    if env.flavor == 'prod':
+        sudo('mkdir -p /backups/postgres')
+        sudo('chown -R postgres:postgres /backups')
+        put('etc/pgbkup.sh', '/backups/postgres', use_sudo=True)
+        sudo('chmod +x /backups/postgres/pgbkup.sh')
+        sudo('echo "0 3 * * * /backups/postgres/pgbkup.sh" | crontab -', user='postgres')
+    else:
+        print('skip pgbakcup')
 
 
 def setup_rclone():
     """
     Setup rclone
     """
-    access = prompt('DO Access key')
-    secret = prompt('DO Secret key')
-    sudo('curl https://rclone.org/install.sh | sudo bash')
-    sudo('mkdir -p /home/%s/.config/rclone' % env.project_user, user=env.project_user)
-    sudo('echo "[BY]\ntype = s3\nprovider = DigitalOcean\nenv_auth = false\naccess_key_id = %s\nsecret_access_key = %s\nendpoint = ams3.digitaloceanspaces.com\nacl = private\nbucket_acl = private\n" > /home/%s/.config/rclone/rclone.conf' % (access, secret, env.project_user), user=env.project_user)
-    sudo('chmod 600 /home/%s/.config/rclone/rclone.conf' % env.project_user, user=env.project_user)
+    if env.flavor == 'prod':
+        access = prompt('DO Access key')
+        secret = prompt('DO Secret key')
+        sudo('curl https://rclone.org/install.sh | sudo bash')
+        sudo('mkdir -p /home/%s/.config/rclone' % env.project_user, user=env.project_user)
+        sudo('echo "[BY]\ntype = s3\nprovider = DigitalOcean\nenv_auth = false\naccess_key_id = %s\nsecret_access_key = %s\nendpoint = ams3.digitaloceanspaces.com\nacl = private\nbucket_acl = private\n" > /home/%s/.config/rclone/rclone.conf' % (access, secret, env.project_user), user=env.project_user)
+        sudo('chmod 600 /home/%s/.config/rclone/rclone.conf' % env.project_user, user=env.project_user)
 
-    sudo('echo "15 4 * * * rclone -P sync /backups/postgres/ BY:bielkeyang/backups/%s/postgres\n30 4 * * * rclone -P sync /sites/prod/%s/media BY:bielkeyang/backups/%s/media" | crontab -' % (env.procname, env.project_name, env.procname), user=env.project_user)
+        sudo('echo "15 4 * * * rclone -P sync /backups/postgres/ BY:bielkeyang/backups/%s/postgres\n30 4 * * * rclone -P sync /sites/prod/%s/media BY:bielkeyang/backups/%s/media" | crontab -' % (env.procname, env.project_name, env.procname), user=env.project_user)
+    else:
+        print('skip rclone')
