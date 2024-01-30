@@ -77,7 +77,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
                 get_in(entry, [Access.key(key)])
             end)
 
-        Brando.I18n.Helpers.localized_path(locale, unquote(fun), args)
+        try do
+          Brando.I18n.Helpers.localized_path(locale, unquote(fun), args)
+        rescue
+          UndefinedFunctionError -> "<no valid url found>"
+          ArgumentError -> "<no valid url found>"
+        end
       end
 
       def __absolute_url_type__, do: :i18n
