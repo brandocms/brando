@@ -2,40 +2,32 @@ defmodule Brando.Blueprint.Listings do
   @moduledoc """
   # Listings
 
-  You can use a `template` or a `field` for displaying data in a listing.
+  ### Listing/row component
 
-  ## Template
+  Set your own component for rendering a listing row:
 
-  ```elixir
-  template("<a href="/">{{ entry.title }}</a>", columns: 8)
-  ```
+      listings do
+        listing do
+          component &__MODULE__.list_row/1
+          # ...
+        end
+      end
 
-  ## Field
-
-  ### Field types
-
-  - `:image` - Display an image in the listing
-
-    For example, to display the entry's `cover` image over 2 columns, with a `padded`
-    class and using the image's `small` size key:
-
-    ```
-    field :cover, :image, columns: 2, class: "padded", size: "small"
-    ```
-
-    If no `size` is supplied, it will fall back to `thumb`.
-
-  - `:language` -
-
-    ```elixir
-    field :language, :language, columns: 1
-    ```
-
-  - `:url` -
-
-    ```elixir
-    field :url, :url
-    ```
+      def listing_row(assigns) do
+        ~H\"""
+        <.cover image={@entry.cover} columns={2} size={:smallest} padded />
+        <.update_link entry={@entry} columns={6}>
+          <%= @entry.title %>
+          <:outside>
+            <%= if @entry.category do %>
+              <br />
+              <small class="badge"><%= @entry.category.name %></small>
+            <% end %>
+          </:outside>
+        </.update_link>
+        <.url entry={@entry} />
+        \"""
+      end
 
   ### Custom query params
 
@@ -62,7 +54,8 @@ defmodule Brando.Blueprint.Listings do
               actions: [],
               selection_actions: [],
               exports: [],
-              child_listing: nil
+              child_listing: nil,
+              component: nil
   end
 
   defmodule Field do
@@ -125,6 +118,7 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_selection_actions) = []
       var!(brando_listing_exports) = []
       var!(brando_listing_child_listing) = nil
+      var!(brando_listing_component) = nil
       var!(brando_listing_default_actions) = true
       var!(brando_listing_sortable) = true
 
@@ -141,7 +135,8 @@ defmodule Brando.Blueprint.Listings do
           var!(brando_listing_child_listing),
           var!(brando_listing_default_actions),
           var!(brando_listing_sortable),
-          var!(brando_listing_exports)
+          var!(brando_listing_exports),
+          var!(brando_listing_component)
         )
 
       Module.put_attribute(__MODULE__, :listings, named_listing)
@@ -209,6 +204,14 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
+  defmacro component(component) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [component: component] do
+      var!(brando_listing_component) = component
+    end
+  end
+
   defmacro actions(actions, opts \\ []) do
     quote generated: true,
           location: :keep,
@@ -250,7 +253,8 @@ defmodule Brando.Blueprint.Listings do
         child_listing,
         default_actions,
         sortable,
-        exports
+        exports,
+        component
       ) do
     %__MODULE__.Listing{
       name: name,
@@ -262,7 +266,8 @@ defmodule Brando.Blueprint.Listings do
       child_listing: child_listing,
       default_actions: default_actions,
       sortable: sortable,
-      exports: exports
+      exports: exports,
+      component: component
     }
   end
 

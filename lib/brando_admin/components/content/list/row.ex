@@ -58,10 +58,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <div class="main-content">
         <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
         <.handle :if={@sortable?} />
-        <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+        <%= if @listing.component do %>
+          <%= Phoenix.LiveView.TagEngine.component(
+            @listing.component,
+            [entry: @entry],
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          ) %>
+        <% else %>
+          <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+        <% end %>
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
-
         <.entry_menu
           schema={@schema}
           content_language={@content_language}

@@ -189,6 +189,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).Identifier
       import unquote(__MODULE__).JSONLD
       import unquote(__MODULE__).Listings
+      import unquote(__MODULE__).Listings.Components
       import unquote(__MODULE__).Meta
       import unquote(__MODULE__).Naming
       import unquote(__MODULE__).Relations
@@ -197,6 +198,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).Utils
 
       import Brando.Utils.Schema
+      import Phoenix.Component, except: [form: 1]
 
       def __absolute_url__(_) do
         false
