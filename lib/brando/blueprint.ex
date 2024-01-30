@@ -959,7 +959,7 @@ defmodule Brando.Blueprint do
         user,
         opts
       )
-      |> Changeset.validate_required(all_required_attrs)
+      |> maybe_validate_required(all_required_attrs)
       |> Unique.run_unique_attribute_constraints(module, all_attributes)
       |> Unique.run_unique_relation_constraints(module, all_relations)
       |> Constraints.run_validations(module, all_attributes)
@@ -987,6 +987,15 @@ defmodule Brando.Blueprint do
     )
 
     changeset
+  end
+
+  def maybe_validate_required(changeset, all_required_attrs) do
+    require Logger
+
+    case Changeset.get_field(changeset, :status) do
+      :draft -> changeset
+      val -> Changeset.validate_required(changeset, all_required_attrs)
+    end
   end
 
   defmacro query(arg) do
