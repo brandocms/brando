@@ -994,7 +994,7 @@ defmodule Brando.Blueprint do
 
     case Changeset.get_field(changeset, :status) do
       :draft -> changeset
-      val -> Changeset.validate_required(changeset, all_required_attrs)
+      _ -> Changeset.validate_required(changeset, all_required_attrs)
     end
   end
 

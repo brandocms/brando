@@ -53,8 +53,14 @@ defmodule Brando.Utils.Schema do
   Precheck field in `cs` to make sure we avoid collisions
   """
   def avoid_field_collision(%Changeset{valid?: true} = changeset, _module, fields, nil) do
-    src = changeset.data.__struct__
-    do_avoid_field_collision(fields, changeset, src)
+    case Changeset.get_field(changeset, :status) do
+      :draft ->
+        changeset
+
+      _ ->
+        src = changeset.data.__struct__
+        do_avoid_field_collision(fields, changeset, src)
+    end
   end
 
   def avoid_field_collision(
@@ -63,8 +69,14 @@ defmodule Brando.Utils.Schema do
         fields,
         {filter_field, filter_fn}
       ) do
-    src = filter_fn.(module, filter_field, changeset)
-    do_avoid_field_collision(fields, changeset, src)
+    case Changeset.get_field(changeset, :status) do
+      :draft ->
+        changeset
+
+      _ ->
+        src = filter_fn.(module, filter_field, changeset)
+        do_avoid_field_collision(fields, changeset, src)
+    end
   end
 
   def avoid_field_collision(%Changeset{} = changeset, _, _, _) do
@@ -73,16 +85,28 @@ defmodule Brando.Utils.Schema do
 
   def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn)
       when is_list(fields) do
-    src = filter_fn.(changeset)
-    do_avoid_field_collision(fields, changeset, src)
+    case Changeset.get_field(changeset, :status) do
+      :draft ->
+        changeset
+
+      _ ->
+        src = filter_fn.(changeset)
+        do_avoid_field_collision(fields, changeset, src)
+    end
   end
 
   def avoid_field_collision(%Changeset{} = changeset, _, _), do: changeset
 
   def avoid_field_collision(%Changeset{valid?: true} = changeset, fields)
       when is_list(fields) do
-    src = changeset.data.__struct__
-    do_avoid_field_collision(fields, changeset, src)
+    case Changeset.get_field(changeset, :status) do
+      :draft ->
+        changeset
+
+      _ ->
+        src = changeset.data.__struct__
+        do_avoid_field_collision(fields, changeset, src)
+    end
   end
 
   def avoid_field_collision(changeset, _), do: changeset
