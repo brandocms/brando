@@ -333,17 +333,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <div class="col-1 seq">
       <div class="center sequence-handle">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="1.5" cy="1.5" r="1.5"></circle>
-          <circle cx="7.5" cy="1.5" r="1.5"></circle>
-          <circle cx="13.5" cy="1.5" r="1.5"></circle>
-          <circle cx="1.5" cy="7.5" r="1.5"></circle>
-          <circle cx="7.5" cy="7.5" r="1.5"></circle>
-          <circle cx="13.5" cy="7.5" r="1.5"></circle>
-          <circle cx="1.5" cy="13.5" r="1.5"></circle>
-          <circle cx="7.5" cy="13.5" r="1.5"></circle>
-          <circle cx="13.5" cy="13.5" r="1.5"></circle>
-        </svg>
+        <.icon name="brando-move" />
       </div>
     </div>
     """

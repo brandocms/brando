@@ -7720,3 +7720,34 @@
   width: 1.25rem;
   height: 1.25rem;
 }
+
+.brando-move {
+  --brando-move: url("data:image/svg+xml,%3Csvg viewBox='0 0 15 15' fill='black' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1.5' cy='1.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='7.5' cy='1.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='13.5' cy='1.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='1.5' cy='7.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='7.5' cy='7.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='13.5' cy='7.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='1.5' cy='13.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='7.5' cy='13.5' r='1.5'%3E%3C/circle%3E%3Ccircle cx='13.5' cy='13.5' r='1.5'%3E%3C/circle%3E%3C/svg%3E");
+  -webkit-mask: var(--brando-move);
+  mask: var(--brando-move);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  background-color: currentColor;
+  vertical-align: middle;
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.brando-dropdown {
+  --brando-dropdown: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' /%3E%3C/svg%3E%0A");
+  -webkit-mask: var(--brando-dropdown);
+  mask: var(--brando-dropdown);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  background-color: currentColor;
+  vertical-align: middle;
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: rotateZ(90deg)
+  }
+}

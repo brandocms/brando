@@ -281,22 +281,18 @@
   }
 
   .sequence-handle {
-    width: 15px;
     cursor: move;
 
     &.center {
       margin: 0 auto;
     }
-
-    svg {
-      circle {
-        fill: var(--brando-color-dark);
-      }
+    span {
+      width: 15px;
+      height: 15px;
+      background-color: var(--brando-color-dark);
 
       &:hover {
-        circle {
-          fill: theme(colors.blue);
-        }
+        background-color: var(--brando-color-blue);
       }
     }
   }
