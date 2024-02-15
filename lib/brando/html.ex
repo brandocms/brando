@@ -644,6 +644,16 @@ defmodule Brando.HTML do
     end)
   end
 
+  def csrf_token_value, do: Plug.CSRFProtection.get_csrf_token()
+
+  def csrf_meta_tag(assigns) do
+    assigns = assign(assigns, :csrf_token, csrf_token_value())
+
+    ~H"""
+    <meta name="csrf-token" content={@csrf_token} />
+    """
+  end
+
   def render_palettes_css(assigns) do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
