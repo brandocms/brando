@@ -2,6 +2,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
 
+* BREAKING: Replace `<%= csrf_meta_tag %>` with ´<.csrf_meta_tag />`
+
 * BREAKING: Switch out `<%= google_analytics(...) %>` calls in your code with
   `<.google_analytics code="...." />
 
