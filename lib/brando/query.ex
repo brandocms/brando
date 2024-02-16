@@ -719,7 +719,42 @@ defmodule Brando.Query do
     preloads = Keyword.get(opts, :preload)
 
     quote do
-      def unquote(:"update_#{singular_schema}")(schema, params, user, opts \\ [])
+      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user) do
+        Brando.Query.Mutations.update_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          []
+        )
+      end
+
+      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, opts) do
+        Brando.Query.Mutations.update_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          opts
+        )
+      end
+
+      def unquote(:"update_#{singular_schema}")(%{id: id}, params, user) do
+        Brando.Query.Mutations.update(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          params,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          nil,
+          true
+        )
+      end
 
       def unquote(:"update_#{singular_schema}")(%{id: id}, params, user, opts) do
         Brando.Query.Mutations.update(
@@ -736,6 +771,21 @@ defmodule Brando.Query do
         )
       end
 
+      def unquote(:"update_#{singular_schema}")(id, params, user) do
+        Brando.Query.Mutations.update(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          params,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          nil,
+          true
+        )
+      end
+
       def unquote(:"update_#{singular_schema}")(id, params, user, opts) do
         Brando.Query.Mutations.update(
           __MODULE__,
@@ -748,16 +798,6 @@ defmodule Brando.Query do
           unquote(callback_block),
           Keyword.get(opts, :changeset, nil),
           Keyword.get(opts, :show_notification, true)
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user) do
-        Brando.Query.Mutations.update_with_changeset(
-          unquote(module),
-          changeset,
-          user,
-          unquote(preloads),
-          unquote(callback_block)
         )
       end
     end

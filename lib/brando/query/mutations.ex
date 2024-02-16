@@ -126,7 +126,9 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def update_with_changeset(module, changeset, user, preloads, callback_block) do
+  def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
+    show_notification = Keyword.get(opts, :show_notification, true)
+
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
@@ -141,9 +143,11 @@ defmodule Brando.Query.Mutations do
           Revisions.create_revision(entry, user)
         end
 
-        case Brando.Blueprint.Identifier.identifier_for(entry) do
-          nil -> nil
-          identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+        if show_notification do
+          case Brando.Blueprint.Identifier.identifier_for(entry) do
+            nil -> nil
+            identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+          end
         end
 
         callback_block.(entry)
