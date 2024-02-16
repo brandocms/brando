@@ -350,7 +350,7 @@ defmodule Brando.Content do
   end
 
   def has_identifier(module) do
-    case {:__identifier__, 2} in module.__info__(:functions) do
+    case module.__has_identifier__ do
       true -> {:ok, :has_identifier}
       false -> {:error, :no_identifier}
     end

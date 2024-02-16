@@ -21,6 +21,10 @@ defmodule Brando.Blueprint.Identifier do
         unquote(fields)
       end
 
+      def __has_identifier__ do
+        true
+      end
+
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
         skip_cover = Keyword.get(opts, :skip_cover, false)
@@ -57,6 +61,14 @@ defmodule Brando.Blueprint.Identifier do
           schema: __MODULE__,
           updated_at: updated_at
         }
+      end
+    end
+  end
+
+  defmacro identifier(nil) do
+    quote location: :keep do
+      def __has_identifier__ do
+        false
       end
     end
   end
