@@ -32,6 +32,7 @@ defmodule BrandoAdmin.UserAuth do
     |> put_session(:user_token, token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
     |> write_last_login(user)
+    |> check_content_language(user)
     |> maybe_write_remember_me_cookie(token, params)
     |> redirect(to: set_initial_password(conn, user) || user_return_to || signed_in_path(conn))
   end
@@ -147,6 +148,31 @@ defmodule BrandoAdmin.UserAuth do
       |> maybe_store_return_to()
       |> redirect(to: Brando.helpers().admin_user_session_path(conn, :new))
       |> halt()
+    end
+  end
+
+  def check_content_language(conn, user) do
+    content_language = user.config.content_language
+
+    # get languages from your application
+    case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
+      nil ->
+        # set content_language to first language
+        first_lang = Brando.config(:languages) |> List.first()
+        updated_data = %{config: %{content_language: first_lang[:value]}}
+
+        {:ok, _updated_current_user} =
+          Brando.Users.update_user(
+            user,
+            updated_data,
+            :system,
+            show_notification: false
+          )
+
+        conn
+
+      _ ->
+        conn
     end
   end
 
