@@ -294,6 +294,15 @@ defmodule Brando.Content do
   mutation(:delete, Template)
   mutation(:duplicate, {Template, change_fields: [:name]})
 
+  def list_identifiers do
+    query =
+      from(t in Brando.Content.Identifier,
+        order_by: [asc: t.schema, asc: t.entry_id]
+      )
+
+    {:ok, Brando.repo().all(query)}
+  end
+
   def list_identifiers(schema, list_opts) do
     initial_query =
       from(t in Brando.Content.Identifier,
@@ -364,6 +373,10 @@ defmodule Brando.Content do
       _ ->
         {:ok, false}
     end
+  end
+
+  def delete_identifier(identifier) do
+    Brando.repo().delete(identifier)
   end
 
   def create_identifier(module, entry) do
