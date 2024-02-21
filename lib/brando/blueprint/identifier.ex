@@ -101,10 +101,14 @@ defmodule Brando.Blueprint.Identifier do
   end
 
   def get_entry_for_identifier(%Brando.Content.Identifier{entry_id: entry_id, schema: schema}) do
-    context = schema.__modules__().context
-    singular = schema.__naming__().singular
-    opts = %{matches: %{id: entry_id}}
-    apply(context, :"get_#{singular}", [opts])
+    if function_exported?(schema, :__info__, 1) do
+      context = schema.__modules__().context
+      singular = schema.__naming__().singular
+      opts = %{matches: %{id: entry_id}}
+      apply(context, :"get_#{singular}", [opts])
+    else
+      {:error, :module_does_not_exist}
+    end
   end
 
   @spec identifiers_for([map]) :: {:ok, list}
@@ -157,5 +161,45 @@ defmodule Brando.Blueprint.Identifier do
     end)
     |> Enum.reject(&is_nil(&1))
     |> Enum.uniq()
+  end
+
+  @doc """
+  Cleans up the identifiers table by removing identifiers that are no longer valid and
+  updating existing identifiers
+  """
+  def clean_up do
+    {:ok, identifiers} = Brando.Content.list_identifiers()
+
+    for identifier <- identifiers do
+      case get_entry_for_identifier(identifier) do
+        {:error, :module_does_not_exist} ->
+          require Logger
+
+          Logger.error("""
+          !! Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier
+          """)
+
+          Brando.Content.delete_identifier(identifier)
+
+        {:error, _} ->
+          require Logger
+
+          Logger.error("""
+          !! Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier
+          """)
+
+          Brando.Content.delete_identifier(identifier)
+
+        {:ok, entry} ->
+          # update the identifier
+          require Logger
+
+          Logger.error("""
+          $$ Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}
+          """)
+
+          Brando.Content.update_identifier(entry.__struct__, entry)
+      end
+    end
   end
 end
