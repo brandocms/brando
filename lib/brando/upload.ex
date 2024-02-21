@@ -272,6 +272,7 @@ defmodule Brando.Upload do
          put_in(
            upload.meta,
            Map.merge(upload.meta, %{
+             filename: Path.basename(dest),
              uploaded_file: dest,
              media_path: Path.join(media_target_path, Path.basename(dest))
            })

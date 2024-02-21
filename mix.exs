@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.11"},
 
       # liveview
-      {:phoenix_live_view, "0.20.7"},
+      {:phoenix_live_view, "0.20.9"},
       {:phoenix_html, "~> 3.3.0"},
 
       # hashing/passwords
@@ -50,7 +50,7 @@ defmodule Brando.Mixfile do
       {:cachex, "~> 3.5"},
 
       # cron
-      {:oban, "~> 2.11"},
+      {:oban, "2.17.3"},
 
       # sitemaps
       {:sitemapper, "~> 0.8"},

@@ -4,6 +4,7 @@ defmodule Brando.Content.Var do
   def types do
     [
       boolean: Var.Boolean,
+      file: Var.File,
       text: Var.Text,
       image: Var.Image,
       string: Var.String,

@@ -23,25 +23,39 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data in_block, :boolean
 
   def update_many(assigns_sockets) do
-    {image_ids, cmp_imgs} =
-      Enum.reduce(assigns_sockets, {[], []}, fn
+    {image_ids, cmp_imgs, file_ids, cmp_files} =
+      Enum.reduce(assigns_sockets, {[], [], [], []}, fn
         {%{id: id, var: %{data: %{type: "image", value_id: image_id}}}, _sockets},
-        {image_ids, cmp_imgs} ->
-          {[image_id | image_ids], [{id, image_id} | cmp_imgs]}
+        {image_ids, cmp_imgs, file_ids, cmp_files} ->
+          {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files}
+
+        {%{id: id, var: %{data: %{type: "file", value_id: file_id}}}, _sockets},
+        {image_ids, cmp_imgs, file_ids, cmp_files} ->
+          {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files]}
 
         _, acc ->
           acc
       end)
 
     {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
-    mapped_images = images |> Enum.map(&{&1.id, &1}) |> Map.new()
-    mapped_ids = Map.new(cmp_imgs)
+    mapped_imgs = images |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_img_ids = Map.new(cmp_imgs)
+
+    {:ok, files} = Brando.Files.list_files(%{filter: %{ids: file_ids}})
+    mapped_files = files |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_file_ids = Map.new(cmp_files)
 
     Enum.map(assigns_sockets, fn {assigns, socket} ->
-      updated_socket =
-        case Map.get(mapped_ids, assigns.id) do
+      socket_with_image =
+        case Map.get(mapped_img_ids, assigns.id) do
           nil -> assign_new(socket, :image, fn -> nil end)
-          key -> assign_new(socket, :image, fn -> Map.get(mapped_images, key) end)
+          key -> assign_new(socket, :image, fn -> Map.get(mapped_imgs, key) end)
+        end
+
+      socket_with_image_and_file =
+        case Map.get(mapped_file_ids, assigns.id) do
+          nil -> assign_new(socket_with_image, :file, fn -> nil end)
+          key -> assign_new(socket_with_image, :file, fn -> Map.get(mapped_files, key) end)
         end
 
       var = assigns.var
@@ -62,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       type = get_field(changeset, :type)
 
       value =
-        if type == "image" do
+        if type in ["image", "file"] do
           get_field(changeset, :value_id)
         else
           get_field(changeset, :value)
@@ -70,7 +84,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
       value = control_value(type, value)
 
-      updated_socket
+      socket_with_image_and_file
       |> assign(assigns)
       |> assign(:id, assigns.id)
       |> assign(:edit, edit)
@@ -82,6 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:type, type)
       |> assign(:value, value)
       |> assign_new(:images, fn -> nil end)
+      |> assign_new(:files, fn -> nil end)
       |> assign_new(:value_id, fn -> value end)
       |> assign(:instructions, get_field(changeset, :instructions))
       |> assign(:placeholder, get_field(changeset, :placeholder))
@@ -122,6 +137,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value("image", value) when is_boolean(value), do: nil
   defp control_value("image", value), do: value
 
+  defp control_value("file", value) when is_binary(value), do: nil
+  defp control_value("file", value) when is_boolean(value), do: nil
+  defp control_value("file", value), do: value
+
   def render(assigns) do
     ~H"""
     <div id={@id} class={["variable", @var[:type].value]}>
@@ -157,7 +176,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     %{label: "String", value: "string"},
                     %{label: "Select", value: "select"},
                     %{label: "Text", value: "text"},
-                    %{label: "Image", value: "image"}
+                    %{label: "Image", value: "image"},
+                    %{label: "File", value: "file"}
                   ]
                 ]}
               />
@@ -169,6 +189,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 var={@var}
                 image={@image}
                 images={@images}
+                file={@file}
+                files={@files}
                 label={@label}
                 value_id={@value_id}
                 placeholder={@placeholder}
@@ -226,6 +248,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               var={@var}
               image={@image}
               images={@images}
+              file={@file}
+              files={@files}
               label={@label}
               value_id={@value_id}
               placeholder={@placeholder}
@@ -319,6 +343,28 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <.image_modal field={@var} image={@image} myself={@myself} />
             </div>
           </Form.field_base>
+        <% "file" -> %>
+          <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
+            <div class="input-file">
+              <%= if @file do %>
+                <Input.File.file_preview
+                  file={@file}
+                  field={@var[:value]}
+                  value={@value_id}
+                  relation_field={@var[:value_id]}
+                  click={show_modal("#var-#{@var.id}-file-config")}
+                  file_name={@file && @file.filename && Path.basename(@file.filename)}
+                />
+              <% else %>
+                <Input.File.empty_preview
+                  field={@var[:value]}
+                  relation_field={@var[:value_id]}
+                  click={show_modal("#var-#{@var.id}-file-config")}
+                />
+              <% end %>
+              <.file_modal field={@var} file={@file} myself={@myself} />
+            </div>
+          </Form.field_base>
       <% end %>
     </div>
     """
@@ -395,6 +441,71 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  def file_modal(assigns) do
+    ~H"""
+    <Content.modal title={gettext("File")} id={"var-#{@field.id}-file-config"}>
+      <div class="panels">
+        <div class="panel">
+          <%= if @file && @file.filename do %>
+            <div class="file-info">
+              URL: <%= Utils.file_url(@file, prefix: Utils.media_url()) %><br />
+              Path: <%= @file.filename %><br /> Size: <%= @file.filesize %> bytes
+            </div>
+          <% end %>
+          <%= if !@file do %>
+            <div
+              id={"#{@field.id}-legacy-uploader"}
+              class="input-image"
+              phx-hook="Brando.LegacyFileUpload"
+              data-text-uploading={gettext("Uploading...")}
+              data-block-uid={"var-#{@field.id}"}
+              data-upload-event-target={@myself}
+            >
+              <input class="file-input" type="file" />
+              <div class="img-placeholder empty upload-canvas">
+                <div class="placeholder-wrapper">
+                  <div class="svg-wrapper">
+                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
+                      <polygon
+                        class="plus"
+                        points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
+                      />
+                      <path
+                        d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
+                        transform="translate(0 0)"
+                      />
+                      <circle cx="8" cy="9" r="2" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="instructions">
+                  <span><%= gettext("Click or drag a file &uarr; to upload") |> raw() %></span>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <div class="panel">
+          <div class="button-group-vertical">
+            <button
+              type="button"
+              class="secondary"
+              phx-click={JS.push("set_file_target", target: @myself) |> toggle_drawer("#file-picker")}
+            >
+              <%= gettext("Select file") %>
+            </button>
+
+            <button type="button" class="danger" phx-click={JS.push("reset_file", target: @myself)}>
+              <%= gettext("Reset file") %>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Content.modal>
+    """
+  end
+
   def handle_event("set_target", _, %{assigns: %{myself: myself}} = socket) do
     send_update(
       BrandoAdmin.Components.ImagePicker,
@@ -403,6 +514,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       event_target: myself,
       multi: false,
       selected_images: []
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_file_target", _, %{assigns: %{myself: myself}} = socket) do
+    send_update(
+      BrandoAdmin.Components.FilePicker,
+      id: "file-picker",
+      config_target: "default",
+      event_target: myself,
+      multi: false,
+      selected_files: []
     )
 
     {:noreply, socket}
@@ -420,6 +544,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event(
+        "reset_file",
+        _,
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(:file, nil)
+     |> assign(:value_id, nil)}
+  end
+
+  def handle_event(
         "select_image",
         %{"id" => image_id},
         socket
@@ -433,6 +568,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event(
+        "select_file",
+        %{"id" => file_id},
+        socket
+      ) do
+    file = Brando.Files.get_file!(file_id)
+
+    {:noreply,
+     socket
+     |> assign(:value_id, file_id)
+     |> assign(:file, file)}
+  end
+
+  def handle_event(
         "image_uploaded",
         %{"id" => image_id},
         socket
@@ -443,6 +591,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      socket
      |> assign(:value_id, image_id)
      |> assign(:image, image)}
+  end
+
+  def handle_event(
+        "file_uploaded",
+        %{"id" => file_id},
+        socket
+      ) do
+    file = Brando.Files.get_file!(file_id)
+
+    {:noreply,
+     socket
+     |> assign(:value_id, file_id)
+     |> assign(:file, file)}
   end
 
   def handle_event("toggle_visible", _, socket) do

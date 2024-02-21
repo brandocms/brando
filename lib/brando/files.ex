@@ -83,8 +83,16 @@ defmodule Brando.Files do
     Brando.repo().soft_delete_all(q)
   end
 
+  @doc """
+  Get configuration for a file's `config_target`
+
+  Returns its configuration or the default configuration if none is found
+  """
   def get_config_for(%{config_target: nil}) do
-    struct(Brando.Type.FileConfig, Brando.config(Brando.Files)[:default_config])
+    maybe_struct(
+      Brando.Type.FileConfig,
+      Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
+    )
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
@@ -99,7 +107,11 @@ defmodule Brando.Files do
           |> Map.get(:cfg)
 
         ["default"] ->
-          struct(Brando.Type.FileConfig, Brando.config(Brando.Files)[:default_config])
+          maybe_struct(
+            Brando.Type.FileConfig,
+            Brando.config(Brando.Files)[:default_config] ||
+              Brando.Type.FileConfig.default_config()
+          )
       end
 
     {:ok, config}
@@ -112,4 +124,7 @@ defmodule Brando.Files do
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
   end
+
+  defp maybe_struct(_struct_type, %Brando.Type.FileConfig{} = config), do: config
+  defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end

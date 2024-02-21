@@ -992,6 +992,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             >
               Image
             </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="file"
+              class="secondary"
+            >
+              File
+            </button>
           </div>
         </Content.modal>
 

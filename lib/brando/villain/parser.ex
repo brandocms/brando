@@ -951,6 +951,18 @@ defmodule Brando.Villain.Parser do
         {key, value}
       end
 
+      defp process_var(
+             %Brando.Content.Var.File{
+               key: key,
+               label: _,
+               type: _,
+               value: %Ecto.Association.NotLoaded{}
+             } = var
+           ) do
+        %{value: value} = Brando.repo().preload(var, [:value])
+        {key, value}
+      end
+
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
       defp process_refs(nil), do: %{}

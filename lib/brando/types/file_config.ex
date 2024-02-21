@@ -50,4 +50,12 @@ defmodule Brando.Type.FileConfig do
   def dump(val) when is_map(val) do
     {:ok, val}
   end
+
+  def default_config do
+    %Brando.Type.FileConfig{
+      size_limit: 100_000_000,
+      allowed_mimetypes: ["*"],
+      random_filename: false
+    }
+  end
 end

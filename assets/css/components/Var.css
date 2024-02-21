@@ -6,7 +6,7 @@
     }
   }
 
-  .image-info {
+  .image-info, .file-info {
     @fontsize 13px;
     @space margin-top 15px;
   }

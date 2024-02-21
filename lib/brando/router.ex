@@ -75,6 +75,7 @@ defmodule Brando.Router do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
         post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
+        post "/api/content/upload/file", BrandoAdmin.API.Content.Upload.FileController, :create
 
         live_session :admin, on_mount: [{Brando.Users, :ensure_authenticated}] do
           # brando routes
