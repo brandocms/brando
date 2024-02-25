@@ -109,6 +109,12 @@ defmodule Brando.Trait.Villain do
         def block_changeset(block, attrs, user) do
           block
           |> cast(attrs, [:description, :uid, :creator_id])
+          |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+        end
+
+        def var_changeset(var, attrs, user) do
+          var
+          |> cast(attrs, [:key, :value, :creator_id])
         end
       end
     end
