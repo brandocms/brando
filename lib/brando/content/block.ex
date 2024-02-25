@@ -38,7 +38,12 @@ defmodule Brando.Content.Block do
     relation :parent, :belongs_to, module: __MODULE__
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
     relation :palette, :belongs_to, module: Brando.Content.Palette
-    relation :vars, :has_many, module: Brando.Content.Var
+
+    relation :vars, :has_many,
+      module: Brando.Content.Var,
+      on_replace: :delete_if_exists,
+      cast: true
+
     relation :refs, :embeds_many, module: Brando.Content.Module.Ref, on_replace: :delete
 
     relation :block_identifiers, :has_many,
@@ -62,4 +67,8 @@ defmodule Brando.Content.Block do
   end
 
   factory %{}
+
+  def preloads do
+    [block: [:parent, :module, :vars, children: [:vars]]]
+  end
 end

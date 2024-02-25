@@ -1047,6 +1047,15 @@ defmodule Brando.Villain do
     refs_with_generated_uids
   end
 
+  def remove_pk_from_vars(nil), do: nil
+  def remove_pk_from_vars([]), do: []
+
+  def remove_pk_from_vars(vars) when is_list(vars) do
+    Enum.map(vars, fn var ->
+      Map.merge(var, %{id: nil, module_id: nil})
+    end)
+  end
+
   def reject_blocks_marked_as_deleted(schema, changeset) do
     Enum.reduce(schema.__villain_fields__(), changeset, fn vf, mutated_changeset ->
       case Changeset.get_field(mutated_changeset, vf.name) do

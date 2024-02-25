@@ -75,7 +75,6 @@ defmodule Brando.Trait.Villain do
     end)
   end
 
-  # TODO: drop sequence from join table(?)
   @impl true
   def generate_code(parent_module, _config) do
     quote generated: true do
@@ -92,18 +91,24 @@ defmodule Brando.Trait.Villain do
 
         schema "#{parent_table_name}_blocks" do
           Ecto.Schema.belongs_to(:entry, parent_module)
-          Ecto.Schema.belongs_to(:block, Brando.Content.Block)
+          Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :delete)
           Ecto.Schema.field(:sequence, :integer)
         end
 
         @parent_table_name parent_table_name
-        def changeset(entry_block, attrs, sequence) do
+        def changeset(entry_block, attrs, user) do
           entry_block
           |> cast(attrs, [:entry_id, :block_id])
-          |> change(sequence: sequence)
+          # Brando.Content.Block.changeset
+          |> cast_assoc(:block, with: &block_changeset(&1, &2, user))
           |> unique_constraint([:entry, :block],
             name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
           )
+        end
+
+        def block_changeset(block, attrs, user) do
+          block
+          |> cast(attrs, [:description, :uid, :creator_id])
         end
       end
     end

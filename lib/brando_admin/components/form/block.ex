@@ -4,9 +4,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   # import Brando.Gettext
 
   def update(assigns, socket) do
+    changeset = assigns.form.source
+
     socket =
       socket
       |> assign(assigns)
+      |> assign(:form_has_changes, changeset.valid? && changeset.changes !== %{})
       |> assign_new(:deleted, fn -> false end)
       |> maybe_assign_children()
 
@@ -35,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
+  # <input type="hidden" name="list[notifications_order][]" value={f_nested.index} />
   def render(%{type: :module, multi: true} = assigns) do
     ~H"""
     <div>
@@ -68,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <div
         id="blocks-children"
         phx-update="stream"
-        phx-hook="Brando.SortableInputsFor"
+        phx-hook="Brando.SortableBlocks"
         data-sortable-id={"sortable-blocks-multi-#{@uid}"}
         data-sortable-handle=".sort-handle"
         data-sortable-selector=".block"
@@ -77,6 +81,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           :for={{id, child_block_form} <- @streams.children_forms}
           id={id}
           data-id={child_block_form.data.id}
+          data-uid={child_block_form.data.uid}
           data-parent_id={child_block_form.data.parent_id}
           class="block draggable"
         >
@@ -101,8 +106,20 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def render(%{type: :module} = assigns) do
     ~H"""
-    <div>
-      <h2>MODULE —— belongs to <%= inspect(@belongs_to) %> — deleted: <%= @deleted %></h2>
+    <div data-dirty={@form_has_changes}>
+      <h2>MODULE<span :if={@form_has_changes} style="color: red;"> [*]</span></h2>
+      <small>
+        —— belongs to <%= inspect(@belongs_to) %> — deleted: <%= @deleted %><br />
+      </small>
+      <button
+        type="button"
+        phx-click={JS.push("insert_block", value: %{type: "BASE"}, target: @myself)}
+      >
+        Add block over
+      </button>
+      <button type="button" phx-click={JS.push("move_block", target: @myself)}>
+        Move to bottom
+      </button>
       <%= render_slot(@inner_block) %>
       <div class="form">
         <.form
@@ -115,10 +132,15 @@ defmodule BrandoAdmin.Components.Form.Block do
         >
           <.toolbar myself={@myself} />
           <%= if @belongs_to == :root do %>
+            <%!-- <Input.text field={@form[:entry_id]} label="ENTRY ID" /> --%>
             <.inputs_for :let={block} field={@form[:block]}>
               <.inputs_for :let={var} field={block[:vars]}>
                 <.var var={var} />
               </.inputs_for>
+              <button>Save</button>
+              —— description fv: <%= block[:description].value %><br />
+              —— description cdv: <%= block.source.data.description %><br />
+              —— sequence: <%= @form[:sequence].value %><br />
               <div class="brando-input">
                 <Input.text field={block[:uid]} label="UID" />
                 <Input.text field={block[:description]} label="Description" />
@@ -170,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <div
         id="blocks-children"
         phx-update="stream"
-        phx-hook="Brando.SortableInputsFor"
+        phx-hook="Brando.SortableBlocks"
         data-sortable-id="sortable-blocks"
         data-sortable-handle=".sort-handle"
         data-sortable-selector=".block"
@@ -179,6 +201,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           :for={{id, child_block_form} <- @streams.children_forms}
           id={id}
           data-id={child_block_form.data.id}
+          data-uid={child_block_form.data.uid}
           data-parent_id={child_block_form.data.parent_id}
           class="block draggable"
         >
@@ -205,6 +228,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="block-var">
       <%= @var.data.key %> - <%= @var.data.type %>
+      <Input.hidden field={@var[:key]} />
+      <Input.hidden field={@var[:type]} />
+      <Input.text field={@var[:value]} label="Value" />
     </div>
     """
   end
@@ -232,6 +258,68 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  def handle_event("move_block", _params, socket) do
+    parent_cid = socket.assigns.parent_cid
+    send_update(parent_cid, %{event: "move_block", form: socket.assigns.form})
+    {:noreply, socket}
+  end
+
+  def handle_event("insert_block", %{"type" => "BASE"}, socket) do
+    parent_cid = socket.assigns.parent_cid
+    require Logger
+
+    Logger.error("""
+
+    == insert block to parent_cid: #{inspect(parent_cid)} -- before id: #{inspect(socket.assigns.uid)}
+
+    """)
+
+    send_update(parent_cid, %{
+      event: "insert_block",
+      type: "BASE",
+      before_id: socket.assigns.uid,
+      parent_id: socket.assigns.parent_id
+    })
+
+    {:noreply, socket}
+  end
+
+  # reposition a main block
+  def handle_event(
+        "reposition",
+        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_id" => parent_id},
+        socket
+      )
+      when new_idx == old_idx do
+    require Logger
+
+    Logger.error("""
+
+    Repositioning CHILD block (parent_id: #{parent_id})
+    --> No move needed.
+
+    """)
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "reposition",
+        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_id" => parent_id},
+        socket
+      ) do
+    require Logger
+
+    Logger.error("""
+
+    Repositioning CHILD block (parent_id: #{parent_id})
+    --> #{old_idx} to #{new_idx}
+
+    """)
+
+    {:noreply, socket}
+  end
+
   def handle_event("delete_block", _params, socket) do
     {:noreply, assign(socket, :deleted, true)}
   end
@@ -249,17 +337,92 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:noreply, socket}
   end
 
-  def handle_event("validate_block", unsigned_params, socket) do
+  def handle_event("save_block", %{"entry_block" => params}, socket) do
+    parent_cid = socket.assigns.parent_cid
+    form = socket.assigns.form
+    action = (form[:id].value && :update) || :insert
+    user_id = socket.assigns.current_user_id
+
+    updated_form = to_base_change_form(form.source, params, user_id)
+    updated_changeset = updated_form.source
+
+    updated_form =
+      if action == :insert and Ecto.Changeset.changed?(updated_changeset, :block) do
+        entry_block = Ecto.Changeset.apply_changes(updated_changeset)
+        to_base_change_form(entry_block, %{}, user_id, :insert)
+      else
+        updated_form
+      end
+
+    updated_changeset = updated_form.source
+
     require Logger
 
     Logger.error("""
 
-    validate_block:
-    #{inspect(unsigned_params, pretty: true)}
+    save_block -cs action #{inspect(action)}
+    #{inspect(updated_changeset, pretty: true)}
 
+    data:
+    #{inspect(updated_changeset.data, pretty: true)}
     """)
 
+    # save changeset
+    case Brando.repo().insert_or_update(updated_changeset) do
+      {:ok, entry} ->
+        preloaded_entry = Brando.repo().preload(entry, Brando.Content.Block.preloads())
+        updated_form = to_base_change_form(preloaded_entry, %{}, user_id, :validate)
+        send_update(parent_cid, %{event: "update_block", type: "BASE", form: updated_form})
+
+      {:error, changeset} ->
+        updated_form = to_base_change_form(changeset, %{}, user_id, :validate)
+        send_update(parent_cid, %{event: "update_block", type: "BASE", form: updated_form})
+    end
+
     {:noreply, socket}
+  end
+
+  def handle_event("validate_block", %{"child_block" => _params}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("validate_block", %{"entry_block" => params}, socket) do
+    parent_cid = socket.assigns.parent_cid
+    form = socket.assigns.form
+
+    updated_form =
+      to_base_change_form(
+        form.source,
+        params,
+        socket.assigns.current_user_id,
+        :validate
+      )
+
+    send_update(parent_cid, %{event: "update_block", type: "BASE", form: updated_form})
+
+    {:noreply, socket}
+  end
+
+  # for forms that are on the base level, meaning
+  # they are a join schema between an entry and a block
+  defp to_base_change_form(entry_block_or_cs, params, user, action \\ nil) do
+    # start from data or entry
+    data =
+      if entry_block_or_cs.__struct__ == Ecto.Changeset do
+        entry_block_or_cs.data
+      else
+        entry_block_or_cs
+      end
+
+    changeset =
+      data
+      |> Brando.Pages.Page.Blocks.changeset(params, user)
+      |> Map.put(:action, action)
+
+    to_form(changeset,
+      as: "entry_block",
+      id: "entry_block_form-#{changeset.data.block.uid}"
+    )
   end
 
   defp to_change_form(child_block_or_cs, params, user, action \\ nil) do

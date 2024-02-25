@@ -61,17 +61,12 @@ defmodule Brando.Content.Module do
     attribute :datasource_module, :string
     attribute :datasource_type, Ecto.Enum, values: [:list, :single, :selection]
     attribute :datasource_query, :string
-
-    attribute :vars, {:array, Brando.PolymorphicEmbed},
-      types: OldVar.types(),
-      type_field: :type,
-      on_type_not_found: :raise,
-      on_replace: :delete
   end
 
   relations do
     relation :entry_template, :embeds_one, module: __MODULE__.EmbeddedModule, on_replace: :delete
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
+    relation :vars, :has_many, module: Brando.Content.Var, on_replace: :delete_if_exists
   end
 
   listings do

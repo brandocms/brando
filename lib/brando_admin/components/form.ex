@@ -497,7 +497,7 @@ defmodule BrandoAdmin.Components.Form do
 
     blocks_preload =
       if schema.has_trait(Brando.Trait.Villain) do
-        [entry_blocks: [block: [:parent, :module, :vars, children: [:vars]]]]
+        [entry_blocks: Brando.Content.Block.preloads()]
       else
         []
       end

@@ -998,6 +998,15 @@ defmodule Brando.Blueprint do
       )
       |> maybe_mark_for_deletion(module)
 
+    require Logger
+
+    Logger.error("""
+
+    changeset from run_changeset: #{inspect(module, pretty: true)} --
+    #{inspect(changeset.action, pretty: true)}
+
+    """)
+
     :telemetry.execute(
       [:brando, :run_changeset],
       %{
