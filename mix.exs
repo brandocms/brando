@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.11"},
 
       # liveview
-      {:phoenix_live_view, "0.20.9"},
+      {:phoenix_live_view, "0.20.10"},
       {:phoenix_html, "~> 3.3.0"},
 
       # hashing/passwords
