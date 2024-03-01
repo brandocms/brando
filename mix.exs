@@ -36,7 +36,7 @@ defmodule Brando.Mixfile do
 
       # liveview
       {:phoenix_live_view, "0.20.9"},
-      {:phoenix_html, "~> 3.3.0"},
+      {:phoenix_html, "~> 4.1.0"},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 3.0"},
