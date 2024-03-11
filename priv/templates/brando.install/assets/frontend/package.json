@@ -17,7 +17,7 @@
     "postcss-reporter": "^7.1.0",
     "stylelint": "^16.2.1",
     "terser": "^5.27.2",
-    "vite": "^5.1.4"
+    "vite": "^5.1.5"
   },
   "dependencies": {
     "@brandocms/jupiter": "^3.50.1",
