@@ -6,7 +6,7 @@ defmodule Brando.Blueprint.Listings.Components do
 
   alias BrandoAdmin.Components.Content
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :padded, :boolean, default: false
   attr :image, :map, required: true
   attr :columns, :integer, required: true
@@ -26,7 +26,7 @@ defmodule Brando.Blueprint.Listings.Components do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :entry, :map, required: true
   attr :offset, :integer, default: nil
 
@@ -48,7 +48,7 @@ defmodule Brando.Blueprint.Listings.Components do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :padded, :boolean, default: false
   attr :entry, :map, required: true
   attr :columns, :integer, required: true

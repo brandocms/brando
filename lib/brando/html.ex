@@ -59,7 +59,7 @@ defmodule Brando.HTML do
       <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
   """
   attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   def icon(assigns) do
     ~H"""
@@ -82,7 +82,7 @@ defmodule Brando.HTML do
       </.alternate_url>
   """
   attr :conn, :map
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :language, :any
   attr :fallback, :string, default: "/"
   attr :rest, :global
