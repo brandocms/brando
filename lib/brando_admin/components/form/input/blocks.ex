@@ -759,6 +759,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def html(assigns) do
+    assigns =
+      assigns
+      |> assign(:uid, assigns.block[:uid].value)
+
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-index={@index} data-block-uid={@block[:uid].value}>
       <.inputs_for :let={block_data} field={@block[:data]}>
@@ -793,6 +797,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   def markdown(assigns) do
+    assigns =
+      assigns
+      |> assign(:uid, assigns.block[:uid].value)
+
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-index={@index} data-block-uid={@block[:uid].value}>
       <.inputs_for :let={block_data} field={@block[:data]}>
