@@ -94,9 +94,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :href, href)
 
     ~H"""
-    <a href={@href} class={@class} {@rest}>
-      <%= render_slot(@inner_block) %>
-    </a>
+    <a href={@href} class={@class} {@rest}><%= render_slot(@inner_block) %></a>
     """
   end
 
@@ -658,9 +656,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())
 
     ~H"""
-    <style :if={@palettes_css != {:safe, ""}} phx-no-format>
-      <%= @palettes_css %>
-    </style>
+    <style :if={@palettes_css != {:safe, ""}} phx-no-format><%= @palettes_css %></style>
     """
   end
 
