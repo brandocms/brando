@@ -8,7 +8,7 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
     create table(:content_identifiers) do
       add(:entry_id, :id)
       add(:schema, :string)
-      add(:title, :string)
+      add(:title, :text)
       add(:status, :integer)
       add(:language, :string)
       add(:cover, :string)
