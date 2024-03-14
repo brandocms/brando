@@ -195,10 +195,10 @@
   resolved "https://registry.yarnpkg.com/@codemirror/state/-/state-6.4.0.tgz#8bc3e096c84360b34525a84696a84f86b305363a"
   integrity sha512-hm8XshYj5Fo30Bb922QX9hXB/bxOAVH+qaqHBzw5TKa72vOeslyGwd4X8M0c1dJ9JqxlaMceOQ8RsL9tC7gU0A==
 
-"@codemirror/view@6.25.0":
-  version "6.25.0"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.25.0.tgz#7bf6cd15d1285e9354a83e39ee35cbf8f3957119"
-  integrity sha512-XnMGOm6qXB8znzCko0N7k97qZayVdvqpA0JebxA5fHtgBjC/XlCPhH9TK92TahsoCKMPQlaTCUep06Dwj/+GXQ==
+"@codemirror/view@6.25.1":
+  version "6.25.1"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.25.1.tgz#826ea345fd757dbeeab6a6165c1823e851c67d16"
+  integrity sha512-2LXLxsQnHDdfGzDvjzAwZh2ZviNJm7im6tGpa0IONIDnFd8RZ80D2SNi8PDi6YjKcMoMRK20v6OmKIdsrwsyoQ==
   dependencies:
     "@codemirror/state" "^6.4.0"
     style-mod "^4.1.0"
@@ -1401,10 +1401,10 @@ phoenix_html@^4.1.1:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.1.1.tgz#0be8c4a0592350b18ff97671eb12f9c6445b5a5a"
   integrity sha512-RpvlxDkP13MTQkfbZGFD7XrLgE28mqlwU+rSQxhNyj9U0KzPgeeh4ctn+Mz7jlpsKFAhLe47PXQsff3EXJ4mbg==
 
-phoenix_live_view@0.20.12:
-  version "0.20.12"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.20.12.tgz#c5b26f2c62e95b5dfd22580123b3080ea7bd01d6"
-  integrity sha512-TbKxU+61gAchfwQ7F5o8qjX5aYxJN5njXkD71p5dbfjYvNAIR5yFyD57kb+4yJtlqq/7AGgKDf05L1ubdGP0kg==
+phoenix_live_view@0.20.14:
+  version "0.20.14"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-0.20.14.tgz#25404d091852f23f26d029b25a07d6ba14409783"
+  integrity sha512-pk7xX1CjUaoHRE47S0Rq+OdrGrXRHrZZQEaNbRNCAbKjSEAJ9o+sYQ+6nZipTJaIbC0lEGMDWxZzyuQ/6yeHsQ==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1957,10 +1957,10 @@ vex-js@^4.1.0:
     es6-object-assign "1.1.0"
     vex-dialog "1.1.0"
 
-vite@^5.1.5:
-  version "5.1.5"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-5.1.5.tgz#bdbc2b15e8000d9cc5172f059201178f9c9de5fb"
-  integrity sha512-BdN1xh0Of/oQafhU+FvopafUp6WaYenLU/NFoL5WyJL++GxkNfieKzBhM24H3HVsPQrlAqB7iJYTHabzaRed5Q==
+vite@^5.1.6:
+  version "5.1.6"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-5.1.6.tgz#706dae5fab9e97f57578469eef1405fc483943e4"
+  integrity sha512-yYIAZs9nVfRJ/AiOLCA91zzhjsHUgMjB+EigzFb6W2XTLO8JixBCKCjvhKZaye+NKYHCrkv3Oh50dH9EdLU2RA==
   dependencies:
     esbuild "^0.19.3"
     postcss "^8.4.35"
