@@ -60,5 +60,8 @@ jobs:
       - name: Remove compiled application files
         run: mix clean
 
+      - name: Reset db
+        run: mix ecto.reset
+
       - name: Run Tests
         run: mix test
