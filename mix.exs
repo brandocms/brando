@@ -50,7 +50,7 @@ defmodule Brando.Mixfile do
       {:cachex, "~> 3.5"},
 
       # cron
-      {:oban, "2.17.3"},
+      {:oban, "~> 2.17.0"},
 
       # sitemaps
       {:sitemapper, "~> 0.8"},

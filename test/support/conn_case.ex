@@ -37,6 +37,7 @@ defmodule Brando.ConnCase do
 
       # Import URL helpers from the router
       alias BrandoIntegrationWeb.Router.Helpers
+      use Oban.Testing, repo: BrandoIntegration.Repo
 
       # The default endpoint for testing
       @endpoint Brando.endpoint()
@@ -44,12 +45,13 @@ defmodule Brando.ConnCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BrandoIntegration.Repo)
-
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, {:shared, self()})
-    end
+    setup_sandbox(tags)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  def setup_sandbox(tags) do
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo, shared: not tags[:async])
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 end

@@ -15,12 +15,6 @@ config :brando, BrandoIntegration.Repo,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
 
-config :brando, BrandoIntegration.DummyRepo,
-  url: "ecto://postgres:postgres@localhost/brando_test_dummy",
-  pool: Ecto.Adapters.SQL.Sandbox,
-  ownership_pool: DBConnection.Poolboy,
-  pool_overflow: 0
-
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Files, cdn: [enabled: false]
 config :brando, scope_default_language_routes: true
@@ -75,12 +69,13 @@ config :brando, :media_url, "/media"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
 config :brando, :web_module, BrandoIntegrationWeb
+config :brando, :ecto_repos, [BrandoIntegration.Repo]
 
 config :brando, Oban,
   crontab: false,
   queues: false,
   plugins: false,
-  repo: BrandoIntegration.DummyRepo,
+  repo: BrandoIntegration.Repo,
   testing: :inline
 
 config :brando, :languages, [

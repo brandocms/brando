@@ -1,3 +1,5 @@
+BrandoIntegration.Repo.start_link()
+
 %Brando.Sites.Identity{
   type: "organization",
   name: "Organization name",

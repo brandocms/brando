@@ -4,30 +4,14 @@
 File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 
+BrandoIntegration.Repo.start_link()
+
 {:ok, _} = Application.ensure_all_started(:ex_machina)
-
-defmodule BrandoIntegration.Repo do
-  use Ecto.Repo,
-    otp_app: :brando,
-    adapter: Ecto.Adapters.Postgres
-
-  use Brando.SoftDelete.Repo
-end
-
-defmodule BrandoIntegration.DummyRepo do
-  use Ecto.Repo,
-    otp_app: :brando,
-    adapter: Ecto.Adapters.Postgres
-
-  use Brando.SoftDelete.Repo
-end
 
 Supervisor.start_link(
   [{Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1}, Brando],
   strategy: :one_for_one
 )
-
-ExUnit.start()
 
 defmodule BrandoIntegration.Presence do
   use BrandoAdmin.Presence,
@@ -216,11 +200,7 @@ defmodule BrandoIntegration.ModuleWithDatasource do
   end
 end
 
-Mix.Task.run("ecto.drop", ["-r", Repo, "--quiet"])
-Mix.Task.run("ecto.create", ["-r", Repo, "--quiet"])
-Mix.Task.run("ecto.migrate", ["-r", Repo, "--quiet"])
-Repo.start_link()
-Mix.Task.run("ecto.seed", ["-r", Repo, "--quiet"])
+ExUnit.start()
 
 Brando.Cache.Identity.set()
 Brando.Cache.SEO.set()
@@ -232,7 +212,6 @@ media_path = Brando.config(:media_path)
 File.mkdir_p!(Path.join([media_path, "images", "avatars"]))
 File.cp!(fixture_src, Path.join([media_path, "images", "avatars", "27i97a.jpeg"]))
 
-Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
-Brando.endpoint().start_link
+Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, :manual)
 
-# Brando.presence().start
+Brando.endpoint().start_link
