@@ -107,8 +107,9 @@ defmodule Brando.Trait.Sequenced do
     Changeset.prepare_changes(changeset, fn
       %{action: :insert} = cs ->
         # set as highest sequence on insert
-        seq = get_highest_sequence(module)
-        Changeset.put_change(cs, :sequence, seq)
+        language = Changeset.get_field(cs, :language)
+        seq = get_highest_sequence(module, language)
+        Changeset.force_change(cs, :sequence, seq)
 
       cs ->
         cs
@@ -129,15 +130,18 @@ defmodule Brando.Trait.Sequenced do
     Brando.repo().update_all(query, [])
   end
 
-  def get_highest_sequence(module) do
+  def get_highest_sequence(module, language) do
     query =
       from t in module,
         select: t.sequence,
         order_by: [desc: t.sequence],
         limit: 1
 
+    query = (language && from(t in query, where: t.language == ^language)) || query
+
     case Brando.repo().all(query) do
       [] -> 0
+      [nil] -> 0
       [seq] -> seq + 1
     end
   end
