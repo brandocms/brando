@@ -28,7 +28,7 @@ defmodule BrandoWeb do
       use Phoenix.Controller,
         namespace: Brando.config(:web_module),
         formats: [:html, :json],
-        layouts: [html: Brando.web_module(Layouts)]
+        layouts: [html: Brando.web_module(Layouts), json: Brando.web_module(Layouts)]
 
       import unquote(gettext_module)
       import Brando.Plug.HTML
