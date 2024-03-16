@@ -1,6 +1,12 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
+* BREAKING: Change Presence module — in your `lib/my_app/presence.ex`:
+
+    use BrandoAdmin.Presence,
+      otp_app: :my_app,
+      pubsub_server: MyApp.PubSub,
+      presence: __MODULE__
 
 * BREAKING: Replace `<%= csrf_meta_tag %>` with ´<.csrf_meta_tag />`
 
@@ -173,6 +179,14 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   view_template "detail.html"
   ```
 
+  New (for Phoenix.Template integrations):
+  ```elixir
+  layout {MyAppWeb.Layouts, :app}
+  template {MyAppWeb.ProjectHTML, "detail"}
+  # or
+  template fn e -> {MyAppWeb.ProjectHTML, e.template} end
+  ```
+
   New (for Phoenix.View integrations):
   ```elixir
   layout {MyAppWeb.LayoutView, "app.html"}
@@ -181,13 +195,6 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   template fn e -> {MyAppWeb.ProjectView, e.template} end
   ```
   
-  New (for Phoenix.Template integrations):
-  ```elixir
-  layout {MyAppWeb.Layouts, :app}
-  template {MyAppWeb.ProjectHTML, "detail"}
-  # or
-  template fn e -> {MyAppWeb.ProjectHTML, e.template} end
-  ```
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type
