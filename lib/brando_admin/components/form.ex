@@ -609,7 +609,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def maybe_put_language(%{language: _} = entry, current_user) do
-    Map.put(entry, :language, current_user.config.content_language)
+    lang_atom = String.to_existing_atom(current_user.config.content_language)
+    Map.put(entry, :language, lang_atom)
   end
 
   def maybe_put_language(entry, _) do
