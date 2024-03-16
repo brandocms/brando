@@ -232,16 +232,16 @@ defmodule Brando.Blueprint.Migrations do
     {up_alternates, down_alternates} =
       if alternates? do
         {"""
-         create table(#{alternates_source}) do
-           add :entry_id, references(#{table_name}, on_delete: :delete_all)
-           add :linked_entry_id, references(#{table_name}, on_delete: :delete_all)
+         create table(:#{alternates_source}) do
+           add :entry_id, references(:#{table_name}, on_delete: :delete_all)
+           add :linked_entry_id, references(:#{table_name}, on_delete: :delete_all)
            timestamps()
          end
 
-         create unique_index(#{alternates_source}, [:entry_id, :linked_entry_id])
+         create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
          """,
          """
-         drop table(#{alternates_source})
+         drop table(:#{alternates_source})
          """}
       else
         {"", ""}
