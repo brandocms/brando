@@ -129,4 +129,5 @@ ARG MIX_ENV=prod
 
 COPY --from=digest /opt/app/priv/static ./priv/static
 
+RUN mix sentry.package_source_code
 RUN mix release --overwrite
