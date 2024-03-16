@@ -1,6 +1,15 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.53.0-dev
+* BREAKING: Updated Sentry to 10.x. Add to your `Dockerfile` before mix release:
+  
+    RUN mix sentry.package_source_code
+    RUN mix release
+
+  Then remove the `included_environments` key from the `:sentry` config in `config/prod.exs``
+  and copy the sentry cfg to other env configs you might want to enable sentry on,
+  for instance `config/staging.exs`.
+
 * BREAKING: Change Presence module — in your `lib/my_app/presence.ex`:
 
     use BrandoAdmin.Presence,
