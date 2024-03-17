@@ -58,18 +58,28 @@ defmodule Brando.Datasource do
     end,
     ```
 
+    You can also supply multiple modules:
+
+    ```
+    fn _module, language, _vars ->
+      Brando.Content.list_identifiers(
+        [MyApp.Projects.Project, MyApp.Articles.Article],
+        %{language: language, order: "asc schema, asc language, asc entry_id"})
+    end,
+    ```
+
+
   - The get function receives selected identifiers as an argument and must return
     the ordered selected entries
 
     ```
     fn identifiers ->
-      entry_ids = Enum.map(identifiers, &(&1.entry_id))
-      results =
-        from t in Post,
-          where: t.id in ^entry_ids,
-          order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
-
-      {:ok, Repo.all(results)}
+      Brando.Content.get_entries_from_identifiers(
+        identifiers,
+        [:categories, :cover, :palette]
+      )
+    end
+  end
     ```
 
   The `order_by: fragment(...)` sorts the returned results in the same order as the supplied `ids`
