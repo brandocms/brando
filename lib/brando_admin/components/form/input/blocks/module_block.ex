@@ -135,13 +135,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   def assign_selected_identifiers(
         %{assigns: %{module_datasource_type: :selection} = assigns} = socket
       ) do
-    module = assigns.module_datasource_module
-    query = assigns.module_datasource_query
     ids = assigns.datasource_selected_ids
 
     assign_new(socket, :selected_identifiers, fn ->
-      {:ok, selected_entries} = Brando.Datasource.get_selection(module, query, ids)
-      {:ok, identifiers} = Brando.Content.list_identifiers_for(selected_entries)
+      {:ok, identifiers} = Brando.Content.list_identifiers(ids)
       identifiers
     end)
   end
