@@ -61,7 +61,7 @@
       <div class="login-form">
         <.form
           :let={f}
-          for={@conn}
+          for={@conn.params["user"]}
           as={:user}
           action={Brando.helpers().admin_user_session_path(@conn, :create)}
         >
