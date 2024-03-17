@@ -303,10 +303,34 @@ defmodule Brando.Content do
     {:ok, Brando.repo().all(query)}
   end
 
-  def list_identifiers(schema, list_opts) do
+  def list_identifiers(schema, list_opts) when is_atom(schema) do
     initial_query =
       from(t in Brando.Content.Identifier,
         where: t.schema == ^schema
+      )
+
+    query =
+      Brando.Query.run_list_query_reducer(
+        Brando.Query,
+        list_opts,
+        initial_query,
+        Brando.Content.Identifier
+      )
+
+    # query = (language && from(t in query, where: t.language == ^language)) || query
+
+    query =
+      from(t in query,
+        order_by: [asc: t.schema, asc: t.language, asc: t.title]
+      )
+
+    {:ok, Brando.repo().all(query)}
+  end
+
+  def list_identifiers(schemas, list_opts) when is_list(schemas) do
+    initial_query =
+      from(t in Brando.Content.Identifier,
+        where: t.schema in ^schemas
       )
 
     query =
