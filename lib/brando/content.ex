@@ -382,6 +382,40 @@ defmodule Brando.Content do
     {:ok, identifiers}
   end
 
+  def get_entries_from_identifiers(identifiers, preloads \\ []) do
+    entry_blueprint =
+      identifiers
+      |> Enum.with_index()
+      |> Enum.map(&{elem(&1, 0).schema, elem(&1, 0).entry_id, elem(&1, 1)})
+
+    grouped_entries = Enum.group_by(entry_blueprint, &elem(&1, 0))
+
+    # build some queries
+    unsorted_entries =
+      for {schema, entry_blueprints} <- grouped_entries do
+        schema_ids = Enum.map(entry_blueprints, &elem(&1, 1))
+
+        query =
+          from t in schema,
+            where: t.id in ^schema_ids,
+            order_by: fragment("array_position(?, ?)", ^schema_ids, t.id),
+            preload: ^preloads
+
+        Brando.repo().all(query)
+      end
+
+    flattened_unsorted_entries = List.flatten(unsorted_entries)
+
+    sorted_entries =
+      Enum.map(entry_blueprint, fn {schema, id, _} ->
+        Enum.find(flattened_unsorted_entries, fn entry ->
+          entry.id == id && schema == entry.__struct__
+        end)
+      end)
+
+    {:ok, sorted_entries}
+  end
+
   def has_identifier(module) do
     case module.__has_identifier__ do
       true -> {:ok, :has_identifier}
