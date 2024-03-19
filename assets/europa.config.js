@@ -284,19 +284,19 @@ module.exports = {
             'line-height': '1.4'
           },
           ipad_portrait: {
-            'font-size': '20px',
+            'font-size': '18px',
             'line-height': '1.4'
           },
           ipad_landscape: {
-            'font-size': '1.3888888888888888vw',
+            'font-size': '18px',
             'line-height': '1.4'
           },
           desktop_md: {
-            'font-size': '1.3888888888888888vw',
+            'font-size': '20px',
             'line-height': '1.4'
           },
           desktop_lg: {
-            'font-size': '1.3888888888888888vw',
+            'font-size': '20px',
             'line-height': '1.4'
           },
           desktop_xl: {
