@@ -1522,12 +1522,12 @@ defmodule BrandoAdmin.Components.Form do
         _,
         %{assigns: %{changeset: changeset, schema: schema, current_user: user}} = socket
       ) do
-    {:ok, preview_url} = Brando.LivePreview.share(schema, changeset, user)
+    {:ok, preview_url, expiration_days} = Brando.LivePreview.share(schema, changeset, user)
 
     message =
       gettext(
-        "A shareable time limited URL has been created. The URL will expire 72 hours from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
-        %{preview_url: preview_url}
+        "A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
+        %{expiration_days: expiration_days, preview_url: preview_url}
       )
 
     {:noreply,

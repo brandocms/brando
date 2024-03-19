@@ -482,6 +482,7 @@ defmodule Brando.LivePreview do
     if function_exported?(preview_module, :render, 3) do
       cache_key = build_cache_key(:erlang.system_time())
       entry_struct = Ecto.Changeset.apply_changes(changeset)
+      expiry_days = Brando.config(:preview_expiry_days) || 2
 
       html =
         schema_module
@@ -489,7 +490,7 @@ defmodule Brando.LivePreview do
         |> Utils.term_to_binary()
 
       preview_key = Utils.random_string(12)
-      expires_at = DateTime.add(DateTime.utc_now(), 72 * 60 * 60, :second)
+      expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
 
       preview = %{
         html: html,
@@ -500,13 +501,10 @@ defmodule Brando.LivePreview do
       {:ok, preview} = Brando.Sites.create_preview(preview, user)
 
       %{id: preview.id}
-      |> Worker.PreviewPurger.new(
-        scheduled_at: expires_at,
-        tags: [:preview_purger]
-      )
+      |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
       |> Oban.insert()
 
-      {:ok, Brando.Sites.Preview.__absolute_url__(preview)}
+      {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
     end
   end
 

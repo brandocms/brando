@@ -204,6 +204,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   template fn e -> {MyAppWeb.ProjectView, e.template} end
   ```
   
+* Add `:preview_expiry_days` config. Default is two days.
+  I.e `config :brando, :preview_expiry_days, 31`
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type

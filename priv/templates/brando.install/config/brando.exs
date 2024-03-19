@@ -38,7 +38,7 @@ config :brando,
   lockdown_password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>",
 
   log_dir: Path.expand("./log"),
-
+  preview_expiry_days: 2,
   media_path: Path.expand("./media"),
   media_url: "/media",
 
