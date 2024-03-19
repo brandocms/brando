@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Chrome do
         <Content.image image={@presence.avatar} size={:thumb} />
       </div>
     </div>
-    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"} narrow>
+    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"}>
       <div :if={@selected_presence && @selected_presence.id == @id} class="user-presence-modal">
         <div class="name"><%= @selected_presence.name %></div>
         <div class="status badge"><%= @presence.status %></div>
