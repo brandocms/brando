@@ -881,7 +881,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       )
     end
 
-    {:noreply, assign(socket, :selected_options, selected_options)}
+    {:noreply,
+     assign(socket, :selected_options, selected_options) |> push_event("b:validate", %{})}
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
