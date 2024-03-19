@@ -83,13 +83,15 @@ defmodule BrandoAdmin.Chrome do
       </div>
     </div>
     <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"} narrow>
-      <div :if={@selected_presence && @selected_presence.id == @id}>
-        <%= @selected_presence.name %><br />
-        <%= @presence.status %><br />
-        <%= @last_active %><br />
-        <div :for={url <- @presence.urls} class="text-mono">
-          <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
+      <div :if={@selected_presence && @selected_presence.id == @id} class="user-presence-modal">
+        <div class="name"><%= @selected_presence.name %></div>
+        <div class="status badge"><%= @presence.status %></div>
+        <div class="urls">
+          <div :for={url <- @presence.urls} class="text-mono">
+            <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
+          </div>
         </div>
+        <div class="last-active"><%= gettext("Last activity") %>: <%= @last_active %></div>
       </div>
     </Content.modal>
     """
@@ -126,7 +128,7 @@ defmodule BrandoAdmin.Chrome do
         id: user.id,
         name: user.name,
         status: "offline",
-        urls: "",
+        urls: [],
         last_active: nil,
         avatar: user.avatar
       }
@@ -184,7 +186,7 @@ defmodule BrandoAdmin.Chrome do
              id: id,
              name: user.name,
              status: "offline",
-             urls: "",
+             urls: [],
              last_active: nil,
              avatar: user.avatar
            }}
