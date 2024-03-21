@@ -106,63 +106,20 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def render(%{type: :module} = assigns) do
     ~H"""
-    <div data-dirty={@form_has_changes}>
-      <h2>MODULE<span :if={@form_has_changes} style="color: red;"> [*]</span></h2>
-      <small>
-        —— belongs to <%= inspect(@belongs_to) %> — deleted: <%= @deleted %><br />
-      </small>
-      <button
-        type="button"
-        phx-click={JS.push("insert_block", value: %{type: "BASE"}, target: @myself)}
-      >
-        Add block over
-      </button>
-      <button type="button" phx-click={JS.push("move_block", target: @myself)}>
-        Move to bottom
-      </button>
+    <.module
+      form={@form}
+      dirty={@form_has_changes}
+      type="BASE"
+      deleted={@deleted}
+      insert_block={
+        JS.push("insert_block",
+          value: %{type: "BASE", belongs_to: @belongs_to, position: @form[:sequence].value},
+          target: @myself
+        )
+      }
+    >
       <%= render_slot(@inner_block) %>
-      <div class="form">
-        <.form
-          for={@form}
-          class="mt-1"
-          phx-value-id={@form.data.id}
-          phx-change="validate_block"
-          phx-submit="save_block"
-          phx-target={@myself}
-        >
-          <.toolbar myself={@myself} />
-          <%= if @belongs_to == :root do %>
-            <%!-- <Input.text field={@form[:entry_id]} label="ENTRY ID" /> --%>
-            <.inputs_for :let={block} field={@form[:block]}>
-              <.inputs_for :let={var} field={block[:vars]}>
-                <.var var={var} />
-              </.inputs_for>
-              <button>Save</button>
-              —— description fv: <%= block[:description].value %><br />
-              —— description cdv: <%= block.source.data.description %><br />
-              —— sequence: <%= @form[:sequence].value %><br />
-              <div class="brando-input">
-                <Input.text field={block[:uid]} label="UID" />
-                <Input.text field={block[:description]} label="Description" />
-              </div>
-            </.inputs_for>
-          <% else %>
-            <.inputs_for :let={var} field={@form[:vars]}>
-              <.var var={var} />
-            </.inputs_for>
-            <div class="brando-input">
-              <Input.text field={@form[:uid]} label="UID" />
-              <Input.text field={@form[:description]} label="Description" />
-            </div>
-          <% end %>
-          <%!-- <div>
-            <code>
-              <pre style="font-size: 9px;font-family: Monospace;"><%= inspect @form, pretty: true %></pre>
-            </code>
-          </div> --%>
-        </.form>
-      </div>
-    </div>
+    </.module>
     """
   end
 
@@ -224,8 +181,320 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
-  def var(assigns) do
+  def module(assigns) do
+    changeset = assigns.form.source
+
+    assigns =
+      assigns
+      |> assign(:form_has_changes, changeset.valid? && changeset.changes !== %{})
+
     ~H"""
+    <div
+      id={"block-#{@uid}-wrapper"}
+      class="module-block"
+      data-block-index={@index}
+      data-block-uid={@uid}
+    >
+      <.form
+        for={@form}
+        class="mt-1"
+        phx-value-id={@form.data.id}
+        phx-change="validate_block"
+        phx-submit="save_block"
+        phx-target={@myself}
+      >
+        <.toolbar myself={@myself} />
+        <%= if @belongs_to == :root do %>
+          <%!-- <Input.text field={@form[:entry_id]} label="ENTRY ID" /> --%>
+          <.inputs_for :let={block} field={@form[:block]}>
+            <.inputs_for :let={var} field={block[:vars]}>
+              <.var var={var} />
+            </.inputs_for>
+            <button>Save</button>
+            —— sequence: <%= @form[:sequence].value %><br />
+            <div class="brando-input">
+              <Input.text field={block[:uid]} label="UID" />
+              <Input.text field={block[:description]} label="Description" />
+            </div>
+          </.inputs_for>
+        <% else %>
+          <.inputs_for :let={var} field={@form[:vars]}>
+            <.var var={var} />
+          </.inputs_for>
+          <div class="brando-input">
+            <Input.text field={@form[:uid]} label="UID" />
+            <Input.text field={@form[:description]} label="Description" />
+          </div>
+        <% end %>
+      </.form>
+      <Blocks.block
+        id={"block-#{@uid}-base"}
+        index={@index}
+        block_count={@block_count}
+        base_form={@base_form}
+        block={@block}
+        belongs_to={@belongs_to}
+        insert_module={@insert_module}
+        duplicate_block={@duplicate_block}
+        is_datasource?={@module_datasource}
+      >
+        <:type>
+          <%= if @module_datasource do %>
+            <%= gettext("DATAMODULE") %>
+          <% else %>
+            <%= gettext("MODULE") %>
+          <% end %>
+        </:type>
+        <:datasource>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z" />
+          </svg>
+          <%= @module_datasource_module_label %> | <%= @module_datasource_type %> | <%= @module_datasource_query %>
+          <%= if @module_datasource_type == :selection do %>
+            <Content.modal
+              title={gettext("Select entries")}
+              id={"select-entries-#{@uid}"}
+              remember_scroll_position
+            >
+              <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+              <Entries.identifier
+                :for={identifier <- @available_identifiers}
+                identifier_id={identifier.id}
+                select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
+                available_identifiers={@available_identifiers}
+                selected_identifiers={@selected_identifiers}
+              />
+            </Content.modal>
+
+            <div class="module-datasource-selected">
+              <Form.array_inputs
+                :let={%{value: array_value, name: array_name}}
+                field={@block_data[:datasource_selected_ids]}
+              >
+                <input type="hidden" name={array_name} value={array_value} />
+              </Form.array_inputs>
+
+              <div
+                id={"sortable-#{@uid}-identifiers"}
+                class="selected-entries"
+                phx-hook="Brando.Sortable"
+                data-target={@myself}
+                data-sortable-id={"sortable-#{@uid}-identifiers"}
+                data-sortable-handle=".sort-handle"
+                data-sortable-selector=".identifier"
+              >
+                <Entries.identifier
+                  :for={identifier <- @selected_identifiers}
+                  identifier_id={identifier.id}
+                  available_identifiers={@selected_identifiers}
+                  sortable
+                >
+                  <:delete>
+                    <button
+                      type="button"
+                      phx-page-loading
+                      phx-click={
+                        JS.push("remove_identifier", value: %{id: identifier.id}, target: @myself)
+                      }
+                    >
+                      <.icon name="hero-x-mark" />
+                    </button>
+                  </:delete>
+                </Entries.identifier>
+              </div>
+
+              <button
+                class="tiny select-button"
+                type="button"
+                phx-click={
+                  JS.push("select_entries", target: @myself) |> show_modal("#select-entries-#{@uid}")
+                }
+              >
+                <%= gettext("Select entries") %>
+              </button>
+            </div>
+          <% end %>
+        </:datasource>
+        <:description>
+          <%= if @description do %>
+            <strong><%= @description %></strong>&nbsp;|
+          <% end %>
+          <%= @module_name %>
+        </:description>
+        <:config>
+          <div class="panels">
+            <div class="panel">
+              <Input.text
+                field={@block[:description]}
+                label={gettext("Block description")}
+                instructions={gettext("Helpful for collapsed blocks")}
+              />
+              <%= for {var, index} <- @indexed_vars do %>
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-#{index}"}
+                  var={var}
+                  render={:only_regular}
+                  in_block
+                />
+              <% end %>
+            </div>
+            <div class="panel">
+              <h2 class="titlecase">Vars</h2>
+              <%= for var <- @vars do %>
+                <div class="var">
+                  <div class="key"><%= var.key %></div>
+                  <div class="buttons">
+                    <button
+                      type="button"
+                      class="tiny"
+                      phx-click={JS.push("reset_var", target: @myself)}
+                      phx-value-id={var.key}
+                    >
+                      <%= gettext("Reset") %>
+                    </button>
+                    <button
+                      type="button"
+                      class="tiny"
+                      phx-click={JS.push("delete_var", target: @myself)}
+                      phx-value-id={var.key}
+                    >
+                      <%= gettext("Delete") %>
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+
+              <h2 class="titlecase">Refs</h2>
+              <%= for ref <- @refs do %>
+                <div class="ref">
+                  <div class="key"><%= ref.name %></div>
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("reset_ref", target: @myself)}
+                    phx-value-id={ref.name}
+                  >
+                    <%= gettext("Reset") %>
+                  </button>
+                </div>
+              <% end %>
+              <h2 class="titlecase"><%= gettext("Advanced") %></h2>
+              <div class="button-group-vertical">
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("fetch_missing_refs", target: @myself)}
+                >
+                  <%= gettext("Fetch missing refs") %>
+                </button>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reset_refs", target: @myself)}
+                >
+                  <%= gettext("Reset all block refs") %>
+                </button>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("fetch_missing_vars", target: @myself)}
+                >
+                  <%= gettext("Fetch missing vars") %>
+                </button>
+                <button
+                  type="button"
+                  class="secondary"
+                  phx-click={JS.push("reset_vars", target: @myself)}
+                >
+                  <%= gettext("Reset all variables") %>
+                </button>
+              </div>
+            </div>
+          </div>
+        </:config>
+
+        <div b-editor-tpl={@module_class}>
+          <%= unless Enum.empty?(@important_vars) do %>
+            <div class="important-vars">
+              <%= for {var, index} <- @indexed_vars do %>
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-render-var-blk-#{index}"}
+                  var={var}
+                  render={:only_important}
+                  in_block
+                />
+              <% end %>
+            </div>
+          <% end %>
+          <%= for split <- @splits do %>
+            <%= case split do %>
+              <% {:ref, ref} -> %>
+                <Blocks.Module.Ref.render
+                  data_field={@data_field}
+                  parent_uploads={@parent_uploads}
+                  module_refs={@refs_forms}
+                  module_ref_name={ref}
+                  base_form={@base_form}
+                />
+              <% {:content, _} -> %>
+                <%= if @module_multi do %>
+                  <.live_component
+                    module={Blocks.Module.Entries}
+                    id={"block-#{@uid}-entries"}
+                    uid={@uid}
+                    entry_template={@entry_template}
+                    block_data={@block_data}
+                    data_field={@data_field}
+                    base_form={@base_form}
+                    module_id={@module_id}
+                  />
+                <% else %>
+                  <%= "{{ content }}" %>
+                <% end %>
+              <% {:variable, var_name, variable_value} -> %>
+                <div
+                  class="rendered-variable"
+                  data-popover={
+                    gettext("Edit the entry directly to affect this variable [%{var_name}]",
+                      var_name: var_name
+                    )
+                  }
+                >
+                  <%= variable_value %>
+                </div>
+              <% {:picture, _, img_src} -> %>
+                <figure>
+                  <img src={img_src} />
+                </figure>
+              <% _ -> %>
+                <%= raw(split) %>
+            <% end %>
+          <% end %>
+          <Input.input
+            type={:hidden}
+            field={@block_data[:module_id]}
+            uid={@uid}
+            id_prefix="module_data"
+          />
+          <Input.input
+            type={:hidden}
+            field={@block_data[:sequence]}
+            uid={@uid}
+            id_prefix="module_data"
+          />
+          <Input.input type={:hidden} field={@block_data[:multi]} uid={@uid} id_prefix="module_data" />
+        </div>
+      </Blocks.block>
+    </div>
+    """
+
+    """
+    end
+
+    def var(assigns) do
+    ~H\"""
     <div class="block-var">
       <%= @var.data.key %> - <%= @var.data.type %>
       <Input.hidden field={@var[:key]} />

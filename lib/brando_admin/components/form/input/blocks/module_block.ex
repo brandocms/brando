@@ -36,15 +36,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   # data uid, :string
   # data module_not_found, :boolean
 
-  defp get_module(id) do
-    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
-
-    case Enum.find(modules, &(&1.id == id)) do
-      nil -> nil
-      module -> module
-    end
-  end
-
   def mount(socket) do
     {:ok, assign(socket, module_not_found: false, entry_template: nil)}
   end
@@ -1004,6 +995,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     case Enum.find(assigns.vars, &(&1.key == var)) do
       %{value: value} -> value
       nil -> var
+    end
+  end
+
+  defp get_module(id) do
+    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+
+    case Enum.find(modules, &(&1.id == id)) do
+      nil -> nil
+      module -> module
     end
   end
 end

@@ -1,3 +1,4 @@
+# TODO: This probably gets deprecated
 defmodule Brando.Villain.Blocks.ModuleBlock do
   alias Brando.Content.Module
   alias Brando.Content.OldVar

@@ -1,3 +1,4 @@
+# TODO: Deprecate
 defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML

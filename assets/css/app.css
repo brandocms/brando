@@ -349,6 +349,10 @@ code {
         transition: all 1.5s ease;
         opacity: .35;
       }
+
+      svg {
+        opacity: .35;
+      }
     }
   }
 

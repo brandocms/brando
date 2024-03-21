@@ -260,7 +260,7 @@ module.exports = {
           ipad_portrait: '20px',
           ipad_landscape: '18px',
           desktop_md: '18px',
-          desktop_lg: '19px',
+          desktop_lg: '18px',
           desktop_xl: '20px'
         },
 
