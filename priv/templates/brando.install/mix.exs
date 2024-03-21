@@ -48,22 +48,21 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "~> 1.7.0", override: true},
-      {:ecto, github: "elixir-ecto/ecto", override: true},
+      {:phoenix, "~> 1.7.12"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
-      {:phoenix_html, "~> 3.0"},
+      {:ecto_sql, "~> 3.10"},
+      {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_dashboard, "~> 0.7"},
-      {:ecto_sql, "~> 3.6"},
       {:telemetry, "~> 1.0", override: true},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 0.18"},
+      {:phoenix_live_view, "~> 0.20"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
