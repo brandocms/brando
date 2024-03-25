@@ -87,22 +87,12 @@ defmodule Brando.Blueprint.Meta do
   defmacro meta_field(name, _) when is_atom(name),
     do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
 
-  defmacro meta_field(name, _, _) when is_atom(name),
-    do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
+
 
   defmacro meta_field(list_of_names, path) when is_list(list_of_names) and is_list(path) do
     for name <- list_of_names do
       quote do
         meta_field(unquote(name), unquote(path))
-      end
-    end
-  end
-
-  defmacro meta_field(list_of_names, path, function)
-           when is_list(list_of_names) and is_list(path) do
-    for name <- list_of_names do
-      quote do
-        meta_field(unquote(name), unquote(path), unquote(function))
       end
     end
   end
@@ -121,6 +111,18 @@ defmodule Brando.Blueprint.Meta do
 
       def __meta_field__(unquote(name), data) do
         get_in(data, Enum.map(unquote(path), &Access.key/1))
+      end
+    end
+  end
+
+  defmacro meta_field(name, _, _) when is_atom(name),
+    do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
+
+  defmacro meta_field(list_of_names, path, function)
+           when is_list(list_of_names) and is_list(path) do
+    for name <- list_of_names do
+      quote do
+        meta_field(unquote(name), unquote(path), unquote(function))
       end
     end
   end

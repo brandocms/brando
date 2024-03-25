@@ -122,17 +122,6 @@ defmodule Brando.JSONLD.Schema do
     end
   end
 
-  # populate a field with a path with mutator function
-  defmacro field(name, :string, path, mutation_function) when is_list(path) do
-    quote do
-      Module.put_attribute(
-        __MODULE__,
-        :json_ld_fields,
-        {unquote(name), {{:string, unquote(path)}, {:mutator, unquote(mutation_function)}}}
-      )
-    end
-  end
-
   # populate a field without a path with mutator function
   defmacro field(name, :string, mutation_function) when is_function(mutation_function) do
     quote do
@@ -173,6 +162,17 @@ defmodule Brando.JSONLD.Schema do
         __MODULE__,
         :json_ld_fields,
         {unquote(name), {unquote(schema), unquote(populator_function)}}
+      )
+    end
+  end
+
+  # populate a field with a path with mutator function
+  defmacro field(name, :string, path, mutation_function) when is_list(path) do
+    quote do
+      Module.put_attribute(
+        __MODULE__,
+        :json_ld_fields,
+        {unquote(name), {{:string, unquote(path)}, {:mutator, unquote(mutation_function)}}}
       )
     end
   end
