@@ -153,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
     vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
 
-    empty_block = %Brando.Content.Block{
+    %Brando.Content.Block{
       uid: Brando.Utils.generate_uid(),
       type: :module,
       anchor: nil,
