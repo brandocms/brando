@@ -76,6 +76,13 @@ defmodule Brando.Sitemap do
   Generate sitemaps
 
   Gathers all sitemap functions, generates and persists to disk.
+
+  ## Options
+
+  Options are passed on to Sitemapper.
+
+    * `:gzip` (default: `true`) - Sets whether the files are gzipped
+
   """
   def generate_sitemap(opts \\ []) do
     sitemap_module = Brando.web_module(Sitemap)
