@@ -69,6 +69,6 @@ defmodule Brando.Content.Block do
   factory %{}
 
   def preloads do
-    [block: [:parent, :module, :vars, children: [:vars]]]
+    [block: [:parent, :module, :vars, children: [:vars, :module, children: [:vars]]]]
   end
 end
