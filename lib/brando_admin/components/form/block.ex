@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Block do
   use BrandoAdmin, :live_component
+  alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.BlockField
   import Brando.Gettext
 
   #
@@ -25,29 +27,38 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     """)
 
+    block_module = socket.assigns.block_module
     form = socket.assigns.form
     level = socket.assigns.level
 
-    if level == 0 do
-      send_update(socket.assigns.parent_cid, %{
-        event: "update_root_sequence",
-        level: 0,
-        form: form,
-        sequence: idx
-      })
-    end
+    cs = socket.assigns.form.source
+    # cs = Changeset.put_change(socket.assigns.form.source, :sequence, idx)
 
-    {:ok, socket}
+    new_form =
+      if level == 0 do
+        to_base_change_form(
+          block_module,
+          cs,
+          %{"sequence" => idx},
+          socket.assigns.current_user_id
+        )
+      else
+        to_change_form(cs, %{"sequence" => idx}, socket.assigns.current_user_id)
+      end
 
-    # cs = socket.assigns.form.source
+    require Logger
 
-    # new_form =
-    #   to_change_form(cs, %{sequence: idx}, socket.assigns.current_user_id)
+    Logger.error("""
 
-    # {:ok,
-    #  socket
-    #  |> assign(:form_has_changes, new_form.source.changes !== %{})
-    #  |> assign(:form, new_form)}
+    update_sequence
+    CHANGES: #{inspect(new_form.source.changes)}
+
+    """)
+
+    {:ok,
+     socket
+     |> assign(:form_has_changes, new_form.source.changes !== %{})
+     |> assign(:form, new_form)}
   end
 
   def update(%{event: "insert_block"} = assigns, socket) do
@@ -95,7 +106,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     children_forms =
       Enum.map(children, &to_change_form(&1, %{}, socket.assigns.current_user_id))
 
-    stream(socket, :children_forms, children_forms)
+    socket
+    |> stream(:children_forms, children_forms)
+    |> assign_new(:block_list, fn ->
+      Enum.map(children, & &1.uid)
+    end)
   end
 
   def maybe_assign_children(
@@ -104,11 +119,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     children_forms =
       Enum.map(children, &to_change_form(&1, %{}, socket.assigns.current_user_id))
 
-    stream(socket, :children_forms, children_forms)
+    socket
+    |> stream(:children_forms, children_forms)
+    |> assign_new(:block_list, fn ->
+      Enum.map(children, & &1.uid)
+    end)
   end
 
   def maybe_assign_children(socket) do
-    socket
+    assign_new(socket, :block_list, fn -> [] end)
   end
 
   # <input type="hidden" name="list[notifications_order][]" value={f_nested.index} />
@@ -165,6 +184,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             uid={child_block_form.data.uid}
             type={child_block_form.data.type}
             multi={child_block_form.data.multi}
+            block_module={@block_module}
             children={child_block_form.data.children}
             parent_id={child_block_form.data.parent_id}
             parent_cid={@myself}
@@ -249,6 +269,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             uid={child_block_form.data.uid}
             type={child_block_form.data.type}
             multi={child_block_form.data.multi}
+            block_module={@block_module}
             children={child_block_form.data.children}
             parent_id={child_block_form.data.parent_id}
             parent_cid={@myself}
@@ -634,6 +655,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(parent_cid, %{
       event: "insert_block",
       level: level,
+      sequence: socket.assigns.form[:sequence].value,
       before_id: socket.assigns.uid,
       parent_id: socket.assigns.parent_id
     })
@@ -695,34 +717,48 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def handle_event("save_block", %{"entry_block" => params}, socket) do
+    block_module = socket.assigns.block_module
     parent_cid = socket.assigns.parent_cid
     form = socket.assigns.form
     level = socket.assigns.level
     action = (form[:id].value && :update) || :insert
     user_id = socket.assigns.current_user_id
+    changeset = form.source
 
-    updated_form = to_base_change_form(form.source, params, user_id)
+    updated_form = to_base_change_form(block_module, changeset, params, user_id)
     updated_changeset = updated_form.source
 
+    require Logger
+
+    Logger.error("""
+
+    changeset.changes = #{inspect(changeset.changes)}
+    updated_changeset.changes = #{inspect(updated_changeset.changes)}
+    """)
+
     updated_form =
-      if action == :insert and Ecto.Changeset.changed?(updated_changeset, :block) do
-        entry_block = Ecto.Changeset.apply_changes(updated_changeset)
-        to_base_change_form(entry_block, %{}, user_id, :insert)
+      if action == :insert and Changeset.changed?(updated_changeset, :block) do
+        entry_block = Changeset.apply_changes(updated_changeset)
+        to_base_change_form(block_module, entry_block, %{}, user_id, :insert)
       else
         updated_form
       end
 
     updated_changeset = updated_form.source
 
+    Logger.error("""
+    updated updated_changeset.changes = #{inspect(updated_changeset.changes)}
+    """)
+
     # save changeset
     case Brando.repo().insert_or_update(updated_changeset) do
       {:ok, entry} ->
         preloaded_entry = Brando.repo().preload(entry, Brando.Content.Block.preloads())
-        updated_form = to_base_change_form(preloaded_entry, %{}, user_id, :validate)
+        updated_form = to_base_change_form(block_module, preloaded_entry, %{}, user_id, :validate)
         send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
 
       {:error, changeset} ->
-        updated_form = to_base_change_form(changeset, %{}, user_id, :validate)
+        updated_form = to_base_change_form(block_module, changeset, %{}, user_id, :validate)
         send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
     end
 
@@ -734,12 +770,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def handle_event("validate_block", %{"entry_block" => params}, socket) do
+    block_module = socket.assigns.block_module
     parent_cid = socket.assigns.parent_cid
     form = socket.assigns.form
     level = socket.assigns.level
 
     updated_form =
       to_base_change_form(
+        block_module,
         form.source,
         params,
         socket.assigns.current_user_id,
@@ -753,18 +791,29 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # for forms that are on the base level, meaning
   # they are a join schema between an entry and a block
-  defp to_base_change_form(entry_block_or_cs, params, user, action \\ nil) do
+  defp to_base_change_form(block_module, entry_block_or_cs, params, user, action \\ nil) do
     # start from data or entry
-    data =
-      if entry_block_or_cs.__struct__ == Ecto.Changeset do
-        entry_block_or_cs.data
-      else
-        entry_block_or_cs
-      end
+    # data =
+    #   if entry_block_or_cs.__struct__ == Changeset do
+    #     entry_block_or_cs.data
+    #   else
+    #     entry_block_or_cs
+    #   end
+
+    # require Logger
+
+    # Logger.error("""
+
+    # to_base_change_form
+    # params = #{inspect(params, pretty: true)}
+    # cs data sequence = #{inspect(data.sequence)}
+    # cs changes = #{inspect(data.sequence)}
+
+    # """)
 
     changeset =
-      data
-      |> Brando.Pages.Page.Blocks.changeset(params, user)
+      entry_block_or_cs
+      |> block_module.changeset(params, user)
       |> Map.put(:action, action)
 
     to_form(changeset,

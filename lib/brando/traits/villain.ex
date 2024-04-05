@@ -98,7 +98,7 @@ defmodule Brando.Trait.Villain do
         @parent_table_name parent_table_name
         def changeset(entry_block, attrs, user) do
           entry_block
-          |> cast(attrs, [:entry_id, :block_id])
+          |> cast(attrs, [:entry_id, :block_id, :sequence])
           # Brando.Content.Block.changeset
           |> cast_assoc(:block, with: &block_changeset(&1, &2, user))
           |> unique_constraint([:entry, :block],
@@ -108,7 +108,7 @@ defmodule Brando.Trait.Villain do
 
         def block_changeset(block, attrs, user) do
           block
-          |> cast(attrs, [:description, :uid, :creator_id])
+          |> cast(attrs, [:description, :uid, :creator_id, :sequence])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
         end
 

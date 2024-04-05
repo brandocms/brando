@@ -377,7 +377,8 @@ defmodule BrandoAdmin.Components.Form do
      |> extract_tab_names()
      |> assign_changeset()
      |> assign_form()
-     |> maybe_assign_uploads()}
+     |> maybe_assign_uploads()
+     |> maybe_assign_block_module}
   end
 
   defp assign_entry(
@@ -460,6 +461,16 @@ defmodule BrandoAdmin.Components.Form do
     else
       socket
     end
+  end
+
+  defp maybe_assign_block_module(socket) do
+    has_blocks? = socket.assigns.has_blocks?
+
+    assign(
+      socket,
+      :block_module,
+      (has_blocks? && Module.concat(socket.assigns.schema, "Blocks")) || nil
+    )
   end
 
   defp add_preloads(query_params, schema, %{query: nil}) do
@@ -828,6 +839,7 @@ defmodule BrandoAdmin.Components.Form do
         <.live_component
           :if={@has_blocks?}
           module={BlockField}
+          block_module={@block_module}
           id={"#{@id}-blocks"}
           entry={@entry}
           current_user={@current_user}
