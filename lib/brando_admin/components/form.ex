@@ -1759,6 +1759,8 @@ defmodule BrandoAdmin.Components.Form do
       Brando.routes().admin_live_path(socket, generated_create_view)
     end
 
+    # gather all blocks changesets
+
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
         Brando.Trait.run_trait_after_save_callbacks(schema, entry, new_changeset, current_user)

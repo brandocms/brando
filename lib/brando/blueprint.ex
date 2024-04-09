@@ -998,15 +998,6 @@ defmodule Brando.Blueprint do
       )
       |> maybe_mark_for_deletion(module)
 
-    require Logger
-
-    Logger.error("""
-
-    changeset from run_changeset: #{inspect(module, pretty: true)} --
-    #{inspect(changeset.action, pretty: true)}
-
-    """)
-
     :telemetry.execute(
       [:brando, :run_changeset],
       %{
@@ -1019,8 +1010,6 @@ defmodule Brando.Blueprint do
   end
 
   def maybe_validate_required(changeset, all_required_attrs) do
-    require Logger
-
     case Changeset.get_field(changeset, :status) do
       :draft -> changeset
       _ -> Changeset.validate_required(changeset, all_required_attrs)

@@ -14,6 +14,7 @@ defmodule Brando.Content.Block do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
+  import Ecto.Query
 
   # ++ Traits
   trait Brando.Trait.Creator
@@ -36,7 +37,12 @@ defmodule Brando.Content.Block do
   relations do
     relation :module, :belongs_to, module: Brando.Content.Module
     relation :parent, :belongs_to, module: __MODULE__
-    relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
+
+    relation :children, :has_many,
+      module: __MODULE__,
+      on_replace: :delete_if_exists,
+      foreign_key: :parent_id
+
     relation :palette, :belongs_to, module: Brando.Content.Palette
 
     relation :vars, :has_many,
@@ -69,6 +75,11 @@ defmodule Brando.Content.Block do
   factory %{}
 
   def preloads do
-    [block: [:parent, :module, :vars, children: [:vars, :module, children: [:vars]]]]
+    children_query =
+      from b in __MODULE__,
+        preload: [:vars, :module, children: [:vars, :children]],
+        order_by: [asc: :sequence]
+
+    [block: [:parent, :module, :vars, children: children_query]]
   end
 end

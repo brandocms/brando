@@ -18,42 +18,18 @@ defmodule BrandoAdmin.Components.Form.Block do
   # - We must somehow hold a state of when all child blocks have been updated before we can update the root blocks?
 
   def update(%{event: "update_sequence", sequence: idx}, socket) do
-    require Logger
-
-    Logger.error("""
-
-    UPDATE_SEQUENCE: #{socket.assigns.id} -- #{inspect(idx)}
-    LEVEL: #{inspect(socket.assigns.level)}
-
-    """)
-
     block_module = socket.assigns.block_module
     form = socket.assigns.form
     level = socket.assigns.level
-
+    user_id = socket.assigns.current_user_id
     cs = socket.assigns.form.source
-    # cs = Changeset.put_change(socket.assigns.form.source, :sequence, idx)
 
     new_form =
       if level == 0 do
-        to_base_change_form(
-          block_module,
-          cs,
-          %{"sequence" => idx},
-          socket.assigns.current_user_id
-        )
+        to_base_change_form(block_module, cs, %{"sequence" => idx}, user_id)
       else
-        to_change_form(cs, %{"sequence" => idx}, socket.assigns.current_user_id)
+        to_change_form(cs, %{"sequence" => idx}, user_id)
       end
-
-    require Logger
-
-    Logger.error("""
-
-    update_sequence
-    CHANGES: #{inspect(new_form.source.changes)}
-
-    """)
 
     {:ok,
      socket
@@ -61,7 +37,83 @@ defmodule BrandoAdmin.Components.Form.Block do
      |> assign(:form, new_form)}
   end
 
-  def update(%{event: "insert_block"} = assigns, socket) do
+  def update(
+        %{event: "gather_block", uid: uid, parent_uid: parent_uid, parent_cid: parent_cid},
+        socket
+      ) do
+    changesets = socket.assigns.changesets
+    changeset = socket.assigns.form.source
+    updated_changesets = Map.put(changesets, uid, changeset)
+
+    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
+      # all changesets are present, ship 'em down
+      require Logger
+
+      Logger.error("""
+
+      Got all changesets
+      sending to parent_cid: #{inspect(parent_cid)}
+      replacing uid: #{inspect(parent_uid)}
+      (uid: #{inspect(uid)}
+
+      changesets:
+      #{inspect(updated_changesets, pretty: true, width: 0)}
+
+      """)
+
+      updated_changesets_list = Map.values(updated_changesets)
+
+      updated_changeset =
+        if Enum.any?(updated_changesets_list, &(&1.changes !== %{})) do
+          Changeset.put_assoc(changeset, :children, updated_changesets_list)
+        else
+          changeset
+        end
+
+      send_update(parent_cid, %{
+        event: "gather_root_block",
+        changeset: updated_changeset,
+        uid: parent_uid
+      })
+    end
+
+    {:ok, assign(socket, :changesets, updated_changesets)}
+  end
+
+  def update(%{event: "gather_root_block"}, socket) do
+    id = socket.assigns.id
+    parent_cid = socket.assigns.parent_cid
+    changeset = socket.assigns.form.source
+    uid = socket.assigns.uid
+    has_children? = socket.assigns.has_children?
+    block_list = socket.assigns.block_list
+
+    # if the block has children we message them to gather their changesets
+    if has_children? do
+      for block_uid <- block_list do
+        id = "#{id}-child-#{block_uid}"
+
+        send_update(__MODULE__,
+          id: id,
+          event: "gather_block",
+          uid: block_uid,
+          parent_uid: uid,
+          parent_cid: parent_cid
+        )
+      end
+    else
+      # if the block has no children we send the current changeset back to the parent
+      send_update(parent_cid, %{
+        event: "gather_root_block",
+        changeset: changeset,
+        uid: uid
+      })
+    end
+
+    {:ok, socket}
+  end
+
+  def update(%{event: "insert_block", sequence: sequence} = assigns, socket) do
     level = assigns.level
     before_id = assigns.before_id
     parent_id = assigns.parent_id
@@ -76,17 +128,21 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     empty_block = BrandoAdmin.Components.Form.BlockField.build_block(2, user_id, parent_id)
 
-    # empty_block_cs = Brando.Content.Block.changeset(empty_block, %{}, socket.assigns.current_user)
+    # insert the new block uid into the block_list
+    block_list = socket.assigns.block_list
+    new_block_list = List.insert_at(block_list, sequence, empty_block.uid)
 
     block_form =
       to_change_form(
         empty_block,
-        %{sequence: 0, description: "Wow!"},
+        %{sequence: sequence, description: "Wow!"},
         user_id
       )
 
     socket
-    |> stream_insert(:children_forms, block_form, at: 0)
+    |> stream_insert(:children_forms, block_form, at: sequence)
+    |> assign(:block_list, new_block_list)
+    |> send_child_sequence_update(new_block_list)
     |> then(&{:ok, &1})
   end
 
@@ -98,6 +154,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form_has_changes, changeset.changes !== %{})
     |> assign(:form_is_new, !changeset.data.id)
     |> assign_new(:deleted, fn -> false end)
+    |> assign_new(:parent_uid, fn -> nil end)
+    |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> maybe_assign_children()
     |> then(&{:ok, &1})
   end
@@ -108,6 +166,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> stream(:children_forms, children_forms)
+    |> assign_new(:changesets, fn ->
+      children
+      |> Enum.map(&{&1.uid, nil})
+      |> Enum.into(%{})
+    end)
     |> assign_new(:block_list, fn ->
       Enum.map(children, & &1.uid)
     end)
@@ -121,80 +184,91 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> stream(:children_forms, children_forms)
+    |> assign_new(:changesets, fn ->
+      children
+      |> Enum.map(&{&1.uid, nil})
+      |> Enum.into(%{})
+    end)
     |> assign_new(:block_list, fn ->
       Enum.map(children, & &1.uid)
     end)
   end
 
   def maybe_assign_children(socket) do
-    assign_new(socket, :block_list, fn -> [] end)
+    socket
+    |> assign_new(:block_list, fn -> [] end)
+    |> assign_new(:changesets, fn -> %{} end)
+  end
+
+  def send_child_sequence_update(socket, block_list) do
+    # send_update to all components in block_list
+    parent_id = socket.assigns.id
+
+    for {block_uid, idx} <- Enum.with_index(block_list) do
+      id = "#{parent_id}-child-#{block_uid}"
+      send_update(__MODULE__, id: id, event: "update_sequence", sequence: idx)
+    end
+
+    socket
   end
 
   # <input type="hidden" name="list[notifications_order][]" value={f_nested.index} />
   def render(%{type: :module, multi: true} = assigns) do
     ~H"""
     <div>
-      <h2>MODULE MULTI — Level <%= @level %></h2>
-      <%= render_slot(@inner_block) %>
-      <div class="form">
-        <.form
-          for={@form}
-          class="mt-1"
-          phx-value-id={@form.data.id}
-          phx-change="validate_block"
-          phx-submit="save_block"
-          phx-target={@myself}
-        >
-          <%= if @belongs_to == :root do %>
-            <.inputs_for :let={block} field={@form[:block]}>
-              <button>Save</button>
-              <div class="brando-input">
-                <Input.text field={block[:uid]} label="UID" />
-                <Input.text field={block[:description]} label="Description" />
-              </div>
-            </.inputs_for>
-          <% else %>
-            <div class="brando-input">
-              <Input.text field={@form[:uid]} label="UID" />
-              <Input.text field={@form[:description]} label="Description" />
-            </div>
-          <% end %>
-        </.form>
-      </div>
-
-      <div
-        id="blocks-children"
-        phx-update="stream"
-        phx-hook="Brando.SortableBlocks"
-        data-sortable-id={"sortable-blocks-multi-#{@uid}"}
-        data-sortable-handle=".sort-handle"
-        data-sortable-selector=".block"
+      <.module
+        form={@form}
+        dirty={@form_has_changes}
+        new={@form_is_new}
+        level={@level}
+        belongs_to={@belongs_to}
+        deleted={@deleted}
+        target={@myself}
+        insert_block={
+          JS.push("insert_block",
+            value: %{level: @level, belongs_to: @belongs_to, position: @form[:sequence].value},
+            target: @myself
+          )
+        }
       >
+        <div>MULTI</div>
+        <code><pre><%= inspect(@block_list, pretty: true, width: 0) %></pre></code>
+
         <div
-          :for={{id, child_block_form} <- @streams.children_forms}
-          id={id}
-          data-id={child_block_form.data.id}
-          data-uid={child_block_form.data.uid}
-          data-parent_id={child_block_form.data.parent_id}
-          class="block draggable"
+          id="blocks-children"
+          phx-update="stream"
+          phx-hook="Brando.SortableBlocks"
+          data-sortable-id={"sortable-blocks-multi-#{@uid}"}
+          data-sortable-handle=".sort-handle"
+          data-sortable-selector=".block"
         >
-          <.live_component
-            module={__MODULE__}
-            id={"#{@id}-blocks-#{id}"}
-            uid={child_block_form.data.uid}
-            type={child_block_form.data.type}
-            multi={child_block_form.data.multi}
-            block_module={@block_module}
-            children={child_block_form.data.children}
-            parent_id={child_block_form.data.parent_id}
-            parent_cid={@myself}
-            form={child_block_form}
-            current_user_id={@current_user_id}
-            belongs_to={:multi}
-            level={@level + 1}
-          />
+          <div
+            :for={{id, child_block_form} <- @streams.children_forms}
+            id={id}
+            data-id={child_block_form.data.id}
+            data-uid={child_block_form.data.uid}
+            data-parent_id={child_block_form.data.parent_id}
+            class="block draggable"
+          >
+            <.live_component
+              module={__MODULE__}
+              id={"#{@id}-child-#{child_block_form.data.uid}"}
+              uid={child_block_form.data.uid}
+              type={child_block_form.data.type}
+              multi={child_block_form.data.multi}
+              block_module={@block_module}
+              children={child_block_form.data.children}
+              parent_id={child_block_form.data.parent_id}
+              parent_cid={@myself}
+              parent_uid={@uid}
+              form={child_block_form}
+              current_user_id={@current_user_id}
+              belongs_to={:multi}
+              level={@level + 1}
+            />
+          </div>
         </div>
-      </div>
+      </.module>
     </div>
     """
   end
@@ -217,7 +291,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           )
         }
       >
-        <%= render_slot(@inner_block) %>
       </.module>
     </div>
     """
@@ -265,7 +338,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         >
           <.live_component
             module={__MODULE__}
-            id={"#{@id}-blocks-#{id}"}
+            id={"#{@id}-child-#{child_block_form.data.uid}"}
             uid={child_block_form.data.uid}
             type={child_block_form.data.type}
             multi={child_block_form.data.multi}
@@ -273,6 +346,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             children={child_block_form.data.children}
             parent_id={child_block_form.data.parent_id}
             parent_cid={@myself}
+            parent_uid={@uid}
             form={child_block_form}
             current_user_id={@current_user_id}
             belongs_to={:container}
@@ -329,12 +403,16 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.inputs_for :let={var} field={@form[:vars]}>
             <.var var={var} />
           </.inputs_for>
+          <button>Save</button>
+          —— sequence: <%= @form[:sequence].value %><br />
           <div class="brando-input">
             <Input.text field={@form[:uid]} label="UID" />
             <Input.text field={@form[:description]} label="Description" />
           </div>
         <% end %>
       </.form>
+
+      <%= render_slot(@inner_block) %>
     </div>
     """
   end
@@ -636,12 +714,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
-  def handle_event("move_block", _params, socket) do
-    parent_cid = socket.assigns.parent_cid
-    send_update(parent_cid, %{event: "move_block", form: socket.assigns.form})
-    {:noreply, socket}
-  end
-
   def handle_event("insert_block", %{"level" => level}, socket) do
     parent_cid = socket.assigns.parent_cid
     require Logger
@@ -766,23 +838,55 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def handle_event("validate_block", %{"child_block" => _params}, socket) do
+    require Logger
+
+    Logger.error("""
+    validate_block >> child_block
+    """)
+
     {:noreply, socket}
   end
 
   def handle_event("validate_block", %{"entry_block" => params}, socket) do
+    require Logger
+
+    Logger.error("""
+    validate_block >> entry_block
+    """)
+
     block_module = socket.assigns.block_module
+    uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
+    parent_uid = socket.assigns.parent_uid
     form = socket.assigns.form
     level = socket.assigns.level
 
     updated_form =
       to_base_change_form(
         block_module,
-        form.source,
+        form.source.data,
         params,
         socket.assigns.current_user_id,
         :validate
       )
+
+    updated_changeset = updated_form.source
+
+    require Logger
+
+    Logger.error("""
+
+    updated_cs = #{inspect(updated_changeset, pretty: true)}
+
+    """)
+
+    send_update(parent_cid, %{
+      event: "update_changeset",
+      level: level,
+      updated_changeset: updated_changeset,
+      block_uid: uid,
+      parent_uid: parent_uid
+    })
 
     send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
 
@@ -792,25 +896,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   # for forms that are on the base level, meaning
   # they are a join schema between an entry and a block
   defp to_base_change_form(block_module, entry_block_or_cs, params, user, action \\ nil) do
-    # start from data or entry
-    # data =
-    #   if entry_block_or_cs.__struct__ == Changeset do
-    #     entry_block_or_cs.data
-    #   else
-    #     entry_block_or_cs
-    #   end
-
-    # require Logger
-
-    # Logger.error("""
-
-    # to_base_change_form
-    # params = #{inspect(params, pretty: true)}
-    # cs data sequence = #{inspect(data.sequence)}
-    # cs changes = #{inspect(data.sequence)}
-
-    # """)
-
     changeset =
       entry_block_or_cs
       |> block_module.changeset(params, user)

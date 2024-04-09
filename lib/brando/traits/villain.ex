@@ -96,11 +96,14 @@ defmodule Brando.Trait.Villain do
         end
 
         @parent_table_name parent_table_name
-        def changeset(entry_block, attrs, user) do
-          entry_block
-          |> cast(attrs, [:entry_id, :block_id, :sequence])
-          # Brando.Content.Block.changeset
-          |> cast_assoc(:block, with: &block_changeset(&1, &2, user))
+        def changeset(entry_block, attrs, user, recursive? \\ false) do
+          cs = cast(entry_block, attrs, [:entry_id, :block_id, :sequence])
+
+          if recursive? do
+            cast_assoc(cs, :block, with: &recursive_block_changeset(&1, &2, user))
+          else
+            cast_assoc(cs, :block, with: &block_changeset(&1, &2, user))
+          end
           |> unique_constraint([:entry, :block],
             name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
           )
@@ -110,6 +113,13 @@ defmodule Brando.Trait.Villain do
           block
           |> cast(attrs, [:description, :uid, :creator_id, :sequence])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+        end
+
+        def recursive_block_changeset(block, attrs, user) do
+          block
+          |> cast(attrs, [:description, :uid, :creator_id, :sequence])
+          |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+          |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
         end
 
         def var_changeset(var, attrs, user) do
