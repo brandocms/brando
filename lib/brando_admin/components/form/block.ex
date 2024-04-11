@@ -37,80 +37,165 @@ defmodule BrandoAdmin.Components.Form.Block do
      |> assign(:form, new_form)}
   end
 
-  def update(
-        %{event: "gather_block", uid: uid, parent_uid: parent_uid, parent_cid: parent_cid},
-        socket
-      ) do
-    changesets = socket.assigns.changesets
-    changeset = socket.assigns.form.source
-    updated_changesets = Map.put(changesets, uid, changeset)
-
-    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
-      # all changesets are present, ship 'em down
-      require Logger
-
-      Logger.error("""
-
-      Got all changesets
-      sending to parent_cid: #{inspect(parent_cid)}
-      replacing uid: #{inspect(parent_uid)}
-      (uid: #{inspect(uid)}
-
-      changesets:
-      #{inspect(updated_changesets, pretty: true, width: 0)}
-
-      """)
-
-      updated_changesets_list = Map.values(updated_changesets)
-
-      updated_changeset =
-        if Enum.any?(updated_changesets_list, &(&1.changes !== %{})) do
-          Changeset.put_assoc(changeset, :children, updated_changesets_list)
-        else
-          changeset
-        end
-
-      send_update(parent_cid, %{
-        event: "gather_root_block",
-        changeset: updated_changeset,
-        uid: parent_uid
-      })
-    end
-
-    {:ok, assign(socket, :changesets, updated_changesets)}
-  end
-
-  def update(%{event: "gather_root_block"}, socket) do
+  def update(%{event: "fetch_root_block"}, socket) do
+    # a message we will receive from the block field
+    require Logger
+    Logger.error("--> fetch_root_block [block] {uid:#{socket.assigns.uid}}")
     id = socket.assigns.id
     parent_cid = socket.assigns.parent_cid
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
     has_children? = socket.assigns.has_children?
-    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
 
     # if the block has children we message them to gather their changesets
     if has_children? do
-      for block_uid <- block_list do
+      Logger.error(
+        "----> fetch_root_block [block] HAS CHILDREN --> MSG THEM {uid:#{uid}/#{changeset.data.__struct__}}"
+      )
+
+      for {block_uid, _} <- changesets do
+        Logger.error("------> msg child block {uid:#{block_uid}}")
         id = "#{id}-child-#{block_uid}"
 
         send_update(__MODULE__,
           id: id,
-          event: "gather_block",
-          uid: block_uid,
-          parent_uid: uid,
-          parent_cid: parent_cid
+          event: "fetch_child_block",
+          uid: block_uid
         )
       end
     else
       # if the block has no children we send the current changeset back to the parent
+      Logger.error(
+        "----> fetch_root_block [block] NO CHILDREN --> PROVIDE ROOT BLOCK {uid:#{uid}/#{changeset.data.__struct__}}"
+      )
+
       send_update(parent_cid, %{
-        event: "gather_root_block",
+        event: "provide_root_block",
         changeset: changeset,
         uid: uid
       })
     end
 
     {:ok, socket}
+  end
+
+  def update(%{event: "fetch_child_block"}, socket) do
+    # a message we will receive from parent block
+    require Logger
+    id = socket.assigns.id
+    parent_cid = socket.assigns.parent_cid
+    changeset = socket.assigns.form.source
+    uid = socket.assigns.uid
+    has_children? = socket.assigns.has_children?
+    changesets = socket.assigns.changesets
+    Logger.error("--> fetch_child_block [block] {uid:#{uid}/#{changeset.data.__struct__}}")
+
+    # if the block has children we message them to gather their changesets
+    if has_children? do
+      Logger.error(
+        "----> fetch_child_block [block] HAS CHILDREN --> MSG THEM {uid:#{uid}/#{changeset.data.__struct__}}"
+      )
+
+      for {block_uid, _} <- changesets do
+        id = "#{id}-child-#{block_uid}"
+        Logger.error("------> msg child block {uid:#{block_uid}}")
+
+        send_update(__MODULE__,
+          id: id,
+          event: "fetch_child_block",
+          uid: block_uid
+        )
+      end
+    else
+      # if the block has no children we send the current changeset back to the parent
+      Logger.error(
+        "----> fetch_child_block [block] NO CHILDREN --> PROVIDE CHILD BLOCK {uid:#{uid}/#{changeset.data.__struct__}}"
+      )
+
+      send_update(parent_cid, %{
+        event: "provide_child_block",
+        changeset: changeset,
+        uid: uid
+      })
+    end
+
+    {:ok, socket}
+  end
+
+  def update(
+        %{
+          event: "provide_child_block",
+          changeset: child_changeset,
+          uid: uid
+        },
+        socket
+      ) do
+    require Logger
+    parent_uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+    level = socket.assigns.level
+    changeset = socket.assigns.form.source
+
+    Logger.error(
+      "--> provide_child_block [block:level{#{level}}] {uid:#{uid}} -> {parent_uid:#{parent_uid}} -> {#{child_changeset.data.__struct__}}"
+    )
+
+    changesets = socket.assigns.changesets
+    updated_changesets = Map.put(changesets, uid, child_changeset)
+
+    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
+      # all changesets are present, ship 'em down
+      require Logger
+
+      updated_changesets_list = Map.values(updated_changesets)
+
+      updated_changeset =
+        if Enum.any?(updated_changesets_list, &(&1.changes !== %{})) do
+          # if the changeset struct is a block we put it directly,
+          # but if it's an entry block we need to put it under the block association
+          if changeset.data.__struct__ == Brando.Content.Block do
+            Changeset.put_assoc(changeset, :children, updated_changesets_list)
+          else
+            block_changeset = Changeset.get_field(changeset, :block)
+
+            Changeset.change(changeset,
+              block: Changeset.put_assoc(block_changeset, :children, updated_changesets_list)
+            )
+          end
+        else
+          changeset
+        end
+
+      if level == 0 do
+        send_update(parent_cid, %{
+          event: "provide_root_block",
+          changeset: updated_changeset,
+          uid: parent_uid
+        })
+      else
+        send_update(parent_cid, %{
+          event: "provide_child_block",
+          changeset: updated_changeset,
+          uid: parent_uid
+        })
+      end
+    end
+
+    {:ok, assign(socket, :changesets, updated_changesets)}
+  end
+
+  def update(%{event: "update_block", level: level, form: form}, socket) do
+    # socket = stream_insert(socket, :children_forms, form)
+    require Logger
+
+    Logger.error("""
+
+    update_block in block.ex -- level: #{level} -- uid: #{inspect(socket.assigns.uid)}
+
+    """)
+
+    {:ok, stream_insert(socket, :children_forms, form)}
   end
 
   def update(%{event: "insert_block", sequence: sequence} = assigns, socket) do
@@ -231,7 +316,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           )
         }
       >
-        <div>MULTI</div>
+        <div>MULTI — parent is <%= inspect(@uid) %></div>
         <code><pre><%= inspect(@block_list, pretty: true, width: 0) %></pre></code>
 
         <div
@@ -837,13 +922,27 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:noreply, socket}
   end
 
-  def handle_event("validate_block", %{"child_block" => _params}, socket) do
+  def handle_event("validate_block", %{"child_block" => params}, socket) do
     require Logger
 
     Logger.error("""
     validate_block >> child_block
     """)
 
+    parent_cid = socket.assigns.parent_cid
+    form = socket.assigns.form
+    level = socket.assigns.level
+
+    updated_form =
+      to_change_form(
+        form.source.data,
+        params,
+        socket.assigns.current_user_id,
+        :validate
+      )
+
+    send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
+    # {:noreply, stream_insert(socket, :children_forms, form)}
     {:noreply, socket}
   end
 
@@ -871,23 +970,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     updated_changeset = updated_form.source
-
-    require Logger
-
-    Logger.error("""
-
-    updated_cs = #{inspect(updated_changeset, pretty: true)}
-
-    """)
-
-    send_update(parent_cid, %{
-      event: "update_changeset",
-      level: level,
-      updated_changeset: updated_changeset,
-      block_uid: uid,
-      parent_uid: parent_uid
-    })
-
     send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
 
     {:noreply, socket}

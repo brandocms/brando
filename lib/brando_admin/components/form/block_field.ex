@@ -8,23 +8,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, stream_configure(socket, :entry_blocks_forms, dom_id: &"base-#{&1.data.block.uid}")}
   end
 
-  # drop this
-  def update(
-        %{
-          event: "update_changeset",
-          level: level,
-          updated_changeset: updated_changeset,
-          block_uid: uid,
-          parent_uid: parent_uid
-        },
-        socket
-      ) do
-    # root_changesets = socket.assigns.root_changesets
-
-    # {:ok, socket |> assign(:root_changesets, Map.put(root_changesets, uid, updated_changeset))}
-    {:ok, socket}
-  end
-
   def update(%{event: "update_root_sequence", sequence: sequence, form: form}, socket) do
     block_module = socket.assigns.block_module
 
@@ -45,10 +28,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
-  def update(%{event: "gather_root_block", changeset: changeset, uid: uid}, socket) do
+  def update(%{event: "provide_root_block", changeset: changeset, uid: uid}, socket) do
     root_changesets = socket.assigns.root_changesets
+    require Logger
 
-    {:ok, assign(socket, :root_changesets, Map.put(root_changesets, uid, changeset))}
+    Logger.error(
+      "--> provide_root_block [block field] {uid:#{uid}} -- #{inspect(changeset.data.__struct__)}"
+    )
+
+    updated_root_changesets = Map.put(root_changesets, uid, changeset)
+
+    {:ok, assign(socket, :root_changesets, updated_root_changesets)}
   end
 
   def update(
@@ -128,13 +118,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, assign(socket, :block_list, new_block_list)}
   end
 
-  def handle_event("gather_root_blocks", _, socket) do
+  def handle_event("fetch_root_blocks", _, socket) do
     block_list = socket.assigns.block_list
     parent_id = socket.assigns.id
     # for each root block in block_list, send_update requesting their changeset
     for block_uid <- block_list do
       id = "root-block-#{block_uid}"
-      send_update(Block, id: id, event: "gather_root_block")
+      send_update(Block, id: id, event: "fetch_root_block")
     end
 
     {:noreply, socket}
@@ -161,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     <%= inspect(@root_changesets, pretty: true) %>
           </pre>
         </code>
-        <button type="button" phx-click="gather_root_blocks" phx-target={@myself}>
+        <button type="button" phx-click="fetch_root_blocks" phx-target={@myself}>
           Gather Blocks
         </button>
       </div>
