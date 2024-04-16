@@ -217,6 +217,24 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{
+          action: "provide_root_blocks",
+          root_changesets: root_changesets,
+          block_field: block_field
+        },
+        socket
+      ) do
+    # TODO: try to save?
+    send(
+      self(),
+      {:toast,
+       gettext("Got all root blocks for %{block_field}:)", block_field: inspect(block_field))}
+    )
+
+    {:ok, socket}
+  end
+
+  def update(
         %{action: :update_changeset, changeset: updated_changeset, force_validation: true},
         socket
       ) do
@@ -378,7 +396,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_changeset()
      |> assign_form()
      |> maybe_assign_uploads()
-     |> maybe_assign_block_module}
+     |> maybe_assign_block_map()}
   end
 
   defp assign_entry(
@@ -463,14 +481,21 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp maybe_assign_block_module(socket) do
-    has_blocks? = socket.assigns.has_blocks?
+  defp maybe_assign_block_map(socket) do
+    schema = socket.assigns.schema
 
-    assign(
-      socket,
-      :block_module,
-      (has_blocks? && Module.concat(socket.assigns.schema, "Blocks")) || nil
-    )
+    block_map =
+      case socket.assigns.has_blocks? do
+        true ->
+          schema.__relations__()
+          |> Enum.filter(&(&1.opts.module == :blocks))
+          |> Enum.map(&{&1.name, Module.concat(schema, "Blocks")})
+
+        false ->
+          []
+      end
+
+    assign_new(socket, :block_map, fn -> block_map end)
   end
 
   defp add_preloads(query_params, schema, %{query: nil}) do
@@ -837,12 +862,15 @@ defmodule BrandoAdmin.Components.Form do
         </div>
 
         <.live_component
+          :for={{block_field, block_module} <- @block_map}
           :if={@has_blocks?}
           module={BlockField}
-          block_module={@block_module}
+          block_module={block_module}
+          block_field={block_field}
           id={"#{@id}-blocks"}
           entry={@entry}
           current_user={@current_user}
+          form_cid={@myself}
         />
 
         <.submit_button

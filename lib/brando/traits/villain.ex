@@ -91,7 +91,7 @@ defmodule Brando.Trait.Villain do
 
         schema "#{parent_table_name}_blocks" do
           Ecto.Schema.belongs_to(:entry, parent_module)
-          Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :delete)
+          Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
           Ecto.Schema.field(:sequence, :integer)
         end
 
@@ -111,20 +111,31 @@ defmodule Brando.Trait.Villain do
 
         def block_changeset(block, attrs, user) do
           block
-          |> cast(attrs, [:description, :uid, :creator_id, :sequence])
+          |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
         end
 
         def recursive_block_changeset(block, attrs, user) do
           block
-          |> cast(attrs, [:description, :uid, :creator_id, :sequence])
+          |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
         end
 
         def var_changeset(var, attrs, user) do
-          var
-          |> cast(attrs, [:key, :value, :creator_id])
+          cast(var, attrs, [
+            :key,
+            :value,
+            :creator_id,
+            :module_id,
+            :page_id,
+            :block_id,
+            :palette_id,
+            :image_id,
+            :file_id,
+            :linked_identifier_id,
+            :global_set_id
+          ])
         end
       end
     end

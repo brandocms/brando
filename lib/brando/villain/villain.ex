@@ -17,7 +17,8 @@ defmodule Brando.Villain do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @module_cache_ttl (Brando.config(:env) == :e2e && %{preload: [:vars]}) ||
+                      %{cache: {:ttl, :infinite}, preload: [:vars]}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @fragment_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
@@ -78,6 +79,46 @@ defmodule Brando.Villain do
     output
   end
 
+  def render_block(block, entry, opts \\ [])
+  def render_block(%{hidden: true}, _entry, _opts), do: ""
+  def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
+
+  def render_block(%Brando.Content.Block{} = block, entry, opts) do
+    opts_map = Enum.into(opts, %{})
+    parser = Brando.config(Brando.Villain)[:parser]
+
+    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
+    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+
+    entry =
+      entry
+      |> maybe_nil_fields(opts_map)
+      |> maybe_put_timestamps()
+
+    context =
+      entry
+      |> Brando.Villain.get_base_context()
+      |> add_request_to_context(opts_map)
+      |> add_url_to_context(entry)
+
+    opts_map =
+      opts_map
+      |> Map.put(:context, context)
+      |> Map.put(:modules, modules)
+      |> Map.put(:palettes, palettes)
+      |> Map.put(:fragments, fragments)
+
+    parser
+    |> parse_node(block, opts_map)
+    |> parse_and_render(context)
+    |> dbg()
+  end
+
+  def render_block(%{block: block} = _entry_block, entry, opts) do
+    render_block(block, entry, opts)
+  end
+
   defp add_request_to_context(ctx, %{conn: conn}) do
     request = %{
       params: conn.path_params,
@@ -93,10 +134,19 @@ defmodule Brando.Villain do
     add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))
   end
 
+  # TODO: we can probably throw out this indirection?
   defp parse_node(parser, data_node, opts_map) do
-    type_atom = String.to_atom(data_node.type)
-    data_node_content = data_node.data
-    apply(parser, type_atom, [data_node_content, opts_map])
+    type_atom = data_node.type
+
+    if not is_atom(type_atom) do
+      raise """
+      Expected type to be an atom, got: #{inspect(type_atom)}
+
+      Data node: #{inspect(data_node, pretty: true)}
+      """
+    end
+
+    apply(parser, type_atom, [data_node, opts_map])
   end
 
   # so we don't pass around unneccessary data in the parser

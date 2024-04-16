@@ -32,6 +32,8 @@ defmodule Brando.Content.Block do
     attribute :anchor, :string
     attribute :multi, :boolean, default: false
     attribute :datasource, :boolean, default: false
+    attribute :rendered_html, :string
+    attribute :rendered_at, :datetime
   end
 
   relations do

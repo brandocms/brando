@@ -17,6 +17,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   #
   # - We must somehow hold a state of when all child blocks have been updated before we can update the root blocks?
 
+  def mount(socket) do
+    {:ok, assign(socket, module_not_found: false, entry_template: nil)}
+  end
+
   def update(%{event: "update_sequence", sequence: idx}, socket) do
     block_module = socket.assigns.block_module
     form = socket.assigns.form
@@ -155,13 +159,35 @@ defmodule BrandoAdmin.Components.Form.Block do
           # if the changeset struct is a block we put it directly,
           # but if it's an entry block we need to put it under the block association
           if changeset.data.__struct__ == Brando.Content.Block do
-            Changeset.put_assoc(changeset, :children, updated_changesets_list)
-          else
-            block_changeset = Changeset.get_field(changeset, :block)
+            Logger.error("==> changing changeset's children association")
 
-            Changeset.change(changeset,
-              block: Changeset.put_assoc(block_changeset, :children, updated_changesets_list)
+            Changeset.put_assoc(
+              changeset,
+              :children,
+              Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
             )
+          else
+            # EctoNestedChangeset.update_at(changeset, [:block, :children], fn _ ->
+            #   updated_changesets_list
+            # end)
+            Logger.error("==> changing changeset's block association")
+
+            Logger.error("""
+
+            updated_changesets_list: #{inspect(updated_changesets_list, pretty: true)}
+
+            """)
+
+            updated_block_changeset =
+              changeset
+              |> Changeset.get_field(:block)
+              |> Changeset.change()
+              |> Changeset.put_assoc(
+                :children,
+                Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
+              )
+
+            Changeset.put_assoc(changeset, :block, updated_block_changeset)
           end
         else
           changeset
@@ -238,6 +264,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(assigns)
     |> assign(:form_has_changes, changeset.changes !== %{})
     |> assign(:form_is_new, !changeset.data.id)
+    |> assign_new(:rendered_block, fn -> "" end)
     |> assign_new(:deleted, fn -> false end)
     |> assign_new(:parent_uid, fn -> nil end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
@@ -311,7 +338,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         target={@myself}
         insert_block={
           JS.push("insert_block",
-            value: %{level: @level, belongs_to: @belongs_to, position: @form[:sequence].value},
+            value: %{level: @level, belongs_to: @belongs_to, sequence: @form[:sequence].value},
             target: @myself
           )
         }
@@ -361,6 +388,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   def render(%{type: :module} = assigns) do
     ~H"""
     <div>
+      <details>
+        <summary>HTML</summary>
+        <%= raw(@rendered_block) %>
+      </details>
       <.module
         form={@form}
         dirty={@form_has_changes}
@@ -371,7 +402,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         target={@myself}
         insert_block={
           JS.push("insert_block",
-            value: %{level: @level, belongs_to: @belongs_to, position: @form[:sequence].value},
+            value: %{level: @level, belongs_to: @belongs_to, sequence: @form[:sequence].value},
             target: @myself
           )
         }
@@ -478,10 +509,8 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.inputs_for>
             <button>Save</button>
             —— sequence: <%= @form[:sequence].value %><br />
-            <div class="brando-input">
-              <Input.text field={block_form[:uid]} label="UID" />
-              <Input.text field={block_form[:description]} label="Description" />
-            </div>
+            —— uid: <%= block_form[:uid].value %><br />
+            —— description: <%= block_form[:description].value %><br />
           </.inputs_for>
         <% else %>
           <Input.hidden field={@form[:sequence]} />
@@ -769,6 +798,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <div style="font-family: monospace; font-size: 9px;">
         <%= @var[:key].value %> - <%= @var[:type].value %>
       </div>
+      <Input.hidden field={@var[:id]} />
       <Input.hidden field={@var[:key]} />
       <Input.hidden field={@var[:type]} />
       <Input.text field={@var[:value]} label="Value" />
@@ -797,6 +827,15 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.icon name="hero-arrows-up-down" />
     </div>
     """
+  end
+
+  defp get_module(id) do
+    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+
+    case Enum.find(modules, &(&1.id == id)) do
+      nil -> nil
+      module -> module
+    end
   end
 
   def handle_event("insert_block", %{"level" => level}, socket) do
@@ -891,6 +930,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     changeset.changes = #{inspect(changeset.changes)}
     updated_changeset.changes = #{inspect(updated_changeset.changes)}
+
     """)
 
     updated_form =
@@ -972,7 +1012,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changeset = updated_form.source
     send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
 
-    {:noreply, socket}
+    require Logger
+
+    Logger.error("""
+
+    validate_block
+
+    #{inspect(updated_changeset, pretty: true)}
+
+    """)
+
+    block = Changeset.apply_changes(updated_changeset)
+    rendered_block = Brando.Villain.render_block(block, %{title: "HEI HEI!"})
+
+    {:noreply, assign(socket, :rendered_block, rendered_block)}
   end
 
   # for forms that are on the base level, meaning

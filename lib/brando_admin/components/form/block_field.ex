@@ -24,12 +24,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "update_block", level: _level, form: form}, socket) do
-    socket = stream_insert(socket, :entry_blocks_forms, form)
-    {:ok, socket}
+    {:ok, stream_insert(socket, :entry_blocks_forms, form)}
   end
 
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid}, socket) do
     root_changesets = socket.assigns.root_changesets
+    form_cid = socket.assigns.form_cid
+    block_field = socket.assigns.block_field
     require Logger
 
     Logger.error(
@@ -38,14 +39,37 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     updated_root_changesets = Map.put(root_changesets, uid, changeset)
 
-    {:ok, assign(socket, :root_changesets, updated_root_changesets)}
+    if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
+      {:ok, assign(socket, :root_changesets, updated_root_changesets)}
+    else
+      Logger.error("--> provide_root_block [block field] {uid:#{uid}} -- all changesets received")
+
+      Logger.error(
+        "--> updated_root_changesets #{inspect(updated_root_changesets, pretty: true)}"
+      )
+
+      send_update(form_cid, %{
+        action: "provide_root_blocks",
+        root_changesets: updated_root_changesets,
+        block_field: block_field
+      })
+
+      # niled_root_changesets =
+      #   Map.new(Enum.map(updated_root_changesets, fn {k, _} -> {k, nil} end))
+
+      # Logger.error("--> niling root_changesets #{inspect(niled_root_changesets, pretty: true)}")
+
+      {:ok, assign(socket, :root_changesets, updated_root_changesets)}
+    end
   end
 
+  # INSERT ROOT BLOCK
   def update(
         %{event: "insert_block", level: 0, sequence: sequence, parent_id: parent_id} = assigns,
         socket
       ) do
     # before_id = assigns.before_id
+    root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     empty_block = build_block(2, user_id, parent_id)
@@ -54,8 +78,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     entry_block =
       struct(block_module, %{
         entry_id: socket.assigns.entry.id,
-        block: empty_block,
-        sequence: sequence
+        block: empty_block
       })
 
     # insert the new block uid into the block_list
@@ -63,11 +86,27 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_block_list = List.insert_at(block_list, sequence, empty_block.uid)
 
     entry_block_form =
-      to_change_form(block_module, entry_block, %{}, socket.assigns.current_user.id)
+      to_change_form(
+        block_module,
+        entry_block,
+        %{sequence: sequence},
+        socket.assigns.current_user.id
+      )
+
+    require Logger
+
+    Logger.error("""
+
+    entry_block_form.source #{inspect(Changeset.apply_changes(entry_block_form.source), pretty: true)}
+
+    """)
+
+    updated_root_changesets = Map.put(root_changesets, empty_block.uid, nil)
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, updated_root_changesets)
     |> send_root_sequence_update(new_block_list)
     |> then(&{:ok, &1})
   end
@@ -145,6 +184,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def render(assigns) do
     ~H"""
     <div>
+      <.live_component
+        module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
+        id={"block-field-#{assigns.block_field}-module-picker"}
+        templates={[]}
+        hide_fragments={false}
+        hide_sections={false}
+      />
       <div class="block-list">
         <code>
           <pre phx-no-format>
@@ -212,6 +258,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
     vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
 
+    var_changesets =
+      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, nil)))
+
     %Brando.Content.Block{
       uid: Brando.Utils.generate_uid(),
       type: :module,
@@ -222,7 +271,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       palette_id: nil,
       refs: refs_with_generated_uids,
       vars: vars_without_pk,
-      creator_id: user_id
+      creator_id: user_id,
+      children: []
     }
   end
 end

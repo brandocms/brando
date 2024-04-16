@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
+defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
   import Brando.Gettext
@@ -16,11 +16,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   # data active_namespace, :string
 
   def mount(socket) do
-    {:ok, assign(socket, active_namespace: nil)}
+    {:ok, assign(socket, active_namespace: nil, show: false)}
   end
 
   def update(%{action: :refresh_modules}, socket) do
     {:ok, assign_modules(socket)}
+  end
+
+  def update(%{action: :show_module_picker, sequence: sequence, parent_cid: parent_cid}, socket) do
+    {:ok, assign(socket, show: true, sequence: sequence, parent_cid: parent_cid)}
   end
 
   def update(assigns, socket) do
@@ -50,14 +54,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.modal title={gettext("Add content block")} id={@id} medium>
+      <Content.modal title={gettext("Add content block")} id={@id} show={@show} medium>
         <div class="modules-header">
           <div class="module-info">
             <%= gettext("Select a module") %>
           </div>
           <div class="other-buttons">
             <%= if !@hide_fragments do %>
-              <button type="button" phx-click={@insert_fragment} phx-value-index={@insert_index}>
+              <button type="button" phx-click="insert_fragment">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -77,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
               </button>
             <% end %>
             <%= if !@hide_sections do %>
-              <button type="button" phx-click={@insert_section} phx-value-index={@insert_index}>
+              <button type="button" phx-click="insert_section">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm17 8H4v8h16v-8zm0-2V5H4v4h16zM9 6h2v2H9V6zM5 6h2v2H5V6z" />
                 </svg>
@@ -113,8 +117,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                   <button
                     type="button"
                     class="module-button"
-                    phx-click={@insert_module}
-                    phx-value-index={@insert_index}
+                    phx-click="insert_module"
                     phx-value-module-id={module.id}
                   >
                     <figure>
@@ -137,8 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModulePicker do
                 <button
                   type="button"
                   class="module-button"
-                  phx-click={@insert_module}
-                  phx-value-index={@insert_index}
+                  phx-click="insert_module"
                   phx-value-module-id={module.id}
                 >
                   <figure>

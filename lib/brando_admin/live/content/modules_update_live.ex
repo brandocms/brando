@@ -686,7 +686,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   defp assign_entry(socket, entry_id) do
     assign_new(socket, :entry, fn ->
-      Brando.Content.get_module!(entry_id)
+      Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars]})
     end)
   end
 

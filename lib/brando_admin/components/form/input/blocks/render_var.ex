@@ -111,35 +111,35 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
      |> assign(:in_block, false)}
   end
 
-  defp control_value("string", value) when is_binary(value), do: value
-  defp control_value("string", _value), do: ""
+  defp control_value(:string, value) when is_binary(value), do: value
+  defp control_value(:string, _value), do: ""
 
-  defp control_value("text", value) when is_binary(value), do: value
-  defp control_value("text", _value), do: ""
+  defp control_value(:text, value) when is_binary(value), do: value
+  defp control_value(:text, _value), do: ""
 
-  defp control_value("datetime", %DateTime{} = value), do: value
-  defp control_value("datetime", %Date{} = value), do: value
-  defp control_value("datetime", _value), do: DateTime.utc_now()
+  defp control_value(:datetime, %DateTime{} = value), do: value
+  defp control_value(:datetime, %Date{} = value), do: value
+  defp control_value(:datetime, _value), do: DateTime.utc_now()
 
-  defp control_value("boolean", value) when is_boolean(value), do: value
-  defp control_value("boolean", _value), do: false
+  defp control_value(:boolean, value) when is_boolean(value), do: value
+  defp control_value(:boolean, _value), do: false
 
-  defp control_value("color", "#" <> value), do: "##{value}"
-  defp control_value("color", _value), do: "#000000"
+  defp control_value(:color, "#" <> value), do: "##{value}"
+  defp control_value(:color, _value), do: "#000000"
 
-  defp control_value("select", value) when is_binary(value), do: value
-  defp control_value("select", _value), do: ""
+  defp control_value(:select, value) when is_binary(value), do: value
+  defp control_value(:select, _value), do: ""
 
-  defp control_value("html", value) when is_binary(value), do: value
-  defp control_value("html", _value), do: "<p></p>"
+  defp control_value(:html, value) when is_binary(value), do: value
+  defp control_value(:html, _value), do: "<p></p>"
 
-  defp control_value("image", value) when is_binary(value), do: nil
-  defp control_value("image", value) when is_boolean(value), do: nil
-  defp control_value("image", value), do: value
+  defp control_value(:image, value) when is_binary(value), do: nil
+  defp control_value(:image, value) when is_boolean(value), do: nil
+  defp control_value(:image, value), do: value
 
-  defp control_value("file", value) when is_binary(value), do: nil
-  defp control_value("file", value) when is_boolean(value), do: nil
-  defp control_value("file", value), do: value
+  defp control_value(:file, value) when is_binary(value), do: nil
+  defp control_value(:file, value) when is_boolean(value), do: nil
+  defp control_value(:file, value), do: value
 
   def render(assigns) do
     ~H"""
@@ -270,23 +270,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <div class="brando-input">
       <%= case @type do %>
-        <% "string" -> %>
+        <% :string -> %>
           <Input.text
             field={@var[:value]}
             label={@label}
             placeholder={@placeholder}
             instructions={@instructions}
           />
-        <% "text" -> %>
+        <% :text -> %>
           <Input.textarea
             field={@var[:value]}
             label={@label}
             placeholder={@placeholder}
             instructions={@instructions}
           />
-        <% "boolean" -> %>
+        <% :boolean -> %>
           <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
-        <% "color" -> %>
+        <% :color -> %>
           <Input.color
             field={@var[:value]}
             label={@label}
@@ -303,11 +303,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <Input.input type={:hidden} field={@var[:opacity]} />
             <Input.input type={:hidden} field={@var[:palette_id]} />
           <% end %>
-        <% "datetime" -> %>
+        <% :datetime -> %>
           <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
-        <% "html" -> %>
+        <% :html -> %>
           <Input.rich_text field={@var[:value]} label={@label} instructions={@instructions} />
-        <% "select" -> %>
+        <% :select -> %>
           <.live_component
             module={Input.Select}
             id={"#{@var.id}-select"}
@@ -321,7 +321,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <Input.hidden field={opt[:label]} />
             <Input.hidden field={opt[:value]} />
           </.inputs_for>
-        <% "image" -> %>
+        <% :image -> %>
           <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
             <div class="input-image">
               <%= if @image do %>
@@ -343,7 +343,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <.image_modal field={@var} image={@image} myself={@myself} />
             </div>
           </Form.field_base>
-        <% "file" -> %>
+        <% :file -> %>
           <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
             <div class="input-file">
               <%= if @file do %>

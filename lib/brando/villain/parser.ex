@@ -857,7 +857,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{blocks: blocks, palette_id: palette_id, target_id: target_id}, opts) do
+      def container(%{children: blocks, palette_id: palette_id, anchor: target_id}, opts) do
         palettes = opts.palettes
 
         blocks_html =
@@ -865,7 +865,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.reduce([], fn
             %{hidden: true}, acc -> acc
             %{marked_as_deleted: true}, acc -> acc
-            d, acc -> [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
+            d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
           end)
           |> Enum.reverse()
           |> Enum.join("")

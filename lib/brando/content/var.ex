@@ -38,7 +38,7 @@ defmodule Brando.Content.Var do
       ]
 
     attribute :label, :string, required: true
-    attribute :placeholder, :string, required: true
+    attribute :placeholder, :string
     attribute :key, :string, required: true
     attribute :value, :text
     attribute :value_boolean, :boolean, default: false
