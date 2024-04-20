@@ -912,16 +912,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     )
   end
 
-  # defp strip_l(tpl) do
-  #   tpl
-  #   |> Enum.reduce([], fn
-  #     {:iteration, _}, acc -> acc
-  #     {:control_flow, _}, acc -> acc
-  #     expr, acc -> [expr | acc]
-  #   end)
-  #   |> Enum.reverse()
-  # end
-
   defp strip_logic(module_code),
     do: Regex.replace(@regex_strips, module_code, "")
 

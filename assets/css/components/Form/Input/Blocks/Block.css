@@ -45,6 +45,10 @@
     .block-datasource {
       display: none;
     }
+
+    .block-children {
+      display: none;
+    }
   }
 
   &.multi {
@@ -120,8 +124,19 @@
     background-color: transparent;
   }
 
-  .module-important-variables {
-    margin-top: 8px;
+  
+  .block-vars {
+    border: 1px solid var(--brando-color-gray-light);
+    border-radius: 7px;
+    padding: 8px;
+    background-color: ghostwhite;
+
+    label.control-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      /* border-bottom: 1px solid; */
+      font-family: 'Mono';
+    }
   }
 
   .helpful-actions {

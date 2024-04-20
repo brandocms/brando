@@ -52,7 +52,10 @@ defmodule Brando.Content.Block do
       on_replace: :delete_if_exists,
       cast: true
 
-    relation :refs, :embeds_many, module: Brando.Content.Module.Ref, on_replace: :delete
+    relation :refs, :embeds_many,
+      module: Brando.Content.Module.Ref,
+      on_replace: :delete,
+      cast: true
 
     relation :block_identifiers, :has_many,
       module: Brando.Content.BlockIdentifier,

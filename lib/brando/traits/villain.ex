@@ -113,12 +113,14 @@ defmodule Brando.Trait.Villain do
           block
           |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+          |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
         end
 
         def recursive_block_changeset(block, attrs, user) do
           block
           |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+          |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
           |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
         end
 
@@ -136,6 +138,23 @@ defmodule Brando.Trait.Villain do
             :linked_identifier_id,
             :global_set_id
           ])
+        end
+
+        def ref_changeset(ref, attrs, user) do
+          require Logger
+
+          Logger.error("""
+
+
+          ref_changeset
+          #{inspect(ref, pretty: true)}
+
+
+          """)
+
+          ref
+          |> cast(attrs, [:name, :description])
+          |> Brando.PolymorphicEmbed.cast_polymorphic_embed(:data)
         end
       end
     end

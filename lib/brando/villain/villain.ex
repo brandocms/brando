@@ -112,7 +112,6 @@ defmodule Brando.Villain do
     parser
     |> parse_node(block, opts_map)
     |> parse_and_render(context)
-    |> dbg()
   end
 
   def render_block(%{block: block} = _entry_block, entry, opts) do

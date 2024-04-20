@@ -81,6 +81,7 @@ defmodule Brando.Mixfile do
       {:ecto_nested_changeset, "~> 0.2"},
       {:nimble_csv, "~> 1.2"},
       {:tzdata, "~> 1.1"},
+      {:polymorphic_embed, github: "SteffenDE/polymorphic_embed"},
 
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},

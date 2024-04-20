@@ -483,19 +483,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_assign_block_map(socket) do
     schema = socket.assigns.schema
+    form_blueprint = socket.assigns.form_blueprint
+    blocks = form_blueprint.blocks
 
-    block_map =
+    assign_new(socket, :block_map, fn ->
       case socket.assigns.has_blocks? do
-        true ->
-          schema.__relations__()
-          |> Enum.filter(&(&1.opts.module == :blocks))
-          |> Enum.map(&{&1.name, Module.concat(schema, "Blocks")})
-
-        false ->
-          []
+        true -> Enum.map(blocks, &{&1.name, Module.concat(schema, "Blocks"), &1.opts})
+        false -> []
       end
-
-    assign_new(socket, :block_map, fn -> block_map end)
+    end)
   end
 
   defp add_preloads(query_params, schema, %{query: nil}) do
@@ -862,11 +858,13 @@ defmodule BrandoAdmin.Components.Form do
         </div>
 
         <.live_component
-          :for={{block_field, block_module} <- @block_map}
+          :for={{block_field, block_module, field_opts} <- @block_map}
           :if={@has_blocks?}
           module={BlockField}
           block_module={block_module}
           block_field={block_field}
+          parent_uploads={@uploads}
+          opts={field_opts}
           id={"#{@id}-blocks"}
           entry={@entry}
           current_user={@current_user}

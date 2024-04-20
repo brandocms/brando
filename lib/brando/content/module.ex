@@ -40,7 +40,7 @@ defmodule Brando.Content.Module do
 
   identifier "{{ entry.name }}"
 
-  @derived_fields ~w(id name sequence namespace help_text wrapper class code refs vars svg deleted_at)a
+  @derived_fields ~w(id type name sequence namespace help_text wrapper class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait Brando.Trait.Sequenced
@@ -49,6 +49,7 @@ defmodule Brando.Content.Module do
   trait Brando.Trait.CastPolymorphicEmbeds
 
   attributes do
+    attribute :type, :enum, values: [:liquid, :heex], default: :liquid
     attribute :name, :string, required: true
     attribute :namespace, :string, required: true
     attribute :help_text, :text, required: true
@@ -66,7 +67,11 @@ defmodule Brando.Content.Module do
   relations do
     relation :entry_template, :embeds_one, module: __MODULE__.EmbeddedModule, on_replace: :delete
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
-    relation :vars, :has_many, module: Brando.Content.Var, on_replace: :delete_if_exists
+
+    relation :vars, :has_many,
+      module: Brando.Content.Var,
+      on_replace: :delete_if_exists,
+      cast: true
   end
 
   listings do

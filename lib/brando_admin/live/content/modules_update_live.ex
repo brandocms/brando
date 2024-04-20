@@ -361,18 +361,14 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       ) do
     changeset = form.source
     vars = get_field(changeset, :vars) || []
-
-    var_module =
-      var_type
-      |> String.to_existing_atom()
-      |> Brando.Content.get_var_by_type()
+    var_type = var_type |> String.to_existing_atom()
 
     new_var =
-      struct(var_module, %{
+      %Brando.Content.Var{
         key: Brando.Utils.random_string(5),
         label: "Label",
         type: var_type
-      })
+      }
 
     updated_changeset = put_change(changeset, :vars, [new_var | vars])
     updated_form = to_form(updated_changeset, [])

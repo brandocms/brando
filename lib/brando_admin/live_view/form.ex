@@ -311,7 +311,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
       send_update(BrandoAdmin.Components.Form.Input.Blocks.ModulePicker,
         id: target_id,
-        action: :refresh_modules
+        event: :refresh_modules
       )
     end
 

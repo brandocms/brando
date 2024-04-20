@@ -117,7 +117,8 @@ defmodule BrandoAdmin.Components.Content do
         "modal",
         @narrow && "narrow",
         @medium && "medium",
-        @wide && "wide"
+        @wide && "wide",
+        @show && "visible"
       ]}
       phx-window-keydown={hide_modal("##{@id}")}
       phx-key="escape"

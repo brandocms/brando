@@ -278,7 +278,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             instructions={@instructions}
           />
         <% :text -> %>
-          <Input.textarea
+          <Input.rich_text
             field={@var[:value]}
             label={@label}
             placeholder={@placeholder}

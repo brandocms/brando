@@ -16,10 +16,12 @@
 
     .modal-backdrop {
       opacity: 1 !important;
+      display: block !important
     }
 
     .modal-dialog {
       opacity: 1 !important;
+      display: flex !important;
     }
   }
 

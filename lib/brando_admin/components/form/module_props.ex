@@ -46,6 +46,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     ~H"""
     <div class="properties shaded">
       <div class="inner">
+        <Input.radios
+          field={@form[:type]}
+          label={gettext("Type")}
+          opts={[
+            options: [
+              %{label: gettext("Liquid"), value: :liquid},
+              %{label: gettext("Heex"), value: :heex}
+            ]
+          ]}
+        />
         <Input.text field={@form[:name]} label={gettext("Name")} />
         <Input.text field={@form[:namespace]} label={gettext("Namespace")} />
         <Input.textarea field={@form[:help_text]} label={gettext("Help text")} />

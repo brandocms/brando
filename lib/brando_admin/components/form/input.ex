@@ -86,9 +86,17 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
       |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
 
+    require Logger
+
+    Logger.error("""
+
+    opts: #{inspect(assigns.opts, pretty: true)}
+
+    """)
+
     assigns =
       assign_new(assigns, :palette_colors, fn ->
-        if assigns.palette_id do
+        if assigns.palette_id not in [nil, ""] do
           case Brando.Content.get_palette(assigns.palette_id) do
             {:ok, palette} ->
               palette.colors

@@ -5,25 +5,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   alias BrandoAdmin.Components.Content
 
-  # prop insert_module, :event, required: true
-  # prop insert_section, :event, required: true
-  # prop insert_fragment, :event, required: true
-  # prop insert_index, :integer, required: true
   # prop hide_sections, :boolean, default: false
   # prop hide_fragments, :boolean, default: false
-
-  # data modules_by_namespace, :list
-  # data active_namespace, :string
 
   def mount(socket) do
     {:ok, assign(socket, active_namespace: nil, show: false)}
   end
 
-  def update(%{action: :refresh_modules}, socket) do
+  def update(%{event: :refresh_modules}, socket) do
     {:ok, assign_modules(socket)}
   end
 
-  def update(%{action: :show_module_picker, sequence: sequence, parent_cid: parent_cid}, socket) do
+  def update(%{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid}, socket) do
     {:ok, assign(socket, show: true, sequence: sequence, parent_cid: parent_cid)}
   end
 
@@ -61,7 +54,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           </div>
           <div class="other-buttons">
             <%= if !@hide_fragments do %>
-              <button type="button" phx-click="insert_fragment">
+              <button type="button" phx-click="insert_fragment" phx-target={@myself}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -81,11 +74,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               </button>
             <% end %>
             <%= if !@hide_sections do %>
-              <button type="button" phx-click="insert_section">
+              <button type="button" phx-click="insert_container" phx-target={@myself}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm17 8H4v8h16v-8zm0-2V5H4v4h16zM9 6h2v2H9V6zM5 6h2v2H5V6z" />
                 </svg>
-                <%= gettext("Insert section") %>
+                <%= gettext("Insert container") %>
               </button>
             <% end %>
           </div>
@@ -99,7 +92,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                   "namespace-button",
                   @active_namespace == namespace && "active"
                 ]}
-                phx-click={JS.push("toggle_namespace", target: @myself)}
+                phx-click="toggle_namespace"
+                phx-target={@myself}
                 phx-value-id={namespace}
               >
                 <figure>
@@ -118,6 +112,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                     type="button"
                     class="module-button"
                     phx-click="insert_module"
+                    phx-target={@myself}
                     phx-value-module-id={module.id}
                   >
                     <figure>
@@ -141,6 +136,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                   type="button"
                   class="module-button"
                   phx-click="insert_module"
+                  phx-target={@myself}
                   phx-value-module-id={module.id}
                 >
                   <figure>
@@ -160,12 +156,38 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     """
   end
 
-  def handle_event(
-        "toggle_namespace",
-        %{"id" => namespace},
-        %{assigns: %{active_namespace: active_namespace}} = socket
-      ) do
+  def handle_event("toggle_namespace", %{"id" => namespace}, socket) do
+    active_namespace = socket.assigns.active_namespace
     {:noreply, assign(socket, active_namespace: active_namespace != namespace && namespace)}
+  end
+
+  def handle_event("insert_module", %{"module-id" => module_id}, socket) do
+    parent_cid = socket.assigns.parent_cid
+    sequence = socket.assigns.sequence
+
+    require Logger
+
+    Logger.error("""
+
+    sending update insert_module in ModulePicker to parent_cid: #{inspect(parent_cid, pretty: true)}
+
+    """)
+
+    send_update(parent_cid, %{event: "insert_block", sequence: sequence, module_id: module_id})
+    {:noreply, assign(socket, :show, false)}
+  end
+
+  def handle_event("insert_container", _, socket) do
+    parent_cid = socket.assigns.parent_cid
+    sequence = socket.assigns.sequence
+    require Logger
+
+    Logger.error("""
+    -> Inserting container to parent_cid: #{inspect(parent_cid, pretty: true)}
+    """)
+
+    send_update(parent_cid, %{event: "insert_container", sequence: sequence})
+    {:noreply, assign(socket, :show, false)}
   end
 
   def sort_namespace({namespace, modules}) do

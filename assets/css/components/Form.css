@@ -234,6 +234,7 @@
   height: 34px;
   position: relative;
   width: 60px;
+  border: none;
 
   &.toggled {
     .slider {
@@ -306,6 +307,25 @@
 
     input[type="checkbox"]:checked + .slider:before {
       transform: translateX(10px);
+    }
+  }
+
+  &.show-disabled {
+    .slider {
+      background-color: #bc3d3d;
+      
+      &:before {
+        transform: translateX(10px);
+      }
+    }
+
+    &.toggled.small {
+      .slider {
+        background-color: #4a4a4a;
+        &:before {
+          transform: translateX(0);
+        }
+      }
     }
   }
 
