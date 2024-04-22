@@ -680,11 +680,106 @@ defmodule BrandoAdmin.Components.Form.Block do
                 active={@active}
                 type={@type}
                 multi={@multi}
+                config={true}
                 block={block_form}
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
               />
+
+              <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+                <div class="panels">
+                  <div class="panel">
+                    <Input.text
+                      field={@block[:description]}
+                      label={gettext("Block description")}
+                      instructions={gettext("Helpful for collapsed blocks")}
+                    />
+                    <.vars vars={block_form[:vars]} uid={@uid} important={false} />
+                  </div>
+                  <div class="panel">
+                    <h2 class="titlecase">Vars</h2>
+                    <%= for var <- @vars do %>
+                      <div class="var">
+                        <div class="key"><%= var.key %></div>
+                        <div class="buttons">
+                          <button
+                            type="button"
+                            class="tiny"
+                            phx-click={JS.push("reset_var", target: @myself)}
+                            phx-value-id={var.key}
+                          >
+                            <%= gettext("Reset") %>
+                          </button>
+                          <button
+                            type="button"
+                            class="tiny"
+                            phx-click={JS.push("delete_var", target: @myself)}
+                            phx-value-id={var.key}
+                          >
+                            <%= gettext("Delete") %>
+                          </button>
+                        </div>
+                      </div>
+                    <% end %>
+
+                    <h2 class="titlecase">Refs</h2>
+                    <%= for ref <- @refs do %>
+                      <div class="ref">
+                        <div class="key"><%= ref.name %></div>
+                        <button
+                          type="button"
+                          class="tiny"
+                          phx-click={JS.push("reset_ref", target: @myself)}
+                          phx-value-id={ref.name}
+                        >
+                          <%= gettext("Reset") %>
+                        </button>
+                      </div>
+                    <% end %>
+                    <h2 class="titlecase"><%= gettext("Advanced") %></h2>
+                    <div class="button-group-vertical">
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("fetch_missing_refs", target: @myself)}
+                      >
+                        <%= gettext("Fetch missing refs") %>
+                      </button>
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("reset_refs", target: @myself)}
+                      >
+                        <%= gettext("Reset all block refs") %>
+                      </button>
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("fetch_missing_vars", target: @myself)}
+                      >
+                        <%= gettext("Fetch missing vars") %>
+                      </button>
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("reset_vars", target: @myself)}
+                      >
+                        <%= gettext("Reset all variables") %>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <:footer>
+                  <button
+                    type="button"
+                    class="primary"
+                    phx-click={hide_modal("#block-#{@uid}_config")}
+                  >
+                    <%= gettext("Close") %>
+                  </button>
+                </:footer>
+              </Content.modal>
               <!-- module contents -->
               <div b-editor-tpl={@module_class}>
                 <.vars vars={block_form[:vars]} uid={@uid} />
@@ -696,6 +791,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                         parent_uploads={@parent_uploads}
                         refs_field={block_form[:refs]}
                         ref_name={ref}
+                        target={@target}
                       />
                     <% {:content, _} -> %>
                       <div>:content</div>
@@ -742,6 +838,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               uid={@uid}
               collapsed={@collapsed}
               active={@active}
+              config={true}
               type={@type}
               block={@form}
               target={@target}
@@ -768,22 +865,12 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   attr :ref_name, :string, required: true
   attr :refs_field, :any, required: true
-  attr :refs, :any, required: true
   attr :parent_uploads, :any, required: true
+  attr :target, :any, required: true
 
   def ref(assigns) do
     # find the ref in the refs
     ref_forms = Brando.Utils.forms_from_field(assigns.refs_field)
-
-    require Logger
-
-    Logger.error("""
-
-    ref_forms:
-    #{inspect(ref_forms, pretty: true)}
-
-    """)
-
     ref_form = Enum.find(ref_forms, fn %{data: %{name: name}} -> name == assigns.ref_name end)
 
     assigns =
@@ -803,6 +890,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             ref_description={@ref_form[:description].value}
             block={block}
             parent_uploads={@parent_uploads}
+            target={@target}
           />
         </.polymorphic_embed_inputs_for>
         <Input.input type={:hidden} field={@ref_form[:description]} />
@@ -897,32 +985,38 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  attr :wide_config, :boolean, default: false
+  attr :type, :any
+  attr :block_type, :any
+  attr :is_datasource?, :boolean, default: false
+  attr :is_ref?, :boolean, default: false
+  attr :datasource, :any
+  attr :bg_color, :string, default: nil
+  attr :uid, :any
+
+  slot :inner_block
+  slot :config
+  slot :config_footer
+  slot :description
+  slot :instructions
+
   def block(assigns) do
     uid = assigns.block[:uid].value || Brando.Utils.generate_uid()
 
     assigns =
       assigns
-      |> assign_new(:wide_config, fn -> false end)
-      |> assign_new(:config, fn -> nil end)
-      |> assign_new(:config_footer, fn -> nil end)
-      |> assign_new(:description, fn -> nil end)
-      |> assign_new(:type, fn -> nil end)
-      |> assign_new(:is_datasource?, fn -> false end)
-      |> assign_new(:datasource, fn -> nil end)
       |> assign_new(:block_type, fn ->
         assigns.block[:type].value || (assigns.is_entry? && "entry")
       end)
-      |> assign_new(:instructions, fn -> nil end)
+      |> assign(:uid, uid)
+      |> assign(:hidden, assigns.block[:hidden].value)
+      |> assign(:collapsed, assigns.block[:collapsed].value)
       |> assign_new(:initial_classes, fn ->
         %{
           collapsed: assigns.block[:collapsed].value,
           disabled: assigns.block[:hidden].value
         }
       end)
-      |> assign(:bg_color, assigns[:bg_color])
-      |> assign(:uid, uid)
-      |> assign(:hidden, assigns.block[:hidden].value)
-      |> assign(:collapsed, assigns.block[:collapsed].value)
       |> assign(:marked_as_deleted, assigns.block[:marked_as_deleted].value)
 
     ~H"""
@@ -960,9 +1054,19 @@ defmodule BrandoAdmin.Components.Form.Block do
         class={["block", "ref_block"]}
         phx-hook="Brando.Block"
       >
-        <div>
-          Toolbar :)
-        </div>
+        <.toolbar
+          uid={@uid}
+          collapsed={false}
+          active={true}
+          config={@config}
+          type={@block_type}
+          block={@block}
+          target={@target}
+          multi={@multi}
+          description={@description}
+          is_ref?={@is_ref?}
+          is_datasource?={false}
+        />
 
         <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot(@inner_block) %>
@@ -978,7 +1082,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>(H<%= block_data[:level].value %>)</:description>
           <:config>
             <Input.radios
@@ -1020,31 +1124,25 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def text(assigns) do
-    extensions = "all"
-    # case assigns.block[:data].value.extensions do
-    #   nil -> "all"
-    #   extensions when is_list(extensions) -> Enum.join(extensions, "|")
-    #   extensions -> extensions
-    # end
+    block_data_cs = get_block_data_changeset(assigns.block)
 
-    require Logger
-
-    Logger.error("""
-
-    extensions: #{inspect(extensions, pretty: true)}
-
-    """)
+    extensions =
+      case Changeset.get_field(block_data_cs, :extensions) do
+        nil -> "all"
+        extensions when is_list(extensions) -> Enum.join(extensions, "|")
+        extensions -> extensions
+      end
 
     assigns =
       assigns
       |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:text_type, assigns.block[:data].value.type)
+      |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(:extensions, extensions)
 
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
       <div id={"ref-#{@uid}-wrapper"} data-block-uid={@uid}>
-        <.block id={"block-#{@uid}-base"} block={@block}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description do %>
               <%= @ref_description %>
@@ -1063,7 +1161,6 @@ defmodule BrandoAdmin.Components.Form.Block do
                 ]
               ]}
             />
-            <div>inspect me</div>
             <%= if @extensions == "all" do %>
               <Input.hidden field={text_block_data[:extensions]} />
             <% else %>
@@ -1118,6 +1215,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   attr :uid, :string, required: true
   attr :vars, :any, required: true
+  attr :important, :boolean, default: true
 
   def vars(assigns) do
     ~H"""
@@ -1127,7 +1225,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           module={RenderVar}
           id={"block-#{@uid}-render-var-#{var.id}"}
           var={var}
-          render={:only_important}
+          render={(@important && :only_important) || :only_regular}
           in_block
         />
       </.inputs_for>
@@ -1152,6 +1250,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :instructions, :string, default: nil
   attr :config, :boolean, default: false
   attr :multi, :boolean, default: false
+  attr :is_ref?, :boolean, default: false
   slot :datasource
   slot :inner_block
 
@@ -1180,7 +1279,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         <%= render_slot(@inner_block) %>
       </div>
       <div class="block-actions" id={"block-#{@uid}-block-actions"}>
-        <.handle />
+        <.handle :if={!@is_ref?} />
         <div
           :if={@instructions}
           class="block-action help"
@@ -1189,7 +1288,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-question-mark-circle" />
         </div>
         <button
-          if={!@is_ref?}
+          :if={@is_ref? == false}
           type="button"
           phx-value-block_uid={@uid}
           class="block-action duplicate"
@@ -1207,7 +1306,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-cog-8-tooth" />
         </button>
         <button
-          :if={!@is_ref?}
+          :if={@is_ref? == false}
           type="button"
           class="block-action toggler"
           phx-click="delete_block"
@@ -1601,5 +1700,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       %{value: value} -> value
       nil -> var
     end
+  end
+
+  defp get_block_data_changeset(block) do
+    Changeset.get_embed(block[:data].form.source, :data)
   end
 end

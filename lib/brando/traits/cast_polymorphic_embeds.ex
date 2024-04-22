@@ -7,7 +7,7 @@ defmodule Brando.Trait.CastPolymorphicEmbeds do
 
   defp cast_poly(changeset, poly_fields) do
     Enum.reduce(poly_fields, changeset, fn poly_field, mutated_changeset ->
-      Brando.PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, poly_field.name)
+      PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, poly_field.name)
     end)
   end
 end

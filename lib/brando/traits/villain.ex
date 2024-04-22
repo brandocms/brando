@@ -71,7 +71,7 @@ defmodule Brando.Trait.Villain do
 
   defp cast_poly(changeset, villain_fields) do
     Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
-      Brando.PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
+      PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
     end)
   end
 
@@ -154,7 +154,7 @@ defmodule Brando.Trait.Villain do
 
           ref
           |> cast(attrs, [:name, :description])
-          |> Brando.PolymorphicEmbed.cast_polymorphic_embed(:data)
+          |> PolymorphicEmbed.cast_polymorphic_embed(:data)
         end
       end
     end

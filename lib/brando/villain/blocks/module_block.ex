@@ -25,9 +25,10 @@ defmodule Brando.Villain.Blocks.ModuleBlock do
       attribute :datasource, :boolean, default: false
       attribute :datasource_selected_ids, {:array, :id}
 
-      attribute :vars, {:array, Brando.PolymorphicEmbed},
+      attribute :vars, {:array, PolymorphicEmbed},
         types: OldVar.types(),
         type_field: :type,
+        default: [],
         on_type_not_found: :raise,
         on_replace: :delete
     end

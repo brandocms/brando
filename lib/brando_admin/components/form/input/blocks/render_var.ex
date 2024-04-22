@@ -287,6 +287,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <% :boolean -> %>
           <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
         <% :color -> %>
+          <!-- TODO: @var -- maybe just pass the field? then extract as changeset -->
           <Input.color
             field={@var[:value]}
             label={@label}

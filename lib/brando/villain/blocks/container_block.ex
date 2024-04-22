@@ -1,3 +1,4 @@
+# TODO: PRobably throw this out?
 defmodule Brando.Villain.Blocks.ContainerBlock do
   defmodule Data do
     use Brando.Blueprint,
@@ -21,9 +22,10 @@ defmodule Brando.Villain.Blocks.ContainerBlock do
       attribute :palette_id, :id
       attribute :description, :string
 
-      attribute :blocks, {:array, Brando.PolymorphicEmbed},
+      attribute :blocks, {:array, PolymorphicEmbed},
         types: Blocks.list_blocks(),
         type_field: :type,
+        default: [],
         on_type_not_found: :raise,
         on_replace: :delete
     end

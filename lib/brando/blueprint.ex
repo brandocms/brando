@@ -268,6 +268,7 @@ defmodule Brando.Blueprint do
               [
                 types: Brando.Villain.Blocks.list_blocks(),
                 type_field: :type,
+                default: [],
                 on_type_not_found: :raise,
                 on_replace: :delete
               ]
@@ -844,7 +845,7 @@ defmodule Brando.Blueprint do
 
       @poly_fields Enum.filter(
                      @attrs,
-                     &(&1.type in [{:array, Brando.PolymorphicEmbed}, Brando.PolymorphicEmbed])
+                     &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
                    )
       def __poly_fields__ do
         @poly_fields

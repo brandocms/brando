@@ -20,7 +20,7 @@ defmodule Brando.Villain.Block do
         field :hidden, :boolean, default: false
         field :collapsed, :boolean, default: false
         field :marked_as_deleted, :boolean, default: false, virtual: true
-        embeds_one :data, __MODULE__.Data, on_replace: :delete
+        embeds_one :data, __MODULE__.Data, on_replace: :update
       end
 
       def changeset(struct, params \\ %{}) do

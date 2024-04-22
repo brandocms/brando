@@ -20,9 +20,10 @@ defmodule Brando.Villain.Blocks.TableBlock do
     attributes do
       attribute :uid, :string
 
-      attribute :cols, {:array, Brando.PolymorphicEmbed},
+      attribute :cols, {:array, PolymorphicEmbed},
         types: OldVar.types(),
         type_field: :type,
+        default: [],
         on_type_not_found: :raise,
         on_replace: :delete
     end

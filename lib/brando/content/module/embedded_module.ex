@@ -38,9 +38,10 @@ defmodule Brando.Content.Module.EmbeddedModule do
     attribute :svg, :text
     attribute :wrapper, :boolean
 
-    attribute :vars, {:array, Brando.PolymorphicEmbed},
+    attribute :vars, {:array, PolymorphicEmbed},
       types: OldVar.types(),
       type_field: :type,
+      default: [],
       on_type_not_found: :raise,
       on_replace: :delete
   end

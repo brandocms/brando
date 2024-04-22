@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
   def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: {:array, Brando.PolymorphicEmbed}
+  def to_ecto_type(:villain), do: {:array, PolymorphicEmbed}
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
