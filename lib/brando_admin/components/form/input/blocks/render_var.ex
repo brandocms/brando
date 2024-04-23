@@ -37,11 +37,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           acc
       end)
 
-    {:ok, images} = Brando.Images.list_images(%{filter: %{ids: image_ids}})
+    {:ok, images} =
+      if image_ids == [] do
+        {:ok, []}
+      else
+        Brando.Images.list_images(%{filter: %{ids: image_ids}})
+      end
+
     mapped_imgs = images |> Enum.map(&{&1.id, &1}) |> Map.new()
     mapped_img_ids = Map.new(cmp_imgs)
 
-    {:ok, files} = Brando.Files.list_files(%{filter: %{ids: file_ids}})
+    {:ok, files} =
+      if file_ids == [] do
+        {:ok, []}
+      else
+        Brando.Files.list_files(%{filter: %{ids: file_ids}})
+      end
+
     mapped_files = files |> Enum.map(&{&1.id, &1}) |> Map.new()
     mapped_file_ids = Map.new(cmp_files)
 
