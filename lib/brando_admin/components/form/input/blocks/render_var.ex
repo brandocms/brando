@@ -276,6 +276,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  attr :edit, :boolean, default: false
+
   def render_value_inputs(%{type: :string} = assigns) do
     ~H"""
     <div class="brando-input">
@@ -289,102 +291,145 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
-  def render_value_inputs(assigns) do
-    assigns = assign_new(assigns, :edit, fn -> false end)
-
+  def render_value_inputs(%{type: :html} = assigns) do
     ~H"""
     <div class="brando-input">
-      <%= case @type do %>
-        <% :text -> %>
-          <Input.rich_text
-            field={@var[:value]}
-            label={@label}
-            placeholder={@placeholder}
-            instructions={@instructions}
-          />
-        <% :boolean -> %>
-          <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
-        <% :color -> %>
-          <!-- TODO: @var -- maybe just pass the field? then extract as changeset -->
-          <Input.color
-            field={@var[:value]}
-            label={@label}
-            placeholder={@placeholder}
-            instructions={@instructions}
-            opts={[
-              opacity: @var[:opacity].value,
-              picker: @var[:picker].value,
-              palette_id: @var[:palette_id].value
-            ]}
-          />
-          <%= unless @edit do %>
-            <Input.input type={:hidden} field={@var[:picker]} />
-            <Input.input type={:hidden} field={@var[:opacity]} />
-            <Input.input type={:hidden} field={@var[:palette_id]} />
-          <% end %>
-        <% :datetime -> %>
-          <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
-        <% :html -> %>
-          <Input.rich_text field={@var[:value]} label={@label} instructions={@instructions} />
-        <% :select -> %>
-          <.live_component
-            module={Input.Select}
-            id={"#{@var.id}-select"}
-            label={@label}
-            field={@var[:value]}
-            opts={[options: @var[:options].value || []]}
-            in_block={@in_block}
-          />
+      <Input.rich_text
+        field={@var[:value]}
+        label={@label}
+        placeholder={@placeholder}
+        instructions={@instructions}
+      />
+    </div>
+    """
+  end
 
-          <.inputs_for :let={opt} field={@var[:options]}>
-            <Input.hidden field={opt[:label]} />
-            <Input.hidden field={opt[:value]} />
-          </.inputs_for>
-        <% :image -> %>
-          <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
-            <div class="input-image">
-              <%= if @image do %>
-                <Input.Image.image_preview
-                  image={@image}
-                  field={@var[:value]}
-                  value={@value_id}
-                  relation_field={@var[:value_id]}
-                  click={show_modal("#var-#{@var.id}-image-config")}
-                  file_name={@image && @image.path && Path.basename(@image.path)}
-                />
-              <% else %>
-                <Input.Image.empty_preview
-                  field={@var[:value]}
-                  relation_field={@var[:value_id]}
-                  click={show_modal("#var-#{@var.id}-image-config")}
-                />
-              <% end %>
-              <.image_modal field={@var} image={@image} myself={@myself} />
-            </div>
-          </Form.field_base>
-        <% :file -> %>
-          <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
-            <div class="input-file">
-              <%= if @file do %>
-                <Input.File.file_preview
-                  file={@file}
-                  field={@var[:value]}
-                  value={@value_id}
-                  relation_field={@var[:value_id]}
-                  click={show_modal("#var-#{@var.id}-file-config")}
-                  file_name={@file && @file.filename && Path.basename(@file.filename)}
-                />
-              <% else %>
-                <Input.File.empty_preview
-                  field={@var[:value]}
-                  relation_field={@var[:value_id]}
-                  click={show_modal("#var-#{@var.id}-file-config")}
-                />
-              <% end %>
-              <.file_modal field={@var} file={@file} myself={@myself} />
-            </div>
-          </Form.field_base>
+  def render_value_inputs(%{type: :text} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Input.textarea
+        field={@var[:value]}
+        label={@label}
+        placeholder={@placeholder}
+        instructions={@instructions}
+      />
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :boolean} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :datetime} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Input.datetime field={@var[:value]} label={@label} instructions={@instructions} />
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :color} = assigns) do
+    # TODO: manage opts?
+    # TODO: set @edit default to false
+    ~H"""
+    <div class="brando-input">
+      <Input.color
+        field={@var[:value]}
+        label={@label}
+        placeholder={@placeholder}
+        instructions={@instructions}
+        opts={[
+          opacity: @var[:opacity].value,
+          picker: @var[:picker].value,
+          palette_id: @var[:palette_id].value
+        ]}
+      />
+      <%= unless @edit do %>
+        <Input.input type={:hidden} field={@var[:picker]} />
+        <Input.input type={:hidden} field={@var[:opacity]} />
+        <Input.input type={:hidden} field={@var[:palette_id]} />
       <% end %>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :select} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <.live_component
+        module={Input.Select}
+        id={"#{@var.id}-select"}
+        label={@label}
+        field={@var[:value]}
+        opts={[options: @var[:options].value || []]}
+        in_block={@in_block}
+      />
+
+      <.inputs_for :let={opt} field={@var[:options]}>
+        <Input.hidden field={opt[:label]} />
+        <Input.hidden field={opt[:value]} />
+      </.inputs_for>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :image} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
+        <div class="input-image">
+          <%= if @image do %>
+            <Input.Image.image_preview
+              image={@image}
+              field={@var[:value]}
+              value={@value_id}
+              relation_field={@var[:value_id]}
+              click={show_modal("#var-#{@var.id}-image-config")}
+              file_name={@image && @image.path && Path.basename(@image.path)}
+            />
+          <% else %>
+            <Input.Image.empty_preview
+              field={@var[:value]}
+              relation_field={@var[:value_id]}
+              click={show_modal("#var-#{@var.id}-image-config")}
+            />
+          <% end %>
+          <.image_modal field={@var} image={@image} myself={@myself} />
+        </div>
+      </Form.field_base>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :file} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
+        <div class="input-file">
+          <%= if @file do %>
+            <Input.File.file_preview
+              file={@file}
+              field={@var[:value]}
+              value={@value_id}
+              relation_field={@var[:value_id]}
+              click={show_modal("#var-#{@var.id}-file-config")}
+              file_name={@file && @file.filename && Path.basename(@file.filename)}
+            />
+          <% else %>
+            <Input.File.empty_preview
+              field={@var[:value]}
+              relation_field={@var[:value_id]}
+              click={show_modal("#var-#{@var.id}-file-config")}
+            />
+          <% end %>
+          <.file_modal field={@var} file={@file} myself={@myself} />
+        </div>
+      </Form.field_base>
     </div>
     """
   end
