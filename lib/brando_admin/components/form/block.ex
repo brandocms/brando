@@ -222,13 +222,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = assigns.form.source
     belongs_to = assigns.belongs_to
 
-    require Logger
-
-    Logger.error("""
-    --> update/2
-    #{inspect(changeset, pretty: true)}
-    """)
-
     socket
     |> assign(assigns)
     |> assign(:form_has_changes, changeset.changes !== %{})
