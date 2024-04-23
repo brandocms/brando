@@ -28,6 +28,21 @@
     margin-bottom: 1rem;
   }
 
+  &.dirty {
+    > .block {
+      .block-toolbar {
+        .block-actions {
+          .dirty {
+            display: flex;
+            span {
+              background-color: orangered;
+            }
+          }
+        }
+      }
+    }
+  }
+
   &.deleted {
     display: none;
   }
@@ -401,6 +416,11 @@
         border: 1px solid var(--brando-color-dark);
         color: var(--brando-color-dark);
         border-radius: 7px;
+      }
+
+      &.dirty {
+        display: none;
+        border-color: transparent !important;
       }
 
       &.toggler {      

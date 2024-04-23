@@ -5,6 +5,7 @@ defmodule Brando.Villain do
   import Ecto.Query
   import Brando.Query.Helpers
 
+  alias Brando.PolymorphicEmbed
   alias Brando.Cache
   alias Brando.Content
   alias Brando.Pages
@@ -1094,6 +1095,21 @@ defmodule Brando.Villain do
       )
 
     refs_with_generated_uids
+  end
+
+  def add_uid_to_ref_changesets(nil), do: nil
+
+  def add_uid_to_ref_changesets(refs) when is_list(refs) do
+    Enum.map(refs, fn ref ->
+      data = Changeset.get_field(ref, :data)
+      data_changeset = Changeset.change(data)
+
+      updated_data_changeset =
+        Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
+
+      Changeset.put_change(ref, :data, updated_data_changeset)
+      |> Map.put(:action, :insert)
+    end)
   end
 
   def remove_pk_from_vars(nil), do: nil

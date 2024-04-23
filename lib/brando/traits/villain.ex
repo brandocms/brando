@@ -141,17 +141,6 @@ defmodule Brando.Trait.Villain do
         end
 
         def ref_changeset(ref, attrs, user) do
-          require Logger
-
-          Logger.error("""
-
-
-          ref_changeset
-          #{inspect(ref, pretty: true)}
-
-
-          """)
-
           ref
           |> cast(attrs, [:name, :description])
           |> PolymorphicEmbed.cast_polymorphic_embed(:data)

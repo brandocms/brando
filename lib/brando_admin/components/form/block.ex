@@ -222,6 +222,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = assigns.form.source
     belongs_to = assigns.belongs_to
 
+    require Logger
+
+    Logger.error("""
+    --> update/2
+    #{inspect(changeset, pretty: true)}
+    """)
+
     socket
     |> assign(assigns)
     |> assign(:form_has_changes, changeset.changes !== %{})
@@ -687,99 +694,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 is_datasource?={@is_datasource?}
               />
 
-              <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
-                <div class="panels">
-                  <div class="panel">
-                    <Input.text
-                      field={@block[:description]}
-                      label={gettext("Block description")}
-                      instructions={gettext("Helpful for collapsed blocks")}
-                    />
-                    <.vars vars={block_form[:vars]} uid={@uid} important={false} />
-                  </div>
-                  <div class="panel">
-                    <h2 class="titlecase">Vars</h2>
-                    <%= for var <- @vars do %>
-                      <div class="var">
-                        <div class="key"><%= var.key %></div>
-                        <div class="buttons">
-                          <button
-                            type="button"
-                            class="tiny"
-                            phx-click={JS.push("reset_var", target: @myself)}
-                            phx-value-id={var.key}
-                          >
-                            <%= gettext("Reset") %>
-                          </button>
-                          <button
-                            type="button"
-                            class="tiny"
-                            phx-click={JS.push("delete_var", target: @myself)}
-                            phx-value-id={var.key}
-                          >
-                            <%= gettext("Delete") %>
-                          </button>
-                        </div>
-                      </div>
-                    <% end %>
-
-                    <h2 class="titlecase">Refs</h2>
-                    <%= for ref <- @refs do %>
-                      <div class="ref">
-                        <div class="key"><%= ref.name %></div>
-                        <button
-                          type="button"
-                          class="tiny"
-                          phx-click={JS.push("reset_ref", target: @myself)}
-                          phx-value-id={ref.name}
-                        >
-                          <%= gettext("Reset") %>
-                        </button>
-                      </div>
-                    <% end %>
-                    <h2 class="titlecase"><%= gettext("Advanced") %></h2>
-                    <div class="button-group-vertical">
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("fetch_missing_refs", target: @myself)}
-                      >
-                        <%= gettext("Fetch missing refs") %>
-                      </button>
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("reset_refs", target: @myself)}
-                      >
-                        <%= gettext("Reset all block refs") %>
-                      </button>
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("fetch_missing_vars", target: @myself)}
-                      >
-                        <%= gettext("Fetch missing vars") %>
-                      </button>
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("reset_vars", target: @myself)}
-                      >
-                        <%= gettext("Reset all variables") %>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <:footer>
-                  <button
-                    type="button"
-                    class="primary"
-                    phx-click={hide_modal("#block-#{@uid}_config")}
-                  >
-                    <%= gettext("Close") %>
-                  </button>
-                </:footer>
-              </Content.modal>
+              <.module_config uid={@uid} block_form={block_form} target={@target} />
               <!-- module contents -->
               <div b-editor-tpl={@module_class}>
                 <.vars vars={block_form[:vars]} uid={@uid} />
@@ -863,6 +778,96 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  attr :uid, :string, required: true
+  attr :block_form, :any, required: true
+  attr :target, :any, required: true
+
+  def module_config(assigns) do
+    ~H"""
+    <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+      <div class="panels">
+        <div class="panel">
+          <Input.text
+            field={@block_form[:description]}
+            label={gettext("Block description")}
+            instructions={gettext("Helpful for collapsed blocks")}
+          />
+          <.vars vars={@block_form[:vars]} uid={@uid} important={false} />
+        </div>
+        <div class="panel">
+          <h2 class="titlecase">Vars</h2>
+          <.inputs_for :let={var} field={@block_form[:vars]}>
+            <div class="var">
+              <div class="key"><%= var[:key].value %></div>
+              <div class="buttons">
+                <button
+                  type="button"
+                  class="tiny"
+                  phx-click={JS.push("reset_var", target: @target)}
+                  phx-value-id={var[:key].value}
+                >
+                  <%= gettext("Reset") %>
+                </button>
+                <button
+                  type="button"
+                  class="tiny"
+                  phx-click={JS.push("delete_var", target: @target)}
+                  phx-value-id={var[:key].value}
+                >
+                  <%= gettext("Delete") %>
+                </button>
+              </div>
+            </div>
+          </.inputs_for>
+
+          <h2 class="titlecase">Refs</h2>
+          <.inputs_for :let={ref} field={@block_form[:refs]}>
+            <div class="ref">
+              <div class="key"><%= ref[:name].value %></div>
+              <button
+                type="button"
+                class="tiny"
+                phx-click={JS.push("reset_ref", target: @target)}
+                phx-value-id={ref[:name].value}
+              >
+                <%= gettext("Reset") %>
+              </button>
+            </div>
+          </.inputs_for>
+          <h2 class="titlecase"><%= gettext("Advanced") %></h2>
+          <div class="button-group-vertical">
+            <button
+              type="button"
+              class="secondary"
+              phx-click={JS.push("fetch_missing_refs", target: @target)}
+            >
+              <%= gettext("Fetch missing refs") %>
+            </button>
+            <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @target)}>
+              <%= gettext("Reset all block refs") %>
+            </button>
+            <button
+              type="button"
+              class="secondary"
+              phx-click={JS.push("fetch_missing_vars", target: @target)}
+            >
+              <%= gettext("Fetch missing vars") %>
+            </button>
+            <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @target)}>
+              <%= gettext("Reset all variables") %>
+            </button>
+          </div>
+        </div>
+      </div>
+      <:footer>
+        <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+          <%= gettext("Close") %>
+        </button>
+      </:footer>
+    </Content.modal>
+    """
+  end
+
   attr :ref_name, :string, required: true
   attr :refs_field, :any, required: true
   attr :parent_uploads, :any, required: true
@@ -871,7 +876,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   def ref(assigns) do
     # find the ref in the refs
     ref_forms = Brando.Utils.forms_from_field(assigns.refs_field)
-    ref_form = Enum.find(ref_forms, fn %{data: %{name: name}} -> name == assigns.ref_name end)
+    # ref_form = Enum.find(ref_forms, fn %{data: %{name: name}} -> name == assigns.ref_name end)
+    ref_form =
+      Enum.find(ref_forms, fn %{source: changeset} ->
+        Changeset.get_field(changeset, :name) == assigns.ref_name
+      end)
 
     assigns =
       assigns
@@ -1218,12 +1227,21 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :important, :boolean, default: true
 
   def vars(assigns) do
+    changeset = assigns.vars.form.source
+
+    vars_to_render =
+      changeset
+      |> Changeset.get_assoc(:vars)
+      |> Enum.filter(&(Changeset.get_field(&1, :important) == assigns.important))
+
+    assigns = assign(assigns, :vars_to_render, vars_to_render)
+
     ~H"""
-    <div class="block-vars">
+    <div :if={@vars_to_render !== []} class="block-vars">
       <.inputs_for :let={var} field={@vars}>
         <.live_component
           module={RenderVar}
-          id={"block-#{@uid}-render-var-#{var.id}"}
+          id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
           var={var}
           render={(@important && :only_important) || :only_regular}
           in_block
@@ -1323,6 +1341,9 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
         </button>
+        <div class="dirty block-action toggler">
+          <.icon name="hero-signal" />
+        </div>
       </div>
     </div>
     """
@@ -1350,6 +1371,75 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, updated_form)
     |> assign(:active, !socket.assigns.active)
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("fetch_missing_refs", _, socket) do
+    user_id = socket.assigns.current_user_id
+    form = socket.assigns.form
+    changeset = form.source
+    block_module = socket.assigns.block_module
+    belongs_to = socket.assigns.belongs_to
+    level = socket.assigns.level
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    parent_id = Changeset.get_field(changeset, :parent_id)
+    id = Changeset.get_field(changeset, :id)
+    module = get_module(module_id)
+
+    module_refs = module.refs
+    module_ref_names = Enum.map(module_refs, & &1.name)
+
+    current_refs =
+      if belongs_to == :root do
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_embed(:refs)
+      else
+        Changeset.get_embed(changeset, :refs)
+      end
+
+    current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
+    missing_ref_names = module_ref_names -- current_ref_names
+
+    missing_refs =
+      module_refs
+      |> Enum.filter(&(&1.name in missing_ref_names))
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.add_uid_to_ref_changesets()
+
+    new_refs = current_refs ++ missing_refs
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_embed(changeset, :refs, new_refs)
+      end
+
+    new_form =
+      if belongs_to == :root do
+        to_form(updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(updated_changeset,
+          as: "child_block",
+          id: "child_block_form-#{parent_id}-#{id}"
+        )
+      end
+
+    # send form to parent
+    # send_update(socket.assigns.parent_cid, %{event: "update_block", form: new_form, level: level})
+
+    # {:noreply, socket}
+
+    {:noreply,
+     socket
+     |> assign(:form_has_changes, new_form.source.changes !== %{})
+     |> assign(:form, new_form)}
   end
 
   def handle(assigns) do
@@ -1551,15 +1641,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     Logger.error("""
     validate_block >> entry_block
-    """)
-
-    require Logger
-
-    Logger.error("""
-
-    params:
-    #{inspect(params, pretty: true)}
-
     """)
 
     block_module = socket.assigns.block_module
