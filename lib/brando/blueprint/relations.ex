@@ -261,7 +261,8 @@ defmodule Brando.Blueprint.Relations do
         cast_assoc(
           changeset,
           name,
-          to_changeset_opts(:has_many, opts) ++ [with: &module.changeset(&1, &2, user)]
+          to_changeset_opts(:has_many, opts) ++
+            [with: &module.changeset(&1, &2, user), drop_param: :drop_ids, sort_param: :sort_ids]
         )
     end
   end

@@ -1,12 +1,15 @@
 defmodule BrandoAdmin.Components.Form.Block do
+  alias Brando.Content.BlockIdentifier
   use BrandoAdmin, :live_component
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
+
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias Brando.Content.Var
   import Brando.Gettext
@@ -235,11 +238,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       block.module_id
     end)
     |> assign_new(:parent_uid, fn -> nil end)
-    |> assign_new(:is_datasource?, fn -> Changeset.get_field(changeset, :datasource, false) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
+    |> assign_new(:available_identifiers, fn -> [] end)
+    |> assign_new(:deleted_block_identifiers, fn -> [] end)
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_parse_module()
+    |> assign_selected_identifiers()
     |> then(&{:ok, &1})
   end
 
@@ -351,6 +356,52 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp maybe_parse_module(socket) do
     assign(socket, liquid_splits: [], vars: [])
+  end
+
+  defp assign_selected_identifiers(%{assigns: %{module_datasource_type: :selection}} = socket) do
+    # form = socket.assigns.form
+    # belongs_to = socket.assigns.belongs_to
+
+    # changeset =
+    #   if belongs_to == :root do
+    #     Changeset.get_assoc(form.source, :block)
+    #   else
+    #     form.source
+    #   end
+
+    # block_identifiers = Changeset.get_assoc(changeset, :block_identifiers)
+
+    # require Logger
+
+    # Logger.error("""
+
+    # block_identifiers
+    # #{inspect(block_identifiers, pretty: true)}
+
+    # """)
+
+    assign(socket, :selected_identifiers, [])
+  end
+
+  defp assign_selected_identifiers(socket) do
+    assign(socket, :selected_identifiers, [])
+  end
+
+  defp assign_available_identifiers(socket) do
+    module = Module.concat([socket.assigns.module_datasource_module])
+    query = socket.assigns.module_datasource_query
+    # TODO: get entry here
+    entry = %{language: :en}
+
+    {:ok, available_identifiers} =
+      Brando.Datasource.list_selection(
+        module,
+        query,
+        Map.get(entry, :language),
+        socket.assigns.vars
+      )
+
+    assign(socket, :available_identifiers, available_identifiers)
   end
 
   def maybe_assign_children(%{assigns: %{children: []}} = socket) do
@@ -481,6 +532,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   def render(%{type: :module} = assigns) do
     ~H"""
     <div>
+      <details>
+        <summary>HTML</summary>
+        <code style="font-family: monospace; font-size: 10px;">
+          <pre><%= @rendered_block %></pre>
+        </code>
+      </details>
       <.module
         form={@form}
         dirty={@form_has_changes}
@@ -498,6 +555,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         liquid_splits={@liquid_splits}
         insert_block={JS.push("insert_block", target: @myself)}
         has_children?={false}
+        module_datasource_module_label={@module_datasource_module_label}
+        module_datasource_type={@module_datasource_type}
+        module_datasource_query={@module_datasource_query}
+        available_identifiers={@available_identifiers}
+        selected_identifiers={@selected_identifiers}
+        deleted_block_identifiers={@deleted_block_identifiers}
       />
     </div>
     """
@@ -629,6 +692,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :liquid_splits, :any, default: []
   attr :insert_block, :any, default: nil
   attr :insert_child_block, :any, default: nil
+  attr :module_datasource_module_label, :string, default: ""
+  attr :module_datasource_type, :string, default: ""
+  attr :module_datasource_query, :string, default: ""
+  attr :available_identifiers, :any, default: []
+  attr :selected_identifiers, :any, default: []
 
   def module(assigns) do
     changeset = assigns.form.source
@@ -685,6 +753,12 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
+                module_datasource_module_label={@module_datasource_module_label}
+                module_datasource_type={@module_datasource_type}
+                module_datasource_query={@module_datasource_query}
+                available_identifiers={@available_identifiers}
+                selected_identifiers={@selected_identifiers}
+                deleted_block_identifiers={@deleted_block_identifiers}
               />
 
               <.module_config uid={@uid} block_form={block_form} target={@target} />
@@ -752,6 +826,12 @@ defmodule BrandoAdmin.Components.Form.Block do
               target={@target}
               is_ref?={false}
               is_datasource?={@is_datasource?}
+              module_datasource_module_label={@module_datasource_module_label}
+              module_datasource_type={@module_datasource_type}
+              module_datasource_query={@module_datasource_query}
+              available_identifiers={@available_identifiers}
+              selected_identifiers={@selected_identifiers}
+              deleted_block_identifiers={@deleted_block_identifiers}
             />
 
             <.inputs_for :let={var} field={@form[:vars]}>
@@ -1262,10 +1342,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :config, :boolean, default: false
   attr :multi, :boolean, default: false
   attr :is_ref?, :boolean, default: false
-  slot :datasource
+  attr :deleted_block_identifiers, :any, default: []
   slot :inner_block
 
-  # TODO: CAN WE DROP THE block ASSIGN HERE?? just pass description field?
   def toolbar(assigns) do
     ~H"""
     <div class="block-toolbar">
@@ -1279,12 +1358,22 @@ defmodule BrandoAdmin.Components.Form.Block do
           <div class="slider round"></div>
         </button>
         <span class="block-type">
-          <%= @type %><span :if={@multi}>[multi]</span>
+          <%= (@is_datasource? && "Datamodule") || @type %><span :if={@multi}>[multi]</span>
         </span>
         <span class="arrow">&rarr;</span> <%= @block[:description].value %> — <%= @block[:uid].value %>
       </div>
       <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
-        <%= render_slot(@datasource) %>
+        <.datasource
+          block_data={@block}
+          uid={@uid}
+          module_datasource_module_label={@module_datasource_module_label}
+          module_datasource_type={@module_datasource_type}
+          module_datasource_query={@module_datasource_query}
+          available_identifiers={@available_identifiers}
+          block_identifiers={@block[:block_identifiers]}
+          deleted_block_identifiers={@deleted_block_identifiers}
+          target={@target}
+        />
       </div>
       <div class="block-content" id={"block-#{@uid}-block-content"}>
         <%= render_slot(@inner_block) %>
@@ -1342,6 +1431,164 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  attr :block_data, :any, required: true
+  attr :module_datasource_module_label, :string, required: true
+  attr :module_datasource_type, :string, required: true
+  attr :module_datasource_query, :string, required: true
+  attr :uid, :string, required: true
+  attr :target, :any, required: true
+  attr :available_identifiers, :any, default: []
+  attr :block_identifiers, :any, default: []
+
+  def datasource(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path fill="none" d="M0 0h24v24H0z" /><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z" />
+    </svg>
+    <%= @module_datasource_module_label %> [<%= @module_datasource_type %>] &raquo; <%= @module_datasource_query %>
+    <%= if @module_datasource_type == :selection do %>
+      <Content.modal
+        title={gettext("Select entries")}
+        id={"select-entries-#{@uid}"}
+        remember_scroll_position
+      >
+        <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+        <Entries.block_identifier
+          :for={identifier <- @available_identifiers}
+          identifier={identifier}
+          select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
+          available_identifiers={@available_identifiers}
+          block_identifiers={@block_identifiers}
+        />
+      </Content.modal>
+
+      <div class="module-datasource-selected">
+        <div
+          id={"sortable-#{@uid}-identifiers"}
+          class="selected-entries"
+          phx-hook="Brando.SortableInputsFor"
+          data-target={@target}
+          data-sortable-id={"sortable-#{@uid}-identifiers"}
+          data-sortable-handle=".sort-handle"
+          data-sortable-selector=".identifier"
+        >
+          <.inputs_for :let={block_identifier} field={@block_identifiers}>
+            <Entries.block_identifier block_identifier={block_identifier} sortable>
+              <input
+                type="hidden"
+                name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
+                value={block_identifier.index}
+              />
+              <:delete>
+                <label>
+                  <input
+                    type="checkbox"
+                    name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
+                    value={block_identifier.index}
+                    class="hidden"
+                  />
+                  <.icon name="hero-x-mark" />
+                </label>
+              </:delete>
+            </Entries.block_identifier>
+          </.inputs_for>
+          <input type="hidden" name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"} />
+        </div>
+
+        <button
+          class="tiny select-button"
+          type="button"
+          phx-click={
+            "assign_available_identifiers"
+            |> JS.push(target: @target)
+            |> show_modal("#select-entries-#{@uid}")
+          }
+        >
+          <%= gettext("Select entries") %>
+        </button>
+      </div>
+    <% end %>
+    """
+  end
+
+  ## Identifier events
+  def handle_event("assign_available_identifiers", _, socket) do
+    {:noreply, assign_available_identifiers(socket)}
+  end
+
+  def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    uid = socket.assigns.uid
+    parent_id = socket.assigns.parent_id
+    id = socket.assigns.id
+    # level = socket.assigns.level
+    available_identifiers = socket.assigns.available_identifiers
+
+    block_changeset =
+      if belongs_to == :root do
+        Changeset.get_assoc(changeset, :block)
+      else
+        form.source
+      end
+
+    block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
+    identifier = Enum.find(available_identifiers, &(&1.id == identifier_id))
+
+    new_block_identifier =
+      Changeset.change(%BlockIdentifier{identifier_id: identifier_id, identifier: identifier})
+
+    updated_block_identifiers = block_identifiers ++ [new_block_identifier]
+
+    updated_block_changeset =
+      Changeset.put_assoc(block_changeset, :block_identifiers, updated_block_identifiers)
+
+    updated_changeset =
+      if belongs_to == :root do
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        updated_block_changeset
+      end
+
+    require Logger
+
+    Logger.error("""
+
+    new_block_identifier:
+    #{inspect(new_block_identifier, pretty: true)}
+    -> data:
+    #{inspect(new_block_identifier.data, pretty: true)}
+
+    updated_changeset:
+    #{inspect(updated_changeset, pretty: true)}
+
+    """)
+
+    new_form =
+      if belongs_to == :root do
+        to_form(updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(updated_changeset,
+          as: "child_block",
+          id: "child_block_form-#{parent_id}-#{id}"
+        )
+      end
+
+    # # send form to parent
+    # send_update(socket.assigns.parent_cid, %{event: "update_block", form: new_form, level: level})
+
+    # {:noreply, socket}
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  ## Block events
   def handle_event("collapse_block", _, socket) do
     {:noreply, assign(socket, :collapsed, !socket.assigns.collapsed)}
   end
@@ -1431,7 +1678,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     {:noreply,
      socket
-     |> assign(:form_has_changes, new_form.source.changes !== %{})
      |> assign(:form, new_form)}
   end
 
@@ -1653,11 +1899,15 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     updated_changeset = updated_form.source
-    send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
+    # send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
     block = Changeset.apply_changes(updated_changeset)
     rendered_block = Brando.Villain.render_block(block, %{title: "HEI HEI!"})
 
-    {:noreply, assign(socket, :rendered_block, rendered_block)}
+    # {:noreply, assign(socket, :rendered_block, rendered_block)}
+    socket
+    |> assign(:rendered_block, rendered_block)
+    |> assign(:form, updated_form)
+    |> then(&{:noreply, &1})
   end
 
   # for forms that are on the base level, meaning

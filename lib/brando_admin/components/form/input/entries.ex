@@ -300,7 +300,159 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
   end
 
-  attr :identifier_id, :integer, required: true
+  attr :block_identifier, :any
+  attr :identifier, :any
+  attr :block_identifiers, :list, default: nil
+  attr :identifier_id, :integer
+  attr :available_identifiers, :list, default: []
+  attr :select, :any, default: false
+  attr :sortable, :boolean, default: false
+  slot :inner_block, default: nil
+  slot :delete
+
+  def block_identifier(%{block_identifier: block_identifier} = assigns) do
+    changeset = block_identifier.source
+    identifier_changeset = Changeset.get_assoc(changeset, :identifier)
+    identifier = identifier_changeset.data
+    schema = identifier.schema
+
+    translated_type =
+      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
+    assigns =
+      assigns
+      |> assign(:identifier, identifier)
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:type, String.upcase(translated_type))
+
+    ~H"""
+    <article
+      data-id={@identifier.id}
+      class={[
+        "draggable",
+        "identifier"
+      ]}
+      phx-page-loading
+      phx-click={@select}
+      phx-value-param={@identifier.id}
+    >
+      <Input.hidden field={@block_identifier[:block_id]} />
+      <Input.hidden field={@block_identifier[:identifier_id]} />
+
+      <%= render_slot(@inner_block) %>
+
+      <%= if @sortable do %>
+        <section class="sort-handle">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="1.5" cy="1.5" r="1.5"></circle>
+            <circle cx="7.5" cy="1.5" r="1.5"></circle>
+            <circle cx="13.5" cy="1.5" r="1.5"></circle>
+            <circle cx="1.5" cy="7.5" r="1.5"></circle>
+            <circle cx="7.5" cy="7.5" r="1.5"></circle>
+            <circle cx="13.5" cy="7.5" r="1.5"></circle>
+            <circle cx="1.5" cy="13.5" r="1.5"></circle>
+            <circle cx="7.5" cy="13.5" r="1.5"></circle>
+            <circle cx="13.5" cy="13.5" r="1.5"></circle>
+          </svg>
+        </section>
+      <% end %>
+      <section class="cover-wrapper">
+        <div class="cover">
+          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
+        </div>
+      </section>
+      <section class="content">
+        <div class="info">
+          <div class="name">
+            <%= @identifier.title %>
+          </div>
+          <div class="meta-info">
+            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+              @identifier.entry_id
+            ) %>
+            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
+          </div>
+        </div>
+      </section>
+      <div class="remove">
+        <%= render_slot(@delete) %>
+      </div>
+    </article>
+    """
+  end
+
+  def block_identifier(%{identifier: identifier, block_identifiers: block_identifiers} = assigns)
+      when not is_nil(block_identifiers) do
+    schema = identifier.schema
+
+    translated_type =
+      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
+    assigns =
+      assigns
+      |> assign(:identifier, identifier)
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:type, String.upcase(translated_type))
+      |> assign(
+        :selected,
+        Enum.find(
+          block_identifiers.form.data.block_identifiers,
+          &(&1.identifier_id == identifier.id)
+        ) ||
+          false
+      )
+
+    ~H"""
+    <article
+      data-id={@identifier.id}
+      class={[
+        "draggable",
+        "identifier",
+        @selected && "selected"
+      ]}
+      phx-page-loading
+      phx-click={@select}
+      phx-value-param={@identifier.id}
+    >
+      <%= render_slot(@inner_block) %>
+
+      <section class="cover-wrapper">
+        <div class="cover">
+          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
+        </div>
+      </section>
+      <section class="content">
+        <div class="info">
+          <div class="name">
+            <%= @identifier.title %>
+          </div>
+          <div class="meta-info">
+            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+              @identifier.entry_id
+            ) %>
+            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
+          </div>
+        </div>
+        <div class="icon">
+          <.icon name="hero-check-circle" />
+        </div>
+      </section>
+      <div class="remove">
+        <%= render_slot(@delete) %>
+      </div>
+    </article>
+    """
+  end
+
+  attr :identifier_id, :integer
   attr :available_identifiers, :list, default: []
   attr :selected_identifiers, :list, default: []
   attr :select, :any, default: false

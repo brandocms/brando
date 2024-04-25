@@ -58,7 +58,7 @@ export default app => ({
 
       onChange: debounce(color => {
         let processedColor = color.printHex(opacity)
-        if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
+        if (processedColor.length === 9 && processedColor.slice(-2) === 'ff') {
           processedColor = processedColor.slice(0, -2)
         }
 
@@ -72,7 +72,7 @@ export default app => ({
         }
 
         this.lastColor = processedColor
-      }, 800),
+      }, 100),
 
       onOpen: function () {
         this._colorToSplotch = {}

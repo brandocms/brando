@@ -88,19 +88,28 @@
 }
 
 .identifier {
-  @fontsize 16px;
+  @fontsize 15px;
   background-color: var(--brando-color-input);
   color: var(--brando-color-dark);
-  padding: 7px;
+  padding: 7px 7px 9px;
+
+  .icon {
+    opacity: 0;
+    transition: 450ms ease;
+  }
 
   &.selectable {
     cursor: pointer;
   }
 
   &.selected {
-    background-color: var(--brando-color-dark);
-    color: var(--brando-color-peach);
+    background-color: var(--brando-color-blue);
+    color: white;
     border: 1px solid transparent;
+
+    .icon {
+      opacity: 1;
+    }
 
     .drawer-form & {
       opacity: 0.5;
@@ -130,19 +139,22 @@
 
   .content {
     flex-grow: 1;
+    align-items: center;
     .name {
+      font-size: 15px;
       font-weight: 500;
     }
   }
 
   .remove  {
     @space margin-left 15px;
-    button {
+    button, label {
       background-color: white;
       border: none;
       font-size: 28px;
       line-height: 1;
       width: 35px;
+      cursor: pointer;
       border-radius: 50%;
       height: 35px;
       margin-left: auto;

@@ -65,7 +65,7 @@ defmodule Brando.Content.Block do
 
     relation :identifiers, :has_many,
       module: Brando.Content.Identifier,
-      through: [:block_identifiers, :contributor]
+      through: [:block_identifiers, :identifier]
   end
 
   absolute_url ""
@@ -85,6 +85,6 @@ defmodule Brando.Content.Block do
         preload: [:vars, :module, children: [:vars, :children]],
         order_by: [asc: :sequence]
 
-    [block: [:parent, :module, :vars, children: children_query]]
+    [block: [:parent, :module, :vars, children: children_query, block_identifiers: :identifier]]
   end
 end

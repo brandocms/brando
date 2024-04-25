@@ -128,8 +128,22 @@ defmodule Brando.Content do
     end
   end
 
-  mutation(:delete, Module)
-  mutation(:duplicate, {Module, change_fields: [:name, :class]})
+  mutation :delete, Module
+  mutation :duplicate, {Module, change_fields: [:name, :class, vars: &duplicate_vars/2]}
+
+  def duplicate_vars(entry, _) do
+    preloaded_vars = Brando.repo().preload(entry, :vars)
+    require Logger
+
+    Logger.error("""
+
+    duplicate_vars
+    #{inspect(preloaded_vars, pretty: true)}
+
+    """)
+
+    []
+  end
 
   @doc """
   Find module with `id` in `modules`
@@ -212,8 +226,8 @@ defmodule Brando.Content do
     end
   end
 
-  mutation(:delete, Palette)
-  mutation(:duplicate, {Palette, change_fields: [:name, :key]})
+  mutation :delete, Palette
+  mutation :duplicate, {Palette, change_fields: [:name, :key]}
 
   @doc """
   Find palette with `id` in `palettes`
@@ -289,10 +303,10 @@ defmodule Brando.Content do
     end
   end
 
-  mutation(:create, Template)
-  mutation(:update, Template)
-  mutation(:delete, Template)
-  mutation(:duplicate, {Template, change_fields: [:name]})
+  mutation :create, Template
+  mutation :update, Template
+  mutation :delete, Template
+  mutation :duplicate, {Template, change_fields: [:name]}
 
   def list_identifiers do
     query =

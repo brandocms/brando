@@ -11,6 +11,6 @@ defmodule Brando.Content.BlockIdentifier do
 
   relations do
     relation :block, :belongs_to, module: Brando.Content.Block
-    relation :category, :belongs_to, module: Brando.Content.Identifier
+    relation :identifier, :belongs_to, module: Brando.Content.Identifier
   end
 end

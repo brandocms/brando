@@ -282,7 +282,14 @@ defmodule Brando.Villain.Parser do
         mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
 
         {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
-        Context.assign(context, :entries, entries)
+
+        require Logger
+
+        Logger.error("""
+        -> add_entries_to_context LIST #{inspect(entries, pretty: true)}
+        """)
+
+        Context.assign(context, :entries, entries || [])
       end
 
       defp add_entries_to_context(
@@ -293,13 +300,20 @@ defmodule Brando.Villain.Parser do
                datasource_module: module,
                datasource_query: query
              },
-             %{datasource_selected_ids: ids, vars: vars} = block
+             %{vars: vars} = block
            ) do
-        {:ok, entries} = Datasource.get_selection(module, query, ids)
-        Context.assign(context, :entries, entries)
+        # {:ok, entries} = Datasource.get_selection(module, query, ids)
+
+        require Logger
+
+        Logger.error("""
+        -> add_entries_to_context SEL -- TODO}
+        """)
+
+        Context.assign(context, :entries, [])
       end
 
-      defp add_entries_to_context(context, _, _), do: context
+      defp add_entries_to_context(context, _, _), do: Context.assign(context, :entries, [])
 
       defp map_vars(nil), do: %{}
 

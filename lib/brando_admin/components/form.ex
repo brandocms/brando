@@ -865,7 +865,7 @@ defmodule BrandoAdmin.Components.Form do
           block_field={block_field}
           parent_uploads={@uploads}
           opts={field_opts}
-          id={"#{@id}-blocks"}
+          id={"#{@id}-blocks-#{block_field}"}
           entry={@entry}
           current_user={@current_user}
           form_cid={@myself}
@@ -1743,6 +1743,40 @@ defmodule BrandoAdmin.Components.Form do
          ),
        type: "error"
      })}
+  end
+
+  def handle_event("save", params, %{assigns: %{has_blocks?: true}} = socket) do
+    schema = socket.assigns.schema
+    entry = socket.assigns.entry
+    current_user = socket.assigns.current_user
+    singular = socket.assigns.singular
+    form_blueprint = socket.assigns.form_blueprint
+    save_redirect_target = socket.assigns.save_redirect_target
+    id = socket.assigns.id
+
+    entry_params = Map.get(params, singular)
+    entry_or_default = entry || struct(schema)
+
+    changeset =
+      entry_or_default
+      |> schema.changeset(entry_params, current_user)
+      |> Brando.Utils.set_action()
+      |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
+
+    # if we have block fields, gather all changesets
+    has_blocks? = socket.assigns.has_blocks?
+    block_map = socket.assigns.block_map
+    require Logger
+
+    for {block_field_name, _schema, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+      Logger.error("-> block field id={#{block_field_id}")
+      send_update(BlockField, id: block_field_id, action: :fetch_root_blocks)
+    end
+
+    send(self(), {:toast, "Saving with blocks..."})
+
+    {:noreply, socket}
   end
 
   def handle_event("save", params, socket) do

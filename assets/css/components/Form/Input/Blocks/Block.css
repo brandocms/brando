@@ -318,7 +318,10 @@
       margin-bottom: 18px;
       
       .selected-entries {
+        display: flex;
+        flex-direction: column;
         margin-bottom: 18px;
+        gap: 4px;
       }
     }
   }

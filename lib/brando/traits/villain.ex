@@ -97,16 +97,20 @@ defmodule Brando.Trait.Villain do
 
         @parent_table_name parent_table_name
         def changeset(entry_block, attrs, user, recursive? \\ false) do
-          cs = cast(entry_block, attrs, [:entry_id, :block_id, :sequence])
-
-          if recursive? do
-            cast_assoc(cs, :block, with: &recursive_block_changeset(&1, &2, user))
-          else
-            cast_assoc(cs, :block, with: &block_changeset(&1, &2, user))
-          end
+          entry_block
+          |> cast(attrs, [:entry_id, :block_id, :sequence])
+          |> maybe_cast_recursive(recursive?, user)
           |> unique_constraint([:entry, :block],
             name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
           )
+        end
+
+        def maybe_cast_recursive(changeset, true, user) do
+          cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user))
+        end
+
+        def maybe_cast_recursive(changeset, false, user) do
+          cast_assoc(changeset, :block, with: &block_changeset(&1, &2, user))
         end
 
         def block_changeset(block, attrs, user) do
@@ -114,6 +118,11 @@ defmodule Brando.Trait.Villain do
           |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+          |> cast_assoc(:block_identifiers,
+            with: &block_identifier_changeset(&1, &2, &3, user),
+            drop_param: :drop_block_identifier_ids,
+            sort_param: :sort_block_identifier_ids
+          )
         end
 
         def recursive_block_changeset(block, attrs, user) do
@@ -122,6 +131,20 @@ defmodule Brando.Trait.Villain do
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
           |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
+        end
+
+        def block_identifier_changeset(block_identifier, attrs, position, _user) do
+          require Logger
+
+          Logger.error("""
+
+          position: #{inspect(position)}
+
+          """)
+
+          block_identifier
+          |> cast(attrs, [:block_id, :identifier_id])
+          |> change(sequence: position)
         end
 
         def var_changeset(var, attrs, user) do

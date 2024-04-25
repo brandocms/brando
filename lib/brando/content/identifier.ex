@@ -33,6 +33,4 @@ defmodule Brando.Content.Identifier do
   end
 
   def has_trait(Brando.Trait.SoftDelete), do: false
-
-  def __primary_key__, do: {:id, :id, autogenerate: true}
 end
