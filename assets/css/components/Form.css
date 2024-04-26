@@ -294,38 +294,18 @@
 
   &.inverse {
     .slider {
-      background-color: #4a4a4a;
-      
-      &:before {
-        transform: translateX(0);
-      }
-    }
-
-    input[type="checkbox"]:checked + .slider {
       background-color: #bc3d3d;
-    }
-
-    input[type="checkbox"]:checked + .slider:before {
-      transform: translateX(10px);
-    }
-  }
-
-  &.show-disabled {
-    .slider {
-      background-color: #bc3d3d;
-      
       &:before {
         transform: translateX(10px);
       }
     }
-
-    &.toggled.small {
-      .slider {
-        background-color: #4a4a4a;
-        &:before {
-          transform: translateX(0);
-        }
-      }
+    
+    input[type="checkbox"]:checked + .slider {
+      background-color: #4a4a4a;
+    }
+    
+    input[type="checkbox"]:checked + .slider:before {
+      transform: translateX(0);
     }
   }
 

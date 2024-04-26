@@ -33,10 +33,7 @@
       .block-toolbar {
         .block-actions {
           .dirty {
-            display: flex;
-            span {
-              background-color: orangered;
-            }
+            opacity: 1;
           }
         }
       }
@@ -422,7 +419,10 @@
       }
 
       &.dirty {
-        display: none;
+        opacity: 0;
+        color: coral;
+        font-size: 13px;
+        transition: opacity 450ms ease;
         border-color: transparent !important;
       }
 
