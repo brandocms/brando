@@ -1771,7 +1771,7 @@ defmodule BrandoAdmin.Components.Form do
     for {block_field_name, _schema, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
       Logger.error("-> block field id={#{block_field_id}")
-      send_update(BlockField, id: block_field_id, action: :fetch_root_blocks)
+      send_update(BlockField, id: block_field_id, action: "fetch_root_blocks")
     end
 
     send(self(), {:toast, "Saving with blocks..."})
