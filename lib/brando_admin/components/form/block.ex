@@ -227,11 +227,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(assigns)
+    |> assign(:active, Changeset.get_field(changeset, :active, true))
     |> assign(:form_has_changes, changeset.changes !== %{})
     |> assign(:form_is_new, !changeset.data.id)
     |> assign_new(:rendered_block, fn -> "" end)
     |> assign_new(:deleted, fn -> false end)
-    |> assign_new(:active, fn -> Changeset.get_field(changeset, :active, true) end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed, false) end)
     |> assign_new(:module_id, fn ->
       block = (belongs_to == :root && changeset.data.block) || changeset.data
@@ -240,11 +240,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:parent_uid, fn -> nil end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
-    |> assign_new(:deleted_block_identifiers, fn -> [] end)
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_parse_module()
-    |> assign_selected_identifiers()
     |> then(&{:ok, &1})
   end
 
@@ -358,35 +356,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, liquid_splits: [], vars: [])
   end
 
-  defp assign_selected_identifiers(%{assigns: %{module_datasource_type: :selection}} = socket) do
-    # form = socket.assigns.form
-    # belongs_to = socket.assigns.belongs_to
-
-    # changeset =
-    #   if belongs_to == :root do
-    #     Changeset.get_assoc(form.source, :block)
-    #   else
-    #     form.source
-    #   end
-
-    # block_identifiers = Changeset.get_assoc(changeset, :block_identifiers)
-
-    # require Logger
-
-    # Logger.error("""
-
-    # block_identifiers
-    # #{inspect(block_identifiers, pretty: true)}
-
-    # """)
-
-    assign(socket, :selected_identifiers, [])
-  end
-
-  defp assign_selected_identifiers(socket) do
-    assign(socket, :selected_identifiers, [])
-  end
-
   defp assign_available_identifiers(socket) do
     module = Module.concat([socket.assigns.module_datasource_module])
     query = socket.assigns.module_datasource_query
@@ -473,8 +442,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         new={@form_is_new}
         level={@level}
         belongs_to={@belongs_to}
-        active={@active}
-        collapsed={@collapsed}
         deleted={@deleted}
         multi={true}
         is_datasource?={@is_datasource?}
@@ -544,8 +511,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         new={@form_is_new}
         level={@level}
         belongs_to={@belongs_to}
-        active={@active}
-        collapsed={@collapsed}
         deleted={@deleted}
         parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
@@ -559,8 +524,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
         available_identifiers={@available_identifiers}
-        selected_identifiers={@selected_identifiers}
-        deleted_block_identifiers={@deleted_block_identifiers}
       />
     </div>
     """
@@ -576,8 +539,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         level={@level}
         belongs_to={@belongs_to}
         active={@active}
-        deleted={@deleted}
         collapsed={@collapsed}
+        deleted={@deleted}
         target={@myself}
         insert_block={JS.push("insert_block", target: @myself)}
         insert_child_block={JS.push("insert_block", value: %{container: true}, target: @myself)}
@@ -696,19 +659,20 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :module_datasource_type, :string, default: ""
   attr :module_datasource_query, :string, default: ""
   attr :available_identifiers, :any, default: []
-  attr :selected_identifiers, :any, default: []
 
   def module(assigns) do
     changeset = assigns.form.source
     belongs_to = assigns.belongs_to
-    block = (belongs_to == :root && changeset.data.block) || changeset.data
+    block_cs = get_block_changeset(changeset, belongs_to)
 
     assigns =
       assigns
-      |> assign(:uid, block.uid)
-      |> assign(:type, block.type)
-      |> assign(:module_id, block.module_id)
-      |> assign(:description, block.description)
+      |> assign(:uid, Changeset.get_field(block_cs, :uid))
+      |> assign(:type, Changeset.get_field(block_cs, :type))
+      |> assign(:module_id, Changeset.get_field(block_cs, :module_id))
+      |> assign(:description, Changeset.get_field(block_cs, :description))
+      |> assign(:active, Changeset.get_field(block_cs, :active))
+      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
 
     ~H"""
     <div
@@ -757,61 +721,59 @@ defmodule BrandoAdmin.Components.Form.Block do
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
                 available_identifiers={@available_identifiers}
-                selected_identifiers={@selected_identifiers}
-                deleted_block_identifiers={@deleted_block_identifiers}
               />
 
               <.module_config uid={@uid} block_form={block_form} target={@target} />
-              <!-- module contents -->
-              <div b-editor-tpl={@module_class}>
-                <.vars vars={block_form[:vars]} uid={@uid} />
+              <div class="block-content">
+                <div b-editor-tpl={@module_class}>
+                  <.vars vars={block_form[:vars]} uid={@uid} />
 
-                <%= for split <- @liquid_splits do %>
-                  <%= case split do %>
-                    <% {:ref, ref} -> %>
-                      <.ref
-                        parent_uploads={@parent_uploads}
-                        refs_field={block_form[:refs]}
-                        ref_name={ref}
-                        target={@target}
-                      />
-                    <% {:content, _} -> %>
-                      <div>:content</div>
-                      <%!-- <%= if @module_multi do %>
-                        <.live_component
-                          module={Blocks.Module.Entries}
-                          id={"block-#{@uid}-entries"}
-                          uid={@uid}
-                          entry_template={@entry_template}
-                          block_data={@block_data}
-                          data_field={@data_field}
-                          base_form={@base_form}
-                          module_id={@module_id}
+                  <%= for split <- @liquid_splits do %>
+                    <%= case split do %>
+                      <% {:ref, ref} -> %>
+                        <.ref
+                          parent_uploads={@parent_uploads}
+                          refs_field={block_form[:refs]}
+                          ref_name={ref}
+                          target={@target}
                         />
-                      <% else %>
-                        <%= "{{ content }}" %>
-                      <% end %> --%>
-                    <% {:variable, var_name, variable_value} -> %>
-                      <div
-                        class="rendered-variable"
-                        data-popover={
-                          gettext("Edit the entry directly to affect this variable [%{var_name}]",
-                            var_name: var_name
-                          )
-                        }
-                      >
-                        <%= variable_value %>
-                      </div>
-                    <% {:picture, _, img_src} -> %>
-                      <figure>
-                        <img src={img_src} />
-                      </figure>
-                    <% _ -> %>
-                      <%= raw(split) %>
+                      <% {:content, _} -> %>
+                        <div>:content</div>
+                        <%!-- <%= if @module_multi do %>
+                          <.live_component
+                            module={Blocks.Module.Entries}
+                            id={"block-#{@uid}-entries"}
+                            uid={@uid}
+                            entry_template={@entry_template}
+                            block_data={@block_data}
+                            data_field={@data_field}
+                            base_form={@base_form}
+                            module_id={@module_id}
+                          />
+                        <% else %>
+                          <%= "{{ content }}" %>
+                        <% end %> --%>
+                      <% {:variable, var_name, variable_value} -> %>
+                        <div
+                          class="rendered-variable"
+                          data-popover={
+                            gettext("Edit the entry directly to affect this variable [%{var_name}]",
+                              var_name: var_name
+                            )
+                          }
+                        >
+                          <%= variable_value %>
+                        </div>
+                      <% {:picture, _, img_src} -> %>
+                        <figure>
+                          <img src={img_src} />
+                        </figure>
+                      <% _ -> %>
+                        <%= raw(split) %>
+                    <% end %>
                   <% end %>
-                <% end %>
+                </div>
               </div>
-              <!-- module contents end -->
             </.inputs_for>
           <% else %>
             <Input.hidden field={@form[:sequence]} />
@@ -830,8 +792,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
               available_identifiers={@available_identifiers}
-              selected_identifiers={@selected_identifiers}
-              deleted_block_identifiers={@deleted_block_identifiers}
             />
 
             <.inputs_for :let={var} field={@form[:vars]}>
@@ -949,7 +909,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def ref(assigns) do
     # find the ref in the refs
     ref_forms = Brando.Utils.forms_from_field(assigns.refs_field)
-    # ref_form = Enum.find(ref_forms, fn %{data: %{name: name}} -> name == assigns.ref_name end)
+
     ref_form =
       Enum.find(ref_forms, fn %{source: changeset} ->
         Changeset.get_field(changeset, :name) == assigns.ref_name
@@ -965,8 +925,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       <section b-ref={@ref_form[:name].value}>
         <.polymorphic_embed_inputs_for :let={block} field={@ref_form[:data]}>
           <.dynamic_block
-            id={@ref_form[:uid].value}
-            block_id={@ref_form[:uid].value}
+            id={block[:uid].value}
+            block_id={block[:uid].value}
             is_ref?={true}
             ref_name={@ref_form[:name].value}
             ref_description={@ref_form[:description].value}
@@ -1125,8 +1085,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         </:footer>
       </Content.modal>
 
-      <Input.input type={:hidden} field={@block[:uid]} uid={@uid} id_prefix="base_block" />
-      <Input.input type={:hidden} field={@block[:type]} uid={@uid} id_prefix="base_block" />
+      <Input.input type={:hidden} field={@block[:uid]} />
+      <Input.input type={:hidden} field={@block[:type]} />
 
       <div
         id={"block-#{@uid}"}
@@ -1196,7 +1156,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               data-autosize={true}
               rows={1}
             />
-            <Input.input type={:hidden} field={block_data[:class]} uid={@uid} />
+            <Input.input type={:hidden} field={block_data[:class]} />
             <Input.input type={:hidden} field={block_data[:placeholder]} />
           </div>
         </.block>
@@ -1342,26 +1302,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :config, :boolean, default: false
   attr :multi, :boolean, default: false
   attr :is_ref?, :boolean, default: false
-  attr :deleted_block_identifiers, :any, default: []
   slot :inner_block
 
   def toolbar(assigns) do
     ~H"""
     <div class="block-toolbar">
       <div class="block-description">
-        <button
-          type="button"
-          class={"switch small show-disabled #{@active && "toggled"}"}
-          phx-click="toggle_active"
-          phx-target={@target}
-        >
+        <Form.label field={@block[:active]} class="switch small inverse" click={JS.dispatch("change")}>
+          <Input.input type={:checkbox} field={@block[:active]} />
           <div class="slider round"></div>
-        </button>
+        </Form.label>
         <span class="block-type">
           <%= (@is_datasource? && "Datamodule") || @type %><span :if={@multi}>[multi]</span>
         </span>
         <span class="arrow">&rarr;</span> <%= @block[:description].value %> — <%= @block[:uid].value %>
       </div>
+      <%!-- <button>Save</button> --%>
       <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
         <.datasource
           block_data={@block}
@@ -1371,7 +1327,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           module_datasource_query={@module_datasource_query}
           available_identifiers={@available_identifiers}
           block_identifiers={@block[:block_identifiers]}
-          deleted_block_identifiers={@deleted_block_identifiers}
           target={@target}
         />
       </div>
@@ -1414,18 +1369,14 @@ defmodule BrandoAdmin.Components.Form.Block do
         >
           <.icon name="hero-trash" />
         </button>
-        <button
-          type="button"
-          class="block-action toggler"
-          phx-click="collapse_block"
-          phx-target={@target}
-        >
+        <Form.label field={@block[:collapsed]} class="block-action toggler">
+          <%!-- click={toggle_collapsed(@collapsed, @uid)} --%>
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
-        </button>
-        <div class="dirty block-action toggler">
-          <.icon name="hero-signal" />
-        </div>
+          <Input.input type={:checkbox} field={@block[:collapsed]} />
+        </Form.label>
+
+        <div :if={!@is_ref?} class="dirty block-action toggler">●</div>
       </div>
     </div>
     """
@@ -1516,6 +1467,25 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:noreply, assign_available_identifiers(socket)}
   end
 
+  def insert_identifier(available_identifiers, block_identifiers, identifier_id) do
+    identifier = Enum.find(available_identifiers, &(&1.id == identifier_id))
+
+    new_block_identifier =
+      Changeset.change(%BlockIdentifier{
+        identifier_id: identifier_id,
+        identifier: identifier
+      })
+
+    block_identifiers ++ [new_block_identifier]
+  end
+
+  def remove_identifier(block_identifiers, identifier_id) do
+    Enum.reject(
+      block_identifiers,
+      &(Changeset.get_field(&1, :identifier_id) == identifier_id)
+    )
+  end
+
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
     form = socket.assigns.form
     changeset = form.source
@@ -1523,7 +1493,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     parent_id = socket.assigns.parent_id
     id = socket.assigns.id
-    # level = socket.assigns.level
     available_identifiers = socket.assigns.available_identifiers
 
     block_changeset =
@@ -1534,36 +1503,41 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
 
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
-    identifier = Enum.find(available_identifiers, &(&1.id == identifier_id))
 
-    new_block_identifier =
-      Changeset.change(%BlockIdentifier{identifier_id: identifier_id, identifier: identifier})
+    # does it have the identifier already?
+    updated_block_identifiers =
+      case Enum.find(
+             block_identifiers,
+             &(Changeset.get_field(&1, :identifier_id) == identifier_id)
+           ) do
+        nil ->
+          # add it
+          insert_identifier(available_identifiers, block_identifiers, identifier_id)
 
-    updated_block_identifiers = block_identifiers ++ [new_block_identifier]
+        %{action: :replace} = replaced_changeset ->
+          Enum.map(block_identifiers, fn block_identifier ->
+            case Changeset.get_field(block_identifier, :identifier_id) == identifier_id do
+              true ->
+                action = (Changeset.get_field(block_identifier, :id) == nil && :insert) || nil
+                Map.put(replaced_changeset, :action, action)
+
+              false ->
+                block_identifier
+            end
+          end)
+
+        _ ->
+          remove_identifier(block_identifiers, identifier_id)
+      end
+
+    # filter out any :replace actions
+    # https://elixirforum.com/t/ecto-put-change-not-working-on-nested-changeset-when-updating/32681/2
+    updated_block_identifiers = Enum.filter(updated_block_identifiers, &(&1.action != :replace))
 
     updated_block_changeset =
       Changeset.put_assoc(block_changeset, :block_identifiers, updated_block_identifiers)
 
-    updated_changeset =
-      if belongs_to == :root do
-        Changeset.put_assoc(changeset, :block, updated_block_changeset)
-      else
-        updated_block_changeset
-      end
-
-    require Logger
-
-    Logger.error("""
-
-    new_block_identifier:
-    #{inspect(new_block_identifier, pretty: true)}
-    -> data:
-    #{inspect(new_block_identifier.data, pretty: true)}
-
-    updated_changeset:
-    #{inspect(updated_changeset, pretty: true)}
-
-    """)
+    updated_changeset = update_block_changeset(changeset, updated_block_changeset, belongs_to)
 
     new_form =
       if belongs_to == :root do
@@ -1588,30 +1562,38 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
+  def update_block_changeset(changeset, block_changeset, :root) do
+    Changeset.put_assoc(changeset, :block, block_changeset)
+  end
+
+  def update_block_changeset(_changeset, block_changeset, _) do
+    block_changeset
+  end
+
   ## Block events
   def handle_event("collapse_block", _, socket) do
     {:noreply, assign(socket, :collapsed, !socket.assigns.collapsed)}
   end
 
-  def handle_event("toggle_active", _, socket) do
-    changeset = socket.assigns.form.source
+  # def handle_event("toggle_active", _, socket) do
+  #   changeset = socket.assigns.form.source
 
-    updated_changeset =
-      EctoNestedChangeset.update_at(changeset, [:block, :active], &(!&1))
+  #   updated_changeset =
+  #     EctoNestedChangeset.update_at(changeset, [:block, :active], &(!&1))
 
-    updated_form =
-      to_base_change_form(
-        socket.assigns.block_module,
-        updated_changeset,
-        %{},
-        socket.assigns.current_user_id
-      )
+  #   updated_form =
+  #     to_base_change_form(
+  #       socket.assigns.block_module,
+  #       updated_changeset,
+  #       %{},
+  #       socket.assigns.current_user_id
+  #     )
 
-    socket
-    |> assign(:form, updated_form)
-    |> assign(:active, !socket.assigns.active)
-    |> then(&{:noreply, &1})
-  end
+  #   socket
+  #   |> assign(:form, updated_form)
+  #   |> assign(:active, !socket.assigns.active)
+  #   |> then(&{:noreply, &1})
+  # end
 
   def handle_event("fetch_missing_refs", _, socket) do
     user_id = socket.assigns.current_user_id
@@ -1882,12 +1864,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     validate_block >> entry_block
     """)
 
-    block_module = socket.assigns.block_module
+    form = socket.assigns.form
+    level = socket.assigns.level
     uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
     parent_uid = socket.assigns.parent_uid
-    form = socket.assigns.form
-    level = socket.assigns.level
+    block_module = socket.assigns.block_module
 
     updated_form =
       to_base_change_form(
@@ -1907,6 +1889,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:rendered_block, rendered_block)
     |> assign(:form, updated_form)
+    |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> then(&{:noreply, &1})
   end
 
@@ -2029,4 +2012,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp get_block_data_changeset(block) do
     Changeset.get_embed(block[:data].form.source, :data)
   end
+
+  def get_block_changeset(changeset, :root), do: Changeset.get_assoc(changeset, :block)
+  def get_block_changeset(changeset, _), do: changeset
 end

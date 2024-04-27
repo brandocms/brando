@@ -313,6 +313,19 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def block_identifier(%{block_identifier: block_identifier} = assigns) do
     changeset = block_identifier.source
     identifier_changeset = Changeset.get_assoc(changeset, :identifier)
+
+    if identifier_changeset == nil do
+      raise """
+      No identifier changeset found for block identifier
+
+      block_identifier.source:
+      #{inspect(block_identifier.source)}
+
+      block_identifier.source.data:
+      #{inspect(block_identifier.source.data)}
+      """
+    end
+
     identifier = identifier_changeset.data
     schema = identifier.schema
 
@@ -396,19 +409,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
         schema.__naming__().singular
 
+    block_identifiers_changesets =
+      Changeset.get_assoc(block_identifiers.form.source, :block_identifiers)
+
+    selected =
+      Enum.find(
+        block_identifiers_changesets,
+        &(Changeset.get_field(&1, :identifier_id) == identifier.id)
+      )
+
+    require Logger
+
+    if selected do
+      Logger.error("""
+      -> selected.action{identifier_id:#{Changeset.get_field(selected, :identifier_id)}}: #{inspect(selected.action)}
+      """)
+    end
+
     assigns =
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
       |> assign(:type, String.upcase(translated_type))
-      |> assign(
-        :selected,
-        Enum.find(
-          block_identifiers.form.data.block_identifiers,
-          &(&1.identifier_id == identifier.id)
-        ) ||
-          false
-      )
+      |> assign(:selected, selected && selected.action != :replace)
 
     ~H"""
     <article

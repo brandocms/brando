@@ -115,7 +115,16 @@ defmodule Brando.Trait.Villain do
 
         def block_changeset(block, attrs, user) do
           block
-          |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
+          |> cast(attrs, [
+            :active,
+            :collapsed,
+            :anchor,
+            :description,
+            :uid,
+            :creator_id,
+            :sequence,
+            :parent_id
+          ])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
           |> cast_assoc(:block_identifiers,
@@ -127,10 +136,24 @@ defmodule Brando.Trait.Villain do
 
         def recursive_block_changeset(block, attrs, user) do
           block
-          |> cast(attrs, [:description, :uid, :creator_id, :sequence, :parent_id])
+          |> cast(attrs, [
+            :active,
+            :collapsed,
+            :anchor,
+            :description,
+            :uid,
+            :creator_id,
+            :sequence,
+            :parent_id
+          ])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
           |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
+          |> cast_assoc(:block_identifiers,
+            with: &block_identifier_changeset(&1, &2, &3, user),
+            drop_param: :drop_block_identifier_ids,
+            sort_param: :sort_block_identifier_ids
+          )
         end
 
         def block_identifier_changeset(block_identifier, attrs, position, _user) do

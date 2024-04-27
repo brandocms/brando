@@ -510,13 +510,14 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
+  attr :hidden_input, :boolean, default: true
+
   def input(%{type: :checkbox} = assigns) do
     assigns =
       assigns
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:checked_value, fn -> "true" end)
       |> assign_new(:unchecked_value, fn -> "false" end)
-      |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
     assigns =

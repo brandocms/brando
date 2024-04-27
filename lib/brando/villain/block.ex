@@ -24,8 +24,9 @@ defmodule Brando.Villain.Block do
       end
 
       def changeset(struct, params \\ %{}) do
+        # TODO: cast `active`
         struct
-        |> cast(params, ~w(uid type active hidden marked_as_deleted collapsed)a)
+        |> cast(params, ~w(uid type hidden marked_as_deleted collapsed)a)
         |> cast_embed(:data)
         |> ensure_uid()
         |> maybe_mark_for_deletion()

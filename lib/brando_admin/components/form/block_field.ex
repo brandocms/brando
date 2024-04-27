@@ -190,6 +190,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, assign(socket, :block_list, new_block_list)}
   end
 
+  def handle_event("insert_block", _, socket) do
+    # message block picker
+    block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
+
+    send_update(BrandoAdmin.Components.Form.BlockField.ModulePicker,
+      id: block_picker_id,
+      event: :show_module_picker,
+      sequence: 0,
+      parent_cid: socket.assigns.myself
+    )
+
+    {:noreply, socket}
+  end
+
   def handle_event("fetch_root_blocks", _, socket) do
     block_list = socket.assigns.block_list
     parent_id = socket.assigns.id
@@ -239,6 +253,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         <button type="button" phx-click="crash" phx-target={@myself}>
           Crash
         </button>
+        <!-- TODO: only show this if we have no blocks -->
+        <Block.plus click={JS.push("insert_block", target: @myself)} />
       </div>
       <div
         id="blocks"
