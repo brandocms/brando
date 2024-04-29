@@ -134,11 +134,19 @@ defmodule Brando.Villain do
     add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))
   end
 
-  # TODO: we can probably throw out this indirection?
   defp parse_node(parser, data_node, opts_map) do
+    require Logger
+
+    Logger.error("""
+
+    parse_node
+    #{inspect(data_node, pretty: true)}
+
+    """)
+
     type_atom = data_node.type
 
-    if not is_atom(type_atom) do
+    if not is_atom(type_atom) or is_nil(type_atom) do
       raise """
       Expected type to be an atom, got: #{inspect(type_atom)}
 

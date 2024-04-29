@@ -216,22 +216,66 @@ defmodule BrandoAdmin.Components.Form do
      |> force_svelte_remounts()}
   end
 
+  # got all root changesets for the block field
   def update(
         %{
-          action: "provide_root_blocks",
+          event: "provide_root_blocks",
           root_changesets: root_changesets,
           block_field: block_field
         },
         socket
       ) do
-    # TODO: try to save?
-    send(
-      self(),
-      {:toast,
-       gettext("Got all root blocks for %{block_field}:)", block_field: inspect(block_field))}
-    )
+    block_changesets = socket.assigns.block_changesets
 
-    {:ok, socket}
+    require Logger
+
+    Logger.error("""
+    -> Got all root blocks for field: #{inspect(block_field)}
+    """)
+
+    list_of_changesets =
+      Enum.map(root_changesets, fn {_key, cs} ->
+        Brando.Utils.set_action(cs)
+      end)
+
+    updated_block_changesets = Map.put(block_changesets, block_field, list_of_changesets)
+
+    require Logger
+
+    Logger.error("""
+    -> list_of_changesets: #{inspect(list_of_changesets, pretty: true)}
+    """)
+
+    {:ok,
+     socket
+     |> assign(:block_changesets, updated_block_changesets)
+     |> maybe_save()}
+  end
+
+  defp maybe_save(socket) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      # still waiting for blocks for fields
+      require Logger
+
+      Logger.error("""
+      -> Still waiting for blocks for fields: #{inspect(block_changesets)}
+      """)
+
+      socket
+    else
+      # we have all block fields, try to save
+      require Logger
+
+      Logger.error("""
+      -> Have all block fields. Try to save
+      """)
+
+      socket
+      |> assign(:all_blocks_received?, true)
+      |> push_event("b:submit", %{})
+    end
   end
 
   def update(
@@ -486,11 +530,17 @@ defmodule BrandoAdmin.Components.Form do
     form_blueprint = socket.assigns.form_blueprint
     blocks = form_blueprint.blocks
 
-    assign_new(socket, :block_map, fn ->
+    socket
+    |> assign_new(:block_map, fn ->
       case socket.assigns.has_blocks? do
         true -> Enum.map(blocks, &{&1.name, Module.concat(schema, "Blocks"), &1.opts})
         false -> []
       end
+    end)
+    |> assign_new(:block_changesets, fn ->
+      blocks
+      |> Enum.map(&{&1.name, nil})
+      |> Enum.into(%{})
     end)
   end
 
@@ -1745,47 +1795,26 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
-  def handle_event("save", params, %{assigns: %{has_blocks?: true}} = socket) do
-    schema = socket.assigns.schema
-    entry = socket.assigns.entry
-    current_user = socket.assigns.current_user
-    singular = socket.assigns.singular
-    form_blueprint = socket.assigns.form_blueprint
-    save_redirect_target = socket.assigns.save_redirect_target
-    id = socket.assigns.id
-
-    entry_params = Map.get(params, singular)
-    entry_or_default = entry || struct(schema)
-
-    changeset =
-      entry_or_default
-      |> schema.changeset(entry_params, current_user)
-      |> Brando.Utils.set_action()
-      |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
-
-    # if we have block fields, gather all changesets
-    has_blocks? = socket.assigns.has_blocks?
-    block_map = socket.assigns.block_map
+  def handle_event(
+        "save",
+        params,
+        %{assigns: %{has_blocks?: true, all_blocks_received?: true}} = socket
+      ) do
     require Logger
 
-    for {block_field_name, _schema, _opts} <- block_map do
-      block_field_id = "#{id}-blocks-#{block_field_name}"
-      Logger.error("-> block field id={#{block_field_id}")
-      send_update(BlockField, id: block_field_id, action: "fetch_root_blocks")
-    end
+    Logger.error("""
 
-    send(self(), {:toast, "Saving with blocks..."})
+    --> save with blocks [all blocks received!]
 
-    {:noreply, socket}
-  end
+    """)
 
-  def handle_event("save", params, socket) do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
     singular = socket.assigns.singular
     form_blueprint = socket.assigns.form_blueprint
     save_redirect_target = socket.assigns.save_redirect_target
+    block_changesets = socket.assigns.block_changesets
 
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
@@ -1795,15 +1824,11 @@ defmodule BrandoAdmin.Components.Form do
       |> schema.changeset(entry_params, current_user)
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
-
-    # clear out deleted villain blocks
-    # one day i will figure out why this is neccessary...
-    new_changeset = Villain.reject_blocks_marked_as_deleted(schema, changeset)
 
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    mutation_type = (get_field(new_changeset, :id) && :update) || :create
+    mutation_type = (get_field(changeset, :id) && :update) || :create
 
     # if redirect_on_save is set in form, use this
     redirect_fn =
@@ -1819,7 +1844,28 @@ defmodule BrandoAdmin.Components.Form do
       Brando.routes().admin_live_path(socket, generated_create_view)
     end
 
-    # gather all blocks changesets
+    # gather all blocks changesets and stick them into the main changeset
+    new_changeset =
+      Enum.reduce(block_changesets, changeset, fn {block_field_name, block_changeset},
+                                                  updated_changeset ->
+        require Logger
+
+        Logger.error("""
+        -> putting assoc: entry_#{block_field_name}
+        #{inspect(block_changeset, pretty: true)}
+        """)
+
+        Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{block_field_name}", block_changeset)
+      end)
+
+    require Logger
+
+    Logger.error("""
+
+    new_changeset:
+    #{inspect(new_changeset, pretty: true)}
+
+    """)
 
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
@@ -1868,6 +1914,30 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("save", params, %{assigns: %{has_blocks?: true}} = socket) do
+    require Logger
+
+    Logger.error("""
+
+    --> save with blocks [no blocks received!]
+
+    """)
+
+    id = socket.assigns.id
+
+    # if we have block fields, gather all changesets
+    block_map = socket.assigns.block_map
+
+    for {block_field_name, _schema, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+      send_update(BlockField, id: block_field_id, event: "fetch_root_blocks")
+    end
+
+    {:noreply, socket}
   end
 
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil

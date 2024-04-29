@@ -9,31 +9,14 @@ defmodule Brando.Trait.Villain do
   @type config :: list()
 
   # @impl true
-  # def trait_attributes(attributes, _assets, _relations) do
-  #   attributes
-  #   |> Enum.filter(&(&1.type == :villain))
-  #   |> Enum.map(fn
-  #     %{name: :data} ->
-  #       Attributes.build_attr(:html, :text, [])
-
-  #     %{name: data_name} ->
-  #       data_name
-  #       |> to_string
-  #       |> String.replace("_data", "_html")
-  #       |> String.to_atom()
-  #       |> Attributes.build_attr(:text, [])
-  #   end)
-  # end
-
-  # @impl true
   # def validate(module, _config) do
   #   if module.__villain_fields__ == [] do
-  #     raise ConfigError,
+  #     raise Brando.Exception.BlueprintError,
   #       message: """
-  #       Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no attributes of type `:villain` found.
+  #       Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no relations with module `:blocks` found.
 
-  #           attributes do
-  #             attribute :data, :villain
+  #           relations do
+  #             relation :blocks, :has_many, module: :blocks
   #           end
   #       """
   #   end
@@ -52,27 +35,22 @@ defmodule Brando.Trait.Villain do
     #   drop_param: :authors_delete
     # )
 
-    case Keyword.get(opts, :skip_villain) do
-      true ->
-        cast_poly(changeset, module.__villain_fields__())
+    # case Keyword.get(opts, :skip_villain) do
+    #   true ->
+    #     cast_poly(changeset, module.__villain_fields__())
 
-      _ ->
-        case cast_poly(changeset, module.__villain_fields__()) do
-          %{valid?: true} = casted_changeset ->
-            Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-              Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-            end)
+    #   _ ->
+    #     case cast_poly(changeset, module.__villain_fields__()) do
+    #       %{valid?: true} = casted_changeset ->
+    #         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+    #           Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+    #         end)
 
-          casted_changeset ->
-            casted_changeset
-        end
-    end
-  end
-
-  defp cast_poly(changeset, villain_fields) do
-    Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
-      PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
-    end)
+    #       casted_changeset ->
+    #         casted_changeset
+    #     end
+    # end
+    changeset
   end
 
   @impl true
@@ -80,10 +58,6 @@ defmodule Brando.Trait.Villain do
     quote generated: true do
       parent_module = unquote(parent_module)
       parent_table_name = @table_name
-
-      relations do
-        relation :blocks, :has_many, module: :blocks
-      end
 
       defmodule Blocks do
         use Ecto.Schema
@@ -123,7 +97,12 @@ defmodule Brando.Trait.Villain do
             :uid,
             :creator_id,
             :sequence,
-            :parent_id
+            :parent_id,
+            :module_id,
+            :anchor,
+            :multi,
+            :palette_id,
+            :type
           ])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
@@ -144,7 +123,12 @@ defmodule Brando.Trait.Villain do
             :uid,
             :creator_id,
             :sequence,
-            :parent_id
+            :parent_id,
+            :module_id,
+            :anchor,
+            :multi,
+            :palette_id,
+            :type
           ])
           |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
           |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
@@ -157,14 +141,6 @@ defmodule Brando.Trait.Villain do
         end
 
         def block_identifier_changeset(block_identifier, attrs, position, _user) do
-          require Logger
-
-          Logger.error("""
-
-          position: #{inspect(position)}
-
-          """)
-
           block_identifier
           |> cast(attrs, [:block_id, :identifier_id])
           |> change(sequence: position)
@@ -172,8 +148,17 @@ defmodule Brando.Trait.Villain do
 
         def var_changeset(var, attrs, user) do
           cast(var, attrs, [
+            :type,
+            :label,
+            :placeholder,
             :key,
             :value,
+            :value_boolean,
+            :important,
+            :instructions,
+            :color_picker,
+            :color_opacity,
+            :sequence,
             :creator_id,
             :module_id,
             :page_id,
@@ -184,6 +169,7 @@ defmodule Brando.Trait.Villain do
             :linked_identifier_id,
             :global_set_id
           ])
+          |> cast_embed(:options)
         end
 
         def ref_changeset(ref, attrs, user) do

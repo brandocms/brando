@@ -94,15 +94,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           get_field(changeset, :value)
         end
 
-      require Logger
+      # require Logger
 
-      Logger.error("""
+      # Logger.error("""
 
-      RenderVar:
-      changeset.....: #{inspect(changeset, pretty: true)}
-      changeset.data: #{inspect(changeset.data, pretty: true)}
+      # RenderVar:
+      # changeset.....: #{inspect(changeset, pretty: true)}
+      # changeset.data: #{inspect(changeset.data, pretty: true)}
 
-      """)
+      # """)
 
       value = control_value(type, value)
 

@@ -314,19 +314,21 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     changeset = block_identifier.source
     identifier_changeset = Changeset.get_assoc(changeset, :identifier)
 
-    if identifier_changeset == nil do
-      raise """
-      No identifier changeset found for block identifier
+    identifier =
+      if identifier_changeset == nil do
+        identifier_id = Changeset.get_field(changeset, :identifier_id)
+        require Logger
 
-      block_identifier.source:
-      #{inspect(block_identifier.source)}
+        Logger.error("""
+        -> identifier_id: #{inspect(identifier_id)}
+        -> available_identifiers: #{inspect(assigns.available_identifiers, pretty: true, width: 0)}
+        """)
 
-      block_identifier.source.data:
-      #{inspect(block_identifier.source.data)}
-      """
-    end
+        Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
+      else
+        identifier_changeset.data
+      end
 
-    identifier = identifier_changeset.data
     schema = identifier.schema
 
     translated_type =

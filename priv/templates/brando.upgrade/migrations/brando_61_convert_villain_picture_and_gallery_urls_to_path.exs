@@ -38,10 +38,8 @@ defmodule Brando.Repo.Migrations.ConvertVillainPictureGalleryURLToPath do
 
   def find_and_replace_vars(list) when is_list(list) do
     list
-    |> Enum.reduce([], fn item, acc ->
-      [find_and_replace_vars(item)|acc]
-    end)
-    |> Enum.reverse
+    |> Enum.reduce([], fn item, acc -> [find_and_replace_vars(item)|acc] end)
+    |> Enum.reverse()
   end
 
   def find_and_replace_vars(map) when is_map(map) do

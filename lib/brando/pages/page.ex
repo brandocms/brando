@@ -41,8 +41,6 @@ defmodule Brando.Pages.Page do
     uri
     language
     title
-    data
-    html
     has_url
     is_homepage
     template
@@ -67,7 +65,6 @@ defmodule Brando.Pages.Page do
     attribute :template, :string, required: true
     attribute :is_homepage, :boolean
     attribute :has_url, :boolean, default: true
-    attribute :data, :villain
     attribute :css_classes, :string
 
     attribute :vars, {:array, PolymorphicEmbed},
@@ -82,6 +79,7 @@ defmodule Brando.Pages.Page do
     relation :parent, :belongs_to, module: __MODULE__
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
     relation :fragments, :has_many, module: Fragment
+    relation :blocks, :has_many, module: :blocks
   end
 
   @derive {Jason.Encoder, only: @derived_fields}

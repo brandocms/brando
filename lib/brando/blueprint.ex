@@ -309,6 +309,7 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:has_many, opts)
           )
 
+        # TODO: don't hard code :blocks -- build module name from name
         %{type: :has_many, name: :blocks, opts: %{module: :blocks}} ->
           main_module = unquote(module)
           block_module = Module.concat([main_module, Blocks])

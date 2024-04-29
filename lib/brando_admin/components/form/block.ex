@@ -234,8 +234,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:deleted, fn -> false end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed, false) end)
     |> assign_new(:module_id, fn ->
-      block = (belongs_to == :root && changeset.data.block) || changeset.data
-      block.module_id
+      block_cs = get_block_changeset(changeset, belongs_to)
+      Changeset.get_field(block_cs, :module_id)
     end)
     |> assign_new(:parent_uid, fn -> nil end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
@@ -304,6 +304,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_parse_module(
          %{assigns: %{module_code: module_code, module_type: :liquid} = assigns} = socket
        ) do
+    require Logger
+
+    Logger.error("""
+    -> maybe_parse_module
+    """)
+
     module_code =
       module_code
       |> liquid_strip_logic()
@@ -317,9 +323,9 @@ defmodule BrandoAdmin.Components.Form.Block do
         changeset
         |> Changeset.get_field(:block)
         |> Changeset.change()
-        |> Changeset.get_field(:vars)
+        |> Changeset.get_assoc(:vars)
       else
-        Changeset.get_field(changeset, :vars)
+        Changeset.get_assoc(changeset, :vars)
       end
 
     splits =
@@ -538,8 +544,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         new={@form_is_new}
         level={@level}
         belongs_to={@belongs_to}
-        active={@active}
-        collapsed={@collapsed}
         deleted={@deleted}
         target={@myself}
         insert_block={JS.push("insert_block", target: @myself)}
@@ -593,13 +597,17 @@ defmodule BrandoAdmin.Components.Form.Block do
   def container(assigns) do
     changeset = assigns.form.source
     belongs_to = assigns.belongs_to
-    block = (belongs_to == :root && changeset.data.block) || changeset.data
+
+    block_cs = get_block_changeset(changeset, belongs_to)
 
     assigns =
       assigns
-      |> assign(:uid, block.uid)
-      |> assign(:type, block.type)
-      |> assign(:module_id, block.module_id)
+      |> assign(:uid, Changeset.get_field(block_cs, :uid))
+      |> assign(:type, Changeset.get_field(block_cs, :type))
+      |> assign(:module_id, Changeset.get_field(block_cs, :module_id))
+      |> assign(:description, Changeset.get_field(block_cs, :description))
+      |> assign(:active, Changeset.get_field(block_cs, :active))
+      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
 
     ~H"""
     <div
@@ -706,6 +714,14 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= if @belongs_to == :root do %>
             <Input.hidden field={@form[:sequence]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
+              <Input.hidden field={block_form[:uid]} />
+              <Input.hidden field={block_form[:type]} />
+              <Input.hidden field={block_form[:anchor]} />
+              <Input.hidden field={block_form[:multi]} />
+              <Input.hidden field={block_form[:module_id]} />
+              <Input.hidden field={block_form[:parent_id]} />
+              <Input.hidden field={block_form[:palette_id]} />
+              <Input.hidden field={block_form[:creator_id]} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -1043,23 +1059,18 @@ defmodule BrandoAdmin.Components.Form.Block do
   slot :instructions
 
   def block(assigns) do
-    uid = assigns.block[:uid].value || Brando.Utils.generate_uid()
+    block_cs = assigns.block.source
+    uid = Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
 
     assigns =
       assigns
       |> assign_new(:block_type, fn ->
-        assigns.block[:type].value || (assigns.is_entry? && "entry")
+        Changeset.get_field(block_cs, :type) || (assigns.is_entry? && "entry")
       end)
       |> assign(:uid, uid)
-      |> assign(:hidden, assigns.block[:hidden].value)
-      |> assign(:collapsed, assigns.block[:collapsed].value)
-      |> assign_new(:initial_classes, fn ->
-        %{
-          collapsed: assigns.block[:collapsed].value,
-          disabled: assigns.block[:hidden].value
-        }
-      end)
-      |> assign(:marked_as_deleted, assigns.block[:marked_as_deleted].value)
+      |> assign(:active, Changeset.get_field(block_cs, :active))
+      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign(:marked_as_deleted, Changeset.get_field(block_cs, :marked_as_deleted))
 
     ~H"""
     <div
@@ -1067,8 +1078,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       data-block-uid={@uid}
       class={[
         "base-block",
-        @initial_classes.collapsed && "collapsed",
-        @initial_classes.disabled && "disabled"
+        "ref-block-",
+        @collapsed && "collapsed",
+        !@active && "disabled"
       ]}
     >
       <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={@wide_config}>
@@ -1424,7 +1436,11 @@ defmodule BrandoAdmin.Components.Form.Block do
           data-sortable-selector=".identifier"
         >
           <.inputs_for :let={block_identifier} field={@block_identifiers}>
-            <Entries.block_identifier block_identifier={block_identifier} sortable>
+            <Entries.block_identifier
+              block_identifier={block_identifier}
+              available_identifiers={@available_identifiers}
+              sortable
+            >
               <input
                 type="hidden"
                 name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
@@ -1495,13 +1511,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     id = socket.assigns.id
     available_identifiers = socket.assigns.available_identifiers
 
-    block_changeset =
-      if belongs_to == :root do
-        Changeset.get_assoc(changeset, :block)
-      else
-        form.source
-      end
-
+    block_changeset = get_block_changeset(changeset, belongs_to)
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
 
     # does it have the identifier already?
@@ -1535,9 +1545,18 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_block_identifiers = Enum.filter(updated_block_identifiers, &(&1.action != :replace))
 
     updated_block_changeset =
-      Changeset.put_assoc(block_changeset, :block_identifiers, updated_block_identifiers)
+      Changeset.put_assoc(
+        block_changeset,
+        :block_identifiers,
+        updated_block_identifiers
+      )
 
-    updated_changeset = update_block_changeset(changeset, updated_block_changeset, belongs_to)
+    updated_changeset =
+      update_block_changeset(
+        changeset,
+        updated_block_changeset,
+        belongs_to
+      )
 
     new_form =
       if belongs_to == :root do
@@ -1865,32 +1884,56 @@ defmodule BrandoAdmin.Components.Form.Block do
     """)
 
     form = socket.assigns.form
+    changeset = form.source
     level = socket.assigns.level
     uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
     parent_uid = socket.assigns.parent_uid
     block_module = socket.assigns.block_module
 
+    block_cs = Changeset.get_assoc(changeset, :block)
+
     updated_form =
       to_base_change_form(
         block_module,
-        form.source.data,
+        changeset,
         params,
         socket.assigns.current_user_id,
         :validate
       )
 
     updated_changeset = updated_form.source
-    # send_update(parent_cid, %{event: "update_block", level: level, form: updated_form})
+    updated_block_cs = Changeset.get_assoc(updated_changeset, :block)
     block = Changeset.apply_changes(updated_changeset)
     rendered_block = Brando.Villain.render_block(block, %{title: "HEI HEI!"})
 
-    # {:noreply, assign(socket, :rendered_block, rendered_block)}
+    # if we have var changes we must redo the liquid splits vars
+    liquid_splits = socket.assigns.liquid_splits
+
+    updated_liquid_splits =
+      case Changeset.get_change(updated_block_cs, :vars) do
+        nil -> liquid_splits
+        vars -> update_liquid_splits_vars(liquid_splits, vars)
+      end
+
     socket
     |> assign(:rendered_block, rendered_block)
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
+    |> assign(:liquid_splits, updated_liquid_splits)
     |> then(&{:noreply, &1})
+  end
+
+  def update_liquid_splits_vars(liquid_splits, vars) do
+    liquid_splits
+    |> Enum.reduce([], fn
+      {:variable, var_key, prev_var_value}, acc ->
+        [{:variable, var_key, liquid_render_variable(var_key, vars)} | acc]
+
+      item, acc ->
+        [item | acc]
+    end)
+    |> Enum.reverse()
   end
 
   # for forms that are on the base level, meaning
@@ -1901,9 +1944,12 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> block_module.changeset(params, user)
       |> Map.put(:action, action)
 
+    block_cs = Changeset.get_assoc(changeset, :block)
+    uid = Changeset.get_field(block_cs, :uid)
+
     to_form(changeset,
       as: "entry_block",
-      id: "entry_block_form-#{changeset.data.block.uid}"
+      id: "entry_block_form-#{uid}"
     )
   end
 
@@ -2003,8 +2049,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp liquid_render_variable(var, vars) do
-    case Enum.find(vars, &(&1.key == var)) do
-      %{value: value} -> value
+    case Enum.find(vars, &(Changeset.get_field(&1, :key) == var)) do
+      var_cs -> Changeset.get_field(var_cs, :value)
       nil -> var
     end
   end

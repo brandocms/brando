@@ -17,16 +17,15 @@ defmodule Brando.Villain.Block do
       embedded_schema do
         field :uid, :string
         field :type, :string, default: unquote(type)
-        field :hidden, :boolean, default: false
+        field :active, :boolean, default: true
         field :collapsed, :boolean, default: false
         field :marked_as_deleted, :boolean, default: false, virtual: true
         embeds_one :data, __MODULE__.Data, on_replace: :update
       end
 
       def changeset(struct, params \\ %{}) do
-        # TODO: cast `active`
         struct
-        |> cast(params, ~w(uid type hidden marked_as_deleted collapsed)a)
+        |> cast(params, ~w(uid type active marked_as_deleted collapsed)a)
         |> cast_embed(:data)
         |> ensure_uid()
         |> maybe_mark_for_deletion()

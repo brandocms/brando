@@ -42,8 +42,6 @@ defmodule Brando.FactoryMixin do
           uri: "a-key",
           language: "en",
           title: "Page Title",
-          html: nil,
-          data: nil,
           vars: [],
           status: :published,
           creator: build(:user),
@@ -58,7 +56,6 @@ defmodule Brando.FactoryMixin do
           key: "a-key",
           language: "no",
           html: nil,
-          data: nil,
           creator: build(:user)
         }
       end
