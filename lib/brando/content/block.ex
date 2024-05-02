@@ -82,9 +82,18 @@ defmodule Brando.Content.Block do
   def preloads do
     children_query =
       from b in __MODULE__,
-        preload: [:vars, :module, children: [:vars, :children]],
+        preload: [:palette, :vars, :module, children: [:palette, :vars, :children]],
         order_by: [asc: :sequence]
 
-    [block: [:parent, :module, :vars, children: children_query, block_identifiers: :identifier]]
+    [
+      block: [
+        :parent,
+        :module,
+        :vars,
+        :palette,
+        children: children_query,
+        block_identifiers: :identifier
+      ]
+    ]
   end
 end

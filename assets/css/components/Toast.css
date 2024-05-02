@@ -12,7 +12,7 @@
 
   &.iziToast-theme-small-error {
     background-color: #310d0d;
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 0;
     min-height: 0;
 
@@ -41,7 +41,7 @@
 
   &.iziToast-theme-small-success {
     background-color: #1e3d06;
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 0;
     min-height: 0;
 
@@ -71,7 +71,7 @@
   &.iziToast-theme-mutations {
     margin-left: auto;
     background-color: var(--brando-color-dark);
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 0;
     min-height: 0;
 

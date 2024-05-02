@@ -261,19 +261,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <div class="block-list">
+      <%!-- <div class="block-list">
         <code>
           <pre phx-no-format>
     <%= inspect(@root_changesets, pretty: true) %>
           </pre>
         </code>
-        <button type="button" phx-click="fetch_root_blocks" phx-target={@myself}>
-          Gather Blocks
-        </button>
-        <button type="button" phx-click="crash" phx-target={@myself}>
-          Crash
-        </button>
-      </div>
+      </div> --%>
       <div
         id="blocks"
         phx-update="stream"
@@ -293,14 +287,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <.live_component
                 module={Block}
                 id={"root-block-#{block[:uid].value}"}
-                uid={block[:uid].value}
                 block_module={@block_module}
                 block_field={@block_field}
-                type={block[:type].value}
-                multi={block[:multi].value}
                 children={block[:children].value}
                 parent_uploads={@parent_uploads}
-                parent_id={block[:parent_id].value}
                 parent_cid={@myself}
                 parent_uid={}
                 form={entry_block_form}

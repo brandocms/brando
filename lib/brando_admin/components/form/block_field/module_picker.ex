@@ -5,9 +5,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   alias BrandoAdmin.Components.Content
 
-  # prop hide_sections, :boolean, default: false
-  # prop hide_fragments, :boolean, default: false
-
   def mount(socket) do
     {:ok, assign(socket, active_namespace: nil, show: false)}
   end
@@ -47,7 +44,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.modal title={gettext("Add content block")} id={@id} show={@show} medium>
+      <Content.modal
+        title={gettext("Add content block")}
+        id={@id}
+        show={@show}
+        medium
+        close="close_modal"
+      >
         <div class="modules-header">
           <div class="module-info">
             <%= gettext("Select a module") %>
@@ -154,6 +157,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       </Content.modal>
     </div>
     """
+  end
+
+  def handle_event("close_modal", _, socket) do
+    {:noreply, assign(socket, :show, false)}
   end
 
   def handle_event("toggle_namespace", %{"id" => namespace}, socket) do

@@ -1800,14 +1800,6 @@ defmodule BrandoAdmin.Components.Form do
         params,
         %{assigns: %{has_blocks?: true, all_blocks_received?: true}} = socket
       ) do
-    require Logger
-
-    Logger.error("""
-
-    --> save with blocks [all blocks received!]
-
-    """)
-
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -1848,24 +1840,8 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       Enum.reduce(block_changesets, changeset, fn {block_field_name, block_changeset},
                                                   updated_changeset ->
-        require Logger
-
-        Logger.error("""
-        -> putting assoc: entry_#{block_field_name}
-        #{inspect(block_changeset, pretty: true)}
-        """)
-
         Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{block_field_name}", block_changeset)
       end)
-
-    require Logger
-
-    Logger.error("""
-
-    new_changeset:
-    #{inspect(new_changeset, pretty: true)}
-
-    """)
 
     case apply(context, :"#{mutation_type}_#{singular}", [new_changeset, current_user]) do
       {:ok, entry} ->
@@ -1914,19 +1890,9 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
-
-    {:noreply, socket}
   end
 
   def handle_event("save", params, %{assigns: %{has_blocks?: true}} = socket) do
-    require Logger
-
-    Logger.error("""
-
-    --> save with blocks [no blocks received!]
-
-    """)
-
     id = socket.assigns.id
 
     # if we have block fields, gather all changesets
@@ -1938,6 +1904,91 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     {:noreply, socket}
+  end
+
+  def handle_event("save", params, %{assigns: %{has_blocks?: false}} = socket) do
+    schema = socket.assigns.schema
+    entry = socket.assigns.entry
+    current_user = socket.assigns.current_user
+    singular = socket.assigns.singular
+    form_blueprint = socket.assigns.form_blueprint
+    save_redirect_target = socket.assigns.save_redirect_target
+
+    entry_params = Map.get(params, singular)
+    entry_or_default = entry || struct(schema)
+
+    changeset =
+      entry_or_default
+      |> schema.changeset(entry_params, current_user)
+      |> Brando.Utils.set_action()
+      |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
+
+    singular = schema.__naming__().singular
+    context = schema.__modules__().context
+
+    mutation_type = (get_field(changeset, :id) && :update) || :create
+
+    # if redirect_on_save is set in form, use this
+    redirect_fn =
+      form_blueprint.redirect_on_save ||
+        fn socket, _entry, _mutation_type ->
+          generated_list_view = schema.__modules__().admin_list_view
+          Brando.routes().admin_live_path(socket, generated_list_view)
+        end
+
+    # redirect to "create new"
+    redirect_new_fn = fn socket, _entry, _mutation_type ->
+      generated_create_view = schema.__modules__().admin_create_view
+      Brando.routes().admin_live_path(socket, generated_create_view)
+    end
+
+    case apply(context, :"#{mutation_type}_#{singular}", [changeset, current_user]) do
+      {:ok, entry} ->
+        Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, current_user)
+        maybe_run_form_after_save(form_blueprint, entry, current_user)
+        send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
+
+        maybe_redirected_socket =
+          case save_redirect_target do
+            :self ->
+              if mutation_type == :create do
+                generated_update_view = schema.__modules__().admin_update_view
+
+                push_redirect(socket,
+                  to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
+                )
+              else
+                if schema.has_trait(Brando.Trait.Revisioned) do
+                  id = "#{socket.assigns.id}-revisions-drawer"
+                  send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+                end
+
+                # update entry!
+                socket
+                |> assign(:entry_id, entry.id)
+                |> assign_refreshed_entry()
+                |> assign_refreshed_changeset
+              end
+
+            :listing ->
+              push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+
+            :new ->
+              push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+          end
+
+        {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        require Logger
+        Logger.error(inspect(changeset, pretty: true))
+
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:form, to_form(changeset, []))
+         |> push_errors(changeset, form_blueprint, schema)}
+    end
   end
 
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil

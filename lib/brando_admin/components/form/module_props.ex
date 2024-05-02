@@ -343,6 +343,43 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:id]} label={gettext("ID")} />
                               <Input.text field={block_data[:link]} label={gettext("Link")} />
                             </Form.inputs_for_block>
+                          <% "comment" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-comment-text"}
+                                field={block_data[:text]}
+                                label={gettext("Text")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "html" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-html-code"}
+                                field={block_data[:text]}
+                                label={gettext("HTML")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "markdown" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-markdown-code"}
+                                field={block_data[:text]}
+                                label={gettext("Markdown")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "map" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.radios
+                                field={block_data[:source]}
+                                opts={[
+                                  options: [
+                                    %{label: gettext("GMaps"), value: :gmaps}
+                                  ]
+                                ]}
+                                label={gettext("Source")}
+                              />
+                              <Input.text field={block_data[:embed_url]} label={gettext("Embed URL")} />
+                            </Form.inputs_for_block>
                           <% "svg" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
                               <Input.text field={block_data[:class]} label={gettext("Class")} />

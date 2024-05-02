@@ -302,6 +302,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
     ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
 
+    require Logger
+
+    Logger.error("""
+    -> ref_data: #{inspect(ref_data, pretty: true)}
+    """)
+
     new_ref = %Ref{
       name: Brando.Utils.random_string(5),
       data: ref_data

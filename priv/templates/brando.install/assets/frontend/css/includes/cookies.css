@@ -30,7 +30,7 @@
     @space padding-y 0.4;
 
     left: auto;
-    border-radius: 15px;
+    border-radius: 12px;
     border: 1px solid var(--brando-color-dark);
   }
 

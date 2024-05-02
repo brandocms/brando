@@ -2,8 +2,7 @@ import autosize from 'autosize'
 
 export default app => ({
   mounted() {
-    console.log('=> mounted autosize — ignoring.')
-    // this.autosizeElements()
+    this.autosizeElements()
   },
 
   autosizeElements() {
@@ -12,6 +11,6 @@ export default app => ({
   },
 
   updated() {
-    // this.autosizeElements()
+    this.autosizeElements()
   }
 })

@@ -654,7 +654,7 @@ h3 {
 }
 
 .variable-content {
-  border-radius: 15px;
+  border-radius: 12px;
   padding: 1vw;
   margin-top: 1vw;
   background-color: var(--brando-color-peach-darker);
@@ -1113,7 +1113,7 @@ h3 {
   padding: 5px 8px 4px;
   line-height: 1;
   border: 1px solid var(--brando-color-dark);
-  border-radius: 15px;
+  border-radius: 12px;
   user-select: none;
 
   & + .badge {
