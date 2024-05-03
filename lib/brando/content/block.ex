@@ -25,7 +25,7 @@ defmodule Brando.Content.Block do
 
   attributes do
     attribute :uid, :string, required: true
-    attribute :type, :enum, values: [:module, :container]
+    attribute :type, :enum, values: [:module, :container, :module_entry]
     attribute :active, :boolean, default: true
     attribute :collapsed, :boolean, default: false
     attribute :description, :string

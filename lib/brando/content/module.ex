@@ -65,7 +65,8 @@ defmodule Brando.Content.Module do
   end
 
   relations do
-    relation :entry_template, :embeds_one, module: __MODULE__.EmbeddedModule, on_replace: :delete
+    relation :children, :has_many, module: __MODULE__, on_replace: :delete_if_exists
+    relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
 
     relation :vars, :has_many,
