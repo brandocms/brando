@@ -611,10 +611,22 @@ defmodule Brando.HTML do
   end
 
   attr :entry, :map, required: true
+  attr :field, :atom, default: :blocks
 
   def render_blocks(assigns) do
+    rendered_field = String.to_existing_atom("rendered_#{assigns.field}")
+    rendered_field_at = String.to_existing_atom("rendered_#{assigns.field}_at")
+
+    assigns =
+      assigns
+      |> assign(:rendered_field, rendered_field)
+      |> assign(:rendered_field_at, rendered_field_at)
+      |> assign(:html, Map.get(assigns.entry, rendered_field, ""))
+      |> assign(:at, Map.get(assigns.entry, rendered_field_at) |> inspect())
+
     ~H"""
-    <%= @entry.html |> raw %>
+    <!-- {<%= @rendered_field %>//<%= @at %>} -->
+    <%= @html |> raw %>
     """
   end
 

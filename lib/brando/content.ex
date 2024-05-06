@@ -49,6 +49,12 @@ defmodule Brando.Content do
       {:ids, ids}, query ->
         from(q in query, where: q.id in ^ids)
 
+      {:parent_id, nil}, query ->
+        from(q in query, where: is_nil(q.parent_id))
+
+      {:parent_id, parent_id}, query ->
+        from(q in query, where: q.parent_id == ^parent_id)
+
       {:namespace, namespace}, query ->
         query =
           from(t in query,

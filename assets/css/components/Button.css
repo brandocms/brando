@@ -245,6 +245,7 @@ button.tiny, a.tiny {
 
 .submit-button {
   @space margin-top 30px;
+  width: fit-content;
 }
 
 .add-entry-button {

@@ -76,25 +76,6 @@ defmodule Brando.Villain.Schema do
   end
 
   @doc """
-  Macro for villain schema fields.
-  """
-  defmacro villain(field \\ nil) do
-    data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
-    html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
-
-    quote do
-      Module.put_attribute(
-        __MODULE__,
-        :villain_fields,
-        {:villain, unquote(data_field), unquote(html_field)}
-      )
-
-      Ecto.Schema.field(unquote(data_field), {:array, :map})
-      Ecto.Schema.field(unquote(html_field), :string)
-    end
-  end
-
-  @doc """
   Takes the schema's `json` field and transforms to `html`.
 
   This is usually called from your schema's `changeset` functions:

@@ -18,7 +18,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(assigns, socket) do
-    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} =
+      Brando.Content.list_modules(%{filter: %{parent_id: nil}, cache: {:ttl, :infinite}})
 
     {:ok,
      socket

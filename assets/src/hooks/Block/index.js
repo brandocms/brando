@@ -3,9 +3,11 @@ import { gsap } from '@brandocms/jupiter'
 
 export default app => ({
   mounted() {
-    gsap.set(this.el, { y: -8, opacity: 0 })
-    gsap.to(this.el, { y: 0, ease: 'power2.out', duration: 0.4 })
-    gsap.to(this.el, { opacity: 1, ease: 'none', duration: 0.2 })
+    const tl = gsap.timeline()
+    tl.set(this.el, { y: -8, opacity: 0 })
+      .to(this.el, { y: 0, ease: 'power2.out', duration: 0.4 })
+      .to(this.el, { opacity: 1, ease: 'none', duration: 0.2 }, '<')
+      .call(() => gsap.set(this.el, { clearProps: 'all' }))
     this.autosizeElements()
   },
 

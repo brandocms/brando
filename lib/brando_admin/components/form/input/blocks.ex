@@ -1,4 +1,4 @@
-# TODO: Deprecate?
+# TODO: Deprecate and delete.
 defmodule BrandoAdmin.Components.Form.Input.Blocks do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML

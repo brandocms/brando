@@ -35,8 +35,6 @@ defmodule Brando.Pages.Fragment do
     parent_key
     key
     language
-    data
-    html
     wrapper
     sequence
     creator_id
@@ -52,12 +50,12 @@ defmodule Brando.Pages.Fragment do
     attribute :title, :string
     attribute :parent_key, :string, required: true
     attribute :key, :string, required: true
-    attribute :data, :villain
     attribute :wrapper, :string
   end
 
   relations do
     relation :page, :belongs_to, module: Brando.Pages.Page
+    relation :blocks, :has_many, module: :blocks
   end
 
   translations do

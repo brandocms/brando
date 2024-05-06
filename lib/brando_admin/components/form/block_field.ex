@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(assigns, socket) do
     block_module = assigns.block_module
-    entry_blocks = assigns.entry.entry_blocks
+    entry_blocks = assigns.entry_blocks
     user_id = assigns.current_user.id
 
     entry_blocks_forms =
@@ -261,13 +261,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <%!-- <div class="block-list">
-        <code>
-          <pre phx-no-format>
-    <%= inspect(@root_changesets, pretty: true) %>
-          </pre>
-        </code>
-      </div> --%>
       <div
         id="blocks"
         phx-update="stream"
@@ -293,6 +286,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 parent_uploads={@parent_uploads}
                 parent_cid={@myself}
                 parent_uid={}
+                entry={@entry}
                 form={entry_block_form}
                 current_user_id={@current_user.id}
                 belongs_to={:root}
@@ -338,6 +332,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       creator_id: user_id,
       module_id: module_id,
       parent_id: parent_id,
+      multi: module.wrapper,
       children: [],
       vars: var_changesets,
       refs: refs_with_generated_uids

@@ -16,22 +16,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
-  #
-  # When saving the complete form, we first message all blocks who BELONGS_TO something besides root.
-  # Worst case this is `CONTAINER -> MULTI -> ENTRY` which is 3 levels deep.
-  # Can we include a LEVEL property in each block to know how deep we are? Then begin messaging from the deepest level?
-  # The message contains the new changeset for the block which will get replaced in the parent stream.
-  # Then we message root blocks to update themselves in the main block stream?
-  # We only need to message blocks who are DIRTY or NEW.
-  # Mark updated containers and updated MULTI blocks as DIRTY! If they're not DIRTY or NEW, they don't need to be saved!
-  # ^- should we still update them in the stream?
-  #
-  # - We must somehow hold a state of when all child blocks have been updated before we can update the root blocks?
-  #
-  # TODO:
-  # - Do we need LEVEL? If we just use parent_cid and message it?
-  # - We do not need both belongs_to and level? Either belongs_to :root or level 0?
-
   def mount(socket) do
     {:ok, assign(socket, module_not_found: false, entry_template: nil)}
   end
@@ -365,11 +349,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_parse_module(
          %{assigns: %{module_code: module_code, module_type: :liquid} = assigns} = socket
        ) do
-    require Logger
+    # require Logger
 
-    Logger.error("""
-    -> maybe_parse_module
-    """)
+    # Logger.error("""
+
+    # -> maybe_parse_module
+    # -> module_code: #{inspect(module_code, pretty: true)}
+
+    # """)
 
     module_code =
       module_code
@@ -378,6 +365,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     belongs_to = socket.assigns.belongs_to
     changeset = socket.assigns.form.source
+    entry = socket.assigns.entry
 
     vars =
       if belongs_to == :root do
@@ -403,8 +391,11 @@ defmodule BrandoAdmin.Components.Form.Block do
           ["content | renderless", "", ""] ->
             {:content, "content"}
 
-          [variable, "", ""] ->
-            {:variable, variable, liquid_render_variable(variable, vars)}
+          ["entry." <> variable, "", ""] ->
+            {:variable, variable, liquid_render_entry_variable(variable, entry)}
+
+          [block_variable, "", ""] ->
+            {:variable, block_variable, liquid_render_block_variable(block_variable, vars)}
 
           ["", pic, ""] ->
             {:picture, pic, liquid_render_picture_src(pic, socket.assigns)}
@@ -501,7 +492,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def render(%{type: :module, multi: true} = assigns) do
     ~H"""
-    <div>
+    <div data-module-multi="true">
       <.module
         form={@form}
         dirty={@form_has_changes}
@@ -515,10 +506,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         vars={@vars}
         liquid_splits={@liquid_splits}
         parent_uploads={@parent_uploads}
+        rendered_block={@rendered_block}
         target={@myself}
         insert_block={JS.push("insert_block", target: @myself)}
+        insert_multi_block={JS.push("insert_block_entry", target: @myself)}
         insert_child_block={JS.push("insert_block", value: %{container: true}, target: @myself)}
         has_children?={@has_children?}
+        module_name={@module_name}
       >
         <div
           :if={@has_children?}
@@ -548,6 +542,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_uid={@uid}
               parent_uploads={@parent_uploads}
               form={child_block_form}
+              entry={@entry}
               current_user_id={@current_user_id}
               belongs_to={:multi}
               level={@level + 1}
@@ -575,12 +570,39 @@ defmodule BrandoAdmin.Components.Form.Block do
         module_class={@module_class}
         vars={@vars}
         liquid_splits={@liquid_splits}
+        rendered_block={@rendered_block}
         insert_block={JS.push("insert_block", target: @myself)}
         has_children?={false}
+        module_name={@module_name}
         module_datasource_module_label={@module_datasource_module_label}
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
         available_identifiers={@available_identifiers}
+      />
+    </div>
+    """
+  end
+
+  def render(%{type: :module_entry} = assigns) do
+    ~H"""
+    <div>
+      <.module
+        form={@form}
+        dirty={@form_has_changes}
+        new={@form_is_new}
+        level={@level}
+        belongs_to={@belongs_to}
+        deleted={@deleted}
+        parent_uploads={@parent_uploads}
+        is_datasource?={@is_datasource?}
+        target={@myself}
+        module_class={@module_class}
+        vars={@vars}
+        liquid_splits={@liquid_splits}
+        rendered_block={@rendered_block}
+        insert_block={JS.push("insert_block_entry", target: @myself)}
+        has_children?={false}
+        module_name={@module_name}
       />
     </div>
     """
@@ -628,6 +650,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_cid={@myself}
               parent_uid={@uid}
               parent_uploads={@parent_uploads}
+              entry={@entry}
               form={child_block_form}
               current_user_id={@current_user_id}
               belongs_to={:container}
@@ -665,13 +688,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     belongs_to = assigns.belongs_to
 
     block_cs = get_block_changeset(changeset, belongs_to)
-
-    require Logger
-
-    Logger.error("""
-    -> container | active: #{inspect(Changeset.get_field(block_cs, :active))} / collapsed: #{inspect(Changeset.get_field(block_cs, :collapsed))}
-    """)
-
     palette = Changeset.get_assoc(block_cs, :palette, :struct)
     bg_color = extract_block_bg_color(palette)
 
@@ -750,8 +766,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   attr :multi, :boolean, default: false
   attr :liquid_splits, :any, default: []
+  attr :rendered_block, :string, default: ""
   attr :insert_block, :any, default: nil
   attr :insert_child_block, :any, default: nil
+  attr :insert_multi_block, :any, default: nil
+  attr :module_name, :string, default: nil
   attr :module_datasource_module_label, :string, default: ""
   attr :module_datasource_type, :string, default: ""
   attr :module_datasource_query, :string, default: ""
@@ -818,7 +837,11 @@ defmodule BrandoAdmin.Components.Form.Block do
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
                 available_identifiers={@available_identifiers}
-              />
+              >
+                <:description>
+                  <%= @module_name %>
+                </:description>
+              </.toolbar>
 
               <.module_config uid={@uid} block_form={block_form} target={@target} />
               <.module_content
@@ -847,7 +870,11 @@ defmodule BrandoAdmin.Components.Form.Block do
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
               available_identifiers={@available_identifiers}
-            />
+            >
+              <:description>
+                <%= @module_name %>
+              </:description>
+            </.toolbar>
 
             <.module_config uid={@uid} block_form={@form} target={@target} />
             <.module_content
@@ -864,7 +891,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= render_slot(@inner_block) %>
         <% else %>
           <%= if @multi do %>
-            <.plus click={@insert_child_block} />
+            <.plus click={@insert_multi_block} />
           <% end %>
         <% end %>
       </div>
@@ -1168,14 +1195,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         assigns
       end
 
-    require Logger
-
-    Logger.error("""
-    -> dynamic_block
-    --> component_target.: #{inspect(assigns.component_target, pretty: true)}
-    --> assigns keys.....: #{inspect(Map.keys(assigns), pretty: true)}
-    """)
-
     ~H"""
     <%= if is_function(@component_target) do %>
       <%= component(
@@ -1278,7 +1297,23 @@ defmodule BrandoAdmin.Components.Form.Block do
           description={@description}
           is_ref?={@is_ref?}
           is_datasource?={false}
-        />
+        >
+          <:description>
+            <%= @block_type %>
+            <span :if={@block_type == "text"}>
+              <%= gettext("Text") %> (<%= @block.source.data.data.type %>)
+            </span>
+            <span :if={@block_type == "heading"}>
+              <%= gettext("Heading") %> (H<%= @block.source.data.data.level %>)
+              <%= if @block.source.data.data.link do %>
+                L
+              <% end %>
+              <%= if @block.source.data.data.id do %>
+                #<%= @block.source.data.data.id %>
+              <% end %>
+            </span>
+          </:description>
+        </.toolbar>
 
         <div class="block-content" id={"block-#{@uid}-block-content"}>
           <%= render_slot(@inner_block) %>
@@ -1567,6 +1602,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :is_ref?, :boolean, default: false
   attr :palette, :any, default: nil
   slot :inner_block
+  slot :description, default: nil
 
   def toolbar(assigns) do
     ~H"""
@@ -1577,7 +1613,22 @@ defmodule BrandoAdmin.Components.Form.Block do
           <div class="slider round"></div>
         </Form.label>
         <span class="block-type">
-          <%= (@is_datasource? && "Datamodule") || @type %><span :if={@multi}>[multi]</span>
+          <span :if={@is_datasource?} class="datasource">
+            <%= gettext("Datamodule") %> |
+          </span>
+          <span :if={@type == :module}>
+            <%= gettext("Module") %> |
+          </span>
+          <span :if={@type == :module_entry}>
+            <%= gettext("Entry") %> |
+          </span>
+          <span :if={@type == :container}>
+            <%= gettext("Container") %> |
+          </span>
+          <span :if={@multi}>[multi] | </span>
+        </span>
+        <span :if={@description} class="block-name">
+          <%= render_slot(@description) %>
         </span>
         <%= if @type == :container do %>
           <%= if @palette do %>
@@ -1598,13 +1649,13 @@ defmodule BrandoAdmin.Components.Form.Block do
               &nbsp;|&nbsp;#<%= @block[:anchor].value %>
             </div>
           <% end %>
-          <%= if @block[:description].value do %>
-            &nbsp;|&nbsp;<strong><%= @block[:description].value %></strong>
-          <% end %>
+          <span :if={@block[:description].value} class="description">
+            &nbsp;<span class="arrow">&rarr;</span>&nbsp;<%= @block[:description].value %>
+          </span>
         <% else %>
-          <%= if @block[:description].value do %>
-            <span class="arrow">&rarr;</span> <%= @block[:description].value %>
-          <% end %>
+          <span :if={@block[:description].value} class="description">
+            &nbsp;<span class="arrow">&rarr;</span>&nbsp;<%= @block[:description].value %>
+          </span>
         <% end %>
       </div>
       <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
@@ -1976,20 +2027,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def handle_event("insert_block", %{"container" => _}, socket) do
-    require Logger
-
-    Logger.error("""
-
-
-
-    SPECIAL CASE CONTAINER!!
-
-    myself: #{inspect(socket.assigns.myself)}
-    parent_cid: #{inspect(socket.assigns.parent_cid)}
-
-
-    """)
-
     # message block picker —— special case for empty container.
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
 
@@ -2004,15 +2041,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def handle_event("insert_block", _, socket) do
-    require Logger
-
-    Logger.error("""
-
-    WHAT ON EARTH.
-    parent_cid: #{inspect(socket.assigns.parent_cid)}
-
-    """)
-
     # message block picker
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
 
@@ -2023,6 +2051,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       parent_cid: socket.assigns.parent_cid
     )
 
+    {:noreply, socket}
+  end
+
+  def handle_event("insert_block_entry", _, socket) do
     {:noreply, socket}
   end
 
@@ -2140,6 +2172,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     parent_cid = socket.assigns.parent_cid
     parent_uid = socket.assigns.parent_uid
     block_module = socket.assigns.block_module
+    entry = socket.assigns.entry
 
     block_cs = Changeset.get_assoc(changeset, :block)
 
@@ -2153,13 +2186,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     updated_changeset = updated_form.source
-
-    updated_block_cs = Changeset.get_assoc(updated_changeset, :block)
-
     updated_block_cs = Changeset.get_assoc(updated_changeset, :block)
     block = Changeset.apply_changes(updated_changeset)
-    # rendered_block = Brando.Villain.render_block(block, %{title: "HEI HEI!"})
-    rendered_block = "TODO"
+    rendered_block = Brando.Villain.render_block(block, entry)
 
     # if we have var changes we must redo the liquid splits vars
     liquid_splits = socket.assigns.liquid_splits
@@ -2167,7 +2196,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_liquid_splits =
       case Changeset.get_change(updated_block_cs, :vars) do
         nil -> liquid_splits
-        vars -> update_liquid_splits_vars(liquid_splits, vars)
+        vars -> update_liquid_splits_block_vars(liquid_splits, vars)
       end
 
     socket
@@ -2178,11 +2207,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
-  def update_liquid_splits_vars(liquid_splits, vars) do
+  def update_liquid_splits_block_vars(liquid_splits, vars) do
     liquid_splits
     |> Enum.reduce([], fn
-      {:variable, var_key, prev_var_value}, acc ->
-        [{:variable, var_key, liquid_render_variable(var_key, vars)} | acc]
+      {:variable, "entry." <> _, _} = entry_var, acc ->
+        [entry_var | acc]
+
+      {:variable, var_key, _prev_var_value}, acc ->
+        [{:variable, var_key, liquid_render_block_variable(var_key, vars)} | acc]
 
       item, acc ->
         [item | acc]
@@ -2289,20 +2321,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp liquid_render_variable("entry." <> var_path_string, assigns) do
+  defp liquid_render_entry_variable(var_path_string, entry) do
     var_path =
       var_path_string
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
     Brando.Utils.try_path(entry, var_path) |> raw()
   rescue
     ArgumentError ->
-      "entry.#{var_path_string}"
+      "{{ entry.#{var_path_string} }}"
   end
 
-  defp liquid_render_variable(var, vars) do
+  defp liquid_render_block_variable(var, vars) do
     case Enum.find(vars, &(Changeset.get_field(&1, :key) == var)) do
       var_cs -> Changeset.get_field(var_cs, :value)
       nil -> var

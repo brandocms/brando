@@ -24,17 +24,17 @@ defmodule Brando.Villain do
   @fragment_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
-  Parses `json` (in Villain-format).
+  Parse blocks
+
   Delegates to the parser module configured in the otp_app's brando.exs.
   Renders to HTML.
   """
-  def parse(data, entry \\ nil, opts \\ [])
+  def parse(entry_blocks_list, entry \\ nil, opts \\ [])
+  def parse([], _, _), do: ""
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
 
-  def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
-
-  defp do_parse(data, entry, opts) do
+  def parse(entry_blocks_list, entry, opts) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
@@ -43,10 +43,7 @@ defmodule Brando.Villain do
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
     {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
 
-    entry =
-      entry
-      |> maybe_nil_fields(opts_map)
-      |> maybe_put_timestamps()
+    entry = maybe_put_timestamps(entry)
 
     context =
       entry
@@ -62,11 +59,11 @@ defmodule Brando.Villain do
       |> Map.put(:fragments, fragments)
 
     html =
-      data
+      entry_blocks_list
       |> Enum.reduce([], fn
-        %{hidden: true}, acc -> acc
-        %{marked_as_deleted: true}, acc -> acc
-        data_node, acc -> [parse_node(parser, data_node, opts_map) | acc]
+        %{block: %{active: false}}, acc -> acc
+        %{block: %{marked_as_deleted: true}}, acc -> acc
+        %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
       end)
       |> Enum.reverse()
       |> Enum.join()
@@ -81,7 +78,7 @@ defmodule Brando.Villain do
   end
 
   def render_block(block, entry, opts \\ [])
-  def render_block(%{hidden: true}, _entry, _opts), do: ""
+  def render_block(%{active: false}, _entry, _opts), do: ""
   def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
 
   def render_block(%Brando.Content.Block{} = block, entry, opts) do
@@ -92,10 +89,7 @@ defmodule Brando.Villain do
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
     {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
 
-    entry =
-      entry
-      |> maybe_nil_fields(opts_map)
-      |> maybe_put_timestamps()
+    entry = maybe_put_timestamps(entry)
 
     context =
       entry
@@ -134,36 +128,19 @@ defmodule Brando.Villain do
     add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))
   end
 
-  defp parse_node(parser, data_node, opts_map) do
-    require Logger
-
-    Logger.error("""
-
-    parse_node
-    #{inspect(data_node, pretty: true)}
-
-    """)
-
-    type_atom = data_node.type
+  defp parse_node(parser, block, opts_map) do
+    type_atom = block.type
 
     if not is_atom(type_atom) or is_nil(type_atom) do
       raise """
       Expected type to be an atom, got: #{inspect(type_atom)}
 
-      Data node: #{inspect(data_node, pretty: true)}
+      Data node: #{inspect(block, pretty: true)}
       """
     end
 
-    apply(parser, type_atom, [data_node, opts_map])
+    apply(parser, type_atom, [block, opts_map])
   end
-
-  # so we don't pass around unneccessary data in the parser
-  defp maybe_nil_fields(entry, %{data_field: data_field, html_field: html_field}),
-    do: %{entry | data_field => nil, html_field => nil}
-
-  defp maybe_nil_fields(entry, %{data_field: data_field}), do: %{entry | data_field => nil}
-  defp maybe_nil_fields(entry, %{html_field: html_field}), do: %{entry | html_field => nil}
-  defp maybe_nil_fields(entry, _), do: entry
 
   def get_base_context do
     locale = Gettext.get_locale(Brando.gettext())

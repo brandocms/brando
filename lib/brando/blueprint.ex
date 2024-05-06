@@ -260,20 +260,6 @@ defmodule Brando.Blueprint do
         %{name: :updated_at} ->
           []
 
-        %{type: :villain} = attr ->
-          Ecto.Schema.field(
-            attr.name,
-            to_ecto_type(:villain),
-            to_ecto_opts(attr.type, attr.opts) ++
-              [
-                types: Brando.Villain.Blocks.list_blocks(),
-                type_field: :type,
-                default: [],
-                on_type_not_found: :raise,
-                on_replace: :delete
-              ]
-          )
-
         attr ->
           Ecto.Schema.field(
             attr.name,
@@ -310,11 +296,13 @@ defmodule Brando.Blueprint do
           )
 
         # TODO: don't hard code :blocks -- build module name from name
-        %{type: :has_many, name: :blocks, opts: %{module: :blocks}} ->
+        %{type: :has_many, name: rel_name, opts: %{module: :blocks}} ->
           main_module = unquote(module)
           block_module = Module.concat([main_module, Blocks])
 
           [
+            Ecto.Schema.field(:"rendered_#{rel_name}", :string),
+            Ecto.Schema.field(:"rendered_#{rel_name}_at", :utc_datetime),
             Ecto.Schema.has_many(
               :entry_blocks,
               block_module,
@@ -823,7 +811,7 @@ defmodule Brando.Blueprint do
         @gallery_fields
       end
 
-      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
+      @villain_fields Enum.filter(@all_relations, &(&1.opts.module == :blocks))
       def __villain_fields__ do
         @villain_fields
       end

@@ -27,7 +27,10 @@ defmodule Brando.Content.Template do
     attribute :name, :string, required: true
     attribute :namespace, :string, required: true
     attribute :instructions, :text
-    attribute :data, :villain
+  end
+
+  relations do
+    relation :blocks, :has_many, module: :blocks
   end
 
   listings do

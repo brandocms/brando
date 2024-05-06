@@ -8,50 +8,78 @@ defmodule Brando.Trait.Villain do
   @type changeset :: Changeset.t()
   @type config :: list()
 
+  @impl true
+  def validate(module, _config) do
+    if Enum.filter(module.__attributes__(), &(&1.type == :villain)) != [] do
+      raise Brando.Exception.BlueprintError,
+        message: """
+        Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are attributes with type `:villain` found.
+
+        Remove your :villain fields from the attributes block
+
+            attributes do
+              attribute :data, :villain
+            end
+
+        And instead add as a relation
+
+            relations do
+              relation :blocks, :has_many, module: :blocks
+            end
+        """
+    end
+
+    if module.__villain_fields__ == [] do
+      raise Brando.Exception.BlueprintError,
+        message: """
+        Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no relations with module `:blocks` found.
+
+            relations do
+              relation :blocks, :has_many, module: :blocks
+            end
+        """
+    end
+
+    true
+  end
+
+  # @doc """
+  # Generate HTML
+  # """
   # @impl true
-  # def validate(module, _config) do
-  #   if module.__villain_fields__ == [] do
-  #     raise Brando.Exception.BlueprintError,
-  #       message: """
-  #       Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no relations with module `:blocks` found.
+  # def changeset_mutator(module, _config, changeset, _user, opts) do
+  #   opts = Enum.into(opts, %{})
+  #   cast_rendered_blocks(changeset, module, opts)
+  #   # |> cast_assoc(:book_authors,
+  #   #   with: &AuthorBook.changeset/3,
+  #   #   sort_param: :authors_order,
+  #   #   drop_param: :authors_delete
+  #   # )
 
-  #           relations do
-  #             relation :blocks, :has_many, module: :blocks
-  #           end
-  #       """
-  #   end
+  #   # case Keyword.get(opts, :skip_villain) do
+  #   #   true ->
+  #   #     cast_poly(changeset, module.__villain_fields__())
 
-  #   true
+  #   #   _ ->
+  #   #     case cast_poly(changeset, module.__villain_fields__()) do
+  #   #       %{valid?: true} = casted_changeset ->
+  #   #         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+  #   #           Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+  #   #         end)
+
+  #   #       casted_changeset ->
+  #   #         casted_changeset
+  #   #     end
+  #   # end
+  #   changeset
   # end
 
-  @doc """
-  Generate HTML
-  """
-  @impl true
-  def changeset_mutator(module, _config, changeset, _user, opts) do
-    # |> cast_assoc(:book_authors,
-    #   with: &AuthorBook.changeset/3,
-    #   sort_param: :authors_order,
-    #   drop_param: :authors_delete
-    # )
+  # defp cast_rendered_blocks(changeset, _, %{skip_villain: true}) do
+  #   changeset
+  # end
+  # defp cast_rendered_blocks(changeset, module, _) do
 
-    # case Keyword.get(opts, :skip_villain) do
-    #   true ->
-    #     cast_poly(changeset, module.__villain_fields__())
-
-    #   _ ->
-    #     case cast_poly(changeset, module.__villain_fields__()) do
-    #       %{valid?: true} = casted_changeset ->
-    #         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-    #           Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-    #         end)
-
-    #       casted_changeset ->
-    #         casted_changeset
-    #     end
-    # end
-    changeset
-  end
+  # end
 
   @impl true
   def generate_code(parent_module, _config) do
