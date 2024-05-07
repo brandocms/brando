@@ -1,6 +1,31 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.53.0-dev
+## 0.53.0
+
+* BREAKING: Switch out `import Phoenix.LiveView.Helpers` with `import Phoenix.Component`
+
+* Upgrade deps:
+  ```
+  {:phoenix_live_view, "~> 0.20"},
+  {:phoenix_live_dashboard, "~> 0.8"},
+  ```
+
+* BREAKING: If you upgrade to Vite 3, they suddenly output `admin/main.css` instead of `admin/admin.css`.
+  To fix, edit your `assets/backend/vite.config.js` and replace `manifest: false` 
+  with `manifest: 'admin_manifest.json`. You can also add in a hash since we now use a manifest:
+  ```
+  entryFileNames: `assets/admin/admin-[hash].js`,
+  chunkFileNames: `assets/admin/__[name]-[hash].js`,
+  assetFileNames: `assets/admin/admin-[hash].[ext]`
+  ```
+
+* BREAKING: Svelte's Vite plugin is requiring type = module now so there are some changes to do:
+  - Upgrade Vite + plugins > 4
+  - Set `assets/backend/package.json` type to `module` -> `"type": "module"`
+  - Rename `assets/backend/postcss.config.js` to `assets/backend/postcss.config.cjs`
+  - Rename `assets/backend/europa.config.js` to `assets/backend/europa.config.cjs`
+  - Upgrade `assets/backend` europacss to `> 0.12`
+
 * BREAKING: Updated Sentry to 10.x. Add to your `Dockerfile` before mix release:
   
     RUN mix sentry.package_source_code
@@ -16,6 +41,22 @@ See `UPGRADE.md` for instructions on upgrading between versions.
       otp_app: :my_app,
       pubsub_server: MyApp.PubSub,
       presence: __MODULE__
+
+* To enable presence in your update forms, add `presences={@presences}` to your 
+  `Form` live components in update views:
+
+  ```
+  <.live_component module={Form}
+    id="page_form"
+    entry_id={@entry_id}
+    current_user={@current_user}
+    presences={@presences}
+    schema={@schema}>
+    <:header>
+      <%= gettext("Edit page") %>
+    </:header>
+  </.live_component>
+  ```
 
 * BREAKING: Replace `<%= csrf_meta_tag %>` with ´<.csrf_meta_tag />`
 
@@ -125,6 +166,14 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BREAKING: Add `delete_selected` as a built-in action for listing selections.
   This means you should remove your own `delete_selected` from your listing's
   `selection_actions`
+
+* BREAKING: Added default actions for listings:
+  - edit
+  - delete
+  - duplicate
+
+  This means you should remove these from your listings (unless you want them doubled)
+
 * BREAKING: `@identity` now refers to the current language identity, instead 
   of a map of all languages
 * BREAKING: Remove datasource block and introduce module blocks with 
@@ -204,6 +253,36 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   template fn e -> {MyAppWeb.ProjectView, e.template} end
   ```
   
+* Use Finch for emails:
+  - Add `finch` as a dep to your `mix.exs`:
+  ```elixir
+  {:finch, "~> 0.13"},
+  ```
+  - Add to your config:
+  ```elixir
+  config :swoosh, :api_client, MyApp.Finch
+  ```
+  - Add to your application supervisor in `lib/my_app/application.ex`
+  ```diff
+    children = [
+      # Start the Ecto repository
+      MyApp.Repo,
+      # Start the Telemetry supervisor
+      MyAppWeb.Telemetry,
+      # Start the PubSub system
+      {Phoenix.PubSub, name: MyApp.PubSub},
+      # Start Finch
+  +   {Finch, name: MyApp.Finch},
+      # Start the Endpoint (http/https)
+      MyAppWeb.Endpoint,
+      # Start the Presence system
+      MyApp.Presence,
+      # Start the Brando supervisor
+      Brando
+      # Start a worker by calling: MyApp.Worker.start_link(arg)
+      # {MyApp.Worker, arg},
+    ]
+
 * Add `:preview_expiry_days` config. Default is two days.
   I.e `config :brando, :preview_expiry_days, 31`
 * Add alternate entries
