@@ -5,13 +5,12 @@ defmodule Brando.Villain do
   import Ecto.Query
   import Brando.Query.Helpers
 
-  alias Brando.PolymorphicEmbed
   alias Brando.Cache
   alias Brando.Content
+  alias Brando.Content.Module
   alias Brando.Pages
   alias Brando.Trait
   alias Brando.Utils
-  alias Brando.Content.Module
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
   alias Liquex.Context
@@ -81,7 +80,7 @@ defmodule Brando.Villain do
   def render_block(%{active: false}, _entry, _opts), do: ""
   def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
 
-  def render_block(%Brando.Content.Block{} = block, entry, opts) do
+  def render_block(%Content.Block{} = block, entry, opts) do
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
 
@@ -322,6 +321,85 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Rerender blocks for id/schema
+
+  ## Example
+
+      rerender_blocks(Pages.Page, 1)
+
+  Will try to rerender all block fields for page with id: 1.
+
+  We treat page fragments special, since they need to propagate to other referencing
+  pages and fragments
+  """
+  @spec rerender_blocks(schema :: module, id :: integer | binary) ::
+          {:ok, map} | {:error, changeset}
+  def rerender_blocks(schema, id, updated_module_id \\ nil) do
+    ctx = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    get_opts =
+      if schema.has_trait(Brando.Trait.SoftDelete) do
+        %{matches: %{id: id}, with_deleted: true}
+      else
+        %{matches: %{id: id}}
+      end
+
+    case apply(ctx, :"get_#{singular}", [get_opts]) do
+      {:error, _} = err ->
+        require Logger
+
+        Logger.error("""
+        ==> Failed to rerender_html_from_id
+
+        #{inspect(err, pretty: true)}
+
+        Schema..: #{inspect(schema, pretty: true)}
+        Id......: #{inspect(id, pretty: true)}
+
+        """)
+
+      {:ok, record} ->
+        {:ok, modules} = Content.list_modules(@module_cache_ttl)
+
+        data = Map.get(record, data_field)
+
+        updated_data =
+          if updated_module_id do
+            module = Enum.find(modules, &(&1.id == updated_module_id))
+            Brando.Villain.reapply_module(module, data)
+          else
+            data
+          end
+
+        parsed_data = Brando.Villain.parse(updated_data, record)
+
+        changeset =
+          record
+          |> Changeset.change()
+          |> Changeset.put_change(
+            data_field,
+            updated_data
+          )
+          |> Changeset.put_change(
+            html_field,
+            parsed_data
+          )
+
+        case Brando.repo().update(changeset) do
+          {:ok, %Pages.Fragment{} = fragment} ->
+            Brando.Cache.Query.evict({:ok, fragment})
+            Pages.update_villains_referencing_fragment(fragment)
+
+          {:ok, result} ->
+            Brando.Cache.Query.evict({:ok, result})
+
+            {:ok, result}
+        end
+    end
+  end
+
+  @doc """
   Rerender multiple IDS
   """
   @spec rerender_html_from_ids({Module, atom, atom}, [integer | binary]) :: nil | [any()]
@@ -342,6 +420,7 @@ defmodule Brando.Villain do
   We treat page fragments special, since they need to propagate to other referencing
   pages and fragments
   """
+  # TODO: DEPRECATE AND DELETE
   @spec rerender_html_from_id(
           {schema :: module, data_field :: atom, html_field :: atom},
           integer | binary
@@ -420,6 +499,10 @@ defmodule Brando.Villain do
     Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
   end
 
+  @doc """
+  Return block module corresponding to `block_type`
+  Used when creating refs in ModuleUpdateLive
+  """
   def get_block_by_type(block_type) do
     default_blocks = Blocks.list_blocks()
     Keyword.get(default_blocks, block_type)
@@ -508,36 +591,77 @@ defmodule Brando.Villain do
   Update all villain fields in database that has a module with `id`.
   """
   def update_module_in_fields(module_id) do
-    villains = list_villains()
+    module_id
+    |> list_block_ids_using_module_id()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
 
-    result =
-      for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn
-          {:villain, data_field, html_field}, acc ->
-            ids = list_ids_with_modules(schema, data_field, [module_id])
-            [acc | rerender_html_from_ids({schema, data_field, html_field}, ids, module_id)]
+  defp enqueue_entry_map_for_render(entry_map) do
+    for {schema, ids} <- entry_map do
+      Brando.Villain.enqueue_entry_map_for_render(schema, ids)
+    end
+  end
 
-          data_field, acc ->
-            html_field = get_html_field(schema, data_field)
+  defp list_block_ids_using_module_id(module_id) do
+    query =
+      from b in Content.Block,
+        select: b.id,
+        where: b.module_id == ^module_id
 
-            case list_ids_with_modules(schema, data_field.name, [module_id]) do
-              [] ->
-                acc
+    Brando.repo().all(query)
+  end
 
-              ids ->
-                [
-                  acc
-                  | rerender_html_from_ids(
-                      {schema, data_field.name, html_field.name},
-                      ids,
-                      module_id
-                    )
-                ]
-            end
-        end)
-      end
+  defp list_entry_ids_for_root_blocks_by_source(source_map) do
+    Enum.reduce(source_map, %{}, fn {join_source, ids}, acc ->
+      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
 
-    {:ok, result}
+      query =
+        from js in join_source,
+          where: js.block_id in ^ids,
+          select: js.entry_id,
+          distinct: true
+
+      entry_ids = Brando.repo().all(query)
+      Map.put(acc, schema, entry_ids)
+    end)
+  end
+
+  defp rerender_entries_with_module_ids(blocks) do
+    block_ids = Enum.map(blocks, & &1.id)
+
+    for {schema, ids} <- list_root_block_ids_by_source(block_ids) do
+    end
+  end
+
+  defp list_root_block_ids_by_source(block_ids) do
+    base_case =
+      from(cb in "content_blocks",
+        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
+        where: cb.id in ^block_ids
+      )
+
+    recursive_case =
+      from(cb in "content_blocks",
+        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
+        join: pb in "parent_blocks",
+        on: pb.parent_id == cb.id
+      )
+
+    query = union_all(base_case, ^recursive_case)
+
+    "parent_blocks"
+    |> recursive_ctes(true)
+    |> with_cte("parent_blocks", as: ^query)
+    |> where([b], is_nil(b.parent_id))
+    |> select([b], %{id: b.id, source: b.source})
+    |> distinct(true)
+    |> Brando.repo().all()
+    |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
+      {:ok, casted_module} = Brando.Type.Module.cast(source)
+      Map.update(acc, casted_module, [id], &(&1 ++ [id]))
+    end)
   end
 
   @doc """
@@ -787,210 +911,6 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Scan recursively through `blocks` looking for `uid` and replace with `new_block`
-  """
-  def replace_block(blocks, uid, new_block) do
-    Enum.reduce(blocks, [], fn
-      %{uid: ^uid}, acc ->
-        [new_block | acc]
-
-      %{type: "module", data: %{refs: refs, entries: entries}} = module, acc ->
-        refs_path = [Access.key(:data), Access.key(:refs)]
-        entries_path = [Access.key(:data), Access.key(:entries)]
-
-        replaced_refs_and_entries =
-          module
-          |> put_in(refs_path, replace_block(refs, uid, new_block))
-          |> put_in(entries_path, replace_block(entries, uid, new_block))
-
-        [replaced_refs_and_entries | acc]
-
-      %{type: "module_entry", data: %{refs: refs}} = module, acc ->
-        refs_path = [Access.key(:data), Access.key(:refs)]
-        replaced_refs = put_in(module, refs_path, replace_block(refs, uid, new_block))
-        [replaced_refs | acc]
-
-      %{type: "container", data: %{blocks: blocks}} = container, acc ->
-        [
-          put_in(
-            container,
-            [
-              Access.key(:data),
-              Access.key(:blocks)
-            ],
-            replace_block(blocks, uid, new_block)
-          )
-          | acc
-        ]
-
-      %Brando.Content.Module.Ref{data: %{uid: ^uid}} = ref, acc ->
-        [%{ref | data: new_block} | acc]
-
-      block, acc ->
-        [block | acc]
-    end)
-    |> Enum.reverse()
-  end
-
-  @doc """
-  Preload all image vars in blocks
-  """
-  def preload_vars(nil), do: nil
-
-  def preload_vars(blocks) do
-    Enum.reduce(blocks, [], fn
-      %Brando.Content.OldVar.Image{value: %Ecto.Association.NotLoaded{}} = var, acc ->
-        [Brando.repo().preload(var, :value) | acc]
-
-      %{type: "module", data: %{vars: vars, entries: entries}} = module, acc ->
-        entries_path = [Access.key(:data), Access.key(:entries)]
-        vars_path = [Access.key(:data), Access.key(:vars)]
-
-        replaced_entries_and_vars =
-          module
-          |> put_in(vars_path, preload_vars(vars))
-          |> put_in(entries_path, preload_vars(entries))
-
-        [replaced_entries_and_vars | acc]
-
-      %{type: "module_entry", data: %{refs: refs}} = module, acc ->
-        refs_path = [Access.key(:data), Access.key(:refs)]
-        replaced_refs = put_in(module, refs_path, preload_vars(refs))
-        [replaced_refs | acc]
-
-      %{type: "container", data: %{blocks: blocks}} = container, acc ->
-        [
-          put_in(
-            container,
-            [
-              Access.key(:data),
-              Access.key(:blocks)
-            ],
-            preload_vars(blocks)
-          )
-          | acc
-        ]
-
-      block, acc ->
-        [block | acc]
-    end)
-    |> Enum.reverse()
-  end
-
-  @doc """
-  Scan recursively through `blocks` looking for `uid` and remove
-  """
-  def delete_block(blocks, uid) do
-    Enum.reduce(blocks, [], fn
-      %{uid: ^uid}, acc ->
-        acc
-
-      %{type: "module", data: %{refs: refs}} = module, acc ->
-        [
-          put_in(
-            module,
-            [
-              Access.key(:data),
-              Access.key(:refs)
-            ],
-            delete_block(refs, uid)
-          )
-          | acc
-        ]
-
-      %{type: "container", data: %{blocks: blocks}} = container, acc ->
-        [
-          put_in(
-            container,
-            [
-              Access.key(:data),
-              Access.key(:blocks)
-            ],
-            delete_block(blocks, uid)
-          )
-          | acc
-        ]
-
-      block, acc ->
-        [block | acc]
-    end)
-    |> Enum.reverse()
-  end
-
-  @doc """
-  Scan recursively through `blocks` looking for `uid` and merge with `merge_data``
-  """
-  def merge_block(blocks, uid, merge_data, merge_entry? \\ false) do
-    Enum.reduce(blocks || [], [], fn
-      %{uid: ^uid} = block, acc ->
-        [Utils.deep_merge(block, merge_data) | acc]
-
-      %{type: "module", data: %{refs: refs, entries: entries, multi: true}} = module, acc ->
-        if merge_entry? do
-          [
-            put_in(
-              module,
-              [
-                Access.key(:data),
-                Access.key(:entries)
-              ],
-              merge_block(entries, uid, merge_data)
-            )
-            | acc
-          ]
-        else
-          [
-            put_in(
-              module,
-              [
-                Access.key(:data),
-                Access.key(:refs)
-              ],
-              merge_block(refs, uid, merge_data, merge_entry?)
-            )
-            | acc
-          ]
-        end
-
-      %{type: "module", data: %{refs: refs}} = module, acc ->
-        [
-          put_in(
-            module,
-            [
-              Access.key(:data),
-              Access.key(:refs)
-            ],
-            merge_block(refs, uid, merge_data, merge_entry?)
-          )
-          | acc
-        ]
-
-      %{type: "container", data: %{blocks: blocks}} = container, acc ->
-        [
-          put_in(
-            container,
-            [
-              Access.key(:data),
-              Access.key(:blocks)
-            ],
-            merge_block(blocks, uid, merge_data, merge_entry?)
-          )
-          | acc
-        ]
-
-      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block} = ref, acc ->
-        [%{ref | data: Utils.deep_merge(block, merge_data)} | acc]
-
-      %Brando.Content.Module.Entry{data: %{uid: ^uid} = block} = entry, acc ->
-        [%{entry | data: Utils.deep_merge(block, merge_data)} | acc]
-
-      block, acc ->
-        [block | acc]
-    end)
-    |> Enum.reverse()
-  end
-
-  @doc """
   Recursively search a list of blocks for block matching `uid`
   """
   @spec find_block(list(), binary()) :: map | nil
@@ -1021,52 +941,12 @@ defmodule Brando.Villain do
           {:cont, acc}
         end
 
-      %Brando.Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
+      %Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
         {:halt, block}
 
       _, acc ->
         {:cont, acc}
     end) || acc
-  end
-
-  @doc """
-  Search for block in changeset
-  """
-  def get_block_in_changeset(changeset, %Phoenix.HTML.FormField{} = data_field, block_uid) do
-    blocks = Changeset.get_field(changeset, data_field.field)
-    find_block(blocks, block_uid)
-  end
-
-  @doc """
-  Switch out a block by uid in changeset
-  """
-  def replace_block_in_changeset(
-        changeset,
-        %Phoenix.HTML.FormField{} = data_field,
-        block_uid,
-        new_block
-      ) do
-    blocks = Changeset.get_field(changeset, data_field.field)
-    updated_blocks = Brando.Villain.replace_block(blocks, block_uid, new_block)
-    Changeset.put_change(changeset, data_field.field, updated_blocks)
-  end
-
-  def update_block_in_changeset(
-        changeset,
-        %Phoenix.HTML.FormField{} = data_field,
-        block_uid,
-        merge_data,
-        merge_entry? \\ false
-      ) do
-    blocks = Changeset.get_field(changeset, data_field.field)
-    updated_blocks = Brando.Villain.merge_block(blocks, block_uid, merge_data, merge_entry?)
-    Changeset.put_change(changeset, data_field.field, updated_blocks)
-  end
-
-  def delete_block_in_changeset(changeset, %Phoenix.HTML.FormField{} = data_field, block_uid) do
-    blocks = Changeset.get_field(changeset, data_field.field)
-    updated_blocks = Brando.Villain.delete_block(blocks, block_uid)
-    Changeset.put_change(changeset, data_field.field, updated_blocks)
   end
 
   def add_uid_to_refs(nil), do: nil
@@ -1206,7 +1086,20 @@ defmodule Brando.Villain do
   def reapply_vars(_module, module_vars, vars) do
     Enum.map(vars, fn %{key: var_key, __struct__: _var_module} = var ->
       var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
-      protected_attrs = [:value, :value_id]
+
+      protected_attrs = [
+        :value,
+        :value_boolean,
+        :image_id,
+        :palette_id,
+        :file_id,
+        :linked_identifier_id,
+        :page_id,
+        :block_id,
+        :module_id,
+        :global_set_id
+      ]
+
       overwritten_attrs = Map.keys(var_src) -- protected_attrs
       new_attrs = Map.take(var_src, overwritten_attrs)
       Map.merge(var, new_attrs)

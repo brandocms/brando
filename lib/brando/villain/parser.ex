@@ -954,27 +954,27 @@ defmodule Brando.Villain.Parser do
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var(
-             %Brando.Content.OldVar.Image{
+             %Brando.Content.Var{
+               type: :image,
                key: key,
                label: _,
-               type: _,
-               value: %Ecto.Association.NotLoaded{}
+               image: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        %{value: value} = Brando.repo().preload(var, [:value])
-        {key, value}
+        %{image: image} = Brando.repo().preload(var, [:image])
+        {key, image}
       end
 
       defp process_var(
-             %Brando.Content.Var.File{
+             %Brando.Content.Var{
+               type: :file,
                key: key,
                label: _,
-               type: _,
-               value: %Ecto.Association.NotLoaded{}
+               file: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        %{value: value} = Brando.repo().preload(var, [:value])
-        {key, value}
+        %{file: file} = Brando.repo().preload(var, [:file])
+        {key, file}
       end
 
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}

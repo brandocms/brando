@@ -31,9 +31,9 @@ defmodule Brando.Content.Var do
         :datetime,
         :color,
         :select,
+        :file,
         # todo
         :date,
-        :file,
         :link
       ]
 

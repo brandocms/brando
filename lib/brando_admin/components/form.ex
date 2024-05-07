@@ -252,32 +252,6 @@ defmodule BrandoAdmin.Components.Form do
      |> maybe_save()}
   end
 
-  defp maybe_save(socket) do
-    block_changesets = socket.assigns.block_changesets
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      # still waiting for blocks for fields
-      require Logger
-
-      Logger.error("""
-      -> Still waiting for blocks for fields: #{inspect(block_changesets)}
-      """)
-
-      socket
-    else
-      # we have all block fields, try to save
-      require Logger
-
-      Logger.error("""
-      -> Have all block fields. Try to save
-      """)
-
-      socket
-      |> assign(:all_blocks_received?, true)
-      |> push_event("b:submit", %{})
-    end
-  end
-
   def update(
         %{action: :update_changeset, changeset: updated_changeset, force_validation: true},
         socket
@@ -371,7 +345,7 @@ defmodule BrandoAdmin.Components.Form do
                 var,
                 [Access.key(:options)],
                 (var.options || []) ++
-                  [%Brando.Content.OldVar.Select.Option{label: "label", value: "option"}]
+                  [%Brando.Content.Var.Option{label: "label", value: "option"}]
               )
             ]
 
@@ -472,21 +446,8 @@ defmodule BrandoAdmin.Components.Form do
         {:ok, entry} -> entry
         {:error, _err} -> raise Brando.Exception.EntryNotFoundError
       end
-
-      # FIXME: When we have sorted out poly changesets clobbering the image var's
-      # `value` field, we can re-enable this. Currently it just adds a preload that
-      # is wasted since it gets destroyed on first "validate"
-      # |> scan_and_preload_block_vars(schema)
     end)
   end
-
-  # defp scan_and_preload_block_vars(entry, schema) do
-  #   Enum.reduce(schema.__villain_fields__(), entry, fn %{name: field}, updated_entry ->
-  #     blocks = Map.get(updated_entry, field)
-  #     updated_blocks = Brando.Villain.preload_vars(blocks)
-  #     Map.put(updated_entry, field, updated_blocks)
-  #   end)
-  # end
 
   defp assign_refreshed_entry(
          %{
@@ -3211,5 +3172,31 @@ defmodule BrandoAdmin.Components.Form do
       <%= render_slot(@inner_block) %>
     </label>
     """
+  end
+
+  defp maybe_save(socket) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      # still waiting for blocks for fields
+      require Logger
+
+      Logger.error("""
+      -> Still waiting for blocks for fields: #{inspect(block_changesets)}
+      """)
+
+      socket
+    else
+      # we have all block fields, try to save
+      require Logger
+
+      Logger.error("""
+      -> Have all block fields. Try to save
+      """)
+
+      socket
+      |> assign(:all_blocks_received?, true)
+      |> push_event("b:submit", %{})
+    end
   end
 end

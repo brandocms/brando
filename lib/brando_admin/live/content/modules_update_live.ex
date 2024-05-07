@@ -62,42 +62,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             add_table_template="add_table_template"
           />
         </div>
-        <.inputs_for
-          :let={entry}
-          :if={@form[:wrapper].value in [true, "true"]}
-          field={@form[:entry_template]}
-        >
-          <div class="entry-template">
-            <hr />
-            <h2>Entry template</h2>
-            <p>
-              This module will be used as a template when generating new entries inside the wrapper module
-            </p>
-
-            <div class="block-editor">
-              <div class="code">
-                <Input.code field={entry[:code]} label={gettext("Code")} />
-              </div>
-
-              <Input.input type={:hidden} field={entry[:id]} />
-
-              <.live_component
-                module={ModuleProps}
-                id={"entry-module-props-#{entry.id}"}
-                form={entry}
-                entry_form
-                create_ref={JS.push("entry_create_ref")}
-                duplicate_ref={JS.push("entry_duplicate_ref")}
-                delete_ref="entry_delete_ref"
-                create_var={JS.push("entry_create_var")}
-                duplicate_var={JS.push("entry_duplicate_var")}
-                delete_var="entry_delete_var"
-                show_modal="show_modal"
-              />
-            </div>
-          </div>
-        </.inputs_for>
-
         <div class="button-group">
           <Form.submit_button
             processing={false}
@@ -152,13 +116,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       ) do
     changeset = form.source
 
-    var_module =
-      var_type
-      |> String.to_existing_atom()
-      |> Brando.Content.get_var_by_type()
-
     new_col =
-      struct(var_module, %{
+      struct(Brando.Content.Var, %{
         key: Brando.Utils.random_string(5),
         label: "Label",
         type: var_type,
@@ -262,32 +221,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
   end
 
   def handle_event(
-        "sequenced",
-        %{"ids" => order_indices, "sortable_id" => "sortable-vars-entry-form"},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-    vars = entry_template.vars
-
-    sorted_vars = Enum.map(order_indices, &Enum.at(vars, &1))
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:vars, sorted_vars)
-
-    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
-  def handle_event(
         "create_ref",
         %{"type" => block_type},
         %{assigns: %{form: form}} = socket
@@ -301,12 +234,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       |> Villain.get_block_by_type()
 
     ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
-
-    require Logger
-
-    Logger.error("""
-    -> ref_data: #{inspect(ref_data, pretty: true)}
-    """)
 
     new_ref = %Ref{
       name: Brando.Utils.random_string(5),
@@ -426,160 +353,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
      |> assign(:var_name, nil)}
   end
 
-  ## Entry events
-
-  def handle_event(
-        "entry_create_ref",
-        %{"type" => block_type},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-    refs = entry_template.refs
-
-    block_module =
-      block_type
-      |> String.to_existing_atom()
-      |> Villain.get_block_by_type()
-
-    ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
-
-    new_ref = %Ref{
-      name: Brando.Utils.random_string(5),
-      data: ref_data
-    }
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:refs, [new_ref | refs])
-
-    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
-  def handle_event(
-        "entry_delete_ref",
-        %{"id" => ref_name},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-
-    refs = entry_template.refs
-    filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:refs, filtered_refs)
-
-    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
-  def handle_event(
-        "entry_create_var",
-        %{"type" => var_type},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-    vars = entry_template.vars || []
-
-    var_module =
-      var_type
-      |> String.to_existing_atom()
-      |> Brando.Content.get_var_by_type()
-
-    new_var =
-      struct(var_module, %{
-        key: Brando.Utils.random_string(5),
-        label: "Label",
-        type: var_type
-      })
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:vars, [new_var | vars])
-
-    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)
-     |> push_event("b:validate", %{})}
-  end
-
-  def handle_event(
-        "entry_duplicate_var",
-        %{"id" => var_key},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-    vars = entry_template.vars || []
-    var_to_dupe = Enum.find(vars, &(&1.key == var_key))
-
-    new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:vars, [new_var | vars])
-
-    updated_changeset = put_embed(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
-  def handle_event(
-        "entry_delete_var",
-        %{"id" => var_key},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    entry_template = get_field(changeset, :entry_template)
-
-    vars = entry_template.vars
-    filtered_vars = Enum.reject(vars, &(&1.key == var_key))
-
-    updated_entry_template =
-      entry_template
-      |> Map.from_struct()
-      |> Map.drop([:__meta__, :id])
-      |> Map.put(:vars, filtered_vars)
-
-    updated_changeset = put_change(changeset, :entry_template, updated_entry_template)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
   def handle_event(
         "validate",
         %{"module" => module_params},
@@ -658,7 +431,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                 var,
                 [Access.key(:options)],
                 (var.options || []) ++
-                  [%Brando.Content.OldVar.Select.Option{label: "label", value: "option"}]
+                  [%Brando.Content.Var.Option{label: "label", value: "option"}]
               )
             ]
 

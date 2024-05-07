@@ -30,11 +30,29 @@ defmodule Brando.Content do
   use Brando.Query
   import Ecto.Query
 
+  alias Brando.Content.Block
   alias Brando.Content.Module
   alias Brando.Content.Palette
   alias Brando.Content.Template
-  alias Brando.Content.OldVar
   alias Brando.Villain
+
+  query :list, Block, do: fn query -> from(q in query) end
+
+  filters Block do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+
+      {:class, class}, query ->
+        from(q in query, where: ilike(q.class, ^"%#{class}%"))
+
+      {:module_id, module_id}, query ->
+        from(q in query, where: q.module_id == ^module_id)
+
+      {:ids, ids}, query ->
+        from(q in query, where: q.id in ^ids)
+    end
+  end
 
   query(:list, Module, do: fn query -> from(q in query) end)
 
@@ -515,8 +533,6 @@ defmodule Brando.Content do
         {:ok, identifier}
     end
   end
-
-  def get_var_by_type(var_type), do: Keyword.get(OldVar.types(), var_type)
 
   def render_var(%{type: "string", value: value}), do: value
   def render_var(%{type: "text", value: value}), do: value

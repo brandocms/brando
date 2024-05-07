@@ -261,6 +261,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
+      <!-- check for empty stream -->
+      <%!-- <%= if @block_count == 0 do %>
+        <div class="blocks-empty-instructions">
+          <%= gettext("Click the plus to start adding content blocks") %>
+          <%= if @templates && @templates != [] do %>
+            <br /><%= gettext("or get started with a prefab'ed template") %>:<br />
+            <div class="blocks-templates">
+              <%= for template <- @templates do %>
+                <button
+                  type="button"
+                  phx-click={JS.push("use_template", target: @myself)}
+                  phx-value-id={template.id}
+                >
+                  <%= template.name %><br />
+                  <small><%= template.instructions %></small>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %> --%>
+
       <div
         id="blocks"
         phx-update="stream"

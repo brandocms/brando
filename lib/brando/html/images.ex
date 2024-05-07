@@ -70,8 +70,8 @@ defmodule Brando.HTML.Images do
     """
   end
 
-  def picture(%{src: %Brando.Content.OldVar.Image{} = var} = assigns) do
-    assigns = assign(assigns, src: var.value)
+  def picture(%{src: %Brando.Content.Var{type: :image} = var} = assigns) do
+    assigns = assign(assigns, src: var.image)
     picture(assigns)
   end
 

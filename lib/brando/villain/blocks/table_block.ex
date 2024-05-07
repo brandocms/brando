@@ -1,3 +1,4 @@
+# TODO: What do we do with these :cols?
 defmodule Brando.Villain.Blocks.TableBlock do
   defmodule Row do
     use Brando.Blueprint,
@@ -9,7 +10,6 @@ defmodule Brando.Villain.Blocks.TableBlock do
       gettext_module: Brando.Gettext
 
     alias Brando.Villain.Blocks
-    alias Brando.Content.OldVar
 
     trait Brando.Trait.CastPolymorphicEmbeds
 
@@ -20,11 +20,17 @@ defmodule Brando.Villain.Blocks.TableBlock do
     attributes do
       attribute :uid, :string
 
-      attribute :cols, {:array, PolymorphicEmbed},
-        types: OldVar.types(),
-        type_field: :type,
-        default: [],
-        on_type_not_found: :raise,
+      # attribute :cols, {:array, PolymorphicEmbed},
+      #   types: OldVar.types(),
+      #   type_field: :type,
+      #   default: [],
+      #   on_type_not_found: :raise,
+      #   on_replace: :delete
+    end
+
+    relations do
+      relation :cols, :embeds_many,
+        module: Blocks.TableBlock.Row.Col,
         on_replace: :delete
     end
   end

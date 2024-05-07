@@ -13,7 +13,6 @@ defmodule Brando.Pages.Page do
     plural: "pages",
     gettext_module: Brando.Gettext
 
-  alias Brando.Content.OldVar
   alias Brando.Pages
   alias Brando.Pages.Fragment
 
@@ -66,13 +65,6 @@ defmodule Brando.Pages.Page do
     attribute :is_homepage, :boolean
     attribute :has_url, :boolean, default: true
     attribute :css_classes, :string
-
-    attribute :vars, {:array, PolymorphicEmbed},
-      types: OldVar.types(),
-      type_field: :type,
-      default: [],
-      on_type_not_found: :raise,
-      on_replace: :delete
   end
 
   relations do
@@ -80,6 +72,11 @@ defmodule Brando.Pages.Page do
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
     relation :fragments, :has_many, module: Fragment
     relation :blocks, :has_many, module: :blocks
+
+    relation :vars, :has_many,
+      module: Brando.Content.Var,
+      on_replace: :delete_if_exists,
+      cast: true
   end
 
   @derive {Jason.Encoder, only: @derived_fields}

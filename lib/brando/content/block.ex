@@ -34,6 +34,7 @@ defmodule Brando.Content.Block do
     attribute :datasource, :boolean, default: false
     attribute :rendered_html, :string
     attribute :rendered_at, :datetime
+    attribute :source, Brando.Type.Module
   end
 
   relations do

@@ -196,12 +196,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     updated_changesets = Map.put(changesets, uid, nil)
 
+    selector = "[data-block-uid=\"#{uid}\"]"
+
     socket
     |> stream_insert(:children_forms, block_form, at: sequence)
     |> assign(:has_children?, true)
     |> assign(:block_list, updated_block_list)
     |> assign(:changesets, updated_changesets)
     |> send_child_sequence_update(updated_block_list)
+    |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
 
@@ -2284,6 +2287,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp liquid_render_picture_src(var_name, %{vars: vars}) do
+    # TODO: Give this another shake now that we have assocs
     # FIXME
     #
     # This is suboptimal at best. We preload all our image vars in the form, but when running
@@ -2293,10 +2297,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     # of replacing/inserting new every time.
 
     case Enum.find(vars, &(&1.key == var_name)) do
-      %Brando.Content.OldVar.Image{value_id: nil} ->
+      %Brando.Content.Var{type: :image, image_id: nil} ->
         ""
 
-      %Brando.Content.OldVar.Image{value: %Ecto.Association.NotLoaded{}, value_id: image_id} ->
+      %Brando.Content.Var{type: :image, image: %Ecto.Association.NotLoaded{}, image_id: image_id} ->
         case Brando.Cache.get("var_image_#{image_id}") do
           nil ->
             image = Brando.Images.get_image!(image_id)
@@ -2308,7 +2312,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             media_path
         end
 
-      %Brando.Content.OldVar.Image{value: image, value_id: image_id} ->
+      %Brando.Content.Var{image: image, image_id: image_id} ->
         media_path = Brando.Utils.media_url(image.path)
         Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
         media_path
@@ -2335,8 +2339,8 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp liquid_render_block_variable(var, vars) do
     case Enum.find(vars, &(Changeset.get_field(&1, :key) == var)) do
-      var_cs -> Changeset.get_field(var_cs, :value)
       nil -> var
+      var_cs -> Changeset.get_field(var_cs, :value)
     end
   end
 

@@ -29,7 +29,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign(open_col_vars: [], datasource: false)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
-     |> assign_available_datasources()}
+     |> assign_available_datasources()
+     |> assign_available_parents()}
   end
 
   def update(assigns, socket) do
@@ -40,6 +41,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign(assigns)
      |> assign(:datasource, datasource)
      |> assign_available_queries()}
+  end
+
+  def assign_available_parents(socket) do
+    {:ok, available_parents} = Brando.Content.list_modules(%{filter: %{parent_id: nil}})
+    assign(socket, :available_parents, available_parents)
   end
 
   def render(assigns) do
@@ -61,6 +67,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <Input.textarea field={@form[:help_text]} label={gettext("Help text")} />
         <Input.text field={@form[:class]} label={gettext("Class")} />
         <Input.toggle field={@form[:wrapper]} label={gettext("Wrapper")} />
+
+        <.live_component
+          module={Input.Select}
+          id={"#{@form.id}-parent_id"}
+          field={@form[:parent_id]}
+          opts={[options: @available_parents]}
+        />
 
         <%= if !@entry_form do %>
           <div class="button-group">

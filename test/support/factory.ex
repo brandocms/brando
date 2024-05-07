@@ -18,14 +18,14 @@ defmodule Brando.Factory do
       label: "System",
       key: "system",
       language: "en",
-      globals: build_list(2, :var_text),
+      vars: build_list(2, :var_text),
       creator: build(:random_user)
     }
   end
 
   def var_text_factory do
-    %Content.Var.Text{
-      type: "text",
+    %Content.Var{
+      type: :text,
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
       value: "Hello!"
@@ -122,7 +122,6 @@ defmodule Brando.Factory do
       status: :published,
       title: "Title",
       template: "default.html",
-      data: [],
       creator: build(:random_user)
     }
   end
