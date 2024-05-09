@@ -34,6 +34,17 @@ defmodule Brando.Villain do
   def parse(nil, _, _), do: ""
 
   def parse(entry_blocks_list, entry, opts) do
+    require Logger
+
+    Logger.error("""
+    => parse
+    sequence —> block_id
+    """)
+
+    Enum.each(entry_blocks_list, fn entry_block ->
+      Logger.error("#{inspect(entry_block.sequence)} — #{inspect(entry_block.block_id)}")
+    end)
+
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
@@ -128,7 +139,7 @@ defmodule Brando.Villain do
   end
 
   defp parse_node(parser, block, opts_map) do
-    type_atom = block.type
+    type_atom = if block.type == :module_entry, do: :module, else: block.type
 
     if not is_atom(type_atom) or is_nil(type_atom) do
       raise """
@@ -335,68 +346,68 @@ defmodule Brando.Villain do
   @spec rerender_blocks(schema :: module, id :: integer | binary) ::
           {:ok, map} | {:error, changeset}
   def rerender_blocks(schema, id, updated_module_id \\ nil) do
-    ctx = schema.__modules__().context
-    singular = schema.__naming__().singular
+    # ctx = schema.__modules__().context
+    # singular = schema.__naming__().singular
 
-    get_opts =
-      if schema.has_trait(Brando.Trait.SoftDelete) do
-        %{matches: %{id: id}, with_deleted: true}
-      else
-        %{matches: %{id: id}}
-      end
+    # get_opts =
+    #   if schema.has_trait(Brando.Trait.SoftDelete) do
+    #     %{matches: %{id: id}, with_deleted: true}
+    #   else
+    #     %{matches: %{id: id}}
+    #   end
 
-    case apply(ctx, :"get_#{singular}", [get_opts]) do
-      {:error, _} = err ->
-        require Logger
+    # case apply(ctx, :"get_#{singular}", [get_opts]) do
+    #   {:error, _} = err ->
+    #     require Logger
 
-        Logger.error("""
-        ==> Failed to rerender_html_from_id
+    #     Logger.error("""
+    #     ==> Failed to rerender_html_from_id
 
-        #{inspect(err, pretty: true)}
+    #     #{inspect(err, pretty: true)}
 
-        Schema..: #{inspect(schema, pretty: true)}
-        Id......: #{inspect(id, pretty: true)}
+    #     Schema..: #{inspect(schema, pretty: true)}
+    #     Id......: #{inspect(id, pretty: true)}
 
-        """)
+    #     """)
 
-      {:ok, record} ->
-        {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    #   {:ok, record} ->
+    #     {:ok, modules} = Content.list_modules(@module_cache_ttl)
 
-        data = Map.get(record, data_field)
+    #     data = Map.get(record, data_field)
 
-        updated_data =
-          if updated_module_id do
-            module = Enum.find(modules, &(&1.id == updated_module_id))
-            Brando.Villain.reapply_module(module, data)
-          else
-            data
-          end
+    #     updated_data =
+    #       if updated_module_id do
+    #         module = Enum.find(modules, &(&1.id == updated_module_id))
+    #         Brando.Villain.reapply_module(module, data)
+    #       else
+    #         data
+    #       end
 
-        parsed_data = Brando.Villain.parse(updated_data, record)
+    #     parsed_data = Brando.Villain.parse(updated_data, record)
 
-        changeset =
-          record
-          |> Changeset.change()
-          |> Changeset.put_change(
-            data_field,
-            updated_data
-          )
-          |> Changeset.put_change(
-            html_field,
-            parsed_data
-          )
+    #     changeset =
+    #       record
+    #       |> Changeset.change()
+    #       |> Changeset.put_change(
+    #         data_field,
+    #         updated_data
+    #       )
+    #       |> Changeset.put_change(
+    #         html_field,
+    #         parsed_data
+    #       )
 
-        case Brando.repo().update(changeset) do
-          {:ok, %Pages.Fragment{} = fragment} ->
-            Brando.Cache.Query.evict({:ok, fragment})
-            Pages.update_villains_referencing_fragment(fragment)
+    #     case Brando.repo().update(changeset) do
+    #       {:ok, %Pages.Fragment{} = fragment} ->
+    #         Brando.Cache.Query.evict({:ok, fragment})
+    #         Pages.update_villains_referencing_fragment(fragment)
 
-          {:ok, result} ->
-            Brando.Cache.Query.evict({:ok, result})
+    #       {:ok, result} ->
+    #         Brando.Cache.Query.evict({:ok, result})
 
-            {:ok, result}
-        end
-    end
+    #         {:ok, result}
+    #     end
+    # end
   end
 
   @doc """
@@ -986,22 +997,6 @@ defmodule Brando.Villain do
     end)
   end
 
-  def reject_blocks_marked_as_deleted(schema, changeset) do
-    Enum.reduce(schema.__villain_fields__(), changeset, fn vf, mutated_changeset ->
-      case Changeset.get_field(mutated_changeset, vf.name) do
-        nil ->
-          mutated_changeset
-
-        data when is_list(data) ->
-          Changeset.put_change(
-            mutated_changeset,
-            vf.name,
-            find_and_reject_deleted(data)
-          )
-      end
-    end)
-  end
-
   def reapply_module(%{id: module_id} = module, data) do
     Enum.reduce(data, [], fn
       %{type: "module", data: %{module_id: ^module_id}} = module_block, acc ->
@@ -1106,55 +1101,31 @@ defmodule Brando.Villain do
     end)
   end
 
-  defp find_and_reject_deleted(nil) do
-    []
-  end
+  def reject_deleted([]), do: []
+  def reject_deleted(nil), do: []
 
-  defp find_and_reject_deleted(blocks) when is_list(blocks) do
-    Enum.reduce(blocks, [], fn
-      %{marked_as_deleted: true}, acc ->
+  def reject_deleted(block_changesets, root \\ true) when is_list(block_changesets) do
+    Enum.reduce(block_changesets, [], fn
+      %{action: :delete}, acc ->
         acc
 
-      %{type: "module", data: %{refs: refs, entries: entries}} = module, acc ->
-        # module can have entries and refs!
+      %{changes: %{mark_as_deleted: true}}, acc ->
+        acc
 
-        processed_refs_module =
-          put_in(
-            module,
-            [
-              Access.key(:data),
-              Access.key(:refs)
-            ],
-            find_and_reject_deleted(refs || [])
-          )
-
-        processed_entries_and_refs_module =
-          put_in(
-            processed_refs_module,
-            [
-              Access.key(:data),
-              Access.key(:entries)
-            ],
-            find_and_reject_deleted(entries || [])
-          )
-
-        [processed_entries_and_refs_module | acc]
-
-      %{type: "container", data: %{blocks: blocks}} = container, acc ->
-        [
-          put_in(
-            container,
-            [
-              Access.key(:data),
-              Access.key(:blocks)
-            ],
-            find_and_reject_deleted(blocks)
-          )
-          | acc
-        ]
-
-      block, acc ->
-        [block | acc]
+      block_cs, acc ->
+        if root do
+          sub_cs = Changeset.get_assoc(block_cs, :block)
+          children = Changeset.get_assoc(sub_cs, :children)
+          processed_children = reject_deleted(children, false)
+          updated_sub_cs = Changeset.put_assoc(sub_cs, :children, processed_children)
+          updated_entry_block_cs = Changeset.put_assoc(block_cs, :block, updated_sub_cs)
+          [updated_entry_block_cs | acc]
+        else
+          children = Changeset.get_assoc(block_cs, :children)
+          processed_children = reject_deleted(children, false)
+          updated_block_cs = Changeset.put_assoc(block_cs, :children, processed_children)
+          [updated_block_cs | acc]
+        end
     end)
     |> Enum.reverse()
   end

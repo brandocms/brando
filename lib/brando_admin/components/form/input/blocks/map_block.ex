@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
 
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop base_form, :any
   # prop data_field, :atom
@@ -23,8 +22,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   # data uid, :string
 
   def update(assigns, socket) do
-    block_cs = assigns.block.source
-
     socket
     |> assign(assigns)
     |> assign(:uid, assigns.block[:uid].value)

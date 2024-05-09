@@ -4,13 +4,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   import Brando.Gettext
   alias Ecto.Changeset
-  alias Brando.Villain
   alias Brando.Villain.Blocks.VideoBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Block
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :any
   # prop block_count, :integer
@@ -306,8 +304,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         },
         socket
       ) do
-    form = socket.assigns.block
-    changeset = form.source
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 

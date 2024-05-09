@@ -6,13 +6,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias Ecto.Changeset
   alias Brando.Villain.Blocks.PictureBlock
-  alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop uploads, :any
   # prop base_form, :any
@@ -229,7 +227,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     """
   end
 
-  def handle_event("image_uploaded", %{"id" => id}, socket) do
+  def handle_event("image_uploaded", %{"id" => _id}, socket) do
     # block = socket.assigns.block
     # uid = socket.assigns.uid
 

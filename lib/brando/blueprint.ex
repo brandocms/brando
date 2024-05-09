@@ -298,20 +298,21 @@ defmodule Brando.Blueprint do
         # TODO: don't hard code :blocks -- build module name from name
         %{type: :has_many, name: rel_name, opts: %{module: :blocks}} ->
           main_module = unquote(module)
-          block_module = Module.concat([main_module, Blocks])
+          rel_module = rel_name |> to_string() |> Macro.camelize() |> String.to_atom()
+          block_module = Module.concat([main_module, rel_module])
 
           [
             Ecto.Schema.field(:"rendered_#{rel_name}", :string),
             Ecto.Schema.field(:"rendered_#{rel_name}_at", :utc_datetime),
             Ecto.Schema.has_many(
-              :entry_blocks,
+              :"entry_#{rel_name}",
               block_module,
               preload_order: [asc: :sequence],
               on_replace: :delete,
               foreign_key: :entry_id
             ),
             Ecto.Schema.has_many(
-              :blocks,
+              rel_name,
               through: [:entry_blocks, :block]
             )
           ]

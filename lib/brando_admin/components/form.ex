@@ -443,8 +443,11 @@ defmodule BrandoAdmin.Components.Form do
 
     assign_new(socket, :entry, fn ->
       case apply(context, :"get_#{singular}", [query_params]) do
-        {:ok, entry} -> entry
-        {:error, _err} -> raise Brando.Exception.EntryNotFoundError
+        {:ok, entry} ->
+          entry
+
+        {:error, _err} ->
+          raise Brando.Exception.EntryNotFoundError
       end
     end)
   end
@@ -539,9 +542,56 @@ defmodule BrandoAdmin.Components.Form do
           name
       end)
 
-    blocks_preload =
+    # TODO: dynamically build block preloads. They are currently hardcoded as entry_blocks.
+    blocks_preloads =
       if schema.has_trait(Brando.Trait.Villain) do
-        [entry_blocks: Brando.Content.Block.preloads()]
+        sub_children_query =
+          from b in Brando.Content.Block,
+            preload: [
+              :palette,
+              :vars,
+              :module
+            ],
+            order_by: [asc: :sequence]
+
+        children_query =
+          from b in Brando.Content.Block,
+            preload: [
+              :palette,
+              :vars,
+              :module,
+              children: [:palette, :vars, :module, children: ^sub_children_query]
+            ],
+            order_by: [asc: :sequence]
+
+        Enum.reduce(schema.__villain_fields__(), [], fn %{name: assoc_name}, acc ->
+          field_as_module =
+            assoc_name
+            |> to_string
+            |> Macro.camelize()
+            |> String.to_atom()
+
+          join_schema = Module.concat([schema, field_as_module])
+          entry_assoc_name = :"entry_#{assoc_name}"
+
+          acc ++
+            [
+              {entry_assoc_name,
+               from(j in join_schema,
+                 order_by: [asc: :sequence],
+                 preload: [
+                   block: [
+                     :parent,
+                     :module,
+                     :vars,
+                     :palette,
+                     children: ^children_query,
+                     block_identifiers: :identifier
+                   ]
+                 ]
+               )}
+            ]
+        end)
       else
         []
       end
@@ -572,7 +622,7 @@ defmodule BrandoAdmin.Components.Form do
         asset_preloads ++
           gallery_preloads ++
           rel_preloads ++
-          blocks_preload ++
+          blocks_preloads ++
           alternates_preload ++
           identifiers_preloads ++
           default_preloads
@@ -1800,21 +1850,14 @@ defmodule BrandoAdmin.Components.Form do
       Brando.routes().admin_live_path(socket, generated_create_view)
     end
 
-    # gather all blocks changesets and stick them into the main changeset
-    new_changeset =
-      Enum.reduce(block_changesets, changeset, fn {block_field_name, block_changeset},
-                                                  updated_changeset ->
-        Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{block_field_name}", block_changeset)
-      end)
-
+    new_changeset = assoc_all_block_fields(block_changesets, changeset)
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
 
     rendered_changeset =
       render_blocks_for_entry(
         block_map,
         new_changeset,
-        entry_for_blocks,
-        current_user
+        entry_for_blocks
       )
 
     case apply(context, :"#{mutation_type}_#{singular}", [rendered_changeset, current_user]) do
@@ -1872,7 +1915,7 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("save", params, %{assigns: %{has_blocks?: true}} = socket) do
+  def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
     id = socket.assigns.id
 
     # if we have block fields, gather all changesets
@@ -1981,6 +2024,13 @@ defmodule BrandoAdmin.Components.Form do
     entry
     |> schema.changeset(params, user, skip_villain: true)
     |> Map.put(:action, :validate)
+  end
+
+  def assoc_all_block_fields(block_changesets, changeset) do
+    Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
+      updated_block_cs = Brando.Villain.reject_deleted(block_cs, true)
+      Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
+    end)
   end
 
   defp is_loaded_image(nil), do: false
@@ -2417,9 +2467,12 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     assign_new(socket, :changeset, fn ->
-      entry
-      |> schema.changeset(%{}, current_user, skip_villain: true)
-      |> Map.put(:action, :validate)
+      cs =
+        entry
+        |> schema.changeset(%{}, current_user, skip_villain: true)
+        |> Map.put(:action, :validate)
+
+      cs
     end)
   end
 
@@ -2482,7 +2535,7 @@ defmodule BrandoAdmin.Components.Form do
     |> Map.drop(blocks_field_names)
   end
 
-  def render_blocks_for_entry(block_map, changeset, entry, current_user) do
+  def render_blocks_for_entry(block_map, changeset, entry) do
     Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _opts}, updated_changeset ->
       entry_field_name = :"entry_#{block_field_name}"
       rendered_field_name = :"rendered_#{block_field_name}"
@@ -3112,9 +3165,11 @@ defmodule BrandoAdmin.Components.Form do
   attr :uid, :string
 
   def error_tag(assigns) do
+    errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
+
     assigns =
       assigns
-      |> assign_new(:feedback_for, fn -> nil end)
+      |> assign_new(:errors, fn -> errors end)
       |> assign_new(:translate_fn, fn ->
         {mod, fun} = assigns[:translator] || {__MODULE__, :translate_error}
         &apply(mod, fun, [&1])
@@ -3138,12 +3193,7 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <span
-      :for={error <- @field.errors}
-      id={"#{@f_id}-error"}
-      class="field-error"
-      phx-feedback-for={@feedback_for || @f_id}
-    >
+    <span :for={error <- @errors} :if={} id={"#{@f_id}-error"} class="field-error">
       <%= @translate_fn.(error) %>
     </span>
     """

@@ -11,7 +11,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop uploads, :any
   # prop base_form, :any

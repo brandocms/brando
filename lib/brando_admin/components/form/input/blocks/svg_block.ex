@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   import Brando.Gettext
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :form
   # prop base_form, :form

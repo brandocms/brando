@@ -44,12 +44,14 @@ defmodule Brando.Content.Block do
     relation :children, :has_many,
       module: __MODULE__,
       on_replace: :delete_if_exists,
+      preload_order: [asc: :sequence],
       foreign_key: :parent_id
 
     relation :palette, :belongs_to, module: Brando.Content.Palette
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
+      preload_order: [asc: :sequence],
       on_replace: :delete_if_exists,
       cast: true
 

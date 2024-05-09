@@ -175,7 +175,7 @@ defmodule Brando.Villain.Parser do
             %{
               multi: true,
               module_id: id,
-              entries: entries
+              children: children
             } = block,
             opts
           ) do
@@ -185,7 +185,7 @@ defmodule Brando.Villain.Parser do
         {:ok, module} = Content.find_module(modules, id)
 
         content =
-          entries
+          children
           |> Enum.with_index()
           |> Enum.map(fn
             {%{hidden: true}, _} ->
@@ -195,13 +195,14 @@ defmodule Brando.Villain.Parser do
               ""
 
             {entry, index} ->
-              vars = process_vars(entry.data.vars)
-              refs = process_refs(entry.data.refs)
+              {:ok, child_module} = Content.find_module(modules, entry.module_id)
+              vars = process_vars(entry.vars)
+              refs = process_refs(entry.refs)
 
               forloop = %{
                 "index" => index + 1,
                 "index0" => index,
-                "count" => Enum.count(entries)
+                "count" => Enum.count(children)
               }
 
               context =
@@ -213,19 +214,18 @@ defmodule Brando.Villain.Parser do
                 |> add_module_id_to_context(id)
                 |> Context.assign("forloop", forloop)
 
-              module.entry_template.code
-              |> Villain.parse_and_render(context)
+              Villain.parse_and_render(child_module.code, context)
           end)
           |> Enum.join("\n")
 
         base_vars = process_vars(block.vars)
         base_refs = process_refs(block.refs)
 
-        entries =
-          Enum.map(entries, fn entry ->
+        children =
+          Enum.map(children, fn entry ->
             entry
-            |> put_in([Access.key(:data), Access.key(:vars)], process_vars(entry.data.vars))
-            |> put_in([Access.key(:data), Access.key(:refs)], process_refs(entry.data.refs))
+            |> put_in([Access.key(:vars)], process_vars(entry.vars))
+            |> put_in([Access.key(:refs)], process_refs(entry.refs))
           end)
 
         context =
@@ -235,11 +235,10 @@ defmodule Brando.Villain.Parser do
           |> add_admin_to_context(opts)
           |> add_parser_to_context(__MODULE__)
           |> add_module_id_to_context(id)
-          |> Context.assign("entries", entries)
+          |> Context.assign("entries", children)
           |> Context.assign("content", content)
 
-        module.code
-        |> Villain.parse_and_render(context)
+        Villain.parse_and_render(module.code, context)
       end
 
       def module(%{module_id: id} = block, opts) do
@@ -261,8 +260,7 @@ defmodule Brando.Villain.Parser do
           |> add_module_id_to_context(id)
           |> add_entries_to_context(module, block)
 
-        module.code
-        |> Villain.parse_and_render(context)
+        Villain.parse_and_render(module.code, context)
       end
 
       defoverridable module: 2
@@ -951,6 +949,7 @@ defmodule Brando.Villain.Parser do
 
       # ...
       defp process_vars(nil), do: %{}
+      defp process_vars(%Ecto.Association.NotLoaded{}), do: []
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var(

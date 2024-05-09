@@ -54,9 +54,11 @@ defmodule BrandoAdmin.UserSessionHTML do
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
@@ -69,7 +71,7 @@ defmodule BrandoAdmin.UserSessionHTML do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <input type="hidden" name={@name} value="false" />
       <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
       <label class="control-label small" for={@id}>
@@ -83,7 +85,7 @@ defmodule BrandoAdmin.UserSessionHTML do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label for={@id}><%= @label %></.label>
       <input
         type={@type}

@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias Ecto.Changeset
-  # import Brando.Gettext
+  import Brando.Gettext
 
   def mount(socket) do
     {:ok,
@@ -39,33 +39,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     root_changesets = socket.assigns.root_changesets
     form_cid = socket.assigns.form_cid
     block_field = socket.assigns.block_field
-    require Logger
-
-    Logger.error(
-      "--> provide_root_block [block field] {uid:#{uid}} -- #{inspect(changeset.data.__struct__)}"
-    )
-
     updated_root_changesets = Map.put(root_changesets, uid, changeset)
 
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     else
-      Logger.error("--> provide_root_block [block field] {uid:#{uid}} -- all changesets received")
-
-      Logger.error(
-        "--> updated_root_changesets #{inspect(updated_root_changesets, pretty: true)}"
-      )
-
       send_update(form_cid, %{
         event: "provide_root_blocks",
         root_changesets: updated_root_changesets,
         block_field: block_field
       })
-
-      # niled_root_changesets =
-      #   Map.new(Enum.map(updated_root_changesets, fn {k, _} -> {k, nil} end))
-
-      # Logger.error("--> niling root_changesets #{inspect(niled_root_changesets, pretty: true)}")
 
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     end
@@ -107,6 +90,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
+    |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
     |> send_root_sequence_update(new_block_list)
     |> then(&{:ok, &1})
@@ -147,6 +131,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
+    |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
     |> send_root_sequence_update(new_block_list)
     |> then(&{:ok, &1})
@@ -154,10 +139,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "fetch_root_blocks"}, socket) do
     block_list = socket.assigns.block_list
-    parent_id = socket.assigns.id
-    # for each root block in block_list, send_update requesting their changeset
-    for block_uid <- block_list do
-      send_update(Block, id: "root-block-#{block_uid}", event: "fetch_root_block")
+    block_field = socket.assigns.block_field
+    form_cid = socket.assigns.form_cid
+
+    if block_list == [] do
+      send_update(form_cid, %{
+        event: "provide_root_blocks",
+        root_changesets: [],
+        block_field: block_field
+      })
+    else
+      # for each root block in block_list, send_update requesting their changeset
+      for block_uid <- block_list do
+        send_update(Block, id: "root-block-#{block_uid}", event: "fetch_root_block")
+      end
     end
 
     socket
@@ -175,10 +170,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(assigns)
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
+    |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
     |> assign_new(:root_changesets, fn ->
       entry_blocks
       |> Enum.map(&{&1.block.uid, nil})
-      |> Enum.into(%{})
     end)
     |> stream(:entry_blocks_forms, entry_blocks_forms)
     |> assign_templates()
@@ -194,7 +189,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event(
         "reposition",
-        %{"uid" => id, "new" => new_idx, "old" => old_idx} = params,
+        %{"uid" => id, "new" => new_idx, "old" => old_idx},
         socket
       ) do
     block_list = socket.assigns.block_list
@@ -226,7 +221,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("fetch_root_blocks", _, socket) do
     block_list = socket.assigns.block_list
-    parent_id = socket.assigns.id
     # for each root block in block_list, send_update requesting their changeset
     for block_uid <- block_list do
       send_update(Block, id: "root-block-#{block_uid}", event: "fetch_root_block")
@@ -242,8 +236,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def send_root_sequence_update(socket, block_list) do
     # send_update to all components in block_list
-    parent_id = socket.assigns.id
-
     for {block_uid, idx} <- Enum.with_index(block_list) do
       send_update(Block, id: "root-block-#{block_uid}", event: "update_sequence", sequence: idx)
     end
@@ -261,8 +253,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <!-- check for empty stream -->
-      <%!-- <%= if @block_count == 0 do %>
+      <div><%= inspect(@block_count) %> blocks</div>
+      <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext("Click the plus to start adding content blocks") %>
           <%= if @templates && @templates != [] do %>
@@ -281,7 +273,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             </div>
           <% end %>
         </div>
-      <% end %> --%>
+      <% end %>
 
       <div
         id="blocks"
@@ -341,7 +333,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def build_block(module_id, user_id, parent_id) do
     module = get_module(module_id)
-
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
     vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
 

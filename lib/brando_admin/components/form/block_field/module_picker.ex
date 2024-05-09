@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
         id={@id}
         show={@show}
         medium
-        close="close_modal"
+        close={JS.push("close_modal", target: @myself)}
       >
         <div class="modules-header">
           <div class="module-info">

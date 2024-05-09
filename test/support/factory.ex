@@ -132,8 +132,6 @@ defmodule Brando.Factory do
       key: "header",
       status: :published,
       language: "en",
-      data: [],
-      html: "fragment content!",
       creator: build(:random_user)
     }
   end

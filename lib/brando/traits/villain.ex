@@ -95,6 +95,7 @@ defmodule Brando.Trait.Villain do
           Ecto.Schema.belongs_to(:entry, parent_module)
           Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
           Ecto.Schema.field(:sequence, :integer)
+          Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
         end
 
         @parent_table_name parent_table_name

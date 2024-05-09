@@ -94,16 +94,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           get_field(changeset, :value)
         end
 
-      # require Logger
-
-      # Logger.error("""
-
-      # RenderVar:
-      # changeset.....: #{inspect(changeset, pretty: true)}
-      # changeset.data: #{inspect(changeset.data, pretty: true)}
-
-      # """)
-
       value = control_value(type, value)
 
       socket_with_image_and_file
