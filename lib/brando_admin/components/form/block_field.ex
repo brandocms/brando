@@ -35,11 +35,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, stream_insert(socket, :entry_blocks_forms, form)}
   end
 
+  def update_root_changeset(root_changesets, uid, new_changeset) do
+    Enum.map(root_changesets, fn
+      {^uid, _changeset} -> {uid, new_changeset}
+      {uid, changeset} -> {uid, changeset}
+    end)
+  end
+
+  def insert_root_changeset(root_changesets, uid, position) do
+    List.insert_at(root_changesets, position, {uid, nil})
+  end
+
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid}, socket) do
     root_changesets = socket.assigns.root_changesets
     form_cid = socket.assigns.form_cid
     block_field = socket.assigns.block_field
-    updated_root_changesets = Map.put(root_changesets, uid, changeset)
+    updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
 
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
@@ -85,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket.assigns.current_user.id
       )
 
-    updated_root_changesets = Map.put(root_changesets, uid, nil)
+    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
@@ -126,7 +137,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket.assigns.current_user.id
       )
 
-    updated_root_changesets = Map.put(root_changesets, uid, nil)
+    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
@@ -142,6 +153,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_field = socket.assigns.block_field
     form_cid = socket.assigns.form_cid
 
+    require Logger
+
+    Logger.error("""
+    -> fetch_root_blocks [block_field:#{block_field}]
+    """)
+
     if block_list == [] do
       send_update(form_cid, %{
         event: "provide_root_blocks",
@@ -151,12 +168,29 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     else
       # for each root block in block_list, send_update requesting their changeset
       for block_uid <- block_list do
+        require Logger
+
+        Logger.error("""
+        --> fetch_root_block [uid:#{block_uid}]
+        """)
+
         send_update(Block, id: "root-block-#{block_uid}", event: "fetch_root_block")
       end
     end
 
     socket
     |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "clear_root_changesets"}, socket) do
+    block_list = socket.assigns.block_list
+    # for each root block in block_list, send_update to clear their (child) changesets
+    for block_uid <- block_list do
+      send_update(Block, id: "root-block-#{block_uid}", event: "clear_changesets")
+    end
+
+    cleared_root_changesets = Enum.map(socket.assigns.root_changesets, &{elem(&1, 0), nil})
+    {:ok, assign(socket, :root_changesets, cleared_root_changesets)}
   end
 
   def update(assigns, socket) do
@@ -172,8 +206,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
     |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
     |> assign_new(:root_changesets, fn ->
-      entry_blocks
-      |> Enum.map(&{&1.block.uid, nil})
+      Enum.map(entry_blocks, &{&1.block.uid, nil})
     end)
     |> stream(:entry_blocks_forms, entry_blocks_forms)
     |> assign_templates()
@@ -253,7 +286,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <div><%= inspect(@block_count) %> blocks</div>
+      <div style="font-family: 'Mono'; font-size: 11px;">
+        ROOT CHANGESETS<br /><br />
+        <%= inspect(@root_changesets, pretty: true, width: 0) %>
+      </div>
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext("Click the plus to start adding content blocks") %>

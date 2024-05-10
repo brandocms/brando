@@ -13,8 +13,30 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {:ok, assign_modules(socket)}
   end
 
-  def update(%{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid}, socket) do
-    {:ok, assign(socket, show: true, sequence: sequence, parent_cid: parent_cid)}
+  def update(
+        %{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid} = assigns,
+        socket
+      ) do
+    socket
+    |> assign(show: true, sequence: sequence, parent_cid: parent_cid)
+    |> maybe_update_modules_by_filter(assigns)
+    |> then(&{:ok, &1})
+  end
+
+  def maybe_update_modules_by_filter(socket, %{filter: filter} = assigns) do
+    {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
+
+    modules_by_namespace =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    socket
+    |> assign(:modules_by_namespace, modules_by_namespace)
+  end
+
+  def maybe_update_modules_by_filter(socket, assigns) do
+    socket
   end
 
   def update(assigns, socket) do

@@ -1889,9 +1889,13 @@ defmodule BrandoAdmin.Components.Form do
 
                 # update entry!
                 socket
+                |> assign(:processing, false)
+                |> assign(:all_blocks_received?, false)
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
-                |> assign_refreshed_changeset
+                |> assign_refreshed_changeset()
+
+                # |> clear_blocks_root_changesets()
               end
 
             :listing ->
@@ -1923,10 +1927,23 @@ defmodule BrandoAdmin.Components.Form do
 
     for {block_field_name, _schema, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update(BlockField, id: block_field_id, event: "fetch_root_blocks")
+      send_update_after(BlockField, [id: block_field_id, event: "fetch_root_blocks"], 500)
     end
 
-    {:noreply, socket}
+    {:noreply, socket |> assign(:processing, true)}
+  end
+
+  def clear_blocks_root_changesets(socket) do
+    socket.assigns.id
+    block_map = socket.assigns.block_map
+    id = socket.assigns.id
+
+    for {block_field_name, _schema, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+      send_update(BlockField, id: block_field_id, event: "clear_root_changesets")
+    end
+
+    socket
   end
 
   def handle_event("save", params, %{assigns: %{has_blocks?: false}} = socket) do
