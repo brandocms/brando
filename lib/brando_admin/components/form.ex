@@ -545,12 +545,23 @@ defmodule BrandoAdmin.Components.Form do
     # TODO: dynamically build block preloads. They are currently hardcoded as entry_blocks.
     blocks_preloads =
       if schema.has_trait(Brando.Trait.Villain) do
+        sub_sub_children_query =
+          from b in Brando.Content.Block,
+            preload: [
+              :palette,
+              :vars,
+              :module,
+              :children
+            ],
+            order_by: [asc: :sequence]
+
         sub_children_query =
           from b in Brando.Content.Block,
             preload: [
               :palette,
               :vars,
-              :module
+              :module,
+              children: ^sub_sub_children_query
             ],
             order_by: [asc: :sequence]
 
@@ -3182,7 +3193,8 @@ defmodule BrandoAdmin.Components.Form do
   attr :uid, :string
 
   def error_tag(assigns) do
-    errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
+    # errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
+    errors = []
 
     assigns =
       assigns

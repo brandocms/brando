@@ -14,16 +14,34 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(
-        %{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid} = assigns,
+        %{
+          event: :show_module_picker,
+          sequence: sequence,
+          parent_cid: parent_cid,
+          type: type
+        } = assigns,
         socket
       ) do
+    require Logger
+
+    Logger.error("""
+    => show_module_picker
+    #{inspect(assigns, pretty: true)}
+    """)
+
     socket
-    |> assign(show: true, sequence: sequence, parent_cid: parent_cid)
+    |> assign(show: true, sequence: sequence, parent_cid: parent_cid, type: type)
     |> maybe_update_modules_by_filter(assigns)
     |> then(&{:ok, &1})
   end
 
   def maybe_update_modules_by_filter(socket, %{filter: filter} = assigns) do
+    require Logger
+
+    Logger.error("""
+    filter #{inspect(filter, pretty: true)}
+    """)
+
     {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
 
     modules_by_namespace =
@@ -194,6 +212,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   def handle_event("insert_module", %{"module-id" => module_id}, socket) do
     parent_cid = socket.assigns.parent_cid
     sequence = socket.assigns.sequence
+    type = socket.assigns.type
 
     require Logger
 
@@ -203,7 +222,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
     """)
 
-    send_update(parent_cid, %{event: "insert_block", sequence: sequence, module_id: module_id})
+    send_update(parent_cid, %{
+      event: "insert_block",
+      sequence: sequence,
+      module_id: module_id,
+      type: type
+    })
+
     {:noreply, assign(socket, :show, false)}
   end
 
