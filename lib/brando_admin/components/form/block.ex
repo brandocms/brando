@@ -41,6 +41,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "clear_changesets"}, socket) do
+    id = socket.assigns.id
     has_children? = socket.assigns.has_children?
 
     if has_children? do
@@ -48,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       cleared_changesets = Enum.map(changesets, &{elem(&1, 0), nil})
 
       for {block_uid, _} <- changesets do
-        id = "block-#{block_uid}"
+        id = "#{id}-child-#{block_uid}"
 
         send_update(__MODULE__,
           id: id,
@@ -64,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update(%{event: "fetch_root_block"}, socket) do
     # a message we will receive from the block field
+    id = socket.assigns.id
     parent_cid = socket.assigns.parent_cid
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
@@ -79,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       """)
 
       for {block_uid, _} <- changesets do
-        id = "block-#{block_uid}"
+        id = "#{id}-child-#{block_uid}"
 
         require Logger
 
@@ -113,6 +115,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update(%{event: "fetch_child_block"}, socket) do
     # a message we will receive from parent block
+    id = socket.assigns.id
     parent_cid = socket.assigns.parent_cid
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
@@ -124,11 +127,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     if has_children? do
       Logger.error("""
       ----> [uid:#{uid}] has children -- fetch_child_block for all
-      #{inspect(changesets, pretty: true)}
       """)
 
       for {block_uid, _} <- changesets do
-        id = "block-#{block_uid}"
+        id = "#{id}-child-#{block_uid}"
 
         Logger.error("""
         -----> fetch_child_block [uid:#{block_uid}]
@@ -172,19 +174,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
 
-    require Logger
-
-    Logger.error("""
-    [!] provide_child_block for #{uid} belonging to #{parent_uid}
-    """)
-
     unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
-      require Logger
-
-      Logger.error("""
-      [!] #{parent_uid} has no NIL changesets --> pass it down
-      """)
-
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
       updated_changeset =
@@ -264,18 +254,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     changesets = socket.assigns.changesets
-
-    require Logger
-
-    Logger.error("""
-    ==> insert_block changesets are #{inspect(changesets, pretty: true)}
-    """)
-
     updated_changesets = insert_child_changeset(changesets, uid, sequence)
-
-    Logger.error("""
-    ==> insert_block changesets after update #{inspect(updated_changesets, pretty: true)}
-    """)
 
     selector = "[data-block-uid=\"#{uid}\"]"
 
@@ -297,6 +276,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     uid = socket.assigns.uid
+    parent_id = socket.assigns.parent_id
+    id = socket.assigns.id
 
     block_changeset = get_block_changeset(changeset, belongs_to)
     refs = Changeset.get_embed(block_changeset, :refs)
@@ -365,23 +346,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       block_cs = get_block_changeset(changeset, belongs_to)
       Changeset.get_field(block_cs, :module_id)
     end)
-    |> assign_new(:has_children?, fn %{uid: uid} ->
-      require Logger
-
-      Logger.error("""
-      !!!! setting has_children? for #{uid} -> #{assigns.children !== []}
-      """)
-
-      if assigns.children !== [] do
-        require Logger
-
-        Logger.error("""
-        ----- assigns.children is #{inspect(assigns.children, pretty: true)}
-        """)
-      end
-
-      assigns.children !== []
-    end)
+    |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
     |> maybe_assign_children()
     |> maybe_assign_module()
@@ -605,8 +570,10 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def send_child_sequence_update(socket, block_list) do
     # send_update to all components in block_list
+    parent_id = socket.assigns.id
+
     for {block_uid, idx} <- Enum.with_index(block_list) do
-      id = "block-#{block_uid}"
+      id = "#{parent_id}-child-#{block_uid}"
       send_update(__MODULE__, id: id, event: "update_sequence", sequence: idx)
     end
 
@@ -666,7 +633,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           >
             <.live_component
               module={__MODULE__}
-              id={"block-#{child_block_form[:uid].value}"}
+              id={"#{@id}-child-#{child_block_form.data.uid}"}
               multi={child_block_form.data.multi}
               block_module={@block_module}
               block_field={@block_field}
@@ -775,7 +742,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           >
             <.live_component
               module={__MODULE__}
-              id={"block-#{child_block_form[:uid].value}"}
+              id={"#{@id}-child-#{child_block_form[:uid].value}"}
               block_module={@block_module}
               block_field={@block_field}
               children={child_block_form[:children].value}
@@ -836,7 +803,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     ~H"""
     <div
-      id={"block-#{@uid}"}
+      id={"base-block-#{@uid}"}
       data-block-uid={@uid}
       class={[
         "base-block",
@@ -925,7 +892,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     ~H"""
     <div
-      id={"block-#{@uid}"}
+      id={"base-block-#{@uid}"}
       data-block-uid={@uid}
       class={[
         "base-block",
@@ -1385,7 +1352,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     ~H"""
     <div
-      id={"block-#{@uid}"}
+      id={"base-block-#{@uid}"}
       data-block-uid={@uid}
       class={[
         "base-block",
