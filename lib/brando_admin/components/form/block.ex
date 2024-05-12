@@ -246,6 +246,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_list = socket.assigns.block_list
     updated_block_list = List.insert_at(block_list, sequence, uid)
 
+    require Logger
+
+    Logger.error("""
+    => uid is #{uid}
+    """)
+
     block_form =
       to_change_form(
         empty_block_cs,
@@ -257,6 +263,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changesets = insert_child_changeset(changesets, uid, sequence)
 
     selector = "[data-block-uid=\"#{uid}\"]"
+
+    require Logger
+
+    Logger.error("""
+    => insert_block [in block.ex] -- block_form.id = #{block_form.id}
+    """)
 
     socket
     |> stream_insert(:children_forms, block_form, at: sequence)
@@ -758,6 +770,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.live_component>
           </div>
         </div>
+        <%!-- <.plus click={@insert_child_block} /> --%>
       </.container>
     </div>
     """
@@ -857,7 +870,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         </.form>
         <%= if @has_children? do %>
           <%= render_slot(@inner_block) %>
+          <.plus click={@insert_child_block} />
         <% else %>
+          <div class="blocks-empty-instructions">
+            <%= gettext("Click the plus to start adding content blocks") %>
+          </div>
           <.plus click={@insert_child_block} />
         <% end %>
       </div>
@@ -2390,6 +2407,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       child_block_or_cs
       |> Brando.Content.Block.changeset(params, user)
       |> Map.put(:action, action)
+
+    # uid = Changeset.get_field(changeset, :uid)
 
     to_form(changeset,
       as: "child_block",

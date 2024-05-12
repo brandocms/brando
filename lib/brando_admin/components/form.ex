@@ -1906,7 +1906,7 @@ defmodule BrandoAdmin.Components.Form do
                 |> assign_refreshed_entry()
                 |> assign_refreshed_changeset()
 
-                # |> clear_blocks_root_changesets()
+                |> clear_blocks_root_changesets()
               end
 
             :listing ->
@@ -1925,6 +1925,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:changeset, changeset)
+         |> assign(:processing, false)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
@@ -1941,7 +1942,7 @@ defmodule BrandoAdmin.Components.Form do
       send_update_after(BlockField, [id: block_field_id, event: "fetch_root_blocks"], 500)
     end
 
-    {:noreply, socket |> assign(:processing, true)}
+    {:noreply, assign(socket, :processing, true)}
   end
 
   def clear_blocks_root_changesets(socket) do
