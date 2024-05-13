@@ -88,10 +88,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       type = get_field(changeset, :type)
 
       value =
-        if type in ["image", "file"] do
-          get_field(changeset, :value_id)
-        else
-          get_field(changeset, :value)
+        case type do
+          :image -> get_field(changeset, :value_id)
+          :file -> get_field(changeset, :value_id)
+          :boolean -> get_field(changeset, :value_boolean)
+          _ -> get_field(changeset, :value)
         end
 
       value = control_value(type, value)
@@ -212,14 +213,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               />
 
               <%= case @type do %>
-                <% "color" -> %>
-                  <Input.toggle field={@var[:picker]} label={gettext("Allow picking custom colors")} />
-                  <Input.toggle field={@var[:opacity]} label={gettext("Allow setting opacity")} />
+                <% :color -> %>
+                  <Input.toggle
+                    field={@var[:color_picker]}
+                    label={gettext("Allow picking custom colors")}
+                  />
+                  <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
                   <Input.number
                     field={@var[:palette_id]}
                     label={gettext("ID of palette to choose colors from")}
                   />
-                <% "select" -> %>
+                <% :select -> %>
                   <Form.field_base
                     field={@var[:options]}
                     label="Options"
@@ -321,7 +325,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :boolean} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.toggle field={@var[:value]} label={@label} instructions={@instructions} />
+      <Input.toggle field={@var[:value_boolean]} label={@label} instructions={@instructions} />
     </div>
     """
   end
@@ -335,8 +339,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def render_value_inputs(%{type: :color} = assigns) do
-    # TODO: manage opts?
-    # TODO: set @edit default to false
+    changeset = assigns.var.source
+
+    assigns =
+      assigns
+      |> assign(:color_opacity, get_field(changeset, :color_opacity))
+      |> assign(:color_picker, get_field(changeset, :color_picker))
+      |> assign(:palette_id, get_field(changeset, :palette_id))
+
     ~H"""
     <div class="brando-input">
       <Input.color
@@ -345,14 +355,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         placeholder={@placeholder}
         instructions={@instructions}
         opts={[
-          opacity: @var[:opacity].value,
-          picker: @var[:picker].value,
-          palette_id: @var[:palette_id].value
+          opacity: @color_opacity,
+          picker: @color_picker,
+          palette_id: @palette_id
         ]}
       />
       <%= unless @edit do %>
-        <Input.input type={:hidden} field={@var[:picker]} />
-        <Input.input type={:hidden} field={@var[:opacity]} />
+        <Input.input type={:hidden} field={@var[:color_picker]} />
+        <Input.input type={:hidden} field={@var[:color_opacity]} />
         <Input.input type={:hidden} field={@var[:palette_id]} />
       <% end %>
     </div>

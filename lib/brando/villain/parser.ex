@@ -976,6 +976,9 @@ defmodule Brando.Villain.Parser do
         {key, file}
       end
 
+      defp process_var(%{key: key, label: _, type: :boolean, value_boolean: value_boolean}),
+        do: {key, value_boolean}
+
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
       defp process_refs(nil), do: %{}
