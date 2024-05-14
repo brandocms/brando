@@ -82,21 +82,102 @@ defmodule Brando.Content.Block do
 
   factory %{}
 
-  def preloads do
-    children_query =
-      from b in __MODULE__,
-        preload: [:palette, :vars, :module, children: [:palette, :vars, :children]],
-        order_by: [asc: :sequence]
+  def maybe_cast_recursive(changeset, true, user) do
+    cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user))
+  end
 
-    [
-      block: [
-        :parent,
-        :module,
-        :vars,
-        :palette,
-        children: children_query,
-        block_identifiers: :identifier
-      ]
-    ]
+  def maybe_cast_recursive(changeset, false, user) do
+    cast_assoc(changeset, :block, with: &block_changeset(&1, &2, user))
+  end
+
+  def block_changeset(block, attrs, user) do
+    block
+    |> cast(attrs, [
+      :active,
+      :collapsed,
+      :anchor,
+      :description,
+      :uid,
+      :creator_id,
+      :sequence,
+      :parent_id,
+      :module_id,
+      :anchor,
+      :multi,
+      :palette_id,
+      :type
+    ])
+    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_assoc(:block_identifiers,
+      with: &block_identifier_changeset(&1, &2, &3, user),
+      drop_param: :drop_block_identifier_ids,
+      sort_param: :sort_block_identifier_ids
+    )
+  end
+
+  def recursive_block_changeset(block, attrs, user) do
+    block
+    |> cast(attrs, [
+      :active,
+      :collapsed,
+      :anchor,
+      :description,
+      :uid,
+      :creator_id,
+      :sequence,
+      :parent_id,
+      :module_id,
+      :anchor,
+      :multi,
+      :palette_id,
+      :type
+    ])
+    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
+    |> cast_assoc(:block_identifiers,
+      with: &block_identifier_changeset(&1, &2, &3, user),
+      drop_param: :drop_block_identifier_ids,
+      sort_param: :sort_block_identifier_ids
+    )
+  end
+
+  def block_identifier_changeset(block_identifier, attrs, position, _user) do
+    block_identifier
+    |> cast(attrs, [:block_id, :identifier_id])
+    |> change(sequence: position)
+  end
+
+  def var_changeset(var, attrs, _user) do
+    cast(var, attrs, [
+      :type,
+      :label,
+      :placeholder,
+      :key,
+      :value,
+      :value_boolean,
+      :important,
+      :instructions,
+      :color_picker,
+      :color_opacity,
+      :sequence,
+      :creator_id,
+      :module_id,
+      :page_id,
+      :block_id,
+      :palette_id,
+      :image_id,
+      :file_id,
+      :linked_identifier_id,
+      :global_set_id
+    ])
+    |> cast_embed(:options)
+  end
+
+  def ref_changeset(ref, attrs, user) do
+    ref
+    |> cast(attrs, [:name, :description])
+    |> PolymorphicEmbed.cast_polymorphic_embed(:data)
   end
 end

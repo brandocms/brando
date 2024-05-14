@@ -37,11 +37,13 @@ export default app => ({
       }
     })
 
-    this.handleEvent('b:scroll_to', selector => {
-      const $node = Dom.find(selector)
-      if ($node) {
-        app.scrollTo({ y: $node, offsetY: 50 })
-      }
+    this.handleEvent('b:scroll_to', ({ selector }) => {
+      setTimeout(() => {
+        const $node = Dom.find(selector)
+        if ($node) {
+          app.scrollTo({ y: $node, offsetY: 50 })
+        }
+      }, 250)
     })
 
     this.tippys = []
@@ -93,19 +95,12 @@ export default app => ({
     const $tippyEls = Dom.all(this.el, '[data-popover]')
     $tippyEls.forEach(el => {
       const content = el.dataset.popover
-      this.tippys.push(
-        tippy(el, {
-          allowHTML: true,
-          content
-        })
-      )
+      this.tippys.push(tippy(el, { allowHTML: true, content }))
     })
   },
 
   destroyTippys() {
-    this.tippys.forEach(t => {
-      t.destroy()
-    })
+    this.tippys.forEach(t => t.destroy())
   },
 
   destroyed() {

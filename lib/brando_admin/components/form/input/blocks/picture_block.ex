@@ -209,7 +209,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </.inputs_for>
 
             <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
-              <input type="hidden" name={"#{name}"} value={"#{value}"} />
+              <%!-- TODO: Remove the _unused check when https://github.com/phoenixframework/phoenix_live_view/pull/3244 is merged --%>
+              <div><%= inspect(name, pretty: true) %></div>
+              <input
+                :if={!String.starts_with?(name, "_unused")}
+                type="hidden"
+                name={name}
+                value={value}
+              />
             </Form.map_inputs>
 
             <Form.array_inputs

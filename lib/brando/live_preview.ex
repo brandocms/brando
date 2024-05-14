@@ -133,17 +133,27 @@ defmodule Brando.LivePreview do
 
         var!(entry) =
           Enum.reduce(villain_fields, var!(entry), fn attr, updated_entry ->
-            html_attr = Brando.Villain.get_html_field(unquote(schema_module), attr)
+            entry_blocks_relation = :"entry_#{attr.name}"
+            rendered_field = :"rendered_#{attr.name}"
             atom_key = attr.name
 
             parsed_villain =
-              Brando.Villain.parse(Map.get(var!(entry), atom_key), var!(entry),
-                cache_modules: true,
-                data_field: atom_key,
-                html_field: html_attr.name
+              Brando.Villain.parse(Map.get(var!(entry), entry_blocks_relation), var!(entry),
+                cache_modules: true
+                # data_field: atom_key,
               )
 
-            Map.put(updated_entry, html_attr.name, parsed_villain)
+            require Logger
+
+            Logger.error("""
+
+            PARSED_VILLAIN for rendered_field: #{rendered_field}
+
+            #{inspect(parsed_villain, pretty: true)}
+
+            """)
+
+            Map.put(updated_entry, rendered_field, parsed_villain)
           end)
 
         session_opts =

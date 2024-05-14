@@ -181,42 +181,47 @@ defmodule Brando.Villain.Parser do
           ) do
         base_context = opts.context
         modules = opts.modules
+        skip_children? = Map.get(opts, :skip_children, false)
 
         {:ok, module} = Content.find_module(modules, id)
 
         content =
-          children
-          |> Enum.with_index()
-          |> Enum.map(fn
-            {%{hidden: true}, _} ->
-              ""
+          if skip_children? do
+            "{$ content $}"
+          else
+            children
+            |> Enum.with_index()
+            |> Enum.map(fn
+              {%{hidden: true}, _} ->
+                ""
 
-            {%{marked_as_deleted: true}, _} ->
-              ""
+              {%{marked_as_deleted: true}, _} ->
+                ""
 
-            {entry, index} ->
-              {:ok, child_module} = Content.find_module(modules, entry.module_id)
-              vars = process_vars(entry.vars)
-              refs = process_refs(entry.refs)
+              {entry, index} ->
+                {:ok, child_module} = Content.find_module(modules, entry.module_id)
+                vars = process_vars(entry.vars)
+                refs = process_refs(entry.refs)
 
-              forloop = %{
-                "index" => index + 1,
-                "index0" => index,
-                "count" => Enum.count(children)
-              }
+                forloop = %{
+                  "index" => index + 1,
+                  "index0" => index,
+                  "count" => Enum.count(children)
+                }
 
-              context =
-                base_context
-                |> add_vars_to_context(vars)
-                |> add_refs_to_context(refs)
-                |> add_admin_to_context(opts)
-                |> add_parser_to_context(__MODULE__)
-                |> add_module_id_to_context(id)
-                |> Context.assign("forloop", forloop)
+                context =
+                  base_context
+                  |> add_vars_to_context(vars)
+                  |> add_refs_to_context(refs)
+                  |> add_admin_to_context(opts)
+                  |> add_parser_to_context(__MODULE__)
+                  |> add_module_id_to_context(id)
+                  |> Context.assign("forloop", forloop)
 
-              Villain.parse_and_render(child_module.code, context)
-          end)
-          |> Enum.join("\n")
+                Villain.parse_and_render(child_module.code, context)
+            end)
+            |> Enum.join("\n")
+          end
 
         base_vars = process_vars(block.vars)
         base_refs = process_refs(block.refs)
@@ -869,18 +874,23 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{children: blocks, palette_id: palette_id, anchor: target_id}, opts) do
+      def container(%{children: children, palette_id: palette_id, anchor: target_id}, opts) do
         palettes = opts.palettes
+        skip_children? = Map.get(opts, :skip_children, false)
 
-        blocks_html =
-          (blocks || [])
-          |> Enum.reduce([], fn
-            %{hidden: true}, acc -> acc
-            %{marked_as_deleted: true}, acc -> acc
-            d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
-          end)
-          |> Enum.reverse()
-          |> Enum.join("")
+        children_html =
+          if skip_children? do
+            "{$ content $}"
+          else
+            (children || [])
+            |> Enum.reduce([], fn
+              %{hidden: true}, acc -> acc
+              %{marked_as_deleted: true}, acc -> acc
+              d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+            end)
+            |> Enum.reverse()
+            |> Enum.join("")
+          end
 
         target_id =
           (target_id && " id=\"#{target_id}\" data-scrollspy-trigger=\"##{target_id}\"") || ""
@@ -889,14 +899,14 @@ defmodule Brando.Villain.Parser do
           {:ok, palette} ->
             """
             <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
-              #{blocks_html}
+              #{children_html}
             </section>
             """
 
           {:error, {:palette, :not_found, nil}} ->
             """
             <section b-section#{target_id}>
-              #{blocks_html}
+              #{children_html}
             </section>
             """
         end

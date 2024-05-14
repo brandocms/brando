@@ -35,37 +35,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, stream_insert(socket, :entry_blocks_forms, form)}
   end
 
-  def update(%{event: "provide_root_block", changeset: changeset, uid: uid}, socket) do
+  def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
     root_changesets = socket.assigns.root_changesets
     form_cid = socket.assigns.form_cid
     block_field = socket.assigns.block_field
     updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
 
-    require Logger
-
-    Logger.error("""
-    [!] provide_root_block #{uid}
-    """)
-
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
-      require Logger
-
-      Logger.error("""
-      [!] still missing some root blocks
-      """)
-
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     else
-      require Logger
-
-      Logger.error("""
-      [!] got all root blocks! :)
-      """)
-
       send_update(form_cid, %{
         event: "provide_root_blocks",
         root_changesets: updated_root_changesets,
-        block_field: block_field
+        block_field: block_field,
+        tag: tag
       })
 
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
@@ -155,33 +138,44 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "fetch_root_blocks"}, socket) do
+  def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
     block_list = socket.assigns.block_list
     block_field = socket.assigns.block_field
     form_cid = socket.assigns.form_cid
-
-    require Logger
-
-    Logger.error("""
-    -> fetch_root_blocks [block_field:#{block_field}]
-    """)
 
     if block_list == [] do
       send_update(form_cid, %{
         event: "provide_root_blocks",
         root_changesets: [],
-        block_field: block_field
+        block_field: block_field,
+        tag: tag
       })
     else
       # for each root block in block_list, send_update requesting their changeset
       for block_uid <- block_list do
-        require Logger
+        send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block", tag: tag)
+      end
+    end
 
-        Logger.error("""
-        --> fetch_root_block [uid:#{block_uid}]
-        """)
+    socket
+    |> then(&{:ok, &1})
+  end
 
-        send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block")
+  def update(%{event: "fetch_root_renders"}, socket) do
+    block_list = socket.assigns.block_list
+    block_field = socket.assigns.block_field
+    form_cid = socket.assigns.form_cid
+
+    if block_list == [] do
+      send_update(form_cid, %{
+        event: "provide_root_renders",
+        renders: [],
+        block_field: block_field
+      })
+    else
+      # for each root block in block_list, send_update requesting their rendered_html
+      for block_uid <- block_list do
+        send_update(Block, id: "block-#{block_uid}", event: "fetch_root_render")
       end
     end
 
@@ -271,15 +265,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, socket}
   end
 
-  def handle_event("fetch_root_blocks", _, socket) do
-    block_list = socket.assigns.block_list
-    # for each root block in block_list, send_update requesting their changeset
-    for block_uid <- block_list do
-      send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block")
-    end
+  # def handle_event("fetch_root_blocks", _, socket) do
+  #   block_list = socket.assigns.block_list
+  #   # for each root block in block_list, send_update requesting their changeset
+  #   for block_uid <- block_list do
+  #     send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block")
+  #   end
 
-    {:noreply, socket}
-  end
+  #   {:noreply, socket}
+  # end
 
   def handle_event("crash", _, socket) do
     raise "Crash"
@@ -355,6 +349,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 parent_uploads={@parent_uploads}
                 parent_cid={@myself}
                 parent_uid={}
+                parent_path={[]}
                 entry={@entry}
                 form={entry_block_form}
                 current_user_id={@current_user.id}

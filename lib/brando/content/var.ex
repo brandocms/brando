@@ -40,10 +40,12 @@ defmodule Brando.Content.Var do
     attribute :label, :string, required: true
     attribute :placeholder, :string
     attribute :key, :string, required: true
-    attribute :value, :text
-    attribute :value_boolean, :boolean, default: false
     attribute :important, :boolean, default: false
     attribute :instructions, :string
+    attribute :value, :text
+
+    # boolean
+    attribute :value_boolean, :boolean, default: false
 
     # color
     attribute :color_picker, :boolean, default: true

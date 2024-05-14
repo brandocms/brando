@@ -47,8 +47,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, false)
      |> assign(:save_redirect_target, :listing)
      |> assign(:live_preview_target, "desktop")
+     |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
-     |> assign(:live_preview_cache_key, nil)}
+     |> assign(:live_preview_cache_key, nil)
+     |> assign(:blocks_ready_for_sharing, false)}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -221,17 +223,12 @@ defmodule BrandoAdmin.Components.Form do
         %{
           event: "provide_root_blocks",
           root_changesets: root_changesets,
-          block_field: block_field
+          block_field: block_field,
+          tag: tag
         },
         socket
       ) do
     block_changesets = socket.assigns.block_changesets
-
-    require Logger
-
-    Logger.error("""
-    -> Got all root blocks for field: #{inspect(block_field)}
-    """)
 
     list_of_changesets =
       Enum.map(root_changesets, fn {_key, cs} ->
@@ -240,16 +237,56 @@ defmodule BrandoAdmin.Components.Form do
 
     updated_block_changesets = Map.put(block_changesets, block_field, list_of_changesets)
 
-    require Logger
-
-    Logger.error("""
-    -> list_of_changesets: #{inspect(list_of_changesets, pretty: true)}
-    """)
-
     {:ok,
      socket
      |> assign(:block_changesets, updated_block_changesets)
-     |> maybe_save()}
+     |> event_tag_received(tag)}
+  end
+
+  def event_tag_received(socket, :save) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      socket
+      |> assign(:all_blocks_received?, true)
+      |> push_event("b:submit", %{})
+    end
+  end
+
+  def event_tag_received(socket, :share) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      require Logger
+
+      Logger.error("""
+      => event_tag_received :share
+      #{inspect(block_changesets, pretty: true)}
+      """)
+
+      schema = socket.assigns.schema
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
+      user = socket.assigns.current_user
+      {:ok, preview_url, expiration_days} = Brando.LivePreview.share(schema, changeset, user)
+
+      message =
+        gettext(
+          "A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
+          %{expiration_days: expiration_days, preview_url: preview_url}
+        )
+
+      socket
+      |> clear_blocks_root_changesets()
+      |> push_event("b:alert", %{
+        title: gettext("Get shareable link"),
+        message: message,
+        type: "info"
+      })
+    end
   end
 
   def update(
@@ -542,7 +579,6 @@ defmodule BrandoAdmin.Components.Form do
           name
       end)
 
-    # TODO: dynamically build block preloads. They are currently hardcoded as entry_blocks.
     blocks_preloads =
       if schema.has_trait(Brando.Trait.Villain) do
         sub_sub_children_query =
@@ -1647,70 +1683,66 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :editing_image?, false)}
   end
 
-  def handle_event(
-        "share_link",
-        _,
-        %{assigns: %{changeset: changeset, schema: schema, current_user: user}} = socket
-      ) do
-    {:ok, preview_url, expiration_days} = Brando.LivePreview.share(schema, changeset, user)
-
-    message =
-      gettext(
-        "A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href=\"%{preview_url}\" target=\"_blank\">OPEN LINK</a>",
-        %{expiration_days: expiration_days, preview_url: preview_url}
-      )
-
-    {:noreply,
-     push_event(socket, "b:alert", %{
-       title: gettext("Get shareable link"),
-       message: message,
-       type: "info"
-     })}
+  def handle_event("share_link", _, socket) do
+    send(self(), {:toast, gettext("Gathering blocks for sharing...")})
+    fetch_root_blocks(socket, :share, 500)
+    {:noreply, socket}
   end
 
-  def handle_event(
-        "open_live_preview",
-        _,
-        %{
-          assigns: %{
-            changeset: changeset,
-            schema: schema,
-            live_preview_active?: live_preview_active?,
-            live_preview_cache_key: live_preview_cache_key
-          }
-        } = socket
-      ) do
+  # try to open already active live_preview.
+  def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
+    live_preview_cache_key = socket.assigns.live_preview_cache_key
+    {:noreply, push_event(socket, "b:live_preview", %{cache_key: live_preview_cache_key})}
+  end
+
+  # try to open live_preview, but blocks are not ready.
+  def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
+    block_map = socket.assigns.block_map
+    id = socket.assigns.id
+    send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
+
+    for {block_field_name, _schema, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+      send_update_after(BlockField, [id: block_field_id, event: "fetch_root_renders"], 500)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("open_live_preview", _, socket) do
     # initialize
-    if live_preview_active? do
-      {:noreply, push_event(socket, "b:live_preview", %{cache_key: live_preview_cache_key})}
+    changeset = socket.assigns.changeset
+    schema = socket.assigns.schema
+    live_preview_active? = socket.assigns.live_preview_active?
+    live_preview_cache_key = socket.assigns.live_preview_cache_key
+
+    if changeset.errors != [] do
+      error_msg =
+        gettext("There are errors in your form. Fix these before activating Live Preview")
+
+      {:noreply,
+       push_event(socket, "b:alert", %{
+         title: "Error",
+         message: error_msg,
+         type: "error"
+       })}
     else
-      if changeset.errors != [] do
-        error_msg =
-          gettext("There are errors in your form. Fix these before activating Live Preview")
+      # fetch all blocks' rendered_html
+      case Brando.LivePreview.initialize(schema, changeset) do
+        {:ok, cache_key} ->
+          {:noreply,
+           socket
+           |> assign(:live_preview_active?, true)
+           |> assign(:live_preview_cache_key, cache_key)
+           |> push_event("b:live_preview", %{cache_key: cache_key})}
 
-        {:noreply,
-         push_event(socket, "b:alert", %{
-           title: "Error",
-           message: error_msg,
-           type: "error"
-         })}
-      else
-        case Brando.LivePreview.initialize(schema, changeset) do
-          {:ok, cache_key} ->
-            {:noreply,
-             socket
-             |> assign(:live_preview_active?, true)
-             |> assign(:live_preview_cache_key, cache_key)
-             |> push_event("b:live_preview", %{cache_key: cache_key})}
-
-          {:error, err} ->
-            {:noreply,
-             push_event(socket, "b:alert", %{
-               title: "Live Preview error",
-               message: err,
-               type: "error"
-             })}
-        end
+        {:error, err} ->
+          {:noreply,
+           push_event(socket, "b:alert", %{
+             title: "Live Preview error",
+             message: err,
+             type: "error"
+           })}
       end
     end
   end
@@ -1905,7 +1937,6 @@ defmodule BrandoAdmin.Components.Form do
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
                 |> assign_refreshed_changeset()
-
                 |> clear_blocks_root_changesets()
               end
 
@@ -1932,17 +1963,24 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
-    id = socket.assigns.id
+    # has blocks, but not all blocks have been received
+    fetch_root_blocks(socket, :save, 500)
+    {:noreply, assign(socket, :processing, true)}
+  end
 
-    # if we have block fields, gather all changesets
+  def fetch_root_blocks(socket, tag \\ :save, delay \\ 500) do
+    id = socket.assigns.id
     block_map = socket.assigns.block_map
 
     for {block_field_name, _schema, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update_after(BlockField, [id: block_field_id, event: "fetch_root_blocks"], 500)
-    end
 
-    {:noreply, assign(socket, :processing, true)}
+      send_update_after(
+        BlockField,
+        [id: block_field_id, event: "fetch_root_blocks", tag: tag],
+        delay
+      )
+    end
   end
 
   def clear_blocks_root_changesets(socket) do
@@ -2883,7 +2921,16 @@ defmodule BrandoAdmin.Components.Form do
 
   def map_inputs(assigns) do
     subform = Utils.form_for_map(assigns.field)
-    input_value = assigns.field.value
+
+    input_value =
+      if input_value = assigns.field.value do
+        Enum.reduce(input_value, %{}, fn
+          {"_unused_" <> _k, v}, acc -> acc
+          {k, v}, acc -> Map.put(acc, k, v)
+        end)
+      else
+        nil
+      end
 
     assigns =
       assigns
@@ -3252,31 +3299,5 @@ defmodule BrandoAdmin.Components.Form do
       <%= render_slot(@inner_block) %>
     </label>
     """
-  end
-
-  defp maybe_save(socket) do
-    block_changesets = socket.assigns.block_changesets
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      # still waiting for blocks for fields
-      require Logger
-
-      Logger.error("""
-      -> Still waiting for blocks for fields: #{inspect(block_changesets)}
-      """)
-
-      socket
-    else
-      # we have all block fields, try to save
-      require Logger
-
-      Logger.error("""
-      -> Have all block fields. Try to save
-      """)
-
-      socket
-      |> assign(:all_blocks_received?, true)
-      |> push_event("b:submit", %{})
-    end
   end
 end

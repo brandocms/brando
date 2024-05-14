@@ -34,17 +34,6 @@ defmodule Brando.Villain do
   def parse(nil, _, _), do: ""
 
   def parse(entry_blocks_list, entry, opts) do
-    require Logger
-
-    Logger.error("""
-    => parse
-    sequence —> block_id
-    """)
-
-    Enum.each(entry_blocks_list, fn entry_block ->
-      Logger.error("#{inspect(entry_block.sequence)} — #{inspect(entry_block.block_id)}")
-    end)
-
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
