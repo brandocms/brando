@@ -437,6 +437,8 @@ defmodule Brando.Content do
     Brando.repo().delete(identifier)
   end
 
+  def create_identifier(Brando.Images.Image, _entry), do: {:ok, false}
+
   def create_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module) do
       new_identifier = module.__identifier__(entry)
@@ -470,6 +472,9 @@ defmodule Brando.Content do
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
       Brando.repo().update(changeset)
     else
+      {:error, {:identifier, :not_found}} ->
+        create_identifier(module, entry)
+
       _err ->
         {:ok, false}
     end
