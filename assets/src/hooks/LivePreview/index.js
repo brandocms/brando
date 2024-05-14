@@ -3,6 +3,7 @@ import { Dom, Events, gsap } from '@brandocms/jupiter'
 export default app => ({
   mounted() {
     this.active = false
+    console.log('==> LivePreview mounted.')
 
     this.handleEvent(`b:live_preview`, () => {
       this.toggle()
@@ -16,6 +17,7 @@ export default app => ({
   },
 
   toggle() {
+    console.log('==> LivePreview toggle')
     this.active = !this.active
     app.navigation.fsToggle.classList.toggle('minimized')
     app.navigation.setFullscreen(this.active)

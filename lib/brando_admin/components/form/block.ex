@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   import PolymorphicEmbed.HTML.Component
 
   def mount(socket) do
-    {:ok, assign(socket, module_not_found: false, entry_template: nil)}
+    {:ok, assign(socket, module_not_found: false, entry_template: nil, initial_render: false)}
   end
 
   def update(%{event: "update_sequence", sequence: idx}, socket) do
@@ -328,18 +328,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def maybe_render_module(%{assigns: %{belongs_to: :root}} = socket) do
+  def maybe_render_module(%{assigns: %{belongs_to: :root, initial_render: false}} = socket) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     uid = socket.assigns.uid
     has_vars? = socket.assigns.has_vars?
 
     updated_changeset =
-      if is_nil(Changeset.get_field(changeset, :rendered_html)) do
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?)
-      else
-        changeset
-      end
+      render_and_update_entry_block_changeset(changeset, entry, has_vars?)
 
     new_form =
       to_form(updated_changeset,
@@ -350,7 +346,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def maybe_render_module(socket) do
+  def maybe_render_module(%{assigns: %{initial_render: false}} = socket) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     belongs_to = socket.assigns.belongs_to
@@ -359,11 +355,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
 
     updated_changeset =
-      if is_nil(Changeset.get_field(block_cs, :rendered_html)) do
-        render_and_update_block_changeset(changeset, entry, has_vars?)
-      else
-        changeset
-      end
+      render_and_update_block_changeset(changeset, entry, has_vars?)
 
     new_form =
       to_form(updated_changeset,
@@ -372,6 +364,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     assign(socket, :form, new_form)
+  end
+
+  def maybe_render_module(socket) do
+    socket
   end
 
   def maybe_assign_module(%{assigns: %{module_id: nil}} = socket) do

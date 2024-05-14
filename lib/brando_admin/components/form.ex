@@ -261,13 +261,6 @@ defmodule BrandoAdmin.Components.Form do
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
-      require Logger
-
-      Logger.error("""
-      => event_tag_received :share
-      #{inspect(block_changesets, pretty: true)}
-      """)
-
       schema = socket.assigns.schema
       changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
       user = socket.assigns.current_user
@@ -287,6 +280,67 @@ defmodule BrandoAdmin.Components.Form do
         type: "info"
       })
     end
+  end
+
+  def event_tag_received(socket, :live_preview) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      # initialize
+      schema = socket.assigns.schema
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
+
+      if changeset.errors != [] do
+        error_msg =
+          gettext("There are errors in your form. Fix these before activating Live Preview")
+
+        push_event(socket, "b:alert", %{
+          title: "Error",
+          message: error_msg,
+          type: "error"
+        })
+      else
+        # fetch all blocks' rendered_html
+        case Brando.LivePreview.initialize(schema, changeset) do
+          {:ok, cache_key} ->
+            require Logger
+
+            Logger.error("""
+            => Live Preview initialized with cache key: #{inspect(cache_key)}
+            """)
+
+            socket
+            |> assign(:live_preview_active?, true)
+            |> assign(:live_preview_cache_key, cache_key)
+            |> push_event("b:live_preview", %{cache_key: cache_key})
+
+          {:error, err} ->
+            require Logger
+
+            Logger.error("""
+            => Live Preview error: #{inspect(err)}
+            """)
+
+            push_event(socket, "b:alert", %{
+              title: "Live Preview error",
+              message: err,
+              type: "error"
+            })
+        end
+      end
+    end
+  end
+
+  def event_tag_received(socket, tag) do
+    socket
+    |> clear_blocks_root_changesets()
+    |> push_event("b:alert", %{
+      title: gettext("Received unknown event tag"),
+      message: "Tag received: #{inspect(tag)}",
+      type: "info"
+    })
   end
 
   def update(
@@ -848,6 +902,7 @@ defmodule BrandoAdmin.Components.Form do
                   />
                 </svg>
               </button>
+              <%= @live_preview_active? %>
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("open_live_preview", target: @myself)}
@@ -1691,8 +1746,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # try to open already active live_preview.
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
-    live_preview_cache_key = socket.assigns.live_preview_cache_key
-    {:noreply, push_event(socket, "b:live_preview", %{cache_key: live_preview_cache_key})}
+    {:noreply, socket}
   end
 
   # try to open live_preview, but blocks are not ready.
@@ -1700,51 +1754,8 @@ defmodule BrandoAdmin.Components.Form do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
-
-    for {block_field_name, _schema, _opts} <- block_map do
-      block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update_after(BlockField, [id: block_field_id, event: "fetch_root_renders"], 500)
-    end
-
+    fetch_root_blocks(socket, :live_preview, 500)
     {:noreply, socket}
-  end
-
-  def handle_event("open_live_preview", _, socket) do
-    # initialize
-    changeset = socket.assigns.changeset
-    schema = socket.assigns.schema
-    live_preview_active? = socket.assigns.live_preview_active?
-    live_preview_cache_key = socket.assigns.live_preview_cache_key
-
-    if changeset.errors != [] do
-      error_msg =
-        gettext("There are errors in your form. Fix these before activating Live Preview")
-
-      {:noreply,
-       push_event(socket, "b:alert", %{
-         title: "Error",
-         message: error_msg,
-         type: "error"
-       })}
-    else
-      # fetch all blocks' rendered_html
-      case Brando.LivePreview.initialize(schema, changeset) do
-        {:ok, cache_key} ->
-          {:noreply,
-           socket
-           |> assign(:live_preview_active?, true)
-           |> assign(:live_preview_cache_key, cache_key)
-           |> push_event("b:live_preview", %{cache_key: cache_key})}
-
-        {:error, err} ->
-          {:noreply,
-           push_event(socket, "b:alert", %{
-             title: "Live Preview error",
-             message: err,
-             type: "error"
-           })}
-      end
-    end
   end
 
   def handle_event("push_submit_redirect", _, socket) do

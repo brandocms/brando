@@ -218,7 +218,8 @@ defmodule Brando.Villain.Parser do
                   |> add_module_id_to_context(id)
                   |> Context.assign("forloop", forloop)
 
-                Villain.parse_and_render(child_module.code, context)
+                code = add_uid(child_module.code, entry.uid)
+                Villain.parse_and_render(code, context)
             end)
             |> Enum.join("\n")
           end
@@ -243,7 +244,8 @@ defmodule Brando.Villain.Parser do
           |> Context.assign("entries", children)
           |> Context.assign("content", content)
 
-        Villain.parse_and_render(module.code, context)
+        code = add_uid(module.code, block.uid)
+        Villain.parse_and_render(code, context)
       end
 
       def module(%{module_id: id} = block, opts) do
@@ -265,7 +267,8 @@ defmodule Brando.Villain.Parser do
           |> add_module_id_to_context(id)
           |> add_entries_to_context(module, block)
 
-        Villain.parse_and_render(module.code, context)
+        code = add_uid(module.code, block.uid)
+        Villain.parse_and_render(code, context)
       end
 
       defoverridable module: 2
@@ -874,7 +877,10 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{children: children, palette_id: palette_id, anchor: target_id}, opts) do
+      def container(
+            %{children: children, palette_id: palette_id, anchor: target_id} = block,
+            opts
+          ) do
         palettes = opts.palettes
         skip_children? = Map.get(opts, :skip_children, false)
 
@@ -898,14 +904,14 @@ defmodule Brando.Villain.Parser do
         case Content.find_palette(palettes, palette_id) do
           {:ok, palette} ->
             """
-            <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
+            <section b-uid="#{block.uid}" b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
               #{children_html}
             </section>
             """
 
           {:error, {:palette, :not_found, nil}} ->
             """
-            <section b-section#{target_id}>
+            <section b-uid="#{block.uid}" b-section#{target_id}>
               #{children_html}
             </section>
             """
@@ -1035,6 +1041,10 @@ defmodule Brando.Villain.Parser do
         {:ok, module} = Content.find_module(modules, module_id)
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(module.code, context)
+      end
+
+      defp add_uid(code, uid) do
+        String.replace(code, "<article b-tpl", "<article data-uid=\"#{uid}\" b-tpl")
       end
     end
   end

@@ -140,7 +140,6 @@ defmodule Brando.LivePreview do
             parsed_villain =
               Brando.Villain.parse(Map.get(var!(entry), entry_blocks_relation), var!(entry),
                 cache_modules: true
-                # data_field: atom_key,
               )
 
             require Logger
