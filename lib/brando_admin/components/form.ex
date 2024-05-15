@@ -137,6 +137,38 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(
         %{
+          event: "update_live_preview_block",
+          rendered_html: rendered_html,
+          uid: uid,
+          has_children: has_children?
+        },
+        socket
+      ) do
+    cache_key = socket.assigns.live_preview_cache_key
+
+    Brando.endpoint().broadcast("live_preview:#{cache_key}", "update_block", %{
+      uid: uid,
+      rendered_html: rendered_html,
+      has_children: has_children?
+    })
+
+    {:ok, socket}
+  end
+
+  def update(
+        %{
+          event: "update_live_preview"
+        },
+        socket
+      ) do
+    # update entire live preview (when deleting or inserting blocks)
+    fetch_root_blocks(socket, :update, 500)
+
+    {:ok, socket}
+  end
+
+  def update(
+        %{
           action: :update_entry_relation,
           updated_relation: updated_relation,
           path: [:transformer, relation_key, asset_key, image_id],
@@ -206,9 +238,23 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{action: :update_entry, updated_entry: updated_entry},
+        %{assigns: %{schema: schema, current_user: current_user}} = socket
+      ) do
+    new_changeset = schema.changeset(updated_entry, %{}, current_user, skip_villain: true)
+
+    {:ok,
+     socket
+     |> assign(:changeset, new_changeset)
+     |> assign(:form, to_form(new_changeset, []))
+     |> force_svelte_remounts()}
+  end
+
+  def update(
         %{updated_entry: updated_entry},
         %{assigns: %{schema: schema, current_user: current_user}} = socket
       ) do
+    raise "DEPRECATE form.ex:updated_entry —— use action: :update_entry instead"
     new_changeset = schema.changeset(updated_entry, %{}, current_user, skip_villain: true)
 
     {:ok,
@@ -290,13 +336,18 @@ defmodule BrandoAdmin.Components.Form do
     else
       # initialize
       schema = socket.assigns.schema
-      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
+
+      changeset =
+        block_changesets
+        |> assoc_all_block_fields(socket.assigns.changeset)
 
       if changeset.errors != [] do
         error_msg =
           gettext("There are errors in your form. Fix these before activating Live Preview")
 
-        push_event(socket, "b:alert", %{
+        socket
+        |> clear_blocks_root_changesets()
+        |> push_event("b:alert", %{
           title: "Error",
           message: error_msg,
           type: "error"
@@ -314,6 +365,7 @@ defmodule BrandoAdmin.Components.Form do
             socket
             |> assign(:live_preview_active?, true)
             |> assign(:live_preview_cache_key, cache_key)
+            |> clear_blocks_root_changesets()
             |> push_event("b:live_preview", %{cache_key: cache_key})
 
           {:error, err} ->
@@ -330,6 +382,26 @@ defmodule BrandoAdmin.Components.Form do
             })
         end
       end
+    end
+  end
+
+  # when inserting or deleting blocks we want a full rerender of the live preview.
+  def event_tag_received(socket, :update) do
+    block_changesets = socket.assigns.block_changesets
+    cache_key = socket.assigns.live_preview_cache_key
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      send(self(), {:toast, gettext("Updating live preview...")})
+      schema = socket.assigns.schema
+
+      changeset =
+        block_changesets
+        |> assoc_all_block_fields(socket.assigns.changeset)
+
+      Brando.LivePreview.update(schema, changeset, cache_key)
+      clear_blocks_root_changesets(socket)
     end
   end
 
@@ -902,7 +974,6 @@ defmodule BrandoAdmin.Components.Form do
                   />
                 </svg>
               </button>
-              <%= @live_preview_active? %>
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("open_live_preview", target: @myself)}
@@ -987,6 +1058,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
+              form_cid={@myself}
               status={@status_revisions}
               close={
                 JS.push("toggle_revisions_drawer_status", target: @myself)
@@ -1019,29 +1091,31 @@ defmodule BrandoAdmin.Components.Form do
               schema={@schema}
             />
           </.form>
+
+          <.live_component
+            :for={{block_field, block_module, field_opts} <- @block_map}
+            :if={@has_blocks?}
+            module={BlockField}
+            block_module={block_module}
+            block_field={block_field}
+            parent_uploads={@uploads}
+            live_preview_active?={@live_preview_active?}
+            live_preview_cache_key={@live_preview_cache_key}
+            opts={field_opts}
+            id={"#{@id}-blocks-#{block_field}"}
+            entry={@entry_for_blocks}
+            entry_blocks={@entry.entry_blocks}
+            current_user={@current_user}
+            form_cid={@myself}
+          />
+
+          <.submit_button
+            processing={@processing}
+            form_id={@id}
+            label={gettext("Save (⌘S)")}
+            class="primary submit-button"
+          />
         </div>
-
-        <.live_component
-          :for={{block_field, block_module, field_opts} <- @block_map}
-          :if={@has_blocks?}
-          module={BlockField}
-          block_module={block_module}
-          block_field={block_field}
-          parent_uploads={@uploads}
-          opts={field_opts}
-          id={"#{@id}-blocks-#{block_field}"}
-          entry={@entry_for_blocks}
-          entry_blocks={@entry.entry_blocks}
-          current_user={@current_user}
-          form_cid={@myself}
-        />
-
-        <.submit_button
-          processing={@processing}
-          form_id={@id}
-          label={gettext("Save (⌘S)")}
-          class="primary submit-button"
-        />
 
         <.live_preview
           live_preview_active?={@live_preview_active?}
@@ -2545,12 +2619,9 @@ defmodule BrandoAdmin.Components.Form do
         } = socket
       ) do
     assign_new(socket, :changeset, fn ->
-      cs =
-        entry
-        |> schema.changeset(%{}, current_user, skip_villain: true)
-        |> Map.put(:action, :validate)
-
-      cs
+      entry
+      |> schema.changeset(%{}, current_user, skip_villain: true)
+      |> Map.put(:action, :validate)
     end)
   end
 

@@ -348,7 +348,7 @@ defmodule Brando.Pages.Page do
   defp filter_language(parents, _), do: parents
 
   defimpl Phoenix.HTML.Safe do
-    def to_iodata(%{html: html}) do
+    def to_iodata(%{rendered_blocks: html}) do
       html
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()

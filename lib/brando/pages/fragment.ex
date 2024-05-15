@@ -122,14 +122,14 @@ defmodule Brando.Pages.Fragment do
 
   defimpl Phoenix.HTML.Safe do
     def to_iodata(%{wrapper: nil} = fragment) do
-      fragment.html
+      fragment.rendered_blocks
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end
 
     def to_iodata(%{wrapper: wrapper} = fragment) do
       wrapper
-      |> String.replace("{{ content }}", fragment.html)
+      |> String.replace("{{ content }}", fragment.rendered_blocks)
       |> String.replace("{{ parent_key }}", fragment.parent_key)
       |> String.replace("{{ key }}", fragment.key)
       |> String.replace("{{ language }}", to_string(fragment.language))

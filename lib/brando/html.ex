@@ -625,7 +625,6 @@ defmodule Brando.HTML do
       |> assign(:at, Map.get(assigns.entry, rendered_field_at) |> inspect())
 
     ~H"""
-    <!-- {<%= @rendered_field %>//<%= @at %>} -->
     <%= @html |> raw %>
     """
   end

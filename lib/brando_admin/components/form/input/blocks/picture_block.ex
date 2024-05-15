@@ -210,7 +210,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
             <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
               <%!-- TODO: Remove the _unused check when https://github.com/phoenixframework/phoenix_live_view/pull/3244 is merged --%>
-              <div><%= inspect(name, pretty: true) %></div>
               <input
                 :if={!String.starts_with?(name, "_unused")}
                 type="hidden"
@@ -328,10 +327,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         :link,
         :srcset,
         :media_queries,
-        :title,
-        :credits,
         :formats,
-        :alt,
         :path,
         :width,
         :height,
@@ -344,26 +340,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         :focal
       ])
 
-    require Logger
-
-    Logger.error("""
-
-    -> sending ref_data #{inspect(new_data, pretty: true)}
-
-    """)
-
     send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
     {:noreply, socket}
-
-    # block_data = block[:data].value
-
-    # updated_data_map =
-    #   block_data
-    #   |> Map.merge(image)
-    #   |> Map.from_struct()
-
-    # updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-    # updated_picture_block = Map.put(block.data, :data, updated_data_struct)
   end
 
   def handle_event("show_image_picker", _, socket) do

@@ -316,6 +316,7 @@ defmodule Brando.Revisions do
 
       [revision] ->
         decoded_entry = Utils.binary_to_term(revision.encoded_entry)
+
         {:ok, {revision, {revision.revision, decoded_entry}}}
     end
   end

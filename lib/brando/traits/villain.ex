@@ -110,8 +110,4 @@ defmodule Brando.Trait.Villain do
       end
     end
   end
-
-  attributes do
-    attribute :html, :text
-  end
 end

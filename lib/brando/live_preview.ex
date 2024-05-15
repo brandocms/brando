@@ -139,7 +139,8 @@ defmodule Brando.LivePreview do
 
             parsed_villain =
               Brando.Villain.parse(Map.get(var!(entry), entry_blocks_relation), var!(entry),
-                cache_modules: true
+                cache_modules: true,
+                annotate_blocks: true
               )
 
             require Logger
@@ -472,10 +473,15 @@ defmodule Brando.LivePreview do
   end
 
   def update(schema, changeset, cache_key) do
-    # TODO: consider if it's worth trying to diff
     preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])
     entry = Ecto.Changeset.apply_changes(changeset)
+
+    require Logger
+
+    Logger.error("""
+    Updating live preview with cache_key: #{inspect(cache_key)}
+    """)
 
     wrapper_html = preview_module.render(schema_module, entry, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})

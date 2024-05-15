@@ -43,7 +43,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
     end
 
     relations do
-      relation :focal, :embeds_one, module: Focal
+      relation :focal, :embeds_one, module: Focal, on_replace: :delete
     end
   end
 

@@ -3,6 +3,7 @@ defmodule Brando.Villain.Tags.Ref do
   @behaviour Liquex.Tag
 
   import NimbleParsec
+  alias Ecto.Changeset
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
@@ -63,6 +64,18 @@ defmodule Brando.Villain.Tags.Ref do
       #{rendered_ref}
     </section>
     """
+  end
+
+  defp render_ref(
+         parser,
+         %{data: %Changeset{} = block_cs, description: _description},
+         _id,
+         _ref_name,
+         _,
+         opts
+       ) do
+    block = Changeset.apply_changes(block_cs)
+    apply(parser, String.to_atom(block.type), [block.data, opts])
   end
 
   defp render_ref(parser, %{data: block, description: _description}, _id, _ref_name, _, opts) do

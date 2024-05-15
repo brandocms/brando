@@ -206,6 +206,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         %{event: "insert_block", sequence: sequence, module_id: module_id, type: type},
         socket
       ) do
+    form_cid = socket.assigns.form_cid
     module_id = String.to_integer(module_id)
     user_id = socket.assigns.current_user_id
     parent_id = nil
@@ -229,6 +230,8 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     selector = "[data-block-uid=\"#{uid}\"]"
 
+    send_update(form_cid, %{event: "update_live_preview"})
+
     socket
     |> stream_insert(:children_forms, block_form, at: sequence)
     |> assign(:has_children?, true)
@@ -250,6 +253,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     parent_id = socket.assigns.parent_id
     id = socket.assigns.id
+    has_vars? = socket.assigns.has_vars?
+    entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
     refs = Changeset.get_embed(block_changeset, :refs)
@@ -273,9 +278,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
-        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+        changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?)
       else
-        Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Changeset.put_embed(changeset, :refs, new_refs)
+        render_and_update_block_changeset(changeset, entry, has_vars?)
       end
 
     new_form =
@@ -293,6 +300,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, new_form)
+    |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
 
@@ -609,12 +617,15 @@ defmodule BrandoAdmin.Components.Form.Block do
               block_module={@block_module}
               block_field={@block_field}
               children={child_block_form[:children].value}
+              live_preview_active?={@live_preview_active?}
+              live_preview_cache_key={@live_preview_cache_key}
               parent_cid={@myself}
               parent_uid={@uid}
               parent_path={@path}
               parent_uploads={@parent_uploads}
               parent_module_id={@module_id}
               form={child_block_form}
+              form_cid={@form_cid}
               entry={@entry}
               current_user_id={@current_user_id}
               belongs_to={:multi}
@@ -718,12 +729,15 @@ defmodule BrandoAdmin.Components.Form.Block do
               block_module={@block_module}
               block_field={@block_field}
               children={child_block_form[:children].value}
+              live_preview_active?={@live_preview_active?}
+              live_preview_cache_key={@live_preview_cache_key}
               parent_cid={@myself}
               parent_uid={@uid}
               parent_path={@path}
               parent_uploads={@parent_uploads}
               entry={@entry}
               form={child_block_form}
+              form_cid={@form_cid}
               current_user_id={@current_user_id}
               belongs_to={:container}
               level={@level + 1}
@@ -910,7 +924,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               <div>
                 <code>
                   <pre style="font-family: 'Mono'; font-size: 10px; text-wrap: pretty;">
-    <%= Phoenix.LiveView.HTMLFormatter.format(block_form[:rendered_html].value, []) %>
+    <%= Phoenix.LiveView.HTMLFormatter.format(block_form[:rendered_html].value || "", []) %>
     </pre>
                 </code>
               </div>
@@ -2207,7 +2221,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> assign(:liquid_splits, updated_liquid_splits)
-    |> maybe_update_live_preview()
+    |> maybe_update_live_preview_block()
     |> then(&{:noreply, &1})
   end
 
@@ -2253,34 +2267,36 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> assign(:liquid_splits, updated_liquid_splits)
-    |> maybe_update_live_preview()
+    |> maybe_update_live_preview_block()
     |> then(&{:noreply, &1})
   end
 
-  defp maybe_update_live_preview(socket) do
+  defp maybe_update_live_preview_block(socket) do
     # TODO: check if Live Preview is active.
-    path = socket.assigns.path
-    rendered_block_field = :"rendered_#{socket.assigns.block_field}"
-    has_children? = socket.assigns.has_children?
     changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+    block_cs = get_block_changeset(changeset, belongs_to)
+    has_children? = socket.assigns.has_children?
+    rendered_html = Changeset.get_field(block_cs, :rendered_html)
+    uid = Changeset.get_field(block_cs, :uid)
 
-    {access_path, _} =
-      Enum.reduce(path, {[], 0}, fn uid, {current_path, depth} ->
-        if depth == 0 do
-          {current_path ++ [Access.filter(&(&1.uid == uid))], depth + 1}
-        else
-          {current_path ++ [:children, Access.filter(&(&1.uid == uid))], depth + 1}
-        end
-      end)
+    form_cid = socket.assigns.form_cid
 
     require Logger
 
     Logger.error("""
-    => update live_preview for:
-    {#{inspect(rendered_block_field)}, #{inspect(access_path)}, has_children: #{inspect(has_children?)}}
-
-    #{inspect(Changeset.get_field(changeset, :rendered_html))}
+    => send_update
+    uid: #{uid}
+    has_children: #{has_children?}
+    rendered_html: #{rendered_html}
     """)
+
+    send_update(form_cid, %{
+      event: "update_live_preview_block",
+      rendered_html: rendered_html,
+      uid: uid,
+      has_children: has_children?
+    })
 
     socket
   end
@@ -2305,7 +2321,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset
       |> Changeset.get_assoc(:block)
       |> Changeset.put_change(:rendered_html, rendered_html)
-      |> Changeset.put_change(:rendered_at, DateTime.truncate(DateTime.utc_now(), :second))
+      |> maybe_update_rendered_at()
 
     Changeset.put_assoc(changeset, :block, updated_block_changeset)
   end
@@ -2319,7 +2335,15 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
-    |> Changeset.put_change(:rendered_at, DateTime.truncate(DateTime.utc_now(), :second))
+    |> maybe_update_rendered_at()
+  end
+
+  defp maybe_update_rendered_at(%Changeset{changes: %{rendered_html: _}} = changeset) do
+    Changeset.put_change(changeset, :rendered_at, DateTime.truncate(DateTime.utc_now(), :second))
+  end
+
+  defp maybe_update_rendered_at(changeset) do
+    changeset
   end
 
   defp reset_empty_vars(block, true, _), do: block

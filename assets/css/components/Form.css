@@ -1,6 +1,6 @@
 .brando-form {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 
   .form-content {
     flex-shrink: 1;

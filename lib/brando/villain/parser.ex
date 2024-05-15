@@ -188,6 +188,7 @@ defmodule Brando.Villain.Parser do
         content =
           if skip_children? do
             "{$ content $}"
+            |> annotate_children(block.uid)
           else
             children
             |> Enum.with_index()
@@ -218,10 +219,11 @@ defmodule Brando.Villain.Parser do
                   |> add_module_id_to_context(id)
                   |> Context.assign("forloop", forloop)
 
-                code = add_uid(child_module.code, entry.uid)
+                code = maybe_annotate(child_module.code, entry.uid, opts)
                 Villain.parse_and_render(code, context)
             end)
             |> Enum.join("\n")
+            |> annotate_children(block.uid)
           end
 
         base_vars = process_vars(block.vars)
@@ -244,7 +246,7 @@ defmodule Brando.Villain.Parser do
           |> Context.assign("entries", children)
           |> Context.assign("content", content)
 
-        code = add_uid(module.code, block.uid)
+        code = maybe_annotate(module.code, block.uid, opts)
         Villain.parse_and_render(code, context)
       end
 
@@ -267,8 +269,9 @@ defmodule Brando.Villain.Parser do
           |> add_module_id_to_context(id)
           |> add_entries_to_context(module, block)
 
-        code = add_uid(module.code, block.uid)
-        Villain.parse_and_render(code, context)
+        module.code
+        |> maybe_annotate(block.uid, opts)
+        |> Villain.parse_and_render(context)
       end
 
       defoverridable module: 2
@@ -288,12 +291,6 @@ defmodule Brando.Villain.Parser do
         mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
 
         {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
-
-        require Logger
-
-        Logger.error("""
-        -> add_entries_to_context LIST #{inspect(entries, pretty: true)}
-        """)
 
         Context.assign(context, :entries, entries || [])
       end
@@ -887,6 +884,7 @@ defmodule Brando.Villain.Parser do
         children_html =
           if skip_children? do
             "{$ content $}"
+            |> annotate_children(block.uid)
           else
             (children || [])
             |> Enum.reduce([], fn
@@ -896,6 +894,7 @@ defmodule Brando.Villain.Parser do
             end)
             |> Enum.reverse()
             |> Enum.join("")
+            |> annotate_children(block.uid)
           end
 
         target_id =
@@ -904,17 +903,19 @@ defmodule Brando.Villain.Parser do
         case Content.find_palette(palettes, palette_id) do
           {:ok, palette} ->
             """
-            <section b-uid="#{block.uid}" b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
+            <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
               #{children_html}
             </section>
             """
+            |> maybe_annotate(block.uid, opts)
 
           {:error, {:palette, :not_found, nil}} ->
             """
-            <section b-uid="#{block.uid}" b-section#{target_id}>
+            <section b-section#{target_id}>
               #{children_html}
             </section>
             """
+            |> maybe_annotate(block.uid, opts)
         end
       end
 
@@ -1045,6 +1046,24 @@ defmodule Brando.Villain.Parser do
 
       defp add_uid(code, uid) do
         String.replace(code, "<article b-tpl", "<article data-uid=\"#{uid}\" b-tpl")
+      end
+
+      def maybe_annotate(code, uid, %{annotate_blocks: true}) do
+        """
+        <!-- B:LP{#{uid}} -->
+          #{code}
+        <!-- E:LP{#{uid}} -->
+        """
+      end
+
+      def maybe_annotate(code, _, _), do: code
+
+      def annotate_children(code, uid) do
+        """
+        <!-- B:CHILDREN{#{uid}} -->
+          #{code}
+        <!-- E:CHILDREN{#{uid}} -->
+        """
       end
     end
   end

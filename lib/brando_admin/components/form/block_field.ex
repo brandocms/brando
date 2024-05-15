@@ -58,6 +58,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # INSERT ROOT BLOCK
 
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id}, socket) do
+    form_cid = socket.assigns.form_cid
     module_id = String.to_integer(module_id)
     root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
@@ -88,6 +89,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
+    send_update(form_cid, %{event: "update_live_preview"})
+
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
@@ -98,6 +101,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "insert_container", sequence: sequence}, socket) do
+    form_cid = socket.assigns.form_cid
     root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
@@ -128,6 +132,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       )
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
+    send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
@@ -346,12 +351,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 block_module={@block_module}
                 block_field={@block_field}
                 children={block[:children].value}
+                live_preview_active?={@live_preview_active?}
+                live_preview_cache_key={@live_preview_cache_key}
                 parent_uploads={@parent_uploads}
                 parent_cid={@myself}
                 parent_uid={}
                 parent_path={[]}
                 entry={@entry}
                 form={entry_block_form}
+                form_cid={@form_cid}
                 current_user_id={@current_user.id}
                 belongs_to={:root}
                 level={0}

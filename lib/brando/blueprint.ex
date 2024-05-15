@@ -345,7 +345,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             name,
             Map.fetch!(opts, :module),
-            to_ecto_opts(:embeds_one, opts) ++ [on_replace: :update]
+            to_ecto_opts(:embeds_one, opts)
           )
 
         %{type: :embeds_many, name: name, opts: opts} ->
