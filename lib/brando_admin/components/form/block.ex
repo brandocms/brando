@@ -822,13 +822,6 @@ defmodule BrandoAdmin.Components.Form.Block do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <div>
-                <code>
-                  <pre style="font-family: 'Mono'; font-size: 10px; text-wrap: pretty;">
-    <%= Phoenix.LiveView.HTMLFormatter.format(block_form[:rendered_html].value, []) %>
-    </pre>
-                </code>
-              </div>
               <.hidden_block_fields block_form={block_form} />
               <.toolbar
                 uid={@uid}
@@ -921,13 +914,6 @@ defmodule BrandoAdmin.Components.Form.Block do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <div>
-                <code>
-                  <pre style="font-family: 'Mono'; font-size: 10px; text-wrap: pretty;">
-    <%= Phoenix.LiveView.HTMLFormatter.format(block_form[:rendered_html].value || "", []) %>
-    </pre>
-                </code>
-              </div>
               <.hidden_block_fields block_form={block_form} />
               <.toolbar
                 uid={@uid}
@@ -962,12 +948,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           <% else %>
             <Input.hidden field={@form[:sequence]} />
             <.hidden_block_fields block_form={@form} />
-
-            <code>
-              <pre style="font-family: 'Mono'; font-size: 10px; text-wrap: pretty;">
-    <%= Phoenix.LiveView.HTMLFormatter.format(@form[:rendered_html].value, []) %>
-    </pre>
-            </code>
 
             <.toolbar
               uid={@uid}
@@ -2271,24 +2251,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
-  defp maybe_update_live_preview_block(socket) do
-    # TODO: check if Live Preview is active.
-    changeset = socket.assigns.form.source
-    belongs_to = socket.assigns.belongs_to
+  defp maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true}} = socket) do
+    %{
+      form: %{source: changeset},
+      belongs_to: belongs_to,
+      has_children?: has_children?,
+      form_cid: form_cid
+    } = socket.assigns
+
     block_cs = get_block_changeset(changeset, belongs_to)
-    has_children? = socket.assigns.has_children?
     rendered_html = Changeset.get_field(block_cs, :rendered_html)
     uid = Changeset.get_field(block_cs, :uid)
-
-    form_cid = socket.assigns.form_cid
 
     require Logger
 
     Logger.error("""
-    => send_update
-    uid: #{uid}
-    has_children: #{has_children?}
-    rendered_html: #{rendered_html}
+    => updating live_preview_block
     """)
 
     send_update(form_cid, %{
@@ -2298,6 +2276,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       has_children: has_children?
     })
 
+    socket
+  end
+
+  defp maybe_update_live_preview_block(socket) do
     socket
   end
 
@@ -2315,7 +2297,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset
       |> Changeset.apply_changes()
       |> reset_empty_vars(has_vars?, true)
-      |> Brando.Villain.render_block(entry, skip_children: true)
+      |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 
     updated_block_changeset =
       changeset
@@ -2331,7 +2313,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset
       |> Changeset.apply_changes()
       |> reset_empty_vars(has_vars?, false)
-      |> Brando.Villain.render_block(entry, skip_children: true)
+      |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)

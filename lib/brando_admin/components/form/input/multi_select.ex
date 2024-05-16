@@ -816,6 +816,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         %{assigns: %{relation_type: relation_type}} = socket
       )
       when relation_type in [:has_many, {:subform, :has_many}] do
+    require Logger
+
+    Logger.error("""
+    => select_option for #{inspect(relation_type)}
+    """)
+
     form = socket.assigns.field.form
     field = socket.assigns.field
     subform_id = socket.assigns.subform_id
@@ -905,6 +911,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp update_relation(changeset, field, updated_relation, relation_type)
        when relation_type in [:has_many, :many_to_many, {:subform, :has_many}] do
+    # TODO: update the "through" relation -- so if we are acting on articles_contributors here,
+    # could we also act on contributors?
     Ecto.Changeset.put_assoc(changeset, field, updated_relation)
   end
 

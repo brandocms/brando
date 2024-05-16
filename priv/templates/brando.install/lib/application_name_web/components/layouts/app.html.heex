@@ -3,12 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="format-detection" content="telephone=no">
+    <title><%%= Brando.Utils.get_page_title(@conn) %></title>
+    <.inject_critical_css />
 
     <.preload_fonts fonts={[]} />
     <.init_js />
-    <.inject_critical_css />
 
     <.render_meta conn={@conn} />
     <.render_rel conn={@conn} />
@@ -16,11 +15,10 @@
 
     <link rel="shortcut icon" href="/ico/favicon.ico">
 
-    <title><%%= Brando.Utils.get_page_title(@conn) %></title>
-
     <.include_assets />
     <.render_json_ld conn={@conn} />
     <.render_hreflangs conn={@conn} />
+    <meta name="format-detection" content="telephone=no">
   </head>
   <.body_tag conn={@conn} id="top">
     <.cookie_law 

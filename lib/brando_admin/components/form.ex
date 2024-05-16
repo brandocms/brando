@@ -162,7 +162,7 @@ defmodule BrandoAdmin.Components.Form do
         socket
       ) do
     # update entire live preview (when deleting or inserting blocks)
-    fetch_root_blocks(socket, :update, 500)
+    fetch_root_blocks(socket, :live_preview_update, 500)
 
     {:ok, socket}
   end
@@ -386,7 +386,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # when inserting or deleting blocks we want a full rerender of the live preview.
-  def event_tag_received(socket, :update) do
+  def event_tag_received(socket, :live_preview_update) do
     block_changesets = socket.assigns.block_changesets
     cache_key = socket.assigns.live_preview_cache_key
 
@@ -800,6 +800,15 @@ defmodule BrandoAdmin.Components.Form do
           identifiers_preloads ++
           default_preloads
       )
+
+    require Logger
+
+    Logger.error("""
+
+    => preloads for #{inspect(schema)}:
+    #{inspect(preloads, pretty: true, width: 0)}
+
+    """)
 
     Map.put(
       query_params,
@@ -1896,6 +1905,15 @@ defmodule BrandoAdmin.Components.Form do
     changeset = validate(schema, entry_or_default, entry_params, current_user)
     changed_fields = Map.keys(changeset.changes)
 
+    require Logger
+
+    Logger.error("""
+
+    changeset
+    #{inspect(changeset, pretty: true)}
+
+    """)
+
     socket =
       if changed_fields != dirty_fields do
         Phoenix.PubSub.broadcast(
@@ -1910,7 +1928,7 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     if live_preview_active? do
-      Brando.LivePreview.update(schema, changeset, live_preview_cache_key)
+      fetch_root_blocks(socket, :live_preview_update, 500)
     end
 
     {:noreply,

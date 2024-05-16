@@ -247,7 +247,11 @@ defmodule Brando.Villain.Parser do
           |> Context.assign("content", content)
 
         code = maybe_annotate(module.code, block.uid, opts)
-        Villain.parse_and_render(code, context)
+
+        module.code
+        |> maybe_annotate(block.uid, opts)
+        |> Villain.parse_and_render(context)
+        |> maybe_format(opts)
       end
 
       def module(%{module_id: id} = block, opts) do
@@ -259,6 +263,18 @@ defmodule Brando.Villain.Parser do
         base_context = opts.context
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
+
+        if id == 7 do
+          require Logger
+
+          Logger.error("""
+          -> module 7 --
+
+          base_context:
+          #{inspect(base_context, pretty: true)}
+
+          """)
+        end
 
         context =
           base_context
@@ -272,6 +288,7 @@ defmodule Brando.Villain.Parser do
         module.code
         |> maybe_annotate(block.uid, opts)
         |> Villain.parse_and_render(context)
+        |> maybe_format(opts)
       end
 
       defoverridable module: 2
@@ -908,6 +925,7 @@ defmodule Brando.Villain.Parser do
             </section>
             """
             |> maybe_annotate(block.uid, opts)
+            |> maybe_format(opts)
 
           {:error, {:palette, :not_found, nil}} ->
             """
@@ -916,6 +934,7 @@ defmodule Brando.Villain.Parser do
             </section>
             """
             |> maybe_annotate(block.uid, opts)
+            |> maybe_format(opts)
         end
       end
 
@@ -1065,6 +1084,12 @@ defmodule Brando.Villain.Parser do
         <!-- E:CHILDREN{#{uid}} -->
         """
       end
+
+      def maybe_format(html, %{format_html: true}) do
+        Phoenix.LiveView.HTMLFormatter.format(html, [])
+      end
+
+      def maybe_format(html, _), do: html
     end
   end
 

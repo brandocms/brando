@@ -7,9 +7,18 @@ var parser = new DOMParser()
 previewSocket.connect()
 var channel = previewSocket.channel('live_preview:' + livePreviewKey)
 var firstUpdate = true
+var MOONWALK_OVERRIDE_STYLES = `
+      .is-live-preview [data-moonwalk],
+      .is-live-preview [data-moonwalk-run], 
+      .is-live-preview [data-moonwalk-section], 
+      .is-live-preview [b-section] {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+    `
 
-function forceLazyloadAllImages() {
-  document
+function forceLazyloadAllImages(target = document) {
+  target
     .querySelectorAll(
       '[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])'
     )
@@ -23,8 +32,8 @@ function forceLazyloadAllImages() {
     })
 }
 
-function forceLazyloadAllVideos() {
-  document.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(llVideo => {
+function forceLazyloadAllVideos(target = document) {
+  target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(llVideo => {
     llVideo.src = llVideo.dataset.src
     llVideo.dataset.booted = ''
   })
@@ -40,7 +49,6 @@ var uid
 
 function buildMap() {
   blockMap = []
-  console.log('==> building map..')
   var iterator = document.createNodeIterator(
     document.body,
     NodeFilter.SHOW_COMMENT,
@@ -73,7 +81,6 @@ function buildMap() {
       }
     }
   }
-  console.log('==> blockMap', blockMap)
 }
 
 buildMap()
@@ -118,7 +125,6 @@ function getChildren(els) {
         }
       }
     }
-    console.log('=> adding children to element', el, elChildren)
     el.children = elChildren
     return el
   })
@@ -129,9 +135,7 @@ function getInsertionPoint(newBlock, uid) {
   var curNode
 
   while ((curNode = iterator.nextNode())) {
-    console.log('scanning', curNode.nodeValue.trim())
     if (curNode.nodeValue.trim().startsWith('{$ content $}')) {
-      console.log('found insertion point', curNode, curNode.nodeType)
       break
     }
   }
@@ -142,15 +146,7 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   if (firstUpdate) {
     // insert styles to head
     var style = document.createElement('style')
-    style.innerHTML = `
-      .is-live-preview [data-moonwalk],
-      .is-live-preview [data-moonwalk-run], 
-      .is-live-preview [data-moonwalk-section], 
-      .is-live-preview [b-section] {
-        opacity: 1 !important;
-        visibility: visible !important;
-      }
-    `
+    style.innerHTML = MOONWALK_OVERRIDE_STYLES
     document.head.appendChild(style)
   }
 
@@ -158,9 +154,7 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   if (blockIndex >= 0) {
     var block = blockMap[blockIndex]
     if (rendered_html === '') {
-      block.els.forEach((el, idx) => {
-        el.element.remove()
-      })
+      block.els.forEach(el => el.element.remove())
       return
     }
 
@@ -174,10 +168,8 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
 
     block.els.forEach((el, idx) => {
       if (has_children) {
-        // find insertion point of the new element
         var childInsertionPoint = getInsertionPoint(newBlocks[idx], block.uid)
 
-        // insert children at childInsertionPoint
         for (var i = 0; i < el.children.length; i++) {
           childInsertionPoint.parentNode.insertBefore(el.children[i], childInsertionPoint)
         }
@@ -194,15 +186,13 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
           block.insertionPoint
         )
       }
-      console.log('el -- we are removing .element', el)
+
       el.element.remove()
-
-      console.log('added', newElement)
       block.els[idx].element = newElement
-    })
 
-    forceLazyloadAllImages()
-    forceLazyloadAllVideos()
+      forceLazyloadAllImages(newElement)
+      forceLazyloadAllVideos(newElement)
+    })
   }
 })
 

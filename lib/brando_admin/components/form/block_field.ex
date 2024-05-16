@@ -304,10 +304,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <div style="font-family: 'Mono'; font-size: 11px;">
+      <%!-- <div style="font-family: 'Mono'; font-size: 11px;">
         ROOT CHANGESETS<br /><br />
         <%= inspect(@root_changesets, pretty: true, width: 0) %>
-      </div>
+      </div> --%>
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext("Click the plus to start adding content blocks") %>
