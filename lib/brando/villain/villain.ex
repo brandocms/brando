@@ -38,6 +38,15 @@ defmodule Brando.Villain do
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
 
+    require Logger
+
+    Logger.error("""
+
+    ==> Parsing entry_blocks_list. Listing uid and sequence for root blocks:
+    #{inspect(Enum.map(entry_blocks_list, &{&1.block.uid, &1.sequence}), pretty: true, width: 0)}
+
+    """)
+
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
     {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)

@@ -89,14 +89,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
-    send_update(form_cid, %{event: "update_live_preview"})
+    # send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
-    |> send_root_sequence_update(new_block_list)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
   end
 
@@ -132,14 +133,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       )
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
-    send_update(form_cid, %{event: "update_live_preview"})
+    # send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
-    |> send_root_sequence_update(new_block_list)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
   end
 
@@ -199,6 +201,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, assign(socket, :root_changesets, cleared_root_changesets)}
   end
 
+  def update(%{event: "signal_position_update", uid: uid}, socket) do
+    require Logger
+    Logger.error("!! received signal_position_update for #{uid}")
+    form_cid = socket.assigns.form_cid
+    position_response_tracker = socket.assigns.position_response_tracker
+
+    position_response_tracker =
+      Enum.map(position_response_tracker, fn
+        {^uid, _} -> {uid, true}
+        item -> item
+      end)
+
+    if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
+      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
+    else
+      send_update(form_cid, %{event: "update_live_preview"})
+      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
+    end
+  end
+
   def update(assigns, socket) do
     block_module = assigns.block_module
     entry_blocks = assigns.entry_blocks
@@ -243,50 +265,52 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
       ) do
     block_list = socket.assigns.block_list
+    root_changesets = socket.assigns.root_changesets
 
     new_block_list =
       block_list
       |> List.delete_at(old_idx)
       |> List.insert_at(new_idx, id)
 
-    send_root_sequence_update(socket, new_block_list)
+    # we must reposition the root_changesets list according to the new block_list
+    new_root_changesets =
+      Enum.map(new_block_list, fn uid ->
+        Enum.find(root_changesets, fn
+          {^uid, _} -> true
+          _ -> false
+        end)
+      end)
 
-    {:noreply, assign(socket, :block_list, new_block_list)}
+    socket
+    |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, new_root_changesets)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("show_block_picker", _, socket) do
     # message block picker
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
-    block_list = socket.assigns.block_list
+    block_count = socket.assigns.block_count
 
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
       type: :module,
-      sequence: Enum.count(block_list) + 1,
+      sequence: block_count + 1,
       parent_cid: socket.assigns.myself
     )
 
     {:noreply, socket}
   end
 
-  # def handle_event("fetch_root_blocks", _, socket) do
-  #   block_list = socket.assigns.block_list
-  #   # for each root block in block_list, send_update requesting their changeset
-  #   for block_uid <- block_list do
-  #     send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block")
-  #   end
-
-  #   {:noreply, socket}
-  # end
-
-  def handle_event("crash", _, socket) do
-    raise "Crash"
-    {:noreply, socket}
+  def reset_position_response_tracker(socket) do
+    block_list = socket.assigns.block_list
+    assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
   end
 
-  def send_root_sequence_update(socket, block_list) do
-    # send_update to all components in block_list
+  def send_block_entry_position_update(socket, block_list) do
     for {block_uid, idx} <- Enum.with_index(block_list) do
       send_update(Block, id: "block-#{block_uid}", event: "update_sequence", sequence: idx)
     end

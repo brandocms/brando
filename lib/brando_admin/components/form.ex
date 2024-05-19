@@ -152,19 +152,14 @@ defmodule BrandoAdmin.Components.Form do
       has_children: has_children?
     })
 
+    send(self(), {:toast, "DBG: Update Live Preview block [#{uid}]"})
+
     {:ok, socket}
   end
 
-  def update(
-        %{
-          event: "update_live_preview"
-        },
-        socket
-      ) do
+  def update(%{event: "update_live_preview"}, socket) do
     # update entire live preview (when deleting or inserting blocks)
-    fetch_root_blocks(socket, :live_preview_update, 500)
-
-    {:ok, socket}
+    {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
   end
 
   def update(
@@ -393,13 +388,10 @@ defmodule BrandoAdmin.Components.Form do
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
-      send(self(), {:toast, gettext("Updating live preview...")})
+      send(self(), {:toast, gettext("DBG: Update Live Preview [complete]")})
       schema = socket.assigns.schema
 
-      changeset =
-        block_changesets
-        |> assoc_all_block_fields(socket.assigns.changeset)
-
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
       Brando.LivePreview.update(schema, changeset, cache_key)
       clear_blocks_root_changesets(socket)
     end
@@ -2084,6 +2076,8 @@ defmodule BrandoAdmin.Components.Form do
         delay
       )
     end
+
+    socket
   end
 
   def clear_blocks_root_changesets(socket) do

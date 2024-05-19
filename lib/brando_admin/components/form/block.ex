@@ -25,7 +25,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_module = socket.assigns.block_module
     level = socket.assigns.level
     user_id = socket.assigns.current_user_id
+    parent_cid = socket.assigns.parent_cid
     cs = socket.assigns.form.source
+    uid = socket.assigns.uid
 
     new_form =
       if level == 0 do
@@ -34,10 +36,38 @@ defmodule BrandoAdmin.Components.Form.Block do
         to_change_form(cs, %{"sequence" => idx}, user_id)
       end
 
+    require Logger
+
+    Logger.error(
+      "<= update_sequence -- sending \"signal_position_update\" to parent_cid: #{parent_cid}"
+    )
+
+    send_update(parent_cid, %{event: "signal_position_update", uid: uid})
+
     {:ok,
      socket
      |> assign(:form_has_changes, new_form.source.changes !== %{})
      |> assign(:form, new_form)}
+  end
+
+  def update(%{event: "signal_position_update", uid: uid}, socket) do
+    require Logger
+    Logger.error("[block] received signal_position_update for #{uid}")
+    form_cid = socket.assigns.form_cid
+    position_response_tracker = socket.assigns.position_response_tracker
+
+    position_response_tracker =
+      Enum.map(position_response_tracker, fn
+        {^uid, _} -> {uid, true}
+        item -> item
+      end)
+
+    if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
+      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
+    else
+      send_update(form_cid, %{event: "update_live_preview"})
+      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
+    end
   end
 
   def update(%{event: "clear_changesets"}, socket) do
@@ -199,6 +229,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_block", form: form}, socket) do
+    require Logger
+
+    Logger.error("""
+    => update_block —— should we update the block live preview?
+    """)
+
     {:ok, stream_insert(socket, :children_forms, form)}
   end
 
@@ -230,7 +266,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     selector = "[data-block-uid=\"#{uid}\"]"
 
-    send_update(form_cid, %{event: "update_live_preview"})
+    # send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:children_forms, block_form, at: sequence)
@@ -238,6 +274,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, updated_block_list)
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> reset_position_response_tracker()
     |> send_child_sequence_update(updated_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
@@ -492,6 +529,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, liquid_splits: [], vars: [])
   end
 
+  defp reset_position_response_tracker(socket) do
+    block_list = socket.assigns.block_list
+    assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
+  end
+
   defp assign_available_identifiers(socket) do
     module = Module.concat([socket.assigns.module_datasource_module])
     query = socket.assigns.module_datasource_query
@@ -607,8 +649,9 @@ defmodule BrandoAdmin.Components.Form.Block do
             :for={{id, child_block_form} <- @streams.children_forms}
             id={id}
             data-id={child_block_form.data.id}
-            data-uid={child_block_form.data.uid}
-            data-parent_id={child_block_form.data.parent_id}
+            data-uid={child_block_form[:uid].value}
+            data-parent_id={child_block_form[:parent_id].value}
+            data-parent_uid={@uid}
           >
             <.live_component
               module={__MODULE__}
@@ -721,6 +764,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             data-id={child_block_form[:id].value}
             data-uid={child_block_form[:uid].value}
             data-parent_id={child_block_form[:parent_id].value}
+            data-parent_uid={@uid}
             class="draggable"
           >
             <.live_component
@@ -2098,37 +2142,50 @@ defmodule BrandoAdmin.Components.Form.Block do
   # reposition a main block
   def handle_event(
         "reposition",
-        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_id" => parent_id},
+        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid},
         socket
       )
       when new_idx == old_idx do
-    require Logger
-
-    Logger.error("""
-
-    Repositioning CHILD block (parent_id: #{parent_id})
-    --> No move needed.
-
-    """)
-
     {:noreply, socket}
   end
 
   def handle_event(
         "reposition",
-        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_id" => parent_id},
+        %{"uid" => uid, "new" => new_idx, "old" => old_idx, "parent_uid" => parent_uid},
         socket
       ) do
     require Logger
 
     Logger.error("""
 
-    Repositioning CHILD block (parent_id: #{parent_id})
+    Repositioning CHILD block (parent_uid: #{parent_uid})
     --> #{old_idx} to #{new_idx}
 
     """)
 
-    {:noreply, socket}
+    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
+
+    new_block_list =
+      block_list
+      |> List.delete_at(old_idx)
+      |> List.insert_at(new_idx, uid)
+
+    # we must reposition the children changesets list according to the new block_list
+    new_changesets =
+      Enum.map(new_block_list, fn block_uid ->
+        Enum.find(changesets, fn
+          {^block_uid, _} -> true
+          _ -> false
+        end)
+      end)
+
+    socket
+    |> assign(:block_list, new_block_list)
+    |> assign(:changesets, new_changesets)
+    |> reset_position_response_tracker()
+    |> send_child_sequence_update(new_block_list)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("delete_block", _params, socket) do

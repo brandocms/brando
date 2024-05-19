@@ -143,16 +143,6 @@ defmodule Brando.LivePreview do
                 annotate_blocks: true
               )
 
-            require Logger
-
-            Logger.error("""
-
-            PARSED_VILLAIN for rendered_field: #{rendered_field}
-
-            #{inspect(parsed_villain, pretty: true)}
-
-            """)
-
             Map.put(updated_entry, rendered_field, parsed_villain)
           end)
 

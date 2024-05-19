@@ -264,18 +264,6 @@ defmodule Brando.Villain.Parser do
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
 
-        if id == 7 do
-          require Logger
-
-          Logger.error("""
-          -> module 7 --
-
-          base_context:
-          #{inspect(base_context, pretty: true)}
-
-          """)
-        end
-
         context =
           base_context
           |> add_vars_to_context(processed_vars)
