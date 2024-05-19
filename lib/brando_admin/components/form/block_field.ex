@@ -17,6 +17,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      )}
   end
 
+  def update(%{event: "delete_block", uid: uid}, socket) do
+    root_changesets = socket.assigns.root_changesets
+    block_list = socket.assigns.block_list
+    updated_root_changesets = delete_root_changeset(root_changesets, uid)
+    new_block_list = List.delete(block_list, uid)
+
+    socket
+    |> assign(:root_changesets, updated_root_changesets)
+    |> assign(:block_list, new_block_list)
+    |> stream_delete_by_dom_id(:entry_blocks_forms, "base-#{uid}")
+    |> update(:block_count, &(&1 - 1))
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> then(&{:ok, &1})
+  end
+
   def update(%{event: "update_root_sequence", sequence: sequence, form: form}, socket) do
     block_module = socket.assigns.block_module
 
@@ -94,8 +110,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
-    |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
+    |> update(:block_count, &(&1 + 1))
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -250,6 +266,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def insert_root_changeset(root_changesets, uid, position) do
     List.insert_at(root_changesets, position, {uid, nil})
+  end
+
+  def delete_root_changeset(root_changesets, uid) do
+    Enum.reject(root_changesets, fn
+      {^uid, _} -> true
+      _ -> false
+    end)
   end
 
   # reposition a main block

@@ -18,7 +18,73 @@ defmodule BrandoAdmin.Components.Form.Block do
   import PolymorphicEmbed.HTML.Component
 
   def mount(socket) do
-    {:ok, assign(socket, module_not_found: false, entry_template: nil, initial_render: false)}
+    {:ok,
+     assign(socket,
+       module_not_found: false,
+       entry_template: nil,
+       initial_render: false,
+       dom_id: nil,
+       position_response_tracker: []
+     )}
+  end
+
+  def update(%{event: "delete_block", uid: uid, dom_id: dom_id}, socket) do
+    changesets = socket.assigns.changesets
+    block_list = socket.assigns.block_list
+    updated_changesets = delete_child_changeset(changesets, uid)
+    new_block_list = List.delete(block_list, uid)
+    changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+    block_cs = get_block_changeset(changeset, belongs_to)
+
+    require Logger
+
+    Logger.error("""
+    => delete_block [BLOCK] uid: #{uid} / dom_id: #{dom_id}
+
+    updated_changesets: #{inspect(updated_changesets, pretty: true)}
+    """)
+
+    has_children? = new_block_list !== []
+
+    # updated_form
+
+    require Logger
+
+    Logger.error("""
+
+    get_assoc children
+    #{inspect(Changeset.get_assoc(block_cs, :children), pretty: true)}
+
+    """)
+
+    # if we deleted the last child block, put_assoc the empty children list
+    updated_block_cs =
+      if has_children? do
+        block_cs
+      else
+        Changeset.put_assoc(block_cs, :children, [])
+      end
+
+    updated_form =
+      if belongs_to == :root do
+        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_cs)
+        to_form(updated_changeset, as: "entry_block", id: "entry_block_form-#{uid}")
+      else
+        to_form(updated_block_cs, as: "child_block", id: "child_block_form-#{uid}")
+      end
+
+    socket
+    |> assign(:changesets, updated_changesets)
+    |> assign(:block_list, new_block_list)
+    |> assign(:has_children?, has_children?)
+    |> assign(:form, updated_form)
+    |> stream_delete_by_dom_id(:children_forms, dom_id)
+    |> update(:block_count, &(&1 - 1))
+    |> reset_position_response_tracker()
+    |> send_child_position_update(new_block_list)
+    |> update_live_preview_on_empty_block_list()
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "update_sequence", sequence: idx}, socket) do
@@ -115,6 +181,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         )
       end
     else
+      require Logger
+
+      Logger.error("""
+      => fetch_root_block —— got asked uid: #{uid} -- HAS NO CHILDREN!
+      """)
+
       # if the block has no children we send the current changeset back to the parent
       send_update(parent_cid, %{
         event: "provide_root_block",
@@ -135,6 +207,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     has_children? = socket.assigns.has_children?
     changesets = socket.assigns.changesets
+    block_list = socket.assigns.block_list
     require Logger
 
     # if the block has children we message them to gather their changesets
@@ -179,34 +252,51 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
 
+    require Logger
+
+    Logger.error("""
+    => provide_child_block —— got asked uid: #{uid} / parent_uid: #{parent_uid}
+    changesets: #{inspect(updated_changesets, pretty: true)}
+    """)
+
     unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
+      # if the changeset struct is a block we put it directly,
+      # but if it's an entry block we need to put it under the block association
       updated_changeset =
-        if Enum.any?(updated_changesets_list, &(&1.changes !== %{})) do
-          # if the changeset struct is a block we put it directly,
-          # but if it's an entry block we need to put it under the block association
-          if changeset.data.__struct__ == Brando.Content.Block do
-            Changeset.put_assoc(
-              changeset,
+        if changeset.data.__struct__ == Brando.Content.Block do
+          Changeset.put_assoc(
+            changeset,
+            :children,
+            Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
+          )
+        else
+          updated_block_changeset =
+            changeset
+            |> Changeset.get_field(:block)
+            |> Changeset.change()
+            |> Changeset.put_assoc(
               :children,
               Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
             )
-          else
-            updated_block_changeset =
-              changeset
-              |> Changeset.get_field(:block)
-              |> Changeset.change()
-              |> Changeset.put_assoc(
-                :children,
-                Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
-              )
 
-            Changeset.put_assoc(changeset, :block, updated_block_changeset)
-          end
-        else
-          changeset
+          Changeset.put_assoc(changeset, :block, updated_block_changeset)
         end
+
+      require Logger
+
+      Logger.error("""
+
+
+
+      => provide_child_block --
+      updated_changeset: #{inspect(updated_changeset, pretty: true)}
+
+
+
+
+      """)
 
       if level == 0 do
         send_update(parent_cid, %{
@@ -275,7 +365,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
     |> reset_position_response_tracker()
-    |> send_child_sequence_update(updated_block_list)
+    |> send_child_position_update(updated_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
@@ -534,6 +624,30 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
   end
 
+  # after we've sent messages to block asking for position updates, if we have deleted the
+  # last child block, we refresh the live preview
+  defp update_live_preview_on_empty_block_list(%{assigns: %{block_list: []}} = socket) do
+    require Logger
+
+    Logger.error("""
+    => update_live_preview_on_empty_block_list TRIGGERED
+    """)
+
+    form_cid = socket.assigns.form_cid
+    send_update(form_cid, %{event: "update_live_preview"})
+    socket
+  end
+
+  defp update_live_preview_on_empty_block_list(socket) do
+    require Logger
+
+    Logger.error("""
+    => update_live_preview_on_empty_block_list IGNORED.
+    """)
+
+    socket
+  end
+
   defp assign_available_identifiers(socket) do
     module = Module.concat([socket.assigns.module_datasource_module])
     query = socket.assigns.module_datasource_query
@@ -589,7 +703,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:changesets, fn -> [] end)
   end
 
-  def send_child_sequence_update(socket, block_list) do
+  def send_child_position_update(socket, block_list) do
     # send_update to all components in block_list
     parent_id = socket.assigns.id
 
@@ -610,6 +724,13 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def insert_child_changeset(changesets, uid, position) do
     List.insert_at(changesets, position, {uid, nil})
+  end
+
+  def delete_child_changeset(changesets, uid) do
+    Enum.reject(changesets, fn
+      {^uid, _} -> true
+      _ -> false
+    end)
   end
 
   def render(%{type: :module, multi: true} = assigns) do
@@ -656,6 +777,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <.live_component
               module={__MODULE__}
               id={"#{@id}-child-#{child_block_form[:uid].value}"}
+              dom_id={id}
               multi={child_block_form[:multi].value}
               block_module={@block_module}
               block_field={@block_field}
@@ -770,6 +892,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <.live_component
               module={__MODULE__}
               id={"#{@id}-child-#{child_block_form[:uid].value}"}
+              dom_id={id}
               block_module={@block_module}
               block_field={@block_field}
               children={child_block_form[:children].value}
@@ -1946,8 +2069,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     uid = socket.assigns.uid
-    parent_id = socket.assigns.parent_id
-    id = socket.assigns.id
     available_identifiers = socket.assigns.available_identifiers
 
     block_changeset = get_block_changeset(changeset, belongs_to)
@@ -2184,39 +2305,23 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> reset_position_response_tracker()
-    |> send_child_sequence_update(new_block_list)
+    |> send_child_position_update(new_block_list)
     |> then(&{:noreply, &1})
   end
 
   def handle_event("delete_block", _params, socket) do
-    belongs_to = socket.assigns.belongs_to
-    changeset = socket.assigns.form.source
-    parent_id = socket.assigns.parent_id
     uid = socket.assigns.uid
-    id = socket.assigns.id
+    parent_cid = socket.assigns.parent_cid
+    dom_id = socket.assigns.dom_id
+    belongs_to = socket.assigns.belongs_to
 
-    updated_changeset =
-      changeset
-      |> Changeset.put_change(:marked_as_deleted, true)
-      |> Map.put(:action, :delete)
+    send_update(parent_cid, %{
+      event: "delete_block",
+      uid: uid,
+      dom_id: dom_id
+    })
 
-    new_form =
-      if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
-
-    socket
-    |> assign(:form, new_form)
-    |> assign(:deleted, true)
-    |> then(&{:noreply, &1})
+    {:noreply, socket}
   end
 
   def handle_event("validate_block", %{"child_block" => params}, socket) do

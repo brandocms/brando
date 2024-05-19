@@ -159,6 +159,12 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{event: "update_live_preview"}, socket) do
     # update entire live preview (when deleting or inserting blocks)
+    require Logger
+
+    Logger.error("""
+    => update_live_preview [form] -- fetching root blocks
+    """)
+
     {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
   end
 
@@ -1826,8 +1832,6 @@ defmodule BrandoAdmin.Components.Form do
 
   # try to open live_preview, but blocks are not ready.
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
-    block_map = socket.assigns.block_map
-    id = socket.assigns.id
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
     fetch_root_blocks(socket, :live_preview, 500)
     {:noreply, socket}
@@ -2191,6 +2195,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assoc_all_block_fields(block_changesets, changeset) do
+    require Logger
+
+    Logger.error("""
+    -> assoc_all_block_fields
+    #{inspect(block_changesets, pretty: true)}
+    """)
+
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs = Brando.Villain.reject_deleted(block_cs, true)
       Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
