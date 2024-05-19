@@ -102,6 +102,7 @@ button.btn-palette {
 
 .block-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
 }
@@ -336,6 +337,8 @@ button.btn-palette {
     @font mono;
     font-size: 10px;
     margin-bottom: 17px;
+    width: 100%;
+    margin-left: 33px;
 
     svg {
       margin-right: 8px;

@@ -1789,18 +1789,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
         <% end %>
       </div>
-      <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
-        <.datasource
-          block_data={@block}
-          uid={@uid}
-          module_datasource_module_label={@module_datasource_module_label}
-          module_datasource_type={@module_datasource_type}
-          module_datasource_query={@module_datasource_query}
-          available_identifiers={@available_identifiers}
-          block_identifiers={@block[:block_identifiers]}
-          target={@target}
-        />
-      </div>
       <div class="block-content" id={"block-#{@uid}-block-content"}>
         <%= render_slot(@inner_block) %>
       </div>
@@ -1847,6 +1835,18 @@ defmodule BrandoAdmin.Components.Form.Block do
         </Form.label>
 
         <div :if={!@is_ref?} class="dirty block-action toggler">●</div>
+      </div>
+      <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
+        <.datasource
+          block_data={@block}
+          uid={@uid}
+          module_datasource_module_label={@module_datasource_module_label}
+          module_datasource_type={@module_datasource_type}
+          module_datasource_query={@module_datasource_query}
+          available_identifiers={@available_identifiers}
+          block_identifiers={@block[:block_identifiers]}
+          target={@target}
+        />
       </div>
     </div>
     """
