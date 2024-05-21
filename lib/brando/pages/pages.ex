@@ -151,7 +151,7 @@ defmodule Brando.Pages do
   Re-render page
   """
   def rerender_page(page_id) do
-    Villain.rerender_html_from_id({Brando.Pages.Page, :data, :html}, page_id)
+    Villain.render_entry(Brando.Pages.Page, page_id)
   end
 
   @doc """

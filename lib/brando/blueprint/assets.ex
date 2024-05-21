@@ -74,6 +74,7 @@ defmodule Brando.Blueprint.Assets do
   """
   alias Ecto.Changeset
   alias Brando.Blueprint
+  import Ecto.Query
 
   def build_asset(name, type, opts \\ [])
 
@@ -369,5 +370,21 @@ defmodule Brando.Blueprint.Assets do
     require Logger
     Logger.error("--> not casted: #{inspect(asset.name, pretty: true)}")
     changeset
+  end
+
+  def preloads_for(schema) do
+    gallery_images_query =
+      from gi in Brando.Images.GalleryImage,
+        order_by: [asc: gi.sequence],
+        preload: [:image]
+
+    Enum.reduce(schema.__assets__(), [], fn asset, acc ->
+      case asset.type do
+        :file -> [asset.name | acc]
+        :image -> [asset.name | acc]
+        :gallery -> [{asset.name, gallery_images_query} | acc]
+        _ -> acc
+      end
+    end)
   end
 end

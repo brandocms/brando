@@ -33,4 +33,13 @@ defmodule Brando.Content.Identifier do
   end
 
   def has_trait(Brando.Trait.SoftDelete), do: false
+
+  def preloads_for(schema) do
+    schema.__relations__()
+    |> Enum.filter(&(&1.type == :entries))
+    |> Enum.map(fn rel ->
+      rel_identifiers_field = :"#{rel.name}_identifiers"
+      [rel.name, {rel_identifiers_field, :identifier}]
+    end)
+  end
 end

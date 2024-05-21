@@ -105,7 +105,8 @@ defmodule Brando.Content.Block do
       :anchor,
       :multi,
       :palette_id,
-      :type
+      :type,
+      :source
     ])
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
@@ -131,7 +132,8 @@ defmodule Brando.Content.Block do
       :anchor,
       :multi,
       :palette_id,
-      :type
+      :type,
+      :source
     ])
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))

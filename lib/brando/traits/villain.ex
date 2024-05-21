@@ -43,44 +43,6 @@ defmodule Brando.Trait.Villain do
     true
   end
 
-  # @doc """
-  # Generate HTML
-  # """
-  # @impl true
-  # def changeset_mutator(module, _config, changeset, _user, opts) do
-  #   opts = Enum.into(opts, %{})
-  #   cast_rendered_blocks(changeset, module, opts)
-  #   # |> cast_assoc(:book_authors,
-  #   #   with: &AuthorBook.changeset/3,
-  #   #   sort_param: :authors_order,
-  #   #   drop_param: :authors_delete
-  #   # )
-
-  #   # case Keyword.get(opts, :skip_villain) do
-  #   #   true ->
-  #   #     cast_poly(changeset, module.__villain_fields__())
-
-  #   #   _ ->
-  #   #     case cast_poly(changeset, module.__villain_fields__()) do
-  #   #       %{valid?: true} = casted_changeset ->
-  #   #         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-  #   #           Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-  #   #         end)
-
-  #   #       casted_changeset ->
-  #   #         casted_changeset
-  #   #     end
-  #   # end
-  #   changeset
-  # end
-
-  # defp cast_rendered_blocks(changeset, _, %{skip_villain: true}) do
-  #   changeset
-  # end
-  # defp cast_rendered_blocks(changeset, module, _) do
-
-  # end
-
   @impl true
   def generate_code(parent_module, _config) do
     quote generated: true do

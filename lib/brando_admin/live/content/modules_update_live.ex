@@ -32,7 +32,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
   def render(%{socket_connected: false} = assigns) do
     ~H"""
-
     """
   end
 
@@ -367,11 +366,9 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
      |> assign(:changeset, updated_changeset)}
   end
 
-  def handle_event(
-        "save",
-        %{"module" => module_params},
-        %{assigns: %{current_user: user, entry: entry}} = socket
-      ) do
+  def handle_event("save", %{"module" => module_params}, socket) do
+    user = socket.assigns.current_user
+    entry = socket.assigns.entry
     changeset = Brando.Content.Module.changeset(entry, module_params, user)
     updated_changeset = %{changeset | action: :update}
 

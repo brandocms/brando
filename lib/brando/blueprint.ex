@@ -1045,6 +1045,25 @@ defmodule Brando.Blueprint do
     Enum.reject(fields_to_cast, &(&1 in poly_fields))
   end
 
+  @doc """
+  Return a list of preloads for a given schema
+  """
+  def preloads_for(schema) do
+    asset_preloads = Brando.Blueprint.Assets.preloads_for(schema)
+    rel_preloads = Brando.Blueprint.Relations.preloads_for(schema)
+    blocks_preloads = Brando.Villain.preloads_for(schema)
+    alternates_preload = Brando.Content.AlternateEntries.preloads_for(schema)
+    identifiers_preloads = Brando.Content.Identifier.preloads_for(schema)
+
+    Enum.uniq(
+      asset_preloads ++
+        rel_preloads ++
+        blocks_preloads ++
+        alternates_preload ++
+        identifiers_preloads
+    )
+  end
+
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
 
   @doc """

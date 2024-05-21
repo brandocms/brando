@@ -76,6 +76,8 @@ defmodule Brando.Content.Module do
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
       cast: true
+
+    relation :blocks, :has_many, module: Brando.Content.Block
   end
 
   listings do

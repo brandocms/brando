@@ -340,30 +340,23 @@ defmodule Brando.Blueprint.Relations do
   ## catch all for non casted relations
   def run_cast_relation(_, changeset, _user), do: changeset
 
-  def load_relations(entry) do
-    relations = get_all_relations(entry.__struct__)
-    Brando.repo().preload(entry, relations)
-  end
+  def preloads_for(schema) do
+    schema.__relations__()
+    |> Enum.filter(&(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator))
+    |> Enum.map(fn
+      %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
+        sub_assets = Enum.map(mod.__assets__(), & &1.name)
 
-  def get_all_relations(schema) do
-    image_preloads =
-      schema.__assets__
-      |> Enum.filter(&(&1.type == :image))
-      |> Enum.map(& &1.name)
+        if mod.has_trait(Brando.Trait.Sequenced) do
+          preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_assets
+          {name, preload_query}
+        else
+          (sub_assets == [] && name) || {name, sub_assets}
+        end
 
-    gallery_preloads =
-      schema.__assets__
-      |> Enum.filter(&(&1.type == :gallery))
-      |> Enum.map(&[{&1.name, [{:gallery_images, :image}]}])
-
-    rel_preloads =
-      schema.__relations__
-      |> Enum.filter(&(&1.type == :belongs_to and &1.name != :creator))
-      |> Enum.map(& &1.name)
-
-    # TODO: Add alternate_entries here if Translatable?
-
-    Enum.uniq(gallery_preloads ++ image_preloads ++ rel_preloads)
+      %{name: name} ->
+        name
+    end)
   end
 
   defp expand_literals(ast, env) do

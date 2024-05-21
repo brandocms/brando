@@ -1006,4 +1006,22 @@ defmodule Brando.Query do
     |> Brando.repo().delete()
     |> Cache.Query.evict()
   end
+
+  @doc """
+  Get entry with all possible preloads
+  """
+  def get_entry(schema, id) do
+    ctx = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    opts =
+      if schema.has_trait(Brando.Trait.SoftDelete) do
+        %{matches: %{id: id}, with_deleted: true}
+      else
+        %{matches: %{id: id}}
+      end
+
+    opts = Map.put(opts, :preload, Brando.Blueprint.preloads_for(schema))
+    apply(ctx, :"get_#{singular}", [opts])
+  end
 end

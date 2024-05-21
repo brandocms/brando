@@ -80,7 +80,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
-    empty_block_cs = build_block(module_id, user_id, parent_id, :module)
+    source = socket.assigns.block_module
+    empty_block_cs = build_block(module_id, user_id, parent_id, source, :module)
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
     entry_block_cs =
@@ -123,7 +124,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
-    empty_block_cs = build_container(user_id, parent_id)
+    source = socket.assigns.block_module
+    empty_block_cs = build_container(user_id, parent_id, source)
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
     entry_block_cs =
@@ -436,7 +438,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     )
   end
 
-  def build_block(module_id, user_id, parent_id, type) do
+  def build_block(module_id, user_id, parent_id, source, type) do
     module = get_module(module_id)
     refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
     vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
@@ -451,18 +453,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       module_id: module_id,
       parent_id: parent_id,
       multi: module.wrapper,
+      source: source,
       children: [],
       vars: var_changesets,
       refs: refs_with_generated_uids
     })
   end
 
-  def build_container(user_id, parent_id) do
+  def build_container(user_id, parent_id, source) do
     Changeset.change(%Brando.Content.Block{}, %{
       uid: Brando.Utils.generate_uid(),
       type: :container,
       creator_id: user_id,
       parent_id: parent_id,
+      source: source,
       children: []
     })
   end

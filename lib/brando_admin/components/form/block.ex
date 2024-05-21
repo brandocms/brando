@@ -24,7 +24,8 @@ defmodule BrandoAdmin.Components.Form.Block do
        entry_template: nil,
        initial_render: false,
        dom_id: nil,
-       position_response_tracker: []
+       position_response_tracker: [],
+       source: nil
      )}
   end
 
@@ -337,8 +338,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     user_id = socket.assigns.current_user_id
     parent_id = nil
     sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
+    source = socket.assigns.block_module
 
-    empty_block_cs = BlockField.build_block(module_id, user_id, parent_id, type)
+    empty_block_cs = BlockField.build_block(module_id, user_id, parent_id, source, type)
     uid = Changeset.get_field(empty_block_cs, :uid)
     # insert the new block uid into the block_list
     block_list = socket.assigns.block_list
@@ -746,6 +748,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         multi={true}
         is_datasource?={@is_datasource?}
         module_class={@module_class}
+        block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
         parent_uploads={@parent_uploads}
@@ -817,6 +820,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         is_datasource?={@is_datasource?}
         target={@myself}
         module_class={@module_class}
+        block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
         insert_block={JS.push("insert_block", target: @myself)}
@@ -845,6 +849,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         is_datasource?={@is_datasource?}
         target={@myself}
         module_class={@module_class}
+        block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
         insert_block={JS.push("insert_block_entry", target: @myself)}
@@ -864,6 +869,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         new={@form_is_new}
         level={@level}
         belongs_to={@belongs_to}
+        block_module={@block_module}
         deleted={@deleted}
         target={@myself}
         insert_block={JS.push("insert_block", target: @myself)}
@@ -989,7 +995,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields block_form={block_form} />
+              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -1081,7 +1087,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields block_form={block_form} />
+              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -1114,7 +1120,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.inputs_for>
           <% else %>
             <Input.hidden field={@form[:sequence]} />
-            <.hidden_block_fields block_form={@form} />
+            <.hidden_block_fields block_form={@form} block_module={@block_module} />
 
             <.toolbar
               uid={@uid}
@@ -1211,6 +1217,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <Input.hidden field={@block_form[:palette_id]} />
       <Input.hidden field={@block_form[:creator_id]} />
       <Input.hidden field={@block_form[:marked_as_deleted]} />
+      <Input.input type={:hidden} field={@block_form[:source]} value={@block_module} />
     </div>
     """
   end
@@ -2152,8 +2159,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = Changeset.get_field(changeset, :uid)
-    parent_id = Changeset.get_field(changeset, :parent_id)
-    id = Changeset.get_field(changeset, :id)
     module = get_module(module_id)
 
     module_refs = module.refs
@@ -2200,11 +2205,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           id: "child_block_form-#{uid}"
         )
       end
-
-    # send form to parent
-    # send_update(socket.assigns.parent_cid, %{event: "update_block", form: new_form, level: level})
-
-    # {:noreply, socket}
 
     socket
     |> assign(:form, new_form)

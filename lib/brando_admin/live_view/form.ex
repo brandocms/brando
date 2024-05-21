@@ -309,7 +309,7 @@ defmodule BrandoAdmin.LiveView.Form do
     for %{name: field} <- schema.__villain_fields__() do
       target_id = "#{singular}_#{field}-blocks-module-picker"
 
-      send_update(BrandoAdmin.Components.Form.Input.Blocks.ModulePicker,
+      send_update(BrandoAdmin.Components.Form.BlockField.ModulePicker,
         id: target_id,
         event: :refresh_modules
       )
