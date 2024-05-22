@@ -33,8 +33,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # data image, :any
   # data upload_formats, :string
 
+  @fields_to_take [
+    :picture_class,
+    :img_class,
+    :link,
+    :srcset,
+    :media_queries,
+    :formats,
+    :path,
+    :width,
+    :height,
+    :sizes,
+    :cdn,
+    :lazyload,
+    :moonwalk,
+    :dominant_color,
+    :placeholder,
+    :focal
+  ]
+
   def mount(socket) do
-    {:ok, assign(socket, images: [])}
+    socket
+    |> assign(:images, [])
+    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
@@ -233,40 +254,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     """
   end
 
-  def handle_event("image_uploaded", %{"id" => _id}, socket) do
-    # block = socket.assigns.block
-    # uid = socket.assigns.uid
+  def handle_event("image_uploaded", %{"id" => id}, socket) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
 
-    # {:ok, image} = Brando.Images.get_image(id)
-    # block_data = block[:data].value
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
 
-    # updated_data_map =
-    #   block_data
-    #   |> Map.merge(image)
-    #   |> Map.from_struct()
+    {:ok, image} = Brando.Images.get_image(id)
+    block_data = Changeset.apply_changes(block_data_cs)
 
-    # updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-    # updated_picture_block = Map.put(block.data, :data, updated_data_struct)
+    new_data =
+      block_data
+      |> Map.merge(image)
+      |> Map.from_struct()
+      |> Map.take(@fields_to_take)
 
-    # changeset = base_form.source
-    # schema = changeset.data.__struct__
-
-    # updated_changeset =
-    #   Villain.replace_block_in_changeset(
-    #     changeset,
-    #     data_field,
-    #     uid,
-    #     updated_picture_block
-    #   )
-
-    # form_id = "#{schema.__naming__().singular}_form"
-
-    # send_update(BrandoAdmin.Components.Form,
-    #   id: form_id,
-    #   action: :update_changeset,
-    #   changeset: updated_changeset,
-    #   force_validation: true
-    # )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
@@ -284,24 +288,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    base_form = socket.assigns.base_form
-    data_field = socket.assigns.data_field
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    new_data =
+      %PictureBlock.Data{}
+      |> Map.from_struct()
+      |> Map.take(@fields_to_take)
+
     uid = socket.assigns.uid
-    changeset = base_form.source
-
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: %PictureBlock.Data{}
-      })
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
@@ -314,31 +310,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     ref_name = socket.assigns.ref_name
 
     {:ok, image} = Brando.Images.get_image(id)
-
     block_data = Changeset.apply_changes(block_data_cs)
 
     new_data =
       block_data
       |> Map.merge(image)
       |> Map.from_struct()
-      |> Map.take([
-        :picture_class,
-        :img_class,
-        :link,
-        :srcset,
-        :media_queries,
-        :formats,
-        :path,
-        :width,
-        :height,
-        :sizes,
-        :cdn,
-        :lazyload,
-        :moonwalk,
-        :dominant_color,
-        :placeholder,
-        :focal
-      ])
+      |> Map.take(@fields_to_take)
 
     send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
     {:noreply, socket}

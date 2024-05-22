@@ -22,44 +22,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
         } = assigns,
         socket
       ) do
-    require Logger
-
-    Logger.error("""
-    => show_module_picker
-    #{inspect(assigns, pretty: true)}
-    """)
-
     socket
     |> assign(show: true, sequence: sequence, parent_cid: parent_cid, type: type)
     |> maybe_update_modules_by_filter(assigns)
     |> then(&{:ok, &1})
   end
 
-  def maybe_update_modules_by_filter(socket, %{filter: filter} = assigns) do
-    require Logger
-
-    Logger.error("""
-    filter #{inspect(filter, pretty: true)}
-    """)
-
-    {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
-
-    modules_by_namespace =
-      modules
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
-
-    socket
-    |> assign(:modules_by_namespace, modules_by_namespace)
-  end
-
-  def maybe_update_modules_by_filter(socket, assigns) do
-    socket
-  end
-
   def update(assigns, socket) do
     {:ok, modules} =
-      Brando.Content.list_modules(%{filter: %{parent_id: nil}, cache: {:ttl, :infinite}})
+      Brando.Content.list_modules(%{
+        filter: %{parent_id: nil},
+        cache: {:ttl, :infinite}
+      })
 
     {:ok,
      socket
@@ -69,6 +43,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
        |> Brando.Utils.split_by(:namespace)
        |> Enum.map(&__MODULE__.sort_namespace/1)
      end)}
+  end
+
+  def maybe_update_modules_by_filter(socket, %{filter: filter}) do
+    {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
+
+    modules_by_namespace =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    assign(socket, :modules_by_namespace, modules_by_namespace)
+  end
+
+  def maybe_update_modules_by_filter(socket, _assigns) do
+    socket
   end
 
   def assign_modules(socket) do
@@ -175,23 +164,22 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           <% end %>
           <%= for {namespace, modules} <- @modules_by_namespace do %>
             <%= if namespace == "general" do %>
-              <%= for module <- modules do %>
-                <button
-                  type="button"
-                  class="module-button"
-                  phx-click="insert_module"
-                  phx-target={@myself}
-                  phx-value-module-id={module.id}
-                >
-                  <figure>
-                    <%= module.svg |> raw %>
-                  </figure>
-                  <div class="info">
-                    <div class="name"><%= module.name %></div>
-                    <div class="instructions"><%= module.help_text %></div>
-                  </div>
-                </button>
-              <% end %>
+              <button
+                :for={module <- modules}
+                type="button"
+                class="module-button"
+                phx-click="insert_module"
+                phx-target={@myself}
+                phx-value-module-id={module.id}
+              >
+                <figure>
+                  <%= module.svg |> raw %>
+                </figure>
+                <div class="info">
+                  <div class="name"><%= module.name %></div>
+                  <div class="instructions"><%= module.help_text %></div>
+                </div>
+              </button>
             <% end %>
           <% end %>
         </div>

@@ -147,24 +147,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Re-render page
-  """
-  def rerender_page(page_id) do
-    Villain.render_entry(Brando.Pages.Page, page_id)
-  end
-
-  @doc """
-  Rerender all pages
-  """
-  def rerender_pages do
-    {:ok, pages} = list_pages()
-
-    for page <- pages do
-      Villain.rerender_html(Changeset.change(page))
-    end
-  end
-
   query :list, Fragment do
     fn query ->
       from q in query,
@@ -209,16 +191,16 @@ defmodule Brando.Pages do
   mutation :create, Fragment
 
   mutation :update, Fragment do
-    fn entry ->
-      Villain.update_module_in_fields(entry.id)
-      {:ok, entry}
+    fn fragment ->
+      Villain.render_entries_with_fragment_id(fragment.id)
+      {:ok, fragment}
     end
   end
 
   mutation :delete, Fragment do
-    fn entry ->
-      Villain.update_module_in_fields(entry.id)
-      {:ok, entry}
+    fn fragment ->
+      Villain.render_entries_with_fragment_id(fragment.id)
+      {:ok, fragment}
     end
   end
 
@@ -357,8 +339,11 @@ defmodule Brando.Pages do
       fragment: "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
     ]
 
-    villains = Villain.list_villains()
-    Villain.rerender_matching_villains(villains, search_term)
+    # Check for instances in blocks (refs/vars)
+    Villain.render_entries_matching_regex(search_term)
+
+    # Check for instances in modules (this handles the `code` portion of the module's template)
+    Villain.rerender_matching_modules(search_term)
   end
 
   @doc """

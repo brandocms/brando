@@ -462,6 +462,10 @@ defmodule Brando.LivePreview do
     end
   end
 
+  def update(_schema, _changeset, nil) do
+    nil
+  end
+
   def update(schema, changeset, cache_key) do
     preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])

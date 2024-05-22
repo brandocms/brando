@@ -123,13 +123,11 @@ defmodule Brando.Sites do
       identity_for: "{% for (.*?) in identity\.(.*?) %}"
     ]
 
-    villains = Villain.list_villains()
+    # Check for instances in blocks (refs/vars)
+    Villain.render_entries_matching_regex(search_terms)
 
-    # Check for instances in data fields
-    Villain.rerender_matching_villains(villains, search_terms)
-
-    # Check for instances in modules
-    Villain.rerender_matching_modules(villains, search_terms)
+    # Check for instances in modules (this handles the `code` portion of the module's template)
+    Villain.rerender_matching_modules(search_terms)
 
     {:ok, identity}
   end
@@ -337,9 +335,11 @@ defmodule Brando.Sites do
   def update_villains_referencing_global({:ok, global_set}) do
     search_terms = [globals: "{{ globals\.(.*?) }}"]
 
-    villains = Villain.list_villains()
-    Villain.rerender_matching_villains(villains, search_terms)
-    Villain.rerender_matching_modules(villains, search_terms)
+    # Check for instances in blocks (refs/vars)
+    Villain.render_entries_matching_regex(search_terms)
+
+    # Check for instances in modules (this handles the `code` portion of the module's template)
+    Villain.rerender_matching_modules(search_terms)
 
     {:ok, global_set}
   end

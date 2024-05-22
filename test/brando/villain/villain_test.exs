@@ -144,47 +144,7 @@ defmodule Brando.VillainTest do
              ]
   end
 
-  test "search_villains_for_text", %{user: user} do
-    params = %{
-      status: "published",
-      parent_key: "parent_key",
-      key: "key",
-      language: "en",
-      creator_id: user.id,
-      data: [
-        %{
-          type: "text",
-          data: %{text: "**Some** text here.", type: "paragraph"}
-        }
-      ]
-    }
-
-    params_empty_data = %{
-      parent_key: "parent_key",
-      key: "key",
-      language: "en",
-      creator_id: user.id,
-      data: []
-    }
-
-    {:ok, pf1} = Brando.Pages.create_fragment(params, :system)
-
-    _pf2 = Brando.Pages.create_fragment(params_empty_data, :system)
-    _pf3 = Brando.Pages.create_fragment(params_empty_data, :system)
-
-    {:ok, pf4} = Brando.Pages.create_fragment(params, :system)
-
-    resulting_ids =
-      Brando.Villain.search_villains_for_text(
-        Brando.Pages.Fragment,
-        :data,
-        "text"
-      )
-
-    assert resulting_ids === [pf1.id, pf4.id]
-  end
-
-  test "search_villains_for_regex", %{user: user} do
+  test "list_block_ids_matching_regex", %{user: user} do
     params = %{
       parent_key: "parent_key",
       key: "key",
@@ -218,7 +178,7 @@ defmodule Brando.VillainTest do
     {:ok, pf4} = Brando.Pages.create_fragment(params, :system)
 
     resulting_ids =
-      Brando.Villain.search_villains_for_regex(
+      Brando.Villain.list_block_ids_matching_regex(
         Brando.Pages.Fragment,
         :data,
         globals: "{{ globals\.(.*?) }}"

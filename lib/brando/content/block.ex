@@ -14,7 +14,6 @@ defmodule Brando.Content.Block do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
-  import Ecto.Query
 
   # ++ Traits
   trait Brando.Trait.Creator
@@ -177,7 +176,7 @@ defmodule Brando.Content.Block do
     |> cast_embed(:options)
   end
 
-  def ref_changeset(ref, attrs, user) do
+  def ref_changeset(ref, attrs, _user) do
     ref
     |> cast(attrs, [:name, :description])
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)

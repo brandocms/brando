@@ -5,7 +5,7 @@ defmodule Brando.Cache.Identity do
   alias Brando.Cache
   alias Brando.Sites
 
-  @type identity :: Brando.Sites.Identity.t()
+  @type identity :: Brando.Content.Identity.t()
   @type changeset :: Ecto.Changeset.t()
 
   @doc """

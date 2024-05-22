@@ -69,27 +69,6 @@ defmodule Brando.Blueprint.Translations do
     end
   end
 
-  defmacro label(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, label: t(\"Title\")` instead"
-      )
-
-  defmacro placeholder(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, placeholder: t(\"Title\")` instead"
-      )
-
-  defmacro instructions(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, instructions: t(\"Title\")` instead"
-      )
-
   def t_field(type, value) do
     # type is an atom -> :label | :placeholder | instructions
     # value is a gettext call, for instance -> gettext("Instructions")

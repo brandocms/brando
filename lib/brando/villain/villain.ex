@@ -1,19 +1,15 @@
 # credo:disable-for-this-file
 defmodule Brando.Villain do
   use Brando.Query
-
   import Ecto.Query
-  import Brando.Query.Helpers
-
-  alias Brando.Content.Block
+  alias Ecto.Changeset
+  alias Liquex.Context
   alias Brando.Cache
   alias Brando.Content
   alias Brando.Pages
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Villain.Blocks
-  alias Ecto.Changeset
-  alias Liquex.Context
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -271,26 +267,729 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Rerenders HTML for all ids in `schema`
-
-  ### Example
-
-      iex> rerender_villains_for(Brando.Pages.Page)
-
+  Render all entries for `schema`
   """
-  def rerender_villains_for(schema) do
-    ids =
+  def render_all_entries(schema) do
+    # get all ids
+    entry_ids =
       Brando.repo().all(
         from(s in schema,
           select: s.id
         )
       )
 
-    Enum.map(schema.__villain_fields__(), fn
-      data_field ->
-        entry_blocks_name = :"entry_#{data_field.name}"
-        render_entries({schema, entry_blocks_name}, ids)
+    enqueue_entries_for_render(schema, entry_ids)
+  end
+
+  @doc """
+  Rerender multiple IDS
+  """
+  @spec render_entries(schema :: module, ids :: [integer | binary]) :: [any()]
+  def render_entries(_, []), do: []
+
+  def render_entries(schema, ids),
+    do: for(id <- ids, do: render_entry(schema, id))
+
+  @doc """
+  Rerender HTML from an ID
+
+  ## Example
+
+      render_entry(Pages.Page, 1)
+
+  Will try to rerender html for page with id: 1.
+
+  We treat page fragments special, since they need to propagate to other referencing
+  pages and fragments
+  """
+
+  @spec render_entry(schema :: module, entry_id :: integer | binary) ::
+          {:ok, map} | {:error, changeset}
+  def render_entry(schema, id) do
+    case Brando.Query.get_entry(schema, id) do
+      {:ok, entry} ->
+        changeset =
+          entry
+          |> Changeset.change()
+          |> render_all_block_fields_and_add_to_changeset(schema, entry)
+
+        case Brando.repo().update(changeset) do
+          {:ok, %Pages.Fragment{} = fragment} ->
+            Brando.Cache.Query.evict({:ok, fragment})
+            Pages.update_villains_referencing_fragment(fragment)
+
+          {:ok, result} ->
+            Brando.Cache.Query.evict({:ok, result})
+
+            {:ok, result}
+        end
+
+      {:error, _} = err ->
+        require Logger
+
+        Logger.error("""
+        ==> Failed to Brando.Villain.render_entry/2
+
+        Schema..: #{inspect(schema, pretty: true)}
+        Id......: #{inspect(id, pretty: true)}
+
+        ERROR:
+        #{inspect(err, pretty: true)}
+
+        """)
+
+        err
+    end
+  end
+
+  @doc """
+  Renders all block fields for an entry and adds them to changeset
+  """
+  def render_all_block_fields_and_add_to_changeset(changeset, schema, entry) do
+    Enum.reduce(schema.__villain_fields__(), changeset, fn field, updated_changeset ->
+      rendered_field = :"rendered_#{field.name}"
+      rendered_at_field = :"rendered_#{field.name}_at"
+      entry_blocks_field = :"entry_#{field.name}"
+      entry_blocks = Map.get(entry, entry_blocks_field)
+      rendered_html = Brando.Villain.parse(entry_blocks, entry)
+
+      updated_changeset
+      |> Changeset.put_change(rendered_field, rendered_html)
+      |> update_rendered_at_field_if_changed(rendered_field, rendered_at_field)
     end)
+  end
+
+  defp update_rendered_at_field_if_changed(changeset, rendered_field, rendered_at_field) do
+    if Changeset.get_change(changeset, rendered_field) do
+      Changeset.put_change(
+        changeset,
+        rendered_at_field,
+        DateTime.truncate(DateTime.utc_now(), :second)
+      )
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Remove all blocks matching `ids` that belong to `entry`
+  """
+  def reject_blocks_belonging_to_entry(ids, entry) do
+    entry_schema = entry.__struct__
+
+    schema_and_ids =
+      ids
+      |> list_root_block_ids_by_source()
+      |> list_entry_ids_for_root_blocks_by_source()
+
+    ids_for_schema = Map.get(schema_and_ids, entry_schema)
+    filtered_ids = Enum.reject(ids_for_schema, &(&1 == entry.id))
+
+    if filtered_ids == [],
+      do: Map.delete(schema_and_ids, entry_schema),
+      else: Map.put(schema_and_ids, entry_schema, filtered_ids)
+  end
+
+  @doc """
+  List all registered Villain fields
+  """
+  @spec list_villains :: [module()]
+  def list_villains do
+    blueprint_impls = Trait.Villain.list_implementations()
+    Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
+  end
+
+  @doc """
+  Return block module corresponding to `block_type`
+  Used when creating refs in ModuleUpdateLive
+  """
+  def get_block_by_type(block_type) do
+    default_blocks = Blocks.list_blocks()
+    Keyword.get(default_blocks, block_type)
+  end
+
+  @doc """
+  List all entries with blocks a module is used in
+  """
+  def list_module_usage(module_id) do
+    module_id
+    |> list_block_ids_using_module()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+  end
+
+  @doc """
+  List all unused modules
+  """
+  def list_unused_modules do
+    query =
+      from m in Content.Module,
+        left_join: b in Content.Block,
+        on: b.module_id == m.id,
+        where: is_nil(b.id),
+        order_by: [asc: m.namespace, asc: m.name],
+        select: m
+
+    query
+    |> Brando.repo().all()
+    |> Enum.map(&%{name: &1.name, namespace: &1.namespace, id: &1.id})
+  end
+
+  @doc """
+  Render and update all entries with a block using `module_id`
+  First syncs the module with the block, renders the block,
+  then renders all entries using the block.
+  """
+  def render_entries_with_module_id(module_id) do
+    module_id
+    |> list_block_ids_using_module()
+    |> sync_and_render_blocks(module_id)
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Render and update all entries with a block using `fragment_id`
+  """
+  def render_entries_with_fragment_id(fragment_id) do
+    fragment_id
+    |> list_block_ids_using_fragment()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Render and update all entries with a block using `palette_id`
+  """
+  def render_entries_with_palette_id(palette_id) do
+    palette_id
+    |> list_block_ids_using_palette()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Look through all `villains` for `search_term` and rerender all matching
+  """
+  def render_entries_matching_regex(search_terms) do
+    search_terms
+    |> list_block_ids_matching_regex()
+    |> render_blocks()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Gets all blocks with `module_id` and reapply refs and vars, then saves them.
+  Returns a list of all updated block ids.
+  """
+  def refresh_module_in_blocks(module_id) do
+    {:ok, module} =
+      Content.get_module(%{
+        matches: %{id: module_id},
+        preload: [:vars]
+      })
+
+    {:ok, blocks} =
+      Content.list_blocks(%{
+        filter: %{module_id: module_id},
+        preload: [:vars]
+      })
+
+    Enum.reduce(blocks, [], fn block, acc ->
+      updated_changeset = sync_module(block, module)
+      Brando.repo().update(updated_changeset)
+      [block.id | acc]
+    end)
+    |> render_blocks()
+  end
+
+  @doc """
+  Return list of all blocks using `palette_id`
+  """
+  def list_block_ids_using_palette(palette_id) do
+    query =
+      from b in Content.Block,
+        select: b.id,
+        where: b.palette_id == ^palette_id
+
+    Brando.repo().all(query)
+  end
+
+  @doc """
+  Syncs a block's vars and refs with a module
+  """
+  def sync_module(block, module) do
+    module_refs = module.refs
+    module_ref_names = Enum.map(module_refs, & &1.name)
+    changeset = Changeset.change(block)
+    current_refs = Changeset.get_embed(changeset, :refs, :struct)
+
+    current_refs =
+      Enum.filter(current_refs, &(&1.name in module_ref_names))
+
+    current_ref_names = Enum.map(current_refs, & &1.name)
+    missing_ref_names = module_ref_names -- current_ref_names
+
+    missing_refs =
+      module_refs
+      |> Enum.filter(&(&1.name in missing_ref_names))
+      |> Brando.Villain.add_uid_to_refs()
+
+    new_refs = current_refs ++ missing_refs
+
+    module_vars = module.vars || []
+    module_var_keys = Enum.map(module_vars, & &1.key)
+
+    current_vars = Changeset.get_assoc(changeset, :vars)
+    current_var_keys = Enum.map(current_vars, &Changeset.get_field(&1, :key))
+
+    missing_var_keys = module_var_keys -- current_var_keys
+
+    missing_vars =
+      module_vars
+      |> Enum.filter(&(&1.key in missing_var_keys))
+      |> remove_pk_from_vars()
+      |> Enum.map(&Changeset.change/1)
+      |> Enum.map(&%{&1 | action: :insert})
+
+    new_vars = current_vars ++ missing_vars
+
+    reapplied_refs = reapply_refs(module, module_refs, new_refs)
+    reapplied_vars = reapply_vars(module, module_vars, new_vars)
+
+    changeset
+    |> Changeset.put_assoc(:vars, reapplied_vars)
+    |> Changeset.put_embed(:refs, reapplied_refs)
+  end
+
+  def enqueue_entry_map_for_render(entry_map) do
+    for {schema, ids} <- entry_map, entry_id <- ids do
+      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
+    end
+  end
+
+  def enqueue_entries_for_render(schema, ids) do
+    for entry_id <- ids do
+      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
+    end
+  end
+
+  def enqueue_entry_for_render(args) do
+    args
+    |> Brando.Worker.EntryRenderer.new(
+      replace_args: true,
+      tags: [:render_entry]
+    )
+    |> Oban.insert()
+  end
+
+  defp list_block_ids_using_module(module_id) do
+    query =
+      from b in Content.Block,
+        select: b.id,
+        where: b.module_id == ^module_id
+
+    Brando.repo().all(query)
+  end
+
+  defp list_block_ids_using_fragment(fragment_id) do
+    query =
+      from b in Content.Block,
+        select: b.id,
+        where: b.fragment_id == ^fragment_id
+
+    Brando.repo().all(query)
+  end
+
+  @doc """
+  List ids of `schema` records that has a datasource matching schema OR
+  a module containing a datasource matching schema.
+  """
+  def list_block_ids_using_datamodule(datasource)
+
+  def list_block_ids_using_datamodule({datasource_module, datasource_type, datasource_query}) do
+    # find all content modules with this datasource
+    {:ok, modules} =
+      Brando.Content.list_modules(%{
+        filter: %{
+          datasource: true,
+          datasource_module: to_string(datasource_module),
+          datasource_type: to_string(datasource_type),
+          datasource_query: to_string(datasource_query)
+        },
+        select: [:id]
+      })
+
+    module_ids = Enum.map(modules, & &1.id)
+    list_block_ids_using_modules(module_ids)
+  end
+
+  def list_block_ids_using_datamodule(datasource_module) do
+    # find all content modules with this datasource
+    {:ok, modules} =
+      Brando.Content.list_modules(%{
+        filter: %{
+          datasource: true,
+          datasource_module: to_string(datasource_module)
+        },
+        select: [:id]
+      })
+
+    module_ids = Enum.map(modules, & &1.id)
+
+    list_block_ids_using_modules(module_ids)
+  end
+
+  defp list_entry_ids_for_root_blocks_by_source(source_map) do
+    Enum.reduce(source_map, %{}, fn {join_source, ids}, acc ->
+      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
+
+      query =
+        from js in join_source,
+          where: js.block_id in ^ids,
+          select: js.entry_id,
+          distinct: true
+
+      entry_ids = Brando.repo().all(query)
+      Map.put(acc, schema, entry_ids)
+    end)
+  end
+
+  def list_block_ids_using_modules(module_ids) when is_list(module_ids) do
+    query = from b in Content.Block, where: b.module_id in ^module_ids, select: b.id
+    Brando.repo().all(query)
+  end
+
+  defp list_root_block_ids_by_source(block_ids) when is_list(block_ids) do
+    base_case =
+      from(cb in "content_blocks",
+        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
+        where: cb.id in ^block_ids
+      )
+
+    recursive_case =
+      from(cb in "content_blocks",
+        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
+        join: pb in "parent_blocks",
+        on: pb.parent_id == cb.id
+      )
+
+    query = union_all(base_case, ^recursive_case)
+
+    "parent_blocks"
+    |> recursive_ctes(true)
+    |> with_cte("parent_blocks", as: ^query)
+    |> where([b], is_nil(b.parent_id))
+    |> select([b], %{id: b.id, source: b.source})
+    |> distinct(true)
+    |> Brando.repo().all()
+    |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
+      {:ok, casted_module} = Brando.Type.Module.cast(source)
+      Map.update(acc, casted_module, [id], &(&1 ++ [id]))
+    end)
+  end
+
+  @doc """
+  List all occurences of regex in blocks.
+  This should only search refs and vars?
+  """
+  @spec list_block_ids_matching_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
+  def list_block_ids_matching_regex(search_terms) do
+    org_query = from(b in Content.Block, select: %{"id" => b.id})
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+
+    built_query =
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
+        search_name_refs = to_string(search_name) <> "_refs"
+        search_name_vars = to_string(search_name) <> "_vars"
+
+        from(q in query,
+          left_join: vars in assoc(q, :vars),
+          select_merge: %{
+            ^search_name_refs =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(q.refs, :string),
+                ^search_term
+              ),
+            ^search_name_vars =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(vars.value, :string),
+                ^search_term
+              )
+          },
+          order_by: [asc: q.id]
+        )
+      end)
+
+    built_query
+    |> Brando.repo().all()
+    |> Enum.map(& &1["id"])
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Searches all modules' `code` for `search_terms`.
+
+  Search terms should be a keyword list with the key being the name of the search and the value being the regex to search for:
+
+  ```
+      search_terms = [
+        navigation_vars: "{{ navigation\.(.*?) }}",
+        navigation_for_loops: "{% for (.*?) in navigation\.(.*?) %}"
+      ]
+
+      search_modules_for_regex(search_terms)
+  ```
+  """
+  @spec search_modules_for_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
+
+  def search_modules_for_regex(search_terms) do
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+
+    org_query =
+      from(s in Content.Module,
+        select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
+      )
+
+    built_query =
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
+        from(q in query,
+          select_merge: %{
+            ^to_string(search_name) =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(field(q, :code), :string),
+                ^search_term
+              )
+          }
+        )
+      end)
+
+    Brando.repo().all(built_query)
+  end
+
+  def sync_and_render_blocks(block_ids, module_id) do
+    {:ok, module} =
+      Content.get_module(%{
+        matches: %{id: module_id},
+        preload: [:vars]
+      })
+
+    {:ok, blocks} =
+      Content.list_blocks(%{
+        filter: %{ids: block_ids},
+        preload: [:vars]
+      })
+
+    blocks
+    |> Enum.reduce([], fn block, acc ->
+      block
+      |> sync_module(module)
+      |> Brando.repo().update()
+
+      [block.id | acc]
+    end)
+    |> render_blocks()
+  end
+
+  def render_blocks(block_ids) do
+    # group blocks by the entry they belong to
+    source_map = list_root_block_ids_by_source(block_ids)
+
+    for {join_source, ids} <- source_map do
+      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
+
+      query =
+        from js in join_source,
+          where: js.block_id in ^ids,
+          select: [js.entry_id, fragment("array_agg(?)", js.block_id)],
+          group_by: js.entry_id
+
+      grouped_block_ids = Brando.repo().all(query)
+
+      for {entry_id, block_ids} <- grouped_block_ids do
+        {:ok, entry} = Brando.Query.get_entry(schema, entry_id)
+
+        {:ok, blocks} =
+          Brando.Content.list_blocks(%{
+            filter: %{ids: block_ids},
+            preload: [:vars, :module]
+          })
+
+        # render and update all blocks
+        for block <- blocks do
+          rendered_block = render_block(block, entry)
+          # update the block
+          changes = %{
+            rendered_html: rendered_block,
+            rendered_at: DateTime.truncate(DateTime.utc_now(), :second)
+          }
+
+          block
+          |> Changeset.change(changes)
+          |> Brando.repo().update()
+        end
+      end
+    end
+
+    source_map
+  end
+
+  @doc """
+  Look through all modules for `search_terms` and rerender all villains that
+  use this module
+  """
+  @spec rerender_matching_modules({atom, binary} | [{atom, binary}]) :: any
+  def rerender_matching_modules(search_terms) do
+    case search_modules_for_regex(search_terms) |> Enum.map(& &1["id"]) do
+      [] -> nil
+      ids -> for id <- ids, do: render_entries_with_module_id(id)
+    end
+  end
+
+  def add_uid_to_refs(nil), do: nil
+
+  def add_uid_to_refs(refs) when is_list(refs) do
+    {_, refs_with_generated_uids} =
+      get_and_update_in(
+        refs,
+        [Access.all(), Access.key(:data), Access.key(:uid)],
+        &{&1, Brando.Utils.generate_uid()}
+      )
+
+    refs_with_generated_uids
+  end
+
+  def add_uid_to_ref_changesets(nil), do: nil
+
+  def add_uid_to_ref_changesets(refs) when is_list(refs) do
+    Enum.map(refs, fn ref ->
+      data = Changeset.get_field(ref, :data)
+      data_changeset = Changeset.change(data)
+
+      updated_data_changeset =
+        Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
+
+      ref
+      |> Changeset.put_change(:data, updated_data_changeset)
+      |> Map.put(:action, :insert)
+    end)
+  end
+
+  def remove_pk_from_vars(nil), do: nil
+  def remove_pk_from_vars([]), do: []
+
+  def remove_pk_from_vars(vars) when is_list(vars) do
+    Enum.map(vars, &Map.merge(&1, %{id: nil, module_id: nil}))
+  end
+
+  def reapply_refs(module, module_refs, refs) do
+    Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
+      ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+
+      if ref_src == nil do
+        raise """
+
+        Ref #{ref_name} not found in module refs!
+
+        Module: ##{module.id} [#{module.namespace}] #{module.name}
+
+        #{inspect(module, pretty: true)}
+
+        """
+      end
+
+      ref_src.data.__struct__
+      |> block_module.apply_ref(ref_src, ref)
+      |> Changeset.change()
+    end)
+  end
+
+  @protected_and_ignored_var_attrs [
+    :value,
+    :value_boolean,
+    :image_id,
+    :palette_id,
+    :file_id,
+    :linked_identifier_id,
+    :page_id,
+    :block_id,
+    :module_id,
+    :global_set_id,
+    # ignored
+    :block,
+    :id,
+    :module,
+    :creator,
+    :creator_id,
+    :file,
+    :image,
+    :palette,
+    :linked_identifier,
+    :page,
+    :global_set,
+    :sequence,
+    :__struct__,
+    :__meta__
+  ]
+  def reapply_vars(_module, module_vars, vars) do
+    require Logger
+
+    Enum.map(vars, fn
+      %Changeset{data: %{key: var_key}} = var ->
+        var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
+        attrs_to_take = Map.keys(var_src) -- @protected_and_ignored_var_attrs
+        new_attrs = Map.take(var_src, attrs_to_take)
+        Changeset.change(var, new_attrs)
+    end)
+  end
+
+  def reject_deleted([]), do: []
+  def reject_deleted(nil), do: []
+
+  def reject_deleted(block_changesets, root \\ true) when is_list(block_changesets) do
+    Enum.reduce(block_changesets, [], fn
+      %{action: :delete}, acc ->
+        acc
+
+      %{changes: %{mark_as_deleted: true}}, acc ->
+        acc
+
+      %{action: :replace}, acc ->
+        acc
+
+      block_cs, acc ->
+        if root do
+          sub_cs = Changeset.get_assoc(block_cs, :block)
+          children = Changeset.get_assoc(sub_cs, :children)
+          processed_children = reject_deleted(children, false)
+
+          require Logger
+
+          Logger.error("""
+          ==> Rejecting deleted children
+
+          children: #{inspect(children, pretty: true)}
+          processed_children: #{inspect(processed_children, pretty: true)}
+
+          """)
+
+          updated_sub_cs = Changeset.put_assoc(sub_cs, :children, processed_children)
+          updated_entry_block_cs = Changeset.put_assoc(block_cs, :block, updated_sub_cs)
+          [updated_entry_block_cs | acc]
+        else
+          children = Changeset.get_assoc(block_cs, :children)
+          processed_children = reject_deleted(children, false)
+          updated_block_cs = Changeset.put_assoc(block_cs, :children, processed_children)
+          [updated_block_cs | acc]
+        end
+    end)
+    |> Enum.reverse()
   end
 
   @doc """
@@ -362,827 +1061,5 @@ defmodule Brando.Villain do
     else
       []
     end
-  end
-
-  def render_all_entries(schema) do
-    # get all ids
-    entry_ids =
-      Brando.repo().all(
-        from(s in schema,
-          select: s.id
-        )
-      )
-
-    enqueue_entries_for_render(schema, entry_ids)
-  end
-
-  @doc """
-  Rerender multiple IDS
-  """
-
-  # @spec render_entries({Module, atom, atom}, [integer | binary]) :: nil | [any()]
-  # def render_entries(_, []), do: nil
-
-  # def render_entries(args, ids, updated_module_id \\ nil),
-  #   do: for(id <- ids, do: render_entry(args, id, updated_module_id))
-
-  def render_entries(_, _, _ \\ nil), do: nil
-
-  @doc """
-  Rerender HTML from an ID
-
-  ## Example
-
-      render_entry(Pages.Page, 1)
-
-  Will try to rerender html for page with id: 1.
-
-  We treat page fragments special, since they need to propagate to other referencing
-  pages and fragments
-  """
-
-  @spec render_entry(schema :: module, entry_id :: integer | binary) ::
-          {:ok, map} | {:error, changeset}
-  def render_entry(schema, id) do
-    case Brando.Query.get_entry(schema, id) do
-      {:error, _} = err ->
-        require Logger
-
-        Logger.error("""
-        ==> Failed to Brando.Villain.render_entry/2
-
-        Schema..: #{inspect(schema, pretty: true)}
-        Id......: #{inspect(id, pretty: true)}
-
-        ERROR:
-        #{inspect(err, pretty: true)}
-
-        """)
-
-        err
-
-      {:ok, entry} ->
-        changeset =
-          entry
-          |> Changeset.change()
-          |> render_all_block_fields_and_add_to_changeset(schema, entry)
-
-        case Brando.repo().update(changeset) do
-          {:ok, %Pages.Fragment{} = fragment} ->
-            Brando.Cache.Query.evict({:ok, fragment})
-            Pages.update_villains_referencing_fragment(fragment)
-
-          {:ok, result} ->
-            Brando.Cache.Query.evict({:ok, result})
-
-            {:ok, result}
-        end
-    end
-  end
-
-  @doc """
-  Renders all block fields for an entry and adds them to changeset
-  """
-  def render_all_block_fields_and_add_to_changeset(changeset, schema, entry) do
-    Enum.reduce(schema.__villain_fields__(), changeset, fn field, updated_changeset ->
-      rendered_field = :"rendered_#{field.name}"
-      rendered_at_field = :"rendered_#{field.name}_at"
-      entry_blocks_field = :"entry_#{field.name}"
-      entry_blocks = Map.get(entry, entry_blocks_field)
-      rendered_html = Brando.Villain.parse(entry_blocks, entry)
-
-      updated_changeset
-      |> Changeset.put_change(rendered_field, rendered_html)
-      |> Changeset.put_change(rendered_at_field, DateTime.truncate(DateTime.utc_now(), :second))
-    end)
-  end
-
-  @doc """
-  Remove all blocks matching `ids` that belong to `entry`
-  """
-  def reject_blocks_belonging_to_entry(ids, entry) do
-    entry_schema = entry.__struct__
-
-    schema_and_ids =
-      ids
-      |> list_root_block_ids_by_source()
-      |> list_entry_ids_for_root_blocks_by_source()
-
-    ids_for_schema = Map.get(schema_and_ids, entry_schema)
-    filtered_ids = Enum.reject(ids_for_schema, &(&1 == entry.id))
-
-    if filtered_ids == [],
-      do: Map.delete(schema_and_ids, entry_schema),
-      else: Map.put(schema_and_ids, entry_schema, filtered_ids)
-  end
-
-  @doc """
-  List all registered Villain fields
-  """
-  @spec list_villains :: [module()]
-  def list_villains do
-    blueprint_impls = Trait.Villain.list_implementations()
-    Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
-  end
-
-  @doc """
-  Return block module corresponding to `block_type`
-  Used when creating refs in ModuleUpdateLive
-  """
-  def get_block_by_type(block_type) do
-    default_blocks = Blocks.list_blocks()
-    Keyword.get(default_blocks, block_type)
-  end
-
-  def update_palette_in_fields(palette_id) do
-    villains = list_villains()
-
-    result =
-      for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn
-          data_field, acc ->
-            html_field = get_html_field(schema, data_field)
-
-            case list_ids_with_palette(schema, data_field.name, palette_id) do
-              [] ->
-                acc
-
-              ids ->
-                [acc | render_entries({schema, data_field.name, html_field.name}, ids)]
-            end
-        end)
-      end
-
-    {:ok, result}
-  end
-
-  @doc """
-  List all {schema, data_field_name, ids} a module is used in
-  """
-  def list_module_usage(module_id) do
-    villains = list_villains()
-
-    result =
-      for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn
-          data_field, acc ->
-            ids = list_ids_with_modules(schema, data_field.name, [module_id])
-
-            if ids == [] do
-              acc
-            else
-              [{schema, data_field.name, ids} | acc]
-            end
-        end)
-      end
-
-    {:ok, Enum.filter(result, &(&1 != []))}
-  end
-
-  @doc """
-  List all unused modules
-  """
-  def list_unused_modules do
-    query =
-      from m in Content.Module,
-        left_join: b in Content.Block,
-        on: b.module_id == m.id,
-        where: is_nil(b.id),
-        order_by: [asc: m.namespace, asc: m.name],
-        select: m
-
-    query
-    |> Brando.repo().all()
-    |> Enum.map(&%{name: &1.name, namespace: &1.namespace, id: &1.id})
-  end
-
-  @doc """
-  Update all villain fields in database that has a module with `id`.
-  """
-  def update_module_in_fields(module_id) do
-    module_id
-    |> refresh_module_in_blocks()
-    |> list_root_block_ids_by_source()
-    |> list_entry_ids_for_root_blocks_by_source()
-    |> enqueue_entry_map_for_render()
-  end
-
-  @doc """
-  Gets all blocks with `module_id` and reapply refs and vars, then saves them.
-  Returns a list of all updated block ids.
-  """
-  def refresh_module_in_blocks(module_id) do
-    {:ok, module} =
-      Content.get_module(%{
-        matches: %{id: module_id},
-        preload: [:vars]
-      })
-
-    {:ok, blocks} =
-      Content.list_blocks(%{
-        filter: %{module_id: module_id},
-        preload: [:vars]
-      })
-
-    Enum.reduce(blocks, [], fn block, acc ->
-      updated_changeset = sync_module(block, module)
-
-      if updated_changeset.changes != %{} do
-        Brando.repo().update(updated_changeset)
-        [block.id | acc]
-      else
-        acc
-      end
-    end)
-  end
-
-  @doc """
-  Syncs a block's vars and refs with a module
-  """
-  def sync_module(block, module) do
-    module_refs = module.refs
-    module_ref_names = Enum.map(module_refs, & &1.name)
-    changeset = Changeset.change(block)
-
-    current_refs = Changeset.get_embed(changeset, :refs)
-
-    current_refs =
-      Enum.filter(current_refs, &(Changeset.get_field(&1, :name) in module_ref_names))
-
-    current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
-    missing_ref_names = module_ref_names -- current_ref_names
-
-    missing_refs =
-      module_refs
-      |> Enum.filter(&(&1.name in missing_ref_names))
-      |> Enum.map(&Changeset.change/1)
-      |> Brando.Villain.add_uid_to_ref_changesets()
-
-    new_refs = current_refs ++ missing_refs
-
-    ## now do vars
-    # find missing vars
-    module_vars = module.vars || []
-    module_var_keys = Enum.map(module_vars, & &1.key)
-
-    current_vars = Changeset.get_assoc(changeset, :vars)
-    current_var_keys = Enum.map(current_vars, &Changeset.get_field(&1, :name))
-
-    missing_var_keys = module_var_keys -- current_var_keys
-    missing_vars = Enum.filter(module_vars, &(&1.key in missing_var_keys))
-
-    new_vars = current_vars ++ missing_vars
-
-    reapplied_refs = reapply_refs(module, module_refs, new_refs)
-    reapplied_vars = reapply_vars(module, module_vars, new_vars)
-
-    changeset
-    |> Changeset.put_assoc(:vars, reapplied_vars)
-    |> Changeset.put_embed(:refs, reapplied_refs)
-  end
-
-  def enqueue_entry_map_for_render(entry_map) do
-    for {schema, ids} <- entry_map, entry_id <- ids do
-      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
-    end
-  end
-
-  def enqueue_entries_for_render(schema, ids) do
-    for entry_id <- ids do
-      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
-    end
-  end
-
-  def enqueue_entry_for_render(args) do
-    args
-    |> Brando.Worker.EntryRenderer.new(
-      replace_args: true,
-      tags: [:render_entry]
-    )
-    |> Oban.insert()
-  end
-
-  defp list_block_ids_using_module_id(module_id) do
-    query =
-      from b in Content.Block,
-        select: b.id,
-        where: b.module_id == ^module_id
-
-    Brando.repo().all(query)
-  end
-
-  @doc """
-  List ids of `schema` records that has a datasource matching schema OR
-  a module containing a datasource matching schema.
-  """
-  def list_block_ids_with_datamodule(datasource)
-
-  def list_block_ids_with_datamodule({datasource_module, datasource_type, datasource_query}) do
-    # find all content modules with this datasource
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module),
-          datasource_type: to_string(datasource_type),
-          datasource_query: to_string(datasource_query)
-        },
-        select: [:id]
-      })
-
-    module_ids = Enum.map(modules, & &1.id)
-    list_block_ids_with_modules(module_ids)
-  end
-
-  def list_block_ids_with_datamodule(datasource_module) do
-    # find all content modules with this datasource
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module)
-        },
-        select: [:id]
-      })
-
-    module_ids = Enum.map(modules, & &1.id)
-
-    list_block_ids_with_modules(module_ids)
-  end
-
-  defp list_entry_ids_for_root_blocks_by_source(source_map) do
-    Enum.reduce(source_map, %{}, fn {join_source, ids}, acc ->
-      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
-
-      query =
-        from js in join_source,
-          where: js.block_id in ^ids,
-          select: js.entry_id,
-          distinct: true
-
-      entry_ids = Brando.repo().all(query)
-      Map.put(acc, schema, entry_ids)
-    end)
-  end
-
-  defp rerender_entries_with_module_ids(blocks) do
-    block_ids = Enum.map(blocks, & &1.id)
-
-    for {schema, ids} <- list_root_block_ids_by_source(block_ids) do
-    end
-  end
-
-  defp list_root_block_ids_by_source(block_ids) do
-    base_case =
-      from(cb in "content_blocks",
-        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
-        where: cb.id in ^block_ids
-      )
-
-    recursive_case =
-      from(cb in "content_blocks",
-        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
-        join: pb in "parent_blocks",
-        on: pb.parent_id == cb.id
-      )
-
-    query = union_all(base_case, ^recursive_case)
-
-    "parent_blocks"
-    |> recursive_ctes(true)
-    |> with_cte("parent_blocks", as: ^query)
-    |> where([b], is_nil(b.parent_id))
-    |> select([b], %{id: b.id, source: b.source})
-    |> distinct(true)
-    |> Brando.repo().all()
-    |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
-      {:ok, casted_module} = Brando.Type.Module.cast(source)
-      Map.update(acc, casted_module, [id], &(&1 ++ [id]))
-    end)
-  end
-
-  @doc """
-  Update all villain fields in database that has a fragment with `id`.
-  """
-  def update_fragment_in_blocks(fragment_id) do
-    query = from b in Content.Block, where: b.fragment_id == ^fragment_id, select: b.id
-    block_ids = Brando.repo().all(query)
-    # TODO: Rerender all blocks with fragment_id
-  end
-
-  def get_html_field(schema, %{name: :data}) do
-    schema.__attribute__(:html)
-  end
-
-  def get_html_field(schema, %{name: data_name}) do
-    data_name
-    |> to_string()
-    |> String.replace("_data", "_html")
-    |> String.to_existing_atom()
-    |> schema.__attribute__
-  end
-
-  @doc """
-  List ids of `schema` records that has a container block with
-  `palette_id` in `data_field`.
-  """
-  def list_ids_with_palette(schema, data_field, palette_id) do
-    t = [
-      %{type: "container", data: %{palette_id: palette_id}}
-    ]
-
-    Brando.repo().all(
-      from(s in schema,
-        select: s.id,
-        where: jsonb_contains(s, data_field, t)
-      )
-    )
-  end
-
-  @doc """
-  List ids of `schema` records that has `module_ids` in `data_field`
-  Also check inside containers.
-  """
-  @deprecated "..."
-  def list_ids_with_modules(schema, data_field, module_ids) when is_list(module_ids) do
-    query =
-      from s in schema,
-        select: s.id
-
-    query =
-      Enum.reduce(module_ids, query, fn module_id, updated_query ->
-        t = [
-          %{type: "module", data: %{module_id: module_id}}
-        ]
-
-        contained_t = [
-          %{
-            type: "container",
-            data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}
-          }
-        ]
-
-        from s in updated_query,
-          or_where: jsonb_contains(s, data_field, t),
-          or_where: jsonb_contains(s, data_field, contained_t)
-      end)
-
-    Brando.repo().all(query)
-  end
-
-  def list_block_ids_with_modules(module_ids) do
-    query =
-      from b in Content.Block,
-        select: b.id,
-        where: b.module_id in ^module_ids
-
-    Brando.repo().all(query)
-  end
-
-  @doc """
-  List ids of `schema` records that has `fragment_ids` in `data_field`
-  Also check inside containers.
-  """
-  def list_ids_with_fragments(schema, data_field, fragment_ids) when is_list(fragment_ids) do
-    query =
-      from s in schema,
-        select: s.id
-
-    query =
-      Enum.reduce(fragment_ids, query, fn fragment_id, updated_query ->
-        t = [
-          %{type: "fragment", data: %{fragment_id: fragment_id}}
-        ]
-
-        contained_t = [
-          %{
-            type: "container",
-            data: %{blocks: [%{type: "fragment", data: %{fragment_id: fragment_id}}]}
-          }
-        ]
-
-        from s in updated_query,
-          or_where: jsonb_contains(s, data_field, t),
-          or_where: jsonb_contains(s, data_field, contained_t)
-      end)
-
-    Brando.repo().all(query)
-  end
-
-  @doc """
-  List all occurences of fragment in `schema`'s `data_field`
-  """
-  @spec search_villains_for_text(
-          schema :: any,
-          data_field :: atom,
-          search_terms :: binary | [binary]
-        ) :: [any]
-  def search_villains_for_text(schema, data_field, search_terms) do
-    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from(s in schema, select: s.id, order_by: [asc: s.id])
-
-    built_query =
-      Enum.reduce(search_terms, org_query, fn search_term, query ->
-        from(q in query,
-          or_where: ilike(type(field(q, ^data_field), :string), ^"%#{search_term}%")
-        )
-      end)
-
-    Brando.repo().all(built_query)
-  end
-
-  @doc """
-  List all occurences of regex in `schema`'s `data_field`
-  """
-  @spec search_villains_for_regex(
-          schema :: any,
-          data_field :: atom,
-          search_terms :: {atom, binary} | [{atom, binary}]
-        ) :: [any]
-  def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
-    org_query = from(s in schema, select: %{"id" => s.id})
-
-    built_query =
-      Enum.reduce(List.wrap(search_terms), org_query, fn {search_name, search_term}, query ->
-        from(q in query,
-          select_merge: %{
-            ^to_string(search_name) =>
-              fragment(
-                "regexp_matches(?, ?, 'g')",
-                type(field(q, ^data_field), :string),
-                ^search_term
-              )
-          },
-          order_by: [asc: q.id]
-        )
-      end)
-
-    if with_data,
-      do: Brando.repo().all(built_query),
-      else: Brando.repo().all(built_query) |> Enum.map(& &1["id"])
-  end
-
-  @spec search_modules_for_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
-  def search_modules_for_regex(search_terms) do
-    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-
-    org_query =
-      from(s in Content.Module,
-        select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
-      )
-
-    built_query =
-      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
-        from(q in query,
-          select_merge: %{
-            ^to_string(search_name) =>
-              fragment(
-                "regexp_matches(?, ?, 'g')",
-                type(field(q, :code), :string),
-                ^search_term
-              )
-          }
-        )
-      end)
-
-    Brando.repo().all(built_query)
-  end
-
-  @doc """
-  Look through all `villains` for `search_term` and rerender all matching
-  """
-  @spec rerender_matching_villains([module], {atom, binary} | [{atom, binary}]) :: [any]
-  def rerender_matching_villains(villains, search_terms) do
-    for {schema, fields} <- villains do
-      Enum.reduce(fields, [], fn
-        {:villain, data_field, html_field}, acc ->
-          case search_villains_for_regex(schema, data_field, search_terms) do
-            [] ->
-              acc
-
-            ids ->
-              [render_entries({schema, data_field, html_field}, ids) | acc]
-          end
-
-        data_field, acc ->
-          html_field = get_html_field(schema, data_field)
-
-          case search_villains_for_regex(schema, data_field.name, search_terms) do
-            [] ->
-              acc
-
-            ids ->
-              [render_entries({schema, data_field.name, html_field.name}, ids) | acc]
-          end
-      end)
-    end
-  end
-
-  @doc """
-  Look through all modules for `search_terms` and rerender all villains that
-  use this module
-  """
-  @spec rerender_matching_modules([module], {atom, binary} | [{atom, binary}]) :: any
-  def rerender_matching_modules(_villains, search_terms) do
-    case search_modules_for_regex(search_terms) |> Enum.map(& &1["id"]) do
-      [] -> nil
-      ids -> for id <- ids, do: update_module_in_fields(id)
-    end
-  end
-
-  @doc """
-  Recursively search a list of blocks for block matching `uid`
-  """
-  @spec find_block(list(), binary()) :: map | nil
-  def find_block(blocks, uid, acc \\ nil)
-  def find_block(_, nil, _), do: nil
-  def find_block(nil, _, acc), do: acc
-
-  def find_block(blocks, uid, acc) do
-    Enum.reduce_while(blocks, acc, fn
-      %{uid: ^uid} = block, _ ->
-        {:halt, block}
-
-      %{type: "container", data: %{blocks: blocks}}, _ ->
-        ret = find_block(blocks, uid, acc)
-
-        if ret do
-          {:halt, ret}
-        else
-          {:cont, acc}
-        end
-
-      %{type: "module", data: %{refs: refs}}, _ ->
-        ret = find_block(refs, uid, acc)
-
-        if ret do
-          {:halt, ret}
-        else
-          {:cont, acc}
-        end
-
-      %Content.Module.Ref{data: %{uid: ^uid} = block}, _ ->
-        {:halt, block}
-
-      _, acc ->
-        {:cont, acc}
-    end) || acc
-  end
-
-  def add_uid_to_refs(nil), do: nil
-
-  def add_uid_to_refs(refs) when is_list(refs) do
-    {_, refs_with_generated_uids} =
-      get_and_update_in(
-        refs,
-        [Access.all(), Access.key(:data), Access.key(:uid)],
-        &{&1, Brando.Utils.generate_uid()}
-      )
-
-    refs_with_generated_uids
-  end
-
-  def add_uid_to_ref_changesets(nil), do: nil
-
-  def add_uid_to_ref_changesets(refs) when is_list(refs) do
-    Enum.map(refs, fn ref ->
-      data = Changeset.get_field(ref, :data)
-      data_changeset = Changeset.change(data)
-
-      updated_data_changeset =
-        Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
-
-      Changeset.put_change(ref, :data, updated_data_changeset)
-      |> Map.put(:action, :insert)
-    end)
-  end
-
-  def remove_pk_from_vars(nil), do: nil
-  def remove_pk_from_vars([]), do: []
-
-  def remove_pk_from_vars(vars) when is_list(vars) do
-    Enum.map(vars, fn var ->
-      Map.merge(var, %{id: nil, module_id: nil})
-    end)
-  end
-
-  def reapply_refs(module, module_refs, refs) do
-    Enum.map(refs, fn %Changeset{data: %{name: ref_name, data: %{__struct__: block_module}}} = ref ->
-      ref_src = Enum.find(module_refs, &(&1.name == ref_name))
-
-      if ref_src == nil do
-        raise """
-
-        Ref #{ref_name} not found in module refs!
-
-        Module: ##{module.id} [#{module.namespace}] #{module.name}
-
-        #{inspect(module, pretty: true)}
-        """
-      end
-
-      applied = block_module.apply_ref(ref_src.data.__struct__, ref_src, ref)
-
-      require Logger
-
-      Logger.error("""
-
-      => reapply_refs #{ref_name}
-
-      ref_src: #{inspect(ref_src, pretty: true)}
-      ref: #{inspect(ref, pretty: true)}
-
-      applied.data: #{inspect(applied.data, pretty: true)}
-
-      """)
-
-      applied
-    end)
-  end
-
-  @protected_and_ignored_var_attrs [
-    :value,
-    :value_boolean,
-    :image_id,
-    :palette_id,
-    :file_id,
-    :linked_identifier_id,
-    :page_id,
-    :block_id,
-    :module_id,
-    :global_set_id,
-    # ignored
-    :block,
-    :id,
-    :module,
-    :creator,
-    :creator_id,
-    :file,
-    :image,
-    :palette,
-    :linked_identifier,
-    :page,
-    :global_set,
-    :sequence,
-    :__struct__,
-    :__meta__
-  ]
-  def reapply_vars(_module, module_vars, vars) do
-    Enum.map(vars, fn
-      %Content.Var{key: var_key} = var ->
-        var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
-        overwritten_attrs = Map.keys(var_src) -- @protected_and_ignored_var_attrs
-        new_attrs = Map.take(var_src, overwritten_attrs)
-        Changeset.change(var, new_attrs)
-
-      %Changeset{data: %{key: var_key}} = var ->
-        var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
-        overwritten_attrs = Map.keys(var_src) -- @protected_and_ignored_var_attrs
-        new_attrs = Map.take(var_src, overwritten_attrs)
-        Changeset.change(var, new_attrs)
-    end)
-  end
-
-  def reject_deleted([]), do: []
-  def reject_deleted(nil), do: []
-
-  def reject_deleted(block_changesets, root \\ true) when is_list(block_changesets) do
-    Enum.reduce(block_changesets, [], fn
-      %{action: :delete}, acc ->
-        acc
-
-      %{changes: %{mark_as_deleted: true}}, acc ->
-        acc
-
-      %{action: :replace}, acc ->
-        acc
-
-      block_cs, acc ->
-        if root do
-          sub_cs = Changeset.get_assoc(block_cs, :block)
-          children = Changeset.get_assoc(sub_cs, :children)
-          processed_children = reject_deleted(children, false)
-
-          require Logger
-
-          Logger.error("""
-          ==> Rejecting deleted children
-
-          children: #{inspect(children, pretty: true)}
-          processed_children: #{inspect(processed_children, pretty: true)}
-
-          """)
-
-          updated_sub_cs = Changeset.put_assoc(sub_cs, :children, processed_children)
-          updated_entry_block_cs = Changeset.put_assoc(block_cs, :block, updated_sub_cs)
-          [updated_entry_block_cs | acc]
-        else
-          children = Changeset.get_assoc(block_cs, :children)
-          processed_children = reject_deleted(children, false)
-          updated_block_cs = Changeset.put_assoc(block_cs, :children, processed_children)
-          [updated_block_cs | acc]
-        end
-    end)
-    |> Enum.reverse()
   end
 end

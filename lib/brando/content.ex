@@ -140,7 +140,7 @@ defmodule Brando.Content do
 
   mutation :update, Module do
     fn entry ->
-      Villain.update_module_in_fields(entry.id)
+      Villain.render_entries_with_module_id(entry.id)
 
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
@@ -242,11 +242,11 @@ defmodule Brando.Content do
   end
 
   mutation :update, Palette do
-    fn entry ->
-      Villain.update_palette_in_fields(entry.id)
+    fn palette ->
+      Villain.render_entries_with_palette_id(palette.id)
       Brando.Cache.Palettes.set()
 
-      {:ok, entry}
+      {:ok, palette}
     end
   end
 

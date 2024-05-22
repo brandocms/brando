@@ -4,7 +4,6 @@ defmodule Brando.System.Log do
 
   Used for start up deprecations et al
   """
-
   def warn(msg) do
     warnings = Brando.Cache.get(:warnings)
     IO.warn(msg, [])

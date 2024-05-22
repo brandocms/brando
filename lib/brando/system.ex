@@ -6,8 +6,6 @@ defmodule Brando.System do
   require Logger
   alias Brando.Exception.ConfigError
   alias Brando.Cache
-  alias Brando.System.Log
-  alias Brando.Villain
 
   def initialize do
     run_checks()
@@ -30,8 +28,6 @@ defmodule Brando.System do
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:seo, :exists}} = check_seo_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
-    {:ok, {:block_syntax, _}} = check_block_syntax()
-    {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, {:env, :exists}} = check_env()
     {:ok, {:presence, :exists}} = check_presence_exists()
 
@@ -247,85 +243,6 @@ defmodule Brando.System do
     end
 
     {:ok, {:module_config, :exists}}
-  end
-
-  # check Villain modules for deprecated syntax.
-  def check_block_syntax do
-    search_terms = [vars: "\\${(.*?)}", for_loops: "{\\% (for .*? <- .*?) \\%}"]
-
-    results = Villain.search_modules_for_regex(search_terms)
-
-    for result <- results do
-      log_invalid_block_syntax(:vars, result)
-      log_invalid_block_syntax(:for_loops, result)
-    end
-
-    # Return valid no matter what. We only want to warn
-    {:ok, {:block_syntax, nil}}
-  end
-
-  def check_entry_syntax do
-    search_terms = [vars: "\\${(.*?)}", for_loops: "{\\% (for .*? <- .*?) \\%}"]
-
-    for {schema, fields} <- Villain.list_villains() do
-      for {_, data_field, _html_field} <- fields do
-        case Villain.search_villains_for_regex(schema, data_field, search_terms, :with_data) do
-          [] ->
-            nil
-
-          results ->
-            meta = %{
-              "namespace" => "#{inspect(schema)}#{inspect(data_field)}",
-              "name" => "Entry"
-            }
-
-            for result <- results do
-              log_invalid_block_syntax(:vars, Map.merge(result, meta))
-              log_invalid_block_syntax(:for_loops, Map.merge(result, meta))
-            end
-        end
-      end
-    end
-
-    {:ok, {:entry_syntax, nil}}
-  end
-
-  defp log_invalid_block_syntax(:vars, %{"vars" => nil}), do: nil
-
-  defp log_invalid_block_syntax(:vars, %{
-         "vars" => matches,
-         "name" => name,
-         "namespace" => namespace,
-         "id" => id
-       }) do
-    for match <- matches do
-      Log.warn("""
-      Deprecated module syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
-
-      Module..: #{inspect(name)}
-      Namespace.: #{inspect(namespace)}
-      Id........: #{inspect(id)}
-      """)
-    end
-  end
-
-  defp log_invalid_block_syntax(:for_loops, %{"for_loops" => nil}), do: nil
-
-  defp log_invalid_block_syntax(:for_loops, %{
-         "for_loops" => matches,
-         "name" => name,
-         "namespace" => namespace,
-         "id" => id
-       }) do
-    for match <- matches do
-      Log.warn("""
-      Deprecated for loop syntax `{% #{match} %}`. Try `{% #{String.replace(match, "<-", "in")} %}` instead.
-
-      Module..: #{inspect(name)}
-      Namespace.: #{inspect(namespace)}
-      Id........: #{inspect(id)}
-      """)
-    end
   end
 end
 

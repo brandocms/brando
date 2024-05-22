@@ -181,7 +181,7 @@ defmodule Brando.Assets.Vite do
       read(scope) |> get_in([file, "file"]) |> prepend_slash()
     end
 
-    @spec get_css(atom, binary()) :: binary()
+    @spec get_css(:admin | :app, binary()) :: binary()
     def get_css(scope, file) do
       read(scope) |> get_in([file, "css"]) |> prepend_slash()
     end

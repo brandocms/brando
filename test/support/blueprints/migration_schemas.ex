@@ -20,7 +20,6 @@ defmodule Brando.MigrationTest.Project do
     attribute :title, :string
     attribute :status, :status, required: true
     attribute :slug, :slug, required: true, unique: [prevent_collision: :language]
-    attribute :data, :villain
   end
 
   assets do
@@ -60,8 +59,6 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
     attribute :slug, :slug, required: true, unique: [prevent_collision: :language]
     attribute :summary, :text
     attribute :unique_hash, :text, unique: true
-
-    attribute :data, :villain
   end
 
   assets do
@@ -109,7 +106,6 @@ defmodule Brando.MigrationTest.ProjectUpdate2 do
   attributes do
     attribute :summary, :text
     attribute :unique_hash, :text, unique: true
-    attribute :data, :villain
   end
 end
 
@@ -172,7 +168,6 @@ defmodule Brando.Persons.Person do
 
   relations do
     relation :profile, :belongs_to, module: Brando.MigrationTest.Profile, type: :binary_id
-
     relation :related_entries, :entries, constraints: [max_length: 3]
   end
 end

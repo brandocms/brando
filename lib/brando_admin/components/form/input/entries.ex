@@ -317,13 +317,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     identifier =
       if identifier_changeset == nil do
         identifier_id = Changeset.get_field(changeset, :identifier_id)
-        require Logger
-
-        Logger.error("""
-        -> identifier_id: #{inspect(identifier_id)}
-        -> available_identifiers: #{inspect(assigns.available_identifiers, pretty: true, width: 0)}
-        """)
-
         Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
       else
         identifier_changeset.data

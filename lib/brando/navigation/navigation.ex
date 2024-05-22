@@ -138,9 +138,11 @@ defmodule Brando.Navigation do
       navigation_for_loops: "{% for (.*?) in navigation\.(.*?) %}"
     ]
 
-    villains = Villain.list_villains()
-    Villain.rerender_matching_villains(villains, search_terms)
-    Villain.rerender_matching_modules(villains, search_terms)
+    # Check for instances in blocks (refs/vars)
+    Villain.render_entries_matching_regex(search_terms)
+
+    # Check for instances in modules (this handles the `code` portion of the module's template)
+    Villain.rerender_matching_modules(search_terms)
 
     {:ok, menu}
   end

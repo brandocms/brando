@@ -310,15 +310,20 @@ defmodule Brando.Villain.Parser do
              },
              %{vars: vars} = block
            ) do
-        # {:ok, entries} = Datasource.get_selection(module, query, ids)
+        identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
 
         require Logger
 
         Logger.error("""
-        -> add_entries_to_context SEL -- TODO}
+
+        add_entries_to_context -> block.identifiers
+        #{inspect(block.identifiers, pretty: true)}
+
         """)
 
-        Context.assign(context, :entries, [])
+        {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
+
+        Context.assign(context, :entries, entries)
       end
 
       defp add_entries_to_context(context, _, _), do: Context.assign(context, :entries, [])

@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   import Brando.Gettext
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop block, :form
   # prop base_form, :form
@@ -27,27 +27,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   # data available_blocks, :list
 
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+    socket
+    |> assign(assigns)
+    |> assign(:uid, assigns.block[:uid].value)
+    |> then(&{:ok, &1})
   end
 
   def render(assigns) do
     ~H"""
-    <div
-      id={"block-#{@block[:uid].value}-wrapper"}
-      data-block-index={@index}
-      data-block-uid={@block[:uid].value}
-    >
+    <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Blocks.block
-          id={"block-#{@block[:uid].value}-base"}
-          index={@index}
-          is_ref?={@is_ref?}
-          block_count={@block_count}
-          base_form={@base_form}
+        <Block.block
+          id={"block-#{@uid}-base"}
           block={@block}
-          belongs_to={@belongs_to}
-          insert_module={@insert_module}
-          duplicate_block={@duplicate_block}
+          is_ref?={true}
+          multi={false}
+          target={@target}
         >
           <:description>
             <%= if @ref_description do %>
@@ -85,19 +80,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:picture_class]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_picture"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:img_class]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_picture"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:placeholder]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_picture"
                     />
 
@@ -123,25 +118,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:opacity]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_video"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:autoplay]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_video"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:preload]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_video"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:play_button]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_video"
                     />
                   </.inputs_for>
@@ -160,37 +155,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:type]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:display]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:class]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:series_slug]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:lightbox]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Input.input
                       type={:hidden}
                       field={tpl_data[:placeholder]}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_gallery"
                     />
                     <Form.array_inputs
@@ -215,7 +210,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                       type={:hidden}
                       field={tpl_data[:class]}
                       label={gettext("Class")}
-                      uid={@block[:uid].value}
+                      uid={@uid}
                       id_prefix="block_data_tpl_svg"
                     />
                   </.inputs_for>
@@ -223,7 +218,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
               </div>
             </div>
           </div>
-        </Blocks.block>
+        </Block.block>
       </.inputs_for>
     </div>
     """

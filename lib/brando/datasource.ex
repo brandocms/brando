@@ -335,9 +335,8 @@ defmodule Brando.Datasource do
   @doc """
   Get selection by [ids] from database
   """
-  def get_selection(_module_binary, _query, nil) do
-    {:ok, []}
-  end
+  def get_selection(_module_binary, _query, []), do: {:ok, []}
+  def get_selection(_module_binary, _query, nil), do: {:ok, []}
 
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
@@ -358,11 +357,10 @@ defmodule Brando.Datasource do
   """
   def update_datasource(datasource_module, entry \\ nil) do
     if is_datasource(datasource_module) do
-      update_map =
-        datasource_module
-        |> Villain.list_block_ids_with_datamodule()
-        |> Villain.reject_blocks_belonging_to_entry(entry)
-        |> Villain.enqueue_entry_map_for_render()
+      datasource_module
+      |> Villain.list_block_ids_using_datamodule()
+      |> Villain.reject_blocks_belonging_to_entry(entry)
+      |> Villain.enqueue_entry_map_for_render()
     end
 
     {:ok, entry}
