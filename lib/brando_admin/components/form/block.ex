@@ -2405,6 +2405,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
 
+    require Logger
+
+    Logger.error("""
+
+    validate_block –– child
+    #{inspect(params, pretty: true)}
+
+    """)
+
     updated_changeset =
       changeset.data
       |> Brando.Content.Block.block_changeset(params, current_user_id)
@@ -2443,6 +2452,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
+
+    require Logger
+
+    Logger.error("""
+
+    validate_block –– entry_block
+    #{inspect(params, pretty: true, limit: :infinity)}
+
+    """)
 
     updated_changeset =
       changeset.data

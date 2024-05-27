@@ -304,7 +304,17 @@ defmodule Brando.Blueprint.Relations do
         end
 
       _ ->
-        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+        updated_opts = to_changeset_opts(:embeds_many, opts)
+        require Logger
+
+        Logger.error("""
+
+        => #{inspect(name)}
+        => #{inspect(updated_opts, pretty: true)}
+
+        """)
+
+        cast_embed(changeset, name, updated_opts)
     end
   end
 

@@ -6,20 +6,6 @@ export default app => ({
   },
 
   bindSortable() {
-    // this.sortable = new Sortable(this.$blocksWrapper, {
-    //   group: this.type,
-    //   animation: 150,
-    //   ghostClass: 'is-sorting',
-    //   sort: true,
-    //   handle: `.block-action.move[data-sortable-group=${this.type}]`,
-    //   dataIdAttr: 'data-block-index',
-    //   draggable: '> [data-phx-component][data-block-uid]',
-    //   store: {
-    //     get: this.getOrder.bind(this),
-    //     set: this.setOrder.bind(this)
-    //   }
-    // })
-
     let group = this.el.dataset.blocksWrapperType
     let isDragging = false
     this.el.addEventListener('focusout', e => isDragging && e.stopImmediatePropagation())
@@ -38,11 +24,4 @@ export default app => ({
       }
     })
   }
-
-  // getOrder() {},
-
-  // setOrder() {
-  //   let order = this.sortable.toArray().map(Number)
-  //   this.pushEventTo(this.el, 'blocks:reorder', { order, type: this.type })
-  // }
 })

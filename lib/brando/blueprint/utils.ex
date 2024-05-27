@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Utils do
-  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints]
+  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param]
   @strip_embeds_opts [:cast, :module, :unique, :constraints]
 
   def to_ecto_type(:text), do: :string

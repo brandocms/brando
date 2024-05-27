@@ -38,7 +38,8 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     relations do
       relation :images, :embeds_many,
         module: Blocks.PictureBlock.Data,
-        on_replace: :delete
+        on_replace: :delete,
+        sort_param: :sort_images
     end
   end
 

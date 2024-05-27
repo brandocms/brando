@@ -2,10 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
   import Brando.Gettext
   alias Ecto.Changeset
-  alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.PictureBlock
-  alias Brando.Utils
-  alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -122,75 +119,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 "images",
                 (@display == :grid && "images-grid") || "images-list"
               ]}
-              phx-hook="Brando.Sortable"
+              phx-hook="Brando.SortableEmbeds"
               data-target={@myself}
               data-sortable-id={"sortable-#{block_data.id}-images"}
               data-sortable-handle=".sort-handle"
               data-sortable-selector=".preview"
             >
-              <%= if @display == :grid do %>
-                <div
-                  :for={{img, idx} <- @indexed_images}
-                  class={[
-                    "preview",
-                    "sort-handle",
-                    "draggable"
-                  ]}
-                  data-id={idx}
-                >
-                  <.img_inputs block_data={block_data} />
-                  <Content.image image={img} size={:thumb} />
-                  <figcaption phx-click={
-                    JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
-                  }>
-                    <div>
-                      <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ #{gettext("No caption")} }") %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ #{gettext("No alt text")} }" %>
-                    </div>
-                  </figcaption>
-                </div>
-              <% else %>
-                <div
-                  :for={{img, idx} <- @indexed_images}
-                  class={[
-                    "preview",
-                    "sort-handle",
-                    "draggable"
-                  ]}
-                  data-id={idx}
-                >
-                  <.img_inputs block_data={block_data} />
-                  <figure>
-                    <Content.image image={img} size={:smallest} />
-                  </figure>
-                  <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-                    <div>
-                      <span><%= gettext("Caption") %></span>
-                      <%= raw(img.title || "{ #{gettext("No caption")} }") %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Alt. text") %></span>
-                      <%= img.alt || "{ #{gettext("No alt text")} }" %>
-                    </div>
-                    <div>
-                      <span><%= gettext("Dimensions") %></span>
-                      <%= img.width %>&times;<%= img.height %>
-                    </div>
-                  </figcaption>
-                  <button
-                    class="tiny"
-                    type="button"
-                    phx-click={JS.push("remove_image", target: @myself)}
-                    phx-value-path={img.path}
-                  >
-                    <%= gettext("Delete") %>
-                  </button>
-                </div>
-              <% end %>
+              <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
+                <.gallery_image
+                  image={image}
+                  uid={@uid}
+                  parent_form_name={block_data.name}
+                  target={@myself}
+                />
+              </.inputs_for>
             </div>
           <% else %>
             <div class={[
@@ -282,29 +224,56 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     """
   end
 
-  def img_inputs(assigns) do
-    ~H"""
-    <.inputs_for :let={image} field={@block_data[:images]}>
-      <Input.input type={:hidden} field={image[:placeholder]} />
-      <Input.input type={:hidden} field={image[:cdn]} />
-      <Input.input type={:hidden} field={image[:dominant_color]} />
-      <Input.input type={:hidden} field={image[:height]} />
-      <Input.input type={:hidden} field={image[:width]} />
-      <Input.input type={:hidden} field={image[:path]} />
+  def gallery_image(assigns) do
+    img = assigns.image.data
+    assigns = assign(assigns, :img, img)
 
-      <.inputs_for :let={focal_form} field={image[:focal]}>
+    ~H"""
+    <div class="preview sort-handle draggable" data-id={@image.index}>
+      <input type="hidden" name={@image[:_persistent_id].name} value={@image.index} />
+      <input type="hidden" name={"#{@parent_form_name}[sort_images][]"} value={@image.index} />
+      <Input.input type={:hidden} field={@image[:placeholder]} />
+      <Input.input type={:hidden} field={@image[:cdn]} />
+      <Input.input type={:hidden} field={@image[:dominant_color]} />
+      <Input.input type={:hidden} field={@image[:height]} />
+      <Input.input type={:hidden} field={@image[:width]} />
+      <Input.input type={:hidden} field={@image[:path]} />
+
+      <.inputs_for :let={focal_form} field={@image[:focal]}>
         <Input.input type={:hidden} field={focal_form[:x]} />
         <Input.input type={:hidden} field={focal_form[:y]} />
       </.inputs_for>
 
-      <Form.map_inputs :let={%{value: value, name: name}} field={image[:sizes]}>
+      <Form.map_inputs :let={%{value: value, name: name}} field={@image[:sizes]}>
         <input type="hidden" name={"#{name}"} value={"#{value}"} />
       </Form.map_inputs>
 
-      <Form.array_inputs :let={%{value: array_value, name: array_name}} field={image[:formats]}>
+      <Form.array_inputs :let={%{value: array_value, name: array_name}} field={@image[:formats]}>
         <input type="hidden" name={array_name} value={array_value} />
       </Form.array_inputs>
-    </.inputs_for>
+      <Content.image image={@img} size={:thumb} />
+      <button
+        class="delete-x"
+        type="button"
+        phx-click={JS.push("remove_image", target: @target)}
+        phx-value-path={@img.path}
+      >
+        <.icon name="hero-x-mark" />
+        <div class="text"><%= gettext("Delete") %></div>
+      </button>
+      <figcaption phx-click={
+        JS.push("show_captions", target: @target) |> show_modal("#block-#{@uid}_captions")
+      }>
+        <div>
+          <span><%= gettext("Caption") %></span>
+          <%= raw(@img.title || "{ #{gettext("No caption")} }") %>
+        </div>
+        <div>
+          <span><%= gettext("Alt. text") %></span>
+          <%= @img.alt || "{ #{gettext("No alt text")} }" %>
+        </div>
+      </figcaption>
+    </div>
     """
   end
 
@@ -312,93 +281,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, assign(socket, :show_only_selected?, !socket.assigns.show_only_selected?)}
   end
 
-  def handle_event("sequenced", %{"ids" => order_indices}, socket) do
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
+  def handle_event("reposition", _, socket) do
+    {:noreply, socket}
+  end
 
+  def handle_event("image_uploaded", %{"id" => id}, socket) do
     block = socket.assigns.block
     block_data_cs = Block.get_block_data_changeset(block)
     block_data = Changeset.apply_changes(block_data_cs)
-    images = block_data.images
-    sorted_images = Enum.map(order_indices, &Enum.at(images, &1))
-    updated_block_data = Map.put(block_data, :images, sorted_images)
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
 
-    require Logger
-
-    Logger.error("""
-      order_indices: #{inspect(order_indices, pretty: true)}
-      sorted_images: #{inspect(Enum.map(sorted_images, & &1.path))}
-    """)
-
-    block_data =
-      Map.from_struct(updated_block_data)
-
-    require Logger
-
-    Logger.error("""
-      block_data: #{inspect(block_data, pretty: true)}
-    """)
-
-    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "image_uploaded",
-        %{"id" => id},
-        %{
-          assigns: %{
-            block_data: block_data,
-            base_form: base_form,
-            uid: uid,
-            data_field: data_field
-          }
-        } = socket
-      ) do
     {:ok, image} = Brando.Images.get_image(id)
     picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = block_data[:images].value ++ [picture_data_tpl]
+    images = block_data.images ++ [picture_data_tpl]
+    updated_block_data = Map.put(block_data, :images, images)
+    block_data = Map.from_struct(updated_block_data)
 
-    changeset = base_form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_changeset =
-      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "reset_image",
-        _,
-        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
-      ) do
-    changeset = base_form.source
-
-    empty_block = %GalleryBlock{
-      uid: Utils.generate_uid(),
-      data: %GalleryBlock.Data{}
-    }
-
-    updated_changeset =
-      Villain.replace_block_in_changeset(changeset, data_field, uid, empty_block)
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
@@ -414,6 +315,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     images = block_data.images ++ [picture_data_tpl]
     updated_block_data = Map.put(block_data, :images, images)
+    block_data = Map.from_struct(updated_block_data)
+
+    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+
+    {:noreply, socket}
+  end
+
+  def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+    {:ok, image} = Brando.Images.get_image(id)
+
+    images = Enum.reject(block_data.images, &(&1.path == image.path))
+    updated_block_data = Map.put(block_data, :images, images)
+
+    block_data = Map.from_struct(updated_block_data)
+    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove_image", %{"path" => path}, socket) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    images = Enum.reject(block_data.images, &(&1.path == path))
+    updated_block_data = Map.put(block_data, :images, images)
 
     block_data =
       Map.from_struct(updated_block_data)
@@ -422,82 +356,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => id, "selected" => "true"},
-        %{
-          assigns: %{
-            base_form: base_form,
-            uid: uid,
-            block_data: block_data,
-            data_field: data_field
-          }
-        } = socket
-      ) do
-    {:ok, image} = Brando.Images.get_image(id)
-    images = Enum.reject(block_data[:images].value, &(&1.path == image.path))
+  def handle_event("set_target", _, socket) do
+    myself = socket.assigns.myself
+    images = socket.assigns.images
 
-    send_update(BrandoAdmin.Components.ImagePicker,
-      id: "image-picker",
-      selected_images: Enum.map(images, & &1.path)
-    )
-
-    changeset = base_form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_changeset =
-      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "remove_image",
-        %{"path" => path},
-        %{
-          assigns: %{
-            base_form: base_form,
-            uid: uid,
-            block_data: block_data,
-            data_field: data_field
-          }
-        } = socket
-      ) do
-    images = Enum.reject(block_data[:images].value, &(&1.path == path))
-
-    send_update(BrandoAdmin.Components.ImagePicker,
-      id: "image-picker",
-      selected_images: Enum.map(images, & &1.path)
-    )
-
-    changeset = base_form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_changeset =
-      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: %{images: images}})
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_event(
-        "set_target",
-        _,
-        %{assigns: %{myself: myself, images: images}} = socket
-      ) do
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: "default",
