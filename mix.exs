@@ -69,7 +69,7 @@ defmodule Brando.Mixfile do
 
       # Liquid templates
       {:liquex, "~> 0.11"},
-      {:html_sanitize_ex, "~> 1.4", override: true},
+      {:html_sanitize_ex, "~> 1.4"},
 
       # Misc
       {:req, "~> 0.4.5"},

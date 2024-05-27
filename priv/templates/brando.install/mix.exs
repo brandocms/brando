@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "1.7.11"},
+      {:phoenix, "1.7.12"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -62,7 +62,7 @@ defmodule <%= application_module %>.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_view, "~> 1.0.0-rc", override: true},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
