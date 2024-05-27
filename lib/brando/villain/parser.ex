@@ -264,6 +264,16 @@ defmodule Brando.Villain.Parser do
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
 
+        require Logger
+
+        Logger.error("""
+
+        module
+        refs:
+        #{inspect(processed_refs, pretty: true)}
+
+        """)
+
         context =
           base_context
           |> add_vars_to_context(processed_vars)
@@ -311,18 +321,7 @@ defmodule Brando.Villain.Parser do
              %{vars: vars} = block
            ) do
         identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
-
-        require Logger
-
-        Logger.error("""
-
-        add_entries_to_context -> block.identifiers
-        #{inspect(block.identifiers, pretty: true)}
-
-        """)
-
         {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
-
         Context.assign(context, :entries, entries)
       end
 

@@ -49,6 +49,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
+     |> assign(:blocks_wanting_entry, [])
      |> assign(:blocks_ready_for_sharing, false)}
   end
 
@@ -151,24 +152,33 @@ defmodule BrandoAdmin.Components.Form do
       has_children: has_children?
     })
 
-    send(self(), {:toast, "DBG: Update Live Preview block [#{uid}]"})
+    {:ok, socket}
+  end
+
+  def update(%{event: "get_live_preview_status", cid: cid}, socket) do
+    cache_key = socket.assigns.live_preview_cache_key
+    live_preview_active = socket.assigns.live_preview_active?
+    event = (live_preview_active && "enable_live_preview") || "disable_live_preview"
+
+    send_update(cid, %{
+      event: event,
+      cache_key: cache_key
+    })
 
     {:ok, socket}
   end
 
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: true}} = socket) do
     # update entire live preview (when deleting or inserting blocks)
-    require Logger
-
-    Logger.error("""
-    => update_live_preview [form] -- fetching root blocks
-    """)
-
     {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
   end
 
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: false}} = socket) do
     {:ok, socket}
+  end
+
+  def update(%{event: "register_block_wanting_entry", cid: cid}, socket) do
+    {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [cid]))}
   end
 
   def update(
@@ -181,7 +191,7 @@ defmodule BrandoAdmin.Components.Form do
         socket
       ) do
     schema = socket.assigns.schema
-    changeset = socket.assigns.changeset
+    changeset = socket.assigns.form.source
     entries = get_field(changeset, relation_key)
     assoc_type = schema.__relation__(relation_key).type
 
@@ -199,7 +209,6 @@ defmodule BrandoAdmin.Components.Form do
 
         {:ok,
          socket
-         |> assign(:changeset, updated_changeset)
          |> assign(:form, to_form(updated_changeset, []))
          |> force_svelte_remounts()}
     end
@@ -249,7 +258,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:changeset, new_changeset)
      |> assign(:form, to_form(new_changeset, []))
      |> force_svelte_remounts()}
   end
@@ -263,7 +271,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:changeset, new_changeset)
      |> assign(:form, to_form(new_changeset, []))
      |> force_svelte_remounts()}
   end
@@ -299,7 +306,6 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     {:ok,
      socket
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
@@ -310,7 +316,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, updated_form)}
   end
 
@@ -330,7 +335,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:processing, false)}
   end
@@ -364,7 +368,6 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset))
      |> force_svelte_remounts()}
   end
@@ -399,7 +402,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, updated_form)}
   end
 
@@ -452,7 +454,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_addon_statuses()
      |> assign_default_params()
      |> extract_tab_names()
-     |> assign_changeset()
      |> assign_form()
      |> maybe_assign_uploads()
      |> maybe_assign_block_map()
@@ -476,13 +477,13 @@ defmodule BrandoAdmin.Components.Form do
            }
          } = socket
        ) do
-    query_params =
-      entry_id
-      |> maybe_query(form_blueprint)
-      |> add_preloads(schema, form_blueprint)
-      |> Map.put(:with_deleted, true)
-
     assign_new(socket, :entry, fn ->
+      query_params =
+        entry_id
+        |> maybe_query(form_blueprint)
+        |> add_preloads(schema, form_blueprint)
+        |> Map.put(:with_deleted, true)
+
       case apply(context, :"get_#{singular}", [query_params]) do
         {:ok, entry} ->
           entry
@@ -535,12 +536,24 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
     form_blueprint = socket.assigns.form_blueprint
     blocks = form_blueprint.blocks
+    entry = socket.assigns.entry
 
     socket
     |> assign_new(:block_map, fn ->
       case socket.assigns.has_blocks? do
-        true -> Enum.map(blocks, &{&1.name, Module.concat(schema, "Blocks"), &1.opts})
-        false -> []
+        true ->
+          Enum.map(
+            blocks,
+            &{
+              &1.name,
+              Module.concat(schema, "Blocks"),
+              Map.get(entry, :"entry_#{&1.name}"),
+              &1.opts
+            }
+          )
+
+        false ->
+          []
       end
     end)
     |> assign_new(:block_changesets, fn ->
@@ -555,15 +568,6 @@ defmodule BrandoAdmin.Components.Form do
     schema_preloads = Brando.Blueprint.preloads_for(schema)
     preloads = Enum.uniq(schema_preloads ++ default_preloads)
 
-    require Logger
-
-    Logger.error("""
-
-    => preloads for #{inspect(schema)}:
-    #{inspect(preloads, pretty: true, width: 0)}
-
-    """)
-
     Map.put(
       query_params,
       :preload,
@@ -577,6 +581,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
+    # TODO: turn each into an assign_new
     assign(socket,
       has_blocks?: schema.has_trait(Brando.Trait.Villain),
       has_meta?: schema.has_trait(Brando.Trait.Meta),
@@ -625,10 +630,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp extract_tab_names(%{assigns: %{form_blueprint: %{tabs: tabs}}} = socket) do
-    first_tab = List.first(tabs)
-
     socket
-    |> assign_new(:active_tab, fn -> Map.get(first_tab, :name) end)
+    |> assign_new(:active_tab, fn ->
+      first_tab = List.first(tabs)
+      Map.get(first_tab, :name)
+    end)
     |> assign_new(:tabs, fn -> Enum.map(tabs, & &1.name) end)
   end
 
@@ -670,13 +676,14 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def event_tag_received(socket, :share) do
+    changeset = socket.assigns.form.source
     block_changesets = socket.assigns.block_changesets
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
       schema = socket.assigns.schema
-      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
+      changeset = assoc_all_block_fields(block_changesets, changeset)
       user = socket.assigns.current_user
       {:ok, preview_url, expiration_days} = Brando.LivePreview.share(schema, changeset, user)
 
@@ -698,16 +705,14 @@ defmodule BrandoAdmin.Components.Form do
 
   def event_tag_received(socket, :live_preview) do
     block_changesets = socket.assigns.block_changesets
+    changeset = socket.assigns.form.source
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
-      # initialize
+      # initialize live preview
       schema = socket.assigns.schema
-
-      changeset =
-        block_changesets
-        |> assoc_all_block_fields(socket.assigns.changeset)
+      changeset = assoc_all_block_fields(block_changesets, changeset)
 
       if changeset.errors != [] do
         error_msg =
@@ -724,15 +729,10 @@ defmodule BrandoAdmin.Components.Form do
         # fetch all blocks' rendered_html
         case Brando.LivePreview.initialize(schema, changeset) do
           {:ok, cache_key} ->
-            require Logger
-
-            Logger.error("""
-            => Live Preview initialized with cache key: #{inspect(cache_key)}
-            """)
-
             socket
             |> assign(:live_preview_active?, true)
             |> assign(:live_preview_cache_key, cache_key)
+            |> enable_live_preview_in_blocks()
             |> clear_blocks_root_changesets()
             |> push_event("b:live_preview", %{cache_key: cache_key})
 
@@ -756,6 +756,7 @@ defmodule BrandoAdmin.Components.Form do
   # when inserting or deleting blocks we want a full rerender of the live preview.
   def event_tag_received(socket, :live_preview_update) do
     block_changesets = socket.assigns.block_changesets
+    changeset = socket.assigns.form.source
     cache_key = socket.assigns.live_preview_cache_key
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
@@ -764,7 +765,7 @@ defmodule BrandoAdmin.Components.Form do
       send(self(), {:toast, gettext("DBG: Update Live Preview [complete]")})
       schema = socket.assigns.schema
 
-      changeset = assoc_all_block_fields(block_changesets, socket.assigns.changeset)
+      changeset = assoc_all_block_fields(block_changesets, changeset)
       Brando.LivePreview.update(schema, changeset, cache_key)
       clear_blocks_root_changesets(socket)
     end
@@ -783,6 +784,7 @@ defmodule BrandoAdmin.Components.Form do
   def render(assigns) do
     ~H"""
     <div>
+      LPA <%= inspect(@live_preview_active?) %>
       <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form">
         <div class="form-content">
           <div :if={@header} class="form-header">
@@ -978,19 +980,19 @@ defmodule BrandoAdmin.Components.Form do
             />
           </.form>
 
+          <div><%= inspect(@blocks_wanting_entry, pretty: true) %></div>
+
           <.live_component
-            :for={{block_field, block_module, field_opts} <- @block_map}
+            :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
             :if={@has_blocks?}
             module={BlockField}
             block_module={block_module}
             block_field={block_field}
             parent_uploads={@uploads}
-            live_preview_active?={@live_preview_active?}
-            live_preview_cache_key={@live_preview_cache_key}
             opts={field_opts}
             id={"#{@id}-blocks-#{block_field}"}
             entry={@entry_for_blocks}
-            entry_blocks={@entry.entry_blocks}
+            entry_blocks={entry_blocks}
             current_user={@current_user}
             form_cid={@myself}
           />
@@ -1437,12 +1439,6 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("validate", params, socket) do
-    require Logger
-
-    Logger.error("""
-    -> validate in form.
-    """)
-
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -1469,24 +1465,20 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
+    [^singular, target_field] = Map.get(params, "_target")
+
+    if change = get_change(changeset, String.to_existing_atom(target_field)) do
+      send_updated_entry_field_to_blocks(socket, target_field, change)
+      send(self(), {:toast, "Field #{target_field} changed. Send to blocks.."})
+    end
+
     if live_preview_active? do
       fetch_root_blocks(socket, :live_preview_update, 500)
     end
 
-    require Logger
-
-    Logger.error("""
-
-    => changeset.changes
-    #{inspect(changeset.changes, pretty: true)}
-
-    """)
-
-    {:noreply,
-     socket
-     |> assign(:changeset, changeset)
-     |> assign_entry_for_blocks()
-     |> assign(:form, to_form(changeset, []))}
+    socket
+    |> assign(:form, to_form(changeset, []))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
@@ -1586,7 +1578,7 @@ defmodule BrandoAdmin.Components.Form do
                 |> assign(:all_blocks_received?, false)
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
-                |> assign_refreshed_changeset()
+                |> assign_refreshed_form()
                 |> clear_blocks_root_changesets()
               end
 
@@ -1605,7 +1597,6 @@ defmodule BrandoAdmin.Components.Form do
 
         {:noreply,
          socket
-         |> assign(:changeset, changeset)
          |> assign(:processing, false)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
@@ -1679,7 +1670,7 @@ defmodule BrandoAdmin.Components.Form do
                 socket
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
-                |> assign_refreshed_changeset
+                |> assign_refreshed_form
               end
 
             :listing ->
@@ -1697,7 +1688,6 @@ defmodule BrandoAdmin.Components.Form do
 
         {:noreply,
          socket
-         |> assign(:changeset, changeset)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
@@ -1746,7 +1736,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, Map.put(entry, edit_file.field, nil))
      |> assign(:file_changeset, nil)
      |> assign(:edit_file, updated_edit_file)
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{
        target: "#{singular}[#{edit_file.relation_field.field}]",
@@ -1759,13 +1748,14 @@ defmodule BrandoAdmin.Components.Form do
         _,
         %{
           assigns: %{
-            changeset: changeset,
+            form: form,
             edit_image: edit_image,
             entry: entry,
             singular: singular
           }
         } = socket
       ) do
+    changeset = form.source
     full_path = edit_image.path ++ [edit_image.relation_field.field]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_image = Map.put(edit_image, :image, nil)
@@ -1775,7 +1765,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, Map.put(entry, edit_image.field, nil))
      |> assign(:image_changeset, nil)
      |> assign(:edit_image, updated_edit_image)
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{
        target: "#{singular}[#{edit_image.relation_field.field}]",
@@ -1792,7 +1781,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"file" => file_params},
         %{
           assigns: %{
-            changeset: changeset,
+            form: form,
             entry: entry,
             schema: schema,
             singular: singular,
@@ -1831,7 +1820,7 @@ defmodule BrandoAdmin.Components.Form do
     full_path = path ++ [relation_field.field]
 
     updated_changeset =
-      changeset
+      form.source
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
@@ -1848,7 +1837,6 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
      |> assign(:edit_file, edit_file)
@@ -1872,7 +1860,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"image" => image_params},
         %{
           assigns: %{
-            changeset: changeset,
+            form: form,
             entry: entry,
             schema: schema,
             singular: singular,
@@ -1912,7 +1900,7 @@ defmodule BrandoAdmin.Components.Form do
     field_full_path = path ++ [field]
 
     updated_changeset =
-      changeset
+      form.source
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> image.id end)
@@ -1949,7 +1937,6 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:changeset, updated_changeset)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
@@ -2034,7 +2021,7 @@ defmodule BrandoAdmin.Components.Form do
     id = socket.assigns.id
     block_map = socket.assigns.block_map
 
-    for {block_field_name, _schema, _opts} <- block_map do
+    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
 
       send_update_after(
@@ -2048,13 +2035,30 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def clear_blocks_root_changesets(socket) do
-    socket.assigns.id
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
-    for {block_field_name, _schema, _opts} <- block_map do
+    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
       send_update(BlockField, id: block_field_id, event: "clear_root_changesets")
+    end
+
+    socket
+  end
+
+  def enable_live_preview_in_blocks(socket) do
+    block_map = socket.assigns.block_map
+    id = socket.assigns.id
+    cache_key = socket.assigns.live_preview_cache_key
+
+    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+
+      send_update(BlockField,
+        id: block_field_id,
+        event: "enable_live_preview",
+        cache_key: cache_key
+      )
     end
 
     socket
@@ -2200,7 +2204,7 @@ defmodule BrandoAdmin.Components.Form do
           assigns: %{
             current_user: current_user,
             schema: schema,
-            changeset: changeset
+            form: form
           }
         } = socket
       ) do
@@ -2226,6 +2230,7 @@ defmodule BrandoAdmin.Components.Form do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
       Brando.Images.Processing.queue_processing(image, current_user)
 
+      changeset = form.source
       gallery = get_field(changeset, key)
 
       current_gallery_images =
@@ -2301,10 +2306,7 @@ defmodule BrandoAdmin.Components.Form do
         selected_images: selected_images
       )
 
-      {:noreply,
-       socket
-       |> assign(:changeset, updated_changeset)
-       |> assign(:form, to_form(updated_changeset, []))}
+      {:noreply, assign(socket, :form, to_form(updated_changeset, []))}
     else
       {:noreply, socket}
     end
@@ -2386,7 +2388,7 @@ defmodule BrandoAdmin.Components.Form do
 
           asset_relation_key = String.to_existing_atom("#{asset_key}_id")
           default_with_asset = Map.put(default, asset_relation_key, image.id)
-          changeset = socket.assigns.changeset
+          changeset = socket.assigns.form.source
           relation_atom = String.to_existing_atom(relation_key)
 
           updated_field =
@@ -2407,7 +2409,7 @@ defmodule BrandoAdmin.Components.Form do
           {:noreply,
            socket
            |> update(:processing_images, &[image.id | &1])
-           |> assign(:changeset, updated_changeset)}
+           |> assign(:form, to_form(updated_changeset, []))}
       end
     else
       {:noreply, socket}
@@ -2484,7 +2486,7 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def assign_changeset(
+  def assign_form(
         %{
           assigns: %{
             default_params: default_params,
@@ -2494,16 +2496,17 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    assign_new(socket, :changeset, fn ->
+    assign_new(socket, :form, fn ->
       # this is the initial assignment of changeset with an empty entry,
       # so we add default_params here
       default_entry
       |> schema.changeset(default_params, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
+      |> to_form()
     end)
   end
 
-  def assign_changeset(
+  def assign_form(
         %{
           assigns: %{
             entry: entry,
@@ -2512,20 +2515,15 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    assign_new(socket, :changeset, fn ->
+    assign_new(socket, :form, fn ->
       entry
       |> schema.changeset(%{}, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
+      |> to_form()
     end)
   end
 
-  def assign_form(socket) do
-    assign_new(socket, :form, fn ->
-      to_form(socket.assigns.changeset)
-    end)
-  end
-
-  def assign_refreshed_changeset(
+  def assign_refreshed_form(
         %{
           assigns: %{
             entry: entry,
@@ -2539,26 +2537,15 @@ defmodule BrandoAdmin.Components.Form do
       |> schema.changeset(%{}, current_user, skip_villain: true)
       |> Map.put(:action, :validate)
 
-    socket
-    |> assign(:changeset, updated_changeset)
-    |> assign(:form, to_form(updated_changeset, []))
+    assign(socket, :form, to_form(updated_changeset, []))
   end
 
   @doc """
   Assigns a stripped down entry to be used in block fields
   """
-  def assign_entry_for_blocks(%{assigns: %{has_blocks?: true}} = socket) do
-    changeset = socket.assigns.changeset
-    block_map = socket.assigns.block_map
-    entry_for_blocks = build_entry_for_blocks(changeset, block_map)
-    assign(socket, :entry_for_blocks, entry_for_blocks)
-  end
-
-  def assign_entry_for_blocks(socket), do: socket
-
   def maybe_assign_entry_for_blocks(%{assigns: %{has_blocks?: true}} = socket) do
     assign_new(socket, :entry_for_blocks, fn ->
-      changeset = socket.assigns.changeset
+      changeset = socket.assigns.form.source
       block_map = socket.assigns.block_map
       build_entry_for_blocks(changeset, block_map)
     end)
@@ -2568,9 +2555,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp build_entry_for_blocks(changeset, block_map) do
     blocks_field_names =
-      Enum.reduce(block_map, [], fn {block_field_name, _schema, _opts}, acc ->
+      Enum.reduce(block_map, [], fn {block_field_name, _schema, _entry_blocks, _opts}, acc ->
         entry_field_name = :"entry_#{block_field_name}"
-        [entry_field_name | [block_field_name | acc]]
+        rendered_field_name = :"rendered_#{block_field_name}"
+        rendered_at_field_name = :"rendered_#{block_field_name}_at"
+
+        [
+          entry_field_name
+          | [block_field_name | [rendered_field_name | [rendered_at_field_name | acc]]]
+        ]
       end)
 
     changeset
@@ -2579,16 +2572,26 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def render_blocks_for_entry(block_map, changeset, entry) do
-    Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _opts}, updated_changeset ->
+    Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _entry_blocks, _opts},
+                                         updated_changeset ->
       entry_field_name = :"entry_#{block_field_name}"
       rendered_field_name = :"rendered_#{block_field_name}"
       rendered_at_field_name = :"rendered_#{block_field_name}_at"
-      blocks_to_parse = get_assoc(changeset, entry_field_name, :struct)
-      rendered_blocks = Villain.parse(blocks_to_parse, entry, [])
+      blocks_to_parse = get_assoc(changeset, entry_field_name)
+      applied_blocks = Brando.Utils.apply_changes_recursively(blocks_to_parse)
+      rendered_blocks = Villain.parse(applied_blocks, entry, [])
 
       updated_changeset
       |> put_change(rendered_field_name, rendered_blocks)
       |> put_change(rendered_at_field_name, DateTime.truncate(DateTime.utc_now(), :second))
+    end)
+  end
+
+  def send_updated_entry_field_to_blocks(socket, field_name, change) do
+    blocks_wanting_entry = socket.assigns.blocks_wanting_entry
+
+    Enum.each(blocks_wanting_entry, fn cid ->
+      send_update(cid, %{event: "update_entry_field", field_name: field_name, change: change})
     end)
   end
 
@@ -2605,7 +2608,6 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 
@@ -2615,7 +2617,6 @@ defmodule BrandoAdmin.Components.Form do
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 
@@ -2634,7 +2635,6 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 
@@ -2643,7 +2643,6 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 
@@ -2652,7 +2651,6 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset = put_change(changeset, key, Map.from_struct(value))
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 
@@ -2660,7 +2658,6 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset = put_change(changeset, key, value)
 
     socket
-    |> assign(:changeset, new_changeset)
     |> assign(:form, to_form(new_changeset, []))
   end
 

@@ -305,12 +305,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event("select_image", %{"id" => id}, socket) do
     block = socket.assigns.block
     block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
 
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 
     {:ok, image} = Brando.Images.get_image(id)
-    block_data = Changeset.apply_changes(block_data_cs)
 
     new_data =
       block_data

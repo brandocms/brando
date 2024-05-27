@@ -413,14 +413,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         &(Changeset.get_field(&1, :identifier_id) == identifier.id)
       )
 
-    require Logger
-
-    if selected do
-      Logger.error("""
-      -> selected.action{identifier_id:#{Changeset.get_field(selected, :identifier_id)}}: #{inspect(selected.action)}
-      """)
-    end
-
     assigns =
       assigns
       |> assign(:identifier, identifier)

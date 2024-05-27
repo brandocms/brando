@@ -33,6 +33,7 @@
     display: inline-block;
     margin-top: 5px;
     margin-bottom: 5px;
+    text-wrap: balance;
   }
 
   .modal-content {

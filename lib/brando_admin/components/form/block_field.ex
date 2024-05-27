@@ -6,15 +6,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   import Brando.Gettext
 
   def mount(socket) do
-    {:ok,
-     stream_configure(socket, :entry_blocks_forms,
-       dom_id: fn form ->
-         changeset = form.source
-         block_cs = Changeset.get_assoc(changeset, :block)
-         uid = Changeset.get_field(block_cs, :uid)
-         "base-#{uid}"
-       end
-     )}
+    socket
+    |> stream_configure(:entry_blocks_forms,
+      dom_id: fn form ->
+        changeset = form.source
+        block_cs = Changeset.get_assoc(changeset, :block)
+        uid = Changeset.get_field(block_cs, :uid)
+        "base-#{uid}"
+      end
+    )
+    |> assign(:first_run, true)
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
@@ -72,7 +74,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # INSERT ROOT BLOCK
-
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id}, socket) do
     module_id = String.to_integer(module_id)
     root_changesets = socket.assigns.root_changesets
@@ -136,8 +137,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_list = socket.assigns.block_list
     new_block_list = List.insert_at(block_list, sequence, uid)
 
-    ## --
-
     entry_block_form =
       to_change_form(
         block_module,
@@ -178,8 +177,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end
     end
 
-    socket
-    |> then(&{:ok, &1})
+    {:ok, socket}
   end
 
   def update(%{event: "fetch_root_renders"}, socket) do
@@ -235,24 +233,43 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
+    block_list = socket.assigns.block_list
+
+    for block_uid <- block_list do
+      send_update(Block,
+        id: "block-#{block_uid}",
+        event: "enable_live_preview",
+        cache_key: cache_key
+      )
+    end
+
+    {:ok, socket}
+  end
+
   def update(assigns, socket) do
     block_module = assigns.block_module
-    entry_blocks = assigns.entry_blocks
     user_id = assigns.current_user.id
-
-    entry_blocks_forms =
-      Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
+    entry_blocks = assigns.entry_blocks
+    entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
 
     socket
     |> assign(assigns)
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
     |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
-    |> assign_new(:root_changesets, fn ->
-      Enum.map(entry_blocks, &{&1.block.uid, nil})
-    end)
-    |> stream(:entry_blocks_forms, entry_blocks_forms)
+    |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
+    |> maybe_stream(entry_blocks_forms)
     |> assign_templates()
+    |> assign(:first_run, false)
     |> then(&{:ok, &1})
+  end
+
+  def maybe_stream(%{assigns: %{first_run: true}} = socket, entry_blocks_forms) do
+    stream(socket, :entry_blocks_forms, entry_blocks_forms)
+  end
+
+  def maybe_stream(socket, _) do
+    socket
   end
 
   def update_root_changeset(root_changesets, uid, new_changeset) do
@@ -349,10 +366,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         hide_fragments={false}
         hide_sections={false}
       />
-      <%!-- <div style="font-family: 'Mono'; font-size: 11px;">
-        ROOT CHANGESETS<br /><br />
-        <%= inspect(@root_changesets, pretty: true, width: 0) %>
-      </div> --%>
       <%= if @block_count == 0 do %>
         <div class="blocks-empty-instructions">
           <%= gettext("Click the plus to start adding content blocks") %>
@@ -396,8 +409,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 block_module={@block_module}
                 block_field={@block_field}
                 children={block[:children].value}
-                live_preview_active?={@live_preview_active?}
-                live_preview_cache_key={@live_preview_cache_key}
                 parent_uploads={@parent_uploads}
                 parent_cid={@myself}
                 parent_uid={}
@@ -442,7 +453,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     var_changesets =
       Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
 
-    Changeset.change(%Brando.Content.Block{children: []}, %{
+    Changeset.change(%Brando.Content.Block{children: [], block_identifiers: []}, %{
       uid: Brando.Utils.generate_uid(),
       type: type,
       creator_id: user_id,
@@ -451,6 +462,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       multi: module.wrapper,
       source: source,
       children: [],
+      block_identifiers: [],
       vars: var_changesets,
       refs: refs_with_generated_uids
     })

@@ -406,7 +406,7 @@ defmodule Brando.LivePreview do
     if function_exported?(preview_module, :render, 3) do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
-      entry_struct = Ecto.Changeset.apply_changes(changeset)
+      entry_struct = Brando.Utils.apply_changes_recursively(changeset)
 
       try do
         wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)

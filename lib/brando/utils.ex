@@ -1312,4 +1312,58 @@ defmodule Brando.Utils do
 
   def strip_leading_slash("/" <> rest), do: rest
   def strip_leading_slash(rest), do: rest
+
+  def apply_changes_recursively(changesets) when is_list(changesets) do
+    Enum.map(changesets, &apply_changes_recursively/1)
+  end
+
+  def apply_changes_recursively(%Ecto.Changeset{action: action})
+      when action in [:replace, :delete] do
+    nil
+  end
+
+  def apply_changes_recursively(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> apply_associations(changeset)
+  end
+
+  # defp apply_associations(struct, %Ecto.Changeset{changes: _changes, action: action})
+  #      when action in [:replace, :delete] do
+  #   require Logger
+  #   Logger.error("==> apply_associations — skipping [#{action}] action")
+  #   struct
+  # end
+
+  defp apply_associations(struct, %Ecto.Changeset{changes: changes}) do
+    Enum.reduce(changes, struct, fn
+      {key, %Ecto.Changeset{} = assoc_changeset}, acc ->
+        require Logger
+        Logger.error("==> apply_associations — processing #{key} association (regular)")
+        updated_assoc = apply_changes_recursively(assoc_changeset)
+        Map.put(acc, key, updated_assoc)
+
+      {key, assoc_changesets}, acc when is_list(assoc_changesets) ->
+        require Logger
+
+        Logger.error(
+          "==> apply_associations — processing #{key} association (list of changesets)"
+        )
+
+        if key == :images do
+          Logger.error("==> images:")
+          Logger.error(inspect(assoc_changesets, pretty: true))
+        end
+
+        updated_assoc =
+          assoc_changesets
+          |> Enum.map(&apply_changes_recursively/1)
+          |> Enum.reject(&is_nil/1)
+
+        Map.put(acc, key, updated_assoc)
+
+      _, acc ->
+        acc
+    end)
+  end
 end

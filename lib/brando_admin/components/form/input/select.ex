@@ -512,11 +512,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       )
     end
 
-    {:noreply,
-     socket
-     |> assign(:selected_option, value)
-     |> assign_label()
-     |> push_event("b:validate", %{})}
+    socket
+    |> assign(:selected_option, value)
+    |> assign_label()
+    # |> push_event("b:validate", %{})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset", _, socket) do

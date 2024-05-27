@@ -46,6 +46,18 @@ defmodule Brando.Villain.Filters do
         __MODULE__
       end
 
+    # require Logger
+
+    # Logger.error("""
+
+    # filters
+    # mod: #{inspect(mod, pretty: true)}
+    # func: #{inspect(func, pretty: true)}
+    # value: #{inspect(value, pretty: true)}
+    # function_args: #{inspect(function_args, pretty: true)}
+
+    # """)
+
     Kernel.apply(mod, func, [value | function_args] ++ [context])
   rescue
     # credo:disable-for-next-line

@@ -105,7 +105,6 @@
   &.selected {
     background-color: var(--brando-color-blue);
     color: white;
-    border: 1px solid transparent;
 
     .icon {
       opacity: 1;

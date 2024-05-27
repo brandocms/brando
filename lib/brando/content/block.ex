@@ -138,9 +138,9 @@ defmodule Brando.Content.Block do
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
     |> cast_assoc(:block_identifiers,
-      with: &block_identifier_changeset(&1, &2, &3, user),
-      drop_param: :drop_block_identifier_ids,
-      sort_param: :sort_block_identifier_ids
+      with: &block_identifier_changeset(&1, &2, &3, user)
+      # drop_param: :drop_block_identifier_ids,
+      # sort_param: :sort_block_identifier_ids
     )
   end
 
