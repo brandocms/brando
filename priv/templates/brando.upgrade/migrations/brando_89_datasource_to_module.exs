@@ -12,7 +12,25 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
 
     flush()
 
-    villain_schemas = Brando.Villain.list_villains()
+    villain_schemas =
+      Enum.reject(
+        Brando.Villain.list_villains(),
+        &(elem(&1, 0) in [
+            Brando.Content.Template,
+            Brando.Pages.Page,
+            Brando.Pages.Fragment
+            # your schemas here
+          ])
+      )
+
+    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    villain_schemas =
+      villain_schemas ++
+        [
+          {Brando.Content.Template, [%{name: :data}]},
+          {Brando.Pages.Page, [%{name: :data}]},
+          {Brando.Pages.Fragment, [%{name: :data}]}
+        ]
 
     for {schema, attrs} <- villain_schemas,
         %{name: data_field} <- attrs do
@@ -44,6 +62,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
   end
 
   def replace_datasources(list, root \\ :root)
+
   def replace_datasources(list, root) when is_list(list) do
     list
     |> Enum.reduce([], fn item, acc -> [replace_datasources(item, root) | acc] end)
@@ -139,16 +158,15 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
   def replace_datasources(
         %{
           "type" => "datasource",
-          "data" =>
-            %{
-              "module_id" => module_id,
-              "module" => datasource_module,
-              "type" => datasource_type,
-              "query" => datasource_query,
-              "limit" => datasource_limit,
-              "arg" => datasource_arg,
-              "ids" => ids
-            }
+          "data" => %{
+            "module_id" => module_id,
+            "module" => datasource_module,
+            "type" => datasource_type,
+            "query" => datasource_query,
+            "limit" => datasource_limit,
+            "arg" => datasource_arg,
+            "ids" => ids
+          }
         },
         scope
       )
@@ -215,6 +233,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
     case Enum.find(vars, &(&1["key"] == "arg")) do
       nil ->
         vars
+
       _ ->
         put_in(vars, [Access.filter(&(&1["key"] == "arg")), "value"], arg)
     end

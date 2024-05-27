@@ -4,18 +4,34 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
 
   def change do
     # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas = Enum.reject(Brando.Villain.list_villains(), &(elem(&1, 0) in [
-      Brando.Content.Template,
-      # your schemas here
-    ]))
+    villain_schemas =
+      Enum.reject(
+        Brando.Villain.list_villains(),
+        &(elem(&1, 0) in [
+            Brando.Content.Template,
+            Brando.Pages.Page,
+            Brando.Pages.Fragment
+            # your schemas here
+          ])
+      )
+
+    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    villain_schemas =
+      villain_schemas ++
+        [
+          {Brando.Pages.Page, [%{name: :data}]},
+          {Brando.Pages.Fragment, [%{name: :data}]}
+        ]
 
     for {schema, fields} <- villain_schemas do
       Enum.map(fields, fn %{name: f} ->
-        query = from(t in schema.__schema__(:source),
-          select: %{id: t.id, data_field: field(t, ^f)}
-        )
+        query =
+          from(t in schema.__schema__(:source),
+            select: %{id: t.id, data_field: field(t, ^f)}
+          )
 
         results = Brando.repo().all(query)
+
         for result <- results do
           processed_result = process_block(result)
           processed_data_field = processed_result.processed_data_field
@@ -37,21 +53,23 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
   end
 
   def replace_block(nil), do: nil
+
   def replace_block(blocks) do
     Enum.reduce(blocks, [], fn
       %{"data" => %{"type" => "picture"} = old_block} = ref, acc ->
         case String.starts_with?(old_block["data"]["path"], "/media/") do
           true ->
-            new_block = update_in(old_block, ["data", "path"], &(String.replace(&1, "/media/", "")))
+            new_block = update_in(old_block, ["data", "path"], &String.replace(&1, "/media/", ""))
             old_sizes = get_in(new_block, ["data", "sizes"])
 
-            updated_sizes = Enum.map(old_sizes, fn {k, v} ->
-              case String.starts_with?(v, "/media/") do
-                true -> {k, String.replace(v, "/media/", "")}
-                false -> {k, v}
-              end
-            end)
-            |> Enum.into(%{})
+            updated_sizes =
+              Enum.map(old_sizes, fn {k, v} ->
+                case String.starts_with?(v, "/media/") do
+                  true -> {k, String.replace(v, "/media/", "")}
+                  false -> {k, v}
+                end
+              end)
+              |> Enum.into(%{})
 
             new_block = put_in(new_block, ["data", "sizes"], updated_sizes)
 
@@ -62,30 +80,34 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
         end
 
       %{"data" => %{"type" => "gallery"} = old_block} = ref, acc ->
-        images = get_in(old_block, ["data", "images"]) # list
-        new_images = Enum.map(images, fn image ->
-          key = Map.has_key?(image, "url") && "url" || "path"
+        # list
+        images = get_in(old_block, ["data", "images"])
 
-          case String.starts_with?(Map.get(image, key), "/media/") do
-            true ->
-              image = Map.put(image, "path", String.replace(Map.get(image, key), "/media/", ""))
-              image = Map.delete(image, "url")
-              old_sizes = image["sizes"]
+        new_images =
+          Enum.map(images, fn image ->
+            key = (Map.has_key?(image, "url") && "url") || "path"
 
-              updated_sizes = Enum.map(old_sizes, fn {k, v} ->
-                case String.starts_with?(v, "/media/") do
-                  true -> {k, String.replace(v, "/media/", "")}
-                  false -> {k, v}
-                end
-              end)
-              |> Enum.into(%{})
+            case String.starts_with?(Map.get(image, key), "/media/") do
+              true ->
+                image = Map.put(image, "path", String.replace(Map.get(image, key), "/media/", ""))
+                image = Map.delete(image, "url")
+                old_sizes = image["sizes"]
 
-              Map.put(image, "sizes", updated_sizes)
+                updated_sizes =
+                  Enum.map(old_sizes, fn {k, v} ->
+                    case String.starts_with?(v, "/media/") do
+                      true -> {k, String.replace(v, "/media/", "")}
+                      false -> {k, v}
+                    end
+                  end)
+                  |> Enum.into(%{})
 
-            false ->
-              image
-          end
-        end)
+                Map.put(image, "sizes", updated_sizes)
+
+              false ->
+                image
+            end
+          end)
 
         new_block = put_in(old_block, ["data", "images"], new_images)
         [%{ref | "data" => new_block} | acc]

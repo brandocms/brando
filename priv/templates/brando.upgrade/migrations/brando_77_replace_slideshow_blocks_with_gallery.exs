@@ -4,11 +4,12 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
 
   def change do
     query =
-      from m in "content_modules",
+      from(m in "content_modules",
         select: %{
           id: m.id,
           refs: m.refs
         }
+      )
 
     modules = Brando.repo().all(query)
 
@@ -18,27 +19,45 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
       query =
         from(m in "content_modules",
           where: m.id == ^module.id,
-          update: [set: [
-            refs: ^new_refs
-          ]]
+          update: [
+            set: [
+              refs: ^new_refs
+            ]
+          ]
         )
 
       Brando.repo().update_all(query, [])
     end
 
     # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas = Enum.reject(Brando.Villain.list_villains(), &(elem(&1, 0) in [
-      Brando.Content.Template,
-      # your schemas here
-    ]))
+    villain_schemas =
+      Enum.reject(
+        Brando.Villain.list_villains(),
+        &(elem(&1, 0) in [
+            Brando.Content.Template,
+            Brando.Pages.Page,
+            Brando.Pages.Fragment
+            # your schemas here
+          ])
+      )
+
+    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    villain_schemas =
+      villain_schemas ++
+        [
+          {Brando.Pages.Page, [%{name: :data}]},
+          {Brando.Pages.Fragment, [%{name: :data}]}
+        ]
 
     for {schema, fields} <- villain_schemas do
       Enum.map(fields, fn %{name: f} ->
-        query = from(t in schema.__schema__(:source),
-          select: %{id: t.id, data_field: field(t, ^f)}
-        )
+        query =
+          from(t in schema.__schema__(:source),
+            select: %{id: t.id, data_field: field(t, ^f)}
+          )
 
         results = Brando.repo().all(query)
+
         for result <- results do
           processed_result = process_block(result)
           processed_data_field = processed_result.processed_data_field
@@ -60,6 +79,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
   end
 
   def replace_block(nil), do: nil
+
   def replace_block(blocks) do
     Enum.reduce(blocks, [], fn
       %{"type" => "slideshow"} = old_block, acc ->

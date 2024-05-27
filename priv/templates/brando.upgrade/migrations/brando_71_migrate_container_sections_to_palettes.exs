@@ -4,10 +4,24 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
 
   def change do
     # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas = Enum.reject(Brando.Villain.list_villains(), &(elem(&1, 0) in [
-      Brando.Content.Template,
-      # your schemas here
-    ]))
+    villain_schemas =
+      Enum.reject(
+        Brando.Villain.list_villains(),
+        &(elem(&1, 0) in [
+            Brando.Content.Template,
+            Brando.Pages.Page,
+            Brando.Pages.Fragment
+            # your schemas here
+          ])
+      )
+
+    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    villain_schemas =
+      villain_schemas ++
+        [
+          {Brando.Pages.Page, [%{name: :data}]},
+          {Brando.Pages.Fragment, [%{name: :data}]}
+        ]
 
     actions =
       for {schema, fields} <- villain_schemas do
@@ -16,7 +30,10 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
             update: [
               set: [
                 {^f,
-                 fragment("REPLACE(?::text, '\"section_id\":', '\"palette_id\":')::jsonb", field(t, ^f))}
+                 fragment(
+                   "REPLACE(?::text, '\"section_id\":', '\"palette_id\":')::jsonb",
+                   field(t, ^f)
+                 )}
               ]
             ]
           )
