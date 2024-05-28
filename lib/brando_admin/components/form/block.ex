@@ -1216,8 +1216,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         </.form>
         <%= if @has_children? do %>
           <%= render_slot(@inner_block) %>
+          <.plus click={@insert_multi_block} />
         <% else %>
           <%= if @multi do %>
+            <div class="blocks-empty-instructions">
+              <%= gettext("Click the plus to start adding content blocks") %>
+            </div>
             <.plus click={@insert_multi_block} />
           <% end %>
         <% end %>
@@ -2709,12 +2713,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     do: Regex.replace(@liquid_regex_strips, module_code, "")
 
   defp liquid_render_picture_src("entry." <> var_path_string, assigns) do
+    entry = assigns.entry
+
     var_path =
       var_path_string
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
-
-    entry = Ecto.Changeset.apply_changes(assigns.base_form.source)
 
     if path = Brando.Utils.try_path(entry, var_path ++ [:path]) do
       Brando.Utils.media_url(path)

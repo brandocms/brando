@@ -295,7 +295,6 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:has_many, opts)
           )
 
-        # TODO: don't hard code :blocks -- build module name from name
         %{type: :has_many, name: rel_name, opts: %{module: :blocks}} ->
           main_module = unquote(module)
           rel_module = rel_name |> to_string() |> Macro.camelize() |> String.to_atom()
@@ -313,7 +312,7 @@ defmodule Brando.Blueprint do
             ),
             Ecto.Schema.has_many(
               rel_name,
-              through: [:entry_blocks, :block]
+              through: [:"entry_#{rel_name}", :block]
             )
           ]
 

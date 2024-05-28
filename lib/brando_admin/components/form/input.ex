@@ -494,6 +494,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :label, :string
   attr :uid, :string
   attr :id_prefix, :string
+  attr :publish, :boolean, default: false
 
   attr :rest, :global,
     include:
@@ -573,10 +574,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> assign(:id, assigns.id || assigns.field.id)
       |> assign(:name, assigns.name || assigns.field.name)
+      |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
       |> process_input_id()
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} {@rest} />
+    <input type={@type} name={@name} id={@id} value={@value} phx-hook={@hook} {@rest} />
     """
   end
 

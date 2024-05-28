@@ -121,11 +121,17 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         options
     end
     |> Enum.map(&ensure_string_values/1)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
     %{label: label, value: to_string(value)}
   end
+
+  defp ensure_string_values(%Ecto.Changeset{action: :replace}), do: nil
+
+  defp ensure_string_values(%Ecto.Changeset{} = changeset),
+    do: Ecto.Changeset.apply_changes(changeset)
 
   defp ensure_string_values(map), do: map
 
@@ -176,14 +182,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}
       >
-        <Input.input
-          type={:hidden}
-          field={@field}
-          uid={@uid}
-          phx-debounce={100}
-          id_prefix="selected_option"
-          value={@selected_option}
-        />
+        <Input.input type={:hidden} field={@field} value={@selected_option} publish={@in_block} />
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -479,6 +478,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
+
+  # def handle_event("select_option", %{"value" => value}, %{assigns: %{in_block: true}} = socket) do
+  #   # var select. send update to parent
+
+  # end
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation

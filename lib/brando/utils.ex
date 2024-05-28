@@ -1328,6 +1328,10 @@ defmodule Brando.Utils do
     |> apply_associations(changeset)
   end
 
+  def apply_changes_recursively(value) do
+    value
+  end
+
   # defp apply_associations(struct, %Ecto.Changeset{changes: _changes, action: action})
   #      when action in [:replace, :delete] do
   #   require Logger

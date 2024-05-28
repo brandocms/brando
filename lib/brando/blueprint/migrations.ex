@@ -63,6 +63,10 @@ defmodule Brando.Blueprint.Migrations do
       opts
       |> Keyword.put(:add_alternates, :language in Enum.map(attributes_to_add, & &1.name))
       |> Keyword.put(:add_entries, Enum.filter(relations_to_add, &(&1.type == :entries)))
+      |> Keyword.put(
+        :add_blocks,
+        Enum.filter(relations_to_add, &(&1.type == :has_many && &1.opts.module == :blocks))
+      )
 
     up = perform_operations(:up, operations)
     down = perform_operations(:down, operations)
@@ -114,6 +118,7 @@ defmodule Brando.Blueprint.Migrations do
     alternates_source = "#{table_name}_alternates"
     alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
     entries? = opts[:add_entries] != []
+    blocks? = opts[:add_blocks] != []
 
     uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
 
@@ -185,6 +190,39 @@ defmodule Brando.Blueprint.Migrations do
         {"", ""}
       end
 
+    {up_blocks, down_blocks} =
+      if blocks? do
+        up =
+          for f <- opts[:add_blocks] do
+            join_source = Enum.join([table_name, f.name], "_")
+
+            """
+            create table(:#{join_source}) do
+              add :entry_id, references(:#{table_name}, on_delete: :delete_all)
+              add :block_id, references(:content_blocks, on_delete: :delete_all)
+              add :sequence, :integer
+            end
+
+            create unique_index(:#{join_source}, [:entry_id, :block_id])
+            """
+          end
+          |> Enum.join("\r\n\r\n")
+
+        down =
+          for f <- opts[:add_blocks] do
+            join_source = Enum.join([table_name, f.name], "_")
+
+            """
+            drop table(:#{join_source})
+            """
+          end
+          |> Enum.join("\r\n\r\n")
+
+        {up, down}
+      else
+        {"", ""}
+      end
+
     """
     defmodule #{migration_module} do
       use Ecto.Migration
@@ -197,6 +235,8 @@ defmodule Brando.Blueprint.Migrations do
         #{up_alternates}
 
         #{up_entries}
+
+        #{up_blocks}
       end
 
       def down do
@@ -207,6 +247,8 @@ defmodule Brando.Blueprint.Migrations do
         #{down_alternates}
 
         #{down_entries}
+
+        #{down_blocks}
       end
     end
     """

@@ -85,7 +85,10 @@ defmodule BrandoAdmin.Components.Content do
 
     ~H"""
     <%= if @image do %>
-      <img width={@image.width} height={@image.height} src={@path} />
+      <div class="image-content">
+        <div class="checkered-bg"></div>
+        <img width={@image.width} height={@image.height} src={@path} />
+      </div>
     <% else %>
       <div class="img-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">

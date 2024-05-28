@@ -712,19 +712,13 @@ defmodule BrandoAdmin.Components.Form do
     else
       # initialize live preview
       schema = socket.assigns.schema
+      form_blueprint = socket.assigns.form_blueprint
       changeset = assoc_all_block_fields(block_changesets, changeset)
 
       if changeset.errors != [] do
-        error_msg =
-          gettext("There are errors in your form. Fix these before activating Live Preview")
-
         socket
         |> clear_blocks_root_changesets()
-        |> push_event("b:alert", %{
-          title: "Error",
-          message: error_msg,
-          type: "error"
-        })
+        |> push_errors(changeset, form_blueprint, schema)
       else
         # fetch all blocks' rendered_html
         case Brando.LivePreview.initialize(schema, changeset) do
@@ -762,9 +756,7 @@ defmodule BrandoAdmin.Components.Form do
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
-      send(self(), {:toast, gettext("DBG: Update Live Preview [complete]")})
       schema = socket.assigns.schema
-
       changeset = assoc_all_block_fields(block_changesets, changeset)
       Brando.LivePreview.update(schema, changeset, cache_key)
       clear_blocks_root_changesets(socket)
@@ -784,7 +776,6 @@ defmodule BrandoAdmin.Components.Form do
   def render(assigns) do
     ~H"""
     <div>
-      LPA <%= inspect(@live_preview_active?) %>
       <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form">
         <div class="form-content">
           <div :if={@header} class="form-header">
@@ -1443,7 +1434,6 @@ defmodule BrandoAdmin.Components.Form do
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
     singular = socket.assigns.singular
-    live_preview_active? = socket.assigns.live_preview_active?
     dirty_fields = socket.assigns.dirty_fields
 
     entry_params = Map.get(params, singular)
@@ -1469,15 +1459,11 @@ defmodule BrandoAdmin.Components.Form do
 
     if change = get_change(changeset, String.to_existing_atom(target_field)) do
       send_updated_entry_field_to_blocks(socket, target_field, change)
-      send(self(), {:toast, "Field #{target_field} changed. Send to blocks.."})
-    end
-
-    if live_preview_active? do
-      fetch_root_blocks(socket, :live_preview_update, 500)
     end
 
     socket
     |> assign(:form, to_form(changeset, []))
+    |> maybe_fetch_root_blocks(:live_preview_update, 0)
     |> then(&{:noreply, &1})
   end
 
@@ -2017,6 +2003,15 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
+  def maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
+    fetch_root_blocks(socket, event, delay)
+    socket
+  end
+
+  def maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, event, delay) do
+    socket
+  end
+
   def fetch_root_blocks(socket, tag \\ :save, delay \\ 500) do
     id = socket.assigns.id
     block_map = socket.assigns.block_map
@@ -2087,13 +2082,19 @@ defmodule BrandoAdmin.Components.Form do
   defp is_loaded_image(%Ecto.Association.NotLoaded{}), do: false
   defp is_loaded_image(%Brando.Images.Image{}), do: true
 
-  defp push_errors(socket, changeset, form, schema) do
+  defp push_errors(socket, changeset, form, schema, env \\ :save) do
     error_title = gettext("Error")
 
     error_notice =
-      gettext(
-        "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
-      )
+      if env == :save do
+        gettext(
+          "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
+        )
+      else
+        gettext(
+          "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
+        )
+      end
 
     traversed_errors =
       traverse_errors(changeset, fn
@@ -2595,13 +2596,16 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  def update_changeset(%{assigns: %{changeset: _}} = socket, [], key, arg) do
+  # used for updating schema assets
+  def update_changeset(socket, [], key, arg) do
     # empty path, treat as root field
     update_changeset(socket, key, arg)
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, list)
+  def update_changeset(socket, path, key, list)
       when is_list(list) do
+    changeset = socket.assigns.form.source
+
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ ->
         Enum.map(list, &Map.from_struct/1)
@@ -2611,8 +2615,10 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:form, to_form(new_changeset, []))
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, map)
+  def update_changeset(socket, path, key, map)
       when is_list(path) and is_map(map) do
+    changeset = socket.assigns.form.source
+
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
@@ -2620,8 +2626,9 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:form, to_form(new_changeset, []))
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, path, key, value)
+  def update_changeset(socket, path, key, value)
       when is_list(path) do
+    changeset = socket.assigns.form.source
     # if we have a path, apply_changes and change the changeset before updating it(?)
     changeset =
       if path != [] do
@@ -2638,23 +2645,26 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:form, to_form(new_changeset, []))
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, list)
+  def update_changeset(socket, key, list)
       when is_list(list) do
+    changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
 
     socket
     |> assign(:form, to_form(new_changeset, []))
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value)
+  def update_changeset(socket, key, value)
       when is_map(value) do
+    changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Map.from_struct(value))
 
     socket
     |> assign(:form, to_form(new_changeset, []))
   end
 
-  def update_changeset(%{assigns: %{changeset: changeset}} = socket, key, value) do
+  def update_changeset(socket, key, value) do
+    changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, value)
 
     socket

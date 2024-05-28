@@ -16,9 +16,10 @@ import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
+import PublishInputHook from './hooks/PublishInput'
 import QueuedUploaderHook from './hooks/QueuedUploader'
-import SelectFilterHook from './hooks/SelectFilter'
 import RememberScrollPositionHook from './hooks/RememberScrollPosition'
+import SelectFilterHook from './hooks/SelectFilter'
 import SchedulerHook from './hooks/Scheduler'
 import SlugHook from './hooks/Slug'
 import SortableHook from './hooks/Sortable'
@@ -51,9 +52,10 @@ export default app => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
+    'Brando.PublishInput': PublishInputHook(app),
     'Brando.QueuedUploader': QueuedUploaderHook(app),
-    'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.RememberScrollPosition': RememberScrollPositionHook(app),
+    'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.Scheduler': SchedulerHook(app),
     'Brando.Slug': SlugHook(app),
     'Brando.Sortable': SortableHook(app),

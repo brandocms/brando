@@ -9,6 +9,7 @@ export default app => ({
     window.addEventListener('keydown', this.submitListenerEvent, false)
 
     this.handleEvent(`b:validate`, opts => {
+      console.log('b:validate', this.$form, opts)
       if (opts.target) {
         const sel = `[name="${opts.target}"]`
         const target = this.$form.querySelector(sel)

@@ -25,11 +25,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def update_many(assigns_sockets) do
     {image_ids, cmp_imgs, file_ids, cmp_files} =
       Enum.reduce(assigns_sockets, {[], [], [], []}, fn
-        {%{id: id, var: %{data: %{type: "image", value_id: image_id}}}, _sockets},
+        {%{id: id, var: %{data: %{type: :image, image_id: image_id}}}, _sockets},
         {image_ids, cmp_imgs, file_ids, cmp_files} ->
           {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files}
 
-        {%{id: id, var: %{data: %{type: "file", value_id: file_id}}}, _sockets},
+        {%{id: id, var: %{data: %{type: :file, file_id: file_id}}}, _sockets},
         {image_ids, cmp_imgs, file_ids, cmp_files} ->
           {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files]}
 
@@ -89,8 +89,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
       value =
         case type do
-          :image -> get_field(changeset, :value_id)
-          :file -> get_field(changeset, :value_id)
+          :image -> get_field(changeset, :image_id)
+          :file -> get_field(changeset, :file_id)
           :boolean -> get_field(changeset, :value_boolean)
           _ -> get_field(changeset, :value)
         end
@@ -111,6 +111,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign_new(:images, fn -> nil end)
       |> assign_new(:files, fn -> nil end)
       |> assign_new(:value_id, fn -> value end)
+      |> assign_new(:image_id, fn ->
+        if type == :image do
+          value
+        end
+      end)
+      |> assign_new(:file_id, fn ->
+        if type == :image do
+          value
+        end
+      end)
       |> assign(:instructions, get_field(changeset, :instructions))
       |> assign(:placeholder, get_field(changeset, :placeholder))
       |> assign(:var, var)
@@ -206,6 +216,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 files={@files}
                 label={@label}
                 value_id={@value_id}
+                image_id={@image_id}
+                file_id={@file_id}
                 placeholder={@placeholder}
                 instructions={@instructions}
                 myself={@myself}
@@ -269,6 +281,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               files={@files}
               label={@label}
               value_id={@value_id}
+              image_id={@image_id}
+              file_id={@file_id}
               placeholder={@placeholder}
               instructions={@instructions}
               myself={@myself}
@@ -392,21 +406,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :image} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
+      <Form.field_base field={@var[:image_id]} label={@label} instructions={@instructions}>
         <div class="input-image">
           <%= if @image do %>
             <Input.Image.image_preview
               image={@image}
-              field={@var[:value]}
-              value={@value_id}
-              relation_field={@var[:value_id]}
+              field={@var[:image_id]}
+              value={@image_id}
+              relation_field={@var[:image_id]}
               click={show_modal("#var-#{@var.id}-image-config")}
               file_name={@image && @image.path && Path.basename(@image.path)}
             />
           <% else %>
             <Input.Image.empty_preview
-              field={@var[:value]}
-              relation_field={@var[:value_id]}
+              field={@var[:image_id]}
+              relation_field={@var[:image_id]}
               click={show_modal("#var-#{@var.id}-image-config")}
             />
           <% end %>
@@ -420,24 +434,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :file} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:value_id]} label={@label} instructions={@instructions}>
+      <Form.field_base field={@var[:file_id]} label={@label} instructions={@instructions}>
         <div class="input-file">
-          <%= if @file do %>
-            <Input.File.file_preview
-              file={@file}
-              field={@var[:value]}
-              value={@value_id}
-              relation_field={@var[:value_id]}
-              click={show_modal("#var-#{@var.id}-file-config")}
-              file_name={@file && @file.filename && Path.basename(@file.filename)}
-            />
-          <% else %>
-            <Input.File.empty_preview
-              field={@var[:value]}
-              relation_field={@var[:value_id]}
-              click={show_modal("#var-#{@var.id}-file-config")}
-            />
-          <% end %>
+          <Input.File.file_preview
+            publish
+            file={@file}
+            field={@var[:file_id]}
+            value={@file_id}
+            relation_field={@var[:file_id]}
+            click={show_modal("#var-#{@var.id}-file-config")}
+            file_name={@file && @file.filename && Path.basename(@file.filename)}
+          />
           <.file_modal field={@var} file={@file} myself={@myself} />
         </div>
       </Form.field_base>
@@ -615,7 +622,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:noreply,
      socket
      |> assign(:image, nil)
-     |> assign(:value_id, nil)}
+     |> assign(:image_id, nil)}
   end
 
   def handle_event(
@@ -626,7 +633,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:noreply,
      socket
      |> assign(:file, nil)
-     |> assign(:value_id, nil)}
+     |> assign(:file_id, nil)}
   end
 
   def handle_event(
@@ -638,7 +645,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:noreply,
      socket
-     |> assign(:value_id, image_id)
+     |> assign(:image_id, image_id)
      |> assign(:image, image)}
   end
 
@@ -651,7 +658,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:noreply,
      socket
-     |> assign(:value_id, file_id)
+     |> assign(:file_id, file_id)
      |> assign(:file, file)}
   end
 
@@ -664,7 +671,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:noreply,
      socket
-     |> assign(:value_id, image_id)
+     |> assign(:image_id, image_id)
      |> assign(:image, image)}
   end
 
@@ -677,7 +684,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     {:noreply,
      socket
-     |> assign(:value_id, file_id)
+     |> assign(:file_id, file_id)
      |> assign(:file, file)}
   end
 
