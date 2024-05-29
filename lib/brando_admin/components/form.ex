@@ -971,8 +971,6 @@ defmodule BrandoAdmin.Components.Form do
             />
           </.form>
 
-          <div><%= inspect(@blocks_wanting_entry, pretty: true) %></div>
-
           <.live_component
             :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
             :if={@has_blocks?}

@@ -30,6 +30,12 @@ function forceLazyloadAllImages(target = document) {
       llImage.src = llImage.dataset.src
       llImage.dataset.llLoaded = ''
     })
+
+  target
+    .querySelectorAll('[data-ll-srcset]:not([data-data-ll-srcset-initialized])')
+    .forEach(llSrcSet => {
+      llSrcSet.dataset.llSrcsetInitialized = ''
+    })
 }
 
 function forceLazyloadAllVideos(target = document) {

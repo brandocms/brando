@@ -26,15 +26,15 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:users) do
-      add(:name, :text)
-      add(:email, :text)
-      add(:password, :text)
-      add(:avatar_id, references(:images))
-      add(:role, :string)
-      add(:config, :map)
-      add(:active, :boolean, default: true)
-      add(:language, :text, default: "no")
-      add(:last_login, :naive_datetime)
+      add :name, :text
+      add :email, :text
+      add :password, :text
+      add :avatar_id, references(:images)
+      add :role, :string
+      add :config, :map
+      add :active, :boolean, default: true
+      add :language, :text, default: "no"
+      add :last_login, :naive_datetime
       timestamps()
       soft_delete()
     end
@@ -105,35 +105,33 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create unique_index(:users_tokens, [:context, :token])
 
     create table(:posts) do
-      add(:language, :text)
-      add(:header, :text)
-      add(:slug, :text)
-      add(:lead, :text)
-      add(:data, :json)
-      add(:html, :text)
-      add(:cover, :text)
-      add(:status, :integer)
-      add(:creator_id, references(:users))
-      add(:meta_description, :text)
-      add(:featured, :boolean)
-      add(:published, :boolean)
-      add(:publish_at, :naive_datetime)
+      add :language, :text
+      add :header, :text
+      add :slug, :text
+      add :lead, :text
+      add :data, :json
+      add :html, :text
+      add :cover, :text
+      add :status, :integer
+      add :creator_id, references(:users)
+      add :meta_description, :text
+      add :featured, :boolean
+      add :published, :boolean
+      add :publish_at, :naive_datetime
       timestamps()
       soft_delete()
       tags()
     end
 
-    create(index(:posts, [:language]))
-    create(index(:posts, [:slug]))
-    create(index(:posts, [:status]))
-    create(index(:posts, [:tags]))
+    create index(:posts, [:language])
+    create index(:posts, [:slug])
+    create index(:posts, [:status])
+    create index(:posts, [:tags])
 
     create table(:pages) do
       add :uri, :text
       add :language, :text
       add :title, :text
-      add :data, :jsonb
-      add :html, :text
       add :vars, :jsonb
       add :status, :integer
       add :is_homepage, :boolean
@@ -146,37 +144,39 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :meta_title, :text
       add :meta_description, :text
       add :meta_image_id, references(:images)
+      add :rendered_blocks, :text
+      add :rendered_blocks_at, :utc_datetime
       sequenced()
       soft_delete()
       timestamps()
     end
 
-    create(index(:pages, [:language]))
-    create(index(:pages, [:uri]))
-    create(unique_index(:pages, [:uri, :language]))
-    create(index(:pages, [:parent_id]))
-    create(index(:pages, [:status]))
+    create index(:pages, [:language])
+    create index(:pages, [:uri])
+    create unique_index(:pages, [:uri, :language])
+    create index(:pages, [:parent_id])
+    create index(:pages, [:status])
 
     create table(:pages_fragments) do
-      add(:key, :text)
-      add(:parent_key, :text)
-      add(:language, :text)
-      add(:title, :text)
-      add(:wrapper, :text)
-      add(:data, :jsonb)
-      add(:html, :text)
-      add(:status, :integer)
-      add(:sequence, :integer)
-      add(:publish_at, :utc_datetime)
-      add(:creator_id, references(:users))
-      add(:page_id, references(:pages))
+      add :key, :text
+      add :parent_key, :text
+      add :language, :text
+      add :title, :text
+      add :wrapper, :text
+      add :rendered_blocks, :text
+      add :rendered_blocks_at, :utc_datetime
+      add :status, :integer
+      add :sequence, :integer
+      add :publish_at, :utc_datetime
+      add :creator_id, references(:users)
+      add :page_id, references(:pages)
       soft_delete()
       timestamps()
     end
 
-    create(index(:pages_fragments, [:language]))
-    create(index(:pages_fragments, [:key]))
-    create(index(:pages_fragments, [:parent_key]))
+    create index(:pages_fragments, [:language])
+    create index(:pages_fragments, [:key])
+    create index(:pages_fragments, [:parent_key])
 
     create table(:pages_alternates) do
       add :entry_id, references(:pages, on_delete: :delete_all)
@@ -193,21 +193,22 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :class, :string
       add :code, :text
       add :refs, :jsonb
-      add :vars, :jsonb
       add :svg, :string
+      add :type, :string
       add :multi, :boolean
       add :wrapper, :boolean
-      add :entry_template, :jsonb
       add :datasource, :boolean
       add :datasource_module, :string
       add :datasource_type, :string
       add :datasource_query, :string
+      add :parent_id, references(:content_modules, on_delete: :delete_all)
       sequenced()
       timestamps()
       soft_delete()
     end
 
     create index(:content_modules, [:namespace])
+
 
     create table(:content_palettes) do
       add :name, :text
@@ -232,10 +233,30 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :instructions, :text
       add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nilify_all)
-      add :data, :jsonb
-      add :html, :text
-
+      add :rendered_blocks, :text
+      add :rendered_blocks_at, :utc_datetime
       timestamps()
+    end
+
+    create table(:content_blocks) do
+      add :uid, :text
+      add :type, :text
+      add :active, :boolean
+      add :collapsed, :boolean
+      add :description, :text
+      add :anchor, :text
+      add :multi, :boolean
+      add :datasource, :boolean
+      add :sequence, :integer
+      add :source, :text
+      add :rendered_html, :text
+      add :rendered_at, :utc_datetime
+      timestamps()
+      add :module_id, references(:content_modules, on_delete: :delete_all)
+      add :parent_id, references(:content_blocks, on_delete: :delete_all)
+      add :palette_id, references(:content_palettes, on_delete: :nilify_all)
+      add :creator_id, references(:users, on_delete: :nothing)
+      add :refs, :jsonb
     end
 
     create table(:projects) do
@@ -243,8 +264,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :status, :integer
       add :slug, :string
       add :language, :string
-      add :data, :jsonb
-      add :html, :text
       add :bio_data, :jsonb
       add :bio_html, :text
       add :cover_id, references(:images)
@@ -252,6 +271,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :pdf_id, references(:files)
       add :properties, :map
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :rendered_blocks, :text
+      add :rendered_blocks_at, :utc_datetime
 
       sequenced()
       soft_delete()

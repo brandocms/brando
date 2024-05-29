@@ -151,16 +151,6 @@ defmodule Brando.Content.Block do
   end
 
   def var_changeset(var, attrs, _user) do
-    require Logger
-
-    Logger.error("""
-    => var_changeset
-
-    attrs:
-    #{inspect(attrs, pretty: true)}
-
-    """)
-
     cast(var, attrs, [
       :type,
       :label,
@@ -184,7 +174,6 @@ defmodule Brando.Content.Block do
       :global_set_id
     ])
     |> cast_embed(:options)
-    |> dbg()
   end
 
   def ref_changeset(ref, attrs, _user) do

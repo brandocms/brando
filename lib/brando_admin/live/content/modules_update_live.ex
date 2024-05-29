@@ -124,28 +124,36 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       })
 
     refs = get_field(changeset, :refs)
-    ref = Enum.find(refs, &(&1.name == ref_name))
 
-    updated_ref =
-      update_in(
-        ref,
-        [
-          Access.key(:data),
-          Access.key(:data),
-          Access.key(:template_row),
-          Access.key(:cols)
-        ],
-        &(&1 ++ [new_col])
-      )
+    if ref = Enum.find(refs, &(&1.name == ref_name)) do
+      updated_ref =
+        update_in(
+          ref,
+          [
+            Access.key(:data),
+            Access.key(:data),
+            Access.key(:template_row),
+            Access.key(:cols)
+          ],
+          &(&1 ++ [new_col])
+        )
 
-    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
-    updated_changeset = put_change(changeset, :refs, updated_refs)
-    updated_form = to_form(updated_changeset, [])
+      updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
+      updated_changeset = put_change(changeset, :refs, updated_refs)
+      updated_form = to_form(updated_changeset, [])
 
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
+      {:noreply,
+       socket
+       |> assign(:form, updated_form)
+       |> assign(:changeset, updated_changeset)}
+    else
+      {:noreply,
+       push_event(socket, "b:alert", %{
+         title: gettext("Error"),
+         message: "Ref #{ref_name} not found. ",
+         type: "error"
+       })}
+    end
   end
 
   def handle_event(

@@ -33,6 +33,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
+    has_children? = socket.assigns.has_children?
+    changesets = socket.assigns.changesets
+    id = socket.assigns.id
+
+    if has_children? do
+      for {block_uid, _} <- changesets do
+        id = "#{id}-child-#{block_uid}"
+
+        send_update(__MODULE__,
+          id: id,
+          event: "enable_live_preview",
+          cache_key: cache_key
+        )
+      end
+    end
+
     socket
     |> assign(:live_preview_active?, true)
     |> assign(:live_preview_cache_key, cache_key)
@@ -1249,26 +1265,24 @@ defmodule BrandoAdmin.Components.Form.Block do
               <div class="split_content"></div>
             <% {:entry_variable, var_name, variable_value} -> %>
               <div
+                phx-no-format
                 class="rendered-variable"
                 data-popover={
                   gettext("Edit the entry directly to affect this variable [entry.%{var_name}]",
                     var_name: var_name
                   )
                 }
-              >
-                <%= variable_value %>
-              </div>
+              ><%= variable_value %></div>
             <% {:module_variable, var_name, variable_value} -> %>
               <div
+                phx-no-format
                 class="rendered-variable"
                 data-popover={
                   gettext("Edit the module variable to affect this variable [%{var_name}]",
                     var_name: var_name
                   )
                 }
-              >
-                <%= variable_value %>
-              </div>
+              ><%= variable_value %></div>
             <% {:picture, _, img_src} -> %>
               <figure>
                 <img src={img_src} />
@@ -2606,7 +2620,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
-      |> dbg
       |> reset_empty_vars(has_vars?, false)
       |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 

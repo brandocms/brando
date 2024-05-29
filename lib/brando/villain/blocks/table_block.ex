@@ -13,24 +13,16 @@ defmodule Brando.Villain.Blocks.TableBlock do
 
     trait Brando.Trait.CastPolymorphicEmbeds
 
-    @primary_key false
     data_layer :embedded
     identifier ""
 
     attributes do
       attribute :uid, :string
-
-      # attribute :cols, {:array, PolymorphicEmbed},
-      #   types: OldVar.types(),
-      #   type_field: :type,
-      #   default: [],
-      #   on_type_not_found: :raise,
-      #   on_replace: :delete
     end
 
     relations do
-      relation :cols, :embeds_many,
-        module: Blocks.TableBlock.Row.Col,
+      relation :cols, :has_many,
+        module: Brando.Content.Var,
         on_replace: :delete
     end
   end
