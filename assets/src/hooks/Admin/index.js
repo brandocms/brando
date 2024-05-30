@@ -23,6 +23,14 @@ export default app => ({
       }
     })
 
+    console.log('registering event')
+
+    this.handleEvent('b:open_window', ({ url }) => {
+      console.log('==> Open window standalone')
+      // open url in new tab/window
+      window.open(url, '_blank')
+    })
+
     this.handleEvent('b:scroll_to_first_error', () => {
       const $fieldErrors = Dom.all('.field-error')
       if ($fieldErrors.length) {

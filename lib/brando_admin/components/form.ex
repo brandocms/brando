@@ -703,6 +703,37 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  def event_tag_received(socket, :live_preview_standalone) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      # initialize live preview
+      schema = socket.assigns.schema
+      form_blueprint = socket.assigns.form_blueprint
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
+
+      if changeset.errors != [] do
+        socket
+        |> clear_blocks_root_changesets()
+        |> push_errors(changeset, form_blueprint, schema)
+      else
+        cache_key = socket.assigns.live_preview_cache_key
+        schema = socket.assigns.schema
+
+        Brando.LivePreview.update_cache(cache_key, schema, changeset)
+        send(self(), {:toast, gettext("Opening standalone live preview...")})
+
+        url = "/__livepreview?key=#{cache_key}&mode=standalone"
+
+        socket
+        |> clear_blocks_root_changesets()
+        |> push_event("b:open_window", %{url: url})
+      end
+    end
+  end
+
   def event_tag_received(socket, :live_preview) do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
@@ -999,6 +1030,7 @@ defmodule BrandoAdmin.Components.Form do
           live_preview_cache_key={@live_preview_cache_key}
           live_preview_target={@live_preview_target}
           change_preview_target={JS.push("change_preview_target", target: @myself)}
+          target={@myself}
         />
       </div>
     </div>
@@ -1433,6 +1465,7 @@ defmodule BrandoAdmin.Components.Form do
     current_user = socket.assigns.current_user
     singular = socket.assigns.singular
     dirty_fields = socket.assigns.dirty_fields
+    has_blocks? = socket.assigns.has_blocks?
 
     entry_params = Map.get(params, singular)
     entry_or_default = entry || struct(schema)
@@ -1453,10 +1486,12 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    [^singular, target_field] = Map.get(params, "_target")
+    if has_blocks? do
+      [^singular, target_field] = Map.get(params, "_target")
 
-    if change = get_change(changeset, String.to_existing_atom(target_field)) do
-      send_updated_entry_field_to_blocks(socket, target_field, change)
+      if change = get_change(changeset, String.to_existing_atom(target_field)) do
+        send_updated_entry_field_to_blocks(socket, target_field, change)
+      end
     end
 
     socket
@@ -1951,6 +1986,12 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
     fetch_root_blocks(socket, :live_preview, 500)
+    {:noreply, socket}
+  end
+
+  def handle_event("open_live_preview_standalone", _, socket) do
+    send(self(), {:toast, gettext("Opening stand alone live preview window...")})
+    fetch_root_blocks(socket, :live_preview_standalone, 500)
     {:noreply, socket}
   end
 
@@ -2684,13 +2725,14 @@ defmodule BrandoAdmin.Components.Form do
         <div class="live-preview">
           <div class="live-preview-targets">
             <div class="live-preview-divider"></div>
-            <a
+            <button
+              type="button"
               class="tiny live-preview-blank"
-              href={"/__livepreview?key=#{@live_preview_cache_key}"}
-              target="_blank"
+              phx-click="open_live_preview_standalone"
+              phx-target={@target}
             >
               <%= gettext("Open preview in new window") %>
-            </a>
+            </button>
             <div class="live-preview-targets-buttons">
               <button type="button" data-live-preview-target="desktop">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">

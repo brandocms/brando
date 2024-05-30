@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Content.PaletteUpdateLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Palette
+defmodule BrandoAdmin.Content.TableTemplateUpdateLive do
+  use BrandoAdmin.LiveView.Form, schema: Brando.Content.TableTemplate
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
@@ -7,14 +7,14 @@ defmodule BrandoAdmin.Content.PaletteUpdateLive do
     ~H"""
     <.live_component
       module={Form}
-      id="palette_form"
-      entry_id={@entry_id}
+      id="table_template_form"
       current_user={@current_user}
+      entry_id={@entry_id}
       presences={@presences}
       schema={@schema}
     >
       <:header>
-        <%= gettext("Edit palette") %>
+        <%= gettext("Edit template") %>
       </:header>
     </.live_component>
     """

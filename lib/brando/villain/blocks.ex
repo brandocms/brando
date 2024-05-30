@@ -16,7 +16,6 @@ defmodule Brando.Villain.Blocks do
       module: Blocks.ModuleBlock,
       picture: Blocks.PictureBlock,
       svg: Blocks.SvgBlock,
-      table: Blocks.TableBlock,
       text: Blocks.TextBlock,
       video: Blocks.VideoBlock
     ]

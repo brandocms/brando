@@ -56,9 +56,6 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
             create_var={JS.push("create_var")}
             delete_var={JS.push("delete_var")}
             duplicate_var={JS.push("duplicate_var")}
-            add_table_row="add_table_row"
-            add_table_col="add_table_col"
-            add_table_template="add_table_template"
           />
         </div>
         <div class="button-group">
@@ -87,128 +84,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
-  ## Table events
-
-  def handle_event("add_table_template", %{"id" => ref_name}, %{assigns: %{form: form}} = socket) do
-    new_row = %Blocks.TableBlock.Row{cols: []}
-    changeset = form.source
-    refs = get_field(changeset, :refs)
-    ref = Enum.find(refs, &(&1.name == ref_name))
-
-    updated_ref =
-      put_in(ref, [Access.key(:data), Access.key(:data), Access.key(:template_row)], new_row)
-
-    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
-    updated_changeset = put_change(changeset, :refs, updated_refs)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
-
-  def handle_event(
-        "add_table_col",
-        %{"id" => ref_name, "type" => var_type},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-
-    new_col =
-      struct(Brando.Content.Var, %{
-        key: Brando.Utils.random_string(5),
-        label: "Label",
-        type: var_type,
-        important: true
-      })
-
-    refs = get_field(changeset, :refs)
-
-    if ref = Enum.find(refs, &(&1.name == ref_name)) do
-      updated_ref =
-        update_in(
-          ref,
-          [
-            Access.key(:data),
-            Access.key(:data),
-            Access.key(:template_row),
-            Access.key(:cols)
-          ],
-          &(&1 ++ [new_col])
-        )
-
-      updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
-      updated_changeset = put_change(changeset, :refs, updated_refs)
-      updated_form = to_form(updated_changeset, [])
-
-      {:noreply,
-       socket
-       |> assign(:form, updated_form)
-       |> assign(:changeset, updated_changeset)}
-    else
-      {:noreply,
-       push_event(socket, "b:alert", %{
-         title: gettext("Error"),
-         message: "Ref #{ref_name} not found. ",
-         type: "error"
-       })}
-    end
-  end
-
-  def handle_event(
-        "add_table_row",
-        %{"id" => ref_name},
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    new_row = %Blocks.TableBlock.Row{}
-    refs = get_field(changeset, :refs)
-    ref = Enum.find(refs, &(&1.name == ref_name))
-    update_in(ref, [Access.key(:data), Access.key(:data), Access.key(:rows)], &[new_row | &1])
-
-    {:noreply, socket}
-  end
-
   ## Sequence event
-
-  def handle_event(
-        "sequenced",
-        %{
-          "ids" => order_indices,
-          "sortable_id" => "sortable-table-cols",
-          "sortable_params" => ref_name
-        },
-        %{assigns: %{form: form}} = socket
-      ) do
-    changeset = form.source
-    refs = get_field(changeset, :refs)
-    ref = Enum.find(refs, &(&1.name == ref_name))
-
-    cols = ref.data.data.template_row.cols
-    sorted_cols = Enum.map(order_indices, &Enum.at(cols, &1))
-
-    updated_ref =
-      put_in(
-        ref,
-        [
-          Access.key(:data),
-          Access.key(:data),
-          Access.key(:template_row),
-          Access.key(:cols)
-        ],
-        sorted_cols
-      )
-
-    updated_refs = Enum.map(refs, &((&1.name == ref_name && updated_ref) || &1))
-    updated_changeset = put_change(changeset, :refs, updated_refs)
-    updated_form = to_form(updated_changeset, [])
-
-    {:noreply,
-     socket
-     |> assign(:form, updated_form)
-     |> assign(:changeset, updated_changeset)}
-  end
 
   def handle_event(
         "sequenced",

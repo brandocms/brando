@@ -75,6 +75,10 @@
       display: none;
     }
 
+    .block-table {
+      display: none;
+    }
+
     .block-children {
       display: none;
     }
@@ -333,6 +337,26 @@ button.btn-palette {
     }
   }
 
+
+  .block-table {
+    width: 100%;
+        
+    tr {
+      td {
+        border: 0;
+        padding: 5px;
+
+        &:first-of-type {
+          width: 35%;
+        }
+
+        input[type=input] {
+          font-size: 90%;
+        }
+      }
+    }
+  }
+
   .block-datasource {
     @font mono;
     font-size: 10px;
@@ -581,23 +605,6 @@ button.btn-palette {
 
 .fade-move-move {
   transition: transform 1s;
-}
-
-.block-datatable-table {
-  tr {
-    td {
-      border: 0;
-      padding: 5px;
-
-      &:first-of-type {
-        width: 35%;
-      }
-
-      input[type=input] {
-        font-size: 90%;
-      }
-    }
-  }
 }
 
 .header-input {

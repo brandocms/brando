@@ -109,6 +109,9 @@ defmodule Brando.Router do
             live "/content/templates", TemplateListLive
             live "/content/templates/create", TemplateCreateLive
             live "/content/templates/update/:entry_id", TemplateUpdateLive
+            live "/content/table_templates", TableTemplateListLive
+            live "/content/table_templates/create", TableTemplateCreateLive
+            live "/content/table_templates/update/:entry_id", TableTemplateUpdateLive
           end
 
           scope "/globals", BrandoAdmin.Globals do

@@ -462,6 +462,14 @@ defmodule Brando.LivePreview do
     end
   end
 
+  def update_cache(cache_key, schema, changeset) do
+    preview_module = Brando.live_preview()
+    schema_module = Module.concat([schema])
+    entry_struct = Brando.Utils.apply_changes_recursively(changeset)
+    wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
+    Brando.LivePreview.store_cache(cache_key, wrapper_html)
+  end
+
   def update(_schema, _changeset, nil) do
     nil
   end

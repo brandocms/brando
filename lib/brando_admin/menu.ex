@@ -279,6 +279,10 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/content/modules"
               },
               %{
+                name: Brando.Gettext.gettext("Table Templates"),
+                url: "/admin/config/content/table_templates"
+              },
+              %{
                 name: Brando.Gettext.gettext("Templates"),
                 url: "/admin/config/content/templates"
               },

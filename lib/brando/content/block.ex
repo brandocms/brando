@@ -5,6 +5,47 @@ defmodule Brando.Content.Block do
 
   @type t :: %__MODULE__{}
 
+  @block_attrs [
+    :active,
+    :collapsed,
+    :anchor,
+    :description,
+    :uid,
+    :creator_id,
+    :sequence,
+    :parent_id,
+    :module_id,
+    :anchor,
+    :multi,
+    :palette_id,
+    :type,
+    :source
+  ]
+
+  @var_attrs [
+    :type,
+    :label,
+    :placeholder,
+    :key,
+    :value,
+    :value_boolean,
+    :important,
+    :instructions,
+    :color_picker,
+    :color_opacity,
+    :sequence,
+    :creator_id,
+    :module_id,
+    :page_id,
+    :block_id,
+    :palette_id,
+    :image_id,
+    :file_id,
+    :linked_identifier_id,
+    :global_set_id,
+    :table_template_id
+  ]
+
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -65,6 +106,12 @@ defmodule Brando.Content.Block do
       on_replace: :delete_if_exists,
       cast: true
 
+    relation :table_rows, :has_many,
+      module: Brando.Content.TableRow,
+      preload_order: [asc: :sequence],
+      on_replace: :delete_if_exists,
+      cast: true
+
     relation :identifiers, :has_many,
       module: Brando.Content.Identifier,
       through: [:block_identifiers, :identifier]
@@ -91,22 +138,12 @@ defmodule Brando.Content.Block do
 
   def block_changeset(block, attrs, user) do
     block
-    |> cast(attrs, [
-      :active,
-      :collapsed,
-      :anchor,
-      :description,
-      :uid,
-      :creator_id,
-      :sequence,
-      :parent_id,
-      :module_id,
-      :anchor,
-      :multi,
-      :palette_id,
-      :type,
-      :source
-    ])
+    |> cast(attrs, @block_attrs)
+    |> cast_assoc(:table_rows,
+      with: &table_row_changeset(&1, &2, &3, user),
+      drop_param: :drop_table_row_ids,
+      sort_param: :sort_table_row_ids
+    )
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:block_identifiers,
@@ -118,30 +155,27 @@ defmodule Brando.Content.Block do
 
   def recursive_block_changeset(block, attrs, user) do
     block
-    |> cast(attrs, [
-      :active,
-      :collapsed,
-      :anchor,
-      :description,
-      :uid,
-      :creator_id,
-      :sequence,
-      :parent_id,
-      :module_id,
-      :anchor,
-      :multi,
-      :palette_id,
-      :type,
-      :source
-    ])
+    |> cast(attrs, @block_attrs)
+    |> cast_assoc(:table_rows,
+      with: &table_row_changeset(&1, &2, &3, user),
+      drop_param: :drop_table_row_ids,
+      sort_param: :sort_table_row_ids
+    )
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
     |> cast_assoc(:block_identifiers,
-      with: &block_identifier_changeset(&1, &2, &3, user)
-      # drop_param: :drop_block_identifier_ids,
-      # sort_param: :sort_block_identifier_ids
+      with: &block_identifier_changeset(&1, &2, &3, user),
+      drop_param: :drop_block_identifier_ids,
+      sort_param: :sort_block_identifier_ids
     )
+  end
+
+  def table_row_changeset(table_row, attrs, position, user) do
+    table_row
+    |> cast(attrs, [:block_id])
+    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+    |> change(sequence: position)
   end
 
   def block_identifier_changeset(block_identifier, attrs, position, _user) do
@@ -151,28 +185,8 @@ defmodule Brando.Content.Block do
   end
 
   def var_changeset(var, attrs, _user) do
-    cast(var, attrs, [
-      :type,
-      :label,
-      :placeholder,
-      :key,
-      :value,
-      :value_boolean,
-      :important,
-      :instructions,
-      :color_picker,
-      :color_opacity,
-      :sequence,
-      :creator_id,
-      :module_id,
-      :page_id,
-      :block_id,
-      :palette_id,
-      :image_id,
-      :file_id,
-      :linked_identifier_id,
-      :global_set_id
-    ])
+    var
+    |> cast(attrs, @var_attrs)
     |> cast_embed(:options)
   end
 

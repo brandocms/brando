@@ -59,10 +59,12 @@ defmodule Brando.Content.Var do
     relation :file, :belongs_to, module: Brando.Files.File
     relation :linked_identifier, :belongs_to, module: Brando.Content.Identifier
 
-    # a var can belong to a page, a block, a module or a global variables set
+    # a var can belong to a page, a block, a module, a table template or row, or a global variables set
     relation :page, :belongs_to, module: Brando.Pages.Page
     relation :block, :belongs_to, module: Brando.Content.Block
     relation :module, :belongs_to, module: Brando.Content.Module
     relation :global_set, :belongs_to, module: Brando.Sites.GlobalSet
+    relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
+    relation :table_row, :belongs_to, module: Brando.Content.TableRow
   end
 end

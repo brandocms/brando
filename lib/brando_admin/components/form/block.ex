@@ -445,10 +445,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
-    |> assign_new(:module_id, fn ->
-      block_cs = get_block_changeset(changeset, belongs_to)
-      Changeset.get_field(block_cs, :module_id)
-    end)
+    |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
     |> maybe_assign_children()
@@ -551,6 +548,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:module_code, fn -> nil end)
     |> assign_new(:module_type, fn -> nil end)
     |> assign_new(:is_datasource?, fn -> false end)
+    |> assign_new(:has_table_template?, fn -> false end)
+    |> assign_new(:table_template, fn -> nil end)
     |> assign_new(:module_datasource_module, fn -> nil end)
     |> assign_new(:module_datasource_module_label, fn -> nil end)
     |> assign_new(:module_datasource_type, fn -> nil end)
@@ -585,6 +584,20 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_code, fn -> module.code end)
         |> assign_new(:module_type, fn -> module.type end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
+        |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
+        |> assign_new(:table_template, fn ->
+          table_template_id = module.table_template_id
+
+          if table_template_id do
+            {:ok, table_template} =
+              Brando.Content.get_table_template(%{
+                matches: %{id: table_template_id},
+                preload: [:vars]
+              })
+
+            table_template
+          end
+        end)
         |> assign_new(:module_datasource_module, fn -> module.datasource_module end)
         |> assign_new(:module_datasource_module_label, fn -> module_datasource_module end)
         |> assign_new(:module_datasource_type, fn -> module.datasource_type end)
@@ -811,6 +824,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         deleted={@deleted}
         multi={true}
         is_datasource?={@is_datasource?}
+        has_table_template?={@has_table_template?}
         module_class={@module_class}
         block_module={@block_module}
         vars={@vars}
@@ -882,6 +896,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         deleted={@deleted}
         parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
+        has_table_template?={@has_table_template?}
         target={@myself}
         module_class={@module_class}
         block_module={@block_module}
@@ -911,6 +926,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         deleted={@deleted}
         parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
+        has_table_template?={@has_table_template?}
         target={@myself}
         module_class={@module_class}
         block_module={@block_module}
@@ -1071,6 +1087,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 palette={@palette}
                 is_ref?={false}
                 is_datasource?={false}
+                has_table_template?={false}
               />
               <.container_config uid={@uid} block={block_form} target={@target} palette={@palette} />
             </.inputs_for>
@@ -1101,6 +1118,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :belongs_to, :atom
   attr :deleted, :boolean, default: false
   attr :is_datasource?, :boolean, default: false
+  attr :has_table_template?, :boolean, default: false
   attr :module_class, :string, default: nil
   attr :block_module, :atom
   attr :vars, :list, default: []
@@ -1176,6 +1194,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
+                has_table_template?={@has_table_template?}
                 module_datasource_module_label={@module_datasource_module_label}
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
@@ -1209,6 +1228,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               target={@target}
               is_ref?={false}
               is_datasource?={@is_datasource?}
+              has_table_template?={@has_table_template?}
               module_datasource_module_label={@module_datasource_module_label}
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
@@ -1956,6 +1976,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :type, :string
   attr :block, Phoenix.HTML.Form, required: true
   attr :target, :any, required: true
+  attr :has_table_template?, :boolean, default: false
   attr :is_datasource?, :boolean, default: false
   attr :instructions, :string, default: nil
   attr :config, :boolean, default: false
@@ -2084,8 +2105,145 @@ defmodule BrandoAdmin.Components.Form.Block do
           target={@target}
         />
       </div>
+      <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
+        <.table block_data={@block} uid={@uid} target={@target} />
+      </div>
     </div>
     """
+  end
+
+  attr :block_data, :any, required: true
+  attr :uid, :string, required: true
+  attr :target, :any, required: true
+
+  def table(assigns) do
+    ~H"""
+    <div class="table-block">
+      <%= if Enum.empty?(@block_data[:table_rows].value) do %>
+        <div class="empty">
+          <figure>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M14 10h-4v4h4v-4zm2 0v4h3v-4h-3zm-2 9v-3h-4v3h4zm2 0h3v-3h-3v3zM14 5h-4v3h4V5zm2 0v3h3V5h-3zm-8 5H5v4h3v-4zm0 9v-3H5v3h3zM8 5H5v3h3V5zM4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+            </svg>
+          </figure>
+          <div class="instructions">
+            <button
+              type="button"
+              class="tiny"
+              phx-click="add_table_row"
+              phx-target={@target}
+              phx-page-loading
+            >
+              <%= gettext("Add row") %>
+            </button>
+          </div>
+        </div>
+      <% else %>
+        <div
+          id={"sortable-#{@uid}-table-rows"}
+          class="table-rows"
+          phx-hook="Brando.Sortable"
+          data-target={@target}
+          data-sortable-id={"sortable-#{@uid}-table-rows"}
+          data-sortable-handle=".sort-handle"
+          data-sortable-binary-keys="true"
+          data-sortable-selector=".table-row"
+        >
+          <.inputs_for :let={table_row} field={@block_data[:table_rows]}>
+            <div class="table-row draggable" data-id={table_row.index}>
+              <div class="subform-tools">
+                <button type="button" class="sort-handle">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="none" d="M0 0h24v24H0z" /><path
+                      class="s"
+                      d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z"
+                      fill="rgba(5,39,82,1)"
+                    />
+                  </svg>
+                </button>
+                <button
+                  phx-click="delete_row"
+                  phx-target={@target}
+                  phx-value-id={table_row.index}
+                  type="button"
+                  class="subform-delete"
+                  phx-page-loading
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="none" d="M0 0h24v24H0z" /><path
+                      class="s"
+                      d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"
+                      fill="rgba(5,39,82,1)"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <.inputs_for :let={var} field={table_row[:vars]}>
+                <.live_component
+                  module={RenderVar}
+                  id={"block-#{@uid}-table-row-#{var.id}"}
+                  var={var}
+                  render={:all}
+                  in_block
+                />
+              </.inputs_for>
+            </div>
+            <div class="insert-row">
+              <button
+                type="button"
+                class="tiny"
+                phx-click="add_table_row"
+                phx-target={@target}
+                phx-page-loading
+              >
+                <%= gettext("Add row") %>
+              </button>
+            </div>
+          </.inputs_for>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  def handle_event("add_table_row", _, socket) do
+    uid = socket.assigns.uid
+    belongs_to = socket.assigns.belongs_to
+    table_template = socket.assigns.table_template
+    vars_without_pk = Brando.Villain.remove_pk_from_vars(table_template.vars)
+
+    var_changesets =
+      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
+
+    new_row = %Brando.Content.TableRow{vars: var_changesets}
+    changeset = socket.assigns.form.source
+
+    block_changeset =
+      if belongs_to == :root, do: Changeset.get_assoc(changeset, :block), else: changeset
+
+    current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
+    new_rows = current_rows ++ List.wrap(new_row)
+    updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
+
+    updated_form =
+      if belongs_to == :root do
+        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
+
+        to_form(
+          updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(
+          updated_block_changeset,
+          as: "child_block",
+          id: "child_block_form-#{uid}"
+        )
+      end
+
+    {:noreply, assign(socket, :form, updated_form)}
   end
 
   attr :block_data, :any, required: true
@@ -2471,15 +2629,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
 
-    require Logger
-
-    Logger.error("""
-
-    validate_block –– entry_block
-    #{inspect(params, pretty: true, limit: :infinity)}
-
-    """)
-
     updated_changeset =
       changeset.data
       |> block_module.changeset(params, current_user_id)
@@ -2579,33 +2728,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     #   |> reset_empty_vars(has_vars?, true)
     #   |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 
-    changed_block =
+    rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
-
-    require Logger
-
-    Logger.error("""
-
-    changed_block:
-
-    #{inspect(changed_block.block.refs, pretty: true)}
-
-    """)
-
-    rendered_html =
-      changed_block
       |> reset_empty_vars(has_vars?, true)
       |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
-
-    require Logger
-
-    Logger.error("""
-
-    rendered_html:
-    #{inspect(rendered_html, pretty: true)}
-
-    """)
 
     updated_block_changeset =
       changeset

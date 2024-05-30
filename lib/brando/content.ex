@@ -33,6 +33,7 @@ defmodule Brando.Content do
   alias Brando.Content.Block
   alias Brando.Content.Module
   alias Brando.Content.Palette
+  alias Brando.Content.TableTemplate
   alias Brando.Content.Template
   alias Brando.Villain
 
@@ -331,6 +332,36 @@ defmodule Brando.Content do
   mutation :update, Template
   mutation :delete, Template
   mutation :duplicate, {Template, change_fields: [:name]}
+  ## Table Templates
+  ##
+
+  query(:list, TableTemplate, do: fn query -> from(q in query) end)
+
+  filters TableTemplate do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+    end
+  end
+
+  query(:single, TableTemplate, do: fn query -> from(q in query) end)
+
+  matches TableTemplate do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:name, name}, query ->
+        from(t in query,
+          where: t.name == ^name
+        )
+    end
+  end
+
+  mutation :create, TableTemplate
+  mutation :update, TableTemplate
+  mutation :delete, TableTemplate
+  mutation :duplicate, {TableTemplate, change_fields: [:name]}
 
   def list_identifiers do
     query =
@@ -459,6 +490,8 @@ defmodule Brando.Content do
       true -> {:ok, :has_identifier}
       false -> {:error, :no_identifier}
     end
+  rescue
+    UndefinedFunctionError -> {:error, :no_identifier}
   end
 
   def delete_identifier(module, entry) do

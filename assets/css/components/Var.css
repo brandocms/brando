@@ -6,6 +6,27 @@
     }
   }
 
+  &.select {
+    width: fit-content;
+    min-width: 300px;
+
+    .multiselect {
+      gap: 2em;
+      height: 35px;
+      padding-left: 9px;
+      padding-right: 9px;
+      font-family: 'Mono';
+      font-size: 15px !important;
+
+      .button-edit {
+        font-size: 13px;
+        text-transform: uppercase;
+        padding: 4px 6px 4px;
+        border-radius: 11px;
+      }
+    }
+  }
+
   .image-info, .file-info {
     @fontsize 13px;
     @space margin-top 15px;

@@ -997,6 +997,13 @@ defmodule Brando.Villain do
   """
   def preloads_for(schema) do
     if schema.has_trait(Brando.Trait.Villain) do
+      vars_query = from v in Brando.Content.Var, order_by: [asc: :sequence]
+
+      table_row_query =
+        from tr in Brando.Content.TableRow,
+          order_by: [asc: :sequence],
+          preload: [vars: ^vars_query]
+
       sub_sub_children_query =
         from b in Brando.Content.Block,
           preload: [
@@ -1004,6 +1011,7 @@ defmodule Brando.Villain do
             :vars,
             :module,
             :children,
+            table_rows: ^table_row_query,
             block_identifiers: :identifier
           ],
           order_by: [asc: :sequence]
@@ -1014,6 +1022,7 @@ defmodule Brando.Villain do
             :palette,
             :vars,
             :module,
+            table_rows: ^table_row_query,
             children: ^sub_sub_children_query,
             block_identifiers: :identifier
           ],
@@ -1025,6 +1034,7 @@ defmodule Brando.Villain do
             :palette,
             :vars,
             :module,
+            table_rows: ^table_row_query,
             children: [:palette, :vars, :module, children: ^sub_children_query],
             block_identifiers: :identifier
           ],
@@ -1051,6 +1061,7 @@ defmodule Brando.Villain do
                    :module,
                    :vars,
                    :palette,
+                   table_rows: ^table_row_query,
                    children: ^children_query,
                    block_identifiers: :identifier
                  ]

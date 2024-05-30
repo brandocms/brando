@@ -69,6 +69,7 @@ defmodule Brando.Content.Module do
       on_replace: :delete_if_exists,
       foreign_key: :parent_id
 
+    relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
     relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
 

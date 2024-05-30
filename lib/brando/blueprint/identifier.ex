@@ -123,6 +123,9 @@ defmodule Brando.Blueprint.Identifier do
 
   def identifier_for(%{__struct__: schema} = entry) do
     schema.__identifier__(entry)
+  rescue
+    UndefinedFunctionError ->
+      nil
   end
 
   def extract_cover(nil, _), do: nil

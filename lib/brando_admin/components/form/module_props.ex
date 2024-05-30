@@ -16,11 +16,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   # prop delete_ref, :event, required: true
   # prop create_var, :event, required: true
   # prop delete_var, :event, required: true
-
-  # prop add_table_template, :event, required: true
-  # prop add_table_row, :event, required: true
-  # prop add_table_col, :event, required: true
-
   # data open_col_vars, :list
 
   def mount(socket) do
@@ -30,7 +25,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
      |> assign_available_datasources()
-     |> assign_available_parents()}
+     |> assign_available_parents()
+     |> assign_available_table_templates()}
   end
 
   def update(assigns, socket) do
@@ -46,6 +42,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   def assign_available_parents(socket) do
     {:ok, available_parents} = Brando.Content.list_modules(%{filter: %{parent_id: nil}})
     assign(socket, :available_parents, available_parents)
+  end
+
+  def assign_available_table_templates(socket) do
+    {:ok, available_table_templates} = Brando.Content.list_table_templates(%{order: "asc name"})
+
+    available_table_templates =
+      Enum.map(available_table_templates, &%{label: &1.name, value: &1.id})
+
+    assign(socket, :available_table_templates, available_table_templates)
   end
 
   def render(assigns) do
@@ -73,6 +78,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           id={"#{@form.id}-parent_id"}
           field={@form[:parent_id]}
           opts={[options: @available_parents]}
+        />
+
+        <.live_component
+          module={Input.Select}
+          id={"#{@form.id}-table_template_id"}
+          field={@form[:table_template_id]}
+          opts={[options: @available_table_templates]}
         />
 
         <%= if !@entry_form do %>
@@ -164,19 +176,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               class="secondary"
             >
               Media
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="table"
-              class="secondary"
-            >
-              Table
             </button>
 
             <button
@@ -834,134 +833,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               />
                               <Input.text field={block_data[:arg]} label={gettext("Arg")} />
                               <Input.text field={block_data[:limit]} label={gettext("Limit")} />
-                            </Form.inputs_for_block>
-                          <% "table" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:key]} label={gettext("Key")} />
-                              <Input.textarea
-                                field={block_data[:instructions]}
-                                label={gettext("Instructions")}
-                              />
-
-                              <.inputs_for :let={tpl_row} field={block_data[:template_row]}>
-                                <%= if !tpl_row[:cols].value do %>
-                                  <button
-                                    type="button"
-                                    phx-click={@add_table_template}
-                                    phx-value-id={ref[:name].value}
-                                  >
-                                    Create table row template
-                                  </button>
-                                <% else %>
-                                  <div
-                                    id={"#{@form.id}-refs-#{@key}-table-cols"}
-                                    class="col-vars"
-                                    phx-hook="Brando.Sortable"
-                                    data-sortable-id="sortable-table-cols"
-                                    data-sortable-selector=".col-var"
-                                    data-sortable-handle=".sort-handle"
-                                    data-sortable-params={ref[:name].value}
-                                  >
-                                    <Form.inputs_for_poly :let={var} field={tpl_row[:cols]}>
-                                      <div class="col-var draggable" data-id={var.index}>
-                                        <div
-                                          class="col-var-toggle"
-                                          phx-click={JS.push("toggle_col_var", target: @myself)}
-                                          phx-value-id={var[:key].value}
-                                        >
-                                          <%= var[:type].value %> — <%= inspect(var[:label].value) %>
-                                          <div class="sort-handle">
-                                            <svg
-                                              width="15"
-                                              height="15"
-                                              viewBox="0 0 15 15"
-                                              fill="none"
-                                              xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                              <circle cx="1.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="1.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="1.5" cy="13.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="13.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="13.5" r="1.5"></circle>
-                                            </svg>
-                                          </div>
-                                        </div>
-                                        <div class={[
-                                          "col-var-form",
-                                          var[:key].value not in @open_col_vars && "hidden"
-                                        ]}>
-                                          <Input.input type={:hidden} field={var[:key]} />
-                                          <Input.input type={:hidden} field={var[:type]} />
-                                          <Input.input type={:hidden} field={var[:important]} />
-                                          <Input.text field={var[:label]} label={gettext("Label")} />
-                                          <Input.text
-                                            field={var[:instructions]}
-                                            label={gettext("Instructions")}
-                                          />
-                                          <Input.text
-                                            field={var[:placeholder]}
-                                            label={gettext("Placeholder")}
-                                          />
-                                          <%= case var[:type].value do %>
-                                            <% "text" -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "string" -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "boolean" -> %>
-                                              <Input.toggle
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "datetime" -> %>
-                                              <Input.datetime
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "html" -> %>
-                                              <Input.rich_text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "color" -> %>
-                                              <!-- #TODO: Input.color -->
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% _ -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                          <% end %>
-                                        </div>
-                                      </div>
-                                    </Form.inputs_for_poly>
-                                  </div>
-
-                                  <%= for type <- ["string", "text", "html", "boolean", "datetime", "color"] do %>
-                                    <button
-                                      type="button"
-                                      class="tiny"
-                                      phx-click={@add_table_col}
-                                      phx-value-id={ref[:name].value}
-                                      phx-value-type={type}
-                                    >
-                                      <%= type %>
-                                    </button>
-                                  <% end %>
-                                <% end %>
-                              </.inputs_for>
                             </Form.inputs_for_block>
                           <% type -> %>
                             No matching block <%= type %> found
