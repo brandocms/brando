@@ -25,7 +25,9 @@ defmodule Brando.Sites.GlobalSet do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
-      cast: true
+      cast: true,
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
   end
 
   forms do
@@ -38,7 +40,7 @@ defmodule Brando.Sites.GlobalSet do
         end
 
         fieldset size: :full do
-          inputs_for :globals, {:component, BrandoAdmin.Components.Form.Input.Globals},
+          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.Vars},
             label: t("Globals")
         end
       end
@@ -78,7 +80,7 @@ defmodule Brando.Sites.GlobalSet do
 
       template(
         """
-        <small>{{ entry.globals | size }} #{t("variables in set")}</small>
+        <small>{{ entry.vars | size }} #{t("variables in set")}</small>
         """,
         columns: 3
       )

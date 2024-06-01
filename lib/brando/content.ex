@@ -567,12 +567,12 @@ defmodule Brando.Content do
     end
   end
 
-  def render_var(%{type: "string", value: value}), do: value
-  def render_var(%{type: "text", value: value}), do: value
-  def render_var(%{type: "boolean", value: value}), do: value || false
-  def render_var(%{type: "html", value: value}), do: value
-  def render_var(%{type: "color", value: value}), do: value
-  def render_var(%{type: "select", value: value, default: default}), do: value || default
+  def render_var(%{type: :string, value: value}), do: value
+  def render_var(%{type: :text, value: value}), do: value
+  def render_var(%{type: :boolean, value_boolean: value}), do: value || false
+  def render_var(%{type: :html, value: value}), do: value
+  def render_var(%{type: :color, value: value}), do: value
+  def render_var(%{type: :select, value: value, default: default}), do: value || default
 
   @doc """
   Trims encoded module string, base decodes and converts to terms

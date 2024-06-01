@@ -208,7 +208,7 @@ defmodule Brando.Sites do
   #
   # Global sets
 
-  query :list, GlobalSet, do: fn query -> from(q in query) end
+  query :list, GlobalSet, do: fn query -> from(q in query, preload: [:vars]) end
 
   filters GlobalSet do
     fn

@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data placeholder, :string
   # data value, :any
   # data visible, :boolean
-  # data in_block, :boolean
+  # data publish, :boolean
 
   def update_many(assigns_sockets) do
     {image_ids, cmp_imgs, file_ids, cmp_files} =
@@ -108,6 +108,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:key, var[:key].value)
       |> assign(:type, type)
       |> assign(:value, value)
+      |> assign_new(:on_change, fn -> nil end)
       |> assign_new(:images, fn -> nil end)
       |> assign_new(:files, fn -> nil end)
       |> assign_new(:value_id, fn -> value end)
@@ -131,7 +132,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:ok,
      socket
      |> assign(:visible, false)
-     |> assign(:in_block, false)}
+     |> assign(:publish, false)}
   end
 
   defp control_value(:string, value) when is_binary(value), do: value
@@ -187,9 +188,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <Input.text field={@var[:label]} label={gettext("Label")} />
               <Input.text field={@var[:instructions]} label={gettext("Instructions")} />
               <Input.text field={@var[:placeholder]} label={gettext("Placeholder")} />
-              <Input.radios
-                field={@var[:type]}
+
+              <.live_component
+                module={Input.Select}
+                id={"#{@var.id}-select-type"}
                 label={gettext("Type")}
+                field={@var[:type]}
                 opts={[
                   options: [
                     %{label: "Boolean", value: "boolean"},
@@ -203,6 +207,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     %{label: "File", value: "file"}
                   ]
                 ]}
+                publish={@publish}
               />
 
               <.render_value_inputs
@@ -221,7 +226,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 placeholder={@placeholder}
                 instructions={@instructions}
                 myself={@myself}
-                in_block={@in_block}
+                publish={@publish}
               />
 
               <%= case @type do %>
@@ -286,7 +291,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               placeholder={@placeholder}
               instructions={@instructions}
               myself={@myself}
-              in_block={@in_block}
+              publish={@publish}
             />
           </div>
         <% end %>
@@ -392,7 +397,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         label={@label}
         field={@var[:value]}
         opts={[options: @var[:options].value || []]}
-        in_block={@in_block}
+        publish={@publish}
       />
 
       <.inputs_for :let={opt} field={@var[:options]}>
@@ -408,22 +413,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <Form.field_base field={@var[:image_id]} label={@label} instructions={@instructions}>
         <div class="input-image">
-          <%= if @image do %>
-            <Input.Image.image_preview
-              image={@image}
-              field={@var[:image_id]}
-              value={@image_id}
-              relation_field={@var[:image_id]}
-              click={show_modal("#var-#{@var.id}-image-config")}
-              file_name={@image && @image.path && Path.basename(@image.path)}
-            />
-          <% else %>
-            <Input.Image.empty_preview
-              field={@var[:image_id]}
-              relation_field={@var[:image_id]}
-              click={show_modal("#var-#{@var.id}-image-config")}
-            />
-          <% end %>
+          <Input.Image.image_preview
+            image={@image}
+            field={@var[:image_id]}
+            value={@image_id}
+            relation_field={@var[:image_id]}
+            click={show_modal("#var-#{@var.id}-image-config")}
+            file_name={@image && @image.path && Path.basename(@image.path)}
+            publish
+          />
           <.image_modal field={@var} image={@image} myself={@myself} />
         </div>
       </Form.field_base>
@@ -619,10 +617,30 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         _,
         socket
       ) do
-    {:noreply,
-     socket
-     |> assign(:image, nil)
-     |> assign(:image_id, nil)}
+    socket
+    |> assign(:image, nil)
+    |> assign(:image_id, nil)
+    |> on_change(%{image: nil, image_id: nil})
+    |> then(&{:noreply, &1})
+  end
+
+  def on_change(%{assigns: %{on_change: nil}} = socket, _) do
+    socket
+  end
+
+  def on_change(%{assigns: %{on_change: on_change}} = socket, data) do
+    var_key = socket.assigns.key
+    var_type = socket.assigns.type
+
+    params = %{
+      event: "update_block_var",
+      var_key: var_key,
+      var_type: var_type,
+      data: data
+    }
+
+    on_change.(params)
+    socket
   end
 
   def handle_event(
@@ -630,10 +648,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         _,
         socket
       ) do
-    {:noreply,
-     socket
-     |> assign(:file, nil)
-     |> assign(:file_id, nil)}
+    socket
+    |> assign(:file, nil)
+    |> assign(:file_id, nil)
+    |> on_change(%{file: nil, file_id: nil})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event(
@@ -643,10 +662,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       ) do
     image = Brando.Images.get_image!(image_id)
 
-    {:noreply,
-     socket
-     |> assign(:image_id, image_id)
-     |> assign(:image, image)}
+    socket
+    |> assign(:image_id, image_id)
+    |> assign(:image, image)
+    |> on_change(%{image: image, image_id: image_id})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event(
@@ -656,10 +676,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       ) do
     file = Brando.Files.get_file!(file_id)
 
-    {:noreply,
-     socket
-     |> assign(:file_id, file_id)
-     |> assign(:file, file)}
+    socket
+    |> assign(:file_id, file_id)
+    |> assign(:file, file)
+    |> on_change(%{file: file, file_id: file_id})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event(

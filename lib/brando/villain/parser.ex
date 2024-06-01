@@ -199,10 +199,10 @@ defmodule Brando.Villain.Parser do
               {%{marked_as_deleted: true}, _} ->
                 ""
 
-              {entry, index} ->
-                {:ok, child_module} = Content.find_module(modules, entry.module_id)
-                vars = process_vars(entry.vars)
-                refs = process_refs(entry.refs)
+              {child_block, index} ->
+                {:ok, child_module} = Content.find_module(modules, child_block.module_id)
+                vars = process_vars(child_block.vars)
+                refs = process_refs(child_block.refs)
 
                 forloop = %{
                   "index" => index + 1,
@@ -217,9 +217,10 @@ defmodule Brando.Villain.Parser do
                   |> add_admin_to_context(opts)
                   |> add_parser_to_context(__MODULE__)
                   |> add_module_id_to_context(id)
+                  |> add_block_to_context(child_module, child_block)
                   |> Context.assign("forloop", forloop)
 
-                code = maybe_annotate(child_module.code, entry.uid, opts)
+                code = maybe_annotate(child_module.code, child_block.uid, opts)
                 Villain.parse_and_render(code, context)
             end)
             |> Enum.join("\n")
@@ -243,6 +244,7 @@ defmodule Brando.Villain.Parser do
           |> add_admin_to_context(opts)
           |> add_parser_to_context(__MODULE__)
           |> add_module_id_to_context(id)
+          |> add_block_to_context(module, block)
           |> Context.assign("entries", children)
           |> Context.assign("content", content)
 
@@ -264,6 +266,15 @@ defmodule Brando.Villain.Parser do
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
 
+        require Logger
+
+        Logger.error("""
+
+        processed_vars — #{block.uid}
+        #{inspect(processed_vars, pretty: true)}
+
+        """)
+
         context =
           base_context
           |> add_vars_to_context(processed_vars)
@@ -272,6 +283,7 @@ defmodule Brando.Villain.Parser do
           |> add_parser_to_context(__MODULE__)
           |> add_module_id_to_context(id)
           |> add_entries_to_context(module, block)
+          |> add_block_to_context(module, block)
 
         module.code
         |> maybe_annotate(block.uid, opts)
@@ -316,6 +328,23 @@ defmodule Brando.Villain.Parser do
       end
 
       defp add_entries_to_context(context, _, _), do: Context.assign(context, :entries, [])
+
+      defp add_block_to_context(context, _module, block) do
+        simple_block =
+          Map.take(block, [
+            :uid,
+            :type,
+            :module_id,
+            :sequence,
+            :active,
+            :collapsed,
+            :table_rows,
+            :anchor,
+            :description
+          ])
+
+        Context.assign(context, :block, simple_block)
+      end
 
       defp map_vars(nil), do: %{}
 
@@ -978,7 +1007,22 @@ defmodule Brando.Villain.Parser do
                image: %Ecto.Association.NotLoaded{}
              } = var
            ) do
+        require Logger
+        Logger.error("=> process_var — #{key}/:image -- not loaded.")
         %{image: image} = Brando.repo().preload(var, [:image])
+        {key, image}
+      end
+
+      defp process_var(
+             %Brando.Content.Var{
+               type: :image,
+               key: key,
+               label: _,
+               image: image
+             } = var
+           ) do
+        require Logger
+        Logger.error("=> process_var — #{key}/:image -- has image -- returning")
         {key, image}
       end
 
@@ -991,6 +1035,19 @@ defmodule Brando.Villain.Parser do
              } = var
            ) do
         %{file: file} = Brando.repo().preload(var, [:file])
+        {key, file}
+      end
+
+      defp process_var(
+             %Brando.Content.Var{
+               type: :file,
+               key: key,
+               label: _,
+               file: file
+             } = var
+           ) do
+        require Logger
+        Logger.error("=> process_var — #{key}/:file -- has file -- returning")
         {key, file}
       end
 

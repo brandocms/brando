@@ -13,11 +13,11 @@ defmodule Brando.Query.Mutations do
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
     {custom_changeset, opts} = Keyword.pop(opts, :changeset)
-    changeset_fun = custom_changeset || (&module.changeset/4)
+    changeset_fun = custom_changeset || (&module.changeset/5)
 
     changeset =
       struct(module)
-      |> changeset_fun.(params, user, opts)
+      |> changeset_fun.(params, user, nil, opts)
       |> Publisher.maybe_override_status()
 
     case Query.insert(changeset) do
@@ -85,7 +85,7 @@ defmodule Brando.Query.Mutations do
         custom_changeset,
         show_notification
       ) do
-    changeset_fun = custom_changeset || (&module.changeset/3)
+    changeset_fun = custom_changeset || (&module.changeset/5)
 
     get_opts =
       if preloads do
@@ -95,7 +95,7 @@ defmodule Brando.Query.Mutations do
       end
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
-         changeset <- changeset_fun.(entry, params, user),
+         changeset <- changeset_fun.(entry, params, user, nil, []),
          changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
@@ -178,7 +178,7 @@ defmodule Brando.Query.Mutations do
           |> maybe_merge_fields(opts)
           |> drop_id()
 
-        apply(context, :"create_#{name}", [params, user, [skip_villain: true]])
+        apply(context, :"create_#{name}", [params, user])
 
       err ->
         err

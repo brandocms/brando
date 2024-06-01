@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:open, false)
      |> assign(:filter_string, "")
-     |> assign_new(:in_block, fn -> false end)}
+     |> assign_new(:publish, fn -> false end)}
   end
 
   def update(assigns, socket) do
@@ -182,7 +182,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}
       >
-        <Input.input type={:hidden} field={@field} value={@selected_option} publish={@in_block} />
+        <Input.input type={:hidden} field={@field} value={@selected_option} publish={@publish} />
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -473,13 +473,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     select_changeset =
       default
-      |> changeset_fun.(entry_params, current_user, skip_villain: true)
+      |> changeset_fun.(entry_params, current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  # def handle_event("select_option", %{"value" => value}, %{assigns: %{in_block: true}} = socket) do
+  # def handle_event("select_option", %{"value" => value}, %{assigns: %{publish: true}} = socket) do
   #   # var select. send update to parent
 
   # end

@@ -258,11 +258,12 @@ defmodule Brando.Blueprint.Relations do
         put_assoc(changeset, name, [])
 
       _ ->
+        opts = Map.put(opts, :with, &module.changeset(&1, &2, user, &3, []))
+
         cast_assoc(
           changeset,
           name,
-          to_changeset_opts(:has_many, opts) ++
-            [with: &module.changeset(&1, &2, user), drop_param: :drop_ids, sort_param: :sort_ids]
+          to_changeset_opts(:has_many, opts)
         )
     end
   end
@@ -323,7 +324,7 @@ defmodule Brando.Blueprint.Relations do
   def run_cast_relation(
         %{type: :entries, name: name, opts: %{module: module} = opts},
         changeset,
-        _user
+        user
       ) do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
@@ -338,7 +339,7 @@ defmodule Brando.Blueprint.Relations do
           :"#{name}_identifiers",
           to_changeset_opts(:has_many, opts) ++
             [
-              with: &module.changeset/3,
+              with: &module.changeset(&1, &2, user, &3, []),
               sort_param: :"#{to_string(name)}_sequence",
               drop_param: :"#{to_string(name)}_delete"
             ]

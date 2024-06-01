@@ -76,7 +76,9 @@ defmodule Brando.Pages.Page do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
-      cast: true
+      cast: true,
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
   end
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -293,7 +295,7 @@ defmodule Brando.Pages.Page do
         end
 
         fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Pages.PageVars},
+          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.Vars},
             label: t("Page variables")
         end
       end

@@ -887,11 +887,12 @@ defmodule Brando.Blueprint do
       end
 
       # generate changeset
-      def changeset(schema, params \\ %{}, user \\ :system, opts \\ []) do
+      def changeset(schema, params \\ %{}, user \\ :system, sequence \\ nil, opts \\ []) do
         run_changeset(
           __MODULE__,
           schema,
           params,
+          sequence,
           user,
           @all_traits,
           @all_attributes,
@@ -937,6 +938,7 @@ defmodule Brando.Blueprint do
         module,
         schema,
         params,
+        sequence,
         user,
         all_traits,
         all_attributes,
@@ -987,6 +989,7 @@ defmodule Brando.Blueprint do
         opts
       )
       |> maybe_mark_for_deletion(module)
+      |> maybe_sequence(module, sequence)
 
     :telemetry.execute(
       [:brando, :run_changeset],
@@ -997,6 +1000,18 @@ defmodule Brando.Blueprint do
     )
 
     changeset
+  end
+
+  def maybe_sequence(changeset, module, nil) do
+    changeset
+  end
+
+  def maybe_sequence(changeset, module, sequence) do
+    if module.has_trait(Brando.Trait.Sequenced) do
+      Changeset.change(changeset, sequence: sequence)
+    else
+      changeset
+    end
   end
 
   def maybe_validate_required(changeset, all_required_attrs) do

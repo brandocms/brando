@@ -934,6 +934,8 @@ defmodule Brando.Villain do
     :page,
     :global_set,
     :sequence,
+    :table_template,
+    :table_row,
     :__struct__,
     :__meta__
   ]
@@ -997,7 +999,10 @@ defmodule Brando.Villain do
   """
   def preloads_for(schema) do
     if schema.has_trait(Brando.Trait.Villain) do
-      vars_query = from v in Brando.Content.Var, order_by: [asc: :sequence]
+      vars_query =
+        from v in Brando.Content.Var,
+          order_by: [asc: :sequence],
+          preload: [:file, :image, :palette, :linked_identifier]
 
       table_row_query =
         from tr in Brando.Content.TableRow,
@@ -1008,9 +1013,9 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
-            :vars,
             :module,
             :children,
+            vars: ^vars_query,
             table_rows: ^table_row_query,
             block_identifiers: :identifier
           ],
@@ -1020,8 +1025,8 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
-            :vars,
             :module,
+            vars: ^vars_query,
             table_rows: ^table_row_query,
             children: ^sub_sub_children_query,
             block_identifiers: :identifier
@@ -1032,8 +1037,8 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
-            :vars,
             :module,
+            vars: ^vars_query,
             table_rows: ^table_row_query,
             children: [:palette, :vars, :module, children: ^sub_children_query],
             block_identifiers: :identifier
@@ -1059,8 +1064,8 @@ defmodule Brando.Villain do
                  block: [
                    :parent,
                    :module,
-                   :vars,
                    :palette,
+                   vars: ^vars_query,
                    table_rows: ^table_row_query,
                    children: ^children_query,
                    block_identifiers: :identifier

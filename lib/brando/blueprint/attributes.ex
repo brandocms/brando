@@ -56,8 +56,7 @@ defmodule Brando.Blueprint.Attributes do
     :text,
     :time,
     :timestamp,
-    :uuid,
-    :villain
+    :uuid
   ]
   def validate_attr!(type) when type in @valid_attributes, do: true
   def validate_attr!({:__aliases__, _, _}), do: true

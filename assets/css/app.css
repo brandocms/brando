@@ -318,6 +318,7 @@ code {
       content: " ";
       border-radius: 50%;
       border: 1px solid #ffffff;
+      z-index: 1;
       top: -2px;
       right: 0;
       width: 10px;

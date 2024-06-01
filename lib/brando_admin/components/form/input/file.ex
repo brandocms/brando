@@ -75,21 +75,13 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       >
         <div>
           <div class="input-file">
-            <%= if @file && !is_struct(@file, Ecto.Association.NotLoaded) && @file.filename do %>
-              <.file_preview
-                file={@file}
-                field={@field}
-                relation_field={@relation_field}
-                click={open_file(@myself)}
-                file_name={@file_name}
-              />
-            <% else %>
-              <.empty_preview
-                field={@field}
-                relation_field={@relation_field}
-                click={open_file(@myself)}
-              />
-            <% end %>
+            <.file_preview
+              file={@file}
+              field={@field}
+              relation_field={@relation_field}
+              click={open_file(@myself)}
+              file_name={@file_name}
+            />
           </div>
         </div>
       </Form.field_base>

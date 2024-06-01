@@ -434,11 +434,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     end
   end
 
-  def handle_event(
-        "select_revision",
-        %{"revision" => selected_revision_id},
-        %{assigns: %{entry_id: entry_id, entry_type: entry_type}} = socket
-      ) do
+  def handle_event("select_revision", %{"revision" => selected_revision_id}, socket) do
+    %{entry_id: entry_id, entry_type: entry_type} = socket.assigns
     form_cid = socket.assigns.form_cid
 
     {:ok, {_revision, {revision_id, decoded_entry}}} =

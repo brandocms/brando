@@ -244,7 +244,14 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, :gallery_images, opts) do
-    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.GalleryImage})
+    opts_map =
+      opts
+      |> Enum.into(%{})
+      |> Map.merge(%{
+        module: Brando.Images.GalleryImage,
+        sort_param: :sort_gallery_image_ids,
+        drop_param: :drop_gallery_image_ids
+      })
 
     %Blueprint.Asset{
       name: name,

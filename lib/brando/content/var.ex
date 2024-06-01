@@ -67,4 +67,14 @@ defmodule Brando.Content.Var do
     relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
     relation :table_row, :belongs_to, module: Brando.Content.TableRow
   end
+
+  defimpl String.Chars do
+    def to_string(%{type: :string, value: value}) do
+      value
+    end
+
+    def to_string(%{type: _} = var) do
+      inspect(var, pretty: true)
+    end
+  end
 end

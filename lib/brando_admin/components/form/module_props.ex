@@ -965,7 +965,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     render={:all}
                     target={@myself}
                     edit
-                    in_block
+                    publish
                   />
                 </Content.modal>
                 <span class="text-mono">

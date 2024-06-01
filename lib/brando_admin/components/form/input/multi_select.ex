@@ -778,7 +778,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     select_changeset =
       default
-      |> changeset_fun.(entry_params, current_user, skip_villain: true)
+      |> changeset_fun.(entry_params, current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, select_changeset: select_changeset)}

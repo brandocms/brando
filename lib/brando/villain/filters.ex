@@ -850,7 +850,24 @@ defmodule Brando.Villain.Filters do
 
   def inspect(value, _), do: "#{Kernel.inspect(value, pretty: true)}"
 
-  def rows(%{data: %{data: %{rows: rows}}}, _), do: rows
+  def rows(%{data: %{data: %{rows: rows}}}, _) do
+    rows
+  end
+
+  def rows(data, _) do
+    IO.warn("""
+
+    ERROR: The `rows` filter can only be used on a legacy table struct.
+
+    Got:
+    #{Kernel.inspect(data, pretty: true)}
+
+    Try {{ block.table_rows }} instead.
+
+    """)
+
+    []
+  end
 
   def humanize(value, _), do: Brando.Utils.humanize(value)
 

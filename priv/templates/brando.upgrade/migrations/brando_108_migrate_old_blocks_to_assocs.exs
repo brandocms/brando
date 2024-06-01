@@ -42,6 +42,58 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         end
       end
     end
+
+    query =
+      from(m in "content_blocks",
+        select: %{id: m.id, refs: m.refs, uid: m.uid, creator_id: m.creator_id},
+        where: not is_nil(m.refs),
+        order_by: [desc: m.id]
+      )
+
+    entries = Brando.repo().all(query)
+
+    for entry <- entries do
+      # strip table refs and add them as table_rows in the block
+      new_refs =
+        Enum.reduce(entry.refs, [], fn
+          %{"data" => %{"type" => "table"}} = ref, acc ->
+            rows = get_in(ref, ["data", "data", "rows"])
+
+            # create a new content_table_rows for each row
+            Enum.map(rows, fn
+              row ->
+                table_row = %{
+                  block_id: entry.id,
+                  inserted_at: DateTime.utc_now(),
+                  updated_at: DateTime.utc_now()
+                }
+
+                {_, [%{id: table_row_id}]} =
+                  Brando.repo().insert_all("content_table_rows", [table_row], returning: [:id])
+
+                old_cols = get_in(row, ["cols"])
+                process_vars(:table_row_id, table_row_id, entry.creator_id, old_cols)
+
+                # skip the table ref..
+                acc
+            end)
+
+            acc
+
+          ref, acc ->
+            acc ++ [ref]
+        end)
+
+      update_args = Keyword.new([{:refs, new_refs}])
+
+      query =
+        from(m in "content_blocks",
+          where: m.id == ^entry.id,
+          update: [set: ^update_args]
+        )
+
+      Brando.repo().update_all(query, [])
+    end
   end
 
   def down do
@@ -314,5 +366,72 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       placeholder: get_in(var, ["placeholder"]),
       block_id: block_id
     }
+  end
+
+  defp process_vars(_, _, _, nil), do: nil
+  defp process_vars(_, _, _, []), do: nil
+
+  defp process_vars(fk_name, fk_value, creator_id, vars) do
+    for var <- vars do
+      base_var = build_var(var, fk_name, fk_value, creator_id)
+
+      new_var =
+        case var do
+          %{"type" => "color"} ->
+            Map.merge(base_var, %{
+              value: get_in(var, ["value"]),
+              color_picker: get_in(var, ["picker"]),
+              color_opacity: get_in(var, ["opacity"]),
+              palette_id: get_in(var, ["palette_id"])
+            })
+
+          %{"type" => "image"} ->
+            Map.merge(base_var, %{
+              image_id: get_in(var, ["value_id"])
+            })
+
+          %{"type" => "file"} ->
+            Map.merge(base_var, %{
+              file_id: get_in(var, ["value_id"])
+            })
+
+          %{"type" => "boolean"} ->
+            Map.merge(base_var, %{
+              value_boolean: get_in(var, ["value"])
+            })
+
+          %{"type" => "select"} ->
+            Map.merge(base_var, %{
+              value: get_in(var, ["value"]),
+              options: get_in(var, ["options"])
+            })
+
+          _ ->
+            Map.merge(base_var, %{
+              value: get_in(var, ["value"])
+            })
+        end
+
+      new_var =
+        Map.merge(new_var, %{
+          inserted_at: DateTime.utc_now(),
+          updated_at: DateTime.utc_now()
+        })
+
+      Brando.repo().insert_all("content_vars", [new_var])
+    end
+  end
+
+  def build_var(var, fk_name, fk_value, creator_id) do
+    %{
+      type: get_in(var, ["type"]),
+      important: get_in(var, ["important"]),
+      instructions: get_in(var, ["instructions"]),
+      key: get_in(var, ["key"]),
+      label: get_in(var, ["label"]),
+      placeholder: get_in(var, ["placeholder"]),
+      creator_id: creator_id
+    }
+    |> Map.put(fk_name, fk_value)
   end
 end

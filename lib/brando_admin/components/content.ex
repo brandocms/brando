@@ -86,7 +86,6 @@ defmodule BrandoAdmin.Components.Content do
     ~H"""
     <%= if @image do %>
       <div class="image-content">
-        <div class="checkered-bg"></div>
         <img width={@image.width} height={@image.height} src={@path} />
       </div>
     <% else %>

@@ -107,66 +107,98 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         label={@label}
         instructions={@instructions}
         class={@class}
-        compact={@compact}>
+        compact={@compact}
+      >
         <div class="gallery-input">
           <%= if @gallery_images != [] do %>
-            <.inputs_for field={@field} :let={gallery_form}>
+            <.inputs_for :let={gallery_form} field={@field}>
               <Input.input type={:hidden} field={gallery_form[:id]} />
               <Input.input type={:hidden} field={gallery_form[:config_target]} />
 
-              <.inputs_for field={gallery_form[:gallery_images]} :let={gallery_image}>
+              <.inputs_for :let={gallery_image} field={gallery_form[:gallery_images]}>
                 <Input.input type={:hidden} field={gallery_image[:image_id]} />
                 <Input.input type={:hidden} field={gallery_image[:gallery_id]} />
                 <Input.input type={:hidden} field={gallery_image[:creator_id]} />
-                <Input.input type={:hidden} field={gallery_image[:sequence]} />
+                <Input.input
+                  type={:hidden}
+                  field={"#{gallery_form.name}[sort_gallery_image_ids][]"}
+                  value={gallery_image.index}
+                />
               </.inputs_for>
             </.inputs_for>
           <% else %>
-            <Input.input type={:hidden} field={@field} value={""} />
+            <Input.input type={:hidden} field={@field} value="" />
           <% end %>
 
           <div class="actions">
             <button type="button" class="tiny upload-button">
-              <%= gettext "Upload images" %>
+              <%= gettext("Upload images") %>
               <.live_file_input upload={@parent_uploads[@field.field]} />
             </button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
               type="button"
-              class="tiny">
-              <%= gettext "Select images" %>
+              class="tiny"
+            >
+              <%= gettext("Select images") %>
             </button>
           </div>
           <%= if @gallery_images == [] do %>
-          <small>
-            <%= gettext "No associated gallery" %>
-          </small>
+            <small>
+              <%= gettext("No associated gallery") %>
+            </small>
           <% else %>
             <div
-              id={"sortable-gallery-images"}
+              id="sortable-gallery-images"
               phx-hook="Brando.Sortable"
               data-target={@myself}
-              data-sortable-id={"sortable-gallery"}
+              data-sortable-id="sortable-gallery"
               data-sortable-handle=".sort-handle"
               data-sortable-selector=".gallery-image"
-              class="gallery-images">
+              class="gallery-images"
+            >
               <figure
                 :for={gallery_image <- @gallery_images}
                 class="gallery-image sort-handle draggable"
-                data-id={gallery_image.image_id}>
+                data-id={gallery_image.image_id}
+              >
                 <%= if gallery_image.image.status == :processed do %>
                   <img
                     width="25"
                     height="25"
-                    src={"#{Utils.img_url(gallery_image.image, :thumb, prefix: Utils.media_url())}"} />
-                  <button type="button" class="delete-image" phx-click={JS.push("select_image", value: %{id: gallery_image.image_id, selected: "true"}, target: @myself)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="16" height="16">
+                    src={"#{Utils.img_url(gallery_image.image, :thumb, prefix: Utils.media_url())}"}
+                  />
+                  <button
+                    type="button"
+                    class="delete-image"
+                    phx-click={
+                      JS.push("select_image",
+                        value: %{id: gallery_image.image_id, selected: "true"},
+                        target: @myself
+                      )
+                    }
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                    >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 <% else %>
                   <div class="img-placeholder">
-                    <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z"/></svg>
+                    <svg
+                      class="spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      height="24"
+                    >
+                      <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
+                    </svg>
                   </div>
                 <% end %>
               </figure>

@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                   var={var}
                   render={:all}
                   edit
-                  in_block
+                  publish
                 />
               </div>
             </Form.inputs_for_poly>

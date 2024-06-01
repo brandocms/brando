@@ -247,6 +247,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
+  def update(%{event: "disable_live_preview"}, socket) do
+    block_list = socket.assigns.block_list
+
+    for block_uid <- block_list do
+      send_update(Block,
+        id: "block-#{block_uid}",
+        event: "disable_live_preview"
+      )
+    end
+
+    {:ok, socket}
+  end
+
   def update(assigns, socket) do
     block_module = assigns.block_module
     user_id = assigns.current_user.id

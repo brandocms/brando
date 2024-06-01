@@ -32,6 +32,78 @@ defmodule BrandoAdmin.Components.Form.Block do
      )}
   end
 
+  def update(%{event: "update_block_var"} = params, socket) do
+    %{var_key: var_key, var_type: var_type, data: data} = params
+
+    require Logger
+
+    Logger.error("""
+
+    UPDATE BLOCK VAR
+    var_key: #{inspect(var_key, pretty: true)}
+    var_type: #{inspect(var_type, pretty: true)}
+
+    data: #{inspect(data, pretty: true)}
+
+    """)
+
+    socket
+    |> update_changeset_data_block_var(var_key, var_type, data)
+    |> update_liquex_block_var(var_key, var_type, data)
+    |> then(&{:ok, &1})
+  end
+
+  def update_changeset_data_block_var(socket, var_key, :image, %{image: image}) do
+    uid = socket.assigns.uid
+    changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+
+    updated_changeset =
+      if belongs_to == :root do
+        put_in(
+          changeset,
+          [
+            Access.key(:data),
+            Access.key(:block),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:image)
+          ],
+          image
+        )
+      else
+        put_in(
+          changeset,
+          [
+            Access.key(:data),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:image)
+          ],
+          image
+        )
+      end
+
+    updated_form =
+      if belongs_to == :root do
+        to_form(updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(updated_changeset,
+          as: "child_block",
+          id: "child_block_form-#{uid}"
+        )
+      end
+
+    assign(socket, :form, updated_form)
+  end
+
+  def update_changeset_data_block_var(socket, _, _, _) do
+    socket
+  end
+
   def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
     has_children? = socket.assigns.has_children?
     changesets = socket.assigns.changesets
@@ -56,6 +128,21 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "disable_live_preview"}, socket) do
+    has_children? = socket.assigns.has_children?
+    changesets = socket.assigns.changesets
+    id = socket.assigns.id
+
+    if has_children? do
+      for {block_uid, _} <- changesets do
+        id = "#{id}-child-#{block_uid}"
+
+        send_update(__MODULE__,
+          id: id,
+          event: "disable_live_preview"
+        )
+      end
+    end
+
     socket
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
@@ -413,12 +500,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_entry_field", field_name: field_name, change: change}, socket) do
-    uid = socket.assigns.uid
     liquid_splits = socket.assigns.liquid_splits
     field_name_atom = String.to_existing_atom(field_name)
     entry = Map.put(socket.assigns.entry, field_name_atom, change)
 
-    updated_liquid_splits = update_liquid_splits_entry_vars(liquid_splits, entry)
+    updated_liquid_splits = update_liquid_splits_entry_variables(liquid_splits, entry)
 
     socket
     |> assign(:entry, entry)
@@ -643,57 +729,66 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_parse_module(
          %{assigns: %{module_code: module_code, module_type: :liquid} = assigns} = socket
        ) do
-    module_code =
-      module_code
-      |> liquid_strip_logic()
-      |> emphasize_datasources(assigns)
+    block_initialized = assigns.block_initialized
 
-    belongs_to = socket.assigns.belongs_to
-    changeset = socket.assigns.form.source
-    entry = socket.assigns.entry
+    if not block_initialized do
+      module_code =
+        module_code
+        |> liquid_strip_logic()
+        |> emphasize_datasources(assigns)
 
-    vars =
-      if belongs_to == :root do
-        changeset
-        |> Changeset.get_field(:block)
-        |> Changeset.change()
-        |> Changeset.get_assoc(:vars)
-      else
-        Changeset.get_assoc(changeset, :vars)
-      end
+      belongs_to = socket.assigns.belongs_to
+      changeset = socket.assigns.form.source
+      entry = socket.assigns.entry
 
-    splits =
-      @liquid_regex_splits
-      |> Regex.split(module_code, include_captures: true)
-      |> Enum.map(fn chunk ->
-        case Regex.run(@liquid_regex_chunks, chunk, capture: :all_names) do
-          nil ->
-            chunk
-
-          ["content", "", ""] ->
-            {:content, "content"}
-
-          ["content | renderless", "", ""] ->
-            {:content, "content"}
-
-          ["entry." <> variable, "", ""] ->
-            {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
-
-          [module_variable, "", ""] ->
-            {:module_variable, module_variable,
-             liquid_render_module_variable(module_variable, vars)}
-
-          ["", pic, ""] ->
-            {:picture, pic, liquid_render_picture_src(pic, socket.assigns)}
-
-          ["", "", ref] ->
-            {:ref, ref}
+      vars =
+        if belongs_to == :root do
+          changeset
+          |> Changeset.get_field(:block)
+          |> Changeset.change()
+          |> Changeset.get_assoc(:vars)
+        else
+          Changeset.get_assoc(changeset, :vars)
         end
-      end)
 
-    socket
-    |> assign(:liquid_splits, splits)
-    |> assign(:vars, vars)
+      splits =
+        @liquid_regex_splits
+        |> Regex.split(module_code, include_captures: true)
+        |> Enum.map(fn chunk ->
+          case Regex.run(@liquid_regex_chunks, chunk, capture: :all_names) do
+            nil ->
+              chunk
+
+            ["content", "", ""] ->
+              {:content, "content"}
+
+            ["content | renderless", "", ""] ->
+              {:content, "content"}
+
+            ["entry." <> variable, "", ""] ->
+              {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
+
+            [module_variable, "", ""] ->
+              {:module_variable, module_variable,
+               liquid_render_module_variable(module_variable, vars)}
+
+            ["", "entry." <> pic = pic_var, ""] ->
+              {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
+
+            ["", pic, ""] ->
+              {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
+
+            ["", "", ref] ->
+              {:ref, ref}
+          end
+        end)
+
+      socket
+      |> assign(:liquid_splits, splits)
+      |> assign(:vars, vars)
+    else
+      socket
+    end
   end
 
   defp maybe_parse_module(socket) do
@@ -1270,7 +1365,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} />
+        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} />
 
         <%= for split <- @liquid_splits do %>
           <%= case split do %>
@@ -1303,7 +1398,11 @@ defmodule BrandoAdmin.Components.Form.Block do
                   )
                 }
               ><%= variable_value %></div>
-            <% {:picture, _, img_src} -> %>
+            <% {:entry_picture, _, img_src} -> %>
+              <figure>
+                <img src={img_src} />
+              </figure>
+            <% {:module_picture, _, img_src} -> %>
               <figure>
                 <img src={img_src} />
               </figure>
@@ -1347,7 +1446,11 @@ defmodule BrandoAdmin.Components.Form.Block do
             label={gettext("Block description")}
             instructions={gettext("Helpful for collapsed blocks")}
           />
-          <.vars vars={@block_form[:vars]} uid={@uid} important={false} />
+          <Input.text
+            field={@block_form[:anchor]}
+            instructions={gettext("Anchor available to block.")}
+          />
+          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} />
         </div>
         <div class="panel">
           <h2 class="titlecase">Vars</h2>
@@ -1442,7 +1545,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               field={@block[:palette_id]}
               label={gettext("Palette")}
               opts={[options: @palette_options]}
-              in_block
+              publish
             />
           <% end %>
           <Input.text field={@block[:anchor]} />
@@ -1964,7 +2067,8 @@ defmodule BrandoAdmin.Components.Form.Block do
           id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
           var={var}
           render={(@important && :only_important) || :only_regular}
-          in_block
+          on_change={fn params -> send_update(@target, params) end}
+          publish
         />
       </.inputs_for>
     </div>
@@ -2185,7 +2289,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   id={"block-#{@uid}-table-row-#{var.id}"}
                   var={var}
                   render={:all}
-                  in_block
+                  publish
                 />
               </.inputs_for>
             </div>
@@ -2583,12 +2687,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     require Logger
 
-    Logger.error("""
-
-    validate_block –– child
-    #{inspect(params, pretty: true)}
-
-    """)
+    Logger.error("=> validate_block –– child")
 
     updated_changeset =
       changeset.data
@@ -2603,19 +2702,21 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     # if we have var changes we must redo the liquid splits vars
-    liquid_splits = socket.assigns.liquid_splits
+    #
+    # TODO: skip this and only update from an event in RenderVar?
+    # liquid_splits = socket.assigns.liquid_splits
 
-    updated_liquid_splits =
-      case Changeset.get_change(updated_changeset, :vars) do
-        nil -> liquid_splits
-        vars -> update_liquid_splits_module_variables(liquid_splits, vars)
-      end
+    # updated_liquid_splits =
+    #   case Changeset.get_change(updated_changeset, :vars) do
+    #     nil -> liquid_splits
+    #     vars -> update_liquid_splits_module_variables(liquid_splits, vars)
+    #   end
 
     socket
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> send_form_to_parent_stream()
-    |> assign(:liquid_splits, updated_liquid_splits)
+    # |> assign(:liquid_splits, updated_liquid_splits)
     |> maybe_update_live_preview_block()
     |> then(&{:noreply, &1})
   end
@@ -2644,18 +2745,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_block_cs = Changeset.get_assoc(updated_changeset, :block)
 
     # if we have var changes we must redo the liquid splits vars
-    liquid_splits = socket.assigns.liquid_splits
+    # TRY TO SKIP THIS AND ONLY UPDATE FROM AN EVENT IN RenderVar
+    # liquid_splits = socket.assigns.liquid_splits
 
-    updated_liquid_splits =
-      case Changeset.get_change(updated_block_cs, :vars) do
-        nil -> liquid_splits
-        vars -> update_liquid_splits_module_variables(liquid_splits, vars)
-      end
+    # updated_liquid_splits =
+    #   case Changeset.get_change(updated_block_cs, :vars) do
+    #     nil -> liquid_splits
+    #     vars -> update_liquid_splits_module_variables(liquid_splits, vars)
+    #   end
 
     socket
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
-    |> assign(:liquid_splits, updated_liquid_splits)
+    # |> assign(:liquid_splits, updated_liquid_splits)
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})
@@ -2722,12 +2824,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def render_and_update_entry_block_changeset(changeset, entry, has_vars?) do
-    # rendered_html =
-    #   changeset
-    #   |> apply_changes_recursively()
-    #   |> reset_empty_vars(has_vars?, true)
-    #   |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
-
     rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
@@ -2774,7 +2870,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     put_in(block, [Access.key(:vars)], [])
   end
 
-  def update_liquid_splits_entry_vars(liquid_splits, entry) do
+  def update_liquid_splits_entry_variables(liquid_splits, entry) do
     liquid_splits
     |> Enum.reduce([], fn
       {:entry_variable, variable, _}, acc ->
@@ -2786,16 +2882,62 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> Enum.reverse()
   end
 
-  def update_liquid_splits_module_variables(liquid_splits, vars) do
-    liquid_splits
-    |> Enum.reduce([], fn
-      {:module_variable, var_key, _prev_var_value}, acc ->
-        [{:module_variable, var_key, liquid_render_module_variable(var_key, vars)} | acc]
+  # def update_liquid_splits_module_variables(liquid_splits, vars) do
+  #   liquid_splits
+  #   |> Enum.reduce([], fn
+  #     {:module_variable, var_key, _prev_var_value}, acc ->
+  #       [{:module_variable, var_key, liquid_render_module_variable(var_key, vars)} | acc]
 
-      item, acc ->
-        [item | acc]
-    end)
-    |> Enum.reverse()
+  #     {:module_picture, var_key, _prev_var_value}, acc ->
+  #       [{:module_picture, var_key, liquid_render_module_picture_src(var_key, vars)} | acc]
+
+  #     item, acc ->
+  #       [item | acc]
+  #   end)
+  #   |> Enum.reverse()
+  # end
+
+  def update_liquex_block_var(socket, var_key, :image, data) do
+    liquid_splits = socket.assigns.liquid_splits
+
+    updated_liquid_splits =
+      liquid_splits
+      |> Enum.reduce([], fn
+        {type, ^var_key, _prev_var_value}, acc ->
+          path = get_in(data, [:image, Access.key(:path)])
+          media_path = Brando.Utils.media_url(path)
+
+          require Logger
+
+          Logger.error("""
+          => update_liquex_block_var #{var_key} => #{media_path}
+          """)
+
+          [{type, var_key, media_path} | acc]
+
+        item, acc ->
+          [item | acc]
+      end)
+      |> Enum.reverse()
+
+    assign(socket, :liquid_splits, updated_liquid_splits)
+  end
+
+  def update_liquex_block_var(socket, var_key, _var_type, data) do
+    liquid_splits = socket.assigns.liquid_splits
+
+    updated_liquid_splits =
+      liquid_splits
+      |> Enum.reduce([], fn
+        {type, ^var_key, _prev_var_value}, acc ->
+          [{type, var_key, Map.get(data, :value)} | acc]
+
+        item, acc ->
+          [item | acc]
+      end)
+      |> Enum.reverse()
+
+    assign(socket, :liquid_splits, updated_liquid_splits)
   end
 
   # for forms that are on the base level, meaning
@@ -2852,7 +2994,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp liquid_strip_logic(module_code),
     do: Regex.replace(@liquid_regex_strips, module_code, "")
 
-  defp liquid_render_picture_src("entry." <> var_path_string, assigns) do
+  defp liquid_render_entry_picture_src("entry." <> var_path_string, assigns) do
     entry = assigns.entry
 
     var_path =
@@ -2867,7 +3009,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp liquid_render_picture_src(var_name, %{vars: vars}) do
+  defp liquid_render_module_picture_src(var_name, vars) do
     # TODO: Give this another shake now that we have assocs
     # FIXME
     #
@@ -2877,32 +3019,56 @@ defmodule BrandoAdmin.Components.Form.Block do
     # Everything here will hopefully improve when we can update poly changesets instead
     # of replacing/inserting new every time.
 
-    case Enum.find(vars, &(&1.key == var_name)) do
-      %Brando.Content.Var{type: :image, image_id: nil} ->
-        ""
+    require Logger
 
-      %Brando.Content.Var{type: :image, image: %Ecto.Association.NotLoaded{}, image_id: image_id} ->
-        case Brando.Cache.get("var_image_#{image_id}") do
-          nil ->
-            image = Brando.Images.get_image!(image_id)
-            media_path = Brando.Utils.media_url(image.path)
-            Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-            media_path
+    Logger.error("""
+    => liquid_render_module_picture_src #{inspect(var_name, pretty: true)}
 
-          media_path ->
-            media_path
-        end
+    #{inspect(vars, pretty: true)}
+    """)
 
-      %Brando.Content.Var{image: image, image_id: image_id} ->
-        media_path = Brando.Utils.media_url(image.path)
-        Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-        media_path
+    if var_cs = Enum.find(vars, &(Changeset.get_field(&1, :key) == var_name)) do
+      image_id = Changeset.get_field(var_cs, :image_id)
+      image = Changeset.get_field(var_cs, :image)
 
-      %Brando.Images.Image{path: path} ->
-        Brando.Utils.media_url(path)
+      cond do
+        image_id == nil ->
+          ""
 
-      _ ->
-        ""
+        image == %Ecto.Association.NotLoaded{} ->
+          image_id = Changeset.get_field(var_cs, :image_id)
+
+          case Brando.Cache.get("var_image_#{image_id}") do
+            nil ->
+              image = Brando.Images.get_image!(image_id)
+              media_path = Brando.Utils.media_url(image.path)
+              Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+              media_path
+
+            media_path ->
+              media_path
+          end
+
+        %Brando.Images.Image{path: path} = image ->
+          media_path = Brando.Utils.media_url(path)
+          Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+          media_path
+
+        true ->
+          require Logger
+
+          Logger.error("""
+
+          other:
+          #{inspect(image_id, pretty: true)}
+          #{inspect(image, pretty: true)}
+
+          """)
+
+          ""
+      end
+    else
+      ""
     end
   end
 
@@ -2956,6 +3122,10 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def get_block_changeset(changeset, :root), do: Changeset.get_assoc(changeset, :block)
   def get_block_changeset(changeset, _), do: changeset
+
+  defp extract_block_bg_color(%{colors: []}) do
+    "transparent"
+  end
 
   defp extract_block_bg_color(%{colors: colors}) do
     colors
