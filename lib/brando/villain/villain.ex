@@ -970,17 +970,6 @@ defmodule Brando.Villain do
           sub_cs = Changeset.get_assoc(block_cs, :block)
           children = Changeset.get_assoc(sub_cs, :children)
           processed_children = reject_deleted(children, false)
-
-          require Logger
-
-          Logger.error("""
-          ==> Rejecting deleted children
-
-          children: #{inspect(children, pretty: true)}
-          processed_children: #{inspect(processed_children, pretty: true)}
-
-          """)
-
           updated_sub_cs = Changeset.put_assoc(sub_cs, :children, processed_children)
           updated_entry_block_cs = Changeset.put_assoc(block_cs, :block, updated_sub_cs)
           [updated_entry_block_cs | acc]
