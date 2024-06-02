@@ -225,7 +225,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 file_id={@file_id}
                 placeholder={@placeholder}
                 instructions={@instructions}
-                myself={@myself}
+                target={@myself}
                 publish={@publish}
               />
 
@@ -290,7 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               file_id={@file_id}
               placeholder={@placeholder}
               instructions={@instructions}
-              myself={@myself}
+              target={@myself}
               publish={@publish}
             />
           </div>
@@ -422,7 +422,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             file_name={@image && @image.path && Path.basename(@image.path)}
             publish
           />
-          <.image_modal field={@var} image={@image} myself={@myself} />
+          <.image_modal field={@var} image={@image} target={@target} />
         </div>
       </Form.field_base>
     </div>
@@ -443,7 +443,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             click={show_modal("#var-#{@var.id}-file-config")}
             file_name={@file && @file.filename && Path.basename(@file.filename)}
           />
-          <.file_modal field={@var} file={@file} myself={@myself} />
+          <.file_modal field={@var} file={@file} target={@target} />
         </div>
       </Form.field_base>
     </div>
@@ -474,7 +474,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               phx-hook="Brando.LegacyImageUpload"
               data-text-uploading={gettext("Uploading...")}
               data-block-uid={"var-#{@field.id}"}
-              data-upload-event-target={@myself}
+              data-upload-event-target={@target}
             >
               <input class="file-input" type="file" />
               <div class="img-placeholder empty upload-canvas">
@@ -506,12 +506,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <button
               type="button"
               class="secondary"
-              phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+              phx-click={JS.push("set_target", target: @target) |> toggle_drawer("#image-picker")}
             >
               <%= gettext("Select image") %>
             </button>
 
-            <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
+            <button type="button" class="danger" phx-click={JS.push("reset_image", target: @target)}>
               <%= gettext("Reset image") %>
             </button>
           </div>
@@ -539,7 +539,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               phx-hook="Brando.LegacyFileUpload"
               data-text-uploading={gettext("Uploading...")}
               data-block-uid={"var-#{@field.id}"}
-              data-upload-event-target={@myself}
+              data-upload-event-target={@target}
             >
               <input class="file-input" type="file" />
               <div class="img-placeholder empty upload-canvas">
@@ -571,12 +571,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <button
               type="button"
               class="secondary"
-              phx-click={JS.push("set_file_target", target: @myself) |> toggle_drawer("#file-picker")}
+              phx-click={JS.push("set_file_target", target: @target) |> toggle_drawer("#file-picker")}
             >
               <%= gettext("Select file") %>
             </button>
 
-            <button type="button" class="danger" phx-click={JS.push("reset_file", target: @myself)}>
+            <button type="button" class="danger" phx-click={JS.push("reset_file", target: @target)}>
               <%= gettext("Reset file") %>
             </button>
           </div>
@@ -622,25 +622,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:image_id, nil)
     |> on_change(%{image: nil, image_id: nil})
     |> then(&{:noreply, &1})
-  end
-
-  def on_change(%{assigns: %{on_change: nil}} = socket, _) do
-    socket
-  end
-
-  def on_change(%{assigns: %{on_change: on_change}} = socket, data) do
-    var_key = socket.assigns.key
-    var_type = socket.assigns.type
-
-    params = %{
-      event: "update_block_var",
-      var_key: var_key,
-      var_type: var_type,
-      data: data
-    }
-
-    on_change.(params)
-    socket
   end
 
   def handle_event(
@@ -711,5 +692,50 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def handle_event("toggle_visible", _, socket) do
     {:noreply, update(socket, :visible, &(!&1))}
+  end
+
+  def handle_event("update_var", %{"_target" => target} = params, socket) do
+    var_key = socket.assigns.key
+    var_type = socket.assigns.type
+    on_change = socket.assigns.on_change
+    value = get_in(params, target)
+
+    require Logger
+
+    Logger.error("""
+
+    update_var value
+    #{inspect(value, pretty: true)}
+
+    """)
+
+    params = %{
+      event: "update_block_var",
+      var_key: var_key,
+      var_type: var_type,
+      data: %{value: value}
+    }
+
+    on_change.(params)
+    {:noreply, socket}
+  end
+
+  def on_change(%{assigns: %{on_change: nil}} = socket, _) do
+    socket
+  end
+
+  def on_change(%{assigns: %{on_change: on_change}} = socket, data) do
+    var_key = socket.assigns.key
+    var_type = socket.assigns.type
+
+    params = %{
+      event: "update_block_var",
+      var_key: var_key,
+      var_type: var_type,
+      data: data
+    }
+
+    on_change.(params)
+    socket
   end
 end

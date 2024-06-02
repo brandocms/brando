@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
   # prop form, :any
   # prop translations, :any
   # prop parent_uploads, :any
+  # prop form_cid, :any
 
   def render(assigns) do
     ~H"""
@@ -18,16 +19,16 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
       @fieldset.style == :inline && "inline",
       @fieldset.shaded && "shaded"
     ]}>
-      <%= for input <- @fieldset.fields do %>
-        <Fieldset.Field.render
-          form={@form}
-          translations={@translations}
-          relations={@relations}
-          input={input}
-          parent_uploads={@parent_uploads}
-          current_user={@current_user}
-        />
-      <% end %>
+      <Fieldset.Field.render
+        :for={input <- @fieldset.fields}
+        form={@form}
+        translations={@translations}
+        relations={@relations}
+        input={input}
+        parent_uploads={@parent_uploads}
+        current_user={@current_user}
+        form_cid={@form_cid}
+      />
     </fieldset>
     """
   end

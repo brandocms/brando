@@ -3,6 +3,7 @@ document.documentElement.classList.add('is-live-preview')
 var token = document.querySelector('meta[name="user_token"]').getAttribute('content')
 var previewSocket = new Phoenix.Socket('/admin/socket', { params: { token: token } })
 var main = document.querySelector('main')
+var body = document.querySelector('body')
 var parser = new DOMParser()
 previewSocket.connect()
 var channel = previewSocket.channel('live_preview:' + livePreviewKey)
@@ -230,5 +231,46 @@ channel.on('update', function (payload) {
   forceLazyloadAllVideos()
 
   buildMap()
+})
+
+channel.on('rerender', function (payload) {
+  if (firstUpdate) {
+    // insert styles to head
+    var style = document.createElement('style')
+    style.innerHTML = MOONWALK_OVERRIDE_STYLES
+    document.head.appendChild(style)
+  }
+  document.documentElement.classList.add('is-updated-live-preview')
+  var doc = parser.parseFromString(payload.html, 'text/html')
+  var newBody = doc.querySelector('body')
+
+  console.log('=> Re-rendering Live Preview', newBody)
+
+  morphdom(body, newBody, {
+    onBeforeElUpdated: (a, b) => {
+      if (a.isEqualNode(b)) {
+        return false
+      }
+
+      if (a.dataset.src && b.dataset.src) {
+        if (a.dataset.src.split('?')[0] === b.dataset.src.split('?')[0] && b.dataset.llLoaded) {
+          return false
+        }
+
+        // data-src differ. Update src
+        b.src = b.dataset.src
+      }
+
+      return true
+    },
+    childrenOnly: false
+  })
+
+  forceLazyloadAllImages()
+  forceLazyloadAllVideos()
+
+  buildMap()
+
+  body.classList.remove('unloaded')
 })
 channel.join()

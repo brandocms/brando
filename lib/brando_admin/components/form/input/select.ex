@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:open, false)
      |> assign(:filter_string, "")
-     |> assign_new(:publish, fn -> false end)}
+     |> assign_new(:publish, fn -> true end)}
   end
 
   def update(assigns, socket) do
@@ -486,13 +486,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
+    on_change = socket.assigns.on_change
 
     value = if value == "", do: nil, else: value
     form = socket.assigns.field.form
     changeset = form.source
 
     module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
 
     if update_relation do
       {update_field, fetcher_fn} = update_relation
@@ -507,19 +507,16 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           end
         end
 
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        action: :update_entry_relation,
-        updated_relation: fetched_relation,
+      on_change.(%{
+        event: "update_entry_relation",
         path: [update_field],
-        force_validation: true
-      )
+        updated_relation: fetched_relation
+      })
     end
 
     socket
     |> assign(:selected_option, value)
     |> assign_label()
-    # |> push_event("b:validate", %{})
     |> then(&{:noreply, &1})
   end
 

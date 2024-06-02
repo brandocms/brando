@@ -885,6 +885,21 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         action: :update_changeset,
         changeset: updated_changeset
       )
+
+      # TODO: Send the selected_options to the parent form?
+      #       on_change.(%{
+      #   event: "update_entry_relation",
+      #   path: [update_field],
+      #   updated_relation: fetched_relation
+      # })
+      require Logger
+
+      Logger.error("""
+
+      multi_select:
+      #{inspect(Enum.map(selected_options, &Ecto.Changeset.apply_changes/1), pretty: true)}
+
+      """)
     end
 
     {:noreply,

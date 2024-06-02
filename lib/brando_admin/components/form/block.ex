@@ -32,76 +32,14 @@ defmodule BrandoAdmin.Components.Form.Block do
      )}
   end
 
+  # event sent from RenderVar for :file and :image vars
   def update(%{event: "update_block_var"} = params, socket) do
     %{var_key: var_key, var_type: var_type, data: data} = params
-
-    require Logger
-
-    Logger.error("""
-
-    UPDATE BLOCK VAR
-    var_key: #{inspect(var_key, pretty: true)}
-    var_type: #{inspect(var_type, pretty: true)}
-
-    data: #{inspect(data, pretty: true)}
-
-    """)
 
     socket
     |> update_changeset_data_block_var(var_key, var_type, data)
     |> update_liquex_block_var(var_key, var_type, data)
     |> then(&{:ok, &1})
-  end
-
-  def update_changeset_data_block_var(socket, var_key, :image, %{image: image}) do
-    uid = socket.assigns.uid
-    changeset = socket.assigns.form.source
-    belongs_to = socket.assigns.belongs_to
-
-    updated_changeset =
-      if belongs_to == :root do
-        put_in(
-          changeset,
-          [
-            Access.key(:data),
-            Access.key(:block),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(:image)
-          ],
-          image
-        )
-      else
-        put_in(
-          changeset,
-          [
-            Access.key(:data),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(:image)
-          ],
-          image
-        )
-      end
-
-    updated_form =
-      if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
-
-    assign(socket, :form, updated_form)
-  end
-
-  def update_changeset_data_block_var(socket, _, _, _) do
-    socket
   end
 
   def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
@@ -499,16 +437,16 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "update_entry_field", field_name: field_name, change: change}, socket) do
+  # update liquid splits for the block editor, and render the module for live preview
+  def update(%{event: "update_entry_field", path: path, change: change}, socket) do
     liquid_splits = socket.assigns.liquid_splits
-    field_name_atom = String.to_existing_atom(field_name)
-    entry = Map.put(socket.assigns.entry, field_name_atom, change)
-
+    entry = put_in(socket.assigns.entry, Enum.map(path, &Access.key/1), change)
     updated_liquid_splits = update_liquid_splits_entry_variables(liquid_splits, entry)
 
     socket
     |> assign(:entry, entry)
     |> assign(:liquid_splits, updated_liquid_splits)
+    |> render_module()
     |> then(&{:ok, &1})
   end
 
@@ -541,6 +479,57 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_get_live_preview_status()
     |> assign(:block_initialized, true)
     |> then(&{:ok, &1})
+  end
+
+  def update_changeset_data_block_var(socket, var_key, :image, %{image: image}) do
+    uid = socket.assigns.uid
+    changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+
+    updated_changeset =
+      if belongs_to == :root do
+        put_in(
+          changeset,
+          [
+            Access.key(:data),
+            Access.key(:block),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:image)
+          ],
+          image
+        )
+      else
+        put_in(
+          changeset,
+          [
+            Access.key(:data),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:image)
+          ],
+          image
+        )
+      end
+
+    updated_form =
+      if belongs_to == :root do
+        to_form(updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(updated_changeset,
+          as: "child_block",
+          id: "child_block_form-#{uid}"
+        )
+      end
+
+    assign(socket, :form, updated_form)
+  end
+
+  def update_changeset_data_block_var(socket, _, _, _) do
+    socket
   end
 
   def maybe_get_live_preview_status(
@@ -2677,7 +2666,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:noreply, socket}
   end
 
-  def handle_event("validate_block", %{"child_block" => params}, socket) do
+  def handle_event(
+        "validate_block",
+        %{"_target" => params_target, "child_block" => params},
+        socket
+      ) do
     form = socket.assigns.form
     changeset = form.source
     uid = socket.assigns.uid
@@ -2701,27 +2694,46 @@ defmodule BrandoAdmin.Components.Form.Block do
         id: "child_block_form-#{uid}"
       )
 
-    # if we have var changes we must redo the liquid splits vars
-    #
-    # TODO: skip this and only update from an event in RenderVar?
-    # liquid_splits = socket.assigns.liquid_splits
-
-    # updated_liquid_splits =
-    #   case Changeset.get_change(updated_changeset, :vars) do
-    #     nil -> liquid_splits
-    #     vars -> update_liquid_splits_module_variables(liquid_splits, vars)
-    #   end
-
     socket
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> send_form_to_parent_stream()
-    # |> assign(:liquid_splits, updated_liquid_splits)
+    |> maybe_update_liquex_block_var(params_target, params)
     |> maybe_update_live_preview_block()
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("validate_block", %{"entry_block" => params}, socket) do
+  # if the target param updated is a var and it's not an image or file, we extract the value
+  # and update the liquex block var
+  def maybe_update_liquex_block_var(
+        socket,
+        [_block_type, "vars", _idx, "value"] = params_target,
+        params
+      ) do
+    var_target =
+      params_target
+      |> List.delete_at(0)
+      |> List.delete_at(-1)
+
+    var_params = get_in(params, var_target)
+    value = Map.get(var_params, "value")
+    var_key = Map.get(var_params, "key")
+
+    var_type =
+      var_params
+      |> Map.get("type")
+      |> String.to_existing_atom()
+
+    update_liquex_block_var(socket, var_key, var_type, %{value: value})
+  end
+
+  def maybe_update_liquex_block_var(socket, _, _), do: socket
+
+  def handle_event(
+        "validate_block",
+        %{"_target" => params_target, "entry_block" => params},
+        socket
+      ) do
     form = socket.assigns.form
     changeset = form.source
     uid = socket.assigns.uid
@@ -2742,22 +2754,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         id: "entry_block_form-#{uid}"
       )
 
-    updated_block_cs = Changeset.get_assoc(updated_changeset, :block)
-
-    # if we have var changes we must redo the liquid splits vars
-    # TRY TO SKIP THIS AND ONLY UPDATE FROM AN EVENT IN RenderVar
-    # liquid_splits = socket.assigns.liquid_splits
-
-    # updated_liquid_splits =
-    #   case Changeset.get_change(updated_block_cs, :vars) do
-    #     nil -> liquid_splits
-    #     vars -> update_liquid_splits_module_variables(liquid_splits, vars)
-    #   end
-
     socket
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
-    # |> assign(:liquid_splits, updated_liquid_splits)
+    |> maybe_update_liquex_block_var(params_target, params)
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})

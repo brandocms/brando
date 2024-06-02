@@ -12,6 +12,7 @@ defmodule Brando.LivePreview do
     layout {MyAppWeb.Layouts, :app}
     template {MyAppWeb.PageHTML, "index.html"}
     template_section fn e -> e.key end
+    rerender_on_change [[:palette]]
 
     assign :navigation, fn _ -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
     assign :partials, fn _ -> Brando.Pages.get_fragments("partials") |> elem(1) end
@@ -32,6 +33,7 @@ defmodule Brando.LivePreview do
   defstruct layout: nil,
             template: nil,
             mutate_data: nil,
+            rerender_on_change: [],
             schema_preloads: [],
             template_prop: nil,
             template_section: nil,
@@ -62,6 +64,8 @@ defmodule Brando.LivePreview do
     - `mutate_data` - function to mutate entry data `entry`
           mutate_data fn entry -> %{entry | title: "custom"} end
     - `layout` - The layout template we want to use for rendering
+    - `rerender_on_change` – List of key paths that will force a rerender of the entire page when changed,
+      for instance `[[:palette]]` if we have code outside of the block fields we must rerender when the palette changes.
     - `template` - The template we want to use for rendering
     - `template_prop` - What we are refering to entry as
     - `template_section` - Run this with `put_section` on conn
@@ -70,6 +74,19 @@ defmodule Brando.LivePreview do
   """
   defmacro preview_target(schema_module, do: block) do
     quote location: :keep do
+      def live_preview_opts(unquote(schema_module)) do
+        var!(cache_key) = ""
+        var!(opts) = %Brando.LivePreview{mutate_data: fn e -> e end}
+        var!(entry) = %{}
+        var!(extra_vars) = []
+        var!(language) = Map.get(var!(entry), :language, Brando.config(:default_language))
+        unquote(block)
+        _ = var!(extra_vars)
+        _ = var!(cache_key)
+        processed_opts = var!(opts)
+        processed_opts
+      end
+
       @doc """
       `prop` - the variable name we store the entry under
       `cache_key` - unique key for this live preview
@@ -346,6 +363,12 @@ defmodule Brando.LivePreview do
     end
   end
 
+  defmacro rerender_on_change(fields) do
+    quote do
+      var!(opts) = Map.put(var!(opts), :rerender_on_change, unquote(fields))
+    end
+  end
+
   @doc """
   Assign variables to be used in the live preview.
 
@@ -470,9 +493,7 @@ defmodule Brando.LivePreview do
     Brando.LivePreview.store_cache(cache_key, wrapper_html)
   end
 
-  def update(_schema, _changeset, nil) do
-    nil
-  end
+  def update(_schema, _changeset, nil), do: nil
 
   def update(schema, changeset, cache_key) do
     preview_module = Brando.live_preview()
@@ -488,6 +509,21 @@ defmodule Brando.LivePreview do
     wrapper_html = preview_module.render(schema_module, entry, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
+  end
+
+  def rerender(schema, changeset, cache_key) do
+    preview_module = Brando.live_preview()
+    schema_module = Module.concat([schema])
+    entry_struct = Brando.Utils.apply_changes_recursively(changeset)
+
+    require Logger
+
+    Logger.error("""
+    Rerendering live preview with cache_key: #{inspect(cache_key)}
+    """)
+
+    wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
+    Brando.endpoint().broadcast("live_preview:#{cache_key}", "rerender", %{html: wrapper_html})
   end
 
   @doc """

@@ -269,6 +269,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         %{"id" => selected_image_id},
         %{assigns: %{form_id: form_id}} = socket
       ) do
+    on_change = socket.assigns.on_change
     {:ok, image} = Brando.Images.get_image(selected_image_id)
 
     send_update(BrandoAdmin.Components.Form,
@@ -276,6 +277,33 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       action: :update_edit_image,
       image: image
     )
+
+    require Logger
+
+    Logger.error("""
+
+    => select_image #{inspect(selected_image_id)}
+    on_change = #{inspect(on_change, pretty: true)}
+
+    """)
+
+    if on_change do
+      path = socket.assigns.path
+      field_name = socket.assigns.field.field
+      field_path = path ++ [field_name]
+
+      require Logger
+
+      Logger.error("""
+      field_path = #{inspect(field_path, pretty: true)}
+      """)
+
+      on_change.(%{
+        event: "update_entry_relation",
+        path: field_path,
+        updated_relation: image
+      })
+    end
 
     {:noreply, socket}
   end

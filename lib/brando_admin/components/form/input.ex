@@ -716,6 +716,17 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
+  attr :placeholder, :string
+  attr :disabled, :boolean
+  attr :debounce, :integer
+  attr :monospace, :boolean
+  attr :change, :any, default: nil
+
   def text(assigns) do
     assigns = prepare_input_component(assigns)
 
@@ -734,6 +745,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         disabled={@disabled}
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
+        phx-change={@change}
       />
     </Form.field_base>
     """

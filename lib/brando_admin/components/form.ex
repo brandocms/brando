@@ -1,4 +1,27 @@
 defmodule BrandoAdmin.Components.Form do
+  @moduledoc """
+  Form component for BrandoAdmin
+
+  This component is used to render forms in BrandoAdmin, and is the heart of the admin interface.
+
+  ## Flow
+
+  ### Entry fields
+
+  When changing form fields for an entry that has a block field, we will signal to update
+  each block's liquex splits and also the live preview.
+
+  In the form's "change" event, we extract the "target" and if there are blocks that want
+  entry updates, we will send a message to the blocks with the "path" to the field and
+  its new value to update their liquex splits and live preview.
+
+  If we change entry fields that are assocs, for instance image fields, file fields, selects
+  and multi selects, we will signal to update the entry relation from the live component.
+
+  ### Block variables
+
+
+  """
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "forms"
 
@@ -50,7 +73,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
      |> assign(:blocks_wanting_entry, [])
-     |> assign(:blocks_ready_for_sharing, false)}
+     |> assign(:blocks_ready_for_sharing, false)
+     |> assign(:fields_demanding_full_live_preview_rerender, [])}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -181,6 +205,56 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [cid]))}
   end
 
+  # from select, image, file, etc.
+  def update(
+        %{
+          event: "update_entry_relation",
+          path: path,
+          updated_relation: updated_relation
+        },
+        socket
+      ) do
+    schema = socket.assigns.schema
+    entry = socket.assigns.entry
+    live_preview_active? = socket.assigns.live_preview_active?
+
+    fields_demanding_full_live_preview_rerender =
+      socket.assigns.fields_demanding_full_live_preview_rerender
+
+    entry_or_default = entry || struct(schema)
+    access_path = Brando.Utils.build_access_path(path)
+
+    updated_entry = put_in(entry_or_default, access_path, updated_relation)
+
+    full_rerender? =
+      live_preview_active? &&
+        Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == path))
+
+    require Logger
+
+    Logger.error("""
+
+    => full rerender? #{inspect(full_rerender?)}
+
+    """)
+
+    socket
+    |> assign(:entry, updated_entry)
+    |> maybe_full_rerender_live_preview(full_rerender?)
+    #  |> force_svelte_remounts()
+    |> then(&{:ok, &1})
+  end
+
+  def maybe_full_rerender_live_preview(socket, true) do
+    fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
+    socket
+  end
+
+  def maybe_full_rerender_live_preview(socket, false) do
+    socket
+  end
+
+  # TODO: rewrite to event: "update_entry_relation
   def update(
         %{
           action: :update_entry_relation,
@@ -802,6 +876,7 @@ defmodule BrandoAdmin.Components.Form do
             |> assign(:live_preview_cache_key, cache_key)
             |> enable_live_preview_in_blocks()
             |> clear_blocks_root_changesets()
+            |> assign_entry_fields_demanding_live_preview_rerender(schema)
             |> push_event("b:live_preview", %{cache_key: cache_key})
 
           {:error, err} ->
@@ -818,6 +893,21 @@ defmodule BrandoAdmin.Components.Form do
             })
         end
       end
+    end
+  end
+
+  def event_tag_received(socket, :live_preview_full_rerender) do
+    block_changesets = socket.assigns.block_changesets
+    changeset = socket.assigns.form.source
+    cache_key = socket.assigns.live_preview_cache_key
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      schema = socket.assigns.schema
+      changeset = assoc_all_block_fields(block_changesets, changeset)
+      Brando.LivePreview.rerender(schema, changeset, cache_key)
+      clear_blocks_root_changesets(socket)
     end
   end
 
@@ -845,6 +935,12 @@ defmodule BrandoAdmin.Components.Form do
       message: "Tag received: #{inspect(tag)}",
       type: "info"
     })
+  end
+
+  def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
+    preview_module = Brando.live_preview()
+    lp_opts = preview_module.live_preview_opts(schema)
+    assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
   end
 
   def render(assigns) do
@@ -1041,6 +1137,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               parent_uploads={@uploads}
               form={@form}
+              form_cid={@myself}
               schema={@schema}
             />
           </.form>
@@ -1108,6 +1205,7 @@ defmodule BrandoAdmin.Components.Form do
           parent_uploads={@parent_uploads}
           schema={@schema}
           form={@form}
+          form_cid={@form_cid}
         />
       </div>
     </div>
@@ -1132,6 +1230,7 @@ defmodule BrandoAdmin.Components.Form do
           fieldset={fieldset}
           parent_uploads={@parent_uploads}
           current_user={@current_user}
+          form_cid={@form_cid}
         />
       <% end %>
     <% end %>
@@ -1530,11 +1629,10 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     if has_blocks? do
-      [^singular, target_field] = Map.get(params, "_target")
-
-      if change = get_change(changeset, String.to_existing_atom(target_field)) do
-        send_updated_entry_field_to_blocks(socket, target_field, change)
-      end
+      [^singular | rest] = Map.get(params, "_target")
+      path = Enum.map(rest, &String.to_existing_atom/1)
+      change = get_in(params, rest)
+      send_updated_entry_field_to_blocks(socket, path, change)
     end
 
     socket
@@ -2700,12 +2798,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  def send_updated_entry_field_to_blocks(socket, field_name, change) do
+  def send_updated_entry_field_to_blocks(socket, path, change) do
     blocks_wanting_entry = socket.assigns.blocks_wanting_entry
 
     Enum.each(blocks_wanting_entry, fn cid ->
-      send_update(cid, %{event: "update_entry_field", field_name: field_name, change: change})
+      send_update(cid, %{event: "update_entry_field", path: path, change: change})
     end)
+
+    socket
   end
 
   # used for updating schema assets
@@ -2962,6 +3062,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:parent_form, fn -> nil end)
       |> assign_new(:parent_form_id, fn -> nil end)
       |> assign_new(:subform_id, fn -> nil end)
+      |> assign_new(:form_cid, fn -> nil end)
       |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
       |> assign_new(:component_target, fn ->
@@ -3006,6 +3107,7 @@ defmodule BrandoAdmin.Components.Form do
           parent_uploads={@parent_uploads}
           opts={@opts}
           current_user={@current_user}
+          on_change={fn params -> send_update(@form_cid, params) end}
         />
       </div>
     <% end %>

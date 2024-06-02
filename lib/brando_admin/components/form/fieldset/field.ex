@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign(:label, nil)
       |> assign(:instructions, nil)
       |> assign(:placeholder, nil)
+      |> assign_new(:form_cid, fn -> nil end)
 
     ~H"""
     <%= if @input.__struct__ == Brando.Blueprint.Forms.Subform do %>
@@ -35,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           subform={@input}
           parent_uploads={@parent_uploads}
           current_user={@current_user}
+          form_cid={@form_cid}
           opts={[]}
         />
       <% else %>
@@ -49,6 +51,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           instructions={@instructions}
           placeholder={@placeholder}
           current_user={@current_user}
+          form_cid={@form_cid}
         />
       <% end %>
     <% else %>
@@ -61,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         opts={@input.opts || []}
         type={@input.type}
         current_user={@current_user}
+        form_cid={@form_cid}
       />
     <% end %>
     """
