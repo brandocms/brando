@@ -35,15 +35,6 @@ defmodule Brando.Villain.Tags.Picture do
 
     assigns = %{src: evaled_source, opts: evaled_args}
 
-    require Logger
-
-    Logger.error("""
-
-    villain/tags/picture
-    #{inspect(assigns, pretty: true)}
-
-    """)
-
     comp = ~H"""
     <Brando.HTML.Images.picture src={@src} opts={@opts} />
     """
