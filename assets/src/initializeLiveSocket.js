@@ -13,11 +13,9 @@ export default hooks => {
 
   // connect if there are any LiveViews on the page
   liveSocket.connect()
-
   liveSocket.disableDebug()
 
   // expose liveSocket on window for web console debug logs and latency simulation:
   window.liveSocket = liveSocket
-
   return liveSocket
 }

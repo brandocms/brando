@@ -423,13 +423,17 @@ defmodule Brando.LivePreview do
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
-  def initialize(schema, changeset) do
+  def initialize(schema, changeset, updated_entry_assocs \\ %{}) do
     preview_module = Brando.live_preview()
 
     if function_exported?(preview_module, :render, 3) do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
-      entry_struct = Brando.Utils.apply_changes_recursively(changeset)
+
+      entry_struct =
+        changeset
+        |> Brando.Utils.apply_changes_recursively()
+        |> Map.merge(updated_entry_assocs)
 
       try do
         wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
@@ -485,20 +489,29 @@ defmodule Brando.LivePreview do
     end
   end
 
-  def update_cache(cache_key, schema, changeset) do
+  def update_cache(cache_key, schema, changeset, updated_entry_assocs \\ %{}) do
     preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])
-    entry_struct = Brando.Utils.apply_changes_recursively(changeset)
+
+    entry_struct =
+      changeset
+      |> Brando.Utils.apply_changes_recursively()
+      |> Map.merge(updated_entry_assocs)
+
     wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
     Brando.LivePreview.store_cache(cache_key, wrapper_html)
   end
 
   def update(_schema, _changeset, nil), do: nil
 
-  def update(schema, changeset, cache_key) do
+  def update(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
     preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])
-    entry = Ecto.Changeset.apply_changes(changeset)
+    # entry = Ecto.Changeset.apply_changes(changeset)
+    entry_struct =
+      changeset
+      |> Brando.Utils.apply_changes_recursively()
+      |> Map.merge(updated_entry_assocs)
 
     require Logger
 
@@ -506,15 +519,19 @@ defmodule Brando.LivePreview do
     Updating live preview with cache_key: #{inspect(cache_key)}
     """)
 
-    wrapper_html = preview_module.render(schema_module, entry, cache_key)
+    wrapper_html = preview_module.render(schema_module, entry_struct, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end
 
-  def rerender(schema, changeset, cache_key) do
+  def rerender(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
     preview_module = Brando.live_preview()
     schema_module = Module.concat([schema])
-    entry_struct = Brando.Utils.apply_changes_recursively(changeset)
+
+    entry_struct =
+      changeset
+      |> Brando.Utils.apply_changes_recursively()
+      |> Map.merge(updated_entry_assocs)
 
     require Logger
 
@@ -529,12 +546,17 @@ defmodule Brando.LivePreview do
   @doc """
   Renders the entry, stores in DB and returns URL
   """
-  def share(schema_module, changeset, user) do
+  def share(schema_module, changeset, user, updated_entry_assocs \\ %{}) do
     preview_module = Brando.live_preview()
 
     if function_exported?(preview_module, :render, 3) do
       cache_key = build_cache_key(:erlang.system_time())
-      entry_struct = Ecto.Changeset.apply_changes(changeset)
+      # entry_struct = Ecto.Changeset.apply_changes(changeset)
+      entry_struct =
+        changeset
+        |> Brando.Utils.apply_changes_recursively()
+        |> Map.merge(updated_entry_assocs)
+
       expiry_days = Brando.config(:preview_expiry_days) || 2
 
       html =

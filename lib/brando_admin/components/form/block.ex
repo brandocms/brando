@@ -440,7 +440,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   # update liquid splits for the block editor, and render the module for live preview
   def update(%{event: "update_entry_field", path: path, change: change}, socket) do
     liquid_splits = socket.assigns.liquid_splits
-    entry = put_in(socket.assigns.entry, Enum.map(path, &Access.key/1), change)
+    entry = put_in(socket.assigns.entry, path, change)
     updated_liquid_splits = update_liquid_splits_entry_variables(liquid_splits, entry)
 
     socket

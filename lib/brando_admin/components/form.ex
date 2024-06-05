@@ -56,6 +56,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
+     |> assign(:updated_entry_assocs, %{})
      |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
      |> assign(:initial_update, true)
@@ -211,38 +212,45 @@ defmodule BrandoAdmin.Components.Form do
           event: "update_entry_relation",
           path: path,
           updated_relation: updated_relation
-        },
+        } = params,
         socket
       ) do
-    schema = socket.assigns.schema
-    entry = socket.assigns.entry
     live_preview_active? = socket.assigns.live_preview_active?
+
+    force_live_preview_update =
+      live_preview_active? && Map.get(params, :force_live_preview_update, false)
 
     fields_demanding_full_live_preview_rerender =
       socket.assigns.fields_demanding_full_live_preview_rerender
 
-    entry_or_default = entry || struct(schema)
     access_path = Brando.Utils.build_access_path(path)
 
-    updated_entry = put_in(entry_or_default, access_path, updated_relation)
+    updated_entry_assocs =
+      put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation)
 
     full_rerender? =
       live_preview_active? &&
         Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == path))
 
-    require Logger
-
-    Logger.error("""
-
-    => full rerender? #{inspect(full_rerender?)}
-
-    """)
-
     socket
-    |> assign(:entry, updated_entry)
+    |> assign(:updated_entry_assocs, updated_entry_assocs)
     |> maybe_full_rerender_live_preview(full_rerender?)
+    |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
     #  |> force_svelte_remounts()
     |> then(&{:ok, &1})
+  end
+
+  def maybe_force_live_preview_update(socket, true, _) do
+    socket
+  end
+
+  def maybe_force_live_preview_update(socket, false, true) do
+    fetch_root_blocks(socket, :live_preview_update, 0)
+    socket
+  end
+
+  def maybe_force_live_preview_update(socket, _, _) do
+    socket
   end
 
   def maybe_full_rerender_live_preview(socket, true) do
@@ -763,12 +771,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def nil_relations(entry, schema) do
-    relations =
-      (schema.__relations__() ++ schema.__assets__())
-      |> Enum.filter(&(&1.type in [:belongs_to, :has_many, :image, :file, :video, :entries]))
-      |> Enum.map(& &1.name)
-
-    Brando.repo().preload(entry, relations)
+    preloads = Brando.Blueprint.preloads_for(schema)
+    Brando.repo().preload(entry, preloads)
   end
 
   def maybe_put_language(%{language: _} = entry, current_user) do
@@ -795,6 +799,7 @@ defmodule BrandoAdmin.Components.Form do
   def event_tag_received(socket, :share) do
     changeset = socket.assigns.form.source
     block_changesets = socket.assigns.block_changesets
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
@@ -802,7 +807,14 @@ defmodule BrandoAdmin.Components.Form do
       schema = socket.assigns.schema
       changeset = assoc_all_block_fields(block_changesets, changeset)
       user = socket.assigns.current_user
-      {:ok, preview_url, expiration_days} = Brando.LivePreview.share(schema, changeset, user)
+
+      {:ok, preview_url, expiration_days} =
+        Brando.LivePreview.share(
+          schema,
+          changeset,
+          user,
+          updated_entry_assocs
+        )
 
       message =
         gettext(
@@ -820,40 +832,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def event_tag_received(socket, :live_preview_standalone) do
-    block_changesets = socket.assigns.block_changesets
-
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      socket
-    else
-      # initialize live preview
-      schema = socket.assigns.schema
-      form_blueprint = socket.assigns.form_blueprint
-      changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
-
-      if changeset.errors != [] do
-        socket
-        |> clear_blocks_root_changesets()
-        |> push_errors(changeset, form_blueprint, schema)
-      else
-        cache_key = socket.assigns.live_preview_cache_key
-        schema = socket.assigns.schema
-
-        Brando.LivePreview.update_cache(cache_key, schema, changeset)
-        send(self(), {:toast, gettext("Opening standalone live preview...")})
-
-        url = "/__livepreview?key=#{cache_key}&mode=standalone"
-
-        socket
-        |> clear_blocks_root_changesets()
-        |> push_event("b:open_window", %{url: url})
-      end
-    end
-  end
-
   def event_tag_received(socket, :live_preview) do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
@@ -869,7 +851,7 @@ defmodule BrandoAdmin.Components.Form do
         |> push_errors(changeset, form_blueprint, schema)
       else
         # fetch all blocks' rendered_html
-        case Brando.LivePreview.initialize(schema, changeset) do
+        case Brando.LivePreview.initialize(schema, changeset, updated_entry_assocs) do
           {:ok, cache_key} ->
             socket
             |> assign(:live_preview_active?, true)
@@ -896,17 +878,50 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  def event_tag_received(socket, :live_preview_standalone) do
+    block_changesets = socket.assigns.block_changesets
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      # initialize live preview
+      schema = socket.assigns.schema
+      form_blueprint = socket.assigns.form_blueprint
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
+
+      if changeset.errors != [] do
+        socket
+        |> clear_blocks_root_changesets()
+        |> push_errors(changeset, form_blueprint, schema)
+      else
+        cache_key = socket.assigns.live_preview_cache_key
+        schema = socket.assigns.schema
+
+        Brando.LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
+        send(self(), {:toast, gettext("Opening standalone live preview...")})
+
+        url = "/__livepreview?key=#{cache_key}&mode=standalone"
+
+        socket
+        |> clear_blocks_root_changesets()
+        |> push_event("b:open_window", %{url: url})
+      end
+    end
+  end
+
   def event_tag_received(socket, :live_preview_full_rerender) do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
     cache_key = socket.assigns.live_preview_cache_key
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
       schema = socket.assigns.schema
       changeset = assoc_all_block_fields(block_changesets, changeset)
-      Brando.LivePreview.rerender(schema, changeset, cache_key)
+      Brando.LivePreview.rerender(schema, changeset, cache_key, updated_entry_assocs)
       clear_blocks_root_changesets(socket)
     end
   end
@@ -916,13 +931,14 @@ defmodule BrandoAdmin.Components.Form do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
     cache_key = socket.assigns.live_preview_cache_key
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
 
     if Enum.any?(Map.values(block_changesets), &is_nil/1) do
       socket
     else
       schema = socket.assigns.schema
       changeset = assoc_all_block_fields(block_changesets, changeset)
-      Brando.LivePreview.update(schema, changeset, cache_key)
+      Brando.LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
       clear_blocks_root_changesets(socket)
     end
   end
@@ -946,6 +962,11 @@ defmodule BrandoAdmin.Components.Form do
   def render(assigns) do
     ~H"""
     <div>
+      <div>
+        <code>
+          <pre style="font-size:11;font-family:'Mono';"><%= inspect @updated_entry_assocs, pretty: true %></pre>
+        </code>
+      </div>
       <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form">
         <div class="form-content">
           <div :if={@header} class="form-header">
@@ -1092,6 +1113,7 @@ defmodule BrandoAdmin.Components.Form do
             phx-submit="save"
             phx-change="validate"
           >
+            <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <MetaDrawer.render
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
@@ -1613,6 +1635,17 @@ defmodule BrandoAdmin.Components.Form do
     entry_or_default = entry || struct(schema)
 
     changeset = validate(schema, entry_or_default, entry_params, current_user)
+
+    require Logger
+
+    Logger.error("""
+
+    validate changeset
+
+    #{inspect(changeset, pretty: true)}
+
+    """)
+
     changed_fields = Map.keys(changeset.changes)
 
     socket =
@@ -1628,15 +1661,18 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    if has_blocks? do
-      [^singular | rest] = Map.get(params, "_target")
-      path = Enum.map(rest, &String.to_existing_atom/1)
+    [^singular | rest] = Map.get(params, "_target")
+
+    if has_blocks? && rest != ["__force_change"] do
+      path = string_path_to_access_path(rest)
       change = get_in(params, rest)
       send_updated_entry_field_to_blocks(socket, path, change)
     end
 
+    new_form = to_form(changeset, [])
+
     socket
-    |> assign(:form, to_form(changeset, []))
+    |> assign(:form, new_form)
     |> maybe_fetch_root_blocks(:live_preview_update, 0)
     |> then(&{:noreply, &1})
   end
@@ -2186,16 +2222,16 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end
 
-  def maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
+  defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
     fetch_root_blocks(socket, event, delay)
     socket
   end
 
-  def maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, event, delay) do
+  defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, event, delay) do
     socket
   end
 
-  def fetch_root_blocks(socket, tag \\ :save, delay \\ 500) do
+  defp fetch_root_blocks(socket, tag \\ :save, delay \\ 500) do
     id = socket.assigns.id
     block_map = socket.assigns.block_map
 
@@ -2212,7 +2248,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  def clear_blocks_root_changesets(socket) do
+  defp clear_blocks_root_changesets(socket) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
@@ -2224,7 +2260,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  def enable_live_preview_in_blocks(socket) do
+  defp enable_live_preview_in_blocks(socket) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
     cache_key = socket.assigns.live_preview_cache_key
@@ -2242,7 +2278,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  def disable_live_preview_in_blocks(socket) do
+  defp disable_live_preview_in_blocks(socket) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
     cache_key = socket.assigns.live_preview_cache_key
@@ -2266,12 +2302,19 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp validate(schema, entry, params, user) do
-    entry
-    |> schema.changeset(params, user)
-    |> Map.put(:action, :validate)
+    require Logger
+    Logger.error("=> validate before")
+
+    cs =
+      entry
+      |> schema.changeset(params, user)
+      |> Map.put(:action, :validate)
+
+    Logger.error("=> validate after")
+    cs
   end
 
-  def assoc_all_block_fields(block_changesets, changeset) do
+  defp assoc_all_block_fields(block_changesets, changeset) do
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs = Brando.Villain.reject_deleted(block_cs, true)
       Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
@@ -2798,7 +2841,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  def send_updated_entry_field_to_blocks(socket, path, change) do
+  defp send_updated_entry_field_to_blocks(socket, path, change) do
     blocks_wanting_entry = socket.assigns.blocks_wanting_entry
 
     Enum.each(blocks_wanting_entry, fn cid ->
@@ -2881,6 +2924,23 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:form, to_form(new_changeset, []))
+  end
+
+  defp string_path_to_access_path(string_path) do
+    case string_path do
+      [field] ->
+        field
+        |> String.to_existing_atom()
+        |> Access.key()
+        |> List.wrap()
+
+      [relation, index, field] ->
+        [
+          relation |> String.to_existing_atom() |> Access.key(),
+          index |> String.to_integer() |> Access.at(),
+          field |> String.to_existing_atom() |> Access.key()
+        ]
+    end
   end
 
   ##

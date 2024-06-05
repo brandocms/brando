@@ -83,6 +83,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
           ref, {table_template_id, refs} ->
             updated_ref =
               ref
+              |> put_in(["id"], Ecto.UUID.generate())
               |> put_in(["data", "uid"], Ecto.UUID.generate())
               |> put_in(["data", "active"], !ref["data"]["hidden"])
               |> pop_in(["data", "hidden"])
@@ -145,21 +146,6 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
   end
 
   defp extract_entry_template(entry), do: entry
-
-  def add_uid_to_refs(nil), do: nil
-
-  def add_uid_to_refs(refs) when is_list(refs) do
-    refs
-    |> get_and_update_in(
-      [Access.all(), Access.key("data"), Access.key("uid")],
-      &{&1, Brando.Utils.generate_uid()}
-    )
-    |> elem(1)
-    |> get_and_update_in(
-      [Access.all(), Access.key("id")],
-      &{&1, Ecto.UUID.generate()}
-    )
-  end
 
   defp process_vars(_, _, _, nil), do: nil
   defp process_vars(_, _, _, []), do: nil

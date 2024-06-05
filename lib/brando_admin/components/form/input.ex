@@ -572,8 +572,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assigns
-      |> assign(:id, assigns.id || assigns.field.id)
-      |> assign(:name, assigns.name || assigns.field.name)
+      |> assign(:id, assigns.field.id || assigns.id)
+      |> assign(:name, assigns.field.name || assigns.name)
       |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
       |> process_input_id()
 

@@ -1,14 +1,13 @@
 defmodule BrandoAdmin.Content.ModuleUpdateLive do
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
-  # use Phoenix.HTML
 
   import Brando.Gettext
-  import Ecto.Changeset
 
+  alias Ecto.Changeset
   alias Brando.Villain
   alias Brando.Content.Module.Ref
-  alias Brando.Villain.Blocks
+  alias Brando.Content.Var
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -92,9 +91,9 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    vars = get_field(changeset, :vars)
+    vars = Changeset.get_field(changeset, :vars)
     sorted_vars = Enum.map(order_indices, &Enum.at(vars, &1))
-    updated_changeset = put_change(changeset, :vars, sorted_vars)
+    updated_changeset = Changeset.put_change(changeset, :vars, sorted_vars)
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -109,7 +108,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    refs = get_field(changeset, :refs)
+    refs = Changeset.get_field(changeset, :refs)
 
     block_module =
       block_type
@@ -123,7 +122,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
       data: ref_data
     }
 
-    updated_changeset = put_change(changeset, :refs, [new_ref | refs])
+    updated_changeset = Changeset.put_change(changeset, :refs, [new_ref | refs])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -138,10 +137,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    refs = get_field(changeset, :refs)
+    refs = Changeset.get_field(changeset, :refs)
     filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
 
-    updated_changeset = put_change(changeset, :refs, filtered_refs)
+    updated_changeset = Changeset.put_change(changeset, :refs, filtered_refs)
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -156,12 +155,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    refs = get_field(changeset, :refs)
+    refs = Changeset.get_field(changeset, :refs)
     ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
 
     new_ref = Map.put(ref_to_dupe, :name, Brando.Utils.random_string(5))
 
-    updated_changeset = put_change(changeset, :refs, refs ++ [new_ref])
+    updated_changeset = Changeset.put_change(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -176,17 +175,17 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    vars = get_field(changeset, :vars) || []
+    vars = Changeset.get_field(changeset, :vars) || []
     var_type = var_type |> String.to_existing_atom()
 
     new_var =
-      %Brando.Content.Var{
+      %Var{
         key: Brando.Utils.random_string(5),
         label: "Label",
         type: var_type
       }
 
-    updated_changeset = put_change(changeset, :vars, [new_var | vars])
+    updated_changeset = Changeset.put_change(changeset, :vars, [new_var | vars])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -202,10 +201,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    vars = get_field(changeset, :vars)
+    vars = Changeset.get_field(changeset, :vars)
     filtered_vars = Enum.reject(vars, &(&1.key == var_key))
 
-    updated_changeset = put_change(changeset, :vars, filtered_vars)
+    updated_changeset = Changeset.put_change(changeset, :vars, filtered_vars)
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -221,12 +220,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    vars = get_field(changeset, :vars)
+    vars = Changeset.get_field(changeset, :vars)
     var_to_dupe = Enum.find(vars, &(&1.key == var_key))
 
     new_var = Map.put(var_to_dupe, :key, Brando.Utils.random_string(5))
 
-    updated_changeset = put_change(changeset, :vars, vars ++ [new_var])
+    updated_changeset = Changeset.put_change(changeset, :vars, vars ++ [new_var])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply,
@@ -257,12 +256,12 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     updated_changeset = %{changeset | action: :update}
 
     changeset =
-      if Ecto.Changeset.changed?(updated_changeset, :svg) do
-        svg = Ecto.Changeset.get_change(updated_changeset, :svg)
+      if Changeset.changed?(updated_changeset, :svg) do
+        svg = Changeset.get_change(updated_changeset, :svg)
 
         if String.starts_with?(svg, "<svg") do
           updated_svg = Base.encode64(svg, padding: false)
-          put_change(updated_changeset, :svg, updated_svg)
+          Changeset.put_change(updated_changeset, :svg, updated_svg)
         else
           updated_changeset
         end
@@ -277,7 +276,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         traversed_errors =
-          traverse_errors(changeset, fn
+          Changeset.traverse_errors(changeset, fn
             {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
             msg -> msg
           end)
@@ -301,7 +300,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    vars = get_field(changeset, :vars) || []
+    vars = Changeset.get_field(changeset, :vars) || []
 
     vars =
       Enum.reduce(vars, [], fn
@@ -312,7 +311,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
                 var,
                 [Access.key(:options)],
                 (var.options || []) ++
-                  [%Brando.Content.Var.Option{label: "label", value: "option"}]
+                  [%Var.Option{label: "label", value: "option"}]
               )
             ]
 
@@ -320,8 +319,10 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           acc ++ [var]
       end)
 
-    updated_changeset = put_change(changeset, :vars, vars)
-    updated_form = to_form(updated_changeset, [])
+    updated_form =
+      changeset
+      |> Changeset.put_change(:vars, vars)
+      |> to_form([])
 
     {:noreply, assign(socket, :form, updated_form)}
   end

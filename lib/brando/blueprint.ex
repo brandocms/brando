@@ -103,6 +103,7 @@ defmodule Brando.Blueprint do
   ```
 
   """
+  alias Brando.Exception.BlueprintError
   alias Ecto.Changeset
 
   alias Brando.Blueprint.Constraints
@@ -640,6 +641,17 @@ defmodule Brando.Blueprint do
         def __relation__(unquote(rel.name)) do
           unquote(Macro.escape(rel))
         end
+      end
+
+      def __relation__(unknown_relation) do
+        raise BlueprintError,
+          message: """
+          Unknown relation: #{inspect(unknown_relation)} in schema #{inspect(__MODULE__)}
+
+          Check that you are not referencing a relation that does not exists,
+          usually this is due to a typo when declaring your forms.
+
+          """
       end
 
       unless Enum.empty?(@all_relations) do

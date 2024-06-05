@@ -104,6 +104,7 @@ for lang <- languages do
           type: :module,
           uid: Brando.Utils.generate_uid(),
           module_id: m1.id,
+          source: Elixir.Brando.Pages.Page.Blocks,
           multi: false,
           refs: [
             %Brando.Content.Module.Ref{

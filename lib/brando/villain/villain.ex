@@ -374,6 +374,8 @@ defmodule Brando.Villain do
   @doc """
   Remove all blocks matching `ids` that belong to `entry`
   """
+  def reject_blocks_belonging_to_entry([], _), do: %{}
+
   def reject_blocks_belonging_to_entry(ids, entry) do
     entry_schema = entry.__struct__
 
@@ -687,6 +689,12 @@ defmodule Brando.Villain do
     |> distinct(true)
     |> Brando.repo().all()
     |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
+      require Logger
+
+      Logger.error("""
+      ==> source: #{inspect(source)} // casted_module: #{inspect(Brando.Type.Module.cast(source))}
+      """)
+
       {:ok, casted_module} = Brando.Type.Module.cast(source)
       Map.update(acc, casted_module, [id], &(&1 ++ [id]))
     end)

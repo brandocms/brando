@@ -21,20 +21,19 @@
     position: relative;
     
     &.compact {
-      height: 56px;
+      height: 51px;
       margin: 0;
       display: flex;
-      justify-content: center;      
+      justify-content: center;
+      width: 50px;
+      background: var(--brando-color-input);
+      /* box-shadow: 1px 1px 5px #d9d9d9, -5px -5px 10px #ffffff; */
+      cursor: pointer;
 
-      svg {
+      > svg {
         margin-right: 0;
         margin-top: 0;
-        border-right: 5px solid transparent;
         box-sizing: content-box;
-
-        &:hover {
-          border: 5px solid #fff;
-        }
       }
     }
 

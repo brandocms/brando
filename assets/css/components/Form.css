@@ -159,10 +159,8 @@
   }
   
   .row {
-    @responsive >=ipad_portrait {
-      @grid;
-    }
-    
+    display: grid;
+    @space grid-column-gap 1;
     grid-template-columns: repeat(16, minmax(0px, 1fr));
     grid-template-rows: min-content;
 

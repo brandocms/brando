@@ -112,10 +112,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
         <div
           id={"#{@field.id}-sortable"}
           data-embeds={@embeds?}
-          phx-hook={@sequenced? && "Brando.SubFormSortable"}
+          phx-hook={@sequenced? && "Brando.SortableEmbeds"}
         >
           <.empty_subform :if={@empty_subform_fields} field={@field} />
-          <.inputs_for :let={sub_form} field={@field}>
+          <.inputs_for :let={sub_form} field={@field} skip_hidden>
             <div
               class={[
                 "subform-entry",
@@ -124,6 +124,13 @@ defmodule BrandoAdmin.Components.Form.Subform do
               ]}
               data-id={sub_form.index}
             >
+              <input type="hidden" name={sub_form[:id].name} value={sub_form[:id].value} />
+              <input type="hidden" name={sub_form[:_persistent_id].name} value={sub_form.index} />
+              <input
+                type="hidden"
+                name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
+                value={sub_form.index}
+              />
               <div class="subform-tools">
                 <.subentry_edit
                   on_click={
@@ -132,9 +139,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   open={sub_form.index in @open_entries}
                 />
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove on_click={
-                  JS.push("remove_subentry", target: @myself, value: %{index: sub_form.index})
-                } />
+                <.subentry_remove
+                  name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
+                  index={sub_form.index}
+                />
               </div>
               <.listing subform={sub_form} subform_config={@subform} />
               <div class="subform-fields">
@@ -182,8 +190,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
         class="subform"
         meta_top
       >
-        <.inputs_for :let={sub_form} field={@field}>
+        <.inputs_for :let={sub_form} field={@field} skip_hidden>
           <div class="subform-entry">
+            <Input.input type={:hidden} field={sub_form[:id]} />
+            <Input.input type={:hidden} field={sub_form[:_persistent_id]} value={sub_form.index} />
             <Subform.Field.render
               :for={input <- @subform.sub_fields}
               cardinality={:one}
@@ -209,27 +219,31 @@ defmodule BrandoAdmin.Components.Form.Subform do
         class="subform"
         meta_top
       >
-        <div id={"#{@field.name}-sortable"} data-embeds={@embeds?} phx-hook="Brando.SubFormSortable">
+        <div
+          id={"#{@field.id}-sortable"}
+          data-embeds={@embeds?}
+          phx-hook="Brando.SortableEmbeds"
+          data-sortable-handle=".subform-handle"
+          data-sortable-id={"#{@field.name}-sortable"}
+          data-sortable-selector=".subform-entry"
+        >
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field}>
-            <div
-              class={["subform-entry", @subform.style == :inline && "inline"]}
-              data-id={sub_form.index}
-            >
+            <div class={["subform-entry", @subform.style == :inline && "inline"]}>
+              <input
+                type="hidden"
+                name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
+                value={sub_form.index}
+              />
               <div class="subform-tools">
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove on_click={
-                  JS.push("remove_subentry", target: @myself, value: %{index: sub_form.index})
-                } />
+                <.subentry_remove
+                  name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
+                  index={sub_form.index}
+                />
               </div>
 
               <div class="subform-fields">
-                <Input.hidden
-                  :if={@sequenced? and !@embeds?}
-                  form={sub_form}
-                  field={:sequence}
-                  value={sub_form.index}
-                />
                 <Subform.Field.render
                   :for={input <- @subform.sub_fields}
                   cardinality={:many}
@@ -244,6 +258,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               </div>
             </div>
           </.inputs_for>
+          <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
         </div>
         <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
       </Form.field_base>
@@ -312,21 +327,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def subentry_sequence(assigns) do
     ~H"""
     <button type="button" class="subform-handle">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        width="16"
-        height="16"
-        stroke-width="1.5"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
-        />
-      </svg>
+      <.icon name="hero-arrows-up-down" />
     </button>
     """
   end
@@ -370,24 +371,19 @@ defmodule BrandoAdmin.Components.Form.Subform do
     """
   end
 
+  attr :name, :string, required: true
+  attr :index, :integer, required: true
+
   def subentry_remove(assigns) do
     ~H"""
-    <button phx-click={@on_click} type="button" class="subform-delete" phx-page-loading>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        width="16"
-        height="16"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-        />
-      </svg>
+    <button
+      name={@name}
+      type="button"
+      value={@index}
+      phx-click={JS.dispatch("change")}
+      class="subform-delete"
+    >
+      <.icon name="hero-x-mark" />
     </button>
     """
   end
@@ -430,6 +426,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
       </div>
     </div>
     """
+  end
+
+  def handle_event("reposition", _, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("edit_subentry", %{"index" => index}, socket) do

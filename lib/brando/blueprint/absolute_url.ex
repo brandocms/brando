@@ -135,13 +135,13 @@ defmodule Brando.Blueprint.AbsoluteURL do
     %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(rel)
     rel_name
   rescue
-    FunctionClauseError -> nil
+    Brando.Exception.BlueprintError -> nil
   end
 
   defp try_relation(schema, rel) when is_binary(rel) do
     %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(String.to_existing_atom(rel))
     rel_name
   rescue
-    FunctionClauseError -> nil
+    Brando.Exception.BlueprintError -> nil
   end
 end

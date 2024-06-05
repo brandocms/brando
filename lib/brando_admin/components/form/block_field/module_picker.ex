@@ -10,6 +10,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(%{event: :refresh_modules}, socket) do
+    require Logger
+
+    Logger.error("""
+    ==> REFRESH MODULES
+    """)
+
     {:ok, assign_modules(socket)}
   end
 
