@@ -27,6 +27,7 @@ defmodule Brando.HTML.Images do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
+    * `fetchpriority` - set to "high" for high fetch priority
     * `moonwalk` - set moonwalk attr
     * `media_queries` - list of media queries to add to source.
        I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
@@ -102,6 +103,7 @@ defmodule Brando.HTML.Images do
       |> add_mq(image_struct)
       |> add_dims(image_struct)
       |> add_src(image_struct)
+      |> add_fetchpriority()
       |> add_dominant_color(image_struct)
       |> add_extra_attrs()
       |> add_classes()
@@ -395,6 +397,14 @@ defmodule Brando.HTML.Images do
 
       mqs ->
         put_in(attrs, [:mq_sources], mqs)
+    end
+  end
+
+  defp add_fetchpriority(attrs) do
+    if fetchpriority = Keyword.get(attrs.opts, :fetchpriority, false) do
+      put_in(attrs, [:img, "fetchpriority"], fetchpriority)
+    else
+      attrs
     end
   end
 
