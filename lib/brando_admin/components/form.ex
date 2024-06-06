@@ -2938,6 +2938,12 @@ defmodule BrandoAdmin.Components.Form do
         |> Access.key()
         |> List.wrap()
 
+      [relation, field] ->
+        [
+          relation |> String.to_existing_atom() |> Access.key(),
+          field |> String.to_existing_atom() |> Access.key()
+        ]
+
       [relation, index, field] ->
         [
           relation |> String.to_existing_atom() |> Access.key(),
