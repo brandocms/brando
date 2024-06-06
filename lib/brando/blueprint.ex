@@ -411,14 +411,6 @@ defmodule Brando.Blueprint do
             on_replace: :delete
           )
 
-        %Asset{type: :gallery_images, name: name} ->
-          Ecto.Schema.has_many(
-            name,
-            Brando.Images.GalleryImage,
-            preload_order: [asc: :sequence],
-            on_replace: :delete_if_exists
-          )
-
         asset ->
           require Logger
           Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")
@@ -971,6 +963,16 @@ defmodule Brando.Blueprint do
       (all_required_attrs ++ all_optional_attrs ++ castable_relations ++ castable_assets)
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
+
+    require Logger
+
+    if module != schema.__struct__ do
+      Logger.error(
+        "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(module)}, schema struct: #{inspect(schema.__struct__)}"
+      )
+
+      Logger.error(inspect(schema, pretty: true))
+    end
 
     changeset =
       schema

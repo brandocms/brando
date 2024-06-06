@@ -243,23 +243,6 @@ defmodule Brando.Blueprint.Assets do
     }
   end
 
-  def build_asset(name, :gallery_images, opts) do
-    opts_map =
-      opts
-      |> Enum.into(%{})
-      |> Map.merge(%{
-        module: Brando.Images.GalleryImage,
-        sort_param: :sort_gallery_image_ids,
-        drop_param: :drop_gallery_image_ids
-      })
-
-    %Blueprint.Asset{
-      name: name,
-      type: :gallery_images,
-      opts: opts_map
-    }
-  end
-
   def build_asset(name, type, opts) do
     %Blueprint.Asset{name: name, type: type, opts: Enum.into(opts, %{})}
   end
@@ -357,20 +340,6 @@ defmodule Brando.Blueprint.Assets do
     end
   end
 
-  def run_cast_asset(
-        %{type: :gallery_images, name: name, opts: opts},
-        changeset,
-        _user
-      ) do
-    case Map.get(changeset.params, to_string(name)) do
-      "" ->
-        Changeset.put_assoc(changeset, name, nil)
-
-      _ ->
-        Changeset.cast_assoc(changeset, name, Blueprint.Utils.to_changeset_opts(:has_many, opts))
-    end
-  end
-
   ##
   ## catch all for non casted assets
   def run_cast_asset(asset, changeset, _user) do
@@ -385,11 +354,15 @@ defmodule Brando.Blueprint.Assets do
         order_by: [asc: gi.sequence],
         preload: [:image]
 
+    gallery_query =
+      from g in Brando.Images.Gallery,
+        preload: [gallery_images: ^gallery_images_query]
+
     Enum.reduce(schema.__assets__(), [], fn asset, acc ->
       case asset.type do
         :file -> [asset.name | acc]
         :image -> [asset.name | acc]
-        :gallery -> [{asset.name, gallery_images_query} | acc]
+        :gallery -> [{asset.name, gallery_query} | acc]
         _ -> acc
       end
     end)

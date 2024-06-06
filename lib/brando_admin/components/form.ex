@@ -1661,20 +1661,24 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    [^singular | rest] = Map.get(params, "_target")
+    case Map.get(params, "_target") do
+      [^singular | rest] ->
+        if has_blocks? && rest != ["__force_change"] do
+          path = string_path_to_access_path(rest)
+          change = get_in(params, rest)
+          send_updated_entry_field_to_blocks(socket, path, change)
+        end
 
-    if has_blocks? && rest != ["__force_change"] do
-      path = string_path_to_access_path(rest)
-      change = get_in(params, rest)
-      send_updated_entry_field_to_blocks(socket, path, change)
+        new_form = to_form(changeset, [])
+
+        socket
+        |> assign(:form, new_form)
+        |> maybe_fetch_root_blocks(:live_preview_update, 0)
+        |> then(&{:noreply, &1})
+
+      [_] ->
+        {:noreply, socket}
     end
-
-    new_form = to_form(changeset, [])
-
-    socket
-    |> assign(:form, new_form)
-    |> maybe_fetch_root_blocks(:live_preview_update, 0)
-    |> then(&{:noreply, &1})
   end
 
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do

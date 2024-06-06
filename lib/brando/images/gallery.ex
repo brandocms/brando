@@ -21,8 +21,14 @@ defmodule Brando.Images.Gallery do
     attribute :config_target, :text
   end
 
-  assets do
-    asset :gallery_images, :gallery_images
+  relations do
+    relation :gallery_images, :has_many,
+      module: Brando.Images.GalleryImage,
+      on_replace: :delete_if_exists,
+      preload_order: [asc: :sequence],
+      sort_param: :sort_gallery_image_ids,
+      drop_param: :drop_gallery_image_ids,
+      cast: true
   end
 
   listings do
@@ -57,10 +63,4 @@ defmodule Brando.Images.Gallery do
       )
     end
   end
-
-  @derive {Jason.Encoder,
-           only: [
-             :gallery_images,
-             :config_target
-           ]}
 end

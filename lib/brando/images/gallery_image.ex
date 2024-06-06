@@ -19,9 +19,6 @@ defmodule Brando.Images.GalleryImage do
 
   identifier "{{ entry.id }}"
 
-  attributes do
-  end
-
   relations do
     relation :gallery, :belongs_to, module: Gallery
     relation :image, :belongs_to, module: Image

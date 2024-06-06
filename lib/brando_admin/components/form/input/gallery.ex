@@ -5,11 +5,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   import Ecto.Changeset
   import Brando.Gettext
 
+  alias Brando.Images.GalleryImage
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-
-  alias Brando.Images.GalleryImage
 
   # prop form, :form
   # prop field, :atom
@@ -110,25 +109,20 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         compact={@compact}
       >
         <div class="gallery-input">
-          <%= if @gallery_images != [] do %>
-            <.inputs_for :let={gallery_form} field={@field}>
-              <Input.input type={:hidden} field={gallery_form[:id]} />
-              <Input.input type={:hidden} field={gallery_form[:config_target]} />
+          <.inputs_for :let={gallery_form} field={@field}>
+            <Input.input type={:hidden} field={gallery_form[:config_target]} />
 
-              <.inputs_for :let={gallery_image} field={gallery_form[:gallery_images]}>
-                <Input.input type={:hidden} field={gallery_image[:image_id]} />
-                <Input.input type={:hidden} field={gallery_image[:gallery_id]} />
-                <Input.input type={:hidden} field={gallery_image[:creator_id]} />
-                <Input.input
-                  type={:hidden}
-                  field={"#{gallery_form.name}[sort_gallery_image_ids][]"}
-                  value={gallery_image.index}
-                />
-              </.inputs_for>
+            <.inputs_for :let={gallery_image} field={gallery_form[:gallery_images]}>
+              <Input.input type={:hidden} field={gallery_image[:image_id]} />
+              <Input.input type={:hidden} field={gallery_image[:gallery_id]} />
+              <Input.input type={:hidden} field={gallery_image[:creator_id]} />
+              <input
+                type="hidden"
+                name={"#{gallery_form.name}[sort_gallery_image_ids][]"}
+                value={gallery_image.index}
+              />
             </.inputs_for>
-          <% else %>
-            <Input.input type={:hidden} field={@field} value="" />
-          <% end %>
+          </.inputs_for>
 
           <div class="actions">
             <button type="button" class="tiny upload-button">
@@ -178,15 +172,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                       )
                     }
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <.icon name="hero-x-mark" />
                   </button>
                 <% else %>
                   <div class="img-placeholder">
