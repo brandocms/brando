@@ -43,6 +43,9 @@ defmodule Brando.Mixfile do
       {:comeonin, "~> 5.0"},
       {:base62, "~> 1.2"},
 
+      # dsl
+      {:spark, "~> 2.0"},
+
       # monitoring
       {:sentry, "~> 10.0"},
 

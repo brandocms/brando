@@ -1,6 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Entries do
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
 
   import Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]
@@ -473,7 +472,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     available_identifiers = assigns.available_identifiers
 
     identifier =
-      Enum.find(available_identifiers, &(to_string(&1.id) == to_string(identifier_id)))
+      Enum.find(
+        available_identifiers,
+        &(to_string(&1.id) == to_string(identifier_id))
+      )
 
     schema = identifier.schema
 

@@ -720,10 +720,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp check_live_preview(schema) do
     Code.ensure_compiled!(Brando.live_preview())
-
-    function_exported?(Brando.live_preview(), :__info__, 1) &&
-      {:render, 3} in Brando.live_preview().__info__(:functions) &&
-      Brando.live_preview().has_preview_target(schema)
+    Brando.LivePreview.has_live_preview_target(schema)
   end
 
   defp assign_default_params(%{assigns: %{initial_params: initial_params}} = socket)
@@ -955,18 +952,14 @@ defmodule BrandoAdmin.Components.Form do
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
     preview_module = Brando.live_preview()
-    lp_opts = preview_module.live_preview_opts(schema)
+    entry = socket.assigns.entry
+    lp_opts = Brando.LivePreview.get_target_config(schema)
     assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
   end
 
   def render(assigns) do
     ~H"""
     <div>
-      <div>
-        <code>
-          <pre style="font-size:11;font-family:'Mono';"><%= inspect @updated_entry_assocs, pretty: true %></pre>
-        </code>
-      </div>
       <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form">
         <div class="form-content">
           <div :if={@header} class="form-header">

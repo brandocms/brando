@@ -241,7 +241,7 @@ defmodule Brando.Blueprint do
               Ecto.Schema.timestamps()
             end
 
-            def changeset(struct, attrs, sequence) do
+            def changeset(struct, attrs, _user, sequence, _opts) do
               struct
               |> cast(attrs, [:parent_id, :identifier_id])
               |> change(sequence: sequence)
