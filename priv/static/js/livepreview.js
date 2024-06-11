@@ -16,6 +16,10 @@ var MOONWALK_OVERRIDE_STYLES = `
         opacity: 1 !important;
         visibility: visible !important;
       }
+      .is-live-preview [data-smart-video][data-revealed] {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
     `
 
 function forceLazyloadAllImages(target = document) {
@@ -43,6 +47,12 @@ function forceLazyloadAllVideos(target = document) {
   target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(llVideo => {
     llVideo.src = llVideo.dataset.src
     llVideo.dataset.booted = ''
+  })
+
+  target.querySelectorAll('[data-smart-video]:not([data-revealed])').forEach(llVideo => {
+    llVideo.dataset.revealed = ''
+    llVideo.dataset.booted = ''
+    llVideo.dataset.playing = ''
   })
 }
 

@@ -167,7 +167,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class={["variable", @var[:type].value]}>
+    <div
+      id={@id}
+      class={["variable", @var[:type].value]}
+      data-size={@var[:width].value}
+      data-id={@var[:id].value}
+    >
       <%= if @should_render? do %>
         <%= if @edit do %>
           <div id={"#{@var.id}-edit"}>
@@ -205,6 +210,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     %{label: "Text", value: "text"},
                     %{label: "Image", value: "image"},
                     %{label: "File", value: "file"}
+                  ]
+                ]}
+                publish={@publish}
+              />
+
+              <.live_component
+                module={Input.Select}
+                id={"#{@var.id}-select-width"}
+                label={gettext("Width")}
+                field={@var[:width]}
+                opts={[
+                  options: [
+                    %{label: "100%", value: "full"},
+                    %{label: "50%", value: "half"},
+                    %{label: "33%", value: "third"}
                   ]
                 ]}
                 publish={@publish}
@@ -276,6 +296,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <Input.input type={:hidden} field={@var[:important]} />
             <Input.input type={:hidden} field={@var[:instructions]} />
             <Input.input type={:hidden} field={@var[:placeholder]} />
+            <Input.input type={:hidden} field={@var[:sequence]} />
 
             <.render_value_inputs
               type={@type}

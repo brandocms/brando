@@ -159,7 +159,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       require Logger
       Logger.error("=> selected_options_structs")
       selected_options = socket.assigns.selected_options
-      Enum.map(selected_options, &Ecto.Changeset.apply_changes/1)
+
+      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
+        Enum.map(selected_options, &Ecto.Changeset.apply_changes/1)
+      else
+        selected_options
+      end
     end)
   end
 
@@ -491,6 +496,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           />
         <% else %>
           <%!-- TODO: Clean up this to components --%>
+          <div><%= inspect(@relation_type) %></div>
           <%= if @relation_type in [:has_many, {:subform, :has_many}] do %>
             <div id={"#{@field.id}-selected-options"}>
               <.inputs_for :let={selected_option} field={@field}>

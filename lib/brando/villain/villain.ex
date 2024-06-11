@@ -56,6 +56,7 @@ defmodule Brando.Villain do
     html =
       entry_blocks_list
       |> Enum.reduce([], fn
+        nil, acc -> acc
         %{block: %{active: false}}, acc -> acc
         %{block: %{marked_as_deleted: true}}, acc -> acc
         %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
@@ -941,7 +942,6 @@ defmodule Brando.Villain do
     :linked_identifier,
     :page,
     :global_set,
-    :sequence,
     :table_template,
     :table_row,
     :__struct__,
@@ -1012,9 +1012,9 @@ defmodule Brando.Villain do
             :palette,
             :module,
             :children,
+            block_identifiers: :identifier,
             vars: ^vars_query,
-            table_rows: ^table_row_query,
-            block_identifiers: :identifier
+            table_rows: ^table_row_query
           ],
           order_by: [asc: :sequence]
 
@@ -1023,10 +1023,10 @@ defmodule Brando.Villain do
           preload: [
             :palette,
             :module,
+            block_identifiers: :identifier,
             vars: ^vars_query,
             table_rows: ^table_row_query,
-            children: ^sub_sub_children_query,
-            block_identifiers: :identifier
+            children: ^sub_sub_children_query
           ],
           order_by: [asc: :sequence]
 
@@ -1037,8 +1037,15 @@ defmodule Brando.Villain do
             :module,
             vars: ^vars_query,
             table_rows: ^table_row_query,
-            children: [:palette, :vars, :module, children: ^sub_children_query],
-            block_identifiers: :identifier
+            block_identifiers: :identifier,
+            children: [
+              :palette,
+              :module,
+              block_identifiers: :identifier,
+              vars: ^vars_query,
+              table_rows: ^table_row_query,
+              children: ^sub_children_query
+            ]
           ],
           order_by: [asc: :sequence]
 
@@ -1062,10 +1069,10 @@ defmodule Brando.Villain do
                    :parent,
                    :module,
                    :palette,
+                   block_identifiers: :identifier,
                    vars: ^vars_query,
                    table_rows: ^table_row_query,
-                   children: ^children_query,
-                   block_identifiers: :identifier
+                   children: ^children_query
                  ]
                ]
              )}

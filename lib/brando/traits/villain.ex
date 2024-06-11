@@ -29,7 +29,7 @@ defmodule Brando.Trait.Villain do
         """
     end
 
-    if module.__villain_fields__ == [] do
+    if module.__villain_fields__() == [] do
       raise Brando.Exception.BlueprintError,
         message: """
         Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no relations with module `:blocks` found.

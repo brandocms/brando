@@ -1232,14 +1232,14 @@ h3 {
     margin-left: 330px;
     width: calc(100vw - 330px);
     padding-left: 25px;
-    padding-right: 40px;
+    padding-right: 25px;
   }
 
   @responsive >=desktop_lg {
     margin-left: 370px;
     width: calc(100vw - 370px);
     padding-left: 25px;
-    padding-right: 40px;
+    padding-right: 25px;
   }
 }
 

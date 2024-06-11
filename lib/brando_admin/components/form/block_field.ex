@@ -348,6 +348,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
+      filter: %{parent_id: nil},
       type: :module,
       sequence: block_count + 1,
       parent_cid: socket.assigns.myself
@@ -466,19 +467,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     var_changesets =
       Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
 
-    Changeset.change(%Brando.Content.Block{children: [], block_identifiers: []}, %{
-      uid: Brando.Utils.generate_uid(),
-      type: type,
-      creator_id: user_id,
-      module_id: module_id,
-      parent_id: parent_id,
-      multi: module.wrapper,
-      source: source,
-      children: [],
-      block_identifiers: [],
-      vars: var_changesets,
-      refs: refs_with_generated_uids
-    })
+    Changeset.change(
+      %Brando.Content.Block{children: [], block_identifiers: [], table_rows: []},
+      %{
+        uid: Brando.Utils.generate_uid(),
+        type: type,
+        creator_id: user_id,
+        module_id: module_id,
+        parent_id: parent_id,
+        multi: module.wrapper,
+        source: source,
+        children: [],
+        block_identifiers: [],
+        table_rows: [],
+        vars: var_changesets,
+        refs: refs_with_generated_uids
+      }
+    )
   end
 
   def build_container(user_id, parent_id, source) do

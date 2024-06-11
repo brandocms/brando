@@ -486,7 +486,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
-    on_change = socket.assigns.on_change
 
     value = if value == "", do: nil, else: value
     form = socket.assigns.field.form
@@ -495,6 +494,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     module = changeset.data.__struct__
 
     if update_relation do
+      on_change = socket.assigns.on_change
       {update_field, fetcher_fn} = update_relation
 
       fetched_relation =

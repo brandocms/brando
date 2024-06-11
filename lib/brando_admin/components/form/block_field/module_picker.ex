@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:filter, %{parent_id: nil})
      |> assign_new(:modules_by_namespace, fn ->
        modules
        |> Brando.Utils.split_by(:namespace)
@@ -195,7 +196,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def handle_event("close_modal", _, socket) do
-    {:noreply, assign(socket, :show, false)}
+    {:noreply,
+     socket
+     |> assign(:show, false)
+     |> assign(:filter, %{parent_id: nil})}
   end
 
   def handle_event("toggle_namespace", %{"id" => namespace}, socket) do
@@ -212,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
     Logger.error("""
 
-    sending update insert_module in ModulePicker to parent_cid: #{inspect(parent_cid, pretty: true)}
+    sending update insert_block in ModulePicker to parent_cid: #{inspect(parent_cid, pretty: true)}
 
     """)
 

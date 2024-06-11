@@ -159,8 +159,46 @@ button.btn-palette {
 
   
   .block-vars {
-    padding: 10px 0 10px;
+    padding: 15px 0 10px;
     border-top: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    .variable {
+      background-color: #fff0f5a6;
+      padding: 0.5em;
+      border-radius: 10px;
+    }
+
+    .variable[data-size="full"] {
+      width: 100%;
+    }
+    .variable[data-size="half"] {
+      width: 50%;
+      flex: calc((100% - 1rem) / 2);
+      max-width: calc((100% - 1rem) / 2);
+    }
+    .variable[data-size="third"] {
+      flex: calc((100% - 2rem) / 3);
+      max-width: calc((100% - 2rem) / 3);
+    }
+
+    .variable .field-wrapper {
+      margin-bottom: 15px;
+
+      .label-wrapper {
+        margin-bottom: 10px;
+      }
+
+      .multiselect {
+        background-color: white;
+        }
+        
+      input.text {
+        background-color: white;
+      }
+    }
 
     label.control-label {
       font-size: 12px;
@@ -172,15 +210,16 @@ button.btn-palette {
     input[type="text"] {
       font-family: 'Mono';
       font-size: 14px;
-      padding: 0.5em 0.5em;
+      padding: 1em 0.7em;
+      background-color: white;
       height: auto;
     }
 
     textarea.text {
       font-family: 'Mono';
       font-size: 14px;
-      background-color: var(--brando-color-input);
-      padding: 0.5em 0.5em;
+      padding: 1em 0.7em;
+      background-color: white;
       height: auto;
     }
 

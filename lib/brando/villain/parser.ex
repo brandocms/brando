@@ -260,26 +260,34 @@ defmodule Brando.Villain.Parser do
         base_context = opts.context
         modules = opts.modules
 
-        {:ok, module} = Content.find_module(modules, id)
+        case Content.find_module(modules, id) do
+          {:ok, module} ->
+            base_context = opts.context
+            processed_vars = process_vars(block.vars)
+            processed_refs = process_refs(block.refs)
 
-        base_context = opts.context
-        processed_vars = process_vars(block.vars)
-        processed_refs = process_refs(block.refs)
+            context =
+              base_context
+              |> add_vars_to_context(processed_vars)
+              |> add_refs_to_context(processed_refs)
+              |> add_admin_to_context(opts)
+              |> add_parser_to_context(__MODULE__)
+              |> add_module_id_to_context(id)
+              |> add_entries_to_context(module, block)
+              |> add_block_to_context(module, block)
 
-        context =
-          base_context
-          |> add_vars_to_context(processed_vars)
-          |> add_refs_to_context(processed_refs)
-          |> add_admin_to_context(opts)
-          |> add_parser_to_context(__MODULE__)
-          |> add_module_id_to_context(id)
-          |> add_entries_to_context(module, block)
-          |> add_block_to_context(module, block)
+            module.code
+            |> maybe_annotate(block.uid, opts)
+            |> Villain.parse_and_render(context)
+            |> maybe_format(opts)
 
-        module.code
-        |> maybe_annotate(block.uid, opts)
-        |> Villain.parse_and_render(context)
-        |> maybe_format(opts)
+          {:error, {:module, :not_found, module_id}} ->
+            """
+            <div class="module-not-found">
+              <p>Module not found: #{module_id}</p>
+            </div>
+            """
+        end
       end
 
       defoverridable module: 2

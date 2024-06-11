@@ -155,7 +155,17 @@ defmodule Brando.Query.Mutations do
         {:ok, entry}
       end
     else
-      err -> err
+      err ->
+        require Logger
+
+        Logger.error("""
+
+        update_with_changeset failed with error:
+        #{inspect(err, pretty: true)}
+
+        """)
+
+        err
     end
   end
 

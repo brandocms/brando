@@ -21,7 +21,7 @@ defmodule Brando.Files.File do
 
   attributes do
     attribute :title, :text
-    attribute :mime_type, :string, required: true
+    attribute :mime_type, :string, default: "application/octet-stream", required: true
     attribute :filesize, :integer, required: true
     attribute :filename, :text, required: true
     attribute :config_target, :text, required: true

@@ -85,6 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:opacity, Keyword.get(assigns.opts, :opacity, false))
       |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
       |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
+      |> assign(:default, Keyword.get(assigns.opts, :default, "#000000"))
 
     assigns =
       assign_new(assigns, :palette_colors, fn ->
@@ -111,7 +112,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
         data-input={"##{@field.id}"}
-        data-color={@field.value || gettext("No color selected")}
+        data-color={@field.value || @default}
         data-opacity={@opacity}
         data-picker={@picker}
         data-palette={@palette_colors}
@@ -572,8 +573,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assigns
-      |> assign(:id, assigns.field.id || assigns.id)
-      |> assign(:name, assigns.field.name || assigns.name)
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
       |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
       |> process_input_id()
 
@@ -726,6 +727,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :debounce, :integer
   attr :monospace, :boolean
   attr :change, :any, default: nil
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
 
   def text(assigns) do
     assigns = prepare_input_component(assigns)
@@ -743,8 +746,11 @@ defmodule BrandoAdmin.Components.Form.Input do
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
-        phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
+        phx-debounce={@debounce}
+        phx-focus={@focus}
+        phx-target={@target}
+        phx-value-field={@focus && @field.field}
         phx-change={@change}
       />
     </Form.field_base>

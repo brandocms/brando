@@ -322,6 +322,9 @@
       margin-left: 0 !important;
       padding-left: 1vw;
     }
+    .child-row .status + .seq {
+      padding-left: 0 !important;
+    }
 
     .main-content .svg svg {
       width: 100%;

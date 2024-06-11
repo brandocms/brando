@@ -52,7 +52,7 @@ export default app => ({
 
     this.picker = new Picker({
       parent: parent,
-      popup: 'top',
+      popup: 'bottom',
       color: initialColor || '#000000',
       alpha: opacity,
 

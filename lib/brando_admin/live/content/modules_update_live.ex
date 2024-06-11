@@ -275,6 +275,8 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
         {:noreply, push_redirect(socket, to: "/admin/config/content/modules")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        raise "Changeset error"
+
         traversed_errors =
           Changeset.traverse_errors(changeset, fn
             {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
@@ -282,6 +284,13 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
           end)
 
         require Logger
+
+        Logger.error("""
+
+        update_module returned an error
+
+        """)
+
         Logger.error(inspect(changeset, pretty: true))
         Logger.error(inspect(changeset.errors, pretty: true))
         Logger.error(inspect(traversed_errors, pretty: true))

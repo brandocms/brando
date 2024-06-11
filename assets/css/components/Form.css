@@ -380,7 +380,7 @@
   align-items: center;
   top: 5px;
   position: sticky;
-  z-index: 99;
+  z-index: 2;
   @space padding-x 15px;
 
   @responsive $mobile {

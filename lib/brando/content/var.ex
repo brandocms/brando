@@ -50,6 +50,15 @@ defmodule Brando.Content.Var do
     # color
     attribute :color_picker, :boolean, default: true
     attribute :color_opacity, :boolean, default: false
+
+    # layout
+    attribute :width, :enum,
+      values: [
+        :full,
+        :half,
+        :third
+      ],
+      default: :full
   end
 
   relations do

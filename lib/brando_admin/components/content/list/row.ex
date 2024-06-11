@@ -544,7 +544,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def creator(assigns) do
     ~H"""
-
     """
   end
 
@@ -557,8 +556,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     assigns =
       assigns
+      |> assign(:entry_schema, entry_schema)
       |> assign_new(:alternates?, fn ->
-        entry_schema.has_trait(Trait.Translatable) and schema.has_alternates?()
+        entry_schema.has_trait(Trait.Translatable) and entry_schema.has_alternates?()
       end)
       |> assign_new(:creator?, fn -> entry_schema.has_trait(Trait.Creator) end)
       |> assign_new(:status?, fn -> entry_schema.has_trait(Trait.Status) end)
@@ -583,7 +583,15 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <div class="child-row draggable" data-id={@entry.id}>
       <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
       <.handle :if={@sortable?} />
-      <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+      <%= if @listing.component do %>
+        <%= Phoenix.LiveView.TagEngine.component(
+          @listing.component,
+          [entry: @entry],
+          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+        ) %>
+      <% else %>
+        <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+      <% end %>
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
       <.entry_menu

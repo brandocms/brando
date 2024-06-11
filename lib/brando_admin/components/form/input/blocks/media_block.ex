@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias Ecto.Changeset
 
   # prop block, :form
   # prop base_form, :form
@@ -224,19 +225,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     """
   end
 
-  def handle_event(
-        "select_block",
-        %{"block" => block},
-        %{assigns: %{data_field: data_field, base_form: form, block: block_form}} =
-          socket
-      ) do
-    # replace block
-    changeset = form.source
-    uid = block_form[:uid].value
-    block_data = block_form[:data].value
+  def handle_event("select_block", %{"block" => selected_block_type}, socket) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
 
-    new_block =
-      case block do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    require Logger
+
+    Logger.error("""
+    => selected [#{selected_block_type}]
+
+    templates?: #{inspect(block_data, pretty: true)}
+
+    transform!
+
+    block
+
+    #{inspect(block, pretty: true)}
+
+    """)
+
+    new_ref_block =
+      case selected_block_type do
         "picture" ->
           %Brando.Villain.Blocks.PictureBlock{
             uid: Brando.Utils.generate_uid(),
@@ -266,17 +279,72 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           }
       end
 
-    updated_changeset =
-      Brando.Villain.replace_block_in_changeset(changeset, data_field, uid, new_block)
+    send_update(target, %{
+      event: "update_ref",
+      ref: new_ref_block,
+      ref_name: ref_name
+    })
 
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
+    # send_update(target, %{event: "update_ref_data", ref_data: new_ref_block, ref_name: ref_name})
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    # {:ok, image} = Brando.Images.get_image(id)
+
+    # new_data =
+    #   block_data
+    #   |> Map.merge(image)
+    #   |> Map.from_struct()
+    #   |> Map.take(@fields_to_take)
+
+    # send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
+    # {:noreply, socket}
+
+    # # replace block
+    # changeset = form.source
+    # uid = block_form[:uid].value
+    # block_data = block_form[:data].value
+
+    # new_block =
+    #   case block do
+    #     "picture" ->
+    #       %Brando.Villain.Blocks.PictureBlock{
+    #         uid: Brando.Utils.generate_uid(),
+    #         type: "picture",
+    #         data: block_data.template_picture
+    #       }
+
+    #     "video" ->
+    #       %Brando.Villain.Blocks.VideoBlock{
+    #         uid: Brando.Utils.generate_uid(),
+    #         type: "video",
+    #         data: block_data.template_video
+    #       }
+
+    #     "gallery" ->
+    #       %Brando.Villain.Blocks.GalleryBlock{
+    #         uid: Brando.Utils.generate_uid(),
+    #         type: "gallery",
+    #         data: block_data.template_gallery
+    #       }
+
+    #     "svg" ->
+    #       %Brando.Villain.Blocks.SvgBlock{
+    #         uid: Brando.Utils.generate_uid(),
+    #         type: "svg",
+    #         data: block_data.template_svg
+    #       }
+    #   end
+
+    # updated_changeset =
+    #   Brando.Villain.replace_block_in_changeset(changeset, data_field, uid, new_block)
+
+    # schema = changeset.data.__struct__
+    # form_id = "#{schema.__naming__().singular}_form"
+
+    # send_update(BrandoAdmin.Components.Form,
+    #   id: form_id,
+    #   action: :update_changeset,
+    #   changeset: updated_changeset
+    # )
 
     {:noreply, socket}
   end
