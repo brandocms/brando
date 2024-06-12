@@ -956,6 +956,12 @@ defmodule Brando.Blueprint do
       ) do
     start = System.monotonic_time()
 
+    require Logger
+
+    Logger.error("""
+    => running changeset for #{inspect(module)}
+    """)
+
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
@@ -1022,8 +1028,24 @@ defmodule Brando.Blueprint do
 
   def maybe_sequence(changeset, module, sequence) do
     if module.has_trait(Brando.Trait.Sequenced) do
+      require Logger
+
+      Logger.error("""
+      -- maybe_sequence
+      #{inspect(module)}
+      - id: #{Changeset.get_field(changeset, :id)}
+      - #{inspect(sequence)}
+      #{inspect(changeset, pretty: true)}
+      """)
+
       Changeset.change(changeset, sequence: sequence)
     else
+      require Logger
+
+      Logger.error("""
+      -- DONT sequence #{inspect(module)} - #{inspect(sequence)}
+      """)
+
       changeset
     end
   end

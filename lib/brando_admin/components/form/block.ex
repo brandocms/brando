@@ -329,8 +329,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         else
           updated_block_changeset =
             changeset
-            |> Changeset.get_field(:block)
-            |> Changeset.change()
+            |> Changeset.get_assoc(:block)
             |> Changeset.put_assoc(
               :children,
               Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
@@ -416,14 +415,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(
-        %{
-          event: "update_ref",
-          ref_name: ref_name,
-          ref: new_ref
-        },
-        socket
-      ) do
+  def update(%{event: "update_ref", ref_name: ref_name, ref: new_ref_data}, socket) do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -437,15 +429,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     new_refs =
       Enum.map(refs, fn ref ->
         if Changeset.get_field(ref, :name) == ref_name do
-          require Logger
+          new_ref_data_cs = Changeset.change(new_ref_data, %{uid: Brando.Utils.generate_uid()})
 
-          Logger.error("""
-          changing ref's data to #{inspect(new_ref, pretty: true)}
-          """)
-
-          new_ref_cs = Changeset.change(new_ref)
-
-          Changeset.force_change(ref, :data, new_ref_cs)
+          ref
+          |> Changeset.force_change(:data, new_ref_data_cs)
+          |> Changeset.force_change(:id, Ecto.UUID.generate())
+          |> Map.put(:action, nil)
+          |> Changeset.apply_changes()
         else
           ref
         end
@@ -477,6 +467,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, new_form)
+    |> send_form_to_parent_stream()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
@@ -496,32 +487,40 @@ defmodule BrandoAdmin.Components.Form.Block do
     refs = Changeset.get_embed(block_changeset, :refs)
 
     new_refs =
-      Enum.map(refs, fn ref ->
-        if Changeset.get_field(ref, :name) == ref_name do
-          require Logger
+      Enum.reduce(refs, [], fn
+        %Changeset{action: :replace}, acc ->
+          acc
 
-          Logger.error("""
-          uid: #{uid}
+        ref, acc ->
+          if Changeset.get_field(ref, :name) == ref_name do
+            require Logger
 
-          update_ref_data
-          -> #{inspect(ref_name)}
+            Logger.error("""
+            uid: #{uid}
 
-          changing ref's data to #{inspect(ref_data, pretty: true)}
+            update_ref_data
+            -> #{inspect(ref_name)}
 
-          """)
+            ref before:
 
-          block =
-            ref
-            |> Changeset.get_field(:data)
-            |> Changeset.change()
+            #{inspect(ref, pretty: true)}
 
-          updated_block =
-            Changeset.put_embed(block, :data, ref_data)
+            changing ref's data to #{inspect(ref_data, pretty: true)}
 
-          Changeset.force_change(ref, :data, updated_block)
-        else
-          ref
-        end
+            """)
+
+            block =
+              ref
+              |> Changeset.get_field(:data)
+              |> Changeset.change()
+
+            updated_block =
+              Changeset.put_embed(block, :data, ref_data)
+
+            acc ++ List.wrap(Changeset.force_change(ref, :data, updated_block))
+          else
+            acc ++ List.wrap(ref)
+          end
       end)
 
     updated_changeset =
@@ -742,6 +741,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:is_datasource?, fn -> false end)
     |> assign_new(:has_table_template?, fn -> false end)
     |> assign_new(:table_template, fn -> nil end)
+    |> assign_new(:table_template_name, fn -> nil end)
     |> assign_new(:module_datasource_module, fn -> nil end)
     |> assign_new(:module_datasource_module_label, fn -> nil end)
     |> assign_new(:module_datasource_type, fn -> nil end)
@@ -788,6 +788,11 @@ defmodule BrandoAdmin.Components.Form.Block do
               })
 
             table_template
+          end
+        end)
+        |> assign_new(:table_template_name, fn %{table_template: table_template} ->
+          if table_template do
+            table_template.name
           end
         end)
         |> assign_new(:module_datasource_module, fn -> module.datasource_module end)
@@ -1041,6 +1046,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         multi={true}
         is_datasource?={@is_datasource?}
         has_table_template?={@has_table_template?}
+        table_template_name={@table_template_name}
         module_class={@module_class}
         block_module={@block_module}
         vars={@vars}
@@ -1051,7 +1057,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         insert_multi_block={JS.push("insert_block_entry", value: %{multi: true}, target: @myself)}
         insert_child_block={JS.push("insert_block", value: %{multi: true}, target: @myself)}
         has_children?={@has_children?}
-        module_name={"multi — #{@module_name}"}
+        module_name={@module_name}
       >
         <div
           :if={@has_children?}
@@ -1113,6 +1119,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
         has_table_template?={@has_table_template?}
+        table_template_name={@table_template_name}
         target={@myself}
         module_class={@module_class}
         block_module={@block_module}
@@ -1143,6 +1150,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
         has_table_template?={@has_table_template?}
+        table_template_name={@table_template_name}
         target={@myself}
         module_class={@module_class}
         block_module={@block_module}
@@ -1410,7 +1418,6 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
-                has_table_template?={@has_table_template?}
                 module_datasource_module_label={@module_datasource_module_label}
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
@@ -1428,6 +1435,8 @@ defmodule BrandoAdmin.Components.Form.Block do
                 liquid_splits={@liquid_splits}
                 module_class={@module_class}
                 parent_uploads={@parent_uploads}
+                has_table_template?={@has_table_template?}
+                table_template_name={@table_template_name}
                 target={@target}
               />
             </.inputs_for>
@@ -1444,7 +1453,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               target={@target}
               is_ref?={false}
               is_datasource?={@is_datasource?}
-              has_table_template?={@has_table_template?}
               module_datasource_module_label={@module_datasource_module_label}
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
@@ -1461,6 +1469,8 @@ defmodule BrandoAdmin.Components.Form.Block do
               block_form={@form}
               liquid_splits={@liquid_splits}
               module_class={@module_class}
+              has_table_template?={@has_table_template?}
+              table_template_name={@table_template_name}
               parent_uploads={@parent_uploads}
               target={@target}
             />
@@ -1487,7 +1497,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
         <.vars vars={@block_form[:vars]} uid={@uid} target={@target} />
-
+        <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
+          <.table
+            block_data={@block_form}
+            uid={@uid}
+            target={@target}
+            table_template_name={@table_template_name}
+          />
+        </div>
         <%= for split <- @liquid_splits do %>
           <%= case split do %>
             <% {:ref, ref} -> %>
@@ -1572,6 +1589,9 @@ defmodule BrandoAdmin.Components.Form.Block do
             instructions={gettext("Anchor available to block.")}
           />
           <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} />
+          <div>
+            UID: <span class="text-mono"><%= @uid %></span>
+          </div>
         </div>
         <div class="panel">
           <h2 class="titlecase">Vars</h2>
@@ -1692,6 +1712,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :target, :any, required: true
 
   def ref(assigns) do
+    refs = Changeset.get_embed(assigns.refs_field.form.source, :refs, :struct)
+    ref_names = Enum.map(refs, & &1.name)
+    ref_found = Enum.member?(ref_names, assigns.ref_name)
+
     # find the ref in the refs
     ref_forms = Brando.Utils.forms_from_field(assigns.refs_field)
 
@@ -1703,10 +1727,16 @@ defmodule BrandoAdmin.Components.Form.Block do
     assigns =
       assigns
       |> assign(:ref_form, ref_form)
-      |> assign(:ref_forms, ref_forms)
+      |> assign(:ref_found, ref_found)
+      |> assign(:ref_names, ref_names)
 
     ~H"""
-    <%= if @ref_form do %>
+    <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
+      <%= if ref_form[:name].value == @ref_name do %>
+      <% end %>
+    </.inputs_for>
+
+    <%= if @ref_found do %>
       <section b-ref={@ref_form[:name].value}>
         <.polymorphic_embed_inputs_for :let={block} field={@ref_form[:data]}>
           <.dynamic_block
@@ -1730,9 +1760,9 @@ defmodule BrandoAdmin.Components.Form.Block do
         is missing!<br /><br />
         If the module has been changed, this block might be out of sync!<br /><br />
         Available refs are:<br /><br />
-        <%= for {%{data: %{name: ref_name}}, _} <- @ref_forms do %>
+        <div :for={ref_name <- @ref_names}>
           &rarr; <%= ref_name %><br />
-        <% end %>
+        </div>
       </section>
     <% end %>
     """
@@ -2321,9 +2351,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           target={@target}
         />
       </div>
-      <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
-        <.table block_data={@block} uid={@uid} target={@target} />
-      </div>
     </div>
     """
   end
@@ -2337,12 +2364,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     <div class="table-block">
       <%= if Enum.empty?(@block_data[:table_rows].value) do %>
         <div class="empty">
-          <figure>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path fill="none" d="M0 0h24v24H0z" /><path d="M14 10h-4v4h4v-4zm2 0v4h3v-4h-3zm-2 9v-3h-4v3h4zm2 0h3v-3h-3v3zM14 5h-4v3h4V5zm2 0v3h3V5h-3zm-8 5H5v4h3v-4zm0 9v-3H5v3h3zM8 5H5v3h3V5zM4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-            </svg>
-          </figure>
           <div class="instructions">
+            <div class="table-template">
+              <.icon name="hero-table-cells" /> <%= gettext("Table") %> [<%= @table_template_name %>]
+            </div>
+            <p>
+              <%= gettext("This block implements tabular data, but the table is empty.") %><br />
+              <%= gettext("Click the 'add row' button below to get started.") %>
+            </p>
             <button
               type="button"
               class="tiny"
@@ -2423,6 +2452,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  def handle_event("duplicate_block", _, socket) do
+    changeset = socket.assigns.form.source
+    uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+    send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
+
+    {:noreply, socket}
+  end
+
   def handle_event("add_table_row", _, socket) do
     uid = socket.assigns.uid
     belongs_to = socket.assigns.belongs_to
@@ -2440,6 +2478,16 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
     new_rows = current_rows ++ List.wrap(new_row)
+
+    require Logger
+
+    Logger.error("""
+
+    table new_rows
+    #{inspect(new_rows, pretty: true)}
+
+    """)
+
     updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
 
     updated_form =
@@ -2877,6 +2925,16 @@ defmodule BrandoAdmin.Components.Form.Block do
         as: "entry_block",
         id: "entry_block_form-#{uid}"
       )
+
+    require Logger
+
+    Logger.error("""
+
+    validate entry_block
+
+    #{inspect(updated_form.source.changes, pretty: true)}
+
+    """)
 
     socket
     |> assign(:form, updated_form)

@@ -109,7 +109,9 @@ defmodule Brando.Trait.Sequenced do
         # set as highest sequence on insert
         language = Changeset.get_field(cs, :language)
         seq = get_highest_sequence(module, language)
+
         Changeset.force_change(cs, :sequence, seq)
+        |> dbg
 
       cs ->
         cs

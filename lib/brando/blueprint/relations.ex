@@ -260,11 +260,19 @@ defmodule Brando.Blueprint.Relations do
       _ ->
         opts = Map.put(opts, :with, &module.changeset(&1, &2, user, &3, []))
 
+        require Logger
+
+        Logger.error("""
+        opts: #{inspect(name)} - #{inspect(module)}
+        #{inspect(opts, pretty: true)}
+        """)
+
         cast_assoc(
           changeset,
           name,
           to_changeset_opts(:has_many, opts)
         )
+        |> dbg
     end
   end
 

@@ -1,15 +1,12 @@
 .table-block {
+  margin-bottom: 15px;
   .empty {
     background-color: var(--brando-color-peach);
     color: var(--brando-color-dark);
     flex-direction: column;
-    max-width: 400px;
-    margin: 0 auto;
     display: flex;
-    align-items: center;
-    text-align: center;
-    padding: 3vw;
-    border-radius: 25px;
+    padding: 12px 15px 15px;
+    border-radius: 12px;
 
     &.hidden {
       display: none !important;
@@ -34,8 +31,21 @@
     .instructions {
       font-size: 16px;
 
+      .table-template {
+        display: flex;
+        align-items: center;
+        gap: 0.8em;
+        font-family: 'Mono';
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      p {
+        margin-top: 15px;
+      }
+
       button {
-        margin-top: 10px;
+        margin-top: 20px;
       }
     }
   }
@@ -68,6 +78,10 @@
           @color bg white;
         }
       }
+    }
+
+    .variable[data-size="full"] {
+      width: 100%;
     }
 
     .subform-tools {

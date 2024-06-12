@@ -19,6 +19,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&{:ok, &1})
   end
 
+  def update(%{event: "duplicate_block", uid: uid, changeset: changeset}, socket) do
+    # find the position of the block to duplicate
+    block_list = socket.assigns.block_list
+    idx = Enum.find_index(block_list, &(&1 == uid))
+
+    # remove id from changeset and set action to :insert
+    block_cs = Changeset.get_assoc(changeset, :block)
+
+    updated_block_cs =
+      block_cs
+      |> Changeset.put_change(:id, nil)
+      |> Changeset.put_change(:uid, Brando.Utils.generate_uid())
+      |> remove_pk_from_vars()
+
+    children = Changeset.get_assoc(updated_block_cs, :children)
+
+    require Logger
+
+    Logger.error("""
+
+    duplicate_block -- children #{inspect(children, pretty: true)}
+
+    """)
+
+    {:ok, socket}
+  end
+
+  defp remove_pk_from_vars(changeset) do
+    vars = Changeset.get_assoc(changeset, :vars)
+    vars_without_pk = Enum.map(vars, &Changeset.put_change(&1, :id, nil))
+    Changeset.put_change(changeset, :vars, vars_without_pk)
+  end
+
   def update(%{event: "delete_block", uid: uid}, socket) do
     root_changesets = socket.assigns.root_changesets
     block_list = socket.assigns.block_list

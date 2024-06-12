@@ -75,8 +75,10 @@ defmodule Brando.Content.Module do
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
-      on_replace: :delete_if_exists,
-      cast: true
+      on_replace: :delete,
+      cast: true,
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
 
     relation :blocks, :has_many, module: Brando.Content.Block
   end
