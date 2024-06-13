@@ -45,8 +45,16 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     file = assigns.field.value
 
     file_name =
-      (is_map(file) && !is_struct(file, Ecto.Association.NotLoaded) && file.filename) ||
-        "<unknown>"
+      cond do
+        is_map(file) && !is_struct(file, Ecto.Association.NotLoaded) ->
+          file.filename
+
+        is_struct(file, Ecto.Changeset) ->
+          Ecto.Changeset.get_field(file, :filename)
+
+        true ->
+          "<unknown>"
+      end
 
     {:ok,
      socket

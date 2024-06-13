@@ -81,6 +81,8 @@
   margin-bottom: 15px;
   @space padding-x 20px;
   @space padding-top 16px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
 
   .header-wrap {
     margin-right: 50px;
@@ -136,7 +138,7 @@
 
 .modal-content {
   color: var(--brando-color-dark);
-  background-color: #ffffffed;
+  background-color: #ffffff;
   background-clip: padding-box;
   border: none;
   display: flex;
@@ -258,6 +260,7 @@
   @space padding-x 20px;
   padding-top: 15px;
   justify-content: flex-end;
+  border-top: 1px solid #eee;
 
   button.secondary {
     margin-top: 0;

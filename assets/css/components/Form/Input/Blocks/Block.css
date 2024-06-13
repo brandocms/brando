@@ -160,26 +160,33 @@ button.btn-palette {
   
   .block-vars {
     border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     margin-bottom: 15px;
     padding-top: 15px;
+    padding-bottom: 15px;
 
     .variable {
-      background-color: rgb(252 250 250 / 90%);
-      padding: 0.5em;
-      border-radius: 10px;
+      padding: 0.5em 0.75em 0;
+
+      &:nth-of-type(2), 
+      &:nth-of-type(3) {
+        border-left: 1px solid #eee;
+      }
     }
 
     .variable[data-size="full"] {
       width: 100%;
     }
+
     .variable[data-size="half"] {
       width: 50%;
       flex: calc((100% - 1rem) / 2);
       max-width: calc((100% - 1rem) / 2);
     }
+
     .variable[data-size="third"] {
       flex: calc((100% - 2rem) / 3);
       max-width: calc((100% - 2rem) / 3);
@@ -190,14 +197,18 @@ button.btn-palette {
 
       .label-wrapper {
         margin-bottom: 10px;
+
+        span {
+          text-decoration: underline;
+        }
       }
 
       .multiselect {
-        background-color: white;
-        }
+        background-color: #fafafa;
+      }
         
       input.text {
-        background-color: white;
+        background-color: #fafafa;
       }
     }
 
@@ -480,6 +491,14 @@ button.btn-palette {
       display: block;
       font-weight: bold;
     }
+
+    span.description {
+      background-color: #ffd70078;
+      margin-left: 7px;
+      border: 1px solid;
+      padding: 0 5px;
+      border-radius: 10px;
+    }
   }
 
   .block-info {
@@ -512,8 +531,7 @@ button.btn-palette {
       }
 
       &:hover {
-        background-color: var(--brando-color-white);
-        border: 1px solid var(--brando-color-dark);
+        background-color: gold;
         color: var(--brando-color-dark);
         border-radius: 7px;
       }

@@ -52,8 +52,12 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, nil, id, ref_name, _, _),
     do: "<!-- REF #{ref_name} missing // module: #{id}. -->"
 
-  defp render_ref(_, %{hidden: true}, _id, _ref_name, _, _), do: "<!-- h -->"
-  defp render_ref(_, %{data: %{hidden: true}}, _id, _ref_name, _, _), do: "<!-- h -->"
+  defp render_ref(_, %{hidden: true}, _id, ref_name, _, _), do: "<!-- h[[#{ref_name}]] -->"
+  defp render_ref(_, %{data: %{hidden: true}}, _id, ref_name, _, _), do: "<!-- h[#{ref_name}] -->"
+
+  defp render_ref(_, %{data: %{active: false}}, _id, ref_name, _, _),
+    do: "<!-- !a[#{ref_name}] -->"
+
   defp render_ref(_, %{deleted: true}, _id, _ref_name, _, _), do: "<!-- d -->"
   defp render_ref(_, %{active: false}, _id, _ref_name, _, _), do: "<!-- !a -->"
 

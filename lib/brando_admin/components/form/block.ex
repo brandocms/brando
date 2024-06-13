@@ -1731,29 +1731,28 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign(:ref_names, ref_names)
 
     ~H"""
-    <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
-      <%= if ref_form[:name].value == @ref_name do %>
-      <% end %>
-    </.inputs_for>
-
     <%= if @ref_found do %>
-      <section b-ref={@ref_form[:name].value}>
-        <.polymorphic_embed_inputs_for :let={block} field={@ref_form[:data]}>
-          <.dynamic_block
-            id={block[:uid].value}
-            block_id={block[:uid].value}
-            is_ref?={true}
-            ref_name={@ref_form[:name].value}
-            ref_description={@ref_form[:description].value}
-            block={block}
-            parent_uploads={@parent_uploads}
-            target={@target}
-          />
-        </.polymorphic_embed_inputs_for>
-        <Input.input type={:hidden} field={@ref_form[:description]} />
-        <Input.input type={:hidden} field={@ref_form[:name]} />
-        <Input.input type={:hidden} field={@ref_form[:id]} />
-      </section>
+      <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
+        <%= if ref_form[:name].value == @ref_name do %>
+          <section b-ref={ref_form[:name].value}>
+            <.polymorphic_embed_inputs_for :let={block} field={ref_form[:data]}>
+              <.dynamic_block
+                id={block[:uid].value}
+                block_id={block[:uid].value}
+                is_ref?={true}
+                ref_name={ref_form[:name].value}
+                ref_description={ref_form[:description].value}
+                block={block}
+                parent_uploads={@parent_uploads}
+                target={@target}
+              />
+            </.polymorphic_embed_inputs_for>
+            <Input.input type={:hidden} field={ref_form[:description]} />
+            <Input.input type={:hidden} field={ref_form[:name]} />
+            <Input.input type={:hidden} field={ref_form[:id]} />
+          </section>
+        <% end %>
+      </.inputs_for>
     <% else %>
       <section class="alert danger">
         Ref <code><%= @ref_name %></code>
@@ -2250,8 +2249,8 @@ defmodule BrandoAdmin.Components.Form.Block do
           <span :if={@is_datasource?} class="datasource">
             <%= gettext("Datamodule") %> |
           </span>
-          <span :if={@type == :module}>
-            <%= gettext("Module") %> |
+          <span :if={@type == :module} phx-no-format>
+            <%= if @multi do %>Multi <% end %><%= gettext("Module") %> |
           </span>
           <span :if={@type == :module_entry}>
             <%= gettext("Entry") %> |
@@ -2259,7 +2258,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           <span :if={@type == :container}>
             <%= gettext("Container") %> |
           </span>
-          <span :if={@multi}>[multi] | </span>
         </span>
         <span :if={@description} class="block-name">
           <%= render_slot(@description) %>
@@ -2284,11 +2282,11 @@ defmodule BrandoAdmin.Components.Form.Block do
             </div>
           <% end %>
           <span :if={@block[:description].value} class="description">
-            &nbsp;<span class="arrow">&rarr;</span>&nbsp;<%= @block[:description].value %>
+            <%= @block[:description].value %>
           </span>
         <% else %>
           <span :if={@block[:description].value} class="description">
-            &nbsp;<span class="arrow">&rarr;</span>&nbsp;<%= @block[:description].value %>
+            <%= @block[:description].value %>
           </span>
         <% end %>
       </div>

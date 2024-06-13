@@ -56,7 +56,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def render(assigns) do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
-      <%= inspect(@uid) %>
       <.inputs_for :let={block_data} field={@block[:data]}>
         <Block.block
           id={"block-#{@uid}-base"}
@@ -109,11 +108,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     >
       <input type="hidden" name={array_name} value={array_value} />
     </Form.array_inputs>
-
-    <div>
-      <%= inspect(@available_blocks, pretty: true) %><br />
-      <%= inspect(@block_data[:available_blocks].value, pretty: true) %>
-    </div>
 
     <button
       :for={block_type <- @available_blocks}
