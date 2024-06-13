@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Menu do
           generated: true,
           bind_quoted: [schema: schema] do
       domain = schema.__naming__().domain
-      snake_domain = domain |> Recase.to_snake()
+      snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
       msgid = Brando.Utils.humanize(plural, :downcase)
@@ -191,7 +191,7 @@ defmodule BrandoAdmin.Menu do
           generated: true,
           bind_quoted: [schema: schema] do
       domain = schema.__naming__().domain
-      snake_domain = domain |> Recase.to_snake()
+      snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
       msgid = Brando.Utils.humanize(plural, :downcase)

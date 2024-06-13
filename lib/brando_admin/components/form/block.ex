@@ -137,10 +137,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_sequence", sequence: sequence}, socket) do
-    block_module = socket.assigns.block_module
-    level = socket.assigns.level
     belongs_to = socket.assigns.belongs_to
-    user_id = socket.assigns.current_user_id
     parent_cid = socket.assigns.parent_cid
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
@@ -1716,17 +1713,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     ref_names = Enum.map(refs, & &1.name)
     ref_found = Enum.member?(ref_names, assigns.ref_name)
 
-    # find the ref in the refs
-    ref_forms = Brando.Utils.forms_from_field(assigns.refs_field)
-
-    ref_form =
-      Enum.find(ref_forms, fn %{source: changeset} ->
-        Changeset.get_field(changeset, :name) == assigns.ref_name
-      end)
-
     assigns =
       assigns
-      |> assign(:ref_form, ref_form)
       |> assign(:ref_found, ref_found)
       |> assign(:ref_names, ref_names)
 
@@ -1792,7 +1780,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_type =
           (type_atom
            |> to_string
-           |> Recase.to_pascal()) <> "Block"
+           |> Macro.camelize()) <> "Block"
 
         block_module = Module.concat([Blocks, block_type])
 
@@ -2182,7 +2170,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def plus(assigns) do
     ~H"""
     <button class="block-plus" type="button" phx-click={@click}>
-      <.icon name="hero-plus-circle-mini" />
+      <.icon name="hero-plus" />
     </button>
     """
   end
@@ -2281,11 +2269,11 @@ defmodule BrandoAdmin.Components.Form.Block do
               &nbsp;|&nbsp;#<%= @block[:anchor].value %>
             </div>
           <% end %>
-          <span :if={@block[:description].value} class="description">
+          <span :if={@block[:description].value not in ["", nil]} class="description">
             <%= @block[:description].value %>
           </span>
         <% else %>
-          <span :if={@block[:description].value} class="description">
+          <span :if={@block[:description].value not in ["", nil]} class="description">
             <%= @block[:description].value %>
           </span>
         <% end %>
@@ -2450,64 +2438,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
-  def handle_event("duplicate_block", _, socket) do
-    changeset = socket.assigns.form.source
-    uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
-    send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
-
-    {:noreply, socket}
-  end
-
-  def handle_event("add_table_row", _, socket) do
-    uid = socket.assigns.uid
-    belongs_to = socket.assigns.belongs_to
-    table_template = socket.assigns.table_template
-    vars_without_pk = Brando.Villain.remove_pk_from_vars(table_template.vars)
-
-    var_changesets =
-      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
-
-    new_row = %Brando.Content.TableRow{vars: var_changesets}
-    changeset = socket.assigns.form.source
-
-    block_changeset =
-      if belongs_to == :root, do: Changeset.get_assoc(changeset, :block), else: changeset
-
-    current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
-    new_rows = current_rows ++ List.wrap(new_row)
-
-    require Logger
-
-    Logger.error("""
-
-    table new_rows
-    #{inspect(new_rows, pretty: true)}
-
-    """)
-
-    updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
-
-    updated_form =
-      if belongs_to == :root do
-        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-
-        to_form(
-          updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(
-          updated_block_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
-
-    {:noreply, assign(socket, :form, updated_form)}
-  end
-
   attr :block_data, :any, required: true
   attr :module_datasource_module_label, :string, required: true
   attr :module_datasource_type, :string, required: true
@@ -2593,6 +2523,64 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
     <% end %>
     """
+  end
+
+  def handle_event("duplicate_block", _, socket) do
+    changeset = socket.assigns.form.source
+    uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+    send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
+
+    {:noreply, socket}
+  end
+
+  def handle_event("add_table_row", _, socket) do
+    uid = socket.assigns.uid
+    belongs_to = socket.assigns.belongs_to
+    table_template = socket.assigns.table_template
+    vars_without_pk = Brando.Villain.remove_pk_from_vars(table_template.vars)
+
+    var_changesets =
+      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
+
+    new_row = %Brando.Content.TableRow{vars: var_changesets}
+    changeset = socket.assigns.form.source
+
+    block_changeset =
+      if belongs_to == :root, do: Changeset.get_assoc(changeset, :block), else: changeset
+
+    current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
+    new_rows = current_rows ++ List.wrap(new_row)
+
+    require Logger
+
+    Logger.error("""
+
+    table new_rows
+    #{inspect(new_rows, pretty: true)}
+
+    """)
+
+    updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
+
+    updated_form =
+      if belongs_to == :root do
+        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
+
+        to_form(
+          updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(
+          updated_block_changeset,
+          as: "child_block",
+          id: "child_block_form-#{uid}"
+        )
+      end
+
+    {:noreply, assign(socket, :form, updated_form)}
   end
 
   ## Identifier events
@@ -2794,7 +2782,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def handle_event(
         "reposition",
-        %{"uid" => uid, "new" => new_idx, "old" => old_idx, "parent_uid" => parent_uid},
+        %{"uid" => uid, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid},
         socket
       ) do
     block_list = socket.assigns.block_list
@@ -2872,32 +2860,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_update_live_preview_block()
     |> then(&{:noreply, &1})
   end
-
-  # if the target param updated is a var and it's not an image or file, we extract the value
-  # and update the liquex block var
-  def maybe_update_liquex_block_var(
-        socket,
-        [_block_type, "vars", _idx, "value"] = params_target,
-        params
-      ) do
-    var_target =
-      params_target
-      |> List.delete_at(0)
-      |> List.delete_at(-1)
-
-    var_params = get_in(params, var_target)
-    value = Map.get(var_params, "value")
-    var_key = Map.get(var_params, "key")
-
-    var_type =
-      var_params
-      |> Map.get("type")
-      |> String.to_existing_atom()
-
-    update_liquex_block_var(socket, var_key, var_type, %{value: value})
-  end
-
-  def maybe_update_liquex_block_var(socket, _, _), do: socket
 
   def handle_event(
         "validate_block",
@@ -3062,20 +3024,31 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> Enum.reverse()
   end
 
-  # def update_liquid_splits_module_variables(liquid_splits, vars) do
-  #   liquid_splits
-  #   |> Enum.reduce([], fn
-  #     {:module_variable, var_key, _prev_var_value}, acc ->
-  #       [{:module_variable, var_key, liquid_render_module_variable(var_key, vars)} | acc]
+  # if the target param updated is a var and it's not an image or file, we extract the value
+  # and update the liquex block var
+  def maybe_update_liquex_block_var(
+        socket,
+        [_block_type, "vars", _idx, "value"] = params_target,
+        params
+      ) do
+    var_target =
+      params_target
+      |> List.delete_at(0)
+      |> List.delete_at(-1)
 
-  #     {:module_picture, var_key, _prev_var_value}, acc ->
-  #       [{:module_picture, var_key, liquid_render_module_picture_src(var_key, vars)} | acc]
+    var_params = get_in(params, var_target)
+    value = Map.get(var_params, "value")
+    var_key = Map.get(var_params, "key")
 
-  #     item, acc ->
-  #       [item | acc]
-  #   end)
-  #   |> Enum.reverse()
-  # end
+    var_type =
+      var_params
+      |> Map.get("type")
+      |> String.to_existing_atom()
+
+    update_liquex_block_var(socket, var_key, var_type, %{value: value})
+  end
+
+  def maybe_update_liquex_block_var(socket, _, _), do: socket
 
   def update_liquex_block_var(socket, var_key, :image, data) do
     liquid_splits = socket.assigns.liquid_splits

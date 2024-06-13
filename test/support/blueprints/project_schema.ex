@@ -141,7 +141,7 @@ end
 defmodule Brando.TraitTest.Project do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Projects",
+    domain: "TraitTest",
     schema: "Project",
     singular: "project",
     plural: "projects"

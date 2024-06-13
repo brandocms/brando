@@ -25,6 +25,7 @@ defmodule Brando.Upload do
   alias Brando.Files
   alias Brando.Images
   alias Brando.Type.FileConfig
+  alias Brando.Type.ImageConfig
 
   @doc """
   Initiate the upload handling.
@@ -84,7 +85,10 @@ defmodule Brando.Upload do
     Files.create_file(file_params, user)
   end
 
-  def handle_upload_type(%{upload_entry: %{client_type: "image/svg+xml"}} = upload, user) do
+  def handle_upload_type(
+        %{cfg: %ImageConfig{}, upload_entry: %{client_type: "image/svg+xml"}} = upload,
+        user
+      ) do
     svg_size = Brando.Images.Utils.svg_size(upload.meta.uploaded_file)
     dominant_color = Images.Operations.Info.get_dominant_color(upload.meta.media_path)
 

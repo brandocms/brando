@@ -3150,7 +3150,7 @@ defmodule BrandoAdmin.Components.Form do
             module
 
           type ->
-            type_module = type |> to_string |> Recase.to_pascal()
+            type_module = type |> to_string |> Macro.camelize()
             input_module = Module.concat([Input, type_module])
 
             # if module exists, it's a live component. if not, function component

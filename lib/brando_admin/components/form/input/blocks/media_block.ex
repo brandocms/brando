@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
-  alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
 
   # prop block, :form

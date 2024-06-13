@@ -42,34 +42,4 @@ defmodule Brando.Trait.Villain do
 
     true
   end
-
-  @impl true
-  def generate_code(parent_module, _config) do
-    quote generated: true do
-      parent_module = unquote(parent_module)
-      parent_table_name = @table_name
-
-      defmodule Blocks do
-        use Ecto.Schema
-        import Ecto.Query
-
-        schema "#{parent_table_name}_blocks" do
-          Ecto.Schema.belongs_to(:entry, parent_module)
-          Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
-          Ecto.Schema.field(:sequence, :integer)
-          Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
-        end
-
-        @parent_table_name parent_table_name
-        def changeset(entry_block, attrs, user, recursive? \\ false) do
-          entry_block
-          |> cast(attrs, [:entry_id, :block_id, :sequence])
-          |> Brando.Content.Block.maybe_cast_recursive(recursive?, user)
-          |> unique_constraint([:entry, :block],
-            name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
-          )
-        end
-      end
-    end
-  end
 end

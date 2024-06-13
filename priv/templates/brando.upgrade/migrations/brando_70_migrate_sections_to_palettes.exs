@@ -35,7 +35,7 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
     for section <- sections do
       new_palette = %Brando.Content.Palette{
         name: section.name,
-        key: Recase.to_camel(section.name),
+        key: Macro.camelize(section.name),
         namespace: section.namespace,
         instructions: section.instructions,
         global: false,

@@ -317,7 +317,7 @@ defmodule Brando.Utils do
 
   def snake_case(map) when is_map(map) do
     map
-    |> Enum.map(fn {k, v} -> {Recase.to_snake(k), snake_case(v)} end)
+    |> Enum.map(fn {k, v} -> {Macro.underscore(k), snake_case(v)} end)
     |> Enum.into(%{})
   end
 
@@ -438,7 +438,7 @@ defmodule Brando.Utils do
 
   def camel_case_map(map) when is_map(map) do
     for {key, val} <- map, into: %{} do
-      {Recase.to_camel(key), camel_case_map(val)}
+      {Macro.camelize(key), camel_case_map(val)}
     end
   end
 

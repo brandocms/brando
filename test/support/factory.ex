@@ -28,7 +28,8 @@ defmodule Brando.Factory do
       type: :text,
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
-      value: "Hello!"
+      value: "Hello!",
+      creator: build(:random_user)
     }
   end
 

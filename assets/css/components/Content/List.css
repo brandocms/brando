@@ -314,7 +314,6 @@
     background-color: white;
     user-select: none;
     border-radius: 20px;
-
     transition: background-color 250ms ease;
 
     .main-content .status + div,
@@ -350,6 +349,32 @@
     &:nth-of-type(odd) {
       .main-content .circle-flag {
         background-color: #fafafa;
+      }
+    }
+
+    .url {
+      a {
+        background-color: #f4f4f4;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        transition: background-color 250ms ease;
+
+        &:hover {
+          background-color: var(--brando-color-dark);
+
+          span {
+            background-color: white;
+          }
+        }
+      }
+      span {
+        width: 0.9rem;
+        height: 0.9rem;
+        transition: background-color 250ms ease;
       }
     }
 

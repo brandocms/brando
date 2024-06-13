@@ -252,6 +252,46 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro maybe_build_blocks_modules(module, _name, relations) do
+    # check if we have any :blocks fields
+    quote do
+      blocks_rels =
+        Enum.filter(unquote(relations), &(&1.type == :has_many && &1.opts.module == :blocks))
+
+      if blocks_rels != [] do
+        for blocks_rel <- blocks_rels do
+          parent_module = Module.concat([@application, @domain, @schema])
+          parent_table_name = @table_name
+
+          defmodule Module.concat([
+                      unquote(module),
+                      "#{Phoenix.Naming.camelize(to_string(blocks_rel.name))}"
+                    ]) do
+            use Ecto.Schema
+            import Ecto.Query
+
+            schema "#{parent_table_name}_#{blocks_rel.name}" do
+              Ecto.Schema.belongs_to(:entry, parent_module)
+              Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
+              Ecto.Schema.field(:sequence, :integer)
+              Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
+            end
+
+            @parent_table_name parent_table_name
+            def changeset(entry_block, attrs, user, recursive? \\ false) do
+              entry_block
+              |> cast(attrs, [:entry_id, :block_id, :sequence])
+              |> Brando.Content.Block.maybe_cast_recursive(recursive?, user)
+              |> unique_constraint([:entry, :block],
+                name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
+              )
+            end
+          end
+        end
+      end
+    end
+  end
+
   defmacro build_attrs(attrs) do
     quote do
       Enum.map(unquote(attrs), fn
@@ -427,6 +467,8 @@ defmodule Brando.Blueprint do
         build_assets(unquote(assets))
         build_relations(unquote(module), unquote(relations))
       end
+
+      maybe_build_blocks_modules(unquote(module), unquote(name), unquote(relations))
     end
   end
 
@@ -765,21 +807,21 @@ defmodule Brando.Blueprint do
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}ListLive"
+            "#{Macro.camelize(@singular)}ListLive"
           ])
 
         admin_create_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}CreateLive"
+            "#{Macro.camelize(@singular)}CreateLive"
           ])
 
         admin_update_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}UpdateLive"
+            "#{Macro.camelize(@singular)}UpdateLive"
           ])
 
         %{
@@ -956,12 +998,6 @@ defmodule Brando.Blueprint do
       ) do
     start = System.monotonic_time()
 
-    require Logger
-
-    Logger.error("""
-    => running changeset for #{inspect(module)}
-    """)
-
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
@@ -970,9 +1006,9 @@ defmodule Brando.Blueprint do
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
 
-    require Logger
-
     if module != schema.__struct__ do
+      require Logger
+
       Logger.error(
         "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(module)}, schema struct: #{inspect(schema.__struct__)}"
       )
@@ -1022,30 +1058,14 @@ defmodule Brando.Blueprint do
     changeset
   end
 
-  def maybe_sequence(changeset, module, nil) do
+  def maybe_sequence(changeset, _module, nil) do
     changeset
   end
 
   def maybe_sequence(changeset, module, sequence) do
     if module.has_trait(Brando.Trait.Sequenced) do
-      require Logger
-
-      Logger.error("""
-      -- maybe_sequence
-      #{inspect(module)}
-      - id: #{Changeset.get_field(changeset, :id)}
-      - #{inspect(sequence)}
-      #{inspect(changeset, pretty: true)}
-      """)
-
       Changeset.change(changeset, sequence: sequence)
     else
-      require Logger
-
-      Logger.error("""
-      -- DONT sequence #{inspect(module)} - #{inspect(sequence)}
-      """)
-
       changeset
     end
   end

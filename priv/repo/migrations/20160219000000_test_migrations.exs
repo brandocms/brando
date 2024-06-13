@@ -186,6 +186,14 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create unique_index(:pages_alternates, [:entry_id, :linked_entry_id])
 
+    create table(:content_table_templates) do
+      add :name, :text
+      add :sequence, :integer
+      add :creator_id, references(:users, on_delete: :nilify_all)
+
+      timestamps()
+    end
+
     create table(:content_modules) do
       add :name, :string
       add :namespace, :string
@@ -202,6 +210,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :datasource_type, :string
       add :datasource_query, :string
       add :parent_id, references(:content_modules, on_delete: :delete_all)
+      add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
       sequenced()
       timestamps()
       soft_delete()
@@ -258,6 +267,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users, on_delete: :nothing)
       add :refs, :jsonb
     end
+
+
 
     create table(:projects) do
       add :title, :string
@@ -405,6 +416,33 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create unique_index(:content_identifiers, [:entry_id, :schema])
+
+    create table(:content_vars) do
+      add :type, :text
+      add :label, :text
+      add :key, :text
+      add :value, :text
+      add :value_boolean, :boolean
+      add :important, :boolean
+      add :instructions, :text
+      add :placeholder, :text
+      add :color_picker, :boolean
+      add :color_opacity, :boolean
+      add :sequence, :integer
+      add :options, :jsonb
+
+      add :page_id, references(:pages, on_delete: :delete_all)
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :module_id, references(:content_modules, on_delete: :delete_all)
+      add :global_set_id, references(:sites_global_sets, on_delete: :delete_all)
+      add :palette_id, references(:content_palettes, on_delete: :nilify_all)
+      add :image_id, references(:images, on_delete: :nilify_all)
+      add :file_id, references(:files, on_delete: :nilify_all)
+      add :linked_identifier_id, references(:content_identifiers, on_delete: :nilify_all)
+      add :creator_id, references(:users, on_delete: :nothing)
+
+      timestamps()
+    end
   end
 
   def down do

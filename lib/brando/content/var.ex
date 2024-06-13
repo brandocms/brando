@@ -43,6 +43,7 @@ defmodule Brando.Content.Var do
     attribute :important, :boolean, default: false
     attribute :instructions, :string
     attribute :value, :text
+    attribute :config_target, :text
 
     # boolean
     attribute :value_boolean, :boolean, default: false

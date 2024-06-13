@@ -2,16 +2,31 @@
   text-align: center;
   margin: 1rem auto;
   display: flex;
+  align-items: center;
   justify-content: center;
   border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  background-color: #dbd7c359;
+  transition: background-color 250ms ease;
+
+  &:hover {
+    background-color: gold;
+  }
 
   span {    
-    width: 30px;
-    height: 30px;
-    transition: color 250ms ease;
-    
-    &:hover {
-      color: theme(colors.villain.main);
+    width: 20px;
+    height: 20px;
+
+    &:after {
+      content: 'Add block';
+      font-family: 'Mono';
+      font-size: 11px;
+      text-transform: uppercase;
+      border: 1px solid #000;
+      padding: 2px 4px;
+      border-radius: 10px;
     }
   }
 }
@@ -454,6 +469,10 @@ button.btn-palette {
     transition: opacity 300ms ease;
     text-transform: uppercase;
     align-items: center;
+
+    &:empty {
+      display: none;
+    }
 
     strong {
       color: var(--brando-color-blue);
