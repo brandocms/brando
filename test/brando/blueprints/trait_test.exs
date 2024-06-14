@@ -43,56 +43,6 @@ defmodule Brando.Blueprint.TraitTest do
     end
   end
 
-  describe "villain trait" do
-    test "exposes attributes" do
-      attrs = [
-        %Brando.Blueprint.Attribute{name: :data, type: :villain},
-        %Brando.Blueprint.Attribute{name: :bio_data, type: :villain}
-      ]
-
-      assert Trait.Villain.all_trait_attributes(attrs, nil, nil) == [
-               %Brando.Blueprint.Attribute{name: :html, opts: %{}, type: :text},
-               %Brando.Blueprint.Attribute{name: :bio_html, opts: %{}, type: :text}
-             ]
-    end
-
-    test "adds _html field" do
-      assert :html in Brando.TraitTest.Project.__schema__(:fields)
-      assert :bio_html in Brando.TraitTest.Project.__schema__(:fields)
-    end
-
-    test "changeset mutator" do
-      bio_data = [
-        %{
-          "data" => %{
-            "extensions" => [],
-            "text" => "Some glorious text",
-            "type" => "paragraph"
-          },
-          "type" => "text"
-        }
-      ]
-
-      mutated_cs =
-        Brando.TraitTest.Project.changeset(
-          %Brando.TraitTest.Project{},
-          %{
-            title: "my title!",
-            bio_data: bio_data,
-            data: bio_data,
-            language: "en"
-          },
-          %{id: 1}
-        )
-
-      assert mutated_cs.valid?
-      assert mutated_cs.changes.creator_id == 1
-      assert mutated_cs.changes.title == "my title!"
-      assert mutated_cs.changes.html == "<div class=\"paragraph\">Some glorious text</div>"
-      assert mutated_cs.changes.bio_html == "<div class=\"paragraph\">Some glorious text</div>"
-    end
-  end
-
   describe "language trait" do
     test "adds language field" do
       assert :language in Brando.TraitTest.Project.__schema__(:fields)

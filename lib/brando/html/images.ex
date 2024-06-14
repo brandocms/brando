@@ -480,7 +480,14 @@ defmodule Brando.HTML.Images do
   defp add_dominant_color(attrs, image_struct) do
     case Keyword.get(attrs.opts, :placeholder) do
       pl when pl in [:dominant_color, "dominant_color"] ->
-        style = "background-color: #{image_struct.dominant_color || "transparent"}"
+        color =
+          case image_struct.dominant_color do
+            nil -> "transparent"
+            "transparent" -> "transparent"
+            color -> color
+          end
+
+        style = "background-color: #{color}"
 
         attrs
         |> put_in([:picture, "style"], style)
@@ -488,7 +495,11 @@ defmodule Brando.HTML.Images do
 
       pl when pl in [:dominant_color_faded, "dominant_color_faded"] ->
         color =
-          (image_struct.dominant_color && image_struct.dominant_color <> "11") || "transparent"
+          case image_struct.dominant_color do
+            nil -> "transparent"
+            "transparent" -> "transparent"
+            color -> color <> "11"
+          end
 
         style = "background-color: #{color}"
 

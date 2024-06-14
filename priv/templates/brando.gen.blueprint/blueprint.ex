@@ -21,7 +21,6 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   # trait Brando.Trait.Status
   # trait Brando.Trait.Timestamped
   # trait Brando.Trait.Translatable
-  # trait Brando.Trait.Villain
 
   identifier "{{ entry.title }}"
   absolute_url "{% route <%= Macro.underscore(schema) %>_path detail { entry.slug } %}"

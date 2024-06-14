@@ -242,8 +242,7 @@ defmodule Brando.LivePreview do
   end
 
   defp build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
-  defp build_share_key(seed), do: "__SHAREPREVIEW__" <> Hashids.encode(@preview_coder, seed)
-  defp store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
+  def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
   def initialize(schema, changeset, updated_entry_assocs \\ %{}) do

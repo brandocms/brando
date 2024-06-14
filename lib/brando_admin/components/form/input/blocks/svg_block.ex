@@ -49,16 +49,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
             <Input.code
               id={"block-#{@uid}-svg-code"}
               field={block_data[:code]}
-              uid={@uid}
-              id_prefix="block_data"
               label={gettext("Code")}
             />
-            <Input.text
-              field={block_data[:class]}
-              uid={@uid}
-              id_prefix="block_data"
-              label={gettext("Class")}
-            />
+            <Input.text field={block_data[:class]} label={gettext("Class")} />
           </:config>
           <div
             class="svg-block"

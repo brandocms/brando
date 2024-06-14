@@ -240,28 +240,6 @@ defmodule BrandoAdmin.Components.Form do
     |> then(&{:ok, &1})
   end
 
-  def maybe_force_live_preview_update(socket, true, _) do
-    socket
-  end
-
-  def maybe_force_live_preview_update(socket, false, true) do
-    fetch_root_blocks(socket, :live_preview_update, 0)
-    socket
-  end
-
-  def maybe_force_live_preview_update(socket, _, _) do
-    socket
-  end
-
-  def maybe_full_rerender_live_preview(socket, true) do
-    fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
-    socket
-  end
-
-  def maybe_full_rerender_live_preview(socket, false) do
-    socket
-  end
-
   # TODO: rewrite to event: "update_entry_relation
   def update(
         %{
@@ -627,6 +605,28 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  defp maybe_force_live_preview_update(socket, true, _) do
+    socket
+  end
+
+  defp maybe_force_live_preview_update(socket, false, true) do
+    fetch_root_blocks(socket, :live_preview_update, 0)
+    socket
+  end
+
+  defp maybe_force_live_preview_update(socket, _, _) do
+    socket
+  end
+
+  defp maybe_full_rerender_live_preview(socket, true) do
+    fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
+    socket
+  end
+
+  defp maybe_full_rerender_live_preview(socket, false) do
+    socket
+  end
+
   defp maybe_assign_block_map(socket) do
     schema = socket.assigns.schema
     form_blueprint = socket.assigns.form_blueprint
@@ -954,8 +954,6 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
-    preview_module = Brando.live_preview()
-    entry = socket.assigns.entry
     lp_opts = Brando.LivePreview.get_target_config(schema)
     assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
   end
@@ -2240,11 +2238,11 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, event, delay) do
+  defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: false}} = socket, _, _) do
     socket
   end
 
-  defp fetch_root_blocks(socket, tag \\ :save, delay \\ 500) do
+  defp fetch_root_blocks(socket, tag, delay) do
     id = socket.assigns.id
     block_map = socket.assigns.block_map
 
@@ -2294,7 +2292,6 @@ defmodule BrandoAdmin.Components.Form do
   defp disable_live_preview_in_blocks(socket) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
-    cache_key = socket.assigns.live_preview_cache_key
 
     for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"

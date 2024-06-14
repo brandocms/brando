@@ -14,7 +14,7 @@ defmodule Brando.Content.Module.Ref do
     plural: "refs",
     gettext_module: Brando.Gettext
 
-  # @primary_key false
+  @primary_key false
   data_layer :embedded
   trait Brando.Trait.CastPolymorphicEmbeds
 

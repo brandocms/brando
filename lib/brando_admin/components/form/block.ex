@@ -418,6 +418,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     belongs_to = socket.assigns.belongs_to
     uid = socket.assigns.uid
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
@@ -443,10 +444,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
         changeset = Changeset.put_embed(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
     new_form =
@@ -478,6 +479,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     belongs_to = socket.assigns.belongs_to
     uid = socket.assigns.uid
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
@@ -525,10 +527,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
         changeset = Changeset.put_embed(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
     new_form =
@@ -579,6 +581,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:type, fn -> Changeset.get_field(block_cs, :type) end)
     |> assign_new(:multi, fn -> Changeset.get_field(block_cs, :multi) end)
     |> assign_new(:has_vars?, fn -> Changeset.get_assoc(block_cs, :vars) !== [] end)
+    |> assign_new(:has_table_rows?, fn -> Changeset.get_assoc(block_cs, :table_rows) !== [] end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
@@ -662,11 +665,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
 
     new_form =
       if belongs_to == :root do
         updated_changeset =
-          render_and_update_entry_block_changeset(changeset, entry, has_vars?)
+          render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
 
         to_form(updated_changeset,
           as: "entry_block",
@@ -674,7 +678,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         )
       else
         updated_changeset =
-          render_and_update_block_changeset(changeset, entry, has_vars?)
+          render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
 
         to_form(updated_changeset,
           as: "child_block",
@@ -690,9 +694,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
     uid = socket.assigns.uid
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
 
     updated_changeset =
-      render_and_update_entry_block_changeset(changeset, entry, has_vars?)
+      render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
 
     new_form =
       to_form(updated_changeset,
@@ -706,11 +711,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_render_module(%{assigns: %{initial_render: false}} = socket) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
-    has_vars? = socket.assigns.has_vars?
     uid = socket.assigns.uid
+    has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
 
     updated_changeset =
-      render_and_update_block_changeset(changeset, entry, has_vars?)
+      render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
 
     new_form =
       to_form(updated_changeset,
@@ -1340,6 +1346,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :deleted, :boolean, default: false
   attr :is_datasource?, :boolean, default: false
   attr :has_table_template?, :boolean, default: false
+  attr :table_template_name, :string
   attr :module_class, :string, default: nil
   attr :block_module, :atom
   attr :vars, :list, default: []
@@ -1415,10 +1422,6 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
-                module_datasource_module_label={@module_datasource_module_label}
-                module_datasource_type={@module_datasource_type}
-                module_datasource_query={@module_datasource_query}
-                available_identifiers={@available_identifiers}
               >
                 <:description>
                   <%= @module_name %>
@@ -1435,6 +1438,12 @@ defmodule BrandoAdmin.Components.Form.Block do
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
                 target={@target}
+                is_datasource?={@is_datasource?}
+                module_datasource_module_label={@module_datasource_module_label}
+                module_datasource_type={@module_datasource_type}
+                module_datasource_query={@module_datasource_query}
+                available_identifiers={@available_identifiers}
+                block_identifiers={block_form[:block_identifiers]}
               />
             </.inputs_for>
           <% else %>
@@ -1450,10 +1459,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               target={@target}
               is_ref?={false}
               is_datasource?={@is_datasource?}
-              module_datasource_module_label={@module_datasource_module_label}
-              module_datasource_type={@module_datasource_type}
-              module_datasource_query={@module_datasource_query}
-              available_identifiers={@available_identifiers}
             >
               <:description>
                 <%= @module_name %>
@@ -1470,6 +1475,12 @@ defmodule BrandoAdmin.Components.Form.Block do
               table_template_name={@table_template_name}
               parent_uploads={@parent_uploads}
               target={@target}
+              is_datasource?={@is_datasource?}
+              module_datasource_module_label={@module_datasource_module_label}
+              module_datasource_type={@module_datasource_type}
+              module_datasource_query={@module_datasource_query}
+              available_identifiers={@available_identifiers}
+              block_identifiers={@form[:block_identifiers]}
             />
           <% end %>
         </.form>
@@ -1494,6 +1505,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
         <.vars vars={@block_form[:vars]} uid={@uid} target={@target} />
+        <.datasource
+          :if={@is_datasource?}
+          block_data={@block_form}
+          uid={@uid}
+          module_datasource_module_label={@module_datasource_module_label}
+          module_datasource_type={@module_datasource_type}
+          module_datasource_query={@module_datasource_query}
+          available_identifiers={@available_identifiers}
+          block_identifiers={@block_identifiers}
+          target={@target}
+        />
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
           <.table
             block_data={@block_form}
@@ -2178,6 +2200,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :vars, :any, required: true
   attr :important, :boolean, default: true
+  attr :target, :any
 
   def vars(assigns) do
     changeset = assigns.vars.form.source
@@ -2325,18 +2348,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         <div :if={!@is_ref?} class="dirty block-action toggler">●</div>
       </div>
-      <div :if={@is_datasource?} class="block-datasource" id={"block-#{@uid}-block-datasource"}>
-        <.datasource
-          block_data={@block}
-          uid={@uid}
-          module_datasource_module_label={@module_datasource_module_label}
-          module_datasource_type={@module_datasource_type}
-          module_datasource_query={@module_datasource_query}
-          available_identifiers={@available_identifiers}
-          block_identifiers={@block[:block_identifiers]}
-          target={@target}
-        />
-      </div>
     </div>
     """
   end
@@ -2344,11 +2355,16 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :block_data, :any, required: true
   attr :uid, :string, required: true
   attr :target, :any, required: true
+  attr :table_template_name, :string
 
   def table(assigns) do
+    table_rows_value = assigns.block_data[:table_rows].value
+    valid? = table_rows_value != [] && !is_struct(table_rows_value, Ecto.Association.NotLoaded)
+    assigns = assign(assigns, :valid?, valid?)
+
     ~H"""
     <div class="table-block">
-      <%= if Enum.empty?(@block_data[:table_rows].value) do %>
+      <%= if !@valid? do %>
         <div class="empty">
           <div class="instructions">
             <div class="table-template">
@@ -2449,79 +2465,84 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def datasource(assigns) do
     ~H"""
-    <%!-- <code style="font-family:Mono;font-size:11px;">
-      <pre><%= inspect @block_identifiers.value, pretty: true %></pre>
-    </code> --%>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path fill="none" d="M0 0h24v24H0z" /><path d="M5 12.5c0 .313.461.858 1.53 1.393C7.914 14.585 9.877 15 12 15c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171C17.35 11.349 14.827 12 12 12s-5.35-.652-7-1.671V12.5zm14 2.829C17.35 16.349 14.827 17 12 17s-5.35-.652-7-1.671V17.5c0 .313.461.858 1.53 1.393C7.914 19.585 9.877 20 12 20c2.123 0 4.086-.415 5.47-1.107 1.069-.535 1.53-1.08 1.53-1.393v-2.171zM3 17.5v-10C3 5.015 7.03 3 12 3s9 2.015 9 4.5v10c0 2.485-4.03 4.5-9 4.5s-9-2.015-9-4.5zm9-7.5c2.123 0 4.086-.415 5.47-1.107C18.539 8.358 19 7.813 19 7.5c0-.313-.461-.858-1.53-1.393C16.086 5.415 14.123 5 12 5c-2.123 0-4.086.415-5.47 1.107C5.461 6.642 5 7.187 5 7.5c0 .313.461.858 1.53 1.393C7.914 9.585 9.877 10 12 10z" />
-    </svg>
-    <%= @module_datasource_module_label %> [<%= @module_datasource_type %>] &raquo; <%= @module_datasource_query %>
-    <%= if @module_datasource_type == :selection do %>
-      <Content.modal
-        title={gettext("Select entries")}
-        id={"select-entries-#{@uid}"}
-        remember_scroll_position
-      >
-        <h2 class="titlecase"><%= gettext("Available entries") %></h2>
-        <Entries.block_identifier
-          :for={identifier <- @available_identifiers}
-          identifier={identifier}
-          select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
-          available_identifiers={@available_identifiers}
-          block_identifiers={@block_identifiers}
-        />
-      </Content.modal>
-
-      <div class="module-datasource-selected">
-        <div
-          id={"sortable-#{@uid}-identifiers"}
-          class="selected-entries"
-          phx-hook="Brando.SortableInputsFor"
-          data-target={@target}
-          data-sortable-id={"sortable-#{@uid}-identifiers"}
-          data-sortable-handle=".sort-handle"
-          data-sortable-selector=".identifier"
-        >
-          <.inputs_for :let={block_identifier} field={@block_identifiers}>
-            <Entries.block_identifier
-              block_identifier={block_identifier}
-              available_identifiers={@available_identifiers}
-              sortable
-            >
-              <input
-                type="hidden"
-                name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
-                value={block_identifier.index}
-              />
-              <:delete>
-                <label>
-                  <input
-                    type="checkbox"
-                    name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
-                    value={block_identifier.index}
-                    class="hidden"
-                  />
-                  <.icon name="hero-x-mark" />
-                </label>
-              </:delete>
-            </Entries.block_identifier>
-          </.inputs_for>
-          <input type="hidden" name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"} />
-        </div>
-
-        <button
-          class="tiny select-button"
-          type="button"
-          phx-click={
-            "assign_available_identifiers"
-            |> JS.push(target: @target)
-            |> show_modal("#select-entries-#{@uid}")
-          }
-        >
-          <%= gettext("Select entries") %>
-        </button>
+    <div class="block-datasource">
+      <div class="datasource-info">
+        <.icon name="hero-circle-stack" />
+        <span class="datasource-label">
+          <%= gettext("Datasource") %> — <%= @module_datasource_module_label %> [<%= @module_datasource_type %>] &raquo; <%= @module_datasource_query %>
+        </span>
       </div>
-    <% end %>
+
+      <%= if @module_datasource_type == :selection do %>
+        <Content.modal
+          title={gettext("Select entries")}
+          id={"select-entries-#{@uid}"}
+          remember_scroll_position
+        >
+          <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+          <Entries.block_identifier
+            :for={identifier <- @available_identifiers}
+            identifier={identifier}
+            select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
+            available_identifiers={@available_identifiers}
+            block_identifiers={@block_identifiers}
+          />
+        </Content.modal>
+
+        <div class="module-datasource-selected">
+          <div
+            id={"sortable-#{@uid}-identifiers"}
+            class="selected-entries"
+            phx-hook="Brando.SortableInputsFor"
+            data-target={@target}
+            data-sortable-id={"sortable-#{@uid}-identifiers"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".identifier"
+          >
+            <.inputs_for :let={block_identifier} field={@block_identifiers}>
+              <Entries.block_identifier
+                block_identifier={block_identifier}
+                available_identifiers={@available_identifiers}
+                sortable
+              >
+                <input
+                  type="hidden"
+                  name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
+                  value={block_identifier.index}
+                />
+                <:delete>
+                  <label>
+                    <input
+                      type="checkbox"
+                      name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
+                      value={block_identifier.index}
+                      class="hidden"
+                    />
+                    <.icon name="hero-x-mark" />
+                  </label>
+                </:delete>
+              </Entries.block_identifier>
+            </.inputs_for>
+            <input
+              type="hidden"
+              name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
+            />
+          </div>
+
+          <button
+            class="tiny select-button"
+            type="button"
+            phx-click={
+              "assign_available_identifiers"
+              |> JS.push(target: @target)
+              |> show_modal("#select-entries-#{@uid}")
+            }
+          >
+            <%= gettext("Select entries") %>
+          </button>
+        </div>
+      <% end %>
+    </div>
     """
   end
 
@@ -2551,16 +2572,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
     new_rows = current_rows ++ List.wrap(new_row)
-
-    require Logger
-
-    Logger.error("""
-
-    table new_rows
-    #{inspect(new_rows, pretty: true)}
-
-    """)
-
     updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
 
     updated_form =
@@ -2580,7 +2591,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         )
       end
 
-    {:noreply, assign(socket, :form, updated_form)}
+    socket
+    |> assign(:form, updated_form)
+    |> assign(:has_table_rows?, true)
+    |> then(&{:noreply, &1})
   end
 
   ## Identifier events
@@ -2593,7 +2607,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     uid = socket.assigns.uid
-    available_identifiers = socket.assigns.available_identifiers
 
     block_changeset = get_block_changeset(changeset, belongs_to)
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
@@ -2606,7 +2619,7 @@ defmodule BrandoAdmin.Components.Form.Block do
            ) do
         nil ->
           # add it
-          insert_identifier(available_identifiers, block_identifiers, identifier_id)
+          insert_identifier(block_identifiers, identifier_id)
 
         %{action: :replace} = replaced_changeset ->
           Enum.map(block_identifiers, fn block_identifier ->
@@ -2835,6 +2848,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
 
     require Logger
 
@@ -2844,7 +2858,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset.data
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
-      |> render_and_update_block_changeset(entry, has_vars?)
+      |> render_and_update_block_changeset(entry, has_vars?, has_table_rows?)
 
     updated_form =
       to_form(updated_changeset,
@@ -2873,12 +2887,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
 
     updated_changeset =
       changeset.data
       |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
-      |> render_and_update_entry_block_changeset(entry, has_vars?)
+      |> render_and_update_entry_block_changeset(entry, has_vars?, has_table_rows?)
 
     updated_form =
       to_form(updated_changeset,
@@ -2965,11 +2980,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def render_and_update_entry_block_changeset(changeset, entry, has_vars?) do
+  def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
     rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
       |> reset_empty_vars(has_vars?, true)
+      |> reset_table_rows(has_table_rows?, true)
       |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 
     updated_block_changeset =
@@ -2981,11 +2997,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_assoc(changeset, :block, updated_block_changeset)
   end
 
-  def render_and_update_block_changeset(changeset, entry, has_vars?) do
+  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
     rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
       |> reset_empty_vars(has_vars?, false)
+      |> reset_table_rows(has_table_rows?, false)
       |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
 
     changeset
@@ -3010,6 +3027,17 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp reset_empty_vars(block, false, false) do
     put_in(block, [Access.key(:vars)], [])
+  end
+
+  defp reset_table_rows(block, true, _), do: block
+
+  # if we don't have vars, force them to an empty list, since they get set to NotLoaded.
+  defp reset_table_rows(block, false, true) do
+    put_in(block, [Access.key(:block), Access.key(:table_rows)], [])
+  end
+
+  defp reset_table_rows(block, false, false) do
+    put_in(block, [Access.key(:table_rows)], [])
   end
 
   def update_liquid_splits_entry_variables(liquid_splits, entry) do
@@ -3091,29 +3119,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> Enum.reverse()
 
     assign(socket, :liquid_splits, updated_liquid_splits)
-  end
-
-  # for forms that are on the base level, meaning
-  # they are a join schema between an entry and a block
-  defp to_base_change_form(
-         block_module,
-         entry_block_or_cs,
-         params,
-         user,
-         action \\ nil
-       ) do
-    changeset =
-      entry_block_or_cs
-      |> block_module.changeset(params, user)
-      |> Map.put(:action, action)
-
-    block_cs = Changeset.get_assoc(changeset, :block)
-    uid = Changeset.get_field(block_cs, :uid)
-
-    to_form(changeset,
-      as: "entry_block",
-      id: "entry_block_form-#{uid}"
-    )
   end
 
   defp to_change_form(child_block_or_cs, params, user, action \\ nil) do
@@ -3244,7 +3249,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def insert_identifier(available_identifiers, block_identifiers, identifier_id) do
+  def insert_identifier(block_identifiers, identifier_id) do
     new_block_identifier =
       %BlockIdentifier{}
       |> Changeset.change()

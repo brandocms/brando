@@ -78,7 +78,6 @@
   position: relative;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 15px;
   @space padding-x 20px;
   @space padding-top 16px;
   border-bottom: 1px solid #eee;

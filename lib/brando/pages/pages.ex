@@ -249,16 +249,11 @@ defmodule Brando.Pages do
   """
   def rerender_fragments do
     {:ok, fragments} = list_fragments()
-
-    for fragment <- fragments do
-      Villain.rerender_html(Changeset.change(fragment))
-    end
+    Villain.render_entries(Fragment, Enum.map(fragments, & &1.id))
   end
 
   def rerender_fragment(id) do
-    {:ok, fragment} = get_fragment(id)
-    changeset = Changeset.change(fragment)
-    Villain.rerender_html(changeset)
+    Villain.render_entry(Fragment, id)
   end
 
   def list_fragments_translations(parent_key, opts \\ []) do
@@ -375,11 +370,11 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       fragment ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 
-  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.html)
+  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.rendered_blocks)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -391,7 +386,7 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       fragment ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 
@@ -409,7 +404,7 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       {:ok, fragment} ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 

@@ -21,7 +21,7 @@ defmodule Brando.Cache.GlobalsTest do
       |> Factory.params_for(creator_id: user.id)
       |> Brando.Utils.map_from_struct()
 
-    {:ok, _category} = Sites.create_global_set(category_params, :system)
+    {:ok, _category} = Sites.create_global_set(category_params, user)
 
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
 

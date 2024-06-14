@@ -139,11 +139,26 @@ defmodule BrandoIntegrationWeb.LivePreview do
   use Brando.LivePreview
 
   preview_target Brando.Pages.Page do
-    template {BrandoIntegrationWeb.PageHTML, "index.html"}
-    layout {BrandoIntegrationWeb.Layouts, :app}
-    template_section fn _ -> "index" end
-    template_prop :page
-    assign :test, fn _ -> "zapp" end
+    template fn e -> {BrandoIntegrationWeb.PageHTML, "#{e.key}.html"} end
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    template_section fn entry -> entry.key end
+
+    assign :restaurants, fn _ -> __MODULE__.list_restaurants!() end
+    assign :employees, fn _ -> __MODULE__.list_employees!() end
+  end
+
+  def list_restaurants! do
+    [
+      %{id: 1, name: "Oslo"},
+      %{id: 2, name: "Bergen"}
+    ]
+  end
+
+  def list_employees! do
+    [
+      %{id: 1, name: "Todd"},
+      %{id: 2, name: "Rod"}
+    ]
   end
 end
 

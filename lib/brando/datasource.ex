@@ -256,19 +256,15 @@ defmodule Brando.Datasource do
     end
   end
 
+  defmacro selection(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
+    raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+  end
+
+  defmacro selection(_, _, {_, _, [{_, _, [[_, _], _]}]}) do
+    raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
+  end
+
   defmacro selection(key, list_fun, get_fun) do
-    {_, _, [{_, _, [list_args, _]}]} = list_fun
-
-    if Enum.count(list_args) == 2 do
-      raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
-    end
-
-    {_, _, [{_, _, [get_args, _]}]} = get_fun
-
-    if Enum.count(get_args) == 2 do
-      raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
-    end
-
     quote do
       Module.put_attribute(__MODULE__, :datasources_selection, unquote(key))
 

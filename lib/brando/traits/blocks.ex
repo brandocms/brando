@@ -1,7 +1,7 @@
-defmodule Brando.Trait.Villain do
+defmodule Brando.Trait.Blocks do
   @moduledoc """
-  Villain parsing
-  Deprecated
+  Blocks
+  Only used to register the trait.
   """
   use Brando.Trait
 

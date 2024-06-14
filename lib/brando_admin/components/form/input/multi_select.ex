@@ -156,8 +156,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp assign_selected_options_structs(socket) do
     assign_new(socket, :selected_options_structs, fn ->
-      require Logger
-      Logger.error("=> selected_options_structs")
       selected_options = socket.assigns.selected_options
 
       if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
@@ -871,18 +869,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             Ecto.Changeset.get_change(&1, :marked_as_deleted) != true)
       )
 
-    require Logger
-
-    Logger.error("""
-
-    => select_option —— exists_at_idx
-    #{inspect(exists_at_idx, pretty: true)}
-
-    => selected_options
-    #{inspect(selected_options, pretty: true)}
-
-    """)
-
     {selected_options_structs, selected_options} =
       if exists_at_idx do
         {to_delete, rest} = List.pop_at(selected_options, exists_at_idx)
@@ -936,15 +922,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       else
         [field.field]
       end
-
-    require Logger
-
-    Logger.error("""
-
-    => select_option —— selected_options_structs
-    #{inspect(selected_options_structs, pretty: true)}
-
-    """)
 
     if relation do
       on_change.(%{

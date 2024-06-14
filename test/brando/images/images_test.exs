@@ -12,7 +12,8 @@ defmodule Brando.ImagesTest do
 
   test "update_image" do
     user = Factory.insert(:random_user)
-    img = Factory.insert(:image)
+    img = Factory.insert(:image, creator_id: user.id)
+
     assert {:ok, img} = Images.update_image(img, %{title: "Hey"}, user)
     assert img.title == "Hey"
   end

@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   # use Phoenix.HTML
 
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   import Brando.Gettext

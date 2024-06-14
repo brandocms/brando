@@ -194,6 +194,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+
+
     create table(:content_modules) do
       add :name, :string
       add :namespace, :string
@@ -268,7 +270,12 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :refs, :jsonb
     end
 
+    create table(:content_table_rows) do
+      add :sequence, :integer
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
 
+      timestamps()
+    end
 
     create table(:projects) do
       add :title, :string
@@ -430,6 +437,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :color_opacity, :boolean
       add :sequence, :integer
       add :options, :jsonb
+      add :config_target, :text
+      add :width, :string
 
       add :page_id, references(:pages, on_delete: :delete_all)
       add :block_id, references(:content_blocks, on_delete: :delete_all)
@@ -439,6 +448,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :image_id, references(:images, on_delete: :nilify_all)
       add :file_id, references(:files, on_delete: :nilify_all)
       add :linked_identifier_id, references(:content_identifiers, on_delete: :nilify_all)
+      add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
+      add :table_row_id, references(:content_table_rows, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
 
       timestamps()

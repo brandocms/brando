@@ -173,7 +173,6 @@ defmodule Brando.TraitTest.Project do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
-  trait Brando.Trait.Villain
   trait Brando.Trait.Translatable
 
   attributes do

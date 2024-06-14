@@ -5,7 +5,7 @@
   .avatar-wrapper, .cover-wrapper {
     align-items: center;
     display: flex;
-    margin-right: 10px;
+    margin-right: 14px;
 
     .avatar, .cover {
       width: 40px;
@@ -91,7 +91,7 @@
   @fontsize 15px;
   background-color: var(--brando-color-input);
   color: var(--brando-color-dark);
-  padding: 7px 7px 9px;
+  padding: 10px 12px 11px;
 
   .icon {
     opacity: 0;

@@ -51,9 +51,11 @@ defmodule Brando.Villain.Block do
 
       def apply_ref(src_type, ref_src, ref_target) do
         protected_attrs = __MODULE__.protected_attrs()
+
         overwritten_attrs = Map.keys(ref_src.data.data) -- protected_attrs
         new_attrs = Map.take(ref_src.data.data, overwritten_attrs)
         new_data = Map.merge(ref_target.data.data, new_attrs)
+
         put_in(ref_target, [Access.key(:data), Access.key(:data)], new_data)
       end
 

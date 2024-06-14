@@ -184,7 +184,7 @@ button.btn-palette {
     padding-bottom: 15px;
 
     .variable {
-      padding: 0.5em 0.75em 0;
+      padding: 0.5em 15px 0;
 
       &:nth-of-type(2), 
       &:nth-of-type(3) {
@@ -221,10 +221,6 @@ button.btn-palette {
       .multiselect {
         background-color: #fafafa;
       }
-        
-      input.text {
-        background-color: #fafafa;
-      }
     }
 
     label.control-label {
@@ -235,15 +231,20 @@ button.btn-palette {
     }
 
     input[type="text"] {
-      font-family: 'Mono';
+      @font mono;
       font-size: 14px;
       padding: 1em 0.7em;
-      background-color: white;
+      background-color: #fafafa;
       height: auto;
+
+      &::placeholder {
+        @font mono;
+        font-size: 14px;
+      }
     }
 
     textarea.text {
-      font-family: 'Mono';
+      @font mono;
       font-size: 14px;
       padding: 1em 0.7em;
       background-color: white;
@@ -427,8 +428,31 @@ button.btn-palette {
     @font mono;
     font-size: 10px;
     margin-bottom: 17px;
+    padding-bottom: 15px;
+    padding-top: 10px;
     width: 100%;
-    margin-left: 33px;
+    padding-left: 15px;
+    padding-right: 15px;
+    border-bottom: 1px solid #eee;
+
+    .datasource-info {
+      @space margin-bottom 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+
+      .hero-circle-stack-mini {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    span.datasource-label {
+      @font mono;
+      font-size: 12px;
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
 
     svg {
       margin-right: 8px;
@@ -444,14 +468,12 @@ button.btn-palette {
     }
 
     .module-datasource-selected {
-      margin-top: 18px;
-      margin-bottom: 18px;
-      
       .selected-entries {
-        display: flex;
-        flex-direction: column;
+        display: grid;
         margin-bottom: 18px;
-        gap: 4px;
+        grid-template-columns: fit-content(500px);
+        max-width: 500px;
+        grid-gap: 6px;
       }
     }
   }

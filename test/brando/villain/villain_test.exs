@@ -52,12 +52,14 @@ defmodule Brando.VillainTest do
     Factory.params_for(:fragment, %{
       parent_key: "blabla",
       key: "blabla",
-      data: [
+      entry_blocks: [
         %{
-          type: "text",
-          data: %{
-            text: text,
-            type: :paragraph
+          block: %{
+            type: "text",
+            data: %{
+              text: text,
+              type: :paragraph
+            }
           }
         }
       ]

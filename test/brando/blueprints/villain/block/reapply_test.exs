@@ -65,7 +65,22 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       uid: "1xVOTDOushEIQlh7sIihqo"
     }
 
-    # TODO: test reapplying a ref
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
+
+    [orig_header_ref] = original_block.refs
+
+    assert orig_header_ref.data.data.level == 2
+    assert orig_header_ref.data.data.class == nil
+    assert orig_header_ref.data.data.id == nil
+
+    [applied_header_ref] = updated_block.refs
+
+    assert applied_header_ref.data.data.level == 3
+    assert applied_header_ref.data.data.class == "testclass"
+    assert applied_header_ref.data.data.id == "testid"
+
+    assert applied_header_ref.data.data.text == orig_header_ref.data.data.text
   end
 
   test "reapply multiple refs and vars" do
@@ -219,6 +234,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       ],
       vars: [
         %Var{
+          id: 1,
           key: "wide",
           label: "Wide?",
           type: :boolean,
@@ -228,6 +244,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
           placeholder: nil
         },
         %Var{
+          id: 2,
           key: "bg_color",
           label: "Background color",
           type: :color,
@@ -247,7 +264,62 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       collapsed: false
     }
 
-    # TODO: test
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
+
+    [orig_header_ref, orig_picture_ref] = original_block.refs
+
+    assert orig_header_ref.data.data.level == 2
+    assert orig_header_ref.data.data.class == nil
+    assert orig_header_ref.data.data.id == nil
+
+    assert orig_picture_ref.data.data.placeholder == :svg
+    assert orig_picture_ref.data.data.img_class == nil
+    assert orig_picture_ref.data.data.moonwalk == false
+    assert orig_picture_ref.data.data.formats == [:jpg, :webp]
+
+    [orig_bool, orig_col] = original_block.vars
+
+    assert orig_bool.key == "wide"
+    assert orig_bool.label == "Wide?"
+    assert orig_bool.value_boolean == true
+
+    assert orig_col.value == "#FF00FF"
+    assert orig_col.color_opacity == false
+    assert orig_col.color_picker == true
+
+    [applied_header_ref, applied_picture_ref] = updated_block.refs
+
+    assert applied_header_ref.data.data.level == 3
+    assert applied_header_ref.data.data.class == "testclass"
+    assert applied_header_ref.data.data.id == "testid"
+
+    assert applied_header_ref.data.data.text == orig_header_ref.data.data.text
+
+    assert applied_picture_ref.data.data.placeholder == :dominant_color
+    assert applied_picture_ref.data.data.img_class == "img-class"
+    assert applied_picture_ref.data.data.moonwalk == true
+    assert applied_picture_ref.data.data.formats == [:jpg, :webp]
+
+    assert applied_picture_ref.data.data.sizes == orig_picture_ref.data.data.sizes
+    assert applied_picture_ref.data.data.height == orig_picture_ref.data.data.height
+    assert applied_picture_ref.data.data.width == orig_picture_ref.data.data.width
+
+    assert applied_picture_ref.data.data.dominant_color ==
+             orig_picture_ref.data.data.dominant_color
+
+    assert applied_picture_ref.data.data.path == orig_picture_ref.data.data.path
+    assert applied_picture_ref.data.data.focal == orig_picture_ref.data.data.focal
+
+    [app_bool, app_col] = updated_block.vars
+
+    assert app_bool.key == "wide"
+    assert app_bool.label == "Is it wide?"
+    assert app_bool.value_boolean == true
+
+    assert app_col.value == "#FF00FF"
+    assert app_col.color_opacity == true
+    assert app_col.color_picker == false
   end
 
   test "media block" do
@@ -376,7 +448,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       sequence: 14,
       svg: nil,
       updated_at: ~N[2022-02-10 15:31:01],
-      vars: nil,
+      vars: [],
       wrapper: false
     }
 
@@ -463,9 +535,38 @@ defmodule Brando.Villain.Block.PictureBlockTest do
         }
       ],
       sequence: nil,
-      vars: nil
+      vars: []
     }
 
-    # TODO: test
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
+
+    [mod_ref1, mod_ref2] = updated_module.refs
+    [org_ref1, org_ref2] = original_block.refs
+    [new_ref1, new_ref2] = updated_block.refs
+
+    assert mod_ref1.data.type == "media"
+    assert mod_ref2.data.type == "media"
+    assert mod_ref1.data.__struct__ == Brando.Villain.Blocks.MediaBlock
+    assert mod_ref2.data.__struct__ == Brando.Villain.Blocks.MediaBlock
+    assert mod_ref1.data.data.__struct__ == Brando.Villain.Blocks.MediaBlock.Data
+    assert mod_ref2.data.data.__struct__ == Brando.Villain.Blocks.MediaBlock.Data
+    assert org_ref1.data.type == "picture"
+    assert org_ref2.data.type == "picture"
+    assert org_ref1.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert org_ref2.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert org_ref1.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+    assert org_ref2.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+    assert new_ref1.data.type == "picture"
+    assert new_ref2.data.type == "picture"
+    assert new_ref1.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert new_ref2.data.__struct__ == Brando.Villain.Blocks.PictureBlock
+    assert new_ref1.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+    assert new_ref2.data.data.__struct__ == Brando.Villain.Blocks.PictureBlock.Data
+
+    assert new_ref1.data.data.path == org_ref1.data.data.path
+    assert new_ref1.data.data.sizes == org_ref1.data.data.sizes
+    assert org_ref1.data.data.placeholder == :svg
+    assert new_ref1.data.data.placeholder == :dominant_color
   end
 end

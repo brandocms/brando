@@ -479,19 +479,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  # def handle_event("select_option", %{"value" => value}, %{assigns: %{publish: true}} = socket) do
-  #   # var select. send update to parent
-
-  # end
-
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
-
     value = if value == "", do: nil, else: value
-    form = socket.assigns.field.form
-    changeset = form.source
-
-    module = changeset.data.__struct__
 
     if update_relation do
       on_change = socket.assigns.on_change

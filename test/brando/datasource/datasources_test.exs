@@ -140,7 +140,10 @@ defmodule Brando.DatasourcesTest do
       |> Brando.Content.list_identifiers(%{order: "asc id"})
 
     {:ok, entries} =
-      Brando.Datasource.get_selection(TestDatasource, "featured", identifiers)
+      Brando.Content.get_entries_from_identifiers(
+        identifiers,
+        []
+      )
 
     assert Enum.map(entries, & &1.id) == [p1.id, p2.id, p3.id]
   end
