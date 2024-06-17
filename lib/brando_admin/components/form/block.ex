@@ -1524,49 +1524,51 @@ defmodule BrandoAdmin.Components.Form.Block do
             table_template_name={@table_template_name}
           />
         </div>
-        <%= for split <- @liquid_splits do %>
-          <%= case split do %>
-            <% {:ref, ref} -> %>
-              <.ref
-                parent_uploads={@parent_uploads}
-                refs_field={@block_form[:refs]}
-                ref_name={ref}
-                target={@target}
-              />
-            <% {:content, _} -> %>
-              <div class="split_content"></div>
-            <% {:entry_variable, var_name, variable_value} -> %>
-              <div
-                phx-no-format
-                class="rendered-variable"
-                data-popover={
-                  gettext("Edit the entry directly to affect this variable [entry.%{var_name}]",
-                    var_name: var_name
-                  )
-                }
-              ><%= variable_value %></div>
-            <% {:module_variable, var_name, variable_value} -> %>
-              <div
-                phx-no-format
-                class="rendered-variable"
-                data-popover={
-                  gettext("Edit the module variable to affect this variable [%{var_name}]",
-                    var_name: var_name
-                  )
-                }
-              ><%= variable_value %></div>
-            <% {:entry_picture, _, img_src} -> %>
-              <figure>
-                <img src={img_src} />
-              </figure>
-            <% {:module_picture, _, img_src} -> %>
-              <figure>
-                <img src={img_src} />
-              </figure>
-            <% _ -> %>
-              <%= raw(split) %>
+        <div class="block-splits">
+          <%= for split <- @liquid_splits do %>
+            <%= case split do %>
+              <% {:ref, ref} -> %>
+                <.ref
+                  parent_uploads={@parent_uploads}
+                  refs_field={@block_form[:refs]}
+                  ref_name={ref}
+                  target={@target}
+                />
+              <% {:content, _} -> %>
+                <div class="split_content"></div>
+              <% {:entry_variable, var_name, variable_value} -> %>
+                <div
+                  phx-no-format
+                  class="rendered-variable"
+                  data-popover={
+                    gettext("Edit the entry directly to affect this variable [entry.%{var_name}]",
+                      var_name: var_name
+                    )
+                  }
+                ><%= variable_value %></div>
+              <% {:module_variable, var_name, variable_value} -> %>
+                <div
+                  phx-no-format
+                  class="rendered-variable"
+                  data-popover={
+                    gettext("Edit the module variable to affect this variable [%{var_name}]",
+                      var_name: var_name
+                    )
+                  }
+                ><%= variable_value %></div>
+              <% {:entry_picture, _, img_src} -> %>
+                <figure>
+                  <img src={img_src} />
+                </figure>
+              <% {:module_picture, _, img_src} -> %>
+                <figure>
+                  <img src={img_src} />
+                </figure>
+              <% _ -> %>
+                <%= raw(split) %>
+            <% end %>
           <% end %>
-        <% end %>
+        </div>
       </div>
     </div>
     """
@@ -1779,7 +1781,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def handle(assigns) do
     ~H"""
-    <div class="sort-handle block-action" data-sortable-group={1}>
+    <div
+      class="sort-handle block-action"
+      data-sortable-group={1}
+      data-popover={gettext("Reposition block (click&drag)")}
+    >
       <.icon name="hero-arrows-up-down" />
     </div>
     """
@@ -2213,17 +2219,29 @@ defmodule BrandoAdmin.Components.Form.Block do
     assigns = assign(assigns, :vars_to_render, vars_to_render)
 
     ~H"""
-    <div :if={@vars_to_render !== []} class="block-vars">
-      <.inputs_for :let={var} field={@vars}>
-        <.live_component
-          module={RenderVar}
-          id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
-          var={var}
-          render={(@important && :only_important) || :only_regular}
-          on_change={fn params -> send_update(@target, params) end}
-          publish
-        />
-      </.inputs_for>
+    <div :if={@vars_to_render != []} class="block-vars-wrapper">
+      <div class="vars-info" phx-click="show_vars_instructions" phx-target={@target}>
+        <div class="icon">
+          <span class="hero-variable-mini"></span>
+        </div>
+        <div class="info">
+          <span class="vars-label">
+            <%= gettext("Block") %><br /> <%= gettext("Variables") %>
+          </span>
+        </div>
+      </div>
+      <div class="block-vars">
+        <.inputs_for :let={var} field={@vars}>
+          <.live_component
+            module={RenderVar}
+            id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
+            var={var}
+            render={(@important && :only_important) || :only_regular}
+            on_change={fn params -> send_update(@target, params) end}
+            publish
+          />
+        </.inputs_for>
+      </div>
     </div>
     """
   end
@@ -2310,6 +2328,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           :if={@instructions}
           class="block-action help"
           phx-click={JS.push("toggle_help", target: @target)}
+          data-popover={gettext("Show instructions")}
         >
           <.icon name="hero-question-mark-circle" />
         </div>
@@ -2320,6 +2339,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           class="block-action duplicate"
           phx-click="duplicate_block"
           phx-target={@target}
+          data-popover={gettext("Duplicate block")}
         >
           <.icon name="hero-document-duplicate" />
         </button>
@@ -2328,6 +2348,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           type="button"
           class="block-action config"
           phx-click={show_modal("#block-#{@uid}_config")}
+          data-popover={gettext("Configure block")}
         >
           <.icon name="hero-cog-8-tooth" />
         </button>
@@ -2337,16 +2358,27 @@ defmodule BrandoAdmin.Components.Form.Block do
           class="block-action toggler"
           phx-click="delete_block"
           phx-target={@target}
+          data-popover={gettext("Delete block")}
         >
           <.icon name="hero-trash" />
         </button>
-        <Form.label field={@block[:collapsed]} class="block-action toggler">
+        <Form.label
+          field={@block[:collapsed]}
+          class="block-action toggler"
+          popover={gettext("Collapse (hide) block in block editor")}
+        >
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
           <Input.input type={:checkbox} field={@block[:collapsed]} />
         </Form.label>
 
-        <div :if={!@is_ref?} class="dirty block-action toggler">●</div>
+        <div
+          :if={!@is_ref?}
+          class="dirty block-action toggler"
+          data-popover={gettext("Block has changes")}
+        >
+          ●
+        </div>
       </div>
     </div>
     """
@@ -2363,13 +2395,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     assigns = assign(assigns, :valid?, valid?)
 
     ~H"""
-    <div class="table-block">
-      <%= if !@valid? do %>
-        <div class="empty">
-          <div class="instructions">
-            <div class="table-template">
-              <.icon name="hero-table-cells" /> <%= gettext("Table") %> [<%= @table_template_name %>]
-            </div>
+    <div class="table-block-wrapper">
+      <div class="table-info" phx-click="show_table_instructions" phx-target={@target}>
+        <div class="icon">
+          <span class="hero-table-cells"></span>
+        </div>
+        <div class="info">
+          <span class="table-label">
+            <%= gettext("Tabular data") %><br /> [<%= @table_template_name %>]
+          </span>
+        </div>
+      </div>
+      <div class="table-block">
+        <%= if !@valid? do %>
+          <div class="empty">
             <p>
               <%= gettext("This block implements tabular data, but the table is empty.") %><br />
               <%= gettext("Click the 'add row' button below to get started.") %>
@@ -2384,72 +2423,72 @@ defmodule BrandoAdmin.Components.Form.Block do
               <%= gettext("Add row") %>
             </button>
           </div>
-        </div>
-      <% else %>
-        <div
-          id={"sortable-#{@uid}-table-rows"}
-          class="table-rows"
-          phx-hook="Brando.Sortable"
-          data-target={@target}
-          data-sortable-id={"sortable-#{@uid}-table-rows"}
-          data-sortable-handle=".sort-handle"
-          data-sortable-binary-keys="true"
-          data-sortable-selector=".table-row"
-        >
-          <.inputs_for :let={table_row} field={@block_data[:table_rows]}>
-            <div class="table-row draggable" data-id={table_row.index}>
-              <div class="subform-tools">
-                <button type="button" class="sort-handle">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                    <path fill="none" d="M0 0h24v24H0z" /><path
-                      class="s"
-                      d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z"
-                      fill="rgba(5,39,82,1)"
-                    />
-                  </svg>
-                </button>
+        <% else %>
+          <div
+            id={"sortable-#{@uid}-table-rows"}
+            class="table-rows"
+            phx-hook="Brando.Sortable"
+            data-target={@target}
+            data-sortable-id={"sortable-#{@uid}-table-rows"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-binary-keys="true"
+            data-sortable-selector=".table-row"
+          >
+            <.inputs_for :let={table_row} field={@block_data[:table_rows]}>
+              <div class="table-row draggable" data-id={table_row.index}>
+                <div class="subform-tools">
+                  <button type="button" class="sort-handle">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                      <path fill="none" d="M0 0h24v24H0z" /><path
+                        class="s"
+                        d="M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z"
+                        fill="rgba(5,39,82,1)"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    phx-click="delete_row"
+                    phx-target={@target}
+                    phx-value-id={table_row.index}
+                    type="button"
+                    class="subform-delete"
+                    phx-page-loading
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                      <path fill="none" d="M0 0h24v24H0z" /><path
+                        class="s"
+                        d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"
+                        fill="rgba(5,39,82,1)"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <.inputs_for :let={var} field={table_row[:vars]}>
+                  <.live_component
+                    module={RenderVar}
+                    id={"block-#{@uid}-table-row-#{var.id}"}
+                    var={var}
+                    render={:all}
+                    publish
+                  />
+                </.inputs_for>
+              </div>
+              <div class="insert-row">
                 <button
-                  phx-click="delete_row"
-                  phx-target={@target}
-                  phx-value-id={table_row.index}
                   type="button"
-                  class="subform-delete"
+                  class="tiny"
+                  phx-click="add_table_row"
+                  phx-target={@target}
                   phx-page-loading
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                    <path fill="none" d="M0 0h24v24H0z" /><path
-                      class="s"
-                      d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"
-                      fill="rgba(5,39,82,1)"
-                    />
-                  </svg>
+                  <%= gettext("Add row") %>
                 </button>
               </div>
-
-              <.inputs_for :let={var} field={table_row[:vars]}>
-                <.live_component
-                  module={RenderVar}
-                  id={"block-#{@uid}-table-row-#{var.id}"}
-                  var={var}
-                  render={:all}
-                  publish
-                />
-              </.inputs_for>
-            </div>
-            <div class="insert-row">
-              <button
-                type="button"
-                class="tiny"
-                phx-click="add_table_row"
-                phx-target={@target}
-                phx-page-loading
-              >
-                <%= gettext("Add row") %>
-              </button>
-            </div>
-          </.inputs_for>
-        </div>
-      <% end %>
+            </.inputs_for>
+          </div>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -2466,11 +2505,16 @@ defmodule BrandoAdmin.Components.Form.Block do
   def datasource(assigns) do
     ~H"""
     <div class="block-datasource">
-      <div class="datasource-info">
-        <.icon name="hero-circle-stack" />
-        <span class="datasource-label">
-          <%= gettext("Datasource") %> — <%= @module_datasource_module_label %> [<%= @module_datasource_type %>] &raquo; <%= @module_datasource_query %>
-        </span>
+      <div class="datasource-info" phx-click="show_datasource_instructions" phx-target={@target}>
+        <div class="icon">
+          <.icon name="hero-circle-stack" />
+        </div>
+        <div class="info">
+          <span class="datasource-label">
+            <%= gettext("Datasource") %> [<%= @module_datasource_type %>]<br />
+            <%= @module_datasource_module_label %> &rarr; <%= @module_datasource_query %>
+          </span>
+        </div>
       </div>
 
       <%= if @module_datasource_type == :selection do %>
@@ -2553,6 +2597,76 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
 
     {:noreply, socket}
+  end
+
+  def handle_event("show_datasource_instructions", _, socket) do
+    message =
+      gettext("""
+      <p>
+        This block has a datasource, meaning it can load and display data from the database. There are two types:
+      </p>
+
+      <ul>
+        <li><strong>List Type</strong>: Automatically lists entries based on a preset filter.</li>
+        <li><strong>Selection Type</strong>: Allows you to manually select specific entries to display.</li>
+      </ul>
+
+      <p>
+        Use these options to dynamically show content or highlight particular items.
+      </p>
+      """)
+
+    alert_params = %{
+      title: gettext("Block datasource"),
+      message: message,
+      type: "info"
+    }
+
+    socket
+    |> push_event("b:alert", alert_params)
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("show_vars_instructions", _, socket) do
+    message =
+      gettext("""
+      <p>
+        This block has variables, which can influence settings like size and colors,
+        and allow you to add images, files, and text. Adjusting these variables
+        lets you customize and manipulate the block's rendering.
+      </p>
+      """)
+
+    alert_params = %{
+      title: gettext("Block variables"),
+      message: message,
+      type: "info"
+    }
+
+    socket
+    |> push_event("b:alert", alert_params)
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("show_table_instructions", _, socket) do
+    message =
+      gettext("""
+      <p>
+        This block allows you to input tabular data following a table row template.
+        The data entered here will be uniformly structured and used by the block's
+        template when rendering content.
+      </p>
+      """)
+
+    alert_params = %{
+      title: gettext("Tabular data"),
+      message: message,
+      type: "info"
+    }
+
+    socket
+    |> push_event("b:alert", alert_params)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("add_table_row", _, socket) do

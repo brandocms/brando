@@ -711,7 +711,7 @@ defmodule BrandoAdmin.Components.Form do
   defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
     # TODO: turn each into an assign_new
     assign(socket,
-      has_blocks?: schema.has_trait(Brando.Trait.Villain),
+      has_blocks?: schema.has_trait(Brando.Trait.Blocks),
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
@@ -3556,6 +3556,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :id_prefix, :string, default: ""
   attr :class, :any, default: nil
   attr :click, :any, default: nil
+  attr :popover, :string, default: nil
   slot :default, default: nil
 
   def label(assigns) do
@@ -3569,7 +3570,13 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <label class={@class} for={@f_id} phx-click={@click} phx-page-loading={(@click && true) || false}>
+    <label
+      class={@class}
+      for={@f_id}
+      data-popover={@popover}
+      phx-click={@click}
+      phx-page-loading={(@click && true) || false}
+    >
       <%= render_slot(@inner_block) %>
     </label>
     """

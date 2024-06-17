@@ -1,5 +1,5 @@
 .table-block {
-  margin-bottom: 25px;
+  
   .empty {
     background-color: var(--brando-color-peach);
     color: var(--brando-color-dark);
@@ -7,6 +7,7 @@
     display: flex;
     padding: 12px 15px 15px;
     border-radius: 12px;
+    max-width: 530px;
 
     &.hidden {
       display: none !important;
@@ -28,25 +29,14 @@
       }
     }
 
-    .instructions {
-      font-size: 16px;
+    p {
+      font-size: 13px;
+      font-family: monospace;
+    }
 
-      .table-template {
-        display: flex;
-        align-items: center;
-        gap: 0.8em;
-        font-family: 'Mono';
-        font-size: 14px;
-        margin-bottom: 8px;
-      }
-
-      p {
-        margin-top: 15px;
-      }
-
-      button {
-        margin-top: 20px;
-      }
+    button {
+      width: fit-content;
+      margin-top: 10px;
     }
   }
 
@@ -99,10 +89,10 @@
 
     &:first-of-type {
       .label-wrapper {
-        @space margin-bottom 1vw;
+        @space margin-bottom 5px;
         height: auto;
         overflow: visible;
-        border-bottom: 1px solid gainsboro;
+        border-bottom: 1px solid #eee;
       }
 
       .help-text {
@@ -131,7 +121,9 @@
 
       .label-wrapper {
         label span {
-          @fontsize 14px;
+          font-size: 12px;
+          text-transform: uppercase;
+          font-family: 'Mono';
         }
       }
     }

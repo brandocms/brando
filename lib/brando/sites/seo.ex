@@ -26,7 +26,7 @@ defmodule Brando.Sites.SEO do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
 
-  identifier "SEO"
+  identifier false
 
   attributes do
     attribute :fallback_meta_description, :text

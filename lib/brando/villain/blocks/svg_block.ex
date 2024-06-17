@@ -10,7 +10,7 @@ defmodule Brando.Villain.Blocks.SvgBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
 
     attributes do
       attribute :class, :text

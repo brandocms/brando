@@ -17,7 +17,7 @@ defmodule Brando.Images.GalleryImage do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
 
-  identifier "{{ entry.id }}"
+  identifier false
 
   relations do
     relation :gallery, :belongs_to, module: Gallery

@@ -118,7 +118,7 @@ defmodule Brando.LivePreview do
         do: opts.template_prop,
         else: :entry
 
-    villain_fields = schema_module.__villain_fields__
+    villain_fields = schema_module.__blocks_fields__
 
     entry =
       Enum.reduce(villain_fields, entry, fn attr, updated_entry ->

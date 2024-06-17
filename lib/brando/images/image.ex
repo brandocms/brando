@@ -18,7 +18,7 @@ defmodule Brando.Images.Image do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Focal
 
-  identifier "{{ entry.id }}"
+  identifier false
 
   attributes do
     attribute :status, Ecto.Enum, values: [:processed, :unprocessed]

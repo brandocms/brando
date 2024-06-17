@@ -29,7 +29,7 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
-  trait Brando.Trait.Villain
+  trait Brando.Trait.Blocks
 
   # --
 
@@ -58,6 +58,22 @@ defmodule Brando.Pages.Page do
     publish_at
   )a
 
+  identifier "{{ entry.title }}"
+
+  absolute_url """
+  {%- assign language = entry.language|strip -%}
+  {%- if config.scope_default_language_routes == true -%}
+    /{{ entry.language }}
+  {%- else -%}
+    {%- if language != config.default_language -%}/{{ entry.language }}{%- endif -%}
+  {%- endif -%}
+  {%- if entry.uri == "index" -%}
+    {%- route_i18n entry.language page_path index -%}
+  {%- else -%}
+    {%- route_i18n entry.language page_path show { entry.uri } -%}
+  {%- endif -%}
+  """
+
   attributes do
     attribute :title, :string, required: true
     attribute :uri, :string, required: true, unique: [prevent_collision: :language]
@@ -82,21 +98,6 @@ defmodule Brando.Pages.Page do
   end
 
   @derive {Jason.Encoder, only: @derived_fields}
-  identifier "{{ entry.title }} [{{ entry.language }}]"
-
-  absolute_url """
-  {%- assign language = entry.language|strip -%}
-  {%- if config.scope_default_language_routes == true -%}
-    /{{ entry.language }}
-  {%- else -%}
-    {%- if language != config.default_language -%}/{{ entry.language }}{%- endif -%}
-  {%- endif -%}
-  {%- if entry.uri == "index" -%}
-    {%- route_i18n entry.language page_path index -%}
-  {%- else -%}
-    {%- route_i18n entry.language page_path show { entry.uri } -%}
-  {%- endif -%}
-  """
 
   translations do
     context :naming do

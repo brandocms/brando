@@ -13,6 +13,7 @@ defmodule Brando.Content.Identifier do
     status
     language
     cover
+    url
     schema
     updated_at
   )a
@@ -25,6 +26,7 @@ defmodule Brando.Content.Identifier do
     field :status, Brando.Type.Status
     field :language, Brando.Type.Atom
     field :cover, :string
+    field :url, :string
     field :updated_at, :utc_datetime
   end
 

@@ -20,6 +20,8 @@ defmodule Brando.Content.TableTemplate do
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
 
+  identifier false
+
   attributes do
     attribute :name, :string, required: true
   end

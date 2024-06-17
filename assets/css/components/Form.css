@@ -114,6 +114,10 @@
     border: none;
     width: 100%;
 
+    &.full, &.half, &.sized {
+      margin-bottom: 25px;
+    }
+
     &.inline {
       display: flex;
       flex-wrap: nowrap;
@@ -129,7 +133,9 @@
     }
   }
 
-
+.brando-input:last-of-type .field-wrapper {
+  margin-bottom: 0;
+}
 
 .brando-input[data-size="full"] {
   width: 100%;

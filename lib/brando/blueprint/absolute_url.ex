@@ -37,8 +37,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
         |> Enum.join()
         |> String.trim()
       rescue
-        UndefinedFunctionError -> "<no valid url found>"
-        ArgumentError -> "<no valid url found>"
+        UndefinedFunctionError -> nil
+        ArgumentError -> nil
       end
 
       def __absolute_url_template__ do
@@ -80,8 +80,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
         try do
           Brando.I18n.Helpers.localized_path(locale, unquote(fun), args)
         rescue
-          UndefinedFunctionError -> "<no valid url found>"
-          ArgumentError -> "<no valid url found>"
+          UndefinedFunctionError -> nil
+          ArgumentError -> nil
         end
       end
 

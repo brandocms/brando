@@ -277,6 +277,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+    create table(:pages_blocks) do
+      add :entry_id, references(:pages, on_delete: :delete_all)
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :sequence, :integer
+    end
+
+    create table(:pages_fragments_blocks) do
+      add :entry_id, references(:pages, on_delete: :delete_all)
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :sequence, :integer
+    end
+
     create table(:projects) do
       add :title, :string
       add :status, :integer
@@ -418,6 +430,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :title, :text
       add :status, :integer
       add :language, :string
+      add :url, :string
       add :cover, :string
       add :updated_at, :utc_datetime
     end
@@ -440,6 +453,12 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :config_target, :text
       add :width, :string
 
+      add :link_text, :string
+      add :link_identifier_schemas, {:array, :string}, default: []
+      add :link_allow_custom_text, :boolean, default: true
+      add :link_target_blank, :boolean, default: false
+      add :link_type, :string, default: "url"
+
       add :page_id, references(:pages, on_delete: :delete_all)
       add :block_id, references(:content_blocks, on_delete: :delete_all)
       add :module_id, references(:content_modules, on_delete: :delete_all)
@@ -447,7 +466,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :palette_id, references(:content_palettes, on_delete: :nilify_all)
       add :image_id, references(:images, on_delete: :nilify_all)
       add :file_id, references(:files, on_delete: :nilify_all)
-      add :linked_identifier_id, references(:content_identifiers, on_delete: :nilify_all)
+      add :identifier_id, references(:content_identifiers, on_delete: :nilify_all)
       add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
       add :table_row_id, references(:content_table_rows, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)

@@ -820,7 +820,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               phx-value-type="text"
               class="secondary"
             >
-              Text
+              Rich text
             </button>
             <button
               type="button"
@@ -833,19 +833,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="html"
+              phx-value-type="image"
               class="secondary"
             >
-              Html
+              Image
             </button>
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="datetime"
+              phx-value-type="file"
               class="secondary"
             >
-              Datetime
+              File
             </button>
+
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
@@ -865,6 +866,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="link"
+              class="secondary"
+            >
+              Link
+            </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="datetime"
+              class="secondary"
+            >
+              Datetime
+            </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="color"
               class="secondary"
             >
@@ -873,18 +890,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="image"
+              phx-value-type="html"
               class="secondary"
             >
-              Image
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="file"
-              class="secondary"
-            >
-              File
+              Html
             </button>
           </div>
         </Content.modal>
@@ -911,21 +920,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={var} field={@form[:vars]} skip_hidden>
+              <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>
+                <.live_component
+                  module={RenderVar}
+                  id={"#{@form.id}-#{@key}-render-var-#{var.index}"}
+                  var={var}
+                  render={:all}
+                  target={@myself}
+                  edit
+                />
+                <!-- ^- had publish -->
+              </Content.modal>
               <li class="var padded sort-handle draggable" data-id={var.index}>
                 <input type="hidden" name={var[:id].name} value={var[:id].value} />
                 <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
                 <input type="hidden" name={"#{@form.name}[sort_var_ids][]"} value={var.index} />
-                <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>
-                  <.live_component
-                    module={RenderVar}
-                    id={"#{@form.id}-#{@key}-render-var-#{var.index}"}
-                    var={var}
-                    render={:all}
-                    target={@myself}
-                    edit
-                  />
-                  <!-- ^- had publish -->
-                </Content.modal>
+
                 <span class="text-mono">
                   <%= var[:type].value %> - &lcub;&lcub; <%= var[:key].value %> &rcub;&rcub;
                 </span>

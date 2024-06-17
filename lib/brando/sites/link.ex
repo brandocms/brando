@@ -8,7 +8,7 @@ defmodule Brando.Link do
     gettext_module: Brando.Gettext
 
   data_layer :embedded
-  identifier "{{ entry.name }}"
+  identifier false
   absolute_url "{{ entry.url }}"
 
   attributes do

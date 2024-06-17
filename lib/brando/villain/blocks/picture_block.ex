@@ -12,7 +12,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
 
     attributes do
       attribute :picture_class, :text

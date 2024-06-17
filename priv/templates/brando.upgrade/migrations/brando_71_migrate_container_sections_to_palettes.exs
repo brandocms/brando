@@ -6,7 +6,7 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
     # Add your own schemas to the reject list, if they were created AFTER this migration
     villain_schemas =
       Enum.reject(
-        Brando.Villain.list_villains(),
+        Brando.Villain.list_blocks(),
         &(elem(&1, 0) in [
             Brando.Content.Template,
             Brando.Pages.Page,
@@ -15,7 +15,7 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
           ])
       )
 
-    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
     villain_schemas =
       villain_schemas ++
         [

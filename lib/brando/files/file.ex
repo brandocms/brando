@@ -17,7 +17,7 @@ defmodule Brando.Files.File do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
 
-  identifier "{{ entry.id }}"
+  identifier false
 
   attributes do
     attribute :title, :text

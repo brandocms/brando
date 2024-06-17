@@ -202,7 +202,7 @@ defmodule Brando.Blueprint do
       import Phoenix.Component, except: [form: 1]
 
       def __absolute_url__(_) do
-        false
+        nil
       end
 
       defoverridable __absolute_url__: 1
@@ -858,7 +858,7 @@ defmodule Brando.Blueprint do
       end
 
       @villain_fields Enum.filter(@all_relations, &(&1.opts.module == :blocks))
-      def __villain_fields__ do
+      def __blocks_fields__ do
         @villain_fields
       end
 
@@ -1106,7 +1106,7 @@ defmodule Brando.Blueprint do
   end
 
   defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
-    villain_fields = Enum.map(module.__villain_fields__(), & &1.name)
+    villain_fields = Enum.map(module.__blocks_fields__(), & &1.name)
     Enum.reject(fields_to_cast, &(&1 in villain_fields))
   end
 
@@ -1146,6 +1146,10 @@ defmodule Brando.Blueprint do
     app_modules
     |> Enum.uniq()
     |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  def list_blueprints(:include_brando) do
+    list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
   end
 
   def get_plural(module) do

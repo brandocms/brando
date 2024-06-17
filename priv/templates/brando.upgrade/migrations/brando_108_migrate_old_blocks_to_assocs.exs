@@ -3,7 +3,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   import Ecto.Query
 
   def up do
-    villain_schemas = Brando.Villain.list_villains()
+    villain_schemas = Brando.Villain.list_blocks()
 
     for {schema, _} <- villain_schemas do
       table = schema.__schema__(:source)

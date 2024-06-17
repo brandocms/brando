@@ -37,7 +37,7 @@ defmodule Brando.Content.Module do
   import Brando.Gettext
   alias Phoenix.LiveView.JS
 
-  identifier "{{ entry.name }}"
+  identifier false
 
   @derived_fields ~w(id type name sequence namespace help_text wrapper class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}

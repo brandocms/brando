@@ -174,6 +174,7 @@ defmodule Brando.TraitTest.Project do
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Translatable
+  trait Brando.Trait.Blocks
 
   attributes do
     attribute :title, :string, unique: true

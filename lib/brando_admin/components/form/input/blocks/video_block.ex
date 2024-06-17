@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   import Brando.Gettext
   alias Ecto.Changeset
-  alias Brando.Villain.Blocks.VideoBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -75,11 +74,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <div class="video-loading hidden">
                   <%= gettext("Fetching video information. Please wait...") %>
                 </div>
-                <%= gettext("Enter the video's URL:") %><br />
                 <small>
                   <%= gettext(
-                    "You can enter YouTube- or Vimeo addresses to embed videos. You can also reference files directly, to use a custom player."
+                    "To embed a video in your content, please input the full URL of the video you want to use. You have a couple of options:"
                   ) %>
+                  <br /><br />
+
+                  <strong>YouTube</strong>: <%= gettext(
+                    "Enter the URL of any YouTube video to use the YouTube embedded player. This allows you to easily integrate YouTube videos with all their features."
+                  ) %><br />
+                  <strong>Vimeo</strong>: <%= gettext(
+                    "Enter the URL of any Vimeo video to use the Vimeo embedded player, ensuring a smooth and high-quality video playback experience."
+                  ) %><br />
+                  <strong><%= gettext("Direct Video File") %></strong>: <%= gettext(
+                    "You can also provide a direct link to a video file (e.g., .mp4, .webm). This will utilize our customized player to embed the video directly into your content."
+                  ) %><br /><br />
+                  <%= gettext(
+                    "Make sure the URL is complete and correct. For YouTube and Vimeo, copy the URL directly from your browser's address bar. For direct video files, ensure the link is publicly accessible and points directly to the video file. Enter the URL in the input below and click 'Get video info'"
+                  ) %><br /><br />
                 </small>
                 <input id={"block-#{@uid}-url"} type="text" class="text" />
                 <button id={"block-#{@uid}-button"} type="button" class="secondary small">
@@ -293,19 +305,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     """
   end
 
-  def handle_event(
-        "url",
-        %{
-          "height" => height,
-          "remoteId" => remote_id,
-          "source" => source,
-          "url" => url,
-          "width" => width
-        },
-        socket
-      ) do
+  def handle_event("url", params, socket) do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
+
+    %{
+      "height" => height,
+      "remoteId" => remote_id,
+      "source" => source,
+      "url" => url,
+      "width" => width
+    } = params
 
     new_data = %{
       url: url,
@@ -354,114 +364,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_image",
-        _,
-        %{
-          assigns: %{
-            base_form: base_form,
-            block: block,
-            data_field: data_field,
-            uid: uid
-          }
-        } = socket
-      ) do
-    block_data = block[:data].value
-    data_map = Map.from_struct(block_data)
+  def handle_event("reset_image", _, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+    new_data = update_block_data(socket, %{cover_image: nil})
 
-    updated_data_map = Map.put(data_map, :cover_image, nil)
-    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
-
-    updated_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Brando.Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_video",
-        _,
-        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
-      ) do
-    changeset = base_form.source
+  def handle_event("reset_video", _, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+    new_data = %{}
 
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: %VideoBlock.Data{}
-      })
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => id},
-        %{
-          assigns: %{
-            base_form: base_form,
-            uid: uid,
-            block: block,
-            data_field: data_field
-          }
-        } = socket
-      ) do
+  def handle_event("select_image", %{"id" => id}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
-    block_data = block[:data].value
-    data_map = Map.from_struct(block_data)
+    new_data = update_block_data(socket, %{cover_image: image})
 
-    updated_data_map = Map.put(data_map, :cover_image, image)
-    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
-
-    updated_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Brando.Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
+  end
+
+  defp update_block_data(socket, new_data) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    data_map = Map.from_struct(block_data)
+    Map.merge(data_map, new_data) |> dbg()
   end
 end

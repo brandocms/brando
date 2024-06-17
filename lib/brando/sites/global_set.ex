@@ -14,7 +14,7 @@ defmodule Brando.Sites.GlobalSet do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
 
-  identifier "{{ entry.label }}"
+  identifier false
 
   attributes do
     attribute :label, :string, required: true

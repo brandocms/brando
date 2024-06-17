@@ -10,7 +10,7 @@ defmodule Brando.Content.Var.Option do
   @primary_key false
   data_layer :embedded
 
-  identifier "{{ entry.label }}"
+  identifier false
 
   attributes do
     attribute :label, :text, required: true

@@ -15,13 +15,13 @@ defmodule Brando.Content.Template do
 
   import Brando.Gettext
 
-  identifier "{{ entry.name }}"
+  identifier false
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Villain
+  trait Brando.Trait.Blocks
 
   attributes do
     attribute :name, :string, required: true

@@ -20,6 +20,8 @@ defmodule Brando.Content.TableRow do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
 
+  identifier false
+
   relations do
     relation :block, :belongs_to, module: Brando.Content.Block
 

@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                 </figure>
                 <div class="instructions">
                   <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                    Configure SVG block
+                    <%= gettext("Configure SVG block") %>
                   </button>
                 </div>
               </div>
@@ -82,32 +82,5 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
       </.inputs_for>
     </div>
     """
-  end
-
-  def handle_event(
-        "drop_svg",
-        %{"code" => code},
-        %{assigns: %{uid: uid, data_field: data_field, base_form: form}} = socket
-      ) do
-    # replace block
-    changeset = form.source
-
-    new_data = %{
-      code: code
-    }
-
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
   end
 end

@@ -24,10 +24,10 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
-  trait Brando.Trait.Villain
-  trait Brando.Trait.Villain.PreventCircularReferences
+  trait Brando.Trait.Blocks
+  trait Brando.Trait.Blocks.PreventCircularReferences
 
-  identifier "{{ entry.title }}"
+  identifier false
 
   @derived_fields ~w(
     id

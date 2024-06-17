@@ -4,7 +4,6 @@ defmodule Brando.Blueprint.TraitTest do
   alias Brando.Blueprint.Attribute
   alias Brando.Blueprint.Relation
   alias Brando.Trait
-  alias Brando.Trait
   alias Brando.Users.User
 
   describe "creator trait" do

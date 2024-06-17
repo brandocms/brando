@@ -45,6 +45,8 @@ defmodule Brando.Users.User do
   trait Brando.Trait.ProtectRole
   trait Brando.Trait.ProtectPassword
 
+  identifier false
+
   attributes do
     attribute :name, :string, required: true
 
@@ -70,8 +72,6 @@ defmodule Brando.Users.User do
   relations do
     relation :config, :embeds_one, module: Brando.Users.UserConfig
   end
-
-  identifier "{{ entry.name }}"
 
   @derived_fields ~w(
     id

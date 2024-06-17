@@ -19,6 +19,8 @@ defmodule Brando.Content.Var do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
 
+  identifier false
+
   attributes do
     attribute :type, :enum,
       required: true,
@@ -52,6 +54,13 @@ defmodule Brando.Content.Var do
     attribute :color_picker, :boolean, default: true
     attribute :color_opacity, :boolean, default: false
 
+    # link
+    attribute :link_text, :string
+    attribute :link_type, :enum, values: [:url, :identifier], default: :url
+    attribute :link_identifier_schemas, {:array, :string}, default: []
+    attribute :link_target_blank, :boolean, default: false
+    attribute :link_allow_custom_text, :boolean, default: true
+
     # layout
     attribute :width, :enum,
       values: [
@@ -67,15 +76,15 @@ defmodule Brando.Content.Var do
     relation :palette, :belongs_to, module: Brando.Content.Palette
     relation :image, :belongs_to, module: Brando.Images.Image
     relation :file, :belongs_to, module: Brando.Files.File
-    relation :linked_identifier, :belongs_to, module: Brando.Content.Identifier
+    relation :identifier, :belongs_to, module: Brando.Content.Identifier
 
     # a var can belong to a page, a block, a module, a table template or row, or a global variables set
     relation :page, :belongs_to, module: Brando.Pages.Page
     relation :block, :belongs_to, module: Brando.Content.Block
     relation :module, :belongs_to, module: Brando.Content.Module
-    relation :global_set, :belongs_to, module: Brando.Sites.GlobalSet
     relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
     relation :table_row, :belongs_to, module: Brando.Content.TableRow
+    relation :global_set, :belongs_to, module: Brando.Sites.GlobalSet
   end
 
   defimpl String.Chars do

@@ -1,4 +1,5 @@
 import { Dom } from '@brandocms/jupiter'
+import { alertError } from '../../alerts'
 
 const GMAPS_REGEX = /<iframe(?:.*)src="(.*?)"/
 
@@ -12,14 +13,29 @@ export default app => ({
   mounted() {
     this.target = this.el.dataset.target
     this.bindInput()
+    this.source = null
+    this.embedUrl = null
   },
 
   bindInput() {
     this.$button = Dom.find(this.el, 'button')
-    this.$input = Dom.find(this.el, 'input')
+    this.$input = Dom.find(this.el, 'textarea')
+    this.$modalButton = this.el
+      .closest('.modal-content')
+      .querySelector('.modal-footer button.primary')
     this.$button.addEventListener('click', () => {
       this.handleInput(this.$input.value)
-      this.pushEventTo(this.target, 'url', { source: this.source, embedUrl: this.embedUrl })
+      if (this.source && this.embedUrl) {
+        this.pushEventTo(this.target, 'url', { source: this.source, embedUrl: this.embedUrl })
+        if (this.$modalButton) {
+          this.$modalButton.click()
+        }
+      } else {
+        alertError(
+          'Parsing failed',
+          'Could not parse map URL. Make sure you are pasting the embed code.'
+        )
+      }
     })
   },
 

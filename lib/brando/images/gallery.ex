@@ -15,7 +15,7 @@ defmodule Brando.Images.Gallery do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
 
-  identifier "{{ entry.id }}"
+  identifier false
 
   attributes do
     attribute :config_target, :text

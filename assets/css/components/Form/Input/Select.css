@@ -1,9 +1,10 @@
 h2.titlecase {
   font-size: 12px !important;
   text-transform: uppercase;
-  font-weight: normal;
-  margin-top: 10px;
+  margin-top: 15px;
   margin-bottom: 8px;
+  letter-spacing: 0.03em;
+  font-weight: bold;
 }
 
 h2.titlecase + .button-group-vertical button:first-of-type {
@@ -38,9 +39,10 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     }
 
     &-text {
-      @fontsize sm;
       display: flex;
       align-items: center;
+      font-size: 14px;
+      font-family: 'Mono';
 
       svg {
         margin-right: 9px;
@@ -161,6 +163,8 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       width: 100%;
       border: none;
       text-align: left;
+      font-size: 14px;
+      font-family: 'Mono';
 
       &.option-selected {
         background-color: var(--brando-color-blue);;

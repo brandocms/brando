@@ -537,7 +537,8 @@ defmodule Brando.Content do
         language: language,
         status: new_identifier.status,
         cover: new_identifier.cover,
-        updated_at: new_identifier.updated_at
+        updated_at: new_identifier.updated_at,
+        url: new_identifier.url
       }
 
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
@@ -548,6 +549,22 @@ defmodule Brando.Content do
 
       _err ->
         {:ok, false}
+    end
+  end
+
+  def get_identifier(id) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.id == ^id,
+        limit: 1
+      )
+
+    case Brando.repo().one(query) do
+      nil ->
+        {:error, {:identifier, :not_found}}
+
+      identifier ->
+        {:ok, identifier}
     end
   end
 

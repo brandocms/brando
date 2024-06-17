@@ -18,7 +18,7 @@ defmodule Brando.Content.Module.Ref do
   data_layer :embedded
   trait Brando.Trait.CastPolymorphicEmbeds
 
-  identifier "{{ entry.name }}"
+  identifier false
 
   attributes do
     attribute :name, :text, required: true

@@ -92,3 +92,85 @@
     }
   }
 }
+
+.link-preview {
+  display: flex;      
+  align-items: center;
+  gap: 10px;
+  background-color: #fafafa;
+  width: fit-content;
+  padding: 7px 15px 7px 7px;
+  border-radius: 7px;
+  cursor: cell;
+
+  .icon {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: gold;
+    border-radius: 50%;
+
+    span {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  .info {
+    @font mono;
+    font-size: 10px;
+    text-transform: uppercase;
+
+    .link-text {
+      text-transform: none;
+
+      svg {
+        float: left;
+        margin-right: 5px;
+        width: 7px;
+        height: 7px;
+        margin-top: 3px;
+
+        circle {
+          fill: theme(colors.status.published);
+
+          &.draft {
+            fill: theme(colors.status.draft);
+          }
+
+          &.pending {
+            fill: theme(colors.status.pending);
+          }
+
+          &.published {
+            fill: theme(colors.status.published);
+          }
+
+          &.disabled {
+            fill: theme(colors.status.disabled);
+          }
+
+          &.deleted {
+            fill: #111;
+          }
+        }
+      }
+    }
+
+    
+
+    dl {
+      display: flex;
+
+      dt {
+        font-weight: 600;
+      }
+
+      dd {
+        text-transform: none;
+      }
+    }
+  }
+}

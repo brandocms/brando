@@ -34,7 +34,7 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
 
     create unique_index(:content_block_identifiers, [:block_id, :identifier_id])
 
-    villain_schemas = Brando.Villain.list_villains()
+    villain_schemas = Brando.Villain.list_blocks()
 
     for {schema, attrs} <- villain_schemas,
         %{name: blocks_field} <- attrs do
@@ -60,7 +60,7 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
   def down do
     drop table(:content_block_identifiers)
 
-    villain_schemas = Brando.Villain.list_villains()
+    villain_schemas = Brando.Villain.list_blocks()
 
     for {schema, attrs} <- villain_schemas,
         %{name: _} <- attrs do

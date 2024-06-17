@@ -61,7 +61,9 @@ defmodule Brando.Revisions do
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active \\ true) do
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
-    encoded_entry = Utils.term_to_binary(entry)
+    preloads = Brando.Blueprint.preloads_for(entry_type)
+    entry_with_preloads = Brando.repo().preload(entry, preloads)
+    encoded_entry = Utils.term_to_binary(entry_with_preloads)
 
     revision = %{
       active: set_active,

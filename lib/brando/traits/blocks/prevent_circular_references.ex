@@ -1,4 +1,4 @@
-defmodule Brando.Trait.Villain.PreventCircularReferences do
+defmodule Brando.Trait.Blocks.PreventCircularReferences do
   @moduledoc """
   Ensure that the fragment is not referencing itself.
   """

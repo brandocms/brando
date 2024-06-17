@@ -63,6 +63,7 @@
         .block-actions {
           .dirty {
             opacity: 1;
+            pointer-events: all;
           }
         }
       }
@@ -173,18 +174,95 @@ button.btn-palette {
   }
 
   
-  .block-vars {
+  .vars-info {
+    @font mono;
+    @space margin-bottom 15px;
+    padding-left: 15px;
+    display: flex;      
+    align-items: center;
+    gap: 10px;
+    cursor: help;
+
+    .icon {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: gold;
+      border-radius: 50%;
+
+      span {
+        width: 15px;
+        height: 15px;
+      }
+    }
+
+    .info {
+      span.vars-label {
+        font-size: 10px;
+        line-height: 1.4 !important;
+        text-transform: uppercase;
+        display: block;
+      }
+    }
+  }
+
+  .table-block-wrapper {
     border-top: 1px solid #eee;
-    border-bottom: 1px solid #eee;
+    padding-top: 15px;
+    padding-bottom: 15px;    
+    padding-right: 15px;
+  }
+
+  .table-info {
+    @font mono;
+    @space margin-bottom 15px;
+    padding-left: 15px;
+    display: flex;      
+    align-items: center;
+    gap: 10px;
+    cursor: help;
+
+    .icon {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: gold;
+      border-radius: 50%;
+
+      span {
+        width: 15px;
+        height: 15px;
+      }
+    }
+
+    .info {
+      span.table-label {
+        font-size: 10px;
+        line-height: 1.4 !important;
+        text-transform: uppercase;
+        display: block;
+      }
+    }
+  }
+
+  .block-vars-wrapper {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    padding-bottom: 15px;    
+    padding-right: 15px;
+  }
+
+  .block-vars {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    margin-bottom: 15px;
-    padding-top: 15px;
-    padding-bottom: 15px;
 
     .variable {
-      padding: 0.5em 15px 0;
+      padding: 0 15px 0 15px;
 
       &:nth-of-type(2), 
       &:nth-of-type(3) {
@@ -254,11 +332,17 @@ button.btn-palette {
     .datetime-wrapper {
       .clear-datetime {
         font-size: 12px;
+        top: 11px;
         line-height: 1;
         font-family: 'Mono';
         text-transform: uppercase;
         padding: 0.5em;
         background-color: white;
+
+        &:hover {
+          background-color: 1px solid var(--brando-color-dark);
+          color: 1px solid var(--brando-color-input);
+        }
       }
     }
   }
@@ -424,34 +508,51 @@ button.btn-palette {
     }
   }
 
+  .block-splits {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+  }
+
   .block-datasource {
     @font mono;
     font-size: 10px;
     margin-bottom: 17px;
     padding-bottom: 15px;
-    padding-top: 10px;
+    padding-top: 15px;
     width: 100%;
     padding-left: 15px;
     padding-right: 15px;
-    border-bottom: 1px solid #eee;
+    border-top: 1px solid #eee;
 
     .datasource-info {
-      @space margin-bottom 10px;
-      display: flex;
+      @space margin-bottom 15px;
+      display: flex;      
       align-items: center;
-      gap: 7px;
+      gap: 10px;
+      cursor: help;
 
-      .hero-circle-stack-mini {
-        width: 12px;
-        height: 12px;
+      .icon {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: gold;
+        border-radius: 50%;
+
+        span {
+          width: 15px;
+          height: 15px;
+        }
       }
-    }
 
-    span.datasource-label {
-      @font mono;
-      font-size: 12px;
-      text-transform: uppercase;
-      text-decoration: underline;
+      .info {
+        span.datasource-label {
+          @font mono;
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+      }
     }
 
     svg {
@@ -571,6 +672,10 @@ button.btn-palette {
         height: 18px;
       }
 
+      &.sort-handle {
+        cursor: move;
+      }
+
       &:hover {
         background-color: gold;
         color: var(--brando-color-dark);
@@ -583,6 +688,7 @@ button.btn-palette {
         font-size: 13px;
         transition: opacity 450ms ease;
         border-color: transparent !important;
+        pointer-events: none;
       }
 
       &.toggler {      

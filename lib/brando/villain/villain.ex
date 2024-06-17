@@ -347,7 +347,7 @@ defmodule Brando.Villain do
   Renders all block fields for an entry and adds them to changeset
   """
   def render_all_block_fields_and_add_to_changeset(changeset, schema, entry) do
-    Enum.reduce(schema.__villain_fields__(), changeset, fn field, updated_changeset ->
+    Enum.reduce(schema.__blocks_fields__(), changeset, fn field, updated_changeset ->
       rendered_field = :"rendered_#{field.name}"
       rendered_at_field = :"rendered_#{field.name}_at"
       entry_blocks_field = :"entry_#{field.name}"
@@ -394,12 +394,12 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  List all registered Villain fields
+  List all registered :blocks fields
   """
-  @spec list_villains :: [module()]
-  def list_villains do
-    blueprint_impls = Trait.Villain.list_implementations()
-    Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
+  @spec list_blocks :: [module()]
+  def list_blocks do
+    blueprint_impls = Trait.Blocks.list_implementations()
+    Enum.map(blueprint_impls, &{&1, &1.__blocks_fields__()})
   end
 
   @doc """
@@ -925,7 +925,7 @@ defmodule Brando.Villain do
     :image_id,
     :palette_id,
     :file_id,
-    :linked_identifier_id,
+    :identifier_id,
     :page_id,
     :block_id,
     :module_id,
@@ -939,7 +939,7 @@ defmodule Brando.Villain do
     :file,
     :image,
     :palette,
-    :linked_identifier,
+    :identifier,
     :page,
     :global_set,
     :table_template,
@@ -995,11 +995,11 @@ defmodule Brando.Villain do
   Returns a list of preloads for a schema if it has the Villain trait
   """
   def preloads_for(schema) do
-    if schema.has_trait(Brando.Trait.Villain) do
+    if schema.has_trait(Brando.Trait.Blocks) do
       vars_query =
         from v in Brando.Content.Var,
           order_by: [asc: :sequence],
-          preload: [:file, :image, :palette, :linked_identifier]
+          preload: [:file, :image, :palette, :identifier]
 
       table_row_query =
         from tr in Brando.Content.TableRow,
@@ -1049,7 +1049,7 @@ defmodule Brando.Villain do
           ],
           order_by: [asc: :sequence]
 
-      Enum.reduce(schema.__villain_fields__(), [], fn %{name: assoc_name}, acc ->
+      Enum.reduce(schema.__blocks_fields__(), [], fn %{name: assoc_name}, acc ->
         field_as_module =
           assoc_name
           |> to_string

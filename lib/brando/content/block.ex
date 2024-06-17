@@ -33,6 +33,11 @@ defmodule Brando.Content.Block do
     :instructions,
     :color_picker,
     :color_opacity,
+    :link_text,
+    :link_type,
+    :link_identifier_schemas,
+    :link_target_blank,
+    :link_allow_custom_text,
     :sequence,
     :creator_id,
     :module_id,
@@ -41,7 +46,7 @@ defmodule Brando.Content.Block do
     :palette_id,
     :image_id,
     :file_id,
-    :linked_identifier_id,
+    :identifier_id,
     :global_set_id,
     :table_template_id
   ]

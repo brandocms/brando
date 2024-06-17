@@ -305,7 +305,7 @@ defmodule BrandoAdmin.LiveView.Form do
        when action in [:created, :updated] do
     schema = socket.assigns.schema
 
-    for %{name: field} <- schema.__villain_fields__() do
+    for %{name: field} <- schema.__blocks_fields__() do
       target_id = "block-field-#{field}-module-picker"
 
       send_update(BrandoAdmin.Components.Form.BlockField.ModulePicker,

@@ -14,7 +14,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
 
     villain_schemas =
       Enum.reject(
-        Brando.Villain.list_villains(),
+        Brando.Villain.list_blocks(),
         &(elem(&1, 0) in [
             Brando.Content.Template,
             Brando.Pages.Page,
@@ -23,7 +23,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
           ])
       )
 
-    # since these are old now, we use :data as field name (since list_villains will return :blocks for these)
+    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
     villain_schemas =
       villain_schemas ++
         [

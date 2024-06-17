@@ -63,7 +63,7 @@ defmodule Mix.Tasks.Brando.Gen do
     file_field? = blueprint_module.__file_fields__() != []
     image_field? = blueprint_module.__image_fields__() != []
     video_field? = blueprint_module.__video_fields__() != []
-    villain? = blueprint_module.__villain_fields__() != []
+    villain? = blueprint_module.__blocks_fields__() != []
     gallery? = blueprint_module.__gallery_fields__() != []
     status? = blueprint_module.__status_fields__() != []
     slug? = blueprint_module.__slug_fields__() != []

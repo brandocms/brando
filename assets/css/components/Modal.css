@@ -103,9 +103,11 @@
   }
 
   h2 {
+    @font mono;
     color: var(--brando-color-dark);
-    font-size: 25px;
-    font-weight: 500;
+    font-size: 18px;
+    font-weight: 400;
+    text-transform: uppercase;
   }
 
   .modal-close {
@@ -209,6 +211,29 @@
         }
       }
     }
+
+    &.tiny {
+      width: fit-content;
+      button {
+        font-size: 11px;
+        font-family: 'Mono';
+        text-transform: uppercase;
+        text-align: left !important;
+        padding: 10px 10px 10px;
+        min-width: 150px;
+
+        &:first-of-type {
+          border-top-left-radius: 0 !important;
+          border-top-right-radius: 0 !important;
+        }
+
+        &:last-of-type {
+          border-bottom-left-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+
+      }
+    }
   }
 
   .panels {
@@ -247,6 +272,7 @@
   @space padding-x 20px;
   max-height: 80vh;
   overflow-y: scroll;
+  overflow-x: hidden;
   background-color: #fff;
 
   > h2 {

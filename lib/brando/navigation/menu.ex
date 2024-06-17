@@ -15,7 +15,7 @@ defmodule Brando.Navigation.Menu do
   trait Brando.Trait.Translatable, alternates: false
   trait Brando.Trait.Status
 
-  identifier "{{ entry.title }} [{{ entry.language }}]"
+  identifier false
 
   attributes do
     attribute :title, :string, required: true

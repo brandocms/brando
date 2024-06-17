@@ -69,7 +69,7 @@ defmodule Brando.Villain.Schema do
   @doc false
   def compile(villain_fields) do
     quote do
-      def __villain_fields__ do
+      def __blocks_fields__ do
         {__MODULE__, unquote(Macro.escape(villain_fields))}
       end
     end

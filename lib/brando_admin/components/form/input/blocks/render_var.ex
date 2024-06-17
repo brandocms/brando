@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # use Phoenix.HTML
   import Brando.Gettext
   import Ecto.Changeset
+  import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
@@ -22,16 +23,36 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data visible, :boolean
   # data publish, :boolean
 
+  def mount(socket) do
+    {:ok,
+     socket
+     |> assign(:visible, false)
+     |> assign(:publish, false)}
+  end
+
   def update_many(assigns_sockets) do
-    {image_ids, cmp_imgs, file_ids, cmp_files} =
-      Enum.reduce(assigns_sockets, {[], [], [], []}, fn
+    {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} =
+      Enum.reduce(assigns_sockets, {[], [], [], [], [], []}, fn
         {%{id: id, var: %{data: %{type: :image, image_id: image_id}}}, _sockets},
-        {image_ids, cmp_imgs, file_ids, cmp_files} ->
-          {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files}
+        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} ->
+          {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files,
+           identifier_ids, cmp_identifiers}
 
         {%{id: id, var: %{data: %{type: :file, file_id: file_id}}}, _sockets},
-        {image_ids, cmp_imgs, file_ids, cmp_files} ->
-          {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files]}
+        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} ->
+          {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files], identifier_ids,
+           cmp_identifiers}
+
+        {%{id: id, var: %{source: changeset, data: %{type: :link}}}, _sockets},
+        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} = acc ->
+          case get_field(changeset, :identifier_id) do
+            nil ->
+              acc
+
+            identifier_id ->
+              {image_ids, cmp_imgs, file_ids, cmp_files, [identifier_id | identifier_ids],
+               [{id, identifier_id} | cmp_identifiers]}
+          end
 
         _, acc ->
           acc
@@ -41,7 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       if image_ids == [] do
         {:ok, []}
       else
-        Brando.Images.list_images(%{filter: %{ids: image_ids}})
+        Brando.Images.list_images(%{filter: %{ids: image_ids}, cache: {:ttl, :timer.minutes(2)}})
       end
 
     mapped_imgs = images |> Enum.map(&{&1.id, &1}) |> Map.new()
@@ -51,11 +72,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       if file_ids == [] do
         {:ok, []}
       else
-        Brando.Files.list_files(%{filter: %{ids: file_ids}})
+        Brando.Files.list_files(%{filter: %{ids: file_ids}, cache: {:ttl, :timer.minutes(2)}})
       end
 
     mapped_files = files |> Enum.map(&{&1.id, &1}) |> Map.new()
     mapped_file_ids = Map.new(cmp_files)
+
+    {:ok, identifiers} =
+      if identifier_ids == [] do
+        {:ok, []}
+      else
+        # TODO: , cache: {:ttl, :timer.minutes(2)}}
+        Brando.Content.list_identifiers(identifier_ids)
+      end
+
+    mapped_identifiers = identifiers |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_identifier_ids = Map.new(cmp_identifiers)
 
     Enum.map(assigns_sockets, fn {assigns, socket} ->
       socket_with_image =
@@ -68,6 +100,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         case Map.get(mapped_file_ids, assigns.id) do
           nil -> assign_new(socket_with_image, :file, fn -> nil end)
           key -> assign_new(socket_with_image, :file, fn -> Map.get(mapped_files, key) end)
+        end
+
+      socket_with_image_and_file_and_identifiers =
+        case Map.get(mapped_identifier_ids, assigns.id) do
+          nil ->
+            assign(socket_with_image_and_file, :identifier, nil)
+
+          key ->
+            assign(socket_with_image_and_file, :identifier, Map.get(mapped_identifiers, key))
         end
 
       var = assigns.var
@@ -92,12 +133,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           :image -> get_field(changeset, :image_id)
           :file -> get_field(changeset, :file_id)
           :boolean -> get_field(changeset, :value_boolean)
+          :link -> get_field(changeset, :value)
           _ -> get_field(changeset, :value)
         end
 
       value = control_value(type, value)
 
-      socket_with_image_and_file
+      socket_with_image_and_file_and_identifiers
       |> assign(assigns)
       |> assign(:id, assigns.id)
       |> assign(:edit, edit)
@@ -108,33 +150,25 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:key, var[:key].value)
       |> assign(:type, type)
       |> assign(:value, value)
+      |> assign_new(:blueprint_schema_opts, fn ->
+        schemas = Brando.Blueprint.list_blueprints()
+        Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
+      end)
       |> assign_new(:on_change, fn -> nil end)
       |> assign_new(:images, fn -> nil end)
       |> assign_new(:files, fn -> nil end)
+      |> assign_new(:identifiers, fn -> nil end)
       |> assign_new(:value_id, fn -> value end)
-      |> assign_new(:image_id, fn ->
-        if type == :image do
-          value
-        end
-      end)
-      |> assign_new(:file_id, fn ->
-        if type == :image do
-          value
-        end
-      end)
+      |> assign_new(:image_id, fn -> if type == :image, do: value end)
+      |> assign_new(:file_id, fn -> if type == :file, do: value end)
+      |> assign_new(:identifier_id, fn -> if type == :link and not is_binary(value), do: value end)
       |> assign(:instructions, get_field(changeset, :instructions))
       |> assign(:placeholder, get_field(changeset, :placeholder))
       |> assign(:var, var)
     end)
   end
 
-  def mount(socket) do
-    {:ok,
-     socket
-     |> assign(:visible, false)
-     |> assign(:publish, false)}
-  end
-
+  defp control_value(nil, nil), do: ""
   defp control_value(:string, value) when is_binary(value), do: value
   defp control_value(:string, _value), do: ""
 
@@ -164,6 +198,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value(:file, value) when is_binary(value), do: nil
   defp control_value(:file, value) when is_boolean(value), do: nil
   defp control_value(:file, value), do: value
+
+  defp control_value(:link, value) when is_binary(value), do: nil
+  defp control_value(:link, value) when is_boolean(value), do: nil
+  defp control_value(:link, value), do: value
 
   def render(assigns) do
     ~H"""
@@ -204,12 +242,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     %{label: "Boolean", value: "boolean"},
                     %{label: "Color", value: "color"},
                     %{label: "Datetime", value: "datetime"},
+                    %{label: "File", value: "file"},
                     %{label: "Html", value: "html"},
+                    %{label: "Image", value: "image"},
+                    %{label: "Link", value: "link"},
                     %{label: "String", value: "string"},
                     %{label: "Select", value: "select"},
-                    %{label: "Text", value: "text"},
-                    %{label: "Image", value: "image"},
-                    %{label: "File", value: "file"}
+                    %{label: "Text", value: "text"}
                   ]
                 ]}
                 publish={@publish}
@@ -243,6 +282,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 value_id={@value_id}
                 image_id={@image_id}
                 file_id={@file_id}
+                identifier={@identifier}
+                identifier_id={@identifier_id}
                 placeholder={@placeholder}
                 instructions={@instructions}
                 target={@myself}
@@ -259,6 +300,18 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   <Input.number
                     field={@var[:palette_id]}
                     label={gettext("ID of palette to choose colors from")}
+                  />
+                <% :link -> %>
+                  <.live_component
+                    module={Input.MultiSelect}
+                    id={"#{@var.id}-select-link-schemas"}
+                    label={gettext("Allowed identifier schemas")}
+                    field={@var[:link_identifier_schemas]}
+                    opts={[options: @blueprint_schema_opts]}
+                  />
+                  <Input.toggle
+                    field={@var[:link_allow_custom_text]}
+                    label={gettext("Allow setting custom link text")}
                   />
                 <% :select -> %>
                   <Form.field_base
@@ -308,6 +361,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               value_id={@value_id}
               image_id={@image_id}
               file_id={@file_id}
+              identifier={@identifier}
+              identifier_id={@identifier_id}
               placeholder={@placeholder}
               instructions={@instructions}
               target={@myself}
@@ -324,6 +379,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :id, :any
   attr :type, :any
   attr :var, :any
+  attr :identifier, :any
   attr :image, :any
   attr :images, :any
   attr :file, :any
@@ -332,6 +388,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :value_id, :any
   attr :image_id, :any
   attr :file_id, :any
+  attr :identifier_id, :any
   attr :placeholder, :any
   attr :instructions, :any
   attr :target, :any
@@ -490,6 +547,166 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         />
       </div>
     </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :link} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Form.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions}>
+        <div class="input-link">
+          <.link_preview
+            var={@var}
+            field={@var[:identifier_id]}
+            click={show_modal("#var-#{@var.id}-link-config")}
+            identifier={@identifier}
+          />
+          <.link_modal field={@var} identifier={@identifier} target={@target} />
+        </div>
+      </Form.field_base>
+    </div>
+    """
+  end
+
+  def link_preview(assigns) do
+    var = assigns.var
+    changeset = var.source
+    value = get_field(changeset, :value)
+    link_type = get_field(changeset, :link_type, :url)
+    link_text = get_field(changeset, :link_text)
+    external? = link_type == :url && is_binary(value) && String.starts_with?(value, "http")
+
+    assigns =
+      assigns
+      |> assign(:link_type, link_type)
+      |> assign(:link_text, link_text)
+      |> assign(:value, value)
+      |> assign(:external?, external?)
+
+    ~H"""
+    <div class="link-preview" phx-click={@click}>
+      <div class="icon">
+        <.icon :if={@link_type == :url && !@external?} name="hero-link" />
+        <.icon :if={@link_type == :url && @external?} name="hero-globe-alt" />
+        <.icon :if={@link_type == :identifier} name="hero-link" />
+      </div>
+      <div class="info">
+        <%= if @link_type == :url do %>
+          <%= if @link_text do %>
+            <div class="link-text"><%= @link_text %></div>
+          <% end %>
+          <dl>
+            <dt><%= gettext("URL") %>=</dt>
+            <dd><%= @value || gettext("<No URL>") %></dd>
+          </dl>
+        <% else %>
+          <.link_identifier identifier={@identifier} link_text={@link_text} />
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :link_text, :string, default: nil
+  attr :identifier, :any, default: nil
+
+  def link_identifier(assigns) do
+    identifier = assigns.identifier
+
+    translated_type =
+      if identifier do
+        schema = identifier.schema
+
+        Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+          schema.__naming__().singular
+      end
+
+    assigns = assign(assigns, :translated_type, translated_type)
+
+    ~H"""
+    <div class="link-text" phx-no-format>
+      <%= if @link_text do %>
+        <%= if @identifier do %>
+          <.status_circle status={@identifier.status} />
+          <%= if @identifier.language do %>
+            [<%= String.upcase(to_string(@identifier.language)) %>]
+          <% end %>
+          <%= @link_text %>
+        <% end %>
+      <% else %>
+        <%= if @identifier do %>
+          <.status_circle status={@identifier.status} />
+          [<%= @translated_type %><%= if @identifier.language do %>/<%= String.upcase(to_string(@identifier.language)) %><% end %>]
+          <%= @identifier.title %>
+        <% end %>
+      <% end %>
+    </div>
+    <dl>
+      <dt><%= gettext("URL") %>=</dt>
+      <dd :if={@identifier}><%= @identifier.url %></dd>
+      <dd :if={!@identifier}><%= gettext("<No URL>") %></dd>
+    </dl>
+    """
+  end
+
+  def link_modal(assigns) do
+    field = assigns.field
+    changeset = field.source
+    link_type = get_field(changeset, :link_type, :url)
+    allow_text? = get_field(changeset, :link_allow_custom_text)
+    wanted_schemas = get_field(changeset, :link_identifier_schemas, [])
+
+    assigns =
+      assigns
+      |> assign(:link_type, link_type)
+      |> assign(:allow_text?, allow_text?)
+      |> assign(:wanted_schemas, wanted_schemas)
+
+    ~H"""
+    <Content.modal title={gettext("Link")} id={"var-#{@field.id}-link-config"}>
+      <div class="panels">
+        <div class="panel">
+          <Input.radios
+            field={@field[:link_type]}
+            label={gettext("Type")}
+            opts={[
+              options: [
+                %{label: gettext("URL"), value: :url},
+                %{label: gettext("Identifier"), value: :identifier}
+              ]
+            ]}
+          />
+        </div>
+        <div class="panel">
+          <div :if={@link_type == :url}>
+            <Input.text
+              field={@field[:value]}
+              label={gettext("URL")}
+              instructions={gettext("i.e: `https://example.com`")}
+            />
+            <Input.text :if={@allow_text?} field={@field[:link_text]} label={gettext("Link text")} />
+            <Input.toggle
+              field={@field[:link_target_blank]}
+              label={gettext("Open link in new window/tab")}
+            />
+          </div>
+          <div :if={@link_type == :identifier}>
+            <Input.toggle
+              field={@field[:link_target_blank]}
+              label={gettext("Open link in new window/tab")}
+            />
+
+            <.live_component
+              module={Content.SelectIdentifier}
+              id={"#{@field.id}-identifier-select"}
+              field={@field[:identifier_id]}
+              identifier={@identifier}
+              wanted_schemas={@wanted_schemas}
+            />
+          </div>
+        </div>
+      </div>
+    </Content.modal>
     """
   end
 

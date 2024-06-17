@@ -96,8 +96,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp assign_relation_fields(socket, field) do
     assign_new(socket, :relation_fields, fn ->
       module = field.form.data.__struct__
+      relation_type = socket.assigns.relation_type
 
-      if {:__relations__, 0} in module.__info__(:functions) do
+      if relation_type in [:has_many, {:subform, :has_many}] and
+           {:__relations__, 0} in module.__info__(:functions) do
         %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
         # the rel module must have `@allow_mark_as_deleted true`
@@ -125,9 +127,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp assign_sequenced?(socket, field) do
     module = field.form.data.__struct__
+    relation_type = socket.assigns.relation_type
 
     sequenced? =
-      if {:__relations__, 0} in module.__info__(:functions) do
+      if relation_type in [:has_many, {:subform, :has_many}] and
+           {:__relations__, 0} in module.__info__(:functions) do
         %{opts: %{module: rel_module}} = module.__relation__(field.field)
         rel_module.has_trait(Brando.Trait.Sequenced)
       else
@@ -138,8 +142,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp assign_selected_options_forms(socket, field) do
+    relation_type = socket.assigns.relation_type
+
     selected_options_forms =
-      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
+      if relation_type in [:has_many, {:subform, :has_many}] do
         Brando.Utils.forms_from_field(field.form[field.field])
       else
         nil
@@ -150,7 +156,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp assign_selected_options(socket, changeset, field) do
-    selected_options = get_selected_options(changeset, field, socket.assigns.relation_type)
+    relation_type = socket.assigns.relation_type
+    selected_options = get_selected_options(changeset, field, relation_type)
     assign(socket, :selected_options, selected_options)
   end
 
@@ -170,16 +177,18 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     module = field.form.data.__struct__
 
     relation_type =
-      if {:__relations__, 0} in module.__info__(:functions) do
-        relation = module.__relation__(field.field)
+      case Map.get(module.__changeset__(), field.field) do
+        {:assoc, %Ecto.Association.Has{cardinality: :many}} -> :has_many
+        {:assoc, %Ecto.Association.BelongsTo{}} -> :belongs_to
+        {:array, type} -> {:array, type}
+        nil -> nil
+      end
 
-        if socket.assigns.parent_form_id do
-          {:subform, relation.type}
-        else
-          relation.type
-        end
+    relation_type =
+      if socket.assigns.subform_id do
+        {:subform, relation_type}
       else
-        Map.get(module.__changeset__, field.field)
+        relation_type
       end
 
     if relation_type in [:has_many, {:subform, :has_many}] and socket.assigns.relation_key == :id do
@@ -494,7 +503,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           />
         <% else %>
           <%!-- TODO: Clean up this to components --%>
-          <div><%= inspect(@relation_type) %></div>
           <%= if @relation_type in [:has_many, {:subform, :has_many}] do %>
             <div id={"#{@field.id}-selected-options"}>
               <.inputs_for :let={selected_option} field={@field}>
@@ -720,6 +728,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
   defp maybe_slug(%{id: id}), do: id
+  defp maybe_slug(opt) when is_atom(opt), do: to_string(opt)
   defp maybe_slug(opt) when is_integer(opt), do: opt
   defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 

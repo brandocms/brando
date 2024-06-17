@@ -10,7 +10,7 @@ defmodule Brando.Villain.Blocks.FragmentBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
 
     relations do
       relation :fragment, :belongs_to, module: Brando.Pages.Fragment

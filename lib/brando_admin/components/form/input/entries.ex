@@ -378,6 +378,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <section class="content">
         <div class="info">
           <div class="name">
+            <%= if @identifier.language do %>
+              [<%= @identifier.language %>]
+            <% end %>
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
@@ -441,6 +444,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <section class="content">
         <div class="info">
           <div class="name">
+            <%= if @identifier.language do %>
+              [<%= @identifier.language %>]
+            <% end %>
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
@@ -531,6 +537,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <section class="content">
         <div class="info">
           <div class="name">
+            <%= if @identifier.language do %>
+              [<%= @identifier.language %>]
+            <% end %>
             <%= @identifier.title %>
           </div>
           <div class="meta-info">
@@ -588,6 +597,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <section class="content">
         <div class="info">
           <div class="name">
+            <%= if @identifier.language do %>
+              [<%= @identifier.language %>]
+            <% end %>
             <%= @identifier.title %>
           </div>
           <div class="meta-info">

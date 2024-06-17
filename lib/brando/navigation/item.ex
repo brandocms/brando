@@ -10,7 +10,7 @@ defmodule Brando.Navigation.Item do
   import Brando.Gettext
 
   data_layer :embedded
-  identifier "{{ entry.title }}"
+  identifier false
 
   attributes do
     attribute :status, :status, required: true

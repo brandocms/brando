@@ -32,17 +32,8 @@ defmodule Brando.DatasourcesTest do
   }
 
   @data_no_datasource [
-    %{
-      type: "text",
-      data: %{
-        text: "<p>Hello world</p>"
-      }
-    },
-    %{
-      type: "text",
-      data: %{
-        text: "<p>Hello world</p>"
-      }
+    block: %{
+      type: :module
     }
   ]
 
@@ -184,14 +175,8 @@ defmodule Brando.DatasourcesTest do
 
     data_refed_datasource = [
       %{
-        type: "text",
-        data: %{
-          text: "<p>Hello world</p>"
-        }
-      },
-      %{
-        type: "module",
-        data: %{
+        block: %{
+          type: :module,
           datasource: true,
           module_id: module.id,
           refs: [
@@ -205,12 +190,6 @@ defmodule Brando.DatasourcesTest do
               }
             }
           ]
-        }
-      },
-      %{
-        type: "text",
-        data: %{
-          text: "<p>Hello world</p>"
         }
       }
     ]
@@ -232,67 +211,56 @@ defmodule Brando.DatasourcesTest do
 
     data_contained_datasource = [
       %{
-        type: "text",
-        data: %{
-          text: "<p>Hello world</p>"
-        }
-      },
-      %{
-        type: "container",
-        data: %{
+        block: %{
+          type: :container,
           palette_id: palette.id,
-          blocks: [
+          children: [
             %{
-              type: "text",
-              data: %{
-                text: "<p>Hello world</p>"
-              }
-            },
-            %{
-              type: "module",
-              data: %{
-                datasource: true,
-                module_id: module.id,
-                refs: [
-                  %{
-                    name: "p",
+              type: :module,
+              datasource: true,
+              module_id: module.id,
+              refs: [
+                %{
+                  name: "p",
+                  data: %{
+                    type: "text",
                     data: %{
-                      type: "text",
-                      data: %{
-                        text: "<p>Hello world</p>"
-                      }
+                      text: "<p>Hello world</p>"
                     }
                   }
-                ]
-              }
+                }
+              ]
             }
           ]
-        }
-      },
-      %{
-        type: "text",
-        data: %{
-          text: "<p>Hello world</p>"
         }
       }
     ]
 
     # insert pages
-    page_params = Factory.params_for(:page, data: data_refed_datasource)
+    page_params = Factory.params_for(:page, entry_blocks: data_refed_datasource)
     {:ok, page_with_refed_datasource} = Brando.Pages.create_page(page_params, user)
 
-    page_params = Factory.params_for(:page, data: data_contained_datasource)
+    require Logger
+
+    Logger.error("""
+    page_with_refed_datasource:
+    #{inspect(Brando.repo().preload(page_with_refed_datasource, entry_blocks: [block: [:vars, :module]]))}
+    """)
+
+    page_params = Factory.params_for(:page, entry_blocks: data_contained_datasource)
     {:ok, page_with_contained_datasource} = Brando.Pages.create_page(page_params, user)
 
-    page_params = Factory.params_for(:page, data: @data_no_datasource)
+    page_params = Factory.params_for(:page, entry_blocks: @data_no_datasource)
     {:ok, page_with_no_datasource} = Brando.Pages.create_page(page_params, user)
 
     found_ids =
-      Brando.Datasource.list_ids_with_datamodule(
-        schema,
-        {datasource_module, datasource_type, datasource_query},
-        data_field
-      )
+      Brando.Villain.list_block_ids_using_datamodule(datasource_module)
+
+    # Brando.Datasource.list_ids_with_datamodule(
+    #   schema,
+    #   {datasource_module, datasource_type, datasource_query},
+    #   data_field
+    # )
 
     assert page_with_refed_datasource.id in found_ids
     assert page_with_contained_datasource.id in found_ids
