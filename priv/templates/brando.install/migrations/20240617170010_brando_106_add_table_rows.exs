@@ -12,7 +12,6 @@ defmodule Brando.Repo.Migrations.AddTableRows do
     alter table(:content_vars) do
       add :table_row_id, references(:content_table_rows, on_delete: :delete_all)
     end
-
     create index(:content_vars, [:table_row_id])
   end
 

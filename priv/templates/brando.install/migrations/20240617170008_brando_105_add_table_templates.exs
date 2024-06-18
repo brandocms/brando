@@ -1,5 +1,6 @@
 defmodule Brando.Repo.Migrations.AddTableTemplates do
   use Ecto.Migration
+  import Ecto.Query
 
   def up do
     create table(:content_table_templates) do
@@ -13,13 +14,11 @@ defmodule Brando.Repo.Migrations.AddTableTemplates do
     alter table(:content_modules) do
       add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
     end
-
     create index(:content_modules, [:table_template_id])
 
     alter table(:content_vars) do
       add :table_template_id, references(:content_table_templates, on_delete: :delete_all)
     end
-
     create index(:content_vars, [:table_template_id])
   end
 
@@ -31,7 +30,6 @@ defmodule Brando.Repo.Migrations.AddTableTemplates do
     alter table(:content_vars) do
       remove :table_template_id
     end
-
     # remove index
     drop table(:content_table_templates)
   end

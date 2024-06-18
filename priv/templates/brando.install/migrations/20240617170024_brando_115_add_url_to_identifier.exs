@@ -1,5 +1,6 @@
 defmodule Brando.Repo.Migrations.AddURLtoIdentifier do
   use Ecto.Migration
+  import Ecto.Query
 
   def up do
     alter table(:content_identifiers) do
