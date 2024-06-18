@@ -316,7 +316,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create table(:persons_profile, primary_key: false) do
       add :id, :uuid, primary_key: true
-      add :status, :text
+      add :status, :integer
       add :sequence, :integer
       add :deleted_at, :utc_datetime
       timestamps()
