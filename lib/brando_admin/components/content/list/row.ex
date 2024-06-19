@@ -446,7 +446,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         disabled={!@alternate_entries?}
         phx-click={show_modal("#entry-#{@entry.id}-alternates")}
       >
-        <.icon name="hero-language" />
+        <.icon name="hero-language" class="m" />
       </button>
       <Content.modal title={gettext("Alternates")} narrow id={"entry-#{@entry.id}-alternates"}>
         <Entries.dumb_identifier

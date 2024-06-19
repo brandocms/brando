@@ -19,6 +19,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(:belongs_to, opts),
     do: opts |> Map.drop(@strip_ecto_opts ++ [:on_delete]) |> Map.to_list()
 
+  def to_ecto_opts(:has_one, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:has_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
 
@@ -39,6 +40,9 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(_type, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
 
   @strip_changeset_opts [:cast, :module]
+  def to_changeset_opts(:has_one, opts),
+    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+
   def to_changeset_opts(:belongs_to, opts),
     do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
@@ -78,7 +82,7 @@ defmodule Brando.Blueprint.Utils do
         field ->
           msgid =
             if field.__struct__ == Brando.Blueprint.Forms.Subform do
-              field.label
+              Map.get(field, :label) || String.capitalize(to_string(field.name))
             else
               Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
             end

@@ -38,6 +38,7 @@ defmodule Brando.Navigation do
   use Brando.Query
 
   alias Brando.Cache
+  alias Brando.Navigation.Item
   alias Brando.Navigation.Menu
   alias Brando.Villain
 
@@ -94,7 +95,27 @@ defmodule Brando.Navigation do
     end
   end
 
-  mutation :duplicate, {Menu, change_fields: [:key, :title]}
+  mutation :duplicate,
+           {Menu,
+            preload: Menu.preloads_for(),
+            change_fields: [
+              :key,
+              :title,
+              {:items, fn _entry, current_items -> fix_items(current_items) end}
+            ]}
+
+  defp fix_items(items) do
+    Enum.map(items, fn item ->
+      %Item{
+        item
+        | id: nil,
+          link: %Brando.Content.Var{
+            item.link
+            | id: nil
+          }
+      }
+    end)
+  end
 
   @doc """
   Get menu.
@@ -110,6 +131,39 @@ defmodule Brando.Navigation do
   @spec get :: map | nil
   def get do
     Brando.Cache.Navigation.get()
+  end
+
+  mutation :create, Item do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  mutation :update, Item do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  mutation :delete, Item do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
+
+  query :single, Item, do: fn query -> from(q in query, preload: [link: :identifier]) end
+
+  matches Item do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+    end
   end
 
   @doc """

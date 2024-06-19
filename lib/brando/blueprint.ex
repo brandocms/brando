@@ -206,6 +206,9 @@ defmodule Brando.Blueprint do
       end
 
       defoverridable __absolute_url__: 1
+
+      def __has_absolute_url__, do: false
+      defoverridable __has_absolute_url__: 0
     end
   end
 
@@ -321,6 +324,15 @@ defmodule Brando.Blueprint do
             name,
             referenced_module,
             to_ecto_opts(:belongs_to, opts)
+          )
+
+        %{type: :has_one, name: name, opts: opts} ->
+          referenced_module = Map.fetch!(opts, :module)
+
+          Ecto.Schema.has_one(
+            name,
+            referenced_module,
+            to_ecto_opts(:has_one, opts)
           )
 
         %{type: :many_to_many, name: name, opts: opts} ->

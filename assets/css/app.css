@@ -962,11 +962,11 @@ h3 {
 }
 
 .mr-1 {
-  margin-right: 1vw;
+  margin-right: 0.5rem;
 }
 
 .mr-2 {
-  margin-right: 2vw;
+  margin-right: 0.8rem;
 }
 
 .mr-3 {
@@ -1163,10 +1163,34 @@ h3 {
     }
   }
 
+  span[class^="hero-"] {
+    width: 12px;
+    height: 12px;
+    margin-bottom: 1px;
+  }
+
   svg {
     margin-right: 5px;
     margin-top: -1px;
     transition: fill 250ms ease;
+  }
+}
+
+span[data-icon] {
+  &.xs {
+    width: 12px;
+    height: 12px;
+  }
+  &.s {
+    width: 16px;
+    height: 16px;
+  }
+  &.m {
+    width: 18px;
+    height: 18px;
+  }
+  &.mr {
+    margin-right: 5px;
   }
 }
 

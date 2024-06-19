@@ -7,21 +7,21 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Pages & sections")}
-      subtitle={gettext("Overview")}>
-      <.link navigate={"/admin/pages/create"} class="primary">
+    <Content.header title={gettext("Pages & sections")} subtitle={gettext("Overview")}>
+      <.link navigate="/admin/pages/create" class="primary">
         <%= gettext("Create page") %>
       </.link>
     </Content.header>
 
-    <.live_component module={Content.List}
+    <.live_component
+      module={Content.List}
       id={"content_listing_#{@schema}_default"}
       schema={@schema}
       current_user={@current_user}
       uri={@uri}
       params={@params}
-      listing={:default} />
+      listing={:default}
+    />
     """
   end
 
@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
     {:noreply,
      push_redirect(socket,
        to:
-         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageFragmentCreateLive,
+         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.FragmentCreateLive,
            page_id: page_id,
            language: language
          )
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
        to:
          Brando.routes().admin_live_path(
            socket,
-           BrandoAdmin.Pages.PageFragmentUpdateLive,
+           BrandoAdmin.Pages.FragmentUpdateLive,
            entry_id
          )
      )}

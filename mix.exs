@@ -27,7 +27,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.7.0"},
+      {:phoenix, "1.7.14"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.17"},
@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.11"},
 
       # liveview
-      {:phoenix_live_view, "~> 1.0.0-rc", override: true},
+      {:phoenix_live_view, "1.0.0-rc.2", override: true},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -44,7 +44,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:spark, "~> 2.0"},
+      {:spark, "~> 2.2.3"},
 
       # monitoring
       {:sentry, "~> 10.0"},

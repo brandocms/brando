@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
   end
 
   defp get_update_url(fragment_id) do
-    update_view = BrandoAdmin.Pages.PageFragmentUpdateLive
+    update_view = BrandoAdmin.Pages.FragmentUpdateLive
 
     Brando.routes().admin_live_path(
       Brando.endpoint(),

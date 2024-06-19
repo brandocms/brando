@@ -3168,7 +3168,12 @@ defmodule BrandoAdmin.Components.Form do
         ) %>
       </div>
     <% else %>
-      <div class="brando-input" data-component={@type} data-compact={@compact} data-size={@size}>
+      <div
+        class="brando-input"
+        data-component={inspect(@type)}
+        data-compact={@compact}
+        data-size={@size}
+      >
         <.live_component
           module={@component_target}
           id={@component_id}

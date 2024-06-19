@@ -55,7 +55,10 @@ defmodule Brando.Cache.Navigation do
   def update({:error, changeset}), do: {:error, changeset}
 
   defp get_menu_map do
-    {:ok, menus} = Navigation.list_menus()
+    {:ok, menus} =
+      Navigation.list_menus(%{
+        preload: [items: [link: [:identifier], children: [link: :identifier]]]
+      })
 
     Enum.reduce(menus, %{}, fn menu, acc ->
       if Map.has_key?(acc, menu.key) do

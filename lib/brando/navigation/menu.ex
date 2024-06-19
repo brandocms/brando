@@ -8,6 +8,9 @@ defmodule Brando.Navigation.Menu do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
+  import Ecto.Query
+  alias Brando.Navigation.Item
+  alias Brando.Content.Var
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
@@ -24,7 +27,12 @@ defmodule Brando.Navigation.Menu do
   end
 
   relations do
-    relation :items, :embeds_many, module: Brando.Navigation.Item, on_replace: :delete
+    relation :items, :has_many,
+      module: Brando.Navigation.Item,
+      cast: true,
+      drop_param: :drop_items_ids,
+      sort_param: :sort_items_ids,
+      on_replace: :delete
   end
 
   translations do
@@ -36,6 +44,8 @@ defmodule Brando.Navigation.Menu do
 
   forms do
     form do
+      form_query &__MODULE__.form_query/1
+
       tab "Content" do
         fieldset size: :half do
           input :status, :status
@@ -50,22 +60,45 @@ defmodule Brando.Navigation.Menu do
             style: :inline,
             cardinality: :many,
             size: :full,
-            default: %Brando.Navigation.Item{} do
-            input :status, :status, compact: true, label: :hidden
-            input :title, :text, label: t("Title", Brando.Navigation.Item)
-            input :key, :text, monospace: true, label: t("Key", Brando.Navigation.Item)
-            input :url, :text, monospace: true, label: t("URL", Brando.Navigation.Item)
-            input :open_in_new_window, :toggle, label: t("New window?", Brando.Navigation.Item)
+            default: &__MODULE__.default_item/2 do
+            input :language, :hidden
+            input :status, :status, compact: true
+            input :key, :text, monospace: true, compact: true, label: t("Key", Item)
+
+            input :link, {:component, BrandoAdmin.Components.Form.Input.Link},
+              compact: true,
+              label: t("Link", Item)
           end
         end
       end
     end
   end
 
+  def form_query(id) do
+    %{matches: %{id: id}, preload: preloads_for()}
+  end
+
+  def default_item(menu, _) do
+    %Item{
+      status: :published,
+      key: "key",
+      language: menu.language,
+      link: %Var{
+        type: :link,
+        key: "link",
+        label: "Link",
+        link_type: :url,
+        link_text: "Text",
+        value: "https://example.com"
+      }
+    }
+  end
+
   listings do
     listing do
       listing_query %{
-        order: [{:asc, :language}, {:asc, :key}]
+        order: [{:asc, :sequence}, {:desc, :inserted_at}],
+        preload: &__MODULE__.preloads_for/0
       }
 
       filters([
@@ -78,35 +111,33 @@ defmodule Brando.Navigation.Menu do
 
       field(:language, :language, columns: 1)
 
-      template(
-        """
-        <div class="badge no-border no-case">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z"/></svg>
-          {{ entry.key }}
-        </div>
-        """,
-        columns: 2
-      )
-
-      template(
-        """
-        <a
-          data-phx-link="redirect"
-          data-phx-link-state="push"
-          href="/admin/config/navigation/menus/update/{{ entry.id }}"
-          class="entry-link">
-          {{ entry.title }}
-        </a>
-        """,
-        columns: 4
-      )
-
-      template(
-        """
-        <small class="monospace">{{ entry.items | size }} #{t("menu items")}</small><br>
-        """,
-        columns: 3
-      )
+      component &__MODULE__.listing_row/1
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.update_link entry={@entry} columns={9}>
+      <%= @entry.title %>
+      <:outside>
+        <br />
+        <small class="monospace"><%= Enum.count(@entry.items) %> <%= gettext("menu items") %></small>
+      </:outside>
+    </.update_link>
+    """
+  end
+
+  def preloads_for do
+    children_preload =
+      from i in Brando.Navigation.Item, order_by: i.sequence, preload: [link: :identifier]
+
+    items_preload =
+      from i in Brando.Navigation.Item,
+        order_by: i.sequence,
+        preload: [link: :identifier, children: ^children_preload]
+
+    [
+      items: items_preload
+    ]
   end
 end

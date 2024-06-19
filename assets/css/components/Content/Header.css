@@ -9,11 +9,17 @@
 
     .main {
       @column 8/16;
+
+      h3 {
+        margin-top: 0.3em;
+        margin-bottom: 0.2em;
+      }
     }
 
     .actions {
       @column 8/16;
       @fontsize lg;
+      margin-bottom: 0.3em;
       font-weight: 400;
       display: flex;
       justify-content: flex-end;

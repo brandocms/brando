@@ -17,6 +17,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
   """
   alias Brando.Villain
 
+  defmacro absolute_url(false) do
+    raise Brando.Exception.BlueprintError,
+          "Instead of setting absolute_url false, remove the absolute_url call from the blueprint"
+  end
+
   defmacro absolute_url(tpl) when is_binary(tpl) do
     {:ok, parsed_absolute_url} = Liquex.parse(tpl, Villain.LiquexParser)
 
@@ -50,6 +55,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
       def __absolute_url_type__, do: :liquid
+      def __has_absolute_url__, do: true
     end
   end
 
@@ -87,6 +93,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
       def __absolute_url_type__, do: :i18n
       def __absolute_url_template__, do: unquote(args_tpl)
+      def __has_absolute_url__, do: true
     end
   end
 
@@ -94,8 +101,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
   Attempt to extract necessary preloads from absolute_url template
   """
   def extract_preloads_from_absolute_url(schema) do
-    type = schema.__absolute_url_type__()
-    do_extract_preloads_from_absolute_url(type, schema)
+    if schema.__has_absolute_url__() do
+      type = schema.__absolute_url_type__()
+      do_extract_preloads_from_absolute_url(type, schema)
+    else
+      []
+    end
   end
 
   defp do_extract_preloads_from_absolute_url(:liquid, schema) do

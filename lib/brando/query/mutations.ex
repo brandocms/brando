@@ -170,10 +170,11 @@ defmodule Brando.Query.Mutations do
   end
 
   def duplicate(context, _module, name, id, opts, override_opts, user) do
-    case apply(context, :"get_#{name}", [id]) do
-      {:ok, entry} ->
-        override_opts = Enum.into(override_opts, %{})
+    override_opts = Enum.into(override_opts, %{})
+    preloads = Keyword.get(opts, :preload) || []
 
+    case apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]) do
+      {:ok, entry} ->
         opts =
           opts
           |> Enum.into(%{})

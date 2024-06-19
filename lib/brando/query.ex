@@ -191,13 +191,11 @@ defmodule Brando.Query do
     pluralized_schema = module.__naming__().plural
 
     quote do
-      @spec unquote(:"list_#{pluralized_schema}!")(map(), boolean) :: list()
       def unquote(:"list_#{pluralized_schema}!")(args \\ %{}, stream \\ false) do
         {:ok, entries} = unquote(:"list_#{pluralized_schema}")(args, stream)
         entries
       end
 
-      @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list()}
       def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)

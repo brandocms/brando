@@ -98,6 +98,8 @@ defmodule Brando.Router do
             live "/navigation/menus", MenuListLive
             live "/navigation/menus/create", MenuCreateLive
             live "/navigation/menus/update/:entry_id", MenuUpdateLive
+            live "/navigation/menus/item/create", ItemCreateLive
+            live "/navigation/menus/item/update/:entry_id", ItemUpdateLive
           end
 
           scope "/config", BrandoAdmin.Content do
@@ -123,9 +125,9 @@ defmodule Brando.Router do
             live "/create", PageCreateLive
             live "/create/:parent_id", PageCreateLive
             live "/update/:entry_id", PageUpdateLive
-            live "/fragments/create", PageFragmentCreateLive
-            live "/fragments/create/:parent_id", PageFragmentCreateLive
-            live "/fragments/update/:entry_id", PageFragmentUpdateLive
+            live "/fragments/create", FragmentCreateLive
+            live "/fragments/create/:parent_id", FragmentCreateLive
+            live "/fragments/update/:entry_id", FragmentUpdateLive
           end
 
           scope "/users", BrandoAdmin.Users do

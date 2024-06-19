@@ -81,12 +81,24 @@ defmodule BrandoAdmin.Components.Content do
         )
       end
 
-    assigns = assign(assigns, :path, path)
+    focal = assigns.image && Map.get(assigns.image, :focal, %{x: 50, y: 50})
+
+    assigns =
+      assigns
+      |> assign(:path, path)
+      |> assign(:focal, focal)
 
     ~H"""
     <%= if @image do %>
       <div class="image-content">
-        <img width={@image.width} height={@image.height} src={@path} />
+        <img
+          width={@image.width}
+          height={@image.height}
+          src={@path}
+          data-focal-x={@focal.x}
+          data-focal-y={@focal.y}
+          style={"object-position: #{@focal.x}% #{@focal.y}%;"}
+        />
       </div>
     <% else %>
       <div class="img-placeholder">

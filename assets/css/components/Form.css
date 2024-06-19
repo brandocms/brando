@@ -142,6 +142,10 @@
   clear: both;
 }
 
+.brando-input[data-component="hidden"] {
+  display: none;
+}
+
 .brando-input[data-size="half"] {
   width: 50%;
   float: left;

@@ -394,6 +394,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :target, :any
   attr :publish, :any
 
+  def render_value_inputs(%{type: nil} = assigns) do
+    ~H"""
+    <Input.hidden field={@var[:value]} />
+    """
+  end
+
   def render_value_inputs(%{type: :string} = assigns) do
     ~H"""
     <div class="brando-input">
@@ -683,6 +689,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               field={@field[:value]}
               label={gettext("URL")}
               instructions={gettext("i.e: `https://example.com`")}
+              monospace
             />
             <Input.text :if={@allow_text?} field={@field[:link_text]} label={gettext("Link text")} />
             <Input.toggle
@@ -691,6 +698,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             />
           </div>
           <div :if={@link_type == :identifier}>
+            <Input.text
+              :if={@allow_text?}
+              field={@field[:link_text]}
+              label={gettext("Link text")}
+              instructions={gettext("Overrides identifier title")}
+            />
             <Input.toggle
               field={@field[:link_target_blank]}
               label={gettext("Open link in new window/tab")}

@@ -188,6 +188,22 @@
           }
         }
 
+        .modal-content {
+          .field-wrapper {
+            margin-bottom: 25px;
+          }
+
+          .meta {
+            margin-top: 0;
+          }
+          
+          .label-wrapper {
+            margin-bottom: 4px;
+            height: auto;
+            overflow: visible;
+          }
+        }
+
         .brando-input {
           flex-grow: 1;
           margin-right: 5px;
@@ -211,6 +227,19 @@
           &[data-component="status"][data-compact] {
             flex-grow: 0;
             flex-shrink: 1;
+          }
+
+          &[data-component="{:component, BrandoAdmin.Components.Form.Input.Link}"][data-compact] {
+            flex-grow: 0;
+            flex-shrink: 0;
+            min-width: 280px;
+
+            .link-preview {
+              width: 100%;
+              background-color: var(--brando-color-input);
+              padding: 10px 15px 11px 7px;
+              border-radius: 0;
+            }
           }
 
           .field-wrapper {

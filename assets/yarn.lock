@@ -1371,20 +1371,20 @@ periscopic@^3.1.0:
     estree-walker "^3.0.0"
     is-reference "^3.0.0"
 
-phoenix@1.7.12:
-  version "1.7.12"
-  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.12.tgz#281bafe850fce1116a480371d3038af4d48db50d"
-  integrity sha512-jo8sK7mVYTFSa5FITmL/1lAbARIJMcEMJrMPZtUdss1zE37VZBnCowpakH8sEzH0ezs+hIaXSyYPCwlzrvph+g==
+phoenix@1.7.14:
+  version "1.7.14"
+  resolved "https://registry.yarnpkg.com/phoenix/-/phoenix-1.7.14.tgz#2661c59dc39f0c0c00f4a4f5e5a9dfad22783810"
+  integrity sha512-3tZ76PiH/2g+Kyzhz8+GIFYrnx3lRnwi/Qt3ZUH04xpMxXL7Guerd5aaxtpWal73X+H8iLAjo2c+AgRy2KYQcQ==
 
 phoenix_html@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.1.1.tgz#0be8c4a0592350b18ff97671eb12f9c6445b5a5a"
   integrity sha512-RpvlxDkP13MTQkfbZGFD7XrLgE28mqlwU+rSQxhNyj9U0KzPgeeh4ctn+Mz7jlpsKFAhLe47PXQsff3EXJ4mbg==
 
-phoenix_live_view@1.0.0-rc.0:
-  version "1.0.0-rc.0"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.0-rc.0.tgz#e2648fc84d3accd750f13a1379caf13cd42b7e99"
-  integrity sha512-fDCiHETkiH9XZ/JD4ImexpAzvz6/EpP3pZ4JrYdPw1F5wAx1yFKK8cHbj+DvSg5d9HHfXfHyy61+fMdjBygaUg==
+phoenix_live_view@1.0.0-rc.2:
+  version "1.0.0-rc.2"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.0-rc.2.tgz#fa98fc7c53847dea0a4000a55efce7ec957887d4"
+  integrity sha512-ME58ZVOAtY4jNbXX4j55ZqwRUfGIXKU4Td2lCxerPI7ACJdaPZnHPiIVdPyj3V/BauPm2aVUc3Aq5iZhxNmVbA==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1841,10 +1841,10 @@ svelte@^4.2.18:
     magic-string "^0.30.4"
     periscopic "^3.1.0"
 
-sweetalert2@^11.11.1:
-  version "11.11.1"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.11.1.tgz#bb07de656c5bd65bb7c30b4bea93f99cc65f7714"
-  integrity sha512-7jumu0I0/QdRa5R7K1mh05ZdhmsMV6rZOVtjpratZGidxyJD4Sn7rDSA+zmKHzvMef9hVTwPmDU3VxnvhVQMNg==
+sweetalert2@^11.12.0:
+  version "11.12.0"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.12.0.tgz#a3039c537b2193161e8effcd09fdc83cd6a6d817"
+  integrity sha512-Fe6sitTNReNdPF1q1w4uz1GAVv9acZff9Q7YILH5n6O/ti3MzwgfEA0aQ6tLjpy+O1NLXnZjUE//xrbluGXzJw==
 
 throttle-debounce@^3.0.1:
   version "3.0.1"

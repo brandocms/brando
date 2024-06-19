@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Pages.FragmentUpdateLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Fragment
+defmodule BrandoAdmin.Navigation.ItemUpdateLive do
+  use BrandoAdmin.LiveView.Form, schema: Brando.Navigation.Item
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
@@ -7,13 +7,14 @@ defmodule BrandoAdmin.Pages.FragmentUpdateLive do
     ~H"""
     <.live_component
       module={Form}
-      id="fragment_form"
+      id="item_form"
       entry_id={@entry_id}
       current_user={@current_user}
       schema={@schema}
+      presences={@presences}
     >
       <:header>
-        <%= gettext("Edit fragment") %>
+        <%= gettext("Edit menu item") %>
       </:header>
     </.live_component>
     """

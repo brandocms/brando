@@ -78,13 +78,15 @@ defmodule Brando.Content.Var do
     relation :file, :belongs_to, module: Brando.Files.File
     relation :identifier, :belongs_to, module: Brando.Content.Identifier
 
-    # a var can belong to a page, a block, a module, a table template or row, or a global variables set
+    # a var can belong to a page, a block, a module, a table template or row,
+    # a global variables set or a menu item link
     relation :page, :belongs_to, module: Brando.Pages.Page
     relation :block, :belongs_to, module: Brando.Content.Block
     relation :module, :belongs_to, module: Brando.Content.Module
     relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
     relation :table_row, :belongs_to, module: Brando.Content.TableRow
     relation :global_set, :belongs_to, module: Brando.Sites.GlobalSet
+    relation :menu_item, :belongs_to, module: Brando.Navigation.Item
   end
 
   defimpl String.Chars do
@@ -94,6 +96,20 @@ defmodule Brando.Content.Var do
 
     def to_string(%{type: _} = var) do
       inspect(var, pretty: true)
+    end
+  end
+
+  defimpl Phoenix.HTML.Safe do
+    def to_iodata(%{type: :link, link_type: :url, value: value}) do
+      value
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+
+    def to_iodata(%{type: :link, link_type: :identifier, identifier: identifier}) do
+      identifier.url
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
     end
   end
 end

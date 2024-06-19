@@ -18,7 +18,6 @@ defmodule Brando.Blueprint.Relations do
               label: t("Clients"),
               cardinality: :many,
               style: {:transformer, :cover},
-              inputs_for :clients,
               default: &__MODULE__.default_client/1,
               listing: &__MODULE__.client_listing/1 do
               input :cover, :image, label: t("Cover", Client)
@@ -174,6 +173,20 @@ defmodule Brando.Blueprint.Relations do
 
   def run_cast_relations(changeset, relations, user) do
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
+  end
+
+  ##
+  ## has_one
+
+  def run_cast_relation(
+        %{type: :has_one, name: name, opts: %{cast: true, module: module} = opts},
+        changeset,
+        user
+      ) do
+    with_opts = [with: {module, :changeset, [user]}]
+    merged_opts = Keyword.merge(to_changeset_opts(:has_one, opts), with_opts)
+
+    cast_assoc(changeset, name, merged_opts)
   end
 
   ##

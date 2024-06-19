@@ -9,6 +9,7 @@ defmodule Brando.Blueprint.Listings.Components do
 
   attr :class, :any, default: nil
   attr :padded, :boolean, default: false
+  attr :circular, :boolean, default: false
   attr :image, :map, required: true
   attr :columns, :integer, required: true
   attr :size, :atom, default: :thumb
@@ -19,6 +20,7 @@ defmodule Brando.Blueprint.Listings.Components do
     <div class={[
       @class,
       @padded && "padded",
+      @circular && "circular",
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>

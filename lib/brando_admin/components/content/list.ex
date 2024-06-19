@@ -294,7 +294,24 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp maybe_merge_listing_query(query_params, listing) do
-    Map.merge(query_params, listing.query)
+    # check if preload is a function
+    listing_query_preloads = Brando.Utils.try_path(listing, [:query, :preload])
+
+    preloads =
+      cond do
+        listing_query_preloads && is_function(listing_query_preloads) ->
+          listing_query_preloads.()
+
+        listing_query_preloads ->
+          listing_query_preloads
+
+        true ->
+          []
+      end
+
+    query = put_in(listing.query, [:preload], preloads)
+
+    Map.merge(query_params, query)
   end
 
   defp maybe_merge_content_language(query_params, schema, content_language) do

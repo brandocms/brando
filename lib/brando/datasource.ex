@@ -82,8 +82,6 @@ defmodule Brando.Datasource do
   end
     ```
 
-  The `order_by: fragment(...)` sorts the returned results in the same order as the supplied `ids`
-
   ## Example
 
   In your schema:
