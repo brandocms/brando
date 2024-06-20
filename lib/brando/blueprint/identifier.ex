@@ -14,6 +14,14 @@ defmodule Brando.Blueprint.Identifier do
 
   import Ecto.Query
 
+  defmacro persist_identifier(persist?) do
+    quote location: :keep do
+      def __persist_identifier__ do
+        unquote(persist?)
+      end
+    end
+  end
+
   defmacro identifier(tpl) when is_binary(tpl) do
     {:ok, parsed_identifier} = Liquex.parse(tpl, LiquexParser)
     fields = extract_fields_from_identifier(tpl)
@@ -27,13 +35,8 @@ defmodule Brando.Blueprint.Identifier do
         """
       end
 
-      def __identifier_fields__ do
-        unquote(fields)
-      end
-
-      def __has_identifier__ do
-        true
-      end
+      def __identifier_fields__, do: unquote(fields)
+      def __has_identifier__, do: true
 
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
@@ -203,6 +206,7 @@ defmodule Brando.Blueprint.Identifier do
       :include_brando
       |> Brando.Blueprint.list_blueprints()
       |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
+      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
 
     # select all identifiers with schema not in `relevant_modules`
     delete_query = from i in Brando.Content.Identifier, where: i.schema not in ^relevant_modules
@@ -249,8 +253,10 @@ defmodule Brando.Blueprint.Identifier do
     require Logger
 
     relevant_modules =
-      Brando.Blueprint.list_blueprints(:include_brando)
+      :include_brando
+      |> Brando.Blueprint.list_blueprints()
       |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
+      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
 
     for module <- relevant_modules do
       identifiers_query =

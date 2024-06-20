@@ -231,11 +231,17 @@ defmodule Brando.Villain.Parser do
         base_refs = process_refs(block.refs)
 
         children =
-          Enum.map(children, fn entry ->
-            entry
-            |> put_in([Access.key(:vars)], process_vars(entry.vars))
-            |> put_in([Access.key(:refs)], process_refs(entry.refs))
-          end)
+          case children do
+            nil -> []
+            %Ecto.Association.NotLoaded{} -> []
+            _ -> children
+          end
+
+        Enum.map(children, fn entry ->
+          entry
+          |> put_in([Access.key(:vars)], process_vars(entry.vars))
+          |> put_in([Access.key(:refs)], process_refs(entry.refs))
+        end)
 
         context =
           base_context
@@ -1124,6 +1130,15 @@ defmodule Brando.Villain.Parser do
       end
 
       def maybe_format(html, %{format_html: true}) do
+        require Logger
+
+        Logger.error("""
+
+        formatting html
+        #{inspect(html, pretty: true)}
+
+        """)
+
         Phoenix.LiveView.HTMLFormatter.format(html, [])
       end
 

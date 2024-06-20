@@ -19,6 +19,7 @@ defmodule Brando.Images.Image do
   trait Brando.Trait.Focal
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :status, Ecto.Enum, values: [:processed, :unprocessed]

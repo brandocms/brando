@@ -18,6 +18,7 @@ defmodule Brando.Images.GalleryImage do
   trait Brando.Trait.Timestamped
 
   identifier false
+  persist_identifier false
 
   relations do
     relation :gallery, :belongs_to, module: Gallery

@@ -15,6 +15,7 @@ defmodule Brando.Sites.GlobalSet do
   trait Brando.Trait.Translatable, alternates: false
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :label, :string, required: true

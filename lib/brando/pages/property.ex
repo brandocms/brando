@@ -10,6 +10,7 @@ defmodule Brando.Pages.Property do
   alias Brando.Pages.Page
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :type, :string, required: true

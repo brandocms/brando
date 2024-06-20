@@ -5,7 +5,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BREAKING: `Brando.Villain.list_villains/0` is now `Brando.Villain.list_blocks/0`
 * BREAKING: change `trait Brando.Trait.Villain` to `trait Brando.Trait.Blocks`
 * BREAKING: added `url` field to identifiers. Go through your blueprints and ensure 
-  that `identifier false` is set for all schemas you don't want to create identifiers for.
+  that `persist_identifier false` is set for all schemas you don't want to create identifiers for.
 
   Run `mix brando.identifiers.sync` to create missing identifiers, delete orphaned identifiers and update URLs
 

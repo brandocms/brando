@@ -13,6 +13,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
     @primary_key false
     data_layer :embedded
     identifier false
+    persist_identifier false
 
     attributes do
       attribute :picture_class, :text

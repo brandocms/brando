@@ -18,6 +18,7 @@ defmodule Brando.Files.File do
   trait Brando.Trait.Timestamped
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :title, :text

@@ -11,6 +11,7 @@ defmodule Brando.Villain.Blocks.FragmentBlock do
     @primary_key false
     data_layer :embedded
     identifier false
+    persist_identifier false
 
     relations do
       relation :fragment, :belongs_to, module: Brando.Pages.Fragment

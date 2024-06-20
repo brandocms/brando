@@ -13,6 +13,7 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     @primary_key false
     data_layer :embedded
     identifier false
+    persist_identifier false
 
     attributes do
       attribute :class, :string

@@ -63,7 +63,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         update_view = schema.__modules__().admin_update_view
 
         {:halt,
-         push_redirect(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
+         push_navigate(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
 
       "undelete_entry", %{"id" => entry_id}, socket ->
         singular = schema.__naming__().singular

@@ -27,6 +27,7 @@ defmodule Brando.Sites.SEO do
   trait Brando.Trait.Translatable, alternates: false
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :fallback_meta_description, :text

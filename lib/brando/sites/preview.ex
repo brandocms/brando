@@ -11,6 +11,8 @@ defmodule Brando.Sites.Preview do
   trait Brando.Trait.Timestamped
 
   identifier false
+  persist_identifier false
+
   absolute_url "{% route preview_url show { entry.preview_key } %}"
 
   attributes do

@@ -16,6 +16,7 @@ defmodule Brando.Content.Template do
   import Brando.Gettext
 
   identifier false
+  persist_identifier false
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

@@ -19,6 +19,7 @@ defmodule Brando.Content.Module.Ref do
   trait Brando.Trait.CastPolymorphicEmbeds
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :name, :text, required: true

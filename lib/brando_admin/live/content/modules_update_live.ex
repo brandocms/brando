@@ -259,7 +259,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->
         send(self(), {:toast, gettext("Module updated")})
-        {:noreply, push_redirect(socket, to: "/admin/config/content/modules")}
+        {:noreply, push_navigate(socket, to: "/admin/config/content/modules")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         raise "Changeset error"

@@ -19,6 +19,7 @@ defmodule Brando.Navigation.Menu do
   trait Brando.Trait.Status
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :title, :string, required: true

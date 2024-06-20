@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
 
   def handle_event("create_menu_item", %{"id" => menu_id, "language" => language}, socket) do
     {:noreply,
-     push_redirect(socket,
+     push_navigate(socket,
        to:
          Brando.routes().admin_live_path(socket, BrandoAdmin.Navigation.ItemCreateLive,
            menu_id: menu_id,

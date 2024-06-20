@@ -10,7 +10,9 @@ defmodule Brando.Sites.Redirect do
   import Brando.Gettext
 
   data_layer :embedded
+
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :to, :string, required: true

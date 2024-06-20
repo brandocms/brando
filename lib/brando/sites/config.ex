@@ -8,6 +8,7 @@ defmodule Brando.Config do
     gettext_module: Brando.Gettext
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :lockdown_enabled, :boolean, default: false

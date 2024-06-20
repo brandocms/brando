@@ -452,7 +452,7 @@
       min-height: 50px;
 
       .padded {
-        @space padding 1;
+        @space padding 15px;
       }
 
       .circular {

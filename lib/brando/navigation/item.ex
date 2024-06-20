@@ -16,6 +16,7 @@ defmodule Brando.Navigation.Item do
   trait Brando.Trait.Translatable, alternates: false
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :key, :string, required: true

@@ -1769,7 +1769,7 @@ defmodule BrandoAdmin.Components.Form do
               if mutation_type == :create do
                 generated_update_view = schema.__modules__().admin_update_view
 
-                push_redirect(socket,
+                push_navigate(socket,
                   to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
                 )
               else
@@ -1789,10 +1789,10 @@ defmodule BrandoAdmin.Components.Form do
               end
 
             :listing ->
-              push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: redirect_fn.(socket, entry, mutation_type))
 
             :new ->
-              push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
           end
 
         {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}
@@ -1863,7 +1863,7 @@ defmodule BrandoAdmin.Components.Form do
               if mutation_type == :create do
                 generated_update_view = schema.__modules__().admin_update_view
 
-                push_redirect(socket,
+                push_navigate(socket,
                   to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
                 )
               else
@@ -1880,10 +1880,10 @@ defmodule BrandoAdmin.Components.Form do
               end
 
             :listing ->
-              push_redirect(socket, to: redirect_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: redirect_fn.(socket, entry, mutation_type))
 
             :new ->
-              push_redirect(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
           end
 
         {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}

@@ -17,7 +17,9 @@ defmodule Brando.Content.Palette.Color do
 
   @primary_key false
   data_layer :embedded
+
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :name, :string, required: true

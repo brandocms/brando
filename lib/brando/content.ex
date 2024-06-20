@@ -494,8 +494,18 @@ defmodule Brando.Content do
     UndefinedFunctionError -> {:error, :no_identifier}
   end
 
+  def persist_identifier(module) do
+    case module.__persist_identifier__ do
+      true -> {:ok, :persist_identifier}
+      false -> {:error, :ignore_identifier}
+    end
+  rescue
+    UndefinedFunctionError -> {:error, :no_identifier}
+  end
+
   def delete_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
       Brando.repo().delete(identifier)
     else
@@ -511,7 +521,8 @@ defmodule Brando.Content do
   def create_identifier(Brando.Images.Image, _entry), do: {:ok, false}
 
   def create_identifier(module, entry) do
-    with {:ok, :has_identifier} <- has_identifier(module) do
+    with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module) do
       new_identifier = module.__identifier__(entry)
       changeset = Ecto.Changeset.change(new_identifier)
 
@@ -528,6 +539,7 @@ defmodule Brando.Content do
 
   def update_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
       new_identifier = module.__identifier__(entry)
       language = new_identifier.language && to_string(new_identifier.language)

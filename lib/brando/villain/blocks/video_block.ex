@@ -10,7 +10,9 @@ defmodule Brando.Villain.Blocks.VideoBlock do
 
     @primary_key false
     data_layer :embedded
+
     identifier false
+    persist_identifier false
 
     attributes do
       attribute :url, :string

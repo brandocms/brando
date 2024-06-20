@@ -3001,6 +3001,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
     has_vars? = socket.assigns.has_vars?
+    has_children? = socket.assigns.has_children?
     has_table_rows? = socket.assigns.has_table_rows?
 
     updated_changeset =
@@ -3008,6 +3009,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
       |> render_and_update_entry_block_changeset(entry, has_vars?, has_table_rows?)
+      |> maybe_put_empty_children(has_children?)
 
     updated_form =
       to_form(updated_changeset,
@@ -3032,6 +3034,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})
+  end
+
+  defp maybe_put_empty_children(changeset, false) do
+    updated_block_cs =
+      changeset
+      |> Changeset.get_assoc(:block)
+      |> Changeset.put_assoc(:children, [])
+
+    Changeset.put_assoc(changeset, :block, updated_block_cs)
+  end
+
+  defp maybe_put_empty_children(changeset, true) do
+    changeset
   end
 
   defp send_form_to_parent_stream(socket) do

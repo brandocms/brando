@@ -2,8 +2,6 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   # prop form, :form
@@ -21,9 +19,6 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
   end
 
   def update(assigns, socket) do
-    field = assigns.field
-    changeset = field.form.source
-
     {:ok,
      socket
      |> assign(assigns)

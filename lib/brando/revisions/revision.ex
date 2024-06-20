@@ -12,7 +12,9 @@ defmodule Brando.Revisions.Revision do
 
   table "revisions"
   primary_key false
+
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :active, :boolean, default: false

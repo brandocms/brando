@@ -109,6 +109,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     parent_id = nil
     source = socket.assigns.block_module
     empty_block_cs = build_block(module_id, user_id, parent_id, source, :module)
+
+    require Logger
+
+    Logger.error("""
+
+    the empty_block_cs
+    #{inspect(empty_block_cs, pretty: true)}
+
+    """)
+
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
     entry_block_cs =
@@ -501,7 +511,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
 
     Changeset.change(
-      %Brando.Content.Block{children: [], block_identifiers: [], table_rows: []},
+      %Brando.Content.Block{block_identifiers: [], table_rows: []},
       %{
         uid: Brando.Utils.generate_uid(),
         type: type,

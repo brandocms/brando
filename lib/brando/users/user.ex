@@ -46,6 +46,7 @@ defmodule Brando.Users.User do
   trait Brando.Trait.ProtectPassword
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :name, :string, required: true

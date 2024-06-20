@@ -185,10 +185,16 @@ defmodule Brando.Pages.Page do
       assign(assigns, :url, assigns.entry.has_url && Brando.HTML.absolute_url(assigns.entry))
 
     ~H"""
-    <.update_link entry={@entry} columns={8}>
-      <div :if={@entry.is_homepage} class="badge mr-1">
+    <div class="col-1 center">
+      <div
+        :if={@entry.is_homepage}
+        class="badge"
+        data-popover={gettext("This page is marked as the homepage.")}
+      >
         <Brando.HTML.icon name="hero-home" class="s" />
       </div>
+    </div>
+    <.update_link entry={@entry} columns={7}>
       <%= @entry.title %>
       <:outside>
         <br />
@@ -288,7 +294,11 @@ defmodule Brando.Pages.Page do
             label: t("Has URL"),
             instructions: t("Page has an URL and should be included in sitemap")
 
-          input :template, :select, options: &__MODULE__.get_templates/2, label: t("Template")
+          input :template, :select,
+            options: &__MODULE__.get_templates/2,
+            monospace: true,
+            label: t("Template")
+
           input :css_classes, :text, label: t("CSS classes")
         end
 

@@ -28,6 +28,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Blocks.PreventCircularReferences
 
   identifier false
+  persist_identifier false
 
   @derived_fields ~w(
     id

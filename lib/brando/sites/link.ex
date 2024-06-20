@@ -9,6 +9,8 @@ defmodule Brando.Link do
 
   data_layer :embedded
   identifier false
+  persist_identifier false
+
   absolute_url "{{ entry.url }}"
 
   attributes do

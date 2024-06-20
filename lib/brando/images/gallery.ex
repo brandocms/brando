@@ -16,6 +16,7 @@ defmodule Brando.Images.Gallery do
   trait Brando.Trait.SoftDelete
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :config_target, :text

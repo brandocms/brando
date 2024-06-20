@@ -201,14 +201,14 @@ defmodule Brando.Blueprint do
       import Brando.Utils.Schema
       import Phoenix.Component, except: [form: 1]
 
-      def __absolute_url__(_) do
-        nil
-      end
-
+      def __absolute_url__(_), do: nil
       defoverridable __absolute_url__: 1
 
       def __has_absolute_url__, do: false
       defoverridable __has_absolute_url__: 0
+
+      def __persist_identifier__, do: true
+      defoverridable __persist_identifier__: 0
     end
   end
 

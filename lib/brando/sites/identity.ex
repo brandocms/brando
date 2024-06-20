@@ -13,6 +13,7 @@ defmodule Brando.Sites.Identity do
   trait Brando.Trait.Translatable, alternates: false
 
   identifier false
+  persist_identifier false
 
   @logo_cfg [
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

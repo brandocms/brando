@@ -20,6 +20,7 @@ defmodule Brando.Content.Var do
   trait Brando.Trait.Timestamped
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :type, :enum,

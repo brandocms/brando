@@ -11,6 +11,7 @@ defmodule Brando.Content.Var.Option do
   data_layer :embedded
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :label, :text, required: true

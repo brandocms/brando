@@ -42,6 +42,7 @@ defmodule Brando.Videos.Video do
   ]
 
   identifier false
+  persist_identifier false
 
   attributes do
     attribute :url, :text
