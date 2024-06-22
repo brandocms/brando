@@ -431,7 +431,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
           ref
           |> Changeset.force_change(:data, new_ref_data_cs)
-          |> Changeset.force_change(:id, Ecto.UUID.generate())
+          # |> Changeset.force_change(:id, Ecto.UUID.generate())
           |> Map.put(:action, nil)
           |> Changeset.apply_changes()
         else
@@ -941,6 +941,9 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     assign(socket, :available_identifiers, available_identifiers)
   end
+
+  # we don't touch the child form stream if the block is already initialized
+  def maybe_assign_children(%{assigns: %{block_initialized: true}} = socket), do: socket
 
   def maybe_assign_children(%{assigns: %{children: []}} = socket) do
     socket

@@ -24,7 +24,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_list = socket.assigns.block_list
     _idx = Enum.find_index(block_list, &(&1 == uid))
 
+    # signal all children to send their changesets
     # remove id from changeset and set action to :insert
+    # changesets = ###
     block_cs = Changeset.get_assoc(changeset, :block)
 
     updated_block_cs =
@@ -210,7 +212,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     else
       # for each root block in block_list, send_update requesting their changeset
       for block_uid <- block_list do
-        send_update(Block, id: "block-#{block_uid}", event: "fetch_root_block", tag: tag)
+        send_update(
+          Block,
+          id: "block-#{block_uid}",
+          event: "fetch_root_block",
+          tag: tag
+        )
       end
     end
 

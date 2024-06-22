@@ -100,8 +100,8 @@ defmodule Brando.Blueprint.Translations do
 
   defmacro t(msgid, schema) do
     schema = Macro.expand(schema, __CALLER__)
-    domain = schema.__naming__.domain
-    schema = schema.__naming__.schema
+    domain = schema.__naming__().domain
+    schema = schema.__naming__().schema
     ctx = Module.get_attribute(__CALLER__.module, :ctx)
     gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
 

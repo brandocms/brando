@@ -930,6 +930,7 @@ defmodule Brando.Villain do
     :block_id,
     :module_id,
     :global_set_id,
+    :menu_item_id,
     # ignored
     :block,
     :id,
@@ -944,12 +945,11 @@ defmodule Brando.Villain do
     :global_set,
     :table_template,
     :table_row,
+    :menu_item,
     :__struct__,
     :__meta__
   ]
   def reapply_vars(_module, module_vars, vars) do
-    require Logger
-
     Enum.map(vars, fn
       %Changeset{data: %{key: var_key}} = var ->
         var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
@@ -999,7 +999,7 @@ defmodule Brando.Villain do
       vars_query =
         from v in Brando.Content.Var,
           order_by: [asc: :sequence],
-          preload: [:file, :image, :palette, :identifier]
+          preload: [:file, :image, :palette, :identifier, :menu_item]
 
       table_row_query =
         from tr in Brando.Content.TableRow,

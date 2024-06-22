@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:opacity, Keyword.get(assigns.opts, :opacity, false))
       |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
       |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
-      |> assign(:default, Keyword.get(assigns.opts, :default, "#000000"))
+      |> assign(:default, Keyword.get(assigns.opts, :default))
 
     assigns =
       assign_new(assigns, :palette_colors, fn ->
@@ -123,6 +123,9 @@ defmodule BrandoAdmin.Components.Form.Input do
             <div class="circle-and-hex">
               <span class="circle tiny"></span>
               <span class="color-hex"></span>
+              <button type="button" class="clear-color">
+                <.icon name="hero-x-circle-mini" />
+              </button>
             </div>
           </div>
         </div>

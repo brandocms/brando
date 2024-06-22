@@ -119,8 +119,15 @@ defmodule Brando.Upload do
     Files.create_file(file_params, user)
   end
 
-  def handle_upload_type(%{meta: meta}, user) do
+  def handle_upload_type(%{meta: meta, upload_entry: upload_entry, cfg: cfg}, user) do
     media_path = meta.media_path
+
+    require Logger
+
+    Logger.error("""
+    cfg: #{inspect(cfg, pretty: true)}
+    upload_entry: #{inspect(upload_entry, pretty: true)}
+    """)
 
     media_path
     |> Images.Utils.media_path()

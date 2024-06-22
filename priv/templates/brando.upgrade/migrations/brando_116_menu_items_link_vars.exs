@@ -44,8 +44,10 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
     for menu <- menus do
       for item <- menu.items || [] do
         # create new menu item
+        status_atom = String.to_atom(item["status"])
+        {:ok, status} = Brando.Type.Status.dump(status_atom)
         menu_item = %{
-          status: item["status"],
+          status: status,
           sequence: item["sequence"],
           key: item["key"],
           language: menu.language,

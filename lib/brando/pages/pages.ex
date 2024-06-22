@@ -88,7 +88,18 @@ defmodule Brando.Pages do
   mutation :create, Page
   mutation :update, Page
   mutation :delete, Page
-  mutation :duplicate, {Page, delete_fields: [:children, :parent], change_fields: [:uri, :title]}
+
+  mutation :duplicate,
+           {Page,
+            delete_fields: [:children, :parent],
+            change_fields: [:uri, :title, vars: &__MODULE__.duplicate_vars/2]}
+
+  def duplicate_vars(entry, _) do
+    entry
+    |> Brando.repo().preload(:vars)
+    |> Map.get(:vars)
+    |> Enum.map(&Map.put(&1, :id, nil))
+  end
 
   @doc """
   Only gets schemas that are parents

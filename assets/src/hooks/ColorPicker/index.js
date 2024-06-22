@@ -44,6 +44,15 @@ export default app => ({
 
     this.circle = this.el.querySelector('.circle')
     this.colorHex = this.el.querySelector('.color-hex')
+    this.clearColorBtn = this.el.querySelector('.clear-color')
+
+    this.clearColorBtn.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.setColor(null)
+      inputTarget.value = null
+      inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
+    })
 
     this.setColor(initialColor)
 
@@ -53,7 +62,7 @@ export default app => ({
     this.picker = new Picker({
       parent: parent,
       popup: 'bottom',
-      color: initialColor || '#000000',
+      color: initialColor,
       alpha: opacity,
 
       onChange: debounce(color => {
@@ -67,7 +76,7 @@ export default app => ({
         inputTarget.value = processedColor
 
         // has the color actually changed?
-        if (this.lastColor.toLowerCase() !== processedColor) {
+        if (this.lastColor && this.lastColor.toLowerCase() !== processedColor) {
           inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
         }
 
@@ -125,6 +134,6 @@ export default app => ({
 
   setColor(color) {
     this.circle.style.background = color
-    this.colorHex.innerHTML = color
+    this.colorHex.innerHTML = color || '(no color)'
   }
 })

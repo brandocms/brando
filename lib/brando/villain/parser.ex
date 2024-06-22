@@ -202,6 +202,15 @@ defmodule Brando.Villain.Parser do
               {child_block, index} ->
                 {:ok, child_module} = Content.find_module(modules, child_block.module_id)
                 vars = process_vars(child_block.vars)
+
+                require Logger
+
+                Logger.error("""
+                processed_vars
+                #{inspect(vars, pretty: true)}
+
+                """)
+
                 refs = process_refs(child_block.refs)
 
                 forloop = %{
@@ -1058,6 +1067,9 @@ defmodule Brando.Villain.Parser do
 
       defp process_var(%{key: key, label: _, type: :boolean, value_boolean: value_boolean}),
         do: {key, value_boolean}
+
+      defp process_var(%{key: key, label: _, type: :link} = link),
+        do: {key, link}
 
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 

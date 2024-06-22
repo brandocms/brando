@@ -1,5 +1,6 @@
 defmodule Brando.Villain.Filters do
   use Phoenix.Component
+  alias Brando.Content.Var
   alias Brando.Utils
   alias Liquex.Context
 
@@ -1124,4 +1125,27 @@ defmodule Brando.Villain.Filters do
   def slugify(str, _) when is_binary(str) do
     Brando.Utils.slugify(str)
   end
+
+  def link_url(%Var{type: :link} = var, _ctx) do
+    get_link_url(var) || nil
+  end
+
+  def link_text(%Var{type: :link} = var, _ctx) do
+    get_link_text(var) || nil
+  end
+
+  defp get_link_url(%{link_type: :url, value: url}), do: url
+  defp get_link_url(%{link_type: :identifier, identifier: %{url: url}}), do: url
+  defp get_link_url(_), do: nil
+
+  defp get_link_text(%{link_type: :url, link_text: text}), do: text
+
+  defp get_link_text(%{link_type: :identifier, link_text: text})
+       when not is_nil(text),
+       do: text
+
+  defp get_link_text(%{link_type: :identifier, link_text: nil, identifier: %{title: text}}),
+    do: text
+
+  defp get_link_text(_), do: nil
 end

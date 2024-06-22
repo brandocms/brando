@@ -100,17 +100,17 @@ defmodule Brando.Content.Var do
     end
   end
 
-  defimpl Phoenix.HTML.Safe do
-    def to_iodata(%{type: :link, link_type: :url, value: value}) do
-      value
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
+  # defimpl Phoenix.HTML.Safe do
+  #   def to_iodata(%{type: :link, link_type: :url, value: value}) do
+  #     value
+  #     |> Phoenix.HTML.raw()
+  #     |> Phoenix.HTML.Safe.to_iodata()
+  #   end
 
-    def to_iodata(%{type: :link, link_type: :identifier, identifier: identifier}) do
-      identifier.url
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
-  end
+  #   def to_iodata(%{type: :link, link_type: :identifier, identifier: identifier}) do
+  #     identifier.url
+  #     |> Phoenix.HTML.raw()
+  #     |> Phoenix.HTML.Safe.to_iodata()
+  #   end
+  # end
 end

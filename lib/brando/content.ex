@@ -154,20 +154,15 @@ defmodule Brando.Content do
   end
 
   mutation :delete, Module
-  mutation :duplicate, {Module, change_fields: [:name, :class, vars: &duplicate_vars/2]}
+
+  mutation :duplicate,
+           {Module, change_fields: [:name, :class, vars: &__MODULE__.duplicate_vars/2]}
 
   def duplicate_vars(entry, _) do
-    preloaded_vars = Brando.repo().preload(entry, :vars)
-    require Logger
-
-    Logger.error("""
-
-    duplicate_vars
-    #{inspect(preloaded_vars, pretty: true)}
-
-    """)
-
-    []
+    entry
+    |> Brando.repo().preload(:vars)
+    |> Map.get(:vars)
+    |> Enum.map(&Map.put(&1, :id, nil))
   end
 
   @doc """
