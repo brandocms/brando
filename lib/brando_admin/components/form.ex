@@ -1629,17 +1629,6 @@ defmodule BrandoAdmin.Components.Form do
     entry_or_default = entry || struct(schema)
 
     changeset = validate(schema, entry_or_default, entry_params, current_user)
-
-    require Logger
-
-    Logger.error("""
-
-    validate changeset
-
-    #{inspect(changeset, pretty: true)}
-
-    """)
-
     changed_fields = Map.keys(changeset.changes)
 
     socket =

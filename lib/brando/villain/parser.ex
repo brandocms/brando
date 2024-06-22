@@ -1021,8 +1021,6 @@ defmodule Brando.Villain.Parser do
                image: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        require Logger
-        Logger.error("=> process_var — #{key}/:image -- not loaded.")
         %{image: image} = Brando.repo().preload(var, [:image])
         {key, image}
       end
@@ -1035,8 +1033,6 @@ defmodule Brando.Villain.Parser do
                image: image
              } = var
            ) do
-        require Logger
-        Logger.error("=> process_var — #{key}/:image -- has image -- returning")
         {key, image}
       end
 
@@ -1060,8 +1056,6 @@ defmodule Brando.Villain.Parser do
                file: file
              } = var
            ) do
-        require Logger
-        Logger.error("=> process_var — #{key}/:file -- has file -- returning")
         {key, file}
       end
 
@@ -1142,15 +1136,6 @@ defmodule Brando.Villain.Parser do
       end
 
       def maybe_format(html, %{format_html: true}) do
-        require Logger
-
-        Logger.error("""
-
-        formatting html
-        #{inspect(html, pretty: true)}
-
-        """)
-
         Phoenix.LiveView.HTMLFormatter.format(html, [])
       end
 

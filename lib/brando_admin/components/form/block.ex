@@ -375,17 +375,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_list = socket.assigns.block_list
     updated_block_list = List.insert_at(block_list, sequence, uid)
 
-    require Logger
-
-    Logger.error("""
-    insert_block
-    -> myself: #{inspect(socket.assigns.myself)}
-    -> sequence: #{inspect(sequence)}
-    -> type: #{inspect(type)}
-    -> uid: #{inspect(uid)}
-
-    """)
-
     block_form =
       to_change_form(
         empty_block_cs,
@@ -397,8 +386,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changesets = insert_child_changeset(changesets, uid, sequence)
 
     selector = "[data-block-uid=\"#{uid}\"]"
-
-    # send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:children_forms, block_form, at: sequence)
@@ -492,22 +479,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         ref, acc ->
           if Changeset.get_field(ref, :name) == ref_name do
-            require Logger
-
-            Logger.error("""
-            uid: #{uid}
-
-            update_ref_data
-            -> #{inspect(ref_name)}
-
-            ref before:
-
-            #{inspect(ref, pretty: true)}
-
-            changing ref's data to #{inspect(ref_data, pretty: true)}
-
-            """)
-
             block =
               ref
               |> Changeset.get_field(:data)
@@ -2968,7 +2939,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     has_table_rows? = socket.assigns.has_table_rows?
 
     require Logger
-
     Logger.error("=> validate_block –– child")
 
     updated_changeset =
@@ -3007,6 +2977,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     has_children? = socket.assigns.has_children?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    require Logger
+    Logger.error("=> validate_block –– root")
+
     updated_changeset =
       changeset.data
       |> block_module.changeset(params, current_user_id)
@@ -3019,16 +2992,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         as: "entry_block",
         id: "entry_block_form-#{uid}"
       )
-
-    require Logger
-
-    Logger.error("""
-
-    validate entry_block
-
-    #{inspect(updated_form.source.changes, pretty: true)}
-
-    """)
 
     socket
     |> assign(:form, updated_form)
@@ -3069,14 +3032,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       form_cid: form_cid
     } = socket.assigns
 
-    require Logger
-
-    Logger.error("""
-
-    maybe_update_live_preview_block TRUE
-
-    """)
-
     block_cs = get_block_changeset(changeset, belongs_to)
     rendered_html = Changeset.get_field(block_cs, :rendered_html)
     uid = Changeset.get_field(block_cs, :uid)
@@ -3091,17 +3046,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
-  defp maybe_update_live_preview_block(socket) do
-    require Logger
-
-    Logger.error("""
-
-    maybe_update_live_preview_block FALSE
-
-    """)
-
-    socket
-  end
+  defp maybe_update_live_preview_block(socket), do: socket
 
   defp get_module(id) do
     {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
