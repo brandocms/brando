@@ -660,8 +660,8 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   def selected_rows(assigns) do
-    ctx = assigns.schema.__modules__.context
-    singular = assigns.schema.__naming__.singular
+    ctx = assigns.schema.__modules__().context
+    singular = assigns.schema.__naming__().singular
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
     duplicate_langs? = assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn?

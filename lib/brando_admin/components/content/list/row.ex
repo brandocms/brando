@@ -222,9 +222,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     processed_actions = process_actions(assigns.listing.actions, language, assigns.entry.id)
     default_actions? = assigns.listing.default_actions
 
-    ctx = assigns.schema.__modules__.context
-    singular = assigns.schema.__naming__.singular
-    translated_singular = assigns.schema.__translations__[:naming][:singular]
+    ctx = assigns.schema.__modules__().context
+    singular = assigns.schema.__naming__().singular
+    translated_singular = assigns.schema.__translations__()[:naming][:singular]
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
 
