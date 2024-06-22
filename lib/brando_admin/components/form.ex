@@ -1229,7 +1229,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def tab_fields(assigns) do
-    assigns = assign(assigns, :indexed_fields, Enum.with_index(assigns.tab.fields))
+    assigns =
+      assigns
+      |> assign(:indexed_fields, Enum.with_index(assigns.tab.fields))
+      |> assign(:translations, assigns.schema.__translations__())
+      |> assign(:relations, assigns.schema.__relations__())
 
     ~H"""
     <%= for {fieldset, idx} <- @indexed_fields do %>
@@ -1240,8 +1244,8 @@ defmodule BrandoAdmin.Components.Form do
       <% else %>
         <Fieldset.render
           id={"#{@form.id}-fieldset-#{@tab.name}-#{idx}"}
-          translations={@schema.__translations__}
-          relations={@schema.__relations__}
+          translations={@translations}
+          relations={@relations}
           form={@form}
           fieldset={fieldset}
           parent_uploads={@parent_uploads}
