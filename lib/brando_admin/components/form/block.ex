@@ -418,7 +418,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
           ref
           |> Changeset.force_change(:data, new_ref_data_cs)
-          # |> Changeset.force_change(:id, Ecto.UUID.generate())
           |> Map.put(:action, nil)
           |> Changeset.apply_changes()
         else
@@ -568,7 +567,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update_changeset_data_block_var(socket, var_key, :image, %{image: image}) do
+  def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
+    assoc_data = Map.get(data, :type)
+
     uid = socket.assigns.uid
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
@@ -582,9 +583,9 @@ defmodule BrandoAdmin.Components.Form.Block do
             Access.key(:block),
             Access.key(:vars),
             Access.filter(&(&1.key == var_key)),
-            Access.key(:image)
+            Access.key(type)
           ],
-          image
+          assoc_data
         )
       else
         put_in(
@@ -593,9 +594,9 @@ defmodule BrandoAdmin.Components.Form.Block do
             Access.key(:data),
             Access.key(:vars),
             Access.filter(&(&1.key == var_key)),
-            Access.key(:image)
+            Access.key(type)
           ],
-          image
+          assoc_data
         )
       end
 
@@ -615,9 +616,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, updated_form)
   end
 
-  def update_changeset_data_block_var(socket, _, _, _) do
-    socket
-  end
+  def update_changeset_data_block_var(socket, _, _, _), do: socket
 
   def maybe_get_live_preview_status(
         %{assigns: %{form_is_new: true, block_initialized: false}} = socket
