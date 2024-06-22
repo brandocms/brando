@@ -925,6 +925,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event(
+        "image_uploaded",
+        %{"id" => image_id},
+        socket
+      ) do
+    image = Brando.Images.get_image!(image_id)
+
+    socket
+    |> assign(:image_id, image_id)
+    |> assign(:image, image)
+    |> on_change(%{image: image, image_id: image_id})
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event(
         "select_file",
         %{"id" => file_id},
         socket
@@ -939,29 +953,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event(
-        "image_uploaded",
-        %{"id" => image_id},
-        socket
-      ) do
-    image = Brando.Images.get_image!(image_id)
-
-    {:noreply,
-     socket
-     |> assign(:image_id, image_id)
-     |> assign(:image, image)}
-  end
-
-  def handle_event(
         "file_uploaded",
         %{"id" => file_id},
         socket
       ) do
     file = Brando.Files.get_file!(file_id)
 
-    {:noreply,
-     socket
-     |> assign(:file_id, file_id)
-     |> assign(:file, file)}
+    socket
+    |> assign(:file_id, file_id)
+    |> assign(:file, file)
+    |> on_change(%{file: file, file_id: file_id})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("toggle_visible", _, socket) do
