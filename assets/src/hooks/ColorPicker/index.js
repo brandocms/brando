@@ -4,11 +4,12 @@ import debounce from 'lodash.debounce'
 
 export default app => ({
   mounted() {
+    // are we creating an entry? if so, set defaults if we have
     this.picker = null
     const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-color') {
-          const currentColor = this.el.dataset.color
+          const currentColor = this.el.dataset.color || this.el.dataset.default
           this.setColor(currentColor)
         }
 
@@ -33,7 +34,7 @@ export default app => ({
       this.picker.destroy()
     }
 
-    const initialColor = this.el.dataset.color
+    const initialColor = this.el.dataset.color || this.el.dataset.default
     const opacity = this.el.hasAttribute('data-opacity')
     const inputTarget = Dom.find(this.el.dataset.input)
     const paletteColors = this.el.hasAttribute('data-palette')

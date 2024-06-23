@@ -116,6 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-opacity={@opacity}
         data-picker={@picker}
         data-palette={@palette_colors}
+        data-default={@default}
       >
         <div class="picker">
           <.input type={:hidden} field={@field} />
