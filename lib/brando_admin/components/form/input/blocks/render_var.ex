@@ -349,6 +349,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <Input.input type={:hidden} field={@var[:important]} />
             <Input.input type={:hidden} field={@var[:instructions]} />
             <Input.input type={:hidden} field={@var[:placeholder]} />
+            <Input.input type={:hidden} field={@var[:width]} />
 
             <.render_value_inputs
               type={@type}
