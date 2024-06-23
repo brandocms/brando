@@ -1207,6 +1207,10 @@ defmodule Brando.Utils do
   @doc """
   Set changeset action depending on if changeset has :id or not
   """
+  def set_action(changesets) when is_list(changesets) do
+    Enum.map(changesets, &set_action/1)
+  end
+
   def set_action(changeset) do
     mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :insert
     Map.put(changeset, :action, mutation_type)
