@@ -582,7 +582,12 @@ defmodule BrandoAdmin.Components.Content.List do
               filter[:filter] == @active_filter[:filter] && "visible"
             ]}>
               <button class="filter-key" phx-click={@next_filter_key}>
-                <span><%= g(@schema, filter[:label]) %></span>
+                <span>
+                  <%= g(@schema, filter[:label]) %>
+                  <%= if Enum.count(@filters) > 1 do %>
+                    &darr;
+                  <% end %>
+                </span>
               </button>
               <.form
                 for={%{}}
