@@ -182,7 +182,11 @@ defmodule Brando.Pages.Page do
 
   def listing_row(assigns) do
     assigns =
-      assign(assigns, :url, assigns.entry.has_url && Brando.HTML.absolute_url(assigns.entry))
+      assign(
+        assigns,
+        :url,
+        assigns.entry.has_url && (Brando.HTML.absolute_url(assigns.entry) || gettext("<no URL>"))
+      )
 
     ~H"""
     <div class="col-1 center">
