@@ -493,8 +493,8 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname() :: binary
-  @spec hostname(path :: binary) :: binary
   def hostname, do: "#{Brando.endpoint().url}"
+  @spec hostname(path :: binary) :: binary
   def hostname(path), do: Path.join(hostname(), path)
 
   @doc """
