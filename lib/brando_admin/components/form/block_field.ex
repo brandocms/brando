@@ -39,7 +39,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> remove_pk_from_table_rows()
       |> add_uid_to_refs()
       |> Map.put(:action, :insert)
-      |> dbg()
 
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
@@ -146,6 +145,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> struct(%{})
       |> Changeset.change(%{entry_id: socket.assigns.entry.id})
       |> Changeset.put_assoc(:block, empty_block_cs)
+      |> Map.put(:action, :insert)
 
     uid = Changeset.get_field(empty_block_cs, :uid)
 
@@ -154,11 +154,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_block_list = List.insert_at(block_list, sequence, uid)
 
     entry_block_form =
-      to_change_form(
-        block_module,
-        entry_block_cs,
-        %{sequence: sequence},
-        socket.assigns.current_user.id
+      to_form(entry_block_cs,
+        as: "entry_block",
+        id: "entry_block_form-#{uid}"
       )
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
