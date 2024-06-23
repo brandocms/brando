@@ -29,8 +29,8 @@
     transition: background-color 250ms ease;
 
     span[class^="hero-"] {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       background-color: var(--brando-color-dark);
       transition: background-color 250ms ease;
     }
