@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Block do
+  alias Brando.Content.Var
   use BrandoAdmin, :live_component
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
@@ -437,17 +438,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
 
     new_form =
-      if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
 
     socket
     |> assign(:form, new_form)
@@ -504,17 +499,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
 
     new_form =
-      if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
 
     socket
     |> assign(:form, new_form)
@@ -601,17 +590,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
 
     updated_form =
-      if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
 
     assign(socket, :form, updated_form)
   end
@@ -1222,6 +1205,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     </div>
     """
   end
+
+  ##
+  ## Function components
 
   def container(assigns) do
     changeset = assigns.form.source
@@ -2559,11 +2545,21 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  ##
+  ## Block events
   def handle_event("duplicate_block", _, socket) do
     changeset = socket.assigns.form.source
+    has_children? = socket.assigns.has_children?
     uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
-    send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
+
+    if has_children? do
+      # if the block has children we need to fetch their changesets
+      # todo
+    else
+      # if not, we can just duplicate the block
+      parent_cid = socket.assigns.parent_cid
+      send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
+    end
 
     {:noreply, socket}
   end
@@ -2764,6 +2760,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:noreply, assign(socket, :collapsed, !socket.assigns.collapsed)}
   end
 
+  # fetch all module refs and add any that are missing to the block
   def handle_event("fetch_missing_refs", _, socket) do
     form = socket.assigns.form
     changeset = form.source
@@ -2805,17 +2802,301 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
 
     new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  # reset a single ref
+  def handle_event("reset_ref", %{"id" => ref_name}, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    module = get_module(module_id)
+
+    module_refs = module.refs
+
+    prepared_ref =
+      module_refs
+      |> Enum.filter(&(&1.name == ref_name))
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.add_uid_to_ref_changesets()
+      |> List.first()
+
+    current_refs =
       if belongs_to == :root do
-        to_form(updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_embed(:refs)
       else
-        to_form(updated_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
+        Changeset.get_embed(changeset, :refs)
       end
+
+    prepared_refs =
+      current_refs
+      |> Enum.reject(&(&1.action == :replace))
+      |> Enum.map(fn ref ->
+        if Changeset.get_field(ref, :name) == ref_name do
+          prepared_ref
+        else
+          ref
+        end
+      end)
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, prepared_refs)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_embed(changeset, :refs, prepared_refs)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("reset_refs", _, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    module = get_module(module_id)
+
+    module_refs = module.refs
+
+    prepared_refs =
+      module_refs
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.add_uid_to_ref_changesets()
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, prepared_refs)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_embed(changeset, :refs, prepared_refs)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  # fetch all module vars and add any that are missing to the block
+  def handle_event("fetch_missing_vars", _, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    module = get_module(module_id)
+
+    module_vars = module.vars
+    module_var_names = Enum.map(module_vars, & &1.key)
+
+    current_vars =
+      if belongs_to == :root do
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_assoc(:vars)
+      else
+        Changeset.get_assoc(changeset, :vars)
+      end
+
+    current_var_names = Enum.map(current_vars, &Changeset.get_field(&1, :key))
+    missing_var_names = module_var_names -- current_var_names
+
+    missing_vars =
+      module_vars
+      |> Enum.filter(&(&1.key in missing_var_names))
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.remove_pk_from_vars()
+
+    new_vars = current_vars ++ missing_vars
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :vars, new_vars)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_assoc(changeset, :vars, new_vars)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  # reset all vars to module defaults
+  def handle_event("reset_vars", _, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    module = get_module(module_id)
+
+    module_vars = module.vars
+
+    original_vars =
+      module_vars
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.remove_pk_from_vars()
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :vars, original_vars)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_assoc(changeset, :vars, original_vars)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  # reset single var to module defaults
+  def handle_event("reset_var", %{"id" => var_key}, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    module_id = socket.assigns.module_id
+    uid = Changeset.get_field(changeset, :uid)
+    module = get_module(module_id)
+
+    module_vars = module.vars
+
+    var_to_replace =
+      module_vars
+      |> Enum.filter(&(&1.key == var_key))
+      |> Enum.map(&Changeset.change/1)
+      |> Brando.Villain.remove_pk_from_vars()
+      |> List.first()
+
+    current_vars =
+      if belongs_to == :root do
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_assoc(:vars)
+      else
+        Changeset.get_assoc(changeset, :vars)
+      end
+
+    updated_vars =
+      Enum.map(current_vars, fn var ->
+        if Changeset.get_field(var, :key) == var_key do
+          var_to_replace
+        else
+          var
+        end
+      end)
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :vars, updated_vars)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_assoc(changeset, :vars, updated_vars)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
+
+    socket
+    |> assign(:form, new_form)
+    |> then(&{:noreply, &1})
+  end
+
+  # delete single var from module
+  def handle_event("delete_var", %{"id" => var_key}, socket) do
+    form = socket.assigns.form
+    changeset = form.source
+    belongs_to = socket.assigns.belongs_to
+    uid = Changeset.get_field(changeset, :uid)
+
+    current_vars =
+      if belongs_to == :root do
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_assoc(:vars)
+      else
+        Changeset.get_assoc(changeset, :vars)
+      end
+
+    updated_vars =
+      current_vars
+      |> Enum.reduce([], fn var, acc ->
+        if Changeset.get_field(var, :key) == var_key do
+          acc
+        else
+          [var | acc]
+        end
+      end)
+      |> Enum.reverse()
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :vars, updated_vars)
+        Changeset.put_assoc(changeset, :block, updated_block_changeset)
+      else
+        Changeset.put_assoc(changeset, :vars, updated_vars)
+      end
+
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
 
     socket
     |> assign(:form, new_form)
@@ -2997,6 +3278,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
+  defp build_form_from_changeset(changeset, uid, belongs_to) do
+    if belongs_to == :root do
+      to_form(changeset,
+        as: "entry_block",
+        id: "entry_block_form-#{uid}"
+      )
+    else
+      to_form(changeset,
+        as: "child_block",
+        id: "child_block_form-#{uid}"
+      )
+    end
+  end
+
   defp maybe_put_empty_children(changeset, false) do
     updated_block_cs =
       changeset
@@ -3044,7 +3339,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_update_live_preview_block(socket), do: socket
 
   defp get_module(id) do
-    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} =
+      Brando.Content.list_modules(%{
+        preload: [{:vars, {Var, [asc: :sequence]}}],
+        cache: {:ttl, :infinite}
+      })
 
     case Enum.find(modules, &(&1.id == id)) do
       nil -> nil

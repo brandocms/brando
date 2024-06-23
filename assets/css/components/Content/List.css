@@ -85,12 +85,11 @@
   }
 
   .list-tools-wrapper {
-    @space margin-bottom 1vw;
+    @space margin-bottom 20px;
   }
 
   .list-tools {
     display: flex;
-    min-height: 3.5vw;
 
     > .statuses {
       background-color: var(--brando-color-input);
@@ -205,7 +204,7 @@
       }
 
       .filter-key {
-        @font mono 0.8vw;
+        @font mono 12px;
         cursor: pointer;
         user-select: none;
         border: none;
@@ -323,11 +322,8 @@
     .main-content .status + div,
     .child-row .status + div {
       margin-left: 0 !important;
-      padding-left: 1vw;
-    }
-    /* .child-row .status + .seq {
-      padding-left: 0 !important;
-    } */
+      padding-left: 0.7em;
+    }    
 
     .main-content .svg svg {
       width: 100%;
@@ -335,7 +331,7 @@
     }
 
     .main-content > div:first-of-type {
-      padding-left: 1vw;
+      padding-left: 0.7em;
     }
 
     &:nth-of-type(odd) {
@@ -390,7 +386,7 @@
 
     .entry-link {
       font-weight: 600;
-      line-height: 1.6vw;
+      line-height: 120%;
       border-bottom: none;
       position: relative;
       color: var(--brando-color-dark); 

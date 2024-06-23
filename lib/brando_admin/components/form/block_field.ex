@@ -20,32 +20,59 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "duplicate_block", uid: uid, changeset: changeset}, socket) do
-    # find the position of the block to duplicate
+    block_module = socket.assigns.block_module
     block_list = socket.assigns.block_list
-    _idx = Enum.find_index(block_list, &(&1 == uid))
+    root_changesets = socket.assigns.root_changesets
+    sequence = Enum.find_index(block_list, &(&1 == uid))
+    current_user_id = socket.assigns.current_user.id
+    entry_id = socket.assigns.entry.id
 
-    # signal all children to send their changesets
-    # remove id from changeset and set action to :insert
-    # changesets = ###
+    uid = Brando.Utils.generate_uid()
     block_cs = Changeset.get_assoc(changeset, :block)
 
     updated_block_cs =
       block_cs
-      |> Changeset.put_change(:id, nil)
-      |> Changeset.put_change(:uid, Brando.Utils.generate_uid())
+      # |> Changeset.put_change(:id, nil)
+      |> put_in([Access.key(:data), Access.key(:id)], nil)
+      |> Changeset.put_change(:uid, uid)
       |> remove_pk_from_vars()
+      |> remove_pk_from_table_rows()
+      |> add_uid_to_refs()
+      |> Map.put(:action, :insert)
+      |> dbg()
 
-    children = Changeset.get_assoc(updated_block_cs, :children)
+    sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
-    require Logger
+    entry_block_cs =
+      block_module
+      |> struct(%{})
+      |> Changeset.change(%{entry_id: entry_id})
+      |> Changeset.put_assoc(:block, updated_block_cs)
+      |> Map.put(:action, :insert)
 
-    Logger.error("""
+    uid = Changeset.get_field(updated_block_cs, :uid)
 
-    duplicate_block -- children #{inspect(children, pretty: true)}
+    # insert the new block uid into the block_list
+    new_block_list = List.insert_at(block_list, sequence, uid)
 
-    """)
+    entry_block_form =
+      to_change_form(
+        block_module,
+        entry_block_cs,
+        %{sequence: sequence},
+        current_user_id
+      )
 
-    {:ok, socket}
+    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
+
+    socket
+    |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
+    |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, updated_root_changesets)
+    |> update(:block_count, &(&1 + 1))
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
@@ -111,15 +138,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     parent_id = nil
     source = socket.assigns.block_module
     empty_block_cs = build_block(module_id, user_id, parent_id, source, :module)
-
-    require Logger
-
-    Logger.error("""
-
-    the empty_block_cs
-    #{inspect(empty_block_cs, pretty: true)}
-
-    """)
 
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
@@ -347,10 +365,40 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end)
   end
 
+  defp add_uid_to_refs(changeset) do
+    refs = Changeset.get_embed(changeset, :refs)
+
+    updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
+    Changeset.put_embed(changeset, :refs, updated_refs)
+  end
+
   defp remove_pk_from_vars(changeset) do
     vars = Changeset.get_assoc(changeset, :vars)
-    vars_without_pk = Enum.map(vars, &Changeset.put_change(&1, :id, nil))
+
+    vars_without_pk =
+      Enum.map(
+        vars,
+        fn var ->
+          var
+          |> put_in([Access.key(:data), Access.key(:id)], nil)
+          |> Map.put(:action, :insert)
+        end
+      )
+
     Changeset.put_change(changeset, :vars, vars_without_pk)
+  end
+
+  defp remove_pk_from_table_rows(changeset) do
+    table_rows = Changeset.get_assoc(changeset, :table_rows)
+
+    table_rows_without_pk =
+      Enum.map(table_rows, fn table_row ->
+        table_row
+        |> put_in([Access.key(:data), Access.key(:id)], nil)
+        |> Map.put(:action, :insert)
+      end)
+
+    Changeset.put_change(changeset, :table_rows, table_rows_without_pk)
   end
 
   # reposition a main block
