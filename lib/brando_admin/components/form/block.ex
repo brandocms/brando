@@ -33,6 +33,54 @@ defmodule BrandoAdmin.Components.Form.Block do
      )}
   end
 
+  # duplicate block (that is not an entry block)
+  # event is received in the parent block (multi or container)
+  def update(%{event: "duplicate_block", uid: uid, changeset: block_cs}, socket) do
+    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
+    sequence = Enum.find_index(block_list, &(&1 == uid))
+    current_user_id = socket.assigns.current_user_id
+
+    new_uid = Brando.Utils.generate_uid()
+
+    updated_block_cs =
+      block_cs
+      |> Changeset.apply_changes()
+      |> Map.merge(%{id: nil, uid: new_uid, sequence: sequence, creator_id: current_user_id})
+      |> Changeset.change()
+      |> remove_pk_from_vars()
+      |> remove_pk_from_table_rows()
+      |> add_uid_to_refs()
+      |> Map.put(:action, :insert)
+      |> filter_replace_refs()
+      |> Changeset.update_change(:refs, fn ref_changesets ->
+        Enum.reject(ref_changesets, &(&1.action == :replace))
+      end)
+
+    # insert the new block uid into the block_list
+    new_block_list = List.insert_at(block_list, sequence, new_uid)
+
+    block_form =
+      to_form(updated_block_cs,
+        as: "child_block",
+        id: "child_block_form-#{new_uid}"
+      )
+
+    updated_changesets = insert_child_changeset(changesets, new_uid, sequence)
+    selector = "[data-block-uid=\"#{new_uid}\"]"
+
+    socket
+    |> stream_insert(:children_forms, block_form, at: sequence)
+    |> assign(:has_children?, true)
+    |> assign(:block_list, new_block_list)
+    |> assign(:changesets, updated_changesets)
+    |> update(:block_count, &(&1 + 1))
+    |> reset_position_response_tracker()
+    |> send_child_position_update(new_block_list)
+    |> push_event("b:scroll_to", %{selector: selector})
+    |> then(&{:ok, &1})
+  end
+
   # event sent from RenderVar for :file and :image vars
   def update(%{event: "update_block_var"} = params, socket) do
     %{var_key: var_key, var_type: var_type, data: data} = params
@@ -322,7 +370,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           Changeset.put_assoc(
             changeset,
             :children,
-            Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
+            Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
           )
         else
           updated_block_changeset =
@@ -330,7 +378,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             |> Changeset.get_assoc(:block)
             |> Changeset.put_assoc(
               :children,
-              Enum.map(updated_changesets_list, &Map.put(&1, :action, nil))
+              Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
             )
 
           Changeset.put_assoc(changeset, :block, updated_block_changeset)
@@ -563,40 +611,45 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
 
-    updated_changeset =
-      if belongs_to == :root do
-        put_in(
-          changeset,
-          [
-            Access.key(:data),
-            Access.key(:block),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(type)
-          ],
-          assoc_data
-        )
-      else
-        put_in(
-          changeset,
-          [
-            Access.key(:data),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(type)
-          ],
-          assoc_data
-        )
-      end
+    # is the block loaded?
+    if Brando.Utils.try_path(changeset, [:data, :block, :vars]) do
+      updated_changeset =
+        if belongs_to == :root do
+          put_in(
+            changeset,
+            [
+              Access.key(:data),
+              Access.key(:block),
+              Access.key(:vars),
+              Access.filter(&(&1.key == var_key)),
+              Access.key(type)
+            ],
+            assoc_data
+          )
+        else
+          put_in(
+            changeset,
+            [
+              Access.key(:data),
+              Access.key(:vars),
+              Access.filter(&(&1.key == var_key)),
+              Access.key(type)
+            ],
+            assoc_data
+          )
+        end
 
-    updated_form =
-      build_form_from_changeset(
-        updated_changeset,
-        uid,
-        belongs_to
-      )
+      updated_form =
+        build_form_from_changeset(
+          updated_changeset,
+          uid,
+          belongs_to
+        )
 
-    assign(socket, :form, updated_form)
+      assign(socket, :form, updated_form)
+    else
+      socket
+    end
   end
 
   def update_changeset_data_block_var(socket, _, _, _), do: socket
@@ -1407,6 +1460,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.inputs_for>
           <% else %>
             <Input.hidden field={@form[:sequence]} />
+            <input type="hidden" name={@form[:id].name} value={@form[:id].value} />
             <.hidden_block_fields block_form={@form} block_module={@block_module} />
 
             <.toolbar
@@ -2268,6 +2322,11 @@ defmodule BrandoAdmin.Components.Form.Block do
             <div :if={@block[:anchor].value} class="container-target">
               &nbsp;|&nbsp;#<%= @block[:anchor].value %>
             </div>
+          <% else %>
+            <div class="arrow">&rarr;</div>
+            <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
+              <%= gettext("<No palette>") %>
+            </button>
           <% end %>
           <span :if={@block[:description].value not in ["", nil]} class="description">
             <%= @block[:description].value %>
@@ -3618,6 +3677,48 @@ defmodule BrandoAdmin.Components.Form.Block do
       nil -> var
       var_cs -> Changeset.get_field(var_cs, :value)
     end
+  end
+
+  defp add_uid_to_refs(changeset) do
+    refs = Changeset.get_embed(changeset, :refs)
+
+    updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
+    Changeset.put_embed(changeset, :refs, updated_refs)
+  end
+
+  defp filter_replace_refs(changeset) do
+    refs = Changeset.get_embed(changeset, :refs)
+    updated_refs = Enum.reject(refs, &(&1.action == :replace))
+    Changeset.put_embed(changeset, :refs, updated_refs)
+  end
+
+  defp remove_pk_from_vars(changeset) do
+    vars = Changeset.get_assoc(changeset, :vars)
+
+    vars_without_pk =
+      Enum.map(
+        vars,
+        fn var ->
+          var
+          |> put_in([Access.key(:data), Access.key(:id)], nil)
+          |> Map.put(:action, :insert)
+        end
+      )
+
+    Changeset.put_change(changeset, :vars, vars_without_pk)
+  end
+
+  defp remove_pk_from_table_rows(changeset) do
+    table_rows = Changeset.get_assoc(changeset, :table_rows)
+
+    table_rows_without_pk =
+      Enum.map(table_rows, fn table_row ->
+        table_row
+        |> put_in([Access.key(:data), Access.key(:id)], nil)
+        |> Map.put(:action, :insert)
+      end)
+
+    Changeset.put_change(changeset, :table_rows, table_rows_without_pk)
   end
 
   def insert_identifier(block_identifiers, identifier_id) do
