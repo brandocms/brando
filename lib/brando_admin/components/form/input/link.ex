@@ -43,14 +43,6 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
   def ensure_default_link(socket) do
     field = socket.assigns.field
     changeset = field.form.source
-    require Logger
-
-    Logger.error("""
-
-    assigns
-    #{inspect(Map.keys(socket.assigns), pretty: true, width: 0)}
-
-    """)
 
     field_name = field.field
     current_link = Ecto.Changeset.get_field(changeset, field_name)

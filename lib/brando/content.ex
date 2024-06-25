@@ -575,6 +575,16 @@ defmodule Brando.Content do
     end
   end
 
+  def get_identifier!(id) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.id == ^id,
+        limit: 1
+      )
+
+    Brando.repo().one(query)
+  end
+
   def get_identifier(module, entry) do
     query =
       from(t in Brando.Content.Identifier,

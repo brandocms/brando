@@ -2305,16 +2305,9 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp validate(schema, entry, params, user) do
-    require Logger
-    Logger.error("=> validate before")
-
-    cs =
-      entry
-      |> schema.changeset(params, user)
-      |> Map.put(:action, :validate)
-
-    Logger.error("=> validate after")
-    cs
+    entry
+    |> schema.changeset(params, user)
+    |> Map.put(:action, :validate)
   end
 
   defp assoc_all_block_fields(block_changesets, changeset) do

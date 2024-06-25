@@ -6,16 +6,14 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   alias BrandoAdmin.Components.Form.Input
 
   def update(assigns, socket) do
-    # {identifier, assigns} = Map.pop(assigns, :identifier)
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:identifier, fn -> nil end)
      |> assign_new(:selected_schema, fn -> nil end)
-     |> assign_new(:selected_identifier, fn -> nil end)
-     |> assign_new(:selected_identifier_id, fn %{identifier: identifier} ->
-       if identifier, do: identifier.id
+     |> assign_new(:selected_identifier_id, fn -> nil end)
+     |> assign_new(:selected_identifier, fn
+       %{selected_identifier_id: nil} -> nil
+       %{selected_identifier_id: id} -> Brando.Content.get_identifier!(id)
      end)
      |> assign_new(:wanted_schemas, fn -> [] end)
      |> assign_available_schemas()
@@ -52,9 +50,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   def render(assigns) do
     ~H"""
     <div>
-      <div :if={@identifier} class="selected-identifier">
+      <div :if={@selected_identifier} class="selected-identifier">
         <h2 class="titlecase"><%= gettext("Current selected identifier") %></h2>
-        <.identifier identifier={@identifier} />
+        <.identifier identifier={@selected_identifier} />
       </div>
       <h2 class="titlecase"><%= gettext("Select content type") %></h2>
       <div class="button-group-vertical tiny">
@@ -151,10 +149,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   end
 
   def handle_event("select_identifier", %{"id" => id}, socket) do
-    # {:ok, identifier} = Brando.Content.get_identifier(id)
+    {:ok, identifier} = Brando.Content.get_identifier(id)
 
     socket
-    # |> assign(:identifier, identifier)
+    |> assign(:selected_identifier, identifier)
     |> assign(:selected_identifier_id, id)
     |> then(&{:noreply, &1})
   end

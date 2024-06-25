@@ -514,6 +514,10 @@ defmodule Brando.Villain.Parser do
       """
       def picture(%{url: ""}, _), do: ""
 
+      def picture(nil, _) do
+        ""
+      end
+
       def picture(data, _) do
         title = Map.get(data, :title, nil)
         credits = Map.get(data, :credits, nil)

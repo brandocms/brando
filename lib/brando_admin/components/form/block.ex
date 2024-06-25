@@ -2409,7 +2409,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def table(assigns) do
     table_rows_value = assigns.block_data[:table_rows].value
-    valid? = table_rows_value != [] && !is_struct(table_rows_value, Ecto.Association.NotLoaded)
+
+    valid? =
+      table_rows_value not in [[], "", nil] &&
+        !is_struct(table_rows_value, Ecto.Association.NotLoaded)
+
     assigns = assign(assigns, :valid?, valid?)
 
     ~H"""
@@ -2440,6 +2444,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             >
               <%= gettext("Add row") %>
             </button>
+            <input type="hidden" name={@block_data[:table_rows].name} value={[]} />
           </div>
         <% else %>
           <div

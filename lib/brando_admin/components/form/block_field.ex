@@ -564,7 +564,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
 
     Changeset.change(
-      %Brando.Content.Block{block_identifiers: [], table_rows: []},
+      %Brando.Content.Block{},
       %{
         uid: Brando.Utils.generate_uid(),
         type: type,
@@ -580,6 +580,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         refs: refs_with_generated_uids
       }
     )
+    |> dbg
   end
 
   def build_container(user_id, parent_id, source) do

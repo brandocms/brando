@@ -18,28 +18,52 @@ for lang <- languages do
     creator_id: user.id,
     items: [
       %Brando.Navigation.Item{
-        items: [],
         key: "brando",
-        open_in_new_window: true,
         status: :published,
-        title: "Brando CMS",
-        url: "https://brandocms.com"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "Brando CMS",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://brandocms.com"
+        }
       },
       %Brando.Navigation.Item{
-        items: [],
         key: "documentation",
-        open_in_new_window: true,
         status: :published,
-        title: "API Documentation",
-        url: "https://hexdocs.pm/brando"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "API Documentation",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://hexdocs.pm/brando"
+        }
       },
       %Brando.Navigation.Item{
-        items: [],
         key: "guides",
-        open_in_new_window: true,
         status: :published,
-        title: "Guides",
-        url: "https://brandocms.com/guides"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "Guides",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://brandocms.com/guides"
+        }
       }
     ],
     key: "main",

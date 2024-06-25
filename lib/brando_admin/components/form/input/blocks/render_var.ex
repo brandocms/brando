@@ -714,7 +714,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               module={Content.SelectIdentifier}
               id={"#{@field.id}-identifier-select"}
               field={@field[:identifier_id]}
-              identifier={@identifier}
+              selected_identifier_id={@identifier && @identifier.id}
               wanted_schemas={@wanted_schemas}
             />
           </div>
@@ -976,15 +976,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     var_type = socket.assigns.type
     on_change = socket.assigns.on_change
     value = get_in(params, target)
-
-    require Logger
-
-    Logger.error("""
-
-    update_var value
-    #{inspect(value, pretty: true)}
-
-    """)
 
     params = %{
       event: "update_block_var",

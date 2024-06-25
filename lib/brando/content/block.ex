@@ -144,36 +144,48 @@ defmodule Brando.Content.Block do
   def block_changeset(block, attrs, user) do
     block
     |> cast(attrs, @block_attrs)
-    |> cast_assoc(:table_rows,
-      with: &table_row_changeset(&1, &2, &3, user),
-      drop_param: :drop_table_row_ids,
-      sort_param: :sort_table_row_ids
-    )
+    |> cast_table_rows(user)
+    |> cast_block_identifiers(user)
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
-    |> cast_assoc(:block_identifiers,
-      with: &block_identifier_changeset(&1, &2, &3, user),
-      drop_param: :drop_block_identifier_ids,
-      sort_param: :sort_block_identifier_ids
-    )
   end
 
   def recursive_block_changeset(block, attrs, user) do
     block
     |> cast(attrs, @block_attrs)
-    |> cast_assoc(:table_rows,
-      with: &table_row_changeset(&1, &2, &3, user),
-      drop_param: :drop_table_row_ids,
-      sort_param: :sort_table_row_ids
-    )
+    |> cast_table_rows(user)
+    |> cast_block_identifiers(user)
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
-    |> cast_assoc(:block_identifiers,
-      with: &block_identifier_changeset(&1, &2, &3, user),
-      drop_param: :drop_block_identifier_ids,
-      sort_param: :sort_block_identifier_ids
-    )
+  end
+
+  defp cast_block_identifiers(changeset, user) do
+    case Map.get(changeset.params, "table_rows") do
+      "" ->
+        put_assoc(changeset, :block_identifiers, [])
+
+      _ ->
+        cast_assoc(changeset, :block_identifiers,
+          with: &block_identifier_changeset(&1, &2, &3, user),
+          drop_param: :drop_block_identifier_ids,
+          sort_param: :sort_block_identifier_ids
+        )
+    end
+  end
+
+  defp cast_table_rows(changeset, user) do
+    case get_assoc(changeset, :table_rows) do
+      [] ->
+        put_assoc(changeset, :table_rows, [])
+
+      _ ->
+        cast_assoc(changeset, :table_rows,
+          with: &table_row_changeset(&1, &2, &3, user),
+          drop_param: :drop_table_row_ids,
+          sort_param: :sort_table_row_ids
+        )
+    end
   end
 
   def table_row_changeset(table_row, attrs, position, user) do
