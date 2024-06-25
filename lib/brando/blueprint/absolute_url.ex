@@ -18,8 +18,9 @@ defmodule Brando.Blueprint.AbsoluteURL do
   alias Brando.Villain
 
   defmacro absolute_url(false) do
-    raise Brando.Exception.BlueprintError,
-          "Instead of setting absolute_url false, remove the absolute_url call from the blueprint"
+    quote location: :keep do
+      def __has_absolute_url__, do: false
+    end
   end
 
   defmacro absolute_url(tpl) when is_binary(tpl) do
