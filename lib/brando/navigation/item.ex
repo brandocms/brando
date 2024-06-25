@@ -13,7 +13,6 @@ defmodule Brando.Navigation.Item do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable, alternates: false
 
   identifier false
   persist_identifier false
@@ -38,25 +37,6 @@ defmodule Brando.Navigation.Item do
       foreign_key: :menu_item_id,
       on_replace: :delete,
       cast: true
-  end
-
-  forms do
-    form default_params: %{"status" => "draft"} do
-      redirect_on_save &__MODULE__.redirect/3
-
-      tab gettext("Content") do
-        fieldset size: :full do
-          input :status, :status
-        end
-
-        fieldset size: :half do
-          input :menu_id, :hidden
-          input :language, :radios, options: :languages, label: t("Language")
-          input :key, :text, label: t("Key")
-          inputs_for :link, {:component, BrandoAdmin.Components.Form.Input.Link}, label: t("Link")
-        end
-      end
-    end
   end
 
   translations do

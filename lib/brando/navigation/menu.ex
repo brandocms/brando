@@ -79,11 +79,10 @@ defmodule Brando.Navigation.Menu do
     %{matches: %{id: id}, preload: preloads_for()}
   end
 
-  def default_item(menu, _) do
+  def default_item(_menu, _) do
     %Item{
       status: :published,
       key: "key",
-      language: menu.language,
       link: %Var{
         type: :link,
         key: "link",

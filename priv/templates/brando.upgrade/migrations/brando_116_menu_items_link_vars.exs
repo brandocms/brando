@@ -7,7 +7,6 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
       add :status, :integer
       add :sequence, :integer
       add :key, :string, null: false
-      add :language, :string
       add :menu_id, references(:navigation_menus, on_delete: :delete_all)
       add :creator_id, references(:users, on_delete: :nilify_all)
       add :parent_id, references(:navigation_items, on_delete: :delete_all)
@@ -50,7 +49,6 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
           status: status,
           sequence: item["sequence"],
           key: item["key"],
-          language: menu.language,
           creator_id: menu.creator_id,
           inserted_at: menu.inserted_at,
           updated_at: menu.updated_at,
