@@ -103,17 +103,20 @@ defmodule Brando.Router do
           end
 
           scope "/config", BrandoAdmin.Content do
+            live "/content/containers", ContainerListLive
+            live "/content/containers/create", ContainerCreateLive
+            live "/content/containers/update/:entry_id", ContainerUpdateLive
             live "/content/modules", ModuleListLive
             live "/content/modules/update/:entry_id", ModuleUpdateLive
             live "/content/palettes", PaletteListLive
             live "/content/palettes/create", PaletteCreateLive
             live "/content/palettes/update/:entry_id", PaletteUpdateLive
-            live "/content/templates", TemplateListLive
-            live "/content/templates/create", TemplateCreateLive
-            live "/content/templates/update/:entry_id", TemplateUpdateLive
             live "/content/table_templates", TableTemplateListLive
             live "/content/table_templates/create", TableTemplateCreateLive
             live "/content/table_templates/update/:entry_id", TableTemplateUpdateLive
+            live "/content/templates", TemplateListLive
+            live "/content/templates/create", TemplateCreateLive
+            live "/content/templates/update/:entry_id", TemplateUpdateLive
           end
 
           scope "/globals", BrandoAdmin.Globals do

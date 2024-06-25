@@ -983,7 +983,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             />
 
             <Input.radios
-              :if={@form[:datasource_module].value}
               field={@form[:datasource_type]}
               label={gettext("Type")}
               opts={[

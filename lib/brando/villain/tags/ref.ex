@@ -10,6 +10,7 @@ defmodule Brando.Villain.Tags.Ref do
   alias Brando.Content
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @container_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @impl true
@@ -28,11 +29,13 @@ defmodule Brando.Villain.Tags.Ref do
     evaled_ref = Liquex.Argument.eval(ref, context)
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, containers} = Content.list_containers(@container_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
 
     opts_map =
       %{}
       |> Map.put(:context, context)
+      |> Map.put(:containers, containers)
       |> Map.put(:modules, modules)
       |> Map.put(:palettes, palettes)
 

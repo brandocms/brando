@@ -921,7 +921,8 @@ defmodule Brando.Villain.Parser do
       Convert container to html. Recursive parsing.
       """
       def container(
-            %{children: children, palette_id: palette_id, anchor: target_id} = block,
+            %{children: children, palette_id: palette_id, anchor: target_id, container_id: nil} =
+              block,
             opts
           ) do
         palettes = opts.palettes
@@ -965,6 +966,43 @@ defmodule Brando.Villain.Parser do
             |> maybe_annotate(block.uid, opts)
             |> maybe_format(opts)
         end
+      end
+
+      def container(
+            %{
+              children: children,
+              palette_id: palette_id,
+              anchor: target_id,
+              container_id: container_id
+            } =
+              block,
+            opts
+          ) do
+        containers = opts.containers
+        palettes = opts.palettes
+        skip_children? = Map.get(opts, :skip_children, false)
+        {:ok, container} = Content.find_container(containers, container_id)
+
+        children_html =
+          if skip_children? do
+            "{$ content $}"
+            |> annotate_children(block.uid)
+          else
+            (children || [])
+            |> Enum.reduce([], fn
+              %{hidden: true}, acc -> acc
+              %{marked_as_deleted: true}, acc -> acc
+              d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+            end)
+            |> Enum.reverse()
+            |> Enum.join("")
+            |> annotate_children(block.uid)
+          end
+
+        container.code
+        |> String.replace("{{ content }}", children_html)
+        |> maybe_annotate(block.uid, opts)
+        |> maybe_format(opts)
       end
 
       defoverridable container: 2

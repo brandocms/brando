@@ -15,6 +15,7 @@ defmodule Brando.Content.Block do
     :sequence,
     :parent_id,
     :module_id,
+    :container_id,
     :anchor,
     :multi,
     :palette_id,
@@ -84,6 +85,7 @@ defmodule Brando.Content.Block do
 
   relations do
     relation :module, :belongs_to, module: Brando.Content.Module
+    relation :container, :belongs_to, module: Brando.Content.Container
     relation :parent, :belongs_to, module: __MODULE__
 
     relation :children, :has_many,

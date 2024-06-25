@@ -15,6 +15,8 @@ defmodule Brando.Villain do
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{preload: [:vars]}) ||
                       %{cache: {:ttl, :infinite}, preload: [:vars]}
+  @container_cache_ttl (Brando.config(:env) == :e2e && %{preload: [:palette]}) ||
+                         %{cache: {:ttl, :infinite}, preload: [:palette]}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @fragment_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
@@ -35,6 +37,7 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, containers} = Content.list_containers(@container_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
     {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
 
@@ -50,6 +53,7 @@ defmodule Brando.Villain do
       opts_map
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
+      |> Map.put(:containers, containers)
       |> Map.put(:palettes, palettes)
       |> Map.put(:fragments, fragments)
 
@@ -82,6 +86,7 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, containers} = Content.list_containers(@container_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
     {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
 
@@ -97,6 +102,7 @@ defmodule Brando.Villain do
       opts_map
       |> Map.put(:context, context)
       |> Map.put(:modules, modules)
+      |> Map.put(:containers, containers)
       |> Map.put(:palettes, palettes)
       |> Map.put(:fragments, fragments)
 
@@ -1010,6 +1016,7 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
+            :container,
             :module,
             :children,
             block_identifiers: :identifier,
@@ -1022,6 +1029,7 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
+            :container,
             :module,
             block_identifiers: :identifier,
             vars: ^vars_query,
@@ -1034,12 +1042,14 @@ defmodule Brando.Villain do
         from b in Brando.Content.Block,
           preload: [
             :palette,
+            :container,
             :module,
             vars: ^vars_query,
             table_rows: ^table_row_query,
             block_identifiers: :identifier,
             children: [
               :palette,
+              :container,
               :module,
               block_identifiers: :identifier,
               vars: ^vars_query,
@@ -1067,6 +1077,7 @@ defmodule Brando.Villain do
                preload: [
                  block: [
                    :parent,
+                   :container,
                    :module,
                    :palette,
                    block_identifiers: :identifier,

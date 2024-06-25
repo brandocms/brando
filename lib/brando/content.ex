@@ -31,6 +31,7 @@ defmodule Brando.Content do
   import Ecto.Query
 
   alias Brando.Content.Block
+  alias Brando.Content.Container
   alias Brando.Content.Module
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
@@ -173,6 +174,18 @@ defmodule Brando.Content do
     |> Enum.find(&(&1.id == id))
     |> case do
       nil -> {:error, {:module, :not_found, id}}
+      mod -> {:ok, mod}
+    end
+  end
+
+  @doc """
+  Find container with `id` in `containers`
+  """
+  def find_container(containers, id) do
+    containers
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, {:container, :not_found, id}}
       mod -> {:ok, mod}
     end
   end
@@ -327,6 +340,7 @@ defmodule Brando.Content do
   mutation :update, Template
   mutation :delete, Template
   mutation :duplicate, {Template, change_fields: [:name]}
+
   ## Table Templates
   ##
 
@@ -357,6 +371,37 @@ defmodule Brando.Content do
   mutation :update, TableTemplate
   mutation :delete, TableTemplate
   mutation :duplicate, {TableTemplate, change_fields: [:name]}
+
+  ## Containers
+  ##
+
+  query(:list, Container, do: fn query -> from(q in query) end)
+
+  filters Container do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+    end
+  end
+
+  query(:single, Container, do: fn query -> from(q in query) end)
+
+  matches Container do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:name, name}, query ->
+        from(t in query,
+          where: t.name == ^name
+        )
+    end
+  end
+
+  mutation :create, Container
+  mutation :update, Container
+  mutation :delete, Container
+  mutation :duplicate, {Container, change_fields: [:name]}
 
   def list_identifiers do
     query =

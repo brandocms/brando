@@ -22,6 +22,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:ok,
      assign(socket,
        block_initialized: false,
+       container_not_found: false,
        module_not_found: false,
        entry_template: nil,
        initial_render: false,
@@ -591,12 +592,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:has_table_rows?, fn -> Changeset.get_assoc(block_cs, :table_rows) !== [] end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
+    |> assign_new(:containers, fn ->
+      Brando.Content.list_containers!(%{order: "desc namespace, asc sequence"})
+    end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
+    |> assign_new(:container_id, fn -> Changeset.get_field(block_cs, :container_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
     |> maybe_assign_children()
     |> maybe_assign_module()
+    |> maybe_assign_container()
     |> maybe_parse_module()
     |> maybe_render_module()
     |> maybe_get_live_preview_status()
@@ -739,6 +745,37 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def register_block_wanting_entry(cid, form_cid) do
     send_update(form_cid, %{event: "register_block_wanting_entry", cid: cid})
+  end
+
+  def maybe_assign_container(%{assigns: %{container_id: nil}} = socket) do
+    socket
+    |> assign_new(:container, fn -> nil end)
+    |> assign_new(:palette_options, fn -> [] end)
+  end
+
+  def maybe_assign_container(%{assigns: %{container_id: container_id}} = socket) do
+    case get_container(container_id) do
+      nil ->
+        assign(socket, :container_not_found, true)
+
+      container ->
+        socket
+        |> assign_new(:container, fn -> container end)
+        |> assign_new(:palette_options, fn ->
+          if container.allow_custom_palette do
+            opts =
+              if container.palette_namespace do
+                %{filter: %{namespace: container.palette_namespace}}
+              else
+                %{}
+              end
+
+            Brando.Content.list_palettes(opts)
+          else
+            []
+          end
+        end)
+    end
   end
 
   def maybe_assign_module(%{assigns: %{module_id: nil}} = socket) do
@@ -1188,6 +1225,9 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_module={@block_module}
         deleted={@deleted}
         target={@myself}
+        palette_options={@palette_options}
+        container={@container}
+        containers={@containers}
         insert_block={JS.push("insert_block", target: @myself)}
         insert_child_block={JS.push("insert_block", value: %{container: true}, target: @myself)}
         has_children?={@has_children?}
@@ -1274,7 +1314,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       assigns
       |> assign(:uid, Changeset.get_field(block_cs, :uid))
       |> assign(:type, Changeset.get_field(block_cs, :type))
-      |> assign(:module_id, Changeset.get_field(block_cs, :module_id))
+      |> assign(:container_id, Changeset.get_field(block_cs, :container_id))
       |> assign(:description, Changeset.get_field(block_cs, :description))
       |> assign(:active, Changeset.get_field(block_cs, :active))
       |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
@@ -1299,7 +1339,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         id={"block-#{@uid}"}
         data-block-uid={@uid}
         data-block-type={@type}
-        data-module-id={@module_id}
+        data-container-id={@container_id}
         class={["block"]}
         phx-hook="Brando.Block"
         style={"background-color: #{@bg_color}"}
@@ -1324,11 +1364,20 @@ defmodule BrandoAdmin.Components.Form.Block do
                 block={block_form}
                 target={@target}
                 palette={@palette}
+                container={@container}
                 is_ref?={false}
                 is_datasource?={false}
                 has_table_template?={false}
               />
-              <.container_config uid={@uid} block={block_form} target={@target} palette={@palette} />
+              <.container_config
+                uid={@uid}
+                block={block_form}
+                target={@target}
+                palette={@palette}
+                palette_options={@palette_options}
+                container={@container}
+                containers={@containers}
+              />
             </.inputs_for>
           <% else %>
             <section class="alert danger">
@@ -1595,6 +1644,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <Input.hidden field={@block_form[:anchor]} />
       <Input.hidden field={@block_form[:multi]} />
       <Input.hidden field={@block_form[:module_id]} />
+      <Input.hidden field={@block_form[:container_id]} />
       <Input.hidden field={@block_form[:parent_id]} />
       <Input.hidden field={@block_form[:palette_id]} />
       <Input.hidden field={@block_form[:creator_id]} />
@@ -1704,6 +1754,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :block, :any, required: true
   attr :palette, :any, required: true
+  attr :container, :any, default: nil
+  attr :containers, :list, default: []
   attr :palette_options, :any, default: []
   attr :target, :any, required: true
 
@@ -1712,8 +1764,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
       <div class="panels">
         <div class="panel">
+          <.live_component
+            module={Input.Select}
+            id={"#{@block.id}-container-select"}
+            field={@block[:container_id]}
+            label={gettext("Container template")}
+            opts={[options: @containers]}
+            publish
+          />
           <%= if @palette_options do %>
-            <div class="instructions mb-1"><%= gettext("Select a new palette") %>:</div>
             <.live_component
               module={Input.Select}
               id={"#{@block.id}-palette-select"}
@@ -2271,6 +2330,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :multi, :boolean, default: false
   attr :is_ref?, :boolean, default: false
   attr :palette, :any, default: nil
+  attr :container, :any, default: nil
   attr :module_datasource_module_label, :string, default: nil
   attr :module_datasource_type, :any, default: nil
   attr :module_datasource_query, :any, default: nil
@@ -2305,6 +2365,11 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= render_slot(@description) %>
         </span>
         <%= if @type == :container do %>
+          <%= if @container do %>
+            <%= @container.name %>
+          <% else %>
+            <%= gettext("<No template>") %>
+          <% end %>
           <%= if @palette do %>
             <div class="arrow">&rarr;</div>
             <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
@@ -3401,6 +3466,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp maybe_update_live_preview_block(socket), do: socket
+
+  defp get_container(id) do
+    {:ok, containers} =
+      Brando.Content.list_containers(%{
+        preload: [:palette],
+        cache: {:ttl, :infinite}
+      })
+
+    case Enum.find(containers, &(&1.id == id)) do
+      nil -> nil
+      container -> container
+    end
+  end
 
   defp get_module(id) do
     {:ok, modules} =
