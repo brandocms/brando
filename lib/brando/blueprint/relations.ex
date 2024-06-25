@@ -183,7 +183,7 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         user
       ) do
-    with_opts = [with: {module, :changeset, [user]}]
+    with_opts = [with: &module.changeset(&1, &2, user)]
     merged_opts = Keyword.merge(to_changeset_opts(:has_one, opts), with_opts)
 
     cast_assoc(changeset, name, merged_opts)
@@ -205,7 +205,7 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         user
       ) do
-    with_opts = [with: {module, :changeset, [user]}]
+    with_opts = [with: &module.changeset(&1, &2, user)]
     merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
 
     cast_assoc(changeset, name, merged_opts)
@@ -219,7 +219,7 @@ defmodule Brando.Blueprint.Relations do
     with_opts =
       case Keyword.get(cast_opts, :with) do
         {with_mod, with_fun, with_user: true} ->
-          [with: {with_mod, with_fun, [user]}]
+          [with: fn changeset, params -> apply(with_mod, with_fun, [changeset, params, user]) end]
 
         {with_mod, with_fun} ->
           cast_assoc(changeset, name, with: {with_mod, with_fun, []})
