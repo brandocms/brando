@@ -201,13 +201,53 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       )
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
-    # send_update(form_cid, %{event: "update_live_preview"})
 
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "insert_fragment", sequence: sequence}, socket) do
+    root_changesets = socket.assigns.root_changesets
+    block_module = socket.assigns.block_module
+    user_id = socket.assigns.current_user.id
+    parent_id = nil
+    source = socket.assigns.block_module
+    empty_block_cs = build_fragment(user_id, parent_id, source)
+
+    sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
+
+    entry_block_cs =
+      block_module
+      |> struct(%{})
+      |> Changeset.change(%{entry_id: socket.assigns.entry.id})
+      |> Changeset.put_assoc(:block, empty_block_cs)
+      |> Map.put(:action, :insert)
+
+    uid = Changeset.get_field(empty_block_cs, :uid)
+
+    # insert the new block uid into the block_list
+    block_list = socket.assigns.block_list
+    new_block_list = List.insert_at(block_list, sequence, uid)
+
+    entry_block_form =
+      to_form(entry_block_cs,
+        as: "entry_block",
+        id: "entry_block_form-#{uid}"
+      )
+
+    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
+
+    socket
+    |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
+    |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, updated_root_changesets)
+    |> update(:block_count, &(&1 + 1))
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -580,7 +620,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         refs: refs_with_generated_uids
       }
     )
-    |> dbg
+  end
+
+  def build_fragment(user_id, parent_id, source) do
+    Changeset.change(
+      %Brando.Content.Block{},
+      %{
+        uid: Brando.Utils.generate_uid(),
+        type: :fragment,
+        creator_id: user_id,
+        parent_id: parent_id,
+        fragment_id: nil,
+        multi: false,
+        source: source,
+        children: [],
+        block_identifiers: [],
+        table_rows: [],
+        vars: [],
+        refs: []
+      }
+    )
   end
 
   def build_container(user_id, parent_id, source) do

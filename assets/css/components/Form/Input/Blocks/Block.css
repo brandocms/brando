@@ -1,3 +1,43 @@
+.block-instructions {
+  background-color: var(--brando-color-peach);
+  color: var(--brando-color-dark);
+  flex-direction: column;
+  display: flex;
+  padding: 12px 15px 15px;
+  border-radius: 12px;
+  max-width: 530px;
+
+  &.hidden {
+    display: none !important;
+  }
+
+  figure {
+    @space margin-bottom 35px;
+
+    svg {
+      width: 200px;
+      user-select: none;
+      pointer-events: none;
+
+      path:nth-of-type(2), .plus, circle {
+        user-select: none;
+        pointer-events: none;
+        fill: var(--brando-color-dark);
+      }
+    }
+  }
+
+  p {
+    font-size: 13px;
+    font-family: monospace;
+  }
+
+  button {
+    width: fit-content;
+    margin-top: 10px;
+  }
+}
+
 .block-plus {
   text-align: center;
   margin: 1rem auto;
@@ -171,6 +211,40 @@ button.btn-palette {
 
   textarea {
     background-color: transparent;
+  }
+
+  .fragment-info {
+    @font mono;
+    @space margin-bottom 15px;
+    padding-left: 15px;
+    display: flex;      
+    align-items: center;
+    gap: 10px;
+    cursor: help;
+
+    .icon {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: gold;
+      border-radius: 50%;
+
+      span {
+        width: 15px;
+        height: 15px;
+      }
+    }
+
+    .info {
+      span.fragment-label {
+        font-size: 10px;
+        line-height: 1.4 !important;
+        text-transform: uppercase;
+        display: block;
+      }
+    }
   }
 
   

@@ -1,45 +1,4 @@
 .table-block {
-  
-  .empty {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
-    flex-direction: column;
-    display: flex;
-    padding: 12px 15px 15px;
-    border-radius: 12px;
-    max-width: 530px;
-
-    &.hidden {
-      display: none !important;
-    }
-
-    figure {
-      @space margin-bottom 35px;
-
-      svg {
-        width: 200px;
-        user-select: none;
-        pointer-events: none;
-
-        path:nth-of-type(2), .plus, circle {
-          user-select: none;
-          pointer-events: none;
-          fill: var(--brando-color-dark);
-        }
-      }
-    }
-
-    p {
-      font-size: 13px;
-      font-family: monospace;
-    }
-
-    button {
-      width: fit-content;
-      margin-top: 10px;
-    }
-  }
-
   .block-content {
     .table-content {
     }

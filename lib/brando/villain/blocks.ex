@@ -5,7 +5,7 @@ defmodule Brando.Villain.Blocks do
     [
       comment: Blocks.CommentBlock,
       container: Blocks.ContainerBlock,
-      fragment: Blocks.FragmentBlock,
+      # fragment: Blocks.FragmentBlock,
       gallery: Blocks.GalleryBlock,
       header: Blocks.HeaderBlock,
       html: Blocks.HtmlBlock,

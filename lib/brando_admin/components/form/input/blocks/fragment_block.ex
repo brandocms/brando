@@ -1,3 +1,4 @@
+# TODO: Delete.
 defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML

@@ -323,7 +323,7 @@ defmodule Brando.Villain do
         case Brando.repo().update(changeset) do
           {:ok, %Pages.Fragment{} = fragment} ->
             Brando.Cache.Query.evict({:ok, fragment})
-            Pages.update_villains_referencing_fragment(fragment)
+            render_entries_with_fragment_id(fragment.id)
 
           {:ok, result} ->
             Brando.Cache.Query.evict({:ok, result})

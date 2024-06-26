@@ -33,7 +33,8 @@ defmodule Brando.Navigation.Menu do
       cast: true,
       drop_param: :drop_items_ids,
       sort_param: :sort_items_ids,
-      on_replace: :delete
+      on_replace: :delete,
+      preload_order: [asc: :sequence]
   end
 
   translations do

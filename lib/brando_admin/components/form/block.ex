@@ -595,14 +595,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:containers, fn ->
       Brando.Content.list_containers!(%{order: "desc namespace, asc sequence"})
     end)
+    |> assign_new(:fragments, fn ->
+      Brando.Pages.list_fragments!(%{order: "asc language, asc title"})
+    end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
     |> assign_new(:container_id, fn -> Changeset.get_field(block_cs, :container_id) end)
+    |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_assign_container()
+    |> maybe_assign_fragment()
     |> maybe_parse_module()
     |> maybe_render_module()
     |> maybe_get_live_preview_status()
@@ -775,6 +780,18 @@ defmodule BrandoAdmin.Components.Form.Block do
             []
           end
         end)
+    end
+  end
+
+  def maybe_assign_fragment(%{assigns: %{fragment_id: nil}} = socket) do
+    socket
+    |> assign_new(:fragment, fn -> nil end)
+  end
+
+  def maybe_assign_fragment(%{assigns: %{fragment_id: fragment_id}} = socket) do
+    case get_fragment(fragment_id) do
+      nil -> assign(socket, :fragment_not_found, true)
+      fragment -> assign_new(socket, :fragment, fn -> fragment end)
     end
   end
 
@@ -1280,6 +1297,26 @@ defmodule BrandoAdmin.Components.Form.Block do
     """
   end
 
+  def render(%{type: :fragment} = assigns) do
+    ~H"""
+    <div>
+      <.fragment_block
+        form={@form}
+        dirty={@form_has_changes}
+        new={@form_is_new}
+        level={@level}
+        fragment={@fragment}
+        fragments={@fragments}
+        belongs_to={@belongs_to}
+        insert_block={JS.push("insert_block", target: @myself)}
+        deleted={@deleted}
+        target={@myself}
+        block_module={@block_module}
+      />
+    </div>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <div style="font-family: Mono; font-size: 11px;">
@@ -1301,6 +1338,138 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   ##
   ## Function components
+
+  attr :form, :any
+  attr :dirty, :any
+  attr :new, :any
+  attr :level, :any
+  attr :belongs_to, :any
+  attr :deleted, :any
+  attr :target, :any
+  attr :block_module, :any
+  attr :insert_block, :any
+  attr :fragment, :any, default: nil
+  attr :fragments, :list, default: []
+
+  def fragment_block(assigns) do
+    changeset = assigns.form.source
+    belongs_to = assigns.belongs_to
+    block_cs = get_block_changeset(changeset, belongs_to)
+
+    assigns =
+      assigns
+      |> assign(:uid, Changeset.get_field(block_cs, :uid))
+      |> assign(:type, Changeset.get_field(block_cs, :type))
+      |> assign(:fragment_id, Changeset.get_field(block_cs, :fragment_id))
+      |> assign(:active, Changeset.get_field(block_cs, :active))
+      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+
+    ~H"""
+    <div
+      id={"base-block-#{@uid}"}
+      data-block-uid={@uid}
+      class={[
+        "base-block",
+        @collapsed && "collapsed",
+        @active == false && "disabled",
+        @deleted && "deleted",
+        (@dirty or @new) && "dirty"
+      ]}
+    >
+      <.plus click={@insert_block} />
+
+      <div
+        id={"block-#{@uid}"}
+        data-block-uid={@uid}
+        data-block-type={@type}
+        data-fragment-id={@fragment_id}
+        class={["block"]}
+        phx-hook="Brando.Block"
+      >
+        <.form
+          for={@form}
+          phx-value-id={@form.data.id}
+          phx-change="validate_block"
+          phx-target={@target}
+        >
+          <%= if @belongs_to == :root do %>
+            <Input.hidden field={@form[:sequence]} />
+            <Input.hidden field={@form[:marked_as_deleted]} />
+            <.inputs_for :let={block_form} field={@form[:block]}>
+              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
+              <.toolbar
+                uid={@uid}
+                collapsed={@collapsed}
+                type={@type}
+                multi={false}
+                config={true}
+                block={block_form}
+                target={@target}
+                palette={nil}
+                container={nil}
+                is_ref?={false}
+                is_datasource?={false}
+                has_table_template?={false}
+              >
+                <:description>
+                  <%= if @fragment do %>
+                    [<%= @fragment.parent_key %>/<strong><%= @fragment.key %></strong>] <%= @fragment.title %> — <%= @fragment.language %>
+                  <% end %>
+                </:description>
+              </.toolbar>
+              <.fragment_config
+                uid={@uid}
+                block={block_form}
+                target={@target}
+                fragment={@fragment}
+                fragments={@fragments}
+              />
+              <div class="block-content">
+                <div class="block-fragment-wrapper">
+                  <div
+                    class="fragment-info"
+                    phx-click="show_fragment_instructions"
+                    phx-target={@target}
+                  >
+                    <div class="icon">
+                      <span class="hero-puzzle-piece"></span>
+                    </div>
+                    <div class="info">
+                      <span class="fragment-label">
+                        <%= gettext("Embedded") %><br /> <%= gettext("fragment") %>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div :if={!@fragment_id} class="block-instructions">
+                    <p>
+                      <%= gettext(
+                        "This block embeds a fragment as a block, but no fragment is currently selected."
+                      ) %>
+                    </p>
+                    <button
+                      type="button"
+                      class="tiny"
+                      phx-click={show_modal("#block-#{@uid}_config")}
+                      phx-target={@target}
+                    >
+                      <%= gettext("Add fragment") %>
+                    </button>
+                  </div>
+                  <div :if={@fragment} class="fragment-info"></div>
+                </div>
+              </div>
+            </.inputs_for>
+          <% else %>
+            <section class="alert danger">
+              <%= gettext("This block is currently not allowed to be a child block :(") %>
+            </section>
+          <% end %>
+        </.form>
+      </div>
+    </div>
+    """
+  end
 
   def container(assigns) do
     changeset = assigns.form.source
@@ -1740,6 +1909,42 @@ defmodule BrandoAdmin.Components.Form.Block do
               <%= gettext("Reset all variables") %>
             </button>
           </div>
+        </div>
+      </div>
+      <:footer>
+        <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+          <%= gettext("Close") %>
+        </button>
+      </:footer>
+    </Content.modal>
+    """
+  end
+
+  attr :uid, :string, required: true
+  attr :block, :any, required: true
+  attr :fragment, :any, default: nil
+  attr :fragments, :list, default: []
+  attr :target, :any, required: true
+
+  def fragment_config(assigns) do
+    ~H"""
+    <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+      <div class="panels">
+        <div class="panel">
+          <.live_component
+            module={Input.Select}
+            id={"#{@block.id}-fragment-select"}
+            field={@block[:fragment_id]}
+            label={gettext("Fragment")}
+            opts={[options: @fragments]}
+            publish
+          />
+          <Input.text field={@block[:anchor]} />
+          <Input.text
+            field={@block[:description]}
+            label={gettext("Block description")}
+            instructions={gettext("Helpful for collapsed blocks")}
+          />
         </div>
       </div>
       <:footer>
@@ -2351,7 +2556,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <span :if={@is_datasource?} class="datasource">
             <%= gettext("Datamodule") %> |
           </span>
-          <span :if={@type == :module} phx-no-format>
+          <span :if={@type == :module and not @is_datasource?} phx-no-format>
             <%= if @multi do %>Multi <% end %><%= gettext("Module") %> |
           </span>
           <span :if={@type == :module_entry}>
@@ -2359,6 +2564,9 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
           <span :if={@type == :container}>
             <%= gettext("Container") %> |
+          </span>
+          <span :if={@type == :fragment}>
+            <%= gettext("Fragment") %> |
           </span>
         </span>
         <span :if={@description} class="block-name">
@@ -2495,7 +2703,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
       <div class="table-block">
         <%= if !@valid? do %>
-          <div class="empty">
+          <div class="block-instructions">
             <p>
               <%= gettext("This block implements tabular data, but the table is empty.") %><br />
               <%= gettext("Click the 'add row' button below to get started.") %>
@@ -3402,6 +3610,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> maybe_update_liquex_block_var(params_target, params)
+    |> maybe_update_container(params_target)
+    |> maybe_update_fragment(params_target)
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})
@@ -3466,6 +3676,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp maybe_update_live_preview_block(socket), do: socket
+
+  defp get_fragment(nil), do: nil
+
+  defp get_fragment(id) do
+    Brando.Pages.get_fragment!(%{
+      matches: %{id: id}
+    })
+  end
 
   defp get_container(id) do
     {:ok, containers} =
@@ -3564,6 +3782,24 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> Enum.reverse()
   end
+
+  def maybe_update_container(socket, [_block_type, "block", "container_id"]) do
+    changeset = socket.assigns.form.source
+    block_cs = Changeset.get_assoc(changeset, :block)
+    container_id = Changeset.get_field(block_cs, :container_id)
+    assign(socket, :container, get_container(container_id))
+  end
+
+  def maybe_update_container(socket, _), do: socket
+
+  def maybe_update_fragment(socket, [_block_type, "block", "fragment_id"]) do
+    changeset = socket.assigns.form.source
+    block_cs = Changeset.get_assoc(changeset, :block)
+    fragment_id = Changeset.get_field(block_cs, :fragment_id)
+    assign(socket, :fragment, get_fragment(fragment_id))
+  end
+
+  def maybe_update_fragment(socket, _), do: socket
 
   # if the target param updated is a var and it's not an image or file, we extract the value
   # and update the liquex block var

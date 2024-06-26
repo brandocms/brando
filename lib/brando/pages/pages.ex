@@ -336,23 +336,6 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Check all fields for references to `fragment`.
-  Rerender if found.
-  """
-  @spec update_villains_referencing_fragment(fragment) :: [any]
-  def update_villains_referencing_fragment(fragment) do
-    search_term = [
-      fragment: "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
-    ]
-
-    # Check for instances in blocks (refs/vars)
-    Villain.render_entries_matching_regex(search_term)
-
-    # Check for instances in modules (this handles the `code` portion of the module's template)
-    Villain.rerender_matching_modules(search_term)
-  end
-
-  @doc """
   Fetch a page fragment by `key`.
 
   ## Example:

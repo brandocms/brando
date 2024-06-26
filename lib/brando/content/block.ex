@@ -16,6 +16,7 @@ defmodule Brando.Content.Block do
     :parent_id,
     :module_id,
     :container_id,
+    :fragment_id,
     :anchor,
     :multi,
     :palette_id,
@@ -71,7 +72,7 @@ defmodule Brando.Content.Block do
 
   attributes do
     attribute :uid, :string, required: true
-    attribute :type, :enum, values: [:module, :container, :module_entry]
+    attribute :type, :enum, values: [:module, :container, :module_entry, :fragment]
     attribute :active, :boolean, default: true
     attribute :collapsed, :boolean, default: false
     attribute :description, :string
@@ -84,8 +85,10 @@ defmodule Brando.Content.Block do
   end
 
   relations do
-    relation :module, :belongs_to, module: Brando.Content.Module
     relation :container, :belongs_to, module: Brando.Content.Container
+    relation :fragment, :belongs_to, module: Brando.Pages.Fragment
+    relation :module, :belongs_to, module: Brando.Content.Module
+    relation :palette, :belongs_to, module: Brando.Content.Palette
     relation :parent, :belongs_to, module: __MODULE__
 
     relation :children, :has_many,
@@ -93,8 +96,6 @@ defmodule Brando.Content.Block do
       on_replace: :delete_if_exists,
       preload_order: [asc: :sequence],
       foreign_key: :parent_id
-
-    relation :palette, :belongs_to, module: Brando.Content.Palette
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
@@ -163,7 +164,7 @@ defmodule Brando.Content.Block do
   end
 
   defp cast_block_identifiers(changeset, user) do
-    case Map.get(changeset.params, "table_rows") do
+    case Map.get(changeset.params, "block_identifiers") do
       "" ->
         put_assoc(changeset, :block_identifiers, [])
 
@@ -177,8 +178,8 @@ defmodule Brando.Content.Block do
   end
 
   defp cast_table_rows(changeset, user) do
-    case get_assoc(changeset, :table_rows) do
-      [] ->
+    case Map.get(changeset.params, "table_rows") do
+      "" ->
         put_assoc(changeset, :table_rows, [])
 
       _ ->

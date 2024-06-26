@@ -1043,8 +1043,8 @@ defmodule Brando.Villain.Parser do
         {:ok, fragment} = Brando.Pages.find_fragment(fragments, id)
 
         case fragment.status do
-          :published -> fragment.html
-          _ -> "<!-- fragment not embedded. status != :published -->"
+          :published -> fragment.rendered_blocks
+          _ -> "<!-- fragment##{id} not embedded. status != :published -->"
         end
       end
 

@@ -152,6 +152,37 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           process_block(c_block, c_block_idx, container_id, schema, entry_id)
         end
 
+      %{"type" => "fragment", "data" => %{"fragment_id" => fragment_id}} = fragment_block ->
+        # multi with entries
+        new_block = %{
+          type: "fragment",
+          multi: false,
+          parent_id: parent_id,
+          uid: Map.get(module, "uid"),
+          description: Map.get(module, "description"),
+          active: !Map.get(module, "hidden", false),
+          collapsed: Map.get(module, "collapsed"),
+          fragment_id: fragment_id,
+          source: to_string(join_schema),
+          inserted_at: DateTime.utc_now(),
+          updated_at: DateTime.utc_now(),
+          sequence: parent_id && idx
+        }
+
+        # repo insert block
+        {_, [%{id: block_id}]} =
+          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+
+        unless new_block.parent_id do
+          Brando.repo().insert_all(join_source, [
+            %{
+              entry_id: entry_id,
+              block_id: block_id,
+              sequence: idx
+            }
+          ])
+        end
+
       %{"type" => "module", "data" => %{"multi" => true}} = module ->
         # multi with entries
         new_block = %{

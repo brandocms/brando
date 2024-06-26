@@ -27,7 +27,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Blocks
   trait Brando.Trait.Blocks.PreventCircularReferences
 
-  identifier false
+  identifier "[{{ entry.parent_key }}/{{ entry.key }}] {{ entry.title }}"
   persist_identifier false
 
   @derived_fields ~w(
