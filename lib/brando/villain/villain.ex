@@ -384,19 +384,22 @@ defmodule Brando.Villain do
   def reject_blocks_belonging_to_entry([], _), do: %{}
 
   def reject_blocks_belonging_to_entry(ids, entry) do
-    entry_schema = entry.__struct__
-
     schema_and_ids =
       ids
       |> list_root_block_ids_by_source()
       |> list_entry_ids_for_root_blocks_by_source()
 
-    ids_for_schema = Map.get(schema_and_ids, entry_schema)
-    filtered_ids = Enum.reject(ids_for_schema, &(&1 == entry.id))
+    if entry do
+      entry_schema = entry.__struct__
+      ids_for_schema = Map.get(schema_and_ids, entry_schema) || []
+      filtered_ids = Enum.reject(ids_for_schema, &(&1 == entry.id))
 
-    if filtered_ids == [],
-      do: Map.delete(schema_and_ids, entry_schema),
-      else: Map.put(schema_and_ids, entry_schema, filtered_ids)
+      if filtered_ids == [],
+        do: Map.delete(schema_and_ids, entry_schema),
+        else: Map.put(schema_and_ids, entry_schema, filtered_ids)
+    else
+      schema_and_ids
+    end
   end
 
   @doc """

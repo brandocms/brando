@@ -467,7 +467,7 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp build_operation(:add, %Relation{} = rel, module) do
-    ecto_data = Map.get(module.__changeset__, rel.name)
+    ecto_data = Map.get(module.__changeset__(), rel.name)
 
     %Operations.Relation.Add{
       relation: rel,
@@ -477,7 +477,7 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp build_operation(:add, %Asset{} = asset, module) do
-    ecto_data = Map.get(module.__changeset__, asset.name)
+    ecto_data = Map.get(module.__changeset__(), asset.name)
 
     %Operations.Asset.Add{
       asset: asset,
@@ -494,7 +494,7 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp build_operation(:remove, %Relation{} = rel, module) do
-    ecto_data = Map.get(module.__changeset__, rel.name)
+    ecto_data = Map.get(module.__changeset__(), rel.name)
 
     %Operations.Relation.Remove{
       relation: rel,
@@ -504,7 +504,7 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp build_operation(:remove, %Asset{} = asset, module) do
-    ecto_data = Map.get(module.__changeset__, asset.name)
+    ecto_data = Map.get(module.__changeset__(), asset.name)
 
     %Operations.Asset.Remove{
       asset: asset,
@@ -514,7 +514,7 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   def perform_operations(operation, operations) do
-    Enum.map(operations, &apply(&1.__struct__(), operation, [&1]))
+    Enum.map(operations, &apply(&1.__struct__, operation, [&1]))
   end
 
   defp locals_without_parens do

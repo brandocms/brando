@@ -2708,13 +2708,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               <%= gettext("This block implements tabular data, but the table is empty.") %><br />
               <%= gettext("Click the 'add row' button below to get started.") %>
             </p>
-            <button
-              type="button"
-              class="tiny"
-              phx-click="add_table_row"
-              phx-target={@target}
-              phx-page-loading
-            >
+            <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
               <%= gettext("Add row") %>
             </button>
             <input type="hidden" name={@block_data[:table_rows].name} value={[]} />
@@ -2766,13 +2760,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 </.inputs_for>
               </div>
               <div class="insert-row">
-                <button
-                  type="button"
-                  class="tiny"
-                  phx-click="add_table_row"
-                  phx-target={@target}
-                  phx-page-loading
-                >
+                <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
                   <%= gettext("Add row") %>
                 </button>
               </div>
@@ -2978,7 +2966,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     vars_without_pk = Brando.Villain.remove_pk_from_vars(table_template.vars)
 
     var_changesets =
-      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
+      Enum.map(
+        vars_without_pk,
+        &(Changeset.change(&1, %{table_template_id: nil}) |> Map.put(:action, :insert))
+      )
 
     new_row = %Brando.Content.TableRow{vars: var_changesets}
     changeset = socket.assigns.form.source

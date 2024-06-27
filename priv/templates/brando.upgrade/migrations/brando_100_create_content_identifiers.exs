@@ -96,7 +96,7 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
                 field(t, ^preload_field_id) == field(tbl2, :id)
               )
 
-            {:assoc, assoc} = blueprint.__changeset__ |> Map.get(preload_field)
+            {:assoc, assoc} = blueprint.__changeset__() |> Map.get(preload_field)
             mod = assoc.queryable
 
             from(t in updated_query,
@@ -119,7 +119,7 @@ defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
           )
 
         query =
-          if Map.has_key?(blueprint.__changeset__, :updated_at) do
+          if Map.has_key?(blueprint.__changeset__(), :updated_at) do
             from(t in query,
               select_merge: %{updated_at: t.updated_at}
             )

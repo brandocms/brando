@@ -11,6 +11,7 @@ defmodule Brando.Images.Gallery do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
+  import Ecto.Query
 
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
@@ -63,5 +64,16 @@ defmodule Brando.Images.Gallery do
         columns: 8
       )
     end
+  end
+
+  # list_projects(%{preload: [gallery: Gallery.preloads_for()]})
+  def preloads_for do
+    gallery_images_query =
+      from gi in Brando.Images.GalleryImage,
+        order_by: [asc: gi.sequence],
+        preload: [:image]
+
+    from g in Brando.Images.Gallery,
+      preload: [gallery_images: ^gallery_images_query]
   end
 end
