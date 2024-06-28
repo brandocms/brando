@@ -2,14 +2,18 @@ import { Dom, Events, gsap } from '@brandocms/jupiter'
 
 export default app => ({
   mounted() {
+    this.skipKeydown = this.el.hasAttribute('data-skip-keydown')
     this.$form = this.el.querySelector('form')
     this.$input = this.$form.querySelector('input')
-    this.paramName = this.$input.name.split('[')[0]
     this.submitListenerEvent = this.submitListener.bind(this)
-    window.addEventListener('keydown', this.submitListenerEvent, false)
+
+    console.log('this.skipKeydown', this.skipKeydown)
+
+    if (!this.skipKeydown) {
+      window.addEventListener('keydown', this.submitListenerEvent, false)
+    }
 
     this.handleEvent(`b:validate`, opts => {
-      console.log('b:validate', this.$form, opts)
       if (opts.target) {
         const sel = `[name="${opts.target}"]`
         const target = this.$form.querySelector(sel)
@@ -26,12 +30,15 @@ export default app => ({
   },
 
   destroyed() {
-    window.removeEventListener('keydown', this.submitListenerEvent, false)
+    if (!this.skipKeydown) {
+      window.removeEventListener('keydown', this.submitListenerEvent, false)
+    }
   },
 
   submitListener(ev) {
     if (ev.metaKey && ev.shiftKey && ev.key.toLowerCase() === 's') {
       ev.preventDefault()
+
       this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
       return
     }
@@ -39,7 +46,9 @@ export default app => ({
     if (ev.metaKey && ev.key === 's') {
       ev.preventDefault()
       this.pushEventTo(this.el, 'save_redirect_target', { save_redirect_target: 'self' })
-      this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      setTimeout(() => {
+        this.$form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      }, 150)
     }
   }
 })

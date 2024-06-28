@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Content.ModuleUpdateLive do
     ~H"""
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
-    <div id="module_form-el" phx-hook="Brando.Form">
+    <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
       <.form for={@form} phx-change="validate" phx-submit="save">
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
         <div class="block-editor">
