@@ -10,7 +10,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      socket
      |> assign(assigns)
      |> assign_new(:selected_schema, fn -> nil end)
-     |> assign_new(:selected_identifier_id, fn -> nil end)
+     |> assign_new(:selected_identifier_id, fn ->
+       changeset = assigns.field.form.source
+       Ecto.Changeset.get_field(changeset, assigns.field.field)
+     end)
      |> assign_new(:selected_identifier, fn
        %{selected_identifier_id: nil} -> nil
        %{selected_identifier_id: id} -> Brando.Content.get_identifier!(id)

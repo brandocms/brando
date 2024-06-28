@@ -33,29 +33,34 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def update_many(assigns_sockets) do
     {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} =
       Enum.reduce(assigns_sockets, {[], [], [], [], [], []}, fn
-        {%{id: id, var: %{data: %{type: :image, image_id: image_id}}}, _sockets},
-        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} ->
-          {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files,
-           identifier_ids, cmp_identifiers}
-
-        {%{id: id, var: %{data: %{type: :file, file_id: file_id}}}, _sockets},
-        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} ->
-          {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files], identifier_ids,
-           cmp_identifiers}
-
-        {%{id: id, var: %{source: changeset, data: %{type: :link}}}, _sockets},
+        {%{id: id, var: %{source: changeset}}, _socket},
         {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} = acc ->
-          case get_field(changeset, :identifier_id) do
-            nil ->
+          case get_field(changeset, :type) do
+            :image ->
+              image_id = get_field(changeset, :image_id)
+
+              {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files,
+               identifier_ids, cmp_identifiers}
+
+            :file ->
+              file_id = get_field(changeset, :file_id)
+
+              {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files],
+               identifier_ids, cmp_identifiers}
+
+            :link ->
+              case get_field(changeset, :identifier_id) do
+                nil ->
+                  acc
+
+                identifier_id ->
+                  {image_ids, cmp_imgs, file_ids, cmp_files, [identifier_id | identifier_ids],
+                   [{id, identifier_id} | cmp_identifiers]}
+              end
+
+            _ ->
               acc
-
-            identifier_id ->
-              {image_ids, cmp_imgs, file_ids, cmp_files, [identifier_id | identifier_ids],
-               [{id, identifier_id} | cmp_identifiers]}
           end
-
-        _, acc ->
-          acc
       end)
 
     {:ok, images} =
@@ -90,25 +95,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     mapped_identifier_ids = Map.new(cmp_identifiers)
 
     Enum.map(assigns_sockets, fn {assigns, socket} ->
-      socket_with_image =
+      socket_i =
         case Map.get(mapped_img_ids, assigns.id) do
           nil -> assign_new(socket, :image, fn -> nil end)
           key -> assign_new(socket, :image, fn -> Map.get(mapped_imgs, key) end)
         end
 
-      socket_with_image_and_file =
+      socket_if =
         case Map.get(mapped_file_ids, assigns.id) do
-          nil -> assign_new(socket_with_image, :file, fn -> nil end)
-          key -> assign_new(socket_with_image, :file, fn -> Map.get(mapped_files, key) end)
+          nil -> assign_new(socket_i, :file, fn -> nil end)
+          key -> assign_new(socket_i, :file, fn -> Map.get(mapped_files, key) end)
         end
 
-      socket_with_image_and_file_and_identifiers =
+      socket_ifi =
         case Map.get(mapped_identifier_ids, assigns.id) do
-          nil ->
-            assign(socket_with_image_and_file, :identifier, nil)
-
-          key ->
-            assign(socket_with_image_and_file, :identifier, Map.get(mapped_identifiers, key))
+          nil -> assign(socket_if, :identifier, nil)
+          key -> assign(socket_if, :identifier, Map.get(mapped_identifiers, key))
         end
 
       var = assigns.var
@@ -139,7 +141,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
       value = control_value(type, value)
 
-      socket_with_image_and_file_and_identifiers
+      socket_ifi
       |> assign(assigns)
       |> assign(:id, assigns.id)
       |> assign(:edit, edit)
@@ -161,7 +163,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign_new(:value_id, fn -> value end)
       |> assign_new(:image_id, fn -> if type == :image, do: value end)
       |> assign_new(:file_id, fn -> if type == :file, do: value end)
-      |> assign_new(:identifier_id, fn -> if type == :link and not is_binary(value), do: value end)
+      |> assign(:identifier_id, get_field(changeset, :identifier_id))
       |> assign(:instructions, get_field(changeset, :instructions))
       |> assign(:placeholder, get_field(changeset, :placeholder))
       |> assign(:var, var)
@@ -714,8 +716,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               module={Content.SelectIdentifier}
               id={"#{@field.id}-identifier-select"}
               field={@field[:identifier_id]}
-              selected_identifier_id={@identifier && @identifier.id}
               wanted_schemas={@wanted_schemas}
+              target={@target}
             />
           </div>
         </div>
