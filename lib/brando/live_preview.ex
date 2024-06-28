@@ -393,9 +393,8 @@ defmodule Brando.LivePreview do
   end
 
   def get_target_config(schema_module) do
-    :live_preview
-    |> List.wrap()
-    |> Brando.live_preview().entities()
+    Brando.live_preview()
+    |> Spark.Dsl.Extension.get_entities([:live_preview])
     |> Enum.find(&(&1.schema == schema_module))
     |> case do
       nil ->
@@ -407,9 +406,8 @@ defmodule Brando.LivePreview do
   end
 
   def has_live_preview_target(schema_module) do
-    :live_preview
-    |> List.wrap()
-    |> Brando.live_preview().entities()
+    Brando.live_preview()
+    |> Spark.Dsl.Extension.get_entities([:live_preview])
     |> Enum.any?(&(&1.schema == schema_module))
   end
 end
