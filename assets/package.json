@@ -39,7 +39,7 @@
     "morphdom": "^2.7.3",
     "phoenix": "1.7.14",
     "phoenix_html": "^4.1.1",
-    "phoenix_live_view": "1.0.0-rc.5",
+    "phoenix_live_view": "^1.0.0-rc.6",
     "slugify": "^1.6.6",
     "sortablejs": "^1.15.2",
     "sweetalert2": "^11.12.0",
