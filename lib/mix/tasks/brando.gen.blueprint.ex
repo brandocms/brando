@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Brando.Gen.Blueprint do
 
     files = [
       {:eex, "blueprint.ex",
-       "lib/application_name/#{Recase.to_snake(domain)}/#{Recase.to_snake(schema)}.ex"}
+       "lib/application_name/#{Macro.underscore(domain)}/#{Macro.underscore(schema)}.ex"}
     ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.blueprint", "", binding, files)

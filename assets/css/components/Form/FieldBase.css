@@ -12,16 +12,28 @@
 .subform-tools {
   display: flex;
   flex-direction: column;
-  padding-right: 15px;
   justify-content: flex-end;
+  gap: 5px;
+  padding-right: 15px;
 
   button {
-    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background-color: #f5f5f5;
+    border: none;
     padding: 5px;
     border-radius: 50%;
     width: fit-content;
-    margin-bottom: 5px;
+    aspect-ratio: 1 / 1;
+    transition: background-color 250ms ease;
+
+    span[class^="hero-"] {
+      width: 16px;
+      height: 16px;
+      background-color: var(--brando-color-dark);
+      transition: background-color 250ms ease;
+    }
 
     &:last-of-type {
       margin-bottom: 0;
@@ -29,8 +41,8 @@
 
     &:hover {
       background-color: var(--brando-color-dark);
-      svg path {
-        stroke: var(--brando-color-peach);
+      span[class^="hero-"] {
+        background-color: #f5f5f5;
       }
     }
   }
@@ -82,7 +94,7 @@
 
 .field-wrapper {
   width: 100%;
-  margin-bottom: 35px;
+  margin-bottom: 25px;
   position: relative;
 
   &.fit-content {
@@ -175,16 +187,21 @@
     display: flex;
     justify-content: space-between;
     margin-top: 3px;
-    position: absolute;
-    left: 0;
 
     .shaded & {
       position: relative;
     }
 
     .help-text {
-      @fontsize form.help;
+      font-size: 11px;
+      font-family: monospace;
+      text-transform: uppercase;
+      margin-top: 2px;
       text-align: left;
+      max-width: 55ch;
+      text-wrap: balance;
+      display: flex;
+      gap: 1em;
     }
 
     .extra {

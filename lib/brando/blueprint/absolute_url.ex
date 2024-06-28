@@ -17,6 +17,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
   """
   alias Brando.Villain
 
+  defmacro absolute_url(false) do
+    quote location: :keep do
+      def __has_absolute_url__, do: false
+    end
+  end
+
   defmacro absolute_url(tpl) when is_binary(tpl) do
     {:ok, parsed_absolute_url} = Liquex.parse(tpl, Villain.LiquexParser)
 
@@ -37,8 +43,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
         |> Enum.join()
         |> String.trim()
       rescue
-        UndefinedFunctionError -> "<no valid url found>"
-        ArgumentError -> "<no valid url found>"
+        UndefinedFunctionError -> nil
+        ArgumentError -> nil
       end
 
       def __absolute_url_template__ do
@@ -50,6 +56,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
       def __absolute_url_type__, do: :liquid
+      def __has_absolute_url__, do: true
     end
   end
 
@@ -80,13 +87,14 @@ defmodule Brando.Blueprint.AbsoluteURL do
         try do
           Brando.I18n.Helpers.localized_path(locale, unquote(fun), args)
         rescue
-          UndefinedFunctionError -> "<no valid url found>"
-          ArgumentError -> "<no valid url found>"
+          UndefinedFunctionError -> nil
+          ArgumentError -> nil
         end
       end
 
       def __absolute_url_type__, do: :i18n
       def __absolute_url_template__, do: unquote(args_tpl)
+      def __has_absolute_url__, do: true
     end
   end
 
@@ -94,8 +102,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
   Attempt to extract necessary preloads from absolute_url template
   """
   def extract_preloads_from_absolute_url(schema) do
-    type = schema.__absolute_url_type__()
-    do_extract_preloads_from_absolute_url(type, schema)
+    if schema.__has_absolute_url__() do
+      type = schema.__absolute_url_type__()
+      do_extract_preloads_from_absolute_url(type, schema)
+    else
+      []
+    end
   end
 
   defp do_extract_preloads_from_absolute_url(:liquid, schema) do
@@ -135,13 +147,13 @@ defmodule Brando.Blueprint.AbsoluteURL do
     %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(rel)
     rel_name
   rescue
-    FunctionClauseError -> nil
+    Brando.Exception.BlueprintError -> nil
   end
 
   defp try_relation(schema, rel) when is_binary(rel) do
     %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(String.to_existing_atom(rel))
     rel_name
   rescue
-    FunctionClauseError -> nil
+    Brando.Exception.BlueprintError -> nil
   end
 end

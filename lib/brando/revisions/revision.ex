@@ -12,7 +12,9 @@ defmodule Brando.Revisions.Revision do
 
   table "revisions"
   primary_key false
-  identifier "{{ entry.entry_type }} - {{ entry.entry_id }}"
+
+  identifier false
+  persist_identifier false
 
   attributes do
     attribute :active, :boolean, default: false

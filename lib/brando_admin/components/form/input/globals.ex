@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                   var={var}
                   render={:all}
                   edit
-                  in_block
+                  publish
                 />
               </div>
             </Form.inputs_for_poly>
@@ -103,8 +103,8 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.field.form.source
 
-    default = %Brando.Content.Var.Boolean{
-      type: "boolean",
+    default = %Brando.Content.Var{
+      type: :boolean,
       label: "Label",
       key: "key",
       value: true

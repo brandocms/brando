@@ -16,53 +16,57 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     ~H"""
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Overview")}>
       <button class="stealth" phx-click={show_modal("#module-import-modal")}>
-        <%= gettext "Import modules" %>
+        <%= gettext("Import modules") %>
       </button>
       <button class="primary" phx-click={JS.push("create_module")}>
-        <%= gettext "Create new" %>
+        <%= gettext("Create new") %>
       </button>
     </Content.header>
 
-    <.live_component module={Content.List}
+    <.live_component
+      module={Content.List}
       id={"content_listing_#{@schema}_default"}
       schema={@schema}
       current_user={@current_user}
       uri={@uri}
       params={@params}
-      listing={:default} />
+      listing={:default}
+    />
 
-    <Content.modal title={gettext "Exported modules"} id={"module-export-modal"}>
+    <Content.modal title={gettext("Exported modules")} id="module-export-modal">
       <textarea rows="15" style="width: 100%; font-size: 11px; font-family: Mono"><%= @base64_modules %></textarea>
     </Content.modal>
 
     <Content.modal
-      title={gettext "Import modules"}
-      id={"module-import-modal"}
-      close={JS.push("reset_import_vars") |> hide_modal("#module-import-modal")}>
-      <div
-        :if={@imported_modules}
-        class="imported-modules">
+      title={gettext("Import modules")}
+      id="module-import-modal"
+      close={JS.push("reset_import_vars") |> hide_modal("#module-import-modal")}
+    >
+      <div :if={@imported_modules} class="imported-modules">
         <p>
-          <%= Enum.count(@imported_modules) %> <%= gettext "encoded modules found." %>
+          <%= Enum.count(@imported_modules) %> <%= gettext("encoded modules found.") %>
         </p>
         <div class="imported-modules mt-2">
-          <div
-            :for={m <- @imported_modules}
-            class="imported-module">
+          <div :for={m <- @imported_modules} class="imported-module">
             <%= m.name %> — <%= m.namespace %>
           </div>
         </div>
 
-        <button class="primary mt-2" type="button" phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}>
-          <%= gettext "Import modules" %>
+        <button
+          class="primary mt-2"
+          type="button"
+          phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}
+        >
+          <%= gettext("Import modules") %>
         </button>
       </div>
 
-      <form
-        :if={!@imported_modules}
-        id="module-import-form"
-        phx-change="validate_module_import">
-        <textarea name="encoded_modules" rows="15" style="width: 100%; font-size: 11px; font-family: Mono"></textarea>
+      <form :if={!@imported_modules} id="module-import-form" phx-change="validate_module_import">
+        <textarea
+          name="encoded_modules"
+          rows="15"
+          style="width: 100%; font-size: 11px; font-family: Mono"
+        ></textarea>
       </form>
     </Content.modal>
     """
@@ -114,7 +118,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:ok, new_module} = Brando.Content.create_module(params, user)
     new_module_route = Brando.routes().admin_live_path(socket, ModuleUpdateLive, new_module.id)
 
-    {:noreply, push_redirect(socket, to: new_module_route)}
+    {:noreply, push_navigate(socket, to: new_module_route)}
   end
 
   def handle_event("export_modules", %{"ids" => ids_string}, socket) do

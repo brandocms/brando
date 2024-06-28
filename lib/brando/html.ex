@@ -43,6 +43,111 @@ defmodule Brando.HTML do
     |> raw()
   end
 
+  attr :menu, :map, required: true
+  slot :inner_block, required: true
+
+  def menu(assigns) do
+    ~H"""
+    <%= for item <- @menu.items do %>
+      <%= render_slot(@inner_block, item) %>
+    <% end %>
+    """
+  end
+
+  attr :item, :map, required: true
+  attr :conn, Plug.Conn, required: true
+  attr :class, :any, default: nil
+  slot :inner_block, default: nil
+
+  def menu_item(assigns) do
+    item = assigns.item
+
+    url = get_menu_item_url(item) || ""
+    text = get_menu_item_text(item)
+    key = item.key
+
+    assigns =
+      assigns
+      |> assign(:url, url)
+      |> assign(:text, text)
+      |> assign(:key, key)
+      |> assign(:active, Utils.active_path?(assigns.conn, url))
+
+    ~H"""
+    <a class={@class} data-link-active={@active} data-menu-item-key={@key} href={@url}>
+      <%= render_slot(@inner_block, @text) %>
+    </a>
+    """
+  end
+
+  attr :item, :map, required: true
+  attr :rest, :global, doc: "the arbitrary HTML attributes to add to button"
+  slot :inner_block, default: nil
+
+  def menu_button(assigns) do
+    item = assigns.item
+    text = get_menu_item_text(item)
+
+    require Logger
+
+    Logger.error("""
+    menu_button
+    text = #{inspect(text)}
+
+    item = #{inspect(item)}
+    """)
+
+    key = item.key
+
+    assigns =
+      assigns
+      |> assign(:text, text)
+      |> assign(:key, key)
+
+    ~H"""
+    <button data-menu-item-key={@key} {@rest}>
+      <%= render_slot(@inner_block, @text) %>
+    </button>
+    """
+  end
+
+  def menu_item_url(assigns) do
+    item = assigns.item
+    url = get_menu_item_url(item) || ""
+    assigns = assign(assigns, :url, url)
+
+    ~H"""
+    <%= @url %>
+    """
+  end
+
+  def menu_item_text(assigns) do
+    item = assigns.item
+    text = get_menu_item_text(item) || ""
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <%= @text %>
+    """
+  end
+
+  defp get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
+  defp get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{url: url}}}), do: url
+  defp get_menu_item_url(_), do: nil
+
+  defp get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
+
+  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}})
+       when not is_nil(text),
+       do: text
+
+  defp get_menu_item_text(%{
+         link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}
+       }),
+       do: text
+
+  defp get_menu_item_text(_), do: nil
+
   @doc """
   Renders a [Heroicon](https://heroicons.com).
 
@@ -63,7 +168,7 @@ defmodule Brando.HTML do
 
   def icon(assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span data-icon class={[@name, @class]} />
     """
   end
 
@@ -611,10 +716,21 @@ defmodule Brando.HTML do
   end
 
   attr :entry, :map, required: true
+  attr :field, :atom, default: :blocks
 
   def render_blocks(assigns) do
+    rendered_field = String.to_existing_atom("rendered_#{assigns.field}")
+    rendered_field_at = String.to_existing_atom("rendered_#{assigns.field}_at")
+
+    assigns =
+      assigns
+      |> assign(:rendered_field, rendered_field)
+      |> assign(:rendered_field_at, rendered_field_at)
+      |> assign(:html, Map.get(assigns.entry, rendered_field, ""))
+      |> assign(:at, Map.get(assigns.entry, rendered_field_at) |> inspect())
+
     ~H"""
-    <%= @entry.html |> raw %>
+    <%= @html |> raw %>
     """
   end
 

@@ -11,18 +11,26 @@ defmodule Brando.Images.Gallery do
     gettext_module: Brando.Gettext
 
   import Brando.Gettext
+  import Ecto.Query
 
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
 
-  identifier "{{ entry.id }}"
+  identifier false
+  persist_identifier false
 
   attributes do
     attribute :config_target, :text
   end
 
-  assets do
-    asset :gallery_images, :gallery_images
+  relations do
+    relation :gallery_images, :has_many,
+      module: Brando.Images.GalleryImage,
+      on_replace: :delete_if_exists,
+      preload_order: [asc: :sequence],
+      sort_param: :sort_gallery_image_ids,
+      drop_param: :drop_gallery_image_ids,
+      cast: true
   end
 
   listings do
@@ -58,9 +66,14 @@ defmodule Brando.Images.Gallery do
     end
   end
 
-  @derive {Jason.Encoder,
-           only: [
-             :gallery_images,
-             :config_target
-           ]}
+  # list_projects(%{preload: [gallery: Gallery.preloads_for()]})
+  def preloads_for do
+    gallery_images_query =
+      from gi in Brando.Images.GalleryImage,
+        order_by: [asc: gi.sequence],
+        preload: [:image]
+
+    from g in Brando.Images.Gallery,
+      preload: [gallery_images: ^gallery_images_query]
+  end
 end

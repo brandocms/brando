@@ -95,13 +95,13 @@ defmodule BrandoAdmin.Menu do
           generated: true,
           bind_quoted: [schema: schema] do
       domain = schema.__naming__().domain
-      snake_domain = domain |> Recase.to_snake()
+      snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
       msgid = Brando.Utils.humanize(plural, :downcase)
 
       url_base = "/admin/#{snake_domain}/#{plural}"
-      default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
+      default_listing = Enum.find(schema.__listings__(), &(&1.name == :default))
 
       if !default_listing do
         raise Brando.Exception.BlueprintError,
@@ -191,7 +191,7 @@ defmodule BrandoAdmin.Menu do
           generated: true,
           bind_quoted: [schema: schema] do
       domain = schema.__naming__().domain
-      snake_domain = domain |> Recase.to_snake()
+      snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
       msgid = Brando.Utils.humanize(plural, :downcase)
@@ -277,6 +277,14 @@ defmodule BrandoAdmin.Menu do
               %{
                 name: Brando.Gettext.gettext("Block modules"),
                 url: "/admin/config/content/modules"
+              },
+              %{
+                name: Brando.Gettext.gettext("Containers"),
+                url: "/admin/config/content/containers"
+              },
+              %{
+                name: Brando.Gettext.gettext("Table Templates"),
+                url: "/admin/config/content/table_templates"
               },
               %{
                 name: Brando.Gettext.gettext("Templates"),

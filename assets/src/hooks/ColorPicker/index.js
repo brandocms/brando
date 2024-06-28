@@ -4,11 +4,12 @@ import debounce from 'lodash.debounce'
 
 export default app => ({
   mounted() {
+    // are we creating an entry? if so, set defaults if we have
     this.picker = null
     const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-color') {
-          const currentColor = this.el.dataset.color
+          const currentColor = this.el.dataset.color || this.el.dataset.default
           this.setColor(currentColor)
         }
 
@@ -33,7 +34,7 @@ export default app => ({
       this.picker.destroy()
     }
 
-    const initialColor = this.el.dataset.color
+    const initialColor = this.el.dataset.color || this.el.dataset.default
     const opacity = this.el.hasAttribute('data-opacity')
     const inputTarget = Dom.find(this.el.dataset.input)
     const paletteColors = this.el.hasAttribute('data-palette')
@@ -44,6 +45,15 @@ export default app => ({
 
     this.circle = this.el.querySelector('.circle')
     this.colorHex = this.el.querySelector('.color-hex')
+    this.clearColorBtn = this.el.querySelector('.clear-color')
+
+    this.clearColorBtn.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.setColor(null)
+      inputTarget.value = null
+      inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
+    })
 
     this.setColor(initialColor)
 
@@ -52,13 +62,13 @@ export default app => ({
 
     this.picker = new Picker({
       parent: parent,
-      popup: 'top',
-      color: initialColor || '#000000',
+      popup: 'bottom',
+      color: initialColor,
       alpha: opacity,
 
       onChange: debounce(color => {
         let processedColor = color.printHex(opacity)
-        if (processedColor === 9 && processedColor.slice(-2) === 'ff') {
+        if (processedColor.length === 9 && processedColor.slice(-2) === 'ff') {
           processedColor = processedColor.slice(0, -2)
         }
 
@@ -67,12 +77,12 @@ export default app => ({
         inputTarget.value = processedColor
 
         // has the color actually changed?
-        if (this.lastColor.toLowerCase() !== processedColor) {
+        if (this.lastColor && this.lastColor.toLowerCase() !== processedColor) {
           inputTarget.dispatchEvent(new Event('input', { bubbles: true }))
         }
 
         this.lastColor = processedColor
-      }, 800),
+      }, 100),
 
       onOpen: function () {
         this._colorToSplotch = {}
@@ -125,6 +135,6 @@ export default app => ({
 
   setColor(color) {
     this.circle.style.background = color
-    this.colorHex.innerHTML = color
+    this.colorHex.innerHTML = color || '(no color)'
   }
 })

@@ -7,6 +7,10 @@
   align-items: baseline;
   border-radius: 0.9vw;
 
+  &.danger {
+    background-color: #ffedeb;
+  }
+
   .form-tab .row & {
     width: 100%;
     flex-basis: 100%;

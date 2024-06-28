@@ -175,58 +175,82 @@ defmodule Brando.Villain.Parser do
             %{
               multi: true,
               module_id: id,
-              entries: entries
+              children: children
             } = block,
             opts
           ) do
         base_context = opts.context
         modules = opts.modules
+        skip_children? = Map.get(opts, :skip_children, false)
 
         {:ok, module} = Content.find_module(modules, id)
 
         content =
-          entries
-          |> Enum.with_index()
-          |> Enum.map(fn
-            {%{hidden: true}, _} ->
-              ""
+          if skip_children? do
+            "{$ content $}"
+            |> annotate_children(block.uid)
+          else
+            children
+            |> Enum.with_index()
+            |> Enum.map(fn
+              {%{hidden: true}, _} ->
+                ""
 
-            {%{marked_as_deleted: true}, _} ->
-              ""
+              {%{marked_as_deleted: true}, _} ->
+                ""
 
-            {entry, index} ->
-              vars = process_vars(entry.data.vars)
-              refs = process_refs(entry.data.refs)
+              {child_block, index} ->
+                {:ok, child_module} = Content.find_module(modules, child_block.module_id)
+                vars = process_vars(child_block.vars)
 
-              forloop = %{
-                "index" => index + 1,
-                "index0" => index,
-                "count" => Enum.count(entries)
-              }
+                require Logger
 
-              context =
-                base_context
-                |> add_vars_to_context(vars)
-                |> add_refs_to_context(refs)
-                |> add_admin_to_context(opts)
-                |> add_parser_to_context(__MODULE__)
-                |> add_module_id_to_context(id)
-                |> Context.assign("forloop", forloop)
+                Logger.error("""
+                processed_vars
+                #{inspect(vars, pretty: true)}
 
-              module.entry_template.code
-              |> Villain.parse_and_render(context)
-          end)
-          |> Enum.join("\n")
+                """)
+
+                refs = process_refs(child_block.refs)
+
+                forloop = %{
+                  "index" => index + 1,
+                  "index0" => index,
+                  "count" => Enum.count(children)
+                }
+
+                context =
+                  base_context
+                  |> add_vars_to_context(vars)
+                  |> add_refs_to_context(refs)
+                  |> add_admin_to_context(opts)
+                  |> add_parser_to_context(__MODULE__)
+                  |> add_module_id_to_context(id)
+                  |> add_block_to_context(child_module, child_block)
+                  |> Context.assign("forloop", forloop)
+
+                code = maybe_annotate(child_module.code, child_block.uid, opts)
+                Villain.parse_and_render(code, context)
+            end)
+            |> Enum.join("\n")
+            |> annotate_children(block.uid)
+          end
 
         base_vars = process_vars(block.vars)
         base_refs = process_refs(block.refs)
 
-        entries =
-          Enum.map(entries, fn entry ->
-            entry
-            |> put_in([Access.key(:data), Access.key(:vars)], process_vars(entry.data.vars))
-            |> put_in([Access.key(:data), Access.key(:refs)], process_refs(entry.data.refs))
-          end)
+        children =
+          case children do
+            nil -> []
+            %Ecto.Association.NotLoaded{} -> []
+            _ -> children
+          end
+
+        Enum.map(children, fn entry ->
+          entry
+          |> put_in([Access.key(:vars)], process_vars(entry.vars))
+          |> put_in([Access.key(:refs)], process_refs(entry.refs))
+        end)
 
         context =
           base_context
@@ -235,34 +259,50 @@ defmodule Brando.Villain.Parser do
           |> add_admin_to_context(opts)
           |> add_parser_to_context(__MODULE__)
           |> add_module_id_to_context(id)
-          |> Context.assign("entries", entries)
+          |> add_block_to_context(module, block)
+          |> Context.assign("entries", children)
           |> Context.assign("content", content)
 
+        code = maybe_annotate(module.code, block.uid, opts)
+
         module.code
+        |> maybe_annotate(block.uid, opts)
         |> Villain.parse_and_render(context)
+        |> maybe_format(opts)
       end
 
       def module(%{module_id: id} = block, opts) do
         base_context = opts.context
         modules = opts.modules
 
-        {:ok, module} = Content.find_module(modules, id)
+        case Content.find_module(modules, id) do
+          {:ok, module} ->
+            base_context = opts.context
+            processed_vars = process_vars(block.vars)
+            processed_refs = process_refs(block.refs)
 
-        base_context = opts.context
-        processed_vars = process_vars(block.vars)
-        processed_refs = process_refs(block.refs)
+            context =
+              base_context
+              |> add_vars_to_context(processed_vars)
+              |> add_refs_to_context(processed_refs)
+              |> add_admin_to_context(opts)
+              |> add_parser_to_context(__MODULE__)
+              |> add_module_id_to_context(id)
+              |> add_entries_to_context(module, block)
+              |> add_block_to_context(module, block)
 
-        context =
-          base_context
-          |> add_vars_to_context(processed_vars)
-          |> add_refs_to_context(processed_refs)
-          |> add_admin_to_context(opts)
-          |> add_parser_to_context(__MODULE__)
-          |> add_module_id_to_context(id)
-          |> add_entries_to_context(module, block)
+            module.code
+            |> maybe_annotate(block.uid, opts)
+            |> Villain.parse_and_render(context)
+            |> maybe_format(opts)
 
-        module.code
-        |> Villain.parse_and_render(context)
+          {:error, {:module, :not_found, module_id}} ->
+            """
+            <div class="module-not-found">
+              <p>Module not found: #{module_id}</p>
+            </div>
+            """
+        end
       end
 
       defoverridable module: 2
@@ -282,7 +322,8 @@ defmodule Brando.Villain.Parser do
         mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
 
         {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
-        Context.assign(context, :entries, entries)
+
+        Context.assign(context, :entries, entries || [])
       end
 
       defp add_entries_to_context(
@@ -293,13 +334,31 @@ defmodule Brando.Villain.Parser do
                datasource_module: module,
                datasource_query: query
              },
-             %{datasource_selected_ids: ids, vars: vars} = block
+             %{vars: vars} = block
            ) do
-        {:ok, entries} = Datasource.get_selection(module, query, ids)
+        identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
+        {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
         Context.assign(context, :entries, entries)
       end
 
-      defp add_entries_to_context(context, _, _), do: context
+      defp add_entries_to_context(context, _, _), do: Context.assign(context, :entries, [])
+
+      defp add_block_to_context(context, _module, block) do
+        simple_block =
+          Map.take(block, [
+            :uid,
+            :type,
+            :module_id,
+            :sequence,
+            :active,
+            :collapsed,
+            :table_rows,
+            :anchor,
+            :description
+          ])
+
+        Context.assign(context, :block, simple_block)
+      end
 
       defp map_vars(nil), do: %{}
 
@@ -454,6 +513,10 @@ defmodule Brando.Villain.Parser do
       Convert image to html, with caption and credits and optional link
       """
       def picture(%{url: ""}, _), do: ""
+
+      def picture(nil, _) do
+        ""
+      end
 
       def picture(data, _) do
         title = Map.get(data, :title, nil)
@@ -857,18 +920,29 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{blocks: blocks, palette_id: palette_id, target_id: target_id}, opts) do
+      def container(
+            %{children: children, palette_id: palette_id, anchor: target_id, container_id: nil} =
+              block,
+            opts
+          ) do
         palettes = opts.palettes
+        skip_children? = Map.get(opts, :skip_children, false)
 
-        blocks_html =
-          (blocks || [])
-          |> Enum.reduce([], fn
-            %{hidden: true}, acc -> acc
-            %{marked_as_deleted: true}, acc -> acc
-            d, acc -> [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
-          end)
-          |> Enum.reverse()
-          |> Enum.join("")
+        children_html =
+          if skip_children? do
+            "{$ content $}"
+            |> annotate_children(block.uid)
+          else
+            (children || [])
+            |> Enum.reduce([], fn
+              %{hidden: true}, acc -> acc
+              %{marked_as_deleted: true}, acc -> acc
+              d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+            end)
+            |> Enum.reverse()
+            |> Enum.join("")
+            |> annotate_children(block.uid)
+          end
 
         target_id =
           (target_id && " id=\"#{target_id}\" data-scrollspy-trigger=\"##{target_id}\"") || ""
@@ -877,17 +951,58 @@ defmodule Brando.Villain.Parser do
           {:ok, palette} ->
             """
             <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
-              #{blocks_html}
+              #{children_html}
             </section>
             """
+            |> maybe_annotate(block.uid, opts)
+            |> maybe_format(opts)
 
           {:error, {:palette, :not_found, nil}} ->
             """
             <section b-section#{target_id}>
-              #{blocks_html}
+              #{children_html}
             </section>
             """
+            |> maybe_annotate(block.uid, opts)
+            |> maybe_format(opts)
         end
+      end
+
+      def container(
+            %{
+              children: children,
+              palette_id: palette_id,
+              anchor: target_id,
+              container_id: container_id
+            } =
+              block,
+            opts
+          ) do
+        containers = opts.containers
+        palettes = opts.palettes
+        skip_children? = Map.get(opts, :skip_children, false)
+        {:ok, container} = Content.find_container(containers, container_id)
+
+        children_html =
+          if skip_children? do
+            "{$ content $}"
+            |> annotate_children(block.uid)
+          else
+            (children || [])
+            |> Enum.reduce([], fn
+              %{hidden: true}, acc -> acc
+              %{marked_as_deleted: true}, acc -> acc
+              d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+            end)
+            |> Enum.reverse()
+            |> Enum.join("")
+            |> annotate_children(block.uid)
+          end
+
+        container.code
+        |> String.replace("{{ content }}", children_html)
+        |> maybe_annotate(block.uid, opts)
+        |> maybe_format(opts)
       end
 
       defoverridable container: 2
@@ -928,8 +1043,8 @@ defmodule Brando.Villain.Parser do
         {:ok, fragment} = Brando.Pages.find_fragment(fragments, id)
 
         case fragment.status do
-          :published -> fragment.html
-          _ -> "<!-- fragment not embedded. status != :published -->"
+          :published -> fragment.rendered_blocks
+          _ -> "<!-- fragment##{id} not embedded. status != :published -->"
         end
       end
 
@@ -937,31 +1052,60 @@ defmodule Brando.Villain.Parser do
 
       # ...
       defp process_vars(nil), do: %{}
+      defp process_vars(%Ecto.Association.NotLoaded{}), do: []
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var(
-             %Brando.Content.Var.Image{
+             %Brando.Content.Var{
+               type: :image,
                key: key,
                label: _,
-               type: _,
-               value: %Ecto.Association.NotLoaded{}
+               image: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        %{value: value} = Brando.repo().preload(var, [:value])
-        {key, value}
+        %{image: image} = Brando.repo().preload(var, [:image])
+        {key, image}
       end
 
       defp process_var(
-             %Brando.Content.Var.File{
+             %Brando.Content.Var{
+               type: :image,
                key: key,
                label: _,
-               type: _,
-               value: %Ecto.Association.NotLoaded{}
+               image: image
              } = var
            ) do
-        %{value: value} = Brando.repo().preload(var, [:value])
-        {key, value}
+        {key, image}
       end
+
+      defp process_var(
+             %Brando.Content.Var{
+               type: :file,
+               key: key,
+               label: _,
+               file: %Ecto.Association.NotLoaded{}
+             } = var
+           ) do
+        %{file: file} = Brando.repo().preload(var, [:file])
+        {key, file}
+      end
+
+      defp process_var(
+             %Brando.Content.Var{
+               type: :file,
+               key: key,
+               label: _,
+               file: file
+             } = var
+           ) do
+        {key, file}
+      end
+
+      defp process_var(%{key: key, label: _, type: :boolean, value_boolean: value_boolean}),
+        do: {key, value_boolean}
+
+      defp process_var(%{key: key, label: _, type: :link} = link),
+        do: {key, link}
 
       defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
@@ -1010,6 +1154,34 @@ defmodule Brando.Villain.Parser do
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(module.code, context)
       end
+
+      defp add_uid(code, uid) do
+        String.replace(code, "<article b-tpl", "<article data-uid=\"#{uid}\" b-tpl")
+      end
+
+      def maybe_annotate(code, uid, %{annotate_blocks: true}) do
+        """
+        <!-- B:LP{#{uid}} -->
+          #{code}
+        <!-- E:LP{#{uid}} -->
+        """
+      end
+
+      def maybe_annotate(code, _, _), do: code
+
+      def annotate_children(code, uid) do
+        """
+        <!-- B:CHILDREN{#{uid}} -->
+          #{code}
+        <!-- E:CHILDREN{#{uid}} -->
+        """
+      end
+
+      def maybe_format(html, %{format_html: true}) do
+        Phoenix.LiveView.HTMLFormatter.format(html, [])
+      end
+
+      def maybe_format(html, _), do: html
     end
   end
 

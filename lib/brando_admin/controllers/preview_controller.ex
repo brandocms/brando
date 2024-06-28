@@ -6,7 +6,7 @@ defmodule Brando.PreviewController do
   alias Brando.Sites
   alias Brando.Utils
 
-  action_fallback Brando.FallbackController
+  action_fallback BrandoWeb.FallbackController
 
   @doc false
   def show(conn, %{"preview_key" => preview_key}) do

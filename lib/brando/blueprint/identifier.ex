@@ -4,7 +4,7 @@ defmodule Brando.Blueprint.Identifier do
 
   ## Example
 
-      identifier "{{ entry.title }} [{{ entry.language }}]"
+      identifier "{{ entry.title }}"
 
   """
 
@@ -12,18 +12,31 @@ defmodule Brando.Blueprint.Identifier do
   alias Brando.Villain.LiquexParser
   alias Brando.Utils
 
+  import Ecto.Query
+
+  defmacro persist_identifier(persist?) do
+    quote location: :keep do
+      def __persist_identifier__ do
+        unquote(persist?)
+      end
+    end
+  end
+
   defmacro identifier(tpl) when is_binary(tpl) do
     {:ok, parsed_identifier} = Liquex.parse(tpl, LiquexParser)
     fields = extract_fields_from_identifier(tpl)
 
     quote location: :keep do
-      def __identifier_fields__ do
-        unquote(fields)
+      if @data_layer == :embedded do
+        raise Brando.Exception.BlueprintError, """
+        Identifiers are not supported with embedded data layer
+
+        Set `identifier false` in your blueprint to disable identifiers
+        """
       end
 
-      def __has_identifier__ do
-        true
-      end
+      def __identifier_fields__, do: unquote(fields)
+      def __has_identifier__, do: true
 
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
@@ -52,6 +65,13 @@ defmodule Brando.Blueprint.Identifier do
         updated_at =
           (Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)) || nil
 
+        url =
+          if {:__absolute_url__, 1} in entry.__struct__.__info__(:functions) do
+            __absolute_url__(entry)
+          else
+            nil
+          end
+
         %Brando.Content.Identifier{
           entry_id: entry.id,
           title: title,
@@ -59,13 +79,22 @@ defmodule Brando.Blueprint.Identifier do
           language: language,
           cover: cover,
           schema: __MODULE__,
-          updated_at: updated_at
+          updated_at: updated_at,
+          url: url
         }
       end
     end
   end
 
   defmacro identifier(nil) do
+    quote location: :keep do
+      def __has_identifier__ do
+        false
+      end
+    end
+  end
+
+  defmacro identifier(false) do
     quote location: :keep do
       def __has_identifier__ do
         false
@@ -104,7 +133,8 @@ defmodule Brando.Blueprint.Identifier do
     if function_exported?(schema, :__info__, 1) do
       context = schema.__modules__().context
       singular = schema.__naming__().singular
-      opts = %{matches: %{id: entry_id}}
+      preloads = Brando.Blueprint.preloads_for(schema)
+      opts = %{matches: %{id: entry_id}, preload: preloads}
       apply(context, :"get_#{singular}", [opts])
     else
       {:error, :module_does_not_exist}
@@ -123,6 +153,9 @@ defmodule Brando.Blueprint.Identifier do
 
   def identifier_for(%{__struct__: schema} = entry) do
     schema.__identifier__(entry)
+  rescue
+    UndefinedFunctionError ->
+      nil
   end
 
   def extract_cover(nil, _), do: nil
@@ -167,7 +200,18 @@ defmodule Brando.Blueprint.Identifier do
   Cleans up the identifiers table by removing identifiers that are no longer valid and
   updating existing identifiers
   """
-  def clean_up do
+  def sync do
+    # first grab all modules that have identifiers
+    relevant_modules =
+      :include_brando
+      |> Brando.Blueprint.list_blueprints()
+      |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
+      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
+
+    # select all identifiers with schema not in `relevant_modules`
+    delete_query = from i in Brando.Content.Identifier, where: i.schema not in ^relevant_modules
+    Brando.repo().delete_all(delete_query, [])
+
     {:ok, identifiers} = Brando.Content.list_identifiers()
 
     for identifier <- identifiers do
@@ -175,18 +219,18 @@ defmodule Brando.Blueprint.Identifier do
         {:error, :module_does_not_exist} ->
           require Logger
 
-          Logger.error("""
-          !! Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier
-          """)
+          Logger.info("
+          => Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier
+          ")
 
           Brando.Content.delete_identifier(identifier)
 
         {:error, _} ->
           require Logger
 
-          Logger.error("""
-          !! Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier
-          """)
+          Logger.info("
+          => Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier
+          ")
 
           Brando.Content.delete_identifier(identifier)
 
@@ -194,11 +238,46 @@ defmodule Brando.Blueprint.Identifier do
           # update the identifier
           require Logger
 
-          Logger.error("""
-          $$ Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}
-          """)
+          Logger.info("
+          => Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}
+          ")
 
           Brando.Content.update_identifier(entry.__struct__, entry)
+      end
+    end
+
+    create_missing_identifiers()
+  end
+
+  def create_missing_identifiers do
+    require Logger
+
+    relevant_modules =
+      :include_brando
+      |> Brando.Blueprint.list_blueprints()
+      |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
+      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
+
+    for module <- relevant_modules do
+      identifiers_query =
+        from i in Brando.Content.Identifier, select: i.entry_id, where: i.schema == ^module
+
+      current_identifiers = Brando.repo().all(identifiers_query)
+
+      # get all entry ids without identifiers
+      preloads = Brando.Blueprint.preloads_for(module)
+
+      entries_query =
+        from e in module, where: e.id not in ^current_identifiers, preload: ^preloads
+
+      entries = Brando.repo().all(entries_query)
+
+      for entry <- entries do
+        {:ok, identifier} = Brando.Content.create_identifier(module, entry)
+
+        Logger.info(
+          "=> Creating identifier ##{inspect(identifier.id)} in schema #{inspect(identifier.schema)} for entry_id ##{identifier.entry_id}"
+        )
       end
     end
   end

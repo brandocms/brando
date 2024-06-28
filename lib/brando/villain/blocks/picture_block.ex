@@ -12,7 +12,8 @@ defmodule Brando.Villain.Blocks.PictureBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
+    persist_identifier false
 
     attributes do
       attribute :picture_class, :text
@@ -43,7 +44,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
     end
 
     relations do
-      relation :focal, :embeds_one, module: Focal
+      relation :focal, :embeds_one, module: Focal, on_replace: :delete
     end
   end
 

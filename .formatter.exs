@@ -1,6 +1,7 @@
 locals_without_parens = [
   absolute_url: 1,
   identifier: 1,
+  persist_identifier: 1,
   meta: 2,
   sequence: 2,
   villain: 1,
@@ -29,13 +30,10 @@ locals_without_parens = [
   schema_module: 1,
   schema_preloads: 1,
   mutate_data: 1,
-  layout_module: 1,
-  layout_template: 1,
-  view_module: 1,
-  view_template: 1,
   template_css_classes: 1,
   template_section: 1,
   template_prop: 1,
+  rerender_on_change: 1,
   # blueprints
   application: 1,
   domain: 1,
@@ -77,6 +75,8 @@ locals_without_parens = [
   asset: 3,
   alert: 1,
   alert: 2,
+  blocks: 1,
+  blocks: 2,
   input: 1,
   input: 2,
   input: 3,
@@ -111,5 +111,5 @@ locals_without_parens = [
   import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html],
   plugins: [Phoenix.LiveView.HTMLFormatter],
   inputs: ["*.{ex,exs,heex}", "priv/*/seeds.exs", "{config,lib,test}/**/*.{ex,exs,heex}"],
-  subdirectories: ["priv/*/migrations"]
+  subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
 ]

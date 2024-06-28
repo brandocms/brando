@@ -16,7 +16,9 @@
     }
 
     .buttons {
-      z-index: 3;
+      margin-top: 15px;
+      display: flex;
+      gap: 0.3em;
     }
 
     figure {

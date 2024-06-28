@@ -317,7 +317,7 @@ defmodule Brando.Utils do
 
   def snake_case(map) when is_map(map) do
     map
-    |> Enum.map(fn {k, v} -> {Recase.to_snake(k), snake_case(v)} end)
+    |> Enum.map(fn {k, v} -> {Macro.underscore(k), snake_case(v)} end)
     |> Enum.into(%{})
   end
 
@@ -438,7 +438,7 @@ defmodule Brando.Utils do
 
   def camel_case_map(map) when is_map(map) do
     for {key, val} <- map, into: %{} do
-      {Recase.to_camel(key), camel_case_map(val)}
+      {Macro.camelize(key), camel_case_map(val)}
     end
   end
 
@@ -493,8 +493,8 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname() :: binary
+  def hostname, do: "#{Brando.endpoint().url()}"
   @spec hostname(path :: binary) :: binary
-  def hostname, do: "#{Brando.endpoint().url}"
   def hostname(path), do: Path.join(hostname(), path)
 
   @doc """
@@ -1207,8 +1207,12 @@ defmodule Brando.Utils do
   @doc """
   Set changeset action depending on if changeset has :id or not
   """
+  def set_action(changesets) when is_list(changesets) do
+    Enum.map(changesets, &set_action/1)
+  end
+
   def set_action(changeset) do
-    mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :create
+    mutation_type = (Ecto.Changeset.get_field(changeset, :id) && :update) || :insert
     Map.put(changeset, :action, mutation_type)
   end
 
@@ -1312,4 +1316,42 @@ defmodule Brando.Utils do
 
   def strip_leading_slash("/" <> rest), do: rest
   def strip_leading_slash(rest), do: rest
+
+  def apply_changes_recursively(changesets) when is_list(changesets) do
+    Enum.map(changesets, &apply_changes_recursively/1)
+  end
+
+  def apply_changes_recursively(%Ecto.Changeset{action: action})
+      when action in [:replace, :delete] do
+    nil
+  end
+
+  def apply_changes_recursively(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> apply_associations(changeset)
+  end
+
+  def apply_changes_recursively(value) do
+    value
+  end
+
+  defp apply_associations(struct, %Ecto.Changeset{changes: changes}) do
+    Enum.reduce(changes, struct, fn
+      {key, %Ecto.Changeset{} = assoc_changeset}, acc ->
+        updated_assoc = apply_changes_recursively(assoc_changeset)
+        Map.put(acc, key, updated_assoc)
+
+      {key, assoc_changesets}, acc when is_list(assoc_changesets) ->
+        updated_assoc =
+          assoc_changesets
+          |> Enum.map(&apply_changes_recursively/1)
+          |> Enum.reject(&is_nil/1)
+
+        Map.put(acc, key, updated_assoc)
+
+      _, acc ->
+        acc
+    end)
+  end
 end

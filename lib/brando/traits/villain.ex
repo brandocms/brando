@@ -1,73 +1,28 @@
 defmodule Brando.Trait.Villain do
   @moduledoc """
   Villain parsing
+  Deprecated
   """
   use Brando.Trait
-  alias Brando.Exception.ConfigError
-  alias Ecto.Changeset
-  alias Brando.Blueprint.Attributes
-
-  @type changeset :: Changeset.t()
-  @type config :: list()
 
   @impl true
-  def trait_attributes(attributes, _assets, _relations) do
-    attributes
-    |> Enum.filter(&(&1.type == :villain))
-    |> Enum.map(fn
-      %{name: :data} ->
-        Attributes.build_attr(:html, :text, [])
+  def validate(_module, _config) do
+    raise Brando.Exception.BlueprintError,
+      message: """
+      trait Brando.Trait.Villain is deprecated
 
-      %{name: data_name} ->
-        data_name
-        |> to_string
-        |> String.replace("_data", "_html")
-        |> String.to_atom()
-        |> Attributes.build_attr(:text, [])
-    end)
-  end
+      Use `trait Brando.Trait.Blocks` instead, and also remove your
+      :villain fields from the attributes block:
 
-  @impl true
-  def validate(module, _config) do
-    if module.__villain_fields__ == [] do
-      raise ConfigError,
-        message: """
-        Resource `#{inspect(module)}` is declaring Brando.Trait.Villain, but there are no attributes of type `:villain` found.
+          attributes do
+            attribute :data, :villain
+          end
 
-            attributes do
-              attribute :data, :villain
-            end
-        """
-    end
+      And instead add as a relation:
 
-    true
-  end
-
-  @doc """
-  Generate HTML
-  """
-  @impl true
-  def changeset_mutator(module, _config, changeset, _user, opts) do
-    case Keyword.get(opts, :skip_villain) do
-      true ->
-        cast_poly(changeset, module.__villain_fields__())
-
-      _ ->
-        case cast_poly(changeset, module.__villain_fields__()) do
-          %{valid?: true} = casted_changeset ->
-            Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-              Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-            end)
-
-          casted_changeset ->
-            casted_changeset
-        end
-    end
-  end
-
-  defp cast_poly(changeset, villain_fields) do
-    Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
-      Brando.PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
-    end)
+          relations do
+            relation :blocks, :has_many, module: :blocks
+          end
+      """
   end
 end

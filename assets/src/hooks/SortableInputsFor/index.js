@@ -13,17 +13,17 @@ export default app => ({
       group: this.sortableId,
       animation: 150,
       dragClass: 'drag-item',
-      draggable: '.draggable',
+      draggable: this.sortableSelector,
       ghostClass: 'is-sorting',
       handle: this.handle,
       swapThreshold: 0.5,
       forceFallback: true,
       onEnd: () => {
-        console.log('sortable onEnd —— dispatch input')
-        this.el
-          .closest('form')
-          .querySelector('input')
-          .dispatchEvent(new Event('input', { bubbles: true }))
+        console.log('sortable onEnd —— do nothing')
+        // this.el
+        //   .closest('form')
+        //   .querySelector('input')
+        //   .dispatchEvent(new Event('input', { bubbles: true }))
       }
     })
   }

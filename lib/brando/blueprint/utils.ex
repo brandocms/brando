@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Utils do
-  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints]
+  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param]
   @strip_embeds_opts [:cast, :module, :unique, :constraints]
 
   def to_ecto_type(:text), do: :string
@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
   def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: {:array, Brando.PolymorphicEmbed}
+  def to_ecto_type(:villain), do: {:array, PolymorphicEmbed}
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
@@ -19,13 +19,30 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(:belongs_to, opts),
     do: opts |> Map.drop(@strip_ecto_opts ++ [:on_delete]) |> Map.to_list()
 
+  def to_ecto_opts(:has_one, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:has_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
-  def to_ecto_opts(:embeds_one, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
-  def to_ecto_opts(:embeds_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
+
+  def to_ecto_opts(:embeds_one, opts) do
+    opts
+    |> Map.put_new(:on_replace, :update)
+    |> Map.drop(@strip_ecto_opts)
+    |> Map.to_list()
+  end
+
+  def to_ecto_opts(:embeds_many, opts) do
+    opts
+    |> Map.put_new(:on_replace, :delete)
+    |> Map.drop(@strip_ecto_opts)
+    |> Map.to_list()
+  end
+
   def to_ecto_opts(_type, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
 
   @strip_changeset_opts [:cast, :module]
+  def to_changeset_opts(:has_one, opts),
+    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+
   def to_changeset_opts(:belongs_to, opts),
     do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
@@ -65,7 +82,7 @@ defmodule Brando.Blueprint.Utils do
         field ->
           msgid =
             if field.__struct__ == Brando.Blueprint.Forms.Subform do
-              field.label
+              Map.get(field, :label) || String.capitalize(to_string(field.name))
             else
               Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
             end

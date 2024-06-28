@@ -85,10 +85,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:opacity, Keyword.get(assigns.opts, :opacity, false))
       |> assign(:picker, Keyword.get(assigns.opts, :picker, true))
       |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
+      |> assign(:default, Keyword.get(assigns.opts, :default))
 
     assigns =
       assign_new(assigns, :palette_colors, fn ->
-        if assigns.palette_id do
+        if assigns.palette_id not in [nil, ""] do
           case Brando.Content.get_palette(assigns.palette_id) do
             {:ok, palette} ->
               palette.colors
@@ -111,10 +112,11 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
         data-input={"##{@field.id}"}
-        data-color={@field.value || gettext("No color selected")}
+        data-color={@field.value || @default}
         data-opacity={@opacity}
         data-picker={@picker}
         data-palette={@palette_colors}
+        data-default={@default}
       >
         <div class="picker">
           <.input type={:hidden} field={@field} />
@@ -122,6 +124,9 @@ defmodule BrandoAdmin.Components.Form.Input do
             <div class="circle-and-hex">
               <span class="circle tiny"></span>
               <span class="color-hex"></span>
+              <button type="button" class="clear-color">
+                <.icon name="hero-x-circle-mini" />
+              </button>
             </div>
           </div>
         </div>
@@ -494,6 +499,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :label, :string
   attr :uid, :string
   attr :id_prefix, :string
+  attr :publish, :boolean, default: false
 
   attr :rest, :global,
     include:
@@ -502,13 +508,14 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
+  attr :hidden_input, :boolean, default: true
+
   def input(%{type: :checkbox} = assigns) do
     assigns =
       assigns
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:checked_value, fn -> "true" end)
       |> assign_new(:unchecked_value, fn -> "false" end)
-      |> assign_new(:hidden_input, fn -> true end)
       |> process_input_id()
 
     assigns =
@@ -572,10 +579,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> assign(:id, assigns.id || assigns.field.id)
       |> assign(:name, assigns.name || assigns.field.name)
+      |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
       |> process_input_id()
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} {@rest} />
+    <input type={@type} name={@name} id={@id} value={@value} phx-hook={@hook} {@rest} />
     """
   end
 
@@ -713,6 +721,19 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
+  attr :placeholder, :string
+  attr :disabled, :boolean
+  attr :debounce, :integer
+  attr :monospace, :boolean
+  attr :change, :any, default: nil
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
+
   def text(assigns) do
     assigns = prepare_input_component(assigns)
 
@@ -729,8 +750,12 @@ defmodule BrandoAdmin.Components.Form.Input do
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
-        phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
+        phx-debounce={@debounce}
+        phx-focus={@focus}
+        phx-target={@target}
+        phx-value-field={@focus && @field.field}
+        phx-change={@change}
       />
     </Form.field_base>
     """

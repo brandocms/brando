@@ -59,6 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
     relation_key = Keyword.get(assigns.opts, :relation_key, :id)
+    relation = Keyword.get(assigns.opts, :relation, nil)
 
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
@@ -71,8 +72,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign(:relation_key, relation_key)
+     |> assign(:relation, relation)
      |> assign_relation_type(assigns.field)
      |> assign_selected_options(changeset, assigns.field)
+     |> assign_selected_options_structs()
      |> assign_input_options()
      |> assign_selected_options_forms(assigns.field)
      |> assign_sequenced?(assigns.field)
@@ -93,8 +96,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp assign_relation_fields(socket, field) do
     assign_new(socket, :relation_fields, fn ->
       module = field.form.data.__struct__
+      relation_type = socket.assigns.relation_type
 
-      if {:__relations__, 0} in module.__info__(:functions) do
+      if relation_type in [:has_many, {:subform, :has_many}] and
+           {:__relations__, 0} in module.__info__(:functions) do
         %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
         # the rel module must have `@allow_mark_as_deleted true`
@@ -122,9 +127,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp assign_sequenced?(socket, field) do
     module = field.form.data.__struct__
+    relation_type = socket.assigns.relation_type
 
     sequenced? =
-      if {:__relations__, 0} in module.__info__(:functions) do
+      if relation_type in [:has_many, {:subform, :has_many}] and
+           {:__relations__, 0} in module.__info__(:functions) do
         %{opts: %{module: rel_module}} = module.__relation__(field.field)
         rel_module.has_trait(Brando.Trait.Sequenced)
       else
@@ -135,8 +142,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp assign_selected_options_forms(socket, field) do
+    relation_type = socket.assigns.relation_type
+
     selected_options_forms =
-      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
+      if relation_type in [:has_many, {:subform, :has_many}] do
         Brando.Utils.forms_from_field(field.form[field.field])
       else
         nil
@@ -147,24 +156,39 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp assign_selected_options(socket, changeset, field) do
-    selected_options = get_selected_options(changeset, field, socket.assigns.relation_type)
+    relation_type = socket.assigns.relation_type
+    selected_options = get_selected_options(changeset, field, relation_type)
     assign(socket, :selected_options, selected_options)
+  end
+
+  defp assign_selected_options_structs(socket) do
+    assign_new(socket, :selected_options_structs, fn ->
+      selected_options = socket.assigns.selected_options
+
+      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
+        Enum.map(selected_options, &Ecto.Changeset.apply_changes/1)
+      else
+        selected_options
+      end
+    end)
   end
 
   defp assign_relation_type(socket, field) do
     module = field.form.data.__struct__
 
     relation_type =
-      if {:__relations__, 0} in module.__info__(:functions) do
-        relation = module.__relation__(field.field)
+      case Map.get(module.__changeset__(), field.field) do
+        {:assoc, %Ecto.Association.Has{cardinality: :many}} -> :has_many
+        {:assoc, %Ecto.Association.BelongsTo{}} -> :belongs_to
+        {:array, type} -> {:array, type}
+        nil -> nil
+      end
 
-        if socket.assigns.parent_form_id do
-          {:subform, relation.type}
-        else
-          relation.type
-        end
+    relation_type =
+      if socket.assigns.subform_id do
+        {:subform, relation_type}
       else
-        Map.get(module.__changeset__, field.field)
+        relation_type
       end
 
     if relation_type in [:has_many, {:subform, :has_many}] and socket.assigns.relation_key == :id do
@@ -480,16 +504,31 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <% else %>
           <%!-- TODO: Clean up this to components --%>
           <%= if @relation_type in [:has_many, {:subform, :has_many}] do %>
-            <%= for {eform, index} <- Enum.with_index(@selected_options_forms) do %>
-              <%= for {name, value_or_values} <- eform.hidden,
+            <div id={"#{@field.id}-selected-options"}>
+              <.inputs_for :let={selected_option} field={@field}>
+                <Input.input
+                  :if={@sequenced?}
+                  type={:hidden}
+                  field={selected_option[:sequence]}
+                  value={selected_option.index}
+                />
+                <Input.input
+                  :for={efield <- @relation_fields}
+                  type={:hidden}
+                  field={selected_option[efield]}
+                />
+              </.inputs_for>
+              <%!-- <%= for {eform, index} <- Enum.with_index(@selected_options_forms) do %>
+                <%= for {name, value_or_values} <- eform.hidden,
                 name = Brando.Utils.name_for_value_or_values(eform, name, value_or_values),
                 value <- List.wrap(value_or_values) do %>
-                <input type="hidden" name={name} value={value} />
-              <% end %>
+                  <input type="hidden" name={name} value={value} />
+                <% end %>
 
-              <Input.hidden :if={@sequenced?} field={eform[:sequence]} value={index} />
-              <Input.hidden :for={efield <- @relation_fields} field={eform[efield]} />
-            <% end %>
+                <Input.input :if={@sequenced?} type={:hidden} field={eform[:sequence]} value={index} />
+                <Input.input :for={efield <- @relation_fields} type={:hidden} field={eform[efield]} />
+              <% end %> --%>
+            </div>
           <% else %>
             <Input.input
               :for={opt <- @selected_options}
@@ -689,6 +728,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
   defp maybe_slug(%{id: id}), do: id
+  defp maybe_slug(opt) when is_atom(opt), do: to_string(opt)
   defp maybe_slug(opt) when is_integer(opt), do: opt
   defp maybe_slug(opt) when is_binary(opt), do: String.replace(opt, ~r/\W/u, "_")
 
@@ -778,7 +818,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     select_changeset =
       default
-      |> changeset_fun.(entry_params, current_user, skip_villain: true)
+      |> changeset_fun.(entry_params, current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, select_changeset: select_changeset)}
@@ -822,47 +862,86 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     changeset = form.source
     module = form.data.__struct__
     sequenced? = socket.assigns.sequenced?
+    selected_options_structs = socket.assigns.selected_options_structs
 
     %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
     relation_type = socket.assigns.relation_type
-    relation_key = socket.assigns.relation_key
+    relation_fk = socket.assigns.relation_key
+    relation = socket.assigns.relation
     selected_options = get_selected_options(changeset, field, relation_type)
 
     exists_at_idx =
       Enum.find_index(
         selected_options,
-        &(to_string(Ecto.Changeset.get_field(&1, relation_key)) == value &&
+        &(to_string(Ecto.Changeset.get_field(&1, relation_fk)) == value &&
             Ecto.Changeset.get_change(&1, :marked_as_deleted) != true)
       )
 
-    selected_options =
+    {selected_options_structs, selected_options} =
       if exists_at_idx do
         {to_delete, rest} = List.pop_at(selected_options, exists_at_idx)
 
-        if to_delete.data.id do
-          List.replace_at(
-            selected_options,
-            exists_at_idx,
-            Ecto.Changeset.change(to_delete, marked_as_deleted: true)
-          )
-        else
-          rest
-        end
+        updated_selected_options =
+          if to_delete.data.id do
+            List.replace_at(
+              selected_options,
+              exists_at_idx,
+              to_delete
+              |> Ecto.Changeset.change(marked_as_deleted: true)
+              |> Map.put(:action, :delete)
+            )
+          else
+            rest
+          end
+
+        # we can't trust the index here since we might have
+        # deleted changesets in the `selected_options` list.
+
+        updated_selected_options_structs =
+          Enum.reject(selected_options_structs, &(to_string(Map.get(&1, relation_fk)) == value))
+
+        {updated_selected_options_structs, updated_selected_options}
       else
         sequence_count = Enum.count(selected_options)
 
         new_rel =
           rel_module
           |> struct!()
-          |> Ecto.Changeset.change([{relation_key, value}])
+          |> Ecto.Changeset.change([{relation_fk, value}])
+          |> Map.put(:action, :insert)
           |> maybe_change_sequence?(sequence_count, sequenced?)
 
-        selected_options ++ [new_rel]
+        input_options = socket.assigns.input_options
+        assoc_data = Enum.find(input_options, &(to_string(&1.id) == value))
+
+        selected_option_struct =
+          new_rel
+          |> Ecto.Changeset.apply_changes()
+          |> maybe_add_relation(relation, assoc_data)
+
+        {selected_options_structs ++ [selected_option_struct], selected_options ++ [new_rel]}
       end
 
+    on_change = socket.assigns.on_change
+
+    path =
+      if subform_id do
+        socket.assigns.path ++ [field.field]
+      else
+        [field.field]
+      end
+
+    if relation do
+      on_change.(%{
+        event: "update_entry_relation",
+        path: path,
+        force_live_preview_update: true,
+        updated_relation: selected_options_structs
+      })
+    end
+
     updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
-    selected_options = get_selected_options(updated_changeset, field, relation_type)
 
     # if we have a subform, throw the updated changeset that way
     if subform_id do
@@ -872,17 +951,25 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         updated_changeset: updated_changeset
       )
     else
-      form_id = "#{module.__naming__().singular}_form"
+      # form_id = "#{module.__naming__().singular}_form"
 
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
+      # send_update(BrandoAdmin.Components.Form,
+      #   id: form_id,
+      #   action: :update_changeset,
+      #   changeset: updated_changeset
+      # )
+
+      on_change.(%{
         action: :update_changeset,
+        path: path,
         changeset: updated_changeset
-      )
+      })
     end
 
-    {:noreply,
-     assign(socket, :selected_options, selected_options) |> push_event("b:validate", %{})}
+    socket
+    |> assign(:selected_options, selected_options)
+    |> assign(:selected_options_structs, selected_options_structs)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
@@ -903,8 +990,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply, assign(socket, :creating, false)}
   end
 
+  def maybe_add_relation(struct, nil, _assoc_data), do: struct
+
+  def maybe_add_relation(struct, relation_key, assoc_data) do
+    put_in(struct, [Access.key(relation_key)], assoc_data)
+  end
+
   defp update_relation(changeset, field, updated_relation, relation_type)
        when relation_type in [:has_many, :many_to_many, {:subform, :has_many}] do
+    # TODO: update the "through" relation -- so if we are acting on articles_contributors here,
+    # could we also act on contributors?
+
     Ecto.Changeset.put_assoc(changeset, field, updated_relation)
   end
 

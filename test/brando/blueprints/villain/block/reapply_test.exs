@@ -20,66 +20,61 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               class: "testclass",
               id: "testid",
               level: 3,
-              marked_as_deleted: false,
               placeholder: nil,
               text: "Text"
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "header",
             uid: "1xVOR77rLseKd3RMm0m1Pl"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "h2"
         }
       ],
       vars: []
     }
 
-    original_block = %Brando.Villain.Blocks.ModuleBlock{
+    original_block = %Brando.Content.Block{
       collapsed: false,
-      data: %Brando.Villain.Blocks.ModuleBlock.Data{
-        entries: [],
-        module_id: 1,
-        multi: false,
-        refs: [
-          %Ref{
-            data: %Blocks.HeaderBlock{
-              collapsed: false,
-              data: %Blocks.HeaderBlock.Data{
-                class: nil,
-                id: nil,
-                level: 2,
-                placeholder: nil,
-                text: "Photography"
-              },
-              hidden: false,
-              type: "header",
-              uid: "1xVOTDOvPTUEMeOC6xlunJ"
+      children: [],
+      module_id: 1,
+      multi: false,
+      refs: [
+        %Ref{
+          data: %Blocks.HeaderBlock{
+            collapsed: false,
+            data: %Blocks.HeaderBlock.Data{
+              class: nil,
+              id: nil,
+              level: 2,
+              placeholder: nil,
+              text: "Photography"
             },
-            description: nil,
-            name: "h2"
-          }
-        ],
-        sequence: nil,
-        vars: []
-      },
-      hidden: false,
-      marked_as_deleted: false,
-      type: "module",
+            active: true,
+            type: "header",
+            uid: "1xVOTDOvPTUEMeOC6xlunJ"
+          },
+          description: nil,
+          name: "h2"
+        }
+      ],
+      sequence: nil,
+      vars: [],
+      active: true,
+      type: :module,
       uid: "1xVOTDOushEIQlh7sIihqo"
     }
 
-    reapplied_block_data = Brando.Villain.reapply_module_data(updated_module, original_block.data)
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
-    [orig_header_ref] = original_block.data.refs
+    [orig_header_ref] = original_block.refs
 
     assert orig_header_ref.data.data.level == 2
     assert orig_header_ref.data.data.class == nil
     assert orig_header_ref.data.data.id == nil
 
-    [applied_header_ref] = reapplied_block_data.refs
+    [applied_header_ref] = updated_block.refs
 
     assert applied_header_ref.data.data.level == 3
     assert applied_header_ref.data.data.class == "testclass"
@@ -94,7 +89,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       code:
         "<article b-tpl=\"entrance insight\"{% if wide %} class=\"wide\"{% endif %} style=\"--bg: {{ bg_color }}; --fg: {{ fg_color }}\" data-moonwalk-section data-moonwalk-stage=\"scaleup\">\n  <div class=\"inner\">\n    <a href=\"{{ link_url }}\">\n      <div class=\"bg\" data-moonwalk>\n        {% ref refs.pic %}\n      </div>\n      <div class=\"heading\" data-moonwalk=\"u\">\n        {% ref refs.h2 %}\n      </div>\n    </a>\n  </div>\n</article>",
       deleted_at: nil,
-      entry_template: nil,
       help_text: "Colored box with logo + symbol",
       id: 22,
       inserted_at: ~N[2022-02-07 15:23:25],
@@ -108,17 +102,14 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               class: "testclass",
               id: "testid",
               level: 3,
-              marked_as_deleted: false,
               placeholder: nil,
               text: "Text"
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "header",
             uid: "1xVOR77rLseKd3RMm0m1Pl"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "h2"
         },
         %Ref{
@@ -135,7 +126,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               img_class: "img-class",
               lazyload: true,
               link: nil,
-              marked_as_deleted: false,
               media_queries: nil,
               moonwalk: true,
               path: nil,
@@ -146,13 +136,11 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: nil,
               width: nil
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "picture",
             uid: "1xVOQeu7m5g2KqKRCsVaGn"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "pic"
         }
       ],
@@ -160,130 +148,126 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       svg: nil,
       updated_at: ~N[2022-02-14 12:35:37],
       vars: [
-        %Var.Boolean{
+        %Var{
+          type: :boolean,
           important: true,
           instructions: nil,
           key: "wide",
           label: "Is it wide?",
-          marked_as_deleted: false,
           placeholder: nil,
-          type: "boolean",
-          value: false
+          value_boolean: false
         },
-        %Var.Color{
+        %Var{
+          type: :color,
           important: true,
           instructions: nil,
           key: "bg_color",
           label: "Background color",
-          marked_as_deleted: false,
-          opacity: true,
+          color_opacity: true,
+          color_picker: false,
           palette_id: nil,
-          picker: false,
           placeholder: nil,
-          type: "color",
           value: "#000000"
         }
       ],
       wrapper: false
     }
 
-    original_block = %Brando.Villain.Blocks.ModuleBlock{
-      collapsed: false,
-      data: %Brando.Villain.Blocks.ModuleBlock.Data{
-        entries: [],
-        module_id: 22,
-        multi: false,
-        refs: [
-          %Ref{
-            data: %Blocks.HeaderBlock{
-              collapsed: false,
-              data: %Blocks.HeaderBlock.Data{
-                class: nil,
-                id: nil,
-                level: 2,
-                placeholder: nil,
-                text: "Photography"
-              },
-              hidden: false,
-              type: "header",
-              uid: "1xVOTDOvPTUEMeOC6xlunJ"
-            },
-            description: nil,
-            name: "h2"
-          },
-          %Ref{
-            data: %Brando.Villain.Blocks.PictureBlock{
-              collapsed: false,
-              data: %Brando.Villain.Blocks.PictureBlock.Data{
-                alt: nil,
-                cdn: false,
-                credits: nil,
-                dominant_color: "#685848",
-                focal: %Brando.Images.Focal{x: 50, y: 50},
-                formats: [:jpg, :webp],
-                height: 1575,
-                img_class: nil,
-                lazyload: true,
-                link: nil,
-                media_queries: nil,
-                moonwalk: false,
-                path: "images/site/default/8qti51006g6.jpg",
-                picture_class: nil,
-                placeholder: :svg,
-                sizes: %{
-                  "large" => "images/site/default/large/8qti51006g6.jpg",
-                  "medium" => "images/site/default/medium/8qti51006g6.jpg",
-                  "micro" => "images/site/default/micro/8qti51006g6.jpg",
-                  "small" => "images/site/default/small/8qti51006g6.jpg",
-                  "thumb" => "images/site/default/thumb/8qti51006g6.jpg",
-                  "xlarge" => "images/site/default/xlarge/8qti51006g6.jpg"
-                },
-                srcset: nil,
-                title: nil,
-                width: 2800
-              },
-              hidden: false,
-              type: "picture",
-              uid: "1xVOTDOvSKu2TQIN3ddD3S"
-            },
-            description: nil,
-            name: "pic"
+    original_block = %Brando.Content.Block{
+      uid: "1xVOTDOushEIQlh7sIihqo",
+      refs: [
+        %Ref{
+          name: "h2",
+          description: nil,
+          data: %Blocks.HeaderBlock{
+            uid: "1xVOTDOvPTUEMeOC6xlunJ",
+            type: "header",
+            active: true,
+            collapsed: false,
+            data: %Blocks.HeaderBlock.Data{
+              level: 2,
+              class: nil,
+              id: nil,
+              placeholder: nil,
+              text: "Photography"
+            }
           }
-        ],
-        sequence: nil,
-        vars: [
-          %Var.Boolean{
-            important: true,
-            instructions: nil,
-            key: "wide",
-            label: "Wide?",
-            placeholder: nil,
-            type: "boolean",
-            value: true
-          },
-          %Var.Color{
-            important: true,
-            instructions: nil,
-            key: "bg_color",
-            label: "Background color",
-            opacity: false,
-            palette_id: nil,
-            picker: true,
-            placeholder: nil,
-            type: "color",
-            value: "#FF00FF"
+        },
+        %Ref{
+          name: "pic",
+          description: nil,
+          data: %Brando.Villain.Blocks.PictureBlock{
+            uid: "1xVOTDOvSKu2TQIN3ddD3S",
+            type: "picture",
+            active: true,
+            collapsed: false,
+            data: %Brando.Villain.Blocks.PictureBlock.Data{
+              alt: nil,
+              cdn: false,
+              credits: nil,
+              dominant_color: "#685848",
+              focal: %Brando.Images.Focal{x: 50, y: 50},
+              formats: [:jpg, :webp],
+              height: 1575,
+              img_class: nil,
+              lazyload: true,
+              link: nil,
+              media_queries: nil,
+              moonwalk: false,
+              path: "images/site/default/8qti51006g6.jpg",
+              picture_class: nil,
+              placeholder: :svg,
+              sizes: %{
+                "large" => "images/site/default/large/8qti51006g6.jpg",
+                "medium" => "images/site/default/medium/8qti51006g6.jpg",
+                "micro" => "images/site/default/micro/8qti51006g6.jpg",
+                "small" => "images/site/default/small/8qti51006g6.jpg",
+                "thumb" => "images/site/default/thumb/8qti51006g6.jpg",
+                "xlarge" => "images/site/default/xlarge/8qti51006g6.jpg"
+              },
+              srcset: nil,
+              title: nil,
+              width: 2800
+            }
           }
-        ]
-      },
-      hidden: false,
-      marked_as_deleted: false,
-      type: "module",
-      uid: "1xVOTDOushEIQlh7sIihqo"
+        }
+      ],
+      vars: [
+        %Var{
+          id: 1,
+          key: "wide",
+          label: "Wide?",
+          type: :boolean,
+          value_boolean: true,
+          important: true,
+          instructions: nil,
+          placeholder: nil
+        },
+        %Var{
+          id: 2,
+          key: "bg_color",
+          label: "Background color",
+          type: :color,
+          value: "#FF00FF",
+          color_opacity: false,
+          color_picker: true,
+          palette_id: nil,
+          important: true,
+          instructions: nil,
+          placeholder: nil
+        }
+      ],
+      sequence: nil,
+      children: [],
+      active: true,
+      type: :module,
+      collapsed: false
     }
 
-    reapplied_block_data = Brando.Villain.reapply_module_data(updated_module, original_block.data)
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
-    [orig_header_ref, orig_picture_ref] = original_block.data.refs
+    [orig_header_ref, orig_picture_ref] = original_block.refs
 
     assert orig_header_ref.data.data.level == 2
     assert orig_header_ref.data.data.class == nil
@@ -294,17 +278,17 @@ defmodule Brando.Villain.Block.PictureBlockTest do
     assert orig_picture_ref.data.data.moonwalk == false
     assert orig_picture_ref.data.data.formats == [:jpg, :webp]
 
-    [orig_bool, orig_col] = original_block.data.vars
+    [orig_bool, orig_col] = original_block.vars
 
     assert orig_bool.key == "wide"
     assert orig_bool.label == "Wide?"
-    assert orig_bool.value == true
+    assert orig_bool.value_boolean == true
 
     assert orig_col.value == "#FF00FF"
-    assert orig_col.opacity == false
-    assert orig_col.picker == true
+    assert orig_col.color_opacity == false
+    assert orig_col.color_picker == true
 
-    [applied_header_ref, applied_picture_ref] = reapplied_block_data.refs
+    [applied_header_ref, applied_picture_ref] = updated_block.refs
 
     assert applied_header_ref.data.data.level == 3
     assert applied_header_ref.data.data.class == "testclass"
@@ -327,15 +311,15 @@ defmodule Brando.Villain.Block.PictureBlockTest do
     assert applied_picture_ref.data.data.path == orig_picture_ref.data.data.path
     assert applied_picture_ref.data.data.focal == orig_picture_ref.data.data.focal
 
-    [app_bool, app_col] = reapplied_block_data.vars
+    [app_bool, app_col] = updated_block.vars
 
     assert app_bool.key == "wide"
     assert app_bool.label == "Is it wide?"
-    assert app_bool.value == true
+    assert app_bool.value_boolean == true
 
     assert app_col.value == "#FF00FF"
-    assert app_col.opacity == true
-    assert app_col.picker == false
+    assert app_col.color_opacity == true
+    assert app_col.color_picker == false
   end
 
   test "media block" do
@@ -344,7 +328,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       code:
         "<article b-tpl=\"2 assets\" class=\"gutter\">\n  <div class=\"inner\" data-moonwalk-section>\n    <div class=\"asset\" data-moonwalk=\"u\">\n      {% ref refs.asset1 %}\n    </div>\n    <div class=\"asset\" data-moonwalk=\"u\">\n      {% ref refs.asset2 %}\n    </div>\n  </div>\n</article>",
       deleted_at: nil,
-      entry_template: nil,
       help_text: "Side by side (w/gutter)",
       id: 18,
       inserted_at: ~N[2022-02-10 09:13:27],
@@ -356,7 +339,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
             collapsed: false,
             data: %Brando.Villain.Blocks.MediaBlock.Data{
               available_blocks: ["picture", "video", "svg"],
-              marked_as_deleted: false,
               template_gallery: nil,
               template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
                 alt: nil,
@@ -369,7 +351,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 img_class: nil,
                 lazyload: false,
                 link: nil,
-                marked_as_deleted: false,
                 media_queries: nil,
                 moonwalk: false,
                 path: nil,
@@ -389,7 +370,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 autoplay: true,
                 cover: "false",
                 height: nil,
-                marked_as_deleted: false,
                 opacity: 0,
                 play_button: false,
                 poster: nil,
@@ -402,13 +382,11 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 width: nil
               }
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "media",
             uid: "1xTkuCvHo0eJGOmZ2Tjvd3"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "asset2"
         },
         %Brando.Content.Module.Ref{
@@ -416,7 +394,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
             collapsed: false,
             data: %Brando.Villain.Blocks.MediaBlock.Data{
               available_blocks: ["picture", "video", "svg"],
-              marked_as_deleted: false,
               template_gallery: nil,
               template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
                 alt: nil,
@@ -429,7 +406,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 img_class: nil,
                 lazyload: false,
                 link: nil,
-                marked_as_deleted: false,
                 media_queries: nil,
                 moonwalk: false,
                 path: nil,
@@ -449,7 +425,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 autoplay: true,
                 cover: "false",
                 height: nil,
-                marked_as_deleted: false,
                 opacity: 0,
                 play_button: false,
                 poster: nil,
@@ -462,26 +437,23 @@ defmodule Brando.Villain.Block.PictureBlockTest do
                 width: nil
               }
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "media",
             uid: "1xTktiszs3EAefrkah8P70"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "asset1"
         }
       ],
       sequence: 14,
       svg: nil,
       updated_at: ~N[2022-02-10 15:31:01],
-      vars: nil,
+      vars: [],
       wrapper: false
     }
 
-    original_block_data = %Brando.Villain.Blocks.ModuleBlock.Data{
-      entries: [],
-      marked_as_deleted: false,
+    original_block = %Brando.Content.Block{
+      children: [],
       module_id: 18,
       multi: false,
       refs: [
@@ -499,7 +471,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               img_class: nil,
               lazyload: false,
               link: nil,
-              marked_as_deleted: false,
               media_queries: nil,
               moonwalk: false,
               path: "images/site/default/oe2gq279qr2.jpg",
@@ -517,13 +488,11 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: "<p>Cialux 1521 + Kurz Luxor 396</p>",
               width: 2020
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "picture",
             uid: "1xVLXsKeKyEJlLXro6R7yl"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "asset2"
         },
         %Brando.Content.Module.Ref{
@@ -540,7 +509,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               img_class: nil,
               lazyload: false,
               link: nil,
-              marked_as_deleted: false,
               media_queries: nil,
               moonwalk: false,
               path: "images/site/default/1r74583pobhb.jpg",
@@ -558,25 +526,24 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: "<p>Colorplan Claret + Cialux 1521</p>",
               width: 1854
             },
-            hidden: false,
-            marked_as_deleted: false,
+            active: true,
             type: "picture",
             uid: "1xVLXqrZcSM5HdqRL1Tusv"
           },
           description: nil,
-          marked_as_deleted: false,
           name: "asset1"
         }
       ],
       sequence: nil,
-      vars: nil
+      vars: []
     }
 
-    reapplied_block_data = Brando.Villain.reapply_module_data(updated_module, original_block_data)
+    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
     [mod_ref1, mod_ref2] = updated_module.refs
-    [org_ref1, org_ref2] = original_block_data.refs
-    [new_ref1, new_ref2] = reapplied_block_data.refs
+    [org_ref1, org_ref2] = original_block.refs
+    [new_ref1, new_ref2] = updated_block.refs
 
     assert mod_ref1.data.type == "media"
     assert mod_ref2.data.type == "media"

@@ -17,7 +17,7 @@ defmodule Brando.Content.Palette do
 
   import Brando.Gettext
 
-  identifier "{{ entry.name }}"
+  identifier "[{{ entry.namespace }}] {{ entry.name }}"
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

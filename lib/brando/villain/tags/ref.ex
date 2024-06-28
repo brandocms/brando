@@ -3,12 +3,14 @@ defmodule Brando.Villain.Tags.Ref do
   @behaviour Liquex.Tag
 
   import NimbleParsec
+  alias Ecto.Changeset
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
   alias Brando.Content
 
   @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @container_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
   @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @impl true
@@ -27,11 +29,13 @@ defmodule Brando.Villain.Tags.Ref do
     evaled_ref = Liquex.Argument.eval(ref, context)
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, containers} = Content.list_containers(@container_cache_ttl)
     {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
 
     opts_map =
       %{}
       |> Map.put(:context, context)
+      |> Map.put(:containers, containers)
       |> Map.put(:modules, modules)
       |> Map.put(:palettes, palettes)
 
@@ -51,9 +55,14 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, nil, id, ref_name, _, _),
     do: "<!-- REF #{ref_name} missing // module: #{id}. -->"
 
-  defp render_ref(_, %{hidden: true}, _id, _ref_name, _, _), do: "<!-- h -->"
-  defp render_ref(_, %{data: %{hidden: true}}, _id, _ref_name, _, _), do: "<!-- h -->"
+  defp render_ref(_, %{hidden: true}, _id, ref_name, _, _), do: "<!-- h[[#{ref_name}]] -->"
+  defp render_ref(_, %{data: %{hidden: true}}, _id, ref_name, _, _), do: "<!-- h[#{ref_name}] -->"
+
+  defp render_ref(_, %{data: %{active: false}}, _id, ref_name, _, _),
+    do: "<!-- !a[#{ref_name}] -->"
+
   defp render_ref(_, %{deleted: true}, _id, _ref_name, _, _), do: "<!-- d -->"
+  defp render_ref(_, %{active: false}, _id, _ref_name, _, _), do: "<!-- !a -->"
 
   defp render_ref(parser, %{data: block, description: description}, id, ref_name, true, opts) do
     rendered_ref = apply(parser, String.to_atom(block.type), [block.data, opts])
@@ -63,6 +72,18 @@ defmodule Brando.Villain.Tags.Ref do
       #{rendered_ref}
     </section>
     """
+  end
+
+  defp render_ref(
+         parser,
+         %{data: %Changeset{} = block_cs, description: _description},
+         _id,
+         _ref_name,
+         _,
+         opts
+       ) do
+    block = Changeset.apply_changes(block_cs)
+    apply(parser, String.to_atom(block.type), [block.data, opts])
   end
 
   defp render_ref(parser, %{data: block, description: _description}, _id, _ref_name, _, opts) do

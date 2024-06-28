@@ -15,19 +15,23 @@ defmodule Brando.Content.Template do
 
   import Brando.Gettext
 
-  identifier "{{ entry.name }}"
+  identifier false
+  persist_identifier false
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Villain
+  trait Brando.Trait.Blocks
 
   attributes do
     attribute :name, :string, required: true
     attribute :namespace, :string, required: true
     attribute :instructions, :text
-    attribute :data, :villain
+  end
+
+  relations do
+    relation :blocks, :has_many, module: :blocks
   end
 
   listings do
@@ -67,15 +71,13 @@ defmodule Brando.Content.Template do
 
   forms do
     form do
+      blocks :blocks, label: t("Blocks")
+
       tab t("Content") do
         fieldset size: :half do
           input :name, :text
           input :namespace, :text, monospace: true
           input :instructions, :textarea
-        end
-
-        fieldset size: :full do
-          input :data, :blocks
         end
       end
     end

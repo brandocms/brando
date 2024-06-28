@@ -16,11 +16,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   # prop delete_ref, :event, required: true
   # prop create_var, :event, required: true
   # prop delete_var, :event, required: true
-
-  # prop add_table_template, :event, required: true
-  # prop add_table_row, :event, required: true
-  # prop add_table_col, :event, required: true
-
   # data open_col_vars, :list
 
   def mount(socket) do
@@ -29,7 +24,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign(open_col_vars: [], datasource: false)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
-     |> assign_available_datasources()}
+     |> assign_available_datasources()
+     |> assign_available_parents()
+     |> assign_available_table_templates()}
   end
 
   def update(assigns, socket) do
@@ -42,15 +39,53 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign_available_queries()}
   end
 
+  def assign_available_parents(socket) do
+    {:ok, available_parents} = Brando.Content.list_modules(%{filter: %{parent_id: nil}})
+    assign(socket, :available_parents, available_parents)
+  end
+
+  def assign_available_table_templates(socket) do
+    {:ok, available_table_templates} = Brando.Content.list_table_templates(%{order: "asc name"})
+
+    available_table_templates =
+      Enum.map(available_table_templates, &%{label: &1.name, value: &1.id})
+
+    assign_new(socket, :available_table_templates, fn -> available_table_templates end)
+  end
+
   def render(assigns) do
     ~H"""
     <div class="properties shaded">
       <div class="inner">
+        <Input.radios
+          field={@form[:type]}
+          label={gettext("Type")}
+          opts={[
+            options: [
+              %{label: gettext("Liquid"), value: :liquid},
+              %{label: gettext("Heex"), value: :heex}
+            ]
+          ]}
+        />
         <Input.text field={@form[:name]} label={gettext("Name")} />
         <Input.text field={@form[:namespace]} label={gettext("Namespace")} />
         <Input.textarea field={@form[:help_text]} label={gettext("Help text")} />
         <Input.text field={@form[:class]} label={gettext("Class")} />
         <Input.toggle field={@form[:wrapper]} label={gettext("Wrapper")} />
+
+        <.live_component
+          module={Input.Select}
+          id={"#{@form.id}-parent_id"}
+          field={@form[:parent_id]}
+          opts={[options: @available_parents]}
+        />
+
+        <.live_component
+          module={Input.Select}
+          id={"#{@form.id}-table_template_id"}
+          field={@form[:table_template_id]}
+          opts={[options: @available_table_templates]}
+        />
 
         <%= if !@entry_form do %>
           <div class="button-group">
@@ -150,19 +185,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 |> hide_modal("##{@form.id}-#{@key}-create-ref")
                 |> show_modal("##{@form.id}-#{@key}-ref-0")
               }
-              phx-value-type="table"
-              class="secondary"
-            >
-              Table
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
               phx-value-type="html"
               class="secondary"
             >
@@ -253,22 +275,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       type="button"
                       phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        width="12"
-                        height="12"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="w-6 h-6"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                        />
-                      </svg>
+                      <.icon name="hero-pencil" />
                     </button>
                     <button
                       class="tiny"
@@ -276,22 +283,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       phx-click={@duplicate_ref}
                       phx-value-id={ref[:name].value}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        width="12"
-                        height="12"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="w-6 h-6"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                        />
-                      </svg>
+                      <.icon name="hero-document-duplicate" />
                     </button>
                     <button
                       class="tiny"
@@ -299,22 +291,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       phx-click={@delete_ref}
                       phx-value-id={ref[:name].value}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        width="12"
-                        height="12"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="w-6 h-6"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                        />
-                      </svg>
+                      <.icon name="hero-x-mark" />
                     </button>
                   </div>
                 </Form.inputs_for_block>
@@ -332,6 +309,43 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:text]} label={gettext("Text")} />
                               <Input.text field={block_data[:id]} label={gettext("ID")} />
                               <Input.text field={block_data[:link]} label={gettext("Link")} />
+                            </Form.inputs_for_block>
+                          <% "comment" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-comment-text"}
+                                field={block_data[:text]}
+                                label={gettext("Text")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "html" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-html-code"}
+                                field={block_data[:text]}
+                                label={gettext("HTML")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "markdown" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.code
+                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-markdown-code"}
+                                field={block_data[:text]}
+                                label={gettext("Markdown")}
+                              />
+                            </Form.inputs_for_block>
+                          <% "map" -> %>
+                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
+                              <Input.radios
+                                field={block_data[:source]}
+                                opts={[
+                                  options: [
+                                    %{label: gettext("GMaps"), value: :gmaps}
+                                  ]
+                                ]}
+                                label={gettext("Source")}
+                              />
+                              <Input.text field={block_data[:embed_url]} label={gettext("Embed URL")} />
                             </Form.inputs_for_block>
                           <% "svg" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
@@ -775,134 +789,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:arg]} label={gettext("Arg")} />
                               <Input.text field={block_data[:limit]} label={gettext("Limit")} />
                             </Form.inputs_for_block>
-                          <% "table" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:key]} label={gettext("Key")} />
-                              <Input.textarea
-                                field={block_data[:instructions]}
-                                label={gettext("Instructions")}
-                              />
-
-                              <.inputs_for :let={tpl_row} field={block_data[:template_row]}>
-                                <%= if !tpl_row[:cols].value do %>
-                                  <button
-                                    type="button"
-                                    phx-click={@add_table_template}
-                                    phx-value-id={ref[:name].value}
-                                  >
-                                    Create table row template
-                                  </button>
-                                <% else %>
-                                  <div
-                                    id={"#{@form.id}-refs-#{@key}-table-cols"}
-                                    class="col-vars"
-                                    phx-hook="Brando.Sortable"
-                                    data-sortable-id="sortable-table-cols"
-                                    data-sortable-selector=".col-var"
-                                    data-sortable-handle=".sort-handle"
-                                    data-sortable-params={ref[:name].value}
-                                  >
-                                    <Form.inputs_for_poly :let={var} field={tpl_row[:cols]}>
-                                      <div class="col-var draggable" data-id={var.index}>
-                                        <div
-                                          class="col-var-toggle"
-                                          phx-click={JS.push("toggle_col_var", target: @myself)}
-                                          phx-value-id={var[:key].value}
-                                        >
-                                          <%= var[:type].value %> — <%= inspect(var[:label].value) %>
-                                          <div class="sort-handle">
-                                            <svg
-                                              width="15"
-                                              height="15"
-                                              viewBox="0 0 15 15"
-                                              fill="none"
-                                              xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                              <circle cx="1.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="1.5" r="1.5"></circle>
-                                              <circle cx="1.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="7.5" r="1.5"></circle>
-                                              <circle cx="1.5" cy="13.5" r="1.5"></circle>
-                                              <circle cx="7.5" cy="13.5" r="1.5"></circle>
-                                              <circle cx="13.5" cy="13.5" r="1.5"></circle>
-                                            </svg>
-                                          </div>
-                                        </div>
-                                        <div class={[
-                                          "col-var-form",
-                                          var[:key].value not in @open_col_vars && "hidden"
-                                        ]}>
-                                          <Input.input type={:hidden} field={var[:key]} />
-                                          <Input.input type={:hidden} field={var[:type]} />
-                                          <Input.input type={:hidden} field={var[:important]} />
-                                          <Input.text field={var[:label]} label={gettext("Label")} />
-                                          <Input.text
-                                            field={var[:instructions]}
-                                            label={gettext("Instructions")}
-                                          />
-                                          <Input.text
-                                            field={var[:placeholder]}
-                                            label={gettext("Placeholder")}
-                                          />
-                                          <%= case var[:type].value do %>
-                                            <% "text" -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "string" -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "boolean" -> %>
-                                              <Input.toggle
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "datetime" -> %>
-                                              <Input.datetime
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "html" -> %>
-                                              <Input.rich_text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% "color" -> %>
-                                              <!-- #TODO: Input.color -->
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                            <% _ -> %>
-                                              <Input.text
-                                                field={var[:value]}
-                                                label={gettext("Value")}
-                                              />
-                                          <% end %>
-                                        </div>
-                                      </div>
-                                    </Form.inputs_for_poly>
-                                  </div>
-
-                                  <%= for type <- ["string", "text", "html", "boolean", "datetime", "color"] do %>
-                                    <button
-                                      type="button"
-                                      class="tiny"
-                                      phx-click={@add_table_col}
-                                      phx-value-id={ref[:name].value}
-                                      phx-value-type={type}
-                                    >
-                                      <%= type %>
-                                    </button>
-                                  <% end %>
-                                <% end %>
-                              </.inputs_for>
-                            </Form.inputs_for_block>
                           <% type -> %>
                             No matching block <%= type %> found
                         <% end %>
@@ -934,7 +820,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               phx-value-type="text"
               class="secondary"
             >
-              Text
+              Rich text
             </button>
             <button
               type="button"
@@ -947,19 +833,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="html"
+              phx-value-type="image"
               class="secondary"
             >
-              Html
+              Image
             </button>
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="datetime"
+              phx-value-type="file"
               class="secondary"
             >
-              Datetime
+              File
             </button>
+
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
@@ -979,6 +866,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="link"
+              class="secondary"
+            >
+              Link
+            </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
+              phx-value-type="datetime"
+              class="secondary"
+            >
+              Datetime
+            </button>
+            <button
+              type="button"
+              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
               phx-value-type="color"
               class="secondary"
             >
@@ -987,18 +890,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             <button
               type="button"
               phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="image"
+              phx-value-type="html"
               class="secondary"
             >
-              Image
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="file"
-              class="secondary"
-            >
-              File
+              Html
             </button>
           </div>
         </Content.modal>
@@ -1018,25 +913,29 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           </h2>
           <ul
             id={"#{@form.id}-vars-#{@key}-list"}
-            phx-hook="Brando.Sortable"
+            phx-hook="Brando.SortableAssocs"
             data-sortable-id={"sortable-vars#{@entry_form && "-entry-form" || ""}"}
             data-sortable-selector=".var"
             data-sortable-handle=".sort-handle"
+            data-sortable-dispatch-event="true"
           >
-            <input type="hidden" name={@form[:vars].name} value="" />
-            <Form.inputs_for_poly :let={var} field={@form[:vars]}>
+            <.inputs_for :let={var} field={@form[:vars]} skip_hidden>
+              <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>
+                <.live_component
+                  module={RenderVar}
+                  id={"#{@form.id}-#{@key}-render-var-#{var.index}"}
+                  var={var}
+                  render={:all}
+                  target={@myself}
+                  edit
+                />
+                <!-- ^- had publish -->
+              </Content.modal>
               <li class="var padded sort-handle draggable" data-id={var.index}>
-                <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>
-                  <.live_component
-                    module={RenderVar}
-                    id={"#{@form.id}-#{@key}-render-var-#{var.index}"}
-                    var={var}
-                    render={:all}
-                    target={@myself}
-                    edit
-                    in_block
-                  />
-                </Content.modal>
+                <input type="hidden" name={var[:id].name} value={var[:id].value} />
+                <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
+                <input type="hidden" name={"#{@form.name}[sort_var_ids][]"} value={var.index} />
+
                 <span class="text-mono">
                   <%= var[:type].value %> - &lcub;&lcub; <%= var[:key].value %> &rcub;&rcub;
                 </span>
@@ -1046,22 +945,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     type="button"
                     phx-click={show_modal("##{@form.id}-#{@key}-var-#{var.index}")}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-6 h-6"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                      />
-                    </svg>
+                    <.icon name="hero-pencil" />
                   </button>
                   <button
                     class="tiny"
@@ -1069,49 +953,21 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                     phx-click={@duplicate_var}
                     phx-value-id={var[:key].value}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-6 h-6"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                      />
-                    </svg>
+                    <.icon name="hero-document-duplicate" />
                   </button>
                   <button
                     class="tiny"
                     type="button"
-                    phx-click={@delete_var}
-                    phx-value-id={var[:key].value}
+                    phx-click={JS.dispatch("change")}
+                    name={"#{@form.name}[drop_var_ids][]"}
+                    value={var.index}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-6 h-6"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                      />
-                    </svg>
+                    <.icon name="hero-x-mark" />
                   </button>
                 </div>
               </li>
-            </Form.inputs_for_poly>
+            </.inputs_for>
+            <input type="hidden" name={"#{@form.name}[drop_var_ids][]"} />
           </ul>
         </div>
 
@@ -1127,7 +983,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             />
 
             <Input.radios
-              :if={@form[:datasource_module].value}
               field={@form[:datasource_type]}
               label={gettext("Type")}
               opts={[
@@ -1189,7 +1044,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
       all_available_queries_by_type = Map.get(all_available_queries, type, [])
 
       available_queries_as_options =
-        Enum.map(all_available_queries_by_type, &%{label: to_string(&1), value: &1})
+        Enum.map(
+          all_available_queries_by_type,
+          &%{label: to_string(&1), value: &1}
+        )
 
       assign(socket, :available_queries, available_queries_as_options)
     else

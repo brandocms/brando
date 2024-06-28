@@ -127,8 +127,8 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.field.form.source
 
-    default = %Brando.Content.Var.Boolean{
-      type: "boolean",
+    default = %Brando.Content.Var{
+      type: :boolean,
       label: "Label",
       key: "key",
       value: true

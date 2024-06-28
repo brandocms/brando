@@ -1,5 +1,6 @@
 .gallery-images {
-  @row 3/wrap/1;
+  @display flex/row/wrap;
+  @space gap 1;
 
   .gallery-image {
     @column 4/12;
@@ -27,6 +28,11 @@
       border-radius: 50%;
       top: 5px;
       padding: 6px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 250ms ease;
 
       svg {
         stroke: black;

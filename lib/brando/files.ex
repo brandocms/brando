@@ -98,6 +98,11 @@ defmodule Brando.Files do
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
+        [type, schema, "function", fn_string] when type in ["file"] ->
+          schema_module = Module.concat([schema])
+          fn_atom = String.to_atom(fn_string)
+          apply(schema_module, fn_atom, [])
+
         [type, schema, field_name] when type in ["file"] ->
           schema_module = Module.concat([schema])
 

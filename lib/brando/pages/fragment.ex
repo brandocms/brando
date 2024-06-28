@@ -24,10 +24,11 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
-  trait Brando.Trait.Villain
-  trait Brando.Trait.Villain.PreventCircularReferences
+  trait Brando.Trait.Blocks
+  trait Brando.Trait.Blocks.PreventCircularReferences
 
-  identifier "{{ entry.title }}"
+  identifier "[{{ entry.parent_key }}/{{ entry.key }}] {{ entry.title }}"
+  persist_identifier false
 
   @derived_fields ~w(
     id
@@ -35,8 +36,6 @@ defmodule Brando.Pages.Fragment do
     parent_key
     key
     language
-    data
-    html
     wrapper
     sequence
     creator_id
@@ -52,12 +51,12 @@ defmodule Brando.Pages.Fragment do
     attribute :title, :string
     attribute :parent_key, :string, required: true
     attribute :key, :string, required: true
-    attribute :data, :villain
     attribute :wrapper, :string
   end
 
   relations do
     relation :page, :belongs_to, module: Brando.Pages.Page
+    relation :blocks, :has_many, module: :blocks
   end
 
   translations do
@@ -70,6 +69,8 @@ defmodule Brando.Pages.Fragment do
   forms do
     form do
       redirect_on_save &__MODULE__.redirect/3
+
+      blocks :blocks, label: t("Blocks")
 
       tab "Content" do
         fieldset size: :full do
@@ -93,10 +94,6 @@ defmodule Brando.Pages.Fragment do
         fieldset size: :half do
           input :language, :select, options: :languages, narrow: true
           input :page_id, :select, options: &__MODULE__.get_pages/2, resetable: true
-        end
-
-        fieldset size: :full do
-          input :data, :blocks, label: t("Content")
         end
       end
 
@@ -126,14 +123,14 @@ defmodule Brando.Pages.Fragment do
 
   defimpl Phoenix.HTML.Safe do
     def to_iodata(%{wrapper: nil} = fragment) do
-      fragment.html
+      fragment.rendered_blocks
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end
 
     def to_iodata(%{wrapper: wrapper} = fragment) do
       wrapper
-      |> String.replace("{{ content }}", fragment.html)
+      |> String.replace("{{ content }}", fragment.rendered_blocks)
       |> String.replace("{{ parent_key }}", fragment.parent_key)
       |> String.replace("{{ key }}", fragment.key)
       |> String.replace("{{ language }}", to_string(fragment.language))

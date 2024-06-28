@@ -143,7 +143,7 @@ defmodule Brando.Plug.HTML do
       Enum.reduce(entry.alternate_entries, [], fn
         %{status: :published} = alt, acc ->
           case Brando.HTML.absolute_url(alt) do
-            "<no valid url found>" ->
+            nil ->
               log_no_valid_hreflang(alt)
               acc
 
@@ -156,7 +156,7 @@ defmodule Brando.Plug.HTML do
 
         alt, acc ->
           case Brando.HTML.absolute_url(alt) do
-            "<no valid url found>" ->
+            nil ->
               log_no_valid_hreflang(alt)
               acc
 

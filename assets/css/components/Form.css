@@ -1,8 +1,6 @@
 .brando-form {
   display: flex;
-  @responsive $mobile {
-    flex-direction: column;
-  }
+  flex-direction: row;
 
   .form-content {
     flex-shrink: 1;
@@ -116,6 +114,10 @@
     border: none;
     width: 100%;
 
+    &.full, &.half, &.sized {
+      margin-bottom: 25px;
+    }
+
     &.inline {
       display: flex;
       flex-wrap: nowrap;
@@ -131,11 +133,17 @@
     }
   }
 
-
+.brando-input:last-of-type .field-wrapper {
+  margin-bottom: 0;
+}
 
 .brando-input[data-size="full"] {
   width: 100%;
   clear: both;
+}
+
+.brando-input[data-component="hidden"] {
+  display: none;
 }
 
 .brando-input[data-size="half"] {
@@ -161,10 +169,8 @@
   }
   
   .row {
-    @responsive >=ipad_portrait {
-      @grid;
-    }
-    
+    display: grid;
+    @space grid-column-gap 1;
     grid-template-columns: repeat(16, minmax(0px, 1fr));
     grid-template-rows: min-content;
 
@@ -236,6 +242,7 @@
   height: 34px;
   position: relative;
   width: 60px;
+  border: none;
 
   &.toggled {
     .slider {
@@ -295,19 +302,18 @@
 
   &.inverse {
     .slider {
-      background-color: #4a4a4a;
-      
+      background-color: #bc3d3d;
       &:before {
-        transform: translateX(0);
+        transform: translateX(10px);
       }
     }
-
+    
     input[type="checkbox"]:checked + .slider {
-      background-color: #bc3d3d;
+      background-color: #adadad;
     }
-
+    
     input[type="checkbox"]:checked + .slider:before {
-      transform: translateX(10px);
+      transform: translateX(0);
     }
   }
 
@@ -384,7 +390,7 @@
   align-items: center;
   top: 5px;
   position: sticky;
-  z-index: 99;
+  z-index: 2;
   @space padding-x 15px;
 
   @responsive $mobile {
@@ -551,5 +557,5 @@
   margin-left: 6px;
   background-color: white;
   border-radius: 6px;
-  padding: 2px;
+  padding: 4px 3px;
 }

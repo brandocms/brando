@@ -82,8 +82,6 @@ defmodule Brando.Datasource do
   end
     ```
 
-  The `order_by: fragment(...)` sorts the returned results in the same order as the supplied `ids`
-
   ## Example
 
   In your schema:
@@ -256,19 +254,15 @@ defmodule Brando.Datasource do
     end
   end
 
+  defmacro selection(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
+    raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+  end
+
+  defmacro selection(_, _, {_, _, [{_, _, [[_, _], _]}]}) do
+    raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
+  end
+
   defmacro selection(key, list_fun, get_fun) do
-    {_, _, [{_, _, [list_args, _]}]} = list_fun
-
-    if Enum.count(list_args) == 2 do
-      raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
-    end
-
-    {_, _, [{_, _, [get_args, _]}]} = get_fun
-
-    if Enum.count(get_args) == 2 do
-      raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
-    end
-
     quote do
       Module.put_attribute(__MODULE__, :datasources_selection, unquote(key))
 
@@ -335,9 +329,8 @@ defmodule Brando.Datasource do
   @doc """
   Get selection by [ids] from database
   """
-  def get_selection(_module_binary, _query, nil) do
-    {:ok, []}
-  end
+  def get_selection(_module_binary, _query, []), do: {:ok, []}
+  def get_selection(_module_binary, _query, nil), do: {:ok, []}
 
   def get_selection(module_binary, query, ids) do
     module = Module.concat([module_binary])
@@ -358,79 +351,13 @@ defmodule Brando.Datasource do
   """
   def update_datasource(datasource_module, entry \\ nil) do
     if is_datasource(datasource_module) do
-      villains = Villain.list_villains()
-
-      Enum.each(villains, fn {schema, fields} ->
-        Enum.map(fields, &parse_fields(datasource_module, &1, schema))
-      end)
+      datasource_module
+      |> Villain.list_block_ids_using_datamodule()
+      |> Villain.reject_blocks_belonging_to_entry(entry)
+      |> Villain.enqueue_entry_map_for_render()
     end
 
     {:ok, entry}
-  end
-
-  defp parse_fields(datasource_module, {:villain, data_field, html_field}, schema) do
-    process_field(schema, datasource_module, data_field, html_field)
-  end
-
-  defp parse_fields(datasource_module, field, schema) do
-    process_field(
-      schema,
-      datasource_module,
-      field.name,
-      Villain.get_html_field(schema, field).name
-    )
-  end
-
-  defp process_field(schema, datasource_module, data_field, html_field) do
-    ids = list_ids_with_datamodule(schema, datasource_module, data_field)
-
-    unless Enum.empty?(ids) do
-      Villain.rerender_html_from_ids({schema, data_field, html_field}, ids)
-    end
-  end
-
-  @doc """
-  List ids of `schema` records that has a datasource matching schema OR
-  a module containing a datasource matching schema.
-  """
-  def list_ids_with_datamodule(schema, datasource, data_field \\ :data)
-
-  def list_ids_with_datamodule(
-        schema,
-        {datasource_module, datasource_type, datasource_query},
-        data_field
-      ) do
-    # find all content modules with this datasource
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module),
-          datasource_type: to_string(datasource_type),
-          datasource_query: to_string(datasource_query)
-        },
-        select: [:id]
-      })
-
-    module_ids = Enum.map(modules, & &1.id)
-
-    Brando.Villain.list_ids_with_modules(schema, data_field, module_ids)
-  end
-
-  def list_ids_with_datamodule(schema, datasource_module, data_field) do
-    # find all content modules with this datasource
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module)
-        },
-        select: [:id]
-      })
-
-    module_ids = Enum.map(modules, & &1.id)
-
-    Brando.Villain.list_ids_with_modules(schema, data_field, module_ids)
   end
 
   @doc """

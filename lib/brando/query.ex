@@ -191,13 +191,11 @@ defmodule Brando.Query do
     pluralized_schema = module.__naming__().plural
 
     quote do
-      @spec unquote(:"list_#{pluralized_schema}!")(map(), boolean) :: list()
       def unquote(:"list_#{pluralized_schema}!")(args \\ %{}, stream \\ false) do
         {:ok, entries} = unquote(:"list_#{pluralized_schema}")(args, stream)
         entries
       end
 
-      @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list()}
       def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
@@ -294,7 +292,6 @@ defmodule Brando.Query do
                 |> unquote(block).()
                 |> limit(1)
                 |> Brando.repo().one()
-                |> Brando.Query.maybe_force_villain(args_without_cache)
                 |> case do
                   nil ->
                     {:error, {unquote(singular_schema_atom), :not_found}}
@@ -330,7 +327,6 @@ defmodule Brando.Query do
                 |> unquote(block).()
                 |> limit(1)
                 |> Brando.repo().one()
-                |> Brando.Query.maybe_force_villain(args_without_cache)
                 |> case do
                   nil -> {:error, {unquote(singular_schema_atom), :not_found}}
                   result -> {:ok, result}
@@ -857,30 +853,6 @@ defmodule Brando.Query do
     end
   end
 
-  @doc """
-  If force_villain: true, then parse entry's data fields and stick
-  them in the html fields.
-  """
-  def maybe_force_villain(nil, _), do: nil
-
-  def maybe_force_villain(entry, %{force_villain: true}) do
-    blueprint = entry.__struct__
-
-    Enum.reduce(blueprint.__villain_fields__, entry, fn v, updated_entry ->
-      %{name: html_field} = Brando.Villain.get_html_field(blueprint, %{name: v.name})
-
-      villain_data = Map.get(updated_entry, v.name)
-
-      Map.put(
-        updated_entry,
-        html_field,
-        Brando.Villain.parse(villain_data, updated_entry)
-      )
-    end)
-  end
-
-  def maybe_force_villain(entry, _), do: entry
-
   # only build pagination_meta if offset & limit is set
   def maybe_build_pagination_meta(query, %{paginate: true, limit: 0}) do
     total_entries = get_total_entries(query)
@@ -1005,5 +977,23 @@ defmodule Brando.Query do
     entry
     |> Brando.repo().delete()
     |> Cache.Query.evict()
+  end
+
+  @doc """
+  Get entry with all possible preloads
+  """
+  def get_entry(schema, id) do
+    ctx = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    opts =
+      if schema.has_trait(Brando.Trait.SoftDelete) do
+        %{matches: %{id: id}, with_deleted: true}
+      else
+        %{matches: %{id: id}}
+      end
+
+    opts = Map.put(opts, :preload, Brando.Blueprint.preloads_for(schema))
+    apply(ctx, :"get_#{singular}", [opts])
   end
 end

@@ -225,7 +225,7 @@
     z-index: 12;
     position: absolute;
     padding: 15px;
-    border-radius: 15px;
+    border-radius: 12px;
     background: rgba(255, 0, 0, .6);
     box-shadow: inset 0 0 3px rgba(0, 0, 0, .5);
     border: 1px solid #fff;
@@ -254,7 +254,7 @@
     background-color: var(--brando-color-peach);
     margin-bottom: 10px;
     padding: 7px;
-    border-radius: 15px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     font-size: 14px;

@@ -7,8 +7,10 @@ defmodule Brando.Meta do
     plural: "metas",
     gettext_module: Brando.Gettext
 
-  data_layer :embedded
-  identifier "{{ entry.key }}"
+  data_layer :embedded1
+
+  identifier false
+  persist_identifier false
 
   attributes do
     attribute :key, :string, required: true

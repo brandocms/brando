@@ -81,11 +81,25 @@ defmodule BrandoAdmin.Components.Content do
         )
       end
 
-    assigns = assign(assigns, :path, path)
+    focal = assigns.image && Map.get(assigns.image, :focal, %{x: 50, y: 50})
+
+    assigns =
+      assigns
+      |> assign(:path, path)
+      |> assign(:focal, focal)
 
     ~H"""
     <%= if @image do %>
-      <img width={@image.width} height={@image.height} src={@path} />
+      <div class="image-content">
+        <img
+          width={@image.width}
+          height={@image.height}
+          src={@path}
+          data-focal-x={@focal.x}
+          data-focal-y={@focal.y}
+          style={"object-position: #{@focal.x}% #{@focal.y}%;"}
+        />
+      </div>
     <% else %>
       <div class="img-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -117,7 +131,8 @@ defmodule BrandoAdmin.Components.Content do
         "modal",
         @narrow && "narrow",
         @medium && "medium",
-        @wide && "wide"
+        @wide && "wide",
+        @show && "visible"
       ]}
       phx-window-keydown={hide_modal("##{@id}")}
       phx-key="escape"

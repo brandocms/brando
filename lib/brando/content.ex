@@ -30,11 +30,31 @@ defmodule Brando.Content do
   use Brando.Query
   import Ecto.Query
 
+  alias Brando.Content.Block
+  alias Brando.Content.Container
   alias Brando.Content.Module
   alias Brando.Content.Palette
+  alias Brando.Content.TableTemplate
   alias Brando.Content.Template
-  alias Brando.Content.Var
   alias Brando.Villain
+
+  query :list, Block, do: fn query -> from(q in query) end
+
+  filters Block do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+
+      {:class, class}, query ->
+        from(q in query, where: ilike(q.class, ^"%#{class}%"))
+
+      {:module_id, module_id}, query ->
+        from(q in query, where: q.module_id == ^module_id)
+
+      {:ids, ids}, query ->
+        from(q in query, where: q.id in ^ids)
+    end
+  end
 
   query(:list, Module, do: fn query -> from(q in query) end)
 
@@ -48,6 +68,12 @@ defmodule Brando.Content do
 
       {:ids, ids}, query ->
         from(q in query, where: q.id in ^ids)
+
+      {:parent_id, nil}, query ->
+        from(q in query, where: is_nil(q.parent_id))
+
+      {:parent_id, parent_id}, query ->
+        from(q in query, where: q.parent_id == ^parent_id)
 
       {:namespace, namespace}, query ->
         query =
@@ -116,7 +142,7 @@ defmodule Brando.Content do
 
   mutation :update, Module do
     fn entry ->
-      Villain.update_module_in_fields(entry.id)
+      Villain.render_entries_with_module_id(entry.id)
 
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
@@ -128,8 +154,17 @@ defmodule Brando.Content do
     end
   end
 
-  mutation(:delete, Module)
-  mutation(:duplicate, {Module, change_fields: [:name, :class]})
+  mutation :delete, Module
+
+  mutation :duplicate,
+           {Module, change_fields: [:name, :class, vars: &__MODULE__.duplicate_vars/2]}
+
+  def duplicate_vars(entry, _) do
+    entry
+    |> Brando.repo().preload(:vars)
+    |> Map.get(:vars)
+    |> Enum.map(&Map.put(&1, :id, nil))
+  end
 
   @doc """
   Find module with `id` in `modules`
@@ -139,6 +174,18 @@ defmodule Brando.Content do
     |> Enum.find(&(&1.id == id))
     |> case do
       nil -> {:error, {:module, :not_found, id}}
+      mod -> {:ok, mod}
+    end
+  end
+
+  @doc """
+  Find container with `id` in `containers`
+  """
+  def find_container(containers, id) do
+    containers
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, {:container, :not_found, id}}
       mod -> {:ok, mod}
     end
   end
@@ -204,16 +251,16 @@ defmodule Brando.Content do
   end
 
   mutation :update, Palette do
-    fn entry ->
-      Villain.update_palette_in_fields(entry.id)
+    fn palette ->
+      Villain.render_entries_with_palette_id(palette.id)
       Brando.Cache.Palettes.set()
 
-      {:ok, entry}
+      {:ok, palette}
     end
   end
 
-  mutation(:delete, Palette)
-  mutation(:duplicate, {Palette, change_fields: [:name, :key]})
+  mutation :delete, Palette
+  mutation :duplicate, {Palette, change_fields: [:name, :key]}
 
   @doc """
   Find palette with `id` in `palettes`
@@ -289,10 +336,72 @@ defmodule Brando.Content do
     end
   end
 
-  mutation(:create, Template)
-  mutation(:update, Template)
-  mutation(:delete, Template)
-  mutation(:duplicate, {Template, change_fields: [:name]})
+  mutation :create, Template
+  mutation :update, Template
+  mutation :delete, Template
+  mutation :duplicate, {Template, change_fields: [:name]}
+
+  ## Table Templates
+  ##
+
+  query(:list, TableTemplate, do: fn query -> from(q in query) end)
+
+  filters TableTemplate do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+    end
+  end
+
+  query(:single, TableTemplate, do: fn query -> from(q in query) end)
+
+  matches TableTemplate do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:name, name}, query ->
+        from(t in query,
+          where: t.name == ^name
+        )
+    end
+  end
+
+  mutation :create, TableTemplate
+  mutation :update, TableTemplate
+  mutation :delete, TableTemplate
+  mutation :duplicate, {TableTemplate, change_fields: [:name]}
+
+  ## Containers
+  ##
+
+  query(:list, Container, do: fn query -> from(q in query) end)
+
+  filters Container do
+    fn
+      {:name, name}, query ->
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+    end
+  end
+
+  query(:single, Container, do: fn query -> from(q in query) end)
+
+  matches Container do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:name, name}, query ->
+        from(t in query,
+          where: t.name == ^name
+        )
+    end
+  end
+
+  mutation :create, Container
+  mutation :update, Container
+  mutation :delete, Container
+  mutation :duplicate, {Container, change_fields: [:name]}
 
   def list_identifiers do
     query =
@@ -421,10 +530,22 @@ defmodule Brando.Content do
       true -> {:ok, :has_identifier}
       false -> {:error, :no_identifier}
     end
+  rescue
+    UndefinedFunctionError -> {:error, :no_identifier}
+  end
+
+  def persist_identifier(module) do
+    case module.__persist_identifier__ do
+      true -> {:ok, :persist_identifier}
+      false -> {:error, :ignore_identifier}
+    end
+  rescue
+    UndefinedFunctionError -> {:error, :no_identifier}
   end
 
   def delete_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
       Brando.repo().delete(identifier)
     else
@@ -440,7 +561,8 @@ defmodule Brando.Content do
   def create_identifier(Brando.Images.Image, _entry), do: {:ok, false}
 
   def create_identifier(module, entry) do
-    with {:ok, :has_identifier} <- has_identifier(module) do
+    with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module) do
       new_identifier = module.__identifier__(entry)
       changeset = Ecto.Changeset.change(new_identifier)
 
@@ -457,6 +579,7 @@ defmodule Brando.Content do
 
   def update_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
+         {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
       new_identifier = module.__identifier__(entry)
       language = new_identifier.language && to_string(new_identifier.language)
@@ -466,7 +589,8 @@ defmodule Brando.Content do
         language: language,
         status: new_identifier.status,
         cover: new_identifier.cover,
-        updated_at: new_identifier.updated_at
+        updated_at: new_identifier.updated_at,
+        url: new_identifier.url
       }
 
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
@@ -478,6 +602,32 @@ defmodule Brando.Content do
       _err ->
         {:ok, false}
     end
+  end
+
+  def get_identifier(id) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.id == ^id,
+        limit: 1
+      )
+
+    case Brando.repo().one(query) do
+      nil ->
+        {:error, {:identifier, :not_found}}
+
+      identifier ->
+        {:ok, identifier}
+    end
+  end
+
+  def get_identifier!(id) do
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.id == ^id,
+        limit: 1
+      )
+
+    Brando.repo().one(query)
   end
 
   def get_identifier(module, entry) do
@@ -496,14 +646,12 @@ defmodule Brando.Content do
     end
   end
 
-  def get_var_by_type(var_type), do: Keyword.get(Var.types(), var_type)
-
-  def render_var(%{type: "string", value: value}), do: value
-  def render_var(%{type: "text", value: value}), do: value
-  def render_var(%{type: "boolean", value: value}), do: value || false
-  def render_var(%{type: "html", value: value}), do: value
-  def render_var(%{type: "color", value: value}), do: value
-  def render_var(%{type: "select", value: value, default: default}), do: value || default
+  def render_var(%{type: :string, value: value}), do: value
+  def render_var(%{type: :text, value: value}), do: value
+  def render_var(%{type: :boolean, value_boolean: value}), do: value || false
+  def render_var(%{type: :html, value: value}), do: value
+  def render_var(%{type: :color, value: value}), do: value
+  def render_var(%{type: :select, value: value, default: default}), do: value || default
 
   @doc """
   Trims encoded module string, base decodes and converts to terms

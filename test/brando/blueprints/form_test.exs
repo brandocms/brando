@@ -5,6 +5,14 @@ defmodule Brando.Blueprint.FormsTest do
     assert Brando.BlueprintTest.Project.__form__() ==
              %Brando.Blueprint.Forms{
                name: :default,
+               blocks: [
+                 %Brando.Blueprint.Forms.Input{
+                   name: :blocks,
+                   type: :blocks,
+                   template: nil,
+                   opts: []
+                 }
+               ],
                tabs: [
                  %Brando.Blueprint.Forms.Tab{
                    fields: [
@@ -54,12 +62,6 @@ defmodule Brando.Blueprint.FormsTest do
                              }
                            ],
                            listing: nil
-                         },
-                         %Brando.Blueprint.Forms.Input{
-                           name: :data,
-                           opts: [],
-                           template: nil,
-                           type: :blocks
                          }
                        ],
                        size: :full,
@@ -85,12 +87,6 @@ defmodule Brando.Blueprint.FormsTest do
            ) ==
              "Properties"
 
-    assert Brando.Blueprint.Forms.get_tab_for_field(
-             :data,
-             Brando.BlueprintTest.Project.__form__()
-           ) ==
-             "Properties"
-
     # get the first one if we don't find the tab
     assert Brando.Blueprint.Forms.get_tab_for_field(
              :non_existing,
@@ -102,6 +98,14 @@ defmodule Brando.Blueprint.FormsTest do
     assert Brando.BlueprintTest.Project.__forms__() == [
              %Brando.Blueprint.Forms{
                name: :default,
+               blocks: [
+                 %Brando.Blueprint.Forms.Input{
+                   name: :blocks,
+                   type: :blocks,
+                   template: nil,
+                   opts: []
+                 }
+               ],
                tabs: [
                  %Brando.Blueprint.Forms.Tab{
                    fields: [
@@ -151,12 +155,6 @@ defmodule Brando.Blueprint.FormsTest do
                              }
                            ],
                            listing: nil
-                         },
-                         %Brando.Blueprint.Forms.Input{
-                           name: :data,
-                           opts: [],
-                           template: nil,
-                           type: :blocks
                          }
                        ],
                        size: :full,

@@ -7,7 +7,8 @@ defmodule Brando.Config do
     plural: "configs",
     gettext_module: Brando.Gettext
 
-  identifier "<< config struct >>"
+  identifier false
+  persist_identifier false
 
   attributes do
     attribute :lockdown_enabled, :boolean, default: false

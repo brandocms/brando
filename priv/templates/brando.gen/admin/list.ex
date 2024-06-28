@@ -1,4 +1,4 @@
-defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular) %>ListLive do
+defmodule <%= app_module %>Admin.<%= domain %>.<%= camel_singular %>ListLive do
   use BrandoAdmin.LiveView.Listing, schema: <%= inspect schema_module %>
   alias BrandoAdmin.Components.Content
   import <%= admin_module %>.Gettext, warn: false

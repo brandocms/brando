@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Pages.PageFragmentCreateLive do
+defmodule BrandoAdmin.Pages.FragmentCreateLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Fragment
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -10,10 +10,10 @@ defmodule BrandoAdmin.Pages.PageFragmentCreateLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Create fragment")} />
+    <Content.header title={gettext("Create fragment")} />
 
-    <.live_component module={Form}
+    <.live_component
+      module={Form}
       id="fragment_form"
       current_user={@current_user}
       schema={@schema}

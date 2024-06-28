@@ -20,6 +20,20 @@
       margin-left: 15px;
     }
   }
+
+  button.clear-color {
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    margin-left: 10px;
+    opacity: 0.4;
+    transition: opacity 0.3s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 }
 
 [data-picker] .picker {

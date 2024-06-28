@@ -3,11 +3,13 @@ defmodule Brando.Blueprint.Listings.Components do
   Components to use in listings
   """
   use Phoenix.Component
-
+  import Brando.HTML, only: [icon: 1]
+  alias BrandoAdmin.Components.ChildrenButton
   alias BrandoAdmin.Components.Content
 
   attr :class, :any, default: nil
   attr :padded, :boolean, default: false
+  attr :circular, :boolean, default: false
   attr :image, :map, required: true
   attr :columns, :integer, required: true
   attr :size, :atom, default: :thumb
@@ -18,6 +20,7 @@ defmodule Brando.Blueprint.Listings.Components do
     <div class={[
       @class,
       @padded && "padded",
+      @circular && "circular",
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>
@@ -31,18 +34,22 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :offset, :integer, default: nil
 
   def url(assigns) do
-    assigns = assign(assigns, :status, Map.get(assigns.entry, :status))
+    entry = assigns.entry
+
+    assigns =
+      assigns
+      |> assign(:status, Map.get(assigns.entry, :status))
+      |> assign(:href, Brando.HTML.absolute_url(entry))
 
     ~H"""
     <div class={[
       @class,
       "col-1",
+      "url",
       @offset && "offset-#{@offset}"
     ]}>
-      <a :if={@status == :published} href={Brando.HTML.absolute_url(@entry)} target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-          <path fill="none" d="M0 0h24v24H0z" /><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z" />
-        </svg>
+      <a :if={@status == :published} href={@href} target="_blank">
+        <.icon name="hero-link" />
       </a>
     </div>
     """
@@ -78,6 +85,31 @@ defmodule Brando.Blueprint.Listings.Components do
         <%= render_slot(@inner_block) %>
       </.link>
       <%= render_slot(@outside) %>
+    </div>
+    """
+  end
+
+  attr :class, :any, default: nil
+  attr :entry, :map, required: true
+  attr :fields, :list, required: true
+  attr :columns, :integer, default: 1
+  attr :offset, :integer, default: nil
+  slot :default
+  slot :outside
+
+  def children_button(assigns) do
+    ~H"""
+    <div class={[
+      @class,
+      @columns && "col-#{@columns}",
+      @offset && "offset-#{@offset}"
+    ]}>
+      <.live_component
+        module={ChildrenButton}
+        id={"#{@entry.id}-children-button"}
+        fields={@fields}
+        entry={@entry}
+      />
     </div>
     """
   end

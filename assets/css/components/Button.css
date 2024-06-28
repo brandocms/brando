@@ -241,10 +241,15 @@ button.tiny, a.tiny {
       }
     }
   }
+  span[class^="hero-"] {
+    width: 12px;
+    height: 12px;
+  }
 }
 
 .submit-button {
   @space margin-top 30px;
+  width: fit-content;
 }
 
 .add-entry-button {

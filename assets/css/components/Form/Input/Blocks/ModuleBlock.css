@@ -1,4 +1,4 @@
-.module-block {
+.block {
   .important-vars {
     background-color: var(--brando-color-peach);
     padding: 15px;
@@ -26,13 +26,17 @@
 
   .rendered-variable {
     @font mono;
-    background-color: #f2f2f2;
+    background-color: #fafafa;
     padding: 14px 16px;
     width: fit-content;
-    border-radius: 15px;
+    border-radius: 12px;
     display: inline-block;
     margin-top: 5px;
     margin-bottom: 5px;
+    text-wrap: balance;
+    &:empty {
+      display: none;
+    }
   }
 
   .modal-content {

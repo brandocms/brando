@@ -45,8 +45,16 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     file = assigns.field.value
 
     file_name =
-      (is_map(file) && !is_struct(file, Ecto.Association.NotLoaded) && file.filename) ||
-        "<unknown>"
+      cond do
+        is_map(file) && !is_struct(file, Ecto.Association.NotLoaded) ->
+          file.filename
+
+        is_struct(file, Ecto.Changeset) ->
+          Ecto.Changeset.get_field(file, :filename)
+
+        true ->
+          "<unknown>"
+      end
 
     {:ok,
      socket
@@ -71,22 +79,17 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         label={@label}
         instructions={@instructions}
         class={@class}
-        relation>
+        relation
+      >
         <div>
           <div class="input-file">
-            <%= if @file && !is_struct(@file, Ecto.Association.NotLoaded) && @file.filename do %>
-              <.file_preview
-                file={@file}
-                field={@field}
-                relation_field={@relation_field}
-                click={open_file(@myself)}
-                file_name={@file_name} />
-            <% else %>
-              <.empty_preview
-                field={@field}
-                relation_field={@relation_field}
-                click={open_file(@myself)} />
-            <% end %>
+            <.file_preview
+              file={@file}
+              field={@field}
+              relation_field={@relation_field}
+              click={open_file(@myself)}
+              file_name={@file_name}
+            />
           </div>
         </div>
       </Form.field_base>
@@ -163,17 +166,20 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def empty_preview(assigns) do
     ~H"""
     <div class="file-preview-empty">
-      <Input.input type={:hidden} field={@relation_field} value={""} />
+      <Input.input type={:hidden} field={@relation_field} value="" />
 
       <div>
-        <%= gettext "No file associated with field" %>
+        <%= gettext("No file associated with field") %>
       </div>
 
       <button
         class="btn-small"
         type="button"
         phx-click={@click}
-        phx-value-id={"edit-file-#{@field.id}"}><%= gettext "Add file" %></button>
+        phx-value-id={"edit-file-#{@field.id}"}
+      >
+        <%= gettext("Add file") %>
+      </button>
     </div>
     """
   end
@@ -182,23 +188,53 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   Show preview if we have a file with a filename
   """
   def file_preview(assigns) do
-    assigns = assign_new(assigns, :value, fn -> nil end)
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:publish, fn -> false end)
+      |> assign_new(:file_id, fn ->
+        if assigns[:file] do
+          assigns[:file].id
+        end
+      end)
 
     ~H"""
     <div class="file-preview">
-      <Input.input type={:hidden} field={@relation_field} value={@value || @file.id} />
-      <div class="img-placeholder">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/></svg>
-      </div>
-      <div class="file-info">
-        <%= @file_name %> (<%= Brando.Utils.human_size(@file.filesize) %>)
-        <button
-          class="btn-small"
-          type="button"
-          phx-click={@click}>
-          <%= gettext "Edit file" %>
-        </button>
-      </div>
+      <Input.input
+        type={:hidden}
+        field={@relation_field}
+        value={@value || @file_id}
+        publish={@publish}
+      />
+
+      <%= if @file do %>
+        <div class="img-placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
+          </svg>
+        </div>
+        <div class="file-info">
+          <%= @file_name %> (<%= Brando.Utils.human_size(@file.filesize) %>)
+          <button class="btn-small" type="button" phx-click={@click}>
+            <%= gettext("Edit file") %>
+          </button>
+        </div>
+      <% else %>
+        <div class="file-preview-empty">
+          <div>
+            <%= gettext("No file associated with field") %>
+          </div>
+
+          <button
+            class="btn-small"
+            type="button"
+            phx-click={@click}
+            phx-value-id={"edit-file-#{@field.id}"}
+          >
+            <%= gettext("Add file") %>
+          </button>
+        </div>
+      <% end %>
     </div>
     """
   end

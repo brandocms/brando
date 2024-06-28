@@ -294,7 +294,24 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp maybe_merge_listing_query(query_params, listing) do
-    Map.merge(query_params, listing.query)
+    # check if preload is a function
+    listing_query_preloads = Brando.Utils.try_path(listing, [:query, :preload])
+
+    preloads =
+      cond do
+        listing_query_preloads && is_function(listing_query_preloads) ->
+          listing_query_preloads.()
+
+        listing_query_preloads ->
+          listing_query_preloads
+
+        true ->
+          []
+      end
+
+    query = put_in(listing.query, [:preload], preloads)
+
+    Map.merge(query_params, query)
   end
 
   defp maybe_merge_content_language(query_params, schema, content_language) do
@@ -565,7 +582,12 @@ defmodule BrandoAdmin.Components.Content.List do
               filter[:filter] == @active_filter[:filter] && "visible"
             ]}>
               <button class="filter-key" phx-click={@next_filter_key}>
-                <span><%= g(@schema, filter[:label]) %></span>
+                <span>
+                  <%= g(@schema, filter[:label]) %>
+                  <%= if Enum.count(@filters) > 1 do %>
+                    &darr;
+                  <% end %>
+                </span>
               </button>
               <.form
                 for={%{}}
@@ -643,8 +665,8 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   def selected_rows(assigns) do
-    ctx = assigns.schema.__modules__.context
-    singular = assigns.schema.__naming__.singular
+    ctx = assigns.schema.__modules__().context
+    singular = assigns.schema.__naming__().singular
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
     duplicate_langs? = assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn?

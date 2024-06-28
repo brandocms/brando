@@ -18,28 +18,52 @@ for lang <- languages do
     creator_id: user.id,
     items: [
       %Brando.Navigation.Item{
-        items: [],
         key: "brando",
-        open_in_new_window: true,
         status: :published,
-        title: "Brando CMS",
-        url: "https://brandocms.com"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "Brando CMS",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://brandocms.com"
+        }
       },
       %Brando.Navigation.Item{
-        items: [],
         key: "documentation",
-        open_in_new_window: true,
         status: :published,
-        title: "API Documentation",
-        url: "https://hexdocs.pm/brando"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "API Documentation",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://hexdocs.pm/brando"
+        }
       },
       %Brando.Navigation.Item{
-        items: [],
         key: "guides",
-        open_in_new_window: true,
         status: :published,
-        title: "Guides",
-        url: "https://brandocms.com/guides"
+        creator_id: user.id,
+        link: %Brando.Content.Var{
+          type: :link,
+          link_type: :url,
+          creator_id: user.id,
+          link_text: "Guides",
+          link_target_blank: true,
+          important: true,
+          label: "Link",
+          key: "link",
+          value: "https://brandocms.com/guides"
+        }
       }
     ],
     key: "main",
@@ -98,10 +122,13 @@ for lang <- languages do
   page = %Brando.Pages.Page{
     creator_id: user.id,
     css_classes: nil,
-    data: [
-      %Brando.Villain.Blocks.ModuleBlock{
-        data: %Brando.Villain.Blocks.ModuleBlock.Data{
+    entry_blocks: [
+      %Brando.Pages.Page.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          uid: Brando.Utils.generate_uid(),
           module_id: m1.id,
+          source: Elixir.Brando.Pages.Page.Blocks,
           multi: false,
           refs: [
             %Brando.Content.Module.Ref{
@@ -136,14 +163,11 @@ for lang <- languages do
           sequence: 0,
           vars: []
         },
-        type: "module",
-        uid: "KMDHFWOUSTVCR"
+        sequence: 0
       }
     ],
     deleted_at: nil,
     fragments: [],
-    html:
-      "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t<h1>Welcome to Brando!</h1>\n        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>\n\t</div>\n</article>",
     is_homepage: true,
     uri: "index",
     language: lang,
@@ -162,17 +186,7 @@ for lang <- languages do
     key: "footer",
     title: "Footer",
     language: lang,
-    html: "<p>(c) BrandoCMS — all rights reserved</p>",
-    data: [
-      %Brando.Villain.Blocks.TextBlock{
-        data: %Brando.Villain.Blocks.TextBlock.Data{
-          text: "(c) BrandoCMS — all rights reserved",
-          type: "paragraph"
-        },
-        type: "text",
-        uid: Brando.Utils.generate_uid()
-      }
-    ],
+    entry_blocks: [],
     page_id: p1.id,
     creator_id: user.id
   }

@@ -16,10 +16,12 @@
 
     .modal-backdrop {
       opacity: 1 !important;
+      display: block !important
     }
 
     .modal-dialog {
       opacity: 1 !important;
+      display: flex !important;
     }
   }
 
@@ -76,9 +78,10 @@
   position: relative;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 15px;
   @space padding-x 20px;
   @space padding-top 16px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
 
   .header-wrap {
     margin-right: 50px;
@@ -100,9 +103,11 @@
   }
 
   h2 {
+    @font mono;
     color: var(--brando-color-dark);
-    font-size: 25px;
-    font-weight: 500;
+    font-size: 18px;
+    font-weight: 400;
+    text-transform: uppercase;
   }
 
   .modal-close {
@@ -134,7 +139,7 @@
 
 .modal-content {
   color: var(--brando-color-dark);
-  background-color: #ffffffed;
+  background-color: #ffffff;
   background-clip: padding-box;
   border: none;
   display: flex;
@@ -206,6 +211,29 @@
         }
       }
     }
+
+    &.tiny {
+      width: fit-content;
+      button {
+        font-size: 11px;
+        font-family: 'Mono';
+        text-transform: uppercase;
+        text-align: left !important;
+        padding: 10px 10px 10px;
+        min-width: 150px;
+
+        &:first-of-type {
+          border-top-left-radius: 0 !important;
+          border-top-right-radius: 0 !important;
+        }
+
+        &:last-of-type {
+          border-bottom-left-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+
+      }
+    }
   }
 
   .panels {
@@ -244,6 +272,7 @@
   @space padding-x 20px;
   max-height: 80vh;
   overflow-y: scroll;
+  overflow-x: hidden;
   background-color: #fff;
 
   > h2 {
@@ -256,6 +285,7 @@
   @space padding-x 20px;
   padding-top: 15px;
   justify-content: flex-end;
+  border-top: 1px solid #eee;
 
   button.secondary {
     margin-top: 0;

@@ -18,13 +18,14 @@ defmodule Brando.Content.Module.Ref do
   data_layer :embedded
   trait Brando.Trait.CastPolymorphicEmbeds
 
-  identifier "{{ entry.name }}"
+  identifier false
+  persist_identifier false
 
   attributes do
     attribute :name, :text, required: true
     attribute :description, :text
 
-    attribute :data, Brando.PolymorphicEmbed,
+    attribute :data, PolymorphicEmbed,
       types: Blocks.list_blocks(),
       type_field: :type,
       on_type_not_found: :raise,

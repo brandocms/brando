@@ -13,6 +13,7 @@ defmodule Brando.Content.Identifier do
     status
     language
     cover
+    url
     schema
     updated_at
   )a
@@ -25,6 +26,7 @@ defmodule Brando.Content.Identifier do
     field :status, Brando.Type.Status
     field :language, Brando.Type.Atom
     field :cover, :string
+    field :url, :string
     field :updated_at, :utc_datetime
   end
 
@@ -33,4 +35,13 @@ defmodule Brando.Content.Identifier do
   end
 
   def has_trait(Brando.Trait.SoftDelete), do: false
+
+  def preloads_for(schema) do
+    schema.__relations__()
+    |> Enum.filter(&(&1.type == :entries))
+    |> Enum.map(fn rel ->
+      rel_identifiers_field = :"#{rel.name}_identifiers"
+      [rel.name, {rel_identifiers_field, :identifier}]
+    end)
+  end
 end

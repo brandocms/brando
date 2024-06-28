@@ -8,7 +8,7 @@
   }
 
   .images-grid {
-    @row 3/wrap/1vw;
+    @row 3/wrap/1em;
     
     .preview {
       @column 4/12;
@@ -20,6 +20,26 @@
 
       figcaption {
         padding-top: 15px;
+      }
+
+      .delete-x {
+        cursor: pointer;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background-color: var(--brando-color-dark);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: none;
+
+        span {
+          background-color: white;
+        }
+
+        .text {
+          display: none;
+        }
       }
     }
   }

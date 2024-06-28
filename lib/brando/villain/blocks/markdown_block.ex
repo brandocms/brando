@@ -10,7 +10,8 @@ defmodule Brando.Villain.Blocks.MarkdownBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
+    persist_identifier false
 
     attributes do
       attribute :text, :text

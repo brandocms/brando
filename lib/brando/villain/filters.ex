@@ -1,5 +1,6 @@
 defmodule Brando.Villain.Filters do
   use Phoenix.Component
+  alias Brando.Content.Var
   alias Brando.Utils
   alias Liquex.Context
 
@@ -45,6 +46,18 @@ defmodule Brando.Villain.Filters do
       else
         __MODULE__
       end
+
+    # require Logger
+
+    # Logger.error("""
+
+    # filters
+    # mod: #{inspect(mod, pretty: true)}
+    # func: #{inspect(func, pretty: true)}
+    # value: #{inspect(value, pretty: true)}
+    # function_args: #{inspect(function_args, pretty: true)}
+
+    # """)
 
     Kernel.apply(mod, func, [value | function_args] ++ [context])
   rescue
@@ -838,7 +851,24 @@ defmodule Brando.Villain.Filters do
 
   def inspect(value, _), do: "#{Kernel.inspect(value, pretty: true)}"
 
-  def rows(%{data: %{data: %{rows: rows}}}, _), do: rows
+  def rows(%{data: %{data: %{rows: rows}}}, _) do
+    rows
+  end
+
+  def rows(data, _) do
+    IO.warn("""
+
+    ERROR: The `rows` filter can only be used on a legacy table struct.
+
+    Got:
+    #{Kernel.inspect(data, pretty: true)}
+
+    Try {{ block.table_rows }} instead.
+
+    """)
+
+    []
+  end
 
   def humanize(value, _), do: Brando.Utils.humanize(value)
 
@@ -1095,4 +1125,27 @@ defmodule Brando.Villain.Filters do
   def slugify(str, _) when is_binary(str) do
     Brando.Utils.slugify(str)
   end
+
+  def link_url(%Var{type: :link} = var, _ctx) do
+    get_link_url(var) || nil
+  end
+
+  def link_text(%Var{type: :link} = var, _ctx) do
+    get_link_text(var) || nil
+  end
+
+  defp get_link_url(%{link_type: :url, value: url}), do: url
+  defp get_link_url(%{link_type: :identifier, identifier: %{url: url}}), do: url
+  defp get_link_url(_), do: nil
+
+  defp get_link_text(%{link_type: :url, link_text: text}), do: text
+
+  defp get_link_text(%{link_type: :identifier, link_text: text})
+       when not is_nil(text),
+       do: text
+
+  defp get_link_text(%{link_type: :identifier, link_text: nil, identifier: %{title: text}}),
+    do: text
+
+  defp get_link_text(_), do: nil
 end

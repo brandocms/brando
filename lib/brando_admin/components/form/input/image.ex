@@ -47,6 +47,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def update(assigns, socket) do
+    # TODO: do we have a form_cid we can use instead of this form id stuff?
+
     socket =
       socket
       |> assign(assigns)
@@ -182,44 +184,26 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       >
         <div>
           <div class={["input-image", @small && "small", @square && "square"]}>
-            <%= if @image && @image.path do %>
-              <.image_preview
-                image={@image}
-                field={@field}
-                relation_field={@relation_field}
-                click={@editable && open_image(@myself)}
-                editable={@editable}
-                file_name={@file_name}
-              />
-            <% else %>
-              <.empty_preview
-                field={@field}
-                relation_field={@relation_field}
-                editable={@editable}
-                click={@editable && open_image(@myself)}
-              />
-            <% end %>
+            <.image_preview
+              image={@image}
+              field={@field}
+              relation_field={@relation_field}
+              click={@editable && open_image(@myself)}
+              editable={@editable}
+              file_name={@file_name}
+            />
           </div>
         </div>
       </Form.field_base>
       <div :if={!@editable} class={["input-image", @small && "small", @square && "square"]}>
-        <%= if @image && @image.path do %>
-          <.image_preview
-            image={@image}
-            field={@field}
-            relation_field={@relation_field}
-            click={@editable && open_image(@myself)}
-            editable={@editable}
-            file_name={@file_name}
-          />
-        <% else %>
-          <.empty_preview
-            field={@field}
-            relation_field={@relation_field}
-            editable={@editable}
-            click={@editable && open_image(@myself)}
-          />
-        <% end %>
+        <.image_preview
+          image={@image}
+          field={@field}
+          relation_field={@relation_field}
+          click={@editable && open_image(@myself)}
+          editable={@editable}
+          file_name={@file_name}
+        />
       </div>
     </div>
     """
@@ -287,6 +271,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         %{"id" => selected_image_id},
         %{assigns: %{form_id: form_id}} = socket
       ) do
+    on_change = socket.assigns.on_change
     {:ok, image} = Brando.Images.get_image(selected_image_id)
 
     send_update(BrandoAdmin.Components.Form,
@@ -295,75 +280,114 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       image: image
     )
 
+    require Logger
+
+    Logger.error("""
+
+    => select_image #{inspect(selected_image_id)}
+    on_change = #{inspect(on_change, pretty: true)}
+
+    """)
+
+    if on_change do
+      path = socket.assigns.path
+      field_name = socket.assigns.field.field
+      field_path = path ++ [field_name]
+
+      require Logger
+
+      Logger.error("""
+      field_path = #{inspect(field_path, pretty: true)}
+      """)
+
+      on_change.(%{
+        event: "update_entry_relation",
+        path: field_path,
+        updated_relation: image
+      })
+    end
+
     {:noreply, socket}
-  end
-
-  def empty_preview(assigns) do
-    assigns = assign_new(assigns, :editable, fn -> true end)
-
-    ~H"""
-    <div class="image-wrapper-compact">
-      <Input.input :if={@editable} type={:hidden} field={@relation_field} value="" />
-      <div class="img-placeholder">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-          <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
-        </svg>
-      </div>
-
-      <div :if={@editable} class="image-info">
-        <%= gettext("No image associated with field") %>
-        <button
-          class="btn-small"
-          type="button"
-          phx-click={@click}
-          phx-value-id={"edit-image-#{@field.id}"}
-        >
-          <%= gettext("Add image") %>
-        </button>
-      </div>
-    </div>
-    """
   end
 
   @doc """
   Show preview if we have an image with a path
   """
   def image_preview(assigns) do
-    type_from_path = Brando.Images.Utils.image_type(assigns.image.path)
+    type_from_path =
+      if assigns.image do
+        Brando.Images.Utils.image_type(assigns.image.path)
+      else
+        nil
+      end
 
     assigns =
       assigns
       |> assign(:type, type_from_path)
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:editable, fn -> true end)
+      |> assign_new(:publish, fn -> false end)
+      |> assign_new(:image_id, fn ->
+        if assigns[:image] do
+          assigns[:image].id
+        end
+      end)
 
     ~H"""
     <div class="image-wrapper-compact">
-      <Input.input :if={@editable} type={:hidden} field={@relation_field} value={@value || @image.id} />
-      <%= if @image.status == :processed do %>
-        <Content.image image={@image} size={(@editable && :thumb) || :smallest} />
+      <Input.input
+        :if={@editable}
+        type={:hidden}
+        field={@relation_field}
+        value={@value || @image_id}
+        publish={@publish}
+      />
+      <%= if @image do %>
+        <%= if @image.status == :processed do %>
+          <Content.image image={@image} size={(@editable && :thumb) || :smallest} />
+        <% else %>
+          <div class="img-placeholder">
+            <svg
+              class="spin"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+            >
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
+            </svg>
+          </div>
+        <% end %>
+        <div :if={@editable} class="image-info">
+          <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
+          <div :if={@image.title} class="title">
+            <%= gettext("Caption") %>: <%= @image.title %>
+          </div>
+          <button class="btn-small" type="button" phx-click={@click}>
+            <%= gettext("Edit image") %>
+          </button>
+        </div>
       <% else %>
-        <div class="img-placeholder">
-          <svg
-            class="spin"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-          >
-            <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
-          </svg>
+        <div class="image-wrapper-compact">
+          <div class="img-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+            </svg>
+          </div>
+
+          <div :if={@editable} class="image-info">
+            <%= gettext("No image associated with field") %>
+            <button
+              class="btn-small"
+              type="button"
+              phx-click={@click}
+              phx-value-id={"edit-image-#{@field.id}"}
+            >
+              <%= gettext("Add image") %>
+            </button>
+          </div>
         </div>
       <% end %>
-      <div :if={@editable} class="image-info">
-        <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
-        <div :if={@image.title} class="title">
-          <%= gettext("Caption") %>: <%= @image.title %>
-        </div>
-        <button class="btn-small" type="button" phx-click={@click}>
-          <%= gettext("Edit image") %>
-        </button>
-      </div>
     </div>
     """
   end

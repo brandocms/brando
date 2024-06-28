@@ -76,7 +76,7 @@ defmodule Brando.Blueprint.RelationsTest do
                 cardinality: :many,
                 field: :properties,
                 on_cast: nil,
-                on_replace: :raise,
+                on_replace: :delete,
                 ordered: true,
                 owner: Brando.BlueprintTest.P1,
                 related: Brando.BlueprintTest.P1.Property,

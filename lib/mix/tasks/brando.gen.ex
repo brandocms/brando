@@ -63,7 +63,7 @@ defmodule Mix.Tasks.Brando.Gen do
     file_field? = blueprint_module.__file_fields__() != []
     image_field? = blueprint_module.__image_fields__() != []
     video_field? = blueprint_module.__video_fields__() != []
-    villain? = blueprint_module.__villain_fields__() != []
+    villain? = blueprint_module.__blocks_fields__() != []
     gallery? = blueprint_module.__gallery_fields__() != []
     status? = blueprint_module.__status_fields__() != []
     slug? = blueprint_module.__slug_fields__() != []
@@ -109,15 +109,14 @@ defmodule Mix.Tasks.Brando.Gen do
 
     module = Enum.join([web_module, binding[:scoped]], ".")
 
-    vue_plural = Recase.to_camel(plural)
-    vue_singular = Recase.to_camel(singular)
-
     # schema
     {attrs, assocs} = partition_attrs_and_assocs(attrs)
     migration_types = Enum.map(attrs, &migration_type/1)
     types = types(attrs)
     defs = defaults(attrs)
     params = Mix.Brando.params(attrs)
+    camel_singular = Macro.camelize(singular)
+    camel_plural = Macro.camelize(plural)
 
     binding =
       Keyword.delete(binding, :module) ++
@@ -158,8 +157,8 @@ defmodule Mix.Tasks.Brando.Gen do
           types: types,
           migration_types: migration_types,
           defaults: defs,
-          vue_singular: vue_singular,
-          vue_plural: vue_plural
+          camel_singular: camel_singular,
+          camel_plural: camel_plural
         ]
 
     binding = Enum.reduce(@generator_modules, binding, &apply(&1, :before_copy, [&2]))
@@ -198,9 +197,9 @@ defmodule Mix.Tasks.Brando.Gen do
     If you want to manage this schema through the admin, add these routes to your router
 
         scope "/#{snake_domain}", #{admin_module}.#{domain} do
-          live "/#{plural}", #{Recase.to_pascal(vue_singular)}ListLive
-          live "/#{plural}/create", #{Recase.to_pascal(vue_singular)}CreateLive
-          live "/#{plural}/update/:entry_id", #{Recase.to_pascal(vue_singular)}UpdateLive
+          live "/#{plural}", #{camel_singular}ListLive
+          live "/#{plural}/create", #{camel_singular}CreateLive
+          live "/#{plural}/update/:entry_id", #{camel_singular}UpdateLive
         end
 
     ================================================================================================

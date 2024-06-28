@@ -106,6 +106,8 @@ defmodule Brando.BlueprintTest.Project do
 
   forms do
     form do
+      blocks :blocks
+
       tab "Content" do
         fieldset size: :half do
           input :title, :text
@@ -122,8 +124,6 @@ defmodule Brando.BlueprintTest.Project do
             input :key, :text, placeholder: "Key"
             input :value, :text, placeholder: "Val"
           end
-
-          input :data, :blocks
         end
       end
     end
@@ -141,7 +141,7 @@ end
 defmodule Brando.TraitTest.Project do
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Projects",
+    domain: "TraitTest",
     schema: "Project",
     singular: "project",
     plural: "projects"
@@ -173,17 +173,20 @@ defmodule Brando.TraitTest.Project do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
-  trait Brando.Trait.Villain
   trait Brando.Trait.Translatable
+  trait Brando.Trait.Blocks
 
   attributes do
     attribute :title, :string, unique: true
-    attribute :data, :villain
-    attribute :bio_data, :villain
   end
 
   assets do
     asset :cover, :image, cfg: @image_cfg
+  end
+
+  relations do
+    relation :blocks, :has_many, module: :blocks
+    relation :bio_blocks, :has_many, module: :blocks
   end
 end
 

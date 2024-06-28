@@ -5,7 +5,7 @@ defmodule Brando.Type.Module do
   use Ecto.Type
 
   @doc """
-  Returns the internal type representation of our `Role` type for pg
+  Returns the internal type representation of our `Module` type for pg
   """
   def type, do: :string
 

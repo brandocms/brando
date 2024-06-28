@@ -41,6 +41,9 @@ defmodule Brando.Videos.Video do
     }
   ]
 
+  identifier false
+  persist_identifier false
+
   attributes do
     attribute :url, :text
     attribute :source, :enum, values: [:youtube, :vimeo, :file, :remote_file]

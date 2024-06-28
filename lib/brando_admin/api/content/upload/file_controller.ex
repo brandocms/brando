@@ -8,8 +8,25 @@ defmodule BrandoAdmin.API.Content.Upload.FileController do
   def create(conn, %{"uid" => uid} = params) do
     user = Brando.Utils.current_user(conn)
 
-    cfg = Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
-    params = Map.put(params, "config_target", "default")
+    require Logger
+
+    Logger.error("""
+
+    params
+    #{inspect(params, pretty: true)}
+
+    """)
+
+    {cfg, params} =
+      case Map.get(params, "config_target") do
+        nil ->
+          {Brando.config(Brando.Files)[:default_config] ||
+             Brando.Type.FileConfig.default_config(), Map.put(params, "config_target", "default")}
+
+        config_target ->
+          {:ok, file_cfg} = Brando.Files.get_config_for(config_target)
+          {file_cfg, params}
+      end
 
     payload =
       case Schema.handle_upload(params, cfg, user) do

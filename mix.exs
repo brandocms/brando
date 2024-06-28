@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.53.0"
+  @version "0.54.0"
   @description "Brando CMS"
 
   def project do
@@ -27,7 +27,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.7.0"},
+      {:phoenix, "1.7.14"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.17"},
@@ -35,13 +35,16 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.11"},
 
       # liveview
-      {:phoenix_live_view, "0.20.14"},
+      {:phoenix_live_view, "1.0.0-rc.6", override: true},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 3.0"},
       {:comeonin, "~> 5.0"},
       {:base62, "~> 1.2"},
+
+      # dsl
+      {:spark, "~> 2.2.3"},
 
       # monitoring
       {:sentry, "~> 10.0"},
@@ -69,18 +72,18 @@ defmodule Brando.Mixfile do
 
       # Liquid templates
       {:liquex, "~> 0.11"},
-      {:html_sanitize_ex, "~> 1.4", override: true},
+      {:html_sanitize_ex, "~> 1.4"},
 
       # Misc
-      {:req, "~> 0.4.5"},
+      {:req, "~> 0.5"},
       {:gettext, "~> 0.20"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
       {:slugger, "~> 0.2"},
-      {:recase, "~> 0.2"},
       {:ecto_nested_changeset, "~> 0.2"},
       {:nimble_csv, "~> 1.2"},
       {:tzdata, "~> 1.1"},
+      {:polymorphic_embed, github: "SteffenDE/polymorphic_embed"},
 
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},

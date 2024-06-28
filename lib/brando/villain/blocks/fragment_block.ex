@@ -1,3 +1,4 @@
+# TODO: Delete
 defmodule Brando.Villain.Blocks.FragmentBlock do
   defmodule Data do
     use Brando.Blueprint,
@@ -10,7 +11,8 @@ defmodule Brando.Villain.Blocks.FragmentBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
+    persist_identifier false
 
     relations do
       relation :fragment, :belongs_to, module: Brando.Pages.Fragment

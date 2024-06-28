@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:open, false)
      |> assign(:filter_string, "")
-     |> assign_new(:in_block, fn -> false end)}
+     |> assign_new(:publish, fn -> true end)}
   end
 
   def update(assigns, socket) do
@@ -121,11 +121,17 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         options
     end
     |> Enum.map(&ensure_string_values/1)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
     %{label: label, value: to_string(value)}
   end
+
+  defp ensure_string_values(%Ecto.Changeset{action: :replace}), do: nil
+
+  defp ensure_string_values(%Ecto.Changeset{} = changeset),
+    do: Ecto.Changeset.apply_changes(changeset)
 
   defp ensure_string_values(map), do: map
 
@@ -176,14 +182,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         class={@class}
         compact={@compact}
       >
-        <Input.input
-          type={:hidden}
-          field={@field}
-          uid={@uid}
-          phx-debounce={100}
-          id_prefix="selected_option"
-          value={@selected_option}
-        />
+        <Input.input type={:hidden} field={@field} value={@selected_option} publish={@publish} />
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -350,7 +349,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     identifier.title
   end
 
-  defp extract_label(%Brando.Content.Var.Select.Option{label: label}), do: label
+  defp extract_label(%Brando.Content.Var.Option{label: label}), do: label
 
   defp extract_label(%{__struct__: _} = entry) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
@@ -367,7 +366,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
-  defp extract_value(%Brando.Content.Var.Select.Option{value: value}), do: value
+  defp extract_value(%Brando.Content.Var.Option{value: value}), do: value
 
   defp get_label(%{opt: %{label: _}} = assigns) do
     assigns = assign_new(assigns, :deletable, fn -> false end)
@@ -474,7 +473,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     select_changeset =
       default
-      |> changeset_fun.(entry_params, current_user, skip_villain: true)
+      |> changeset_fun.(entry_params, current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, select_changeset: select_changeset)}
@@ -482,15 +481,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def handle_event("select_option", %{"value" => value}, socket) do
     update_relation = socket.assigns.update_relation
-
     value = if value == "", do: nil, else: value
-    form = socket.assigns.field.form
-    changeset = form.source
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
 
     if update_relation do
+      on_change = socket.assigns.on_change
       {update_field, fetcher_fn} = update_relation
 
       fetched_relation =
@@ -503,20 +497,17 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           end
         end
 
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        action: :update_entry_relation,
-        updated_relation: fetched_relation,
+      on_change.(%{
+        event: "update_entry_relation",
         path: [update_field],
-        force_validation: true
-      )
+        updated_relation: fetched_relation
+      })
     end
 
-    {:noreply,
-     socket
-     |> assign(:selected_option, value)
-     |> assign_label()
-     |> push_event("b:validate", %{})}
+    socket
+    |> assign(:selected_option, value)
+    |> assign_label()
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset", _, socket) do

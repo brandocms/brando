@@ -304,14 +304,13 @@ defmodule BrandoAdmin.LiveView.Form do
   defp handle_hooks_modules_info({_module, [:module, action]}, socket)
        when action in [:created, :updated] do
     schema = socket.assigns.schema
-    singular = schema.__naming__().singular
 
-    for %{name: field} <- schema.__villain_fields__() do
-      target_id = "#{singular}_#{field}-blocks-module-picker"
+    for %{name: field} <- schema.__blocks_fields__() do
+      target_id = "block-field-#{field}-module-picker"
 
-      send_update(BrandoAdmin.Components.Form.Input.Blocks.ModulePicker,
+      send_update(BrandoAdmin.Components.Form.BlockField.ModulePicker,
         id: target_id,
-        action: :refresh_modules
+        event: :refresh_modules
       )
     end
 

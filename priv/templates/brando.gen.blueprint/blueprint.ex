@@ -7,8 +7,8 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
     application: "<%= app_module %>",
     domain: "<%= domain %>",
     schema: "<%= schema %>",
-    singular: "<%= Recase.to_snake(schema) %>",
-    plural: "<%= Recase.to_snake(schema) %>s"
+    singular: "<%= Macro.underscore(schema) %>",
+    plural: "<%= Macro.underscore(schema) %>s"
 
   import <%= app_module %>Admin.Gettext
 
@@ -21,10 +21,9 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   # trait Brando.Trait.Status
   # trait Brando.Trait.Timestamped
   # trait Brando.Trait.Translatable
-  # trait Brando.Trait.Villain
 
   identifier "{{ entry.title }}"
-  absolute_url "{% route <%= Recase.to_snake(schema) %>_path detail { entry.slug } %}"
+  absolute_url "{% route <%= Macro.underscore(schema) %>_path detail { entry.slug } %}"
 
   attributes do
   end
@@ -34,8 +33,8 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   translations do
     context :naming do
-      translate :singular, t("<%= Recase.to_snake(schema) |> Brando.Utils.humanize(:downcase) %>")
-      translate :plural, t("<%= Recase.to_snake(schema) |> Brando.Utils.humanize(:downcase) %>s")
+      translate :singular, t("<%= Macro.underscore(schema) |> Brando.Utils.humanize(:downcase) %>")
+      translate :plural, t("<%= Macro.underscore(schema) |> Brando.Utils.humanize(:downcase) %>s")
     end
   end
 end

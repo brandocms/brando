@@ -4,13 +4,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   import Brando.Gettext
 
+  alias Ecto.Changeset
   alias Brando.Villain.Blocks.PictureBlock
-  alias Brando.Villain
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
 
   # prop uploads, :any
   # prop base_form, :any
@@ -33,28 +33,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # data image, :any
   # data upload_formats, :string
 
+  @fields_to_take [
+    :picture_class,
+    :img_class,
+    :link,
+    :srcset,
+    :media_queries,
+    :formats,
+    :path,
+    :width,
+    :height,
+    :sizes,
+    :cdn,
+    :lazyload,
+    :moonwalk,
+    :dominant_color,
+    :placeholder,
+    :focal
+  ]
+
   def mount(socket) do
-    {:ok, assign(socket, images: [])}
+    socket
+    |> assign(:images, [])
+    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
+    block_data_cs = Block.get_block_data_changeset(assigns.block)
+
     {extracted_path, extracted_filename} =
-      case assigns.block[:data].value do
+      case Changeset.get_field(block_data_cs, :path) do
         nil -> {nil, nil}
-        %{path: nil} -> {nil, nil}
-        %{path: path} -> {path, Path.basename(path)}
+        path -> {path, Path.basename(path)}
       end
 
     upload_formats =
-      case assigns.block[:formats].value do
+      case Changeset.get_field(block_data_cs, :formats) do
         nil -> ""
         formats -> Enum.join(formats, ",")
       end
 
+    image = Changeset.apply_changes(block_data_cs)
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:image, assigns.block[:data].value)
+     |> assign(:image, image)
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
@@ -68,20 +92,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       class="picture-block"
       phx-hook="Brando.LegacyImageUpload"
       data-text-uploading={gettext("Uploading...")}
-      data-block-index={@index}
       data-block-uid={@uid}
     >
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Blocks.block
+        <Block.block
           id={"block-#{@uid}-base"}
-          index={@index}
-          is_ref?={@is_ref?}
-          block_count={@block_count}
-          base_form={@base_form}
           block={@block}
-          belongs_to={@belongs_to}
-          insert_module={@insert_module}
-          duplicate_block={@duplicate_block}
+          is_ref?={true}
+          multi={false}
+          target={@target}
         >
           <:description>
             <%= if @ref_description do %>
@@ -164,24 +183,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 </div>
               </div>
               <div class="panel">
-                <Input.rich_text
-                  field={block_data[:title]}
-                  uid={@uid}
-                  id_prefix="block_data"
-                  label={gettext("Title")}
-                />
-                <Input.text
-                  field={block_data[:alt]}
-                  uid={@uid}
-                  id_prefix="block_data"
-                  label={gettext("Alt")}
-                />
-                <Input.text
-                  field={block_data[:link]}
-                  uid={@uid}
-                  id_prefix="block_data"
-                  label={gettext("Link")}
-                />
+                <Input.rich_text field={block_data[:title]} label={gettext("Title")} />
+                <Input.text field={block_data[:alt]} label={gettext("Alt")} />
+                <Input.text field={block_data[:link]} label={gettext("Link")} />
 
                 <div class="button-group-vertical">
                   <button
@@ -205,69 +209,34 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
             </div>
 
-            <Input.input
-              type={:hidden}
-              uid={@uid}
-              id_prefix="block_data"
-              field={block_data[:placeholder]}
-            />
-            <Input.input type={:hidden} uid={@uid} id_prefix="block_data" field={block_data[:cdn]} />
-            <Input.input
-              type={:hidden}
-              uid={@uid}
-              id_prefix="block_data"
-              field={block_data[:moonwalk]}
-            />
-            <Input.input
-              type={:hidden}
-              uid={@uid}
-              id_prefix="block_data"
-              field={block_data[:lazyload]}
-            />
-            <Input.input
-              type={:hidden}
-              uid={@uid}
-              id_prefix="block_data"
-              field={block_data[:credits]}
-            />
-            <Input.input
-              type={:hidden}
-              uid={@uid}
-              id_prefix="block_data"
-              field={block_data[:dominant_color]}
-            />
-            <Input.input type={:hidden} uid={@uid} id_prefix="block_data" field={block_data[:height]} />
-            <Input.input type={:hidden} uid={@uid} id_prefix="block_data" field={block_data[:width]} />
+            <Input.input type={:hidden} field={block_data[:placeholder]} />
+            <Input.input type={:hidden} field={block_data[:cdn]} />
+            <Input.input type={:hidden} field={block_data[:moonwalk]} />
+            <Input.input type={:hidden} field={block_data[:lazyload]} />
+            <Input.input type={:hidden} field={block_data[:credits]} />
+            <Input.input type={:hidden} field={block_data[:dominant_color]} />
+            <Input.input type={:hidden} field={block_data[:height]} />
+            <Input.input type={:hidden} field={block_data[:width]} />
 
             <%= if is_nil(block_data[:path].value) and !is_nil(block_data[:sizes].value) do %>
-              <Input.input
-                type={:hidden}
-                uid={@uid}
-                id_prefix="block_data"
-                field={block_data[:path]}
-                value={@extracted_path}
-              />
+              <Input.input type={:hidden} field={block_data[:path]} value={@extracted_path} />
             <% else %>
-              <Input.input type={:hidden} uid={@uid} id_prefix="block_data" field={block_data[:path]} />
+              <Input.input type={:hidden} field={block_data[:path]} />
             <% end %>
 
             <.inputs_for :let={focal_form} field={block_data[:focal]}>
-              <Input.input
-                type={:hidden}
-                uid={@uid}
-                id_prefix="block_data_focal"
-                field={focal_form[:x]}
-              />
-              <Input.input
-                type={:hidden}
-                uid={@uid}
-                id_prefix="block_data_focal"
-                field={focal_form[:y]}
-              />
+              <Input.input type={:hidden} field={focal_form[:x]} />
+              <Input.input type={:hidden} field={focal_form[:y]} />
             </.inputs_for>
 
             <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
-              <input type="hidden" name={"#{name}"} value={"#{value}"} />
+              <%!-- TODO: Remove the _unused check when https://github.com/phoenixframework/phoenix_live_view/pull/3244 is merged --%>
+              <input
+                :if={!String.starts_with?(name, "_unused")}
+                type="hidden"
+                name={name}
+                value={value}
+              />
             </Form.map_inputs>
 
             <Form.array_inputs
@@ -279,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
             <input type="hidden" data-upload-formats={@upload_formats} />
           </:config>
-        </Blocks.block>
+        </Block.block>
       </.inputs_for>
     </div>
     """
@@ -287,40 +256,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("image_uploaded", %{"id" => id}, socket) do
     block = socket.assigns.block
-    base_form = socket.assigns.base_form
-    uid = socket.assigns.uid
-    data_field = socket.assigns.data_field
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
 
     {:ok, image} = Brando.Images.get_image(id)
-    block_data = block[:data].value
 
-    updated_data_map =
+    new_data =
       block_data
       |> Map.merge(image)
       |> Map.from_struct()
+      |> Map.take(@fields_to_take)
 
-    updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_picture_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
@@ -338,65 +288,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    base_form = socket.assigns.base_form
-    data_field = socket.assigns.data_field
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    new_data =
+      %PictureBlock.Data{}
+      |> Map.from_struct()
+      |> Map.take(@fields_to_take)
+
     uid = socket.assigns.uid
-    changeset = base_form.source
-
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: %PictureBlock.Data{}
-      })
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    base_form = socket.assigns.base_form
-    uid = socket.assigns.uid
     block = socket.assigns.block
-    data_field = socket.assigns.data_field
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
     {:ok, image} = Brando.Images.get_image(id)
 
-    block_data = block[:data].value
-
-    updated_data_map =
+    new_data =
       block_data
       |> Map.merge(image)
       |> Map.from_struct()
+      |> Map.take(@fields_to_take)
 
-    updated_data_struct = struct(PictureBlock.Data, updated_data_map)
-    updated_picture_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_picture_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
     {:noreply, socket}
   end
 

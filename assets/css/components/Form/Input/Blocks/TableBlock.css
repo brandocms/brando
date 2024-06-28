@@ -1,45 +1,4 @@
 .table-block {
-  .empty {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
-    flex-direction: column;
-    max-width: 400px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    text-align: center;
-    padding: 3vw;
-    border-radius: 25px;
-
-    &.hidden {
-      display: none !important;
-    }
-
-    figure {
-      @space margin-bottom 35px;
-
-      svg {
-        width: 200px;
-        user-select: none;
-        pointer-events: none;
-
-        path:nth-of-type(2), .plus, circle {
-          user-select: none;
-          pointer-events: none;
-          fill: var(--brando-color-dark);
-        }
-      }
-    }
-
-    .instructions {
-      font-size: 16px;
-
-      button {
-        margin-top: 10px;
-      }
-    }
-  }
-
   .block-content {
     .table-content {
     }
@@ -70,6 +29,10 @@
       }
     }
 
+    .variable[data-size="full"] {
+      width: 100%;
+    }
+
     .subform-tools {
       justify-content: flex-start;
     }
@@ -85,10 +48,10 @@
 
     &:first-of-type {
       .label-wrapper {
-        @space margin-bottom 1vw;
+        @space margin-bottom 5px;
         height: auto;
         overflow: visible;
-        border-bottom: 1px solid gainsboro;
+        border-bottom: 1px solid #eee;
       }
 
       .help-text {
@@ -117,7 +80,9 @@
 
       .label-wrapper {
         label span {
-          @fontsize 14px;
+          font-size: 12px;
+          text-transform: uppercase;
+          font-family: 'Mono';
         }
       }
     }

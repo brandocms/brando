@@ -3,19 +3,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # use Phoenix.HTML
 
   import Brando.Gettext
-
-  alias Brando.Villain
-  alias Brando.Villain.Blocks.VideoBlock
+  alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Block
 
-  # prop base_form, :any
-  # prop data_field, :atom
   # prop block, :any
   # prop block_count, :integer
-  # prop index, :any
   # prop is_ref?, :boolean, default: false
   # prop belongs_to, :string
 
@@ -26,35 +21,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # data uid, :string
 
   def update(assigns, socket) do
-    {
-      :ok,
-      socket
-      |> assign(assigns)
-      |> assign(:uid, assigns.block[:uid].value)
-      |> assign(:type, assigns.block.data.data.source)
-    }
+    block_cs = assigns.block.source
+    block_data_cs = Changeset.get_field(block_cs, :data) |> Changeset.change()
+
+    socket
+    |> assign(assigns)
+    |> assign(:uid, Changeset.get_field(block_cs, :uid))
+    |> assign(:type, Changeset.get_field(block_data_cs, :source))
+    |> then(&{:ok, &1})
   end
 
   def render(assigns) do
     ~H"""
-    <div
-      id={"block-#{@uid}-wrapper"}
-      class="video-block"
-      data-block-index={@index}
-      data-block-uid={@uid}
-    >
+    <div id={"block-#{@uid}-wrapper"} class="video-block" data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Blocks.block
+        <Block.block
           id={"block-#{@uid}-base"}
-          index={@index}
-          is_ref?={@is_ref?}
-          block_count={@block_count}
-          base_form={@base_form}
           block={@block}
-          belongs_to={@belongs_to}
-          insert_module={@insert_module}
-          duplicate_block={@duplicate_block}
-          wide_config
+          is_ref?={true}
+          multi={false}
+          target={@target}
         >
           <:description>
             <%= if @type == :file do %>
@@ -65,79 +51,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           </:description>
           <:config>
             <%= if block_data[:remote_id].value in [nil, ""] do %>
-              <Input.input type={:hidden} field={block_data[:url]} uid={@uid} id_prefix="block_data" />
-              <Input.input
-                type={:hidden}
-                field={block_data[:source]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:width]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:height]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:remote_id]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:thumbnail_url]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:title]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:poster]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:cover]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:opacity]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:autoplay]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:preload]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
-              <Input.input
-                type={:hidden}
-                field={block_data[:play_button]}
-                uid={@uid}
-                id_prefix="block_data"
-              />
+              <Input.input type={:hidden} field={block_data[:url]} />
+              <Input.input type={:hidden} field={block_data[:source]} />
+              <Input.input type={:hidden} field={block_data[:width]} />
+              <Input.input type={:hidden} field={block_data[:height]} />
+              <Input.input type={:hidden} field={block_data[:remote_id]} />
+              <Input.input type={:hidden} field={block_data[:thumbnail_url]} />
+              <Input.input type={:hidden} field={block_data[:title]} />
+              <Input.input type={:hidden} field={block_data[:poster]} />
+              <Input.input type={:hidden} field={block_data[:cover]} />
+              <Input.input type={:hidden} field={block_data[:opacity]} />
+              <Input.input type={:hidden} field={block_data[:autoplay]} />
+              <Input.input type={:hidden} field={block_data[:preload]} />
+              <Input.input type={:hidden} field={block_data[:play_button]} />
 
               <div
                 id={"block-#{@uid}-videoUrl"}
@@ -148,11 +74,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 <div class="video-loading hidden">
                   <%= gettext("Fetching video information. Please wait...") %>
                 </div>
-                <%= gettext("Enter the video's URL:") %><br />
                 <small>
                   <%= gettext(
-                    "You can enter YouTube- or Vimeo addresses to embed videos. You can also reference files directly, to use a custom player."
+                    "To embed a video in your content, please input the full URL of the video you want to use. You have a couple of options:"
                   ) %>
+                  <br /><br />
+
+                  <strong>YouTube</strong>: <%= gettext(
+                    "Enter the URL of any YouTube video to use the YouTube embedded player. This allows you to easily integrate YouTube videos with all their features."
+                  ) %><br />
+                  <strong>Vimeo</strong>: <%= gettext(
+                    "Enter the URL of any Vimeo video to use the Vimeo embedded player, ensuring a smooth and high-quality video playback experience."
+                  ) %><br />
+                  <strong><%= gettext("Direct Video File") %></strong>: <%= gettext(
+                    "You can also provide a direct link to a video file (e.g., .mp4, .webm). This will utilize our customized player to embed the video directly into your content."
+                  ) %><br /><br />
+                  <%= gettext(
+                    "Make sure the URL is complete and correct. For YouTube and Vimeo, copy the URL directly from your browser's address bar. For direct video files, ensure the link is publicly accessible and points directly to the video file. Enter the URL in the input below and click 'Get video info'"
+                  ) %><br /><br />
                 </small>
                 <input id={"block-#{@uid}-url"} type="text" class="text" />
                 <button id={"block-#{@uid}-button"} type="button" class="secondary small">
@@ -196,37 +135,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   </div>
 
                   <div class="information mb-1 mt-1">
-                    <strong>Dimensions:</strong> <%= block_data[:width].value %>&times;<%= block_data[
-                      :height
-                    ].value %>
+                    <strong>Dimensions:</strong>
+                    <%= block_data[:width].value %>&times;<%= block_data[:height].value %>
                   </div>
                 </div>
                 <div class="panel">
-                  <Input.input
-                    type={:hidden}
-                    field={block_data[:source]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                  />
-                  <Input.input
-                    type={:hidden}
-                    field={block_data[:thumbnail_url]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                  />
-                  <Input.text
-                    field={block_data[:remote_id]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                    monospace
-                    label={gettext("Remote ID")}
-                  />
-                  <Input.text
-                    field={block_data[:title]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                    label={gettext("Title")}
-                  />
+                  <Input.input type={:hidden} field={block_data[:source]} />
+                  <Input.input type={:hidden} field={block_data[:thumbnail_url]} />
+                  <Input.text field={block_data[:remote_id]} monospace label={gettext("Remote ID")} />
+                  <Input.text field={block_data[:title]} label={gettext("Title")} />
 
                   <div :if={!block_data[:cover_image].value} class="button-group-vertical">
                     <button
@@ -255,51 +172,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     </button>
                   </div>
 
-                  <Input.input
-                    type={:hidden}
-                    field={block_data[:poster]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                  />
+                  <Input.input type={:hidden} field={block_data[:poster]} />
                   <%= if block_data[:cover].value in ["false", "svg"] do %>
-                    <Input.input
-                      type={:hidden}
-                      field={block_data[:cover]}
-                      uid={@uid}
-                      id_prefix="block_data"
-                    />
+                    <Input.input type={:hidden} field={block_data[:cover]} />
                   <% else %>
-                    <Input.text
-                      field={block_data[:cover]}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      label={gettext("Cover")}
-                    />
+                    <Input.text field={block_data[:cover]} label={gettext("Cover")} />
                   <% end %>
 
-                  <Input.input
-                    type={:hidden}
-                    field={block_data[:opacity]}
-                    uid={@uid}
-                    id_prefix="block_data"
-                  />
+                  <Input.input type={:hidden} field={block_data[:opacity]} />
 
                   <div class="row">
                     <div class="half">
-                      <Input.number
-                        field={block_data[:width]}
-                        uid={@uid}
-                        id_prefix="block_data"
-                        label={gettext("Width")}
-                      />
+                      <Input.number field={block_data[:width]} label={gettext("Width")} />
                     </div>
                     <div class="half">
-                      <Input.number
-                        field={block_data[:height]}
-                        uid={@uid}
-                        id_prefix="block_data"
-                        label={gettext("Height")}
-                      />
+                      <Input.number field={block_data[:height]} label={gettext("Height")} />
                     </div>
                   </div>
 
@@ -308,37 +195,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <Input.toggle
                         compact
                         field={block_data[:play_button]}
-                        uid={@uid}
-                        id_prefix="block_data"
                         label={gettext("Play button")}
                       />
                     </div>
                     <div class="half">
-                      <Input.toggle
-                        compact
-                        field={block_data[:autoplay]}
-                        uid={@uid}
-                        id_prefix="block_data"
-                        label={gettext("Autoplay")}
-                      />
+                      <Input.toggle compact field={block_data[:autoplay]} label={gettext("Autoplay")} />
                     </div>
                   </div>
                   <div class="row">
                     <div class="half">
-                      <Input.toggle
-                        compact
-                        field={block_data[:preload]}
-                        uid={@uid}
-                        id_prefix="block_data"
-                        label={gettext("Preload")}
-                      />
+                      <Input.toggle compact field={block_data[:preload]} label={gettext("Preload")} />
                     </div>
                     <div class="half">
                       <Input.toggle
                         compact
                         field={block_data[:controls]}
-                        uid={@uid}
-                        id_prefix="block_data"
                         label={gettext("Show native player controls")}
                       />
                     </div>
@@ -348,74 +219,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     :if={block_data[:cover_image].value}
                     field={block_data[:cover_image]}
                   >
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:placeholder]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:cdn]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:moonwalk]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:lazyload]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:credits]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:dominant_color]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:height]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:width]}
-                    />
-                    <Input.input
-                      type={:hidden}
-                      uid={@uid}
-                      id_prefix="block_data"
-                      field={cover_image[:path]}
-                    />
+                    <Input.input type={:hidden} field={cover_image[:placeholder]} />
+                    <Input.input type={:hidden} field={cover_image[:cdn]} />
+                    <Input.input type={:hidden} field={cover_image[:moonwalk]} />
+                    <Input.input type={:hidden} field={cover_image[:lazyload]} />
+                    <Input.input type={:hidden} field={cover_image[:credits]} />
+                    <Input.input type={:hidden} field={cover_image[:dominant_color]} />
+                    <Input.input type={:hidden} field={cover_image[:height]} />
+                    <Input.input type={:hidden} field={cover_image[:width]} />
+                    <Input.input type={:hidden} field={cover_image[:path]} />
 
                     <.inputs_for :let={focal_form} field={cover_image[:focal]}>
-                      <Input.input
-                        type={:hidden}
-                        uid={@uid}
-                        id_prefix="block_data_focal"
-                        field={focal_form[:x]}
-                      />
-                      <Input.input
-                        type={:hidden}
-                        uid={@uid}
-                        id_prefix="block_data_focal"
-                        field={focal_form[:y]}
-                      />
+                      <Input.input type={:hidden} field={focal_form[:x]} />
+                      <Input.input type={:hidden} field={focal_form[:y]} />
                     </.inputs_for>
 
                     <Form.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
@@ -483,25 +299,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 </div>
             <% end %>
           <% end %>
-        </Blocks.block>
+        </Block.block>
       </.inputs_for>
     </div>
     """
   end
 
-  def handle_event(
-        "url",
-        %{
-          "remoteId" => remote_id,
-          "source" => source,
-          "url" => url,
-          "width" => width,
-          "height" => height
-        },
-        %{assigns: %{uid: uid, data_field: data_field, base_form: form}} = socket
-      ) do
-    # replace block
-    changeset = form.source
+  def handle_event("url", params, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    %{
+      "height" => height,
+      "remoteId" => remote_id,
+      "source" => source,
+      "url" => url,
+      "width" => width
+    } = params
 
     new_data = %{
       url: url,
@@ -532,27 +346,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           })
       end
 
-    updated_changeset =
-      Villain.update_block_in_changeset(changeset, data_field, uid, %{data: new_data})
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
     {:noreply, socket}
   end
 
-  def handle_event(
-        "set_target",
-        _,
-        %{assigns: %{myself: myself}} = socket
-      ) do
+  def handle_event("set_target", _, socket) do
+    myself = socket.assigns.myself
+
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: "default",
@@ -564,114 +364,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_image",
-        _,
-        %{
-          assigns: %{
-            base_form: base_form,
-            block: block,
-            data_field: data_field,
-            uid: uid
-          }
-        } = socket
-      ) do
-    block_data = block[:data].value
-    data_map = Map.from_struct(block_data)
+  def handle_event("reset_image", _, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+    new_data = update_block_data(socket, %{cover_image: nil})
 
-    updated_data_map = Map.put(data_map, :cover_image, nil)
-    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
-
-    updated_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Brando.Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_video",
-        _,
-        %{assigns: %{base_form: base_form, data_field: data_field, uid: uid}} = socket
-      ) do
-    changeset = base_form.source
+  def handle_event("reset_video", _, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+    new_data = %{}
 
-    updated_changeset =
-      Brando.Villain.update_block_in_changeset(changeset, data_field, uid, %{
-        data: %VideoBlock.Data{}
-      })
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => id},
-        %{
-          assigns: %{
-            base_form: base_form,
-            uid: uid,
-            block: block,
-            data_field: data_field
-          }
-        } = socket
-      ) do
+  def handle_event("select_image", %{"id" => id}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
-    block_data = block[:data].value
-    data_map = Map.from_struct(block_data)
+    new_data = update_block_data(socket, %{cover_image: image})
 
-    updated_data_map = Map.put(data_map, :cover_image, image)
-    updated_data_struct = struct(VideoBlock.Data, updated_data_map)
-
-    updated_block = Map.put(block.data, :data, updated_data_struct)
-
-    changeset = base_form.source
-    schema = changeset.data.__struct__
-
-    updated_changeset =
-      Brando.Villain.replace_block_in_changeset(
-        changeset,
-        data_field,
-        uid,
-        updated_block
-      )
-
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
+    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
     {:noreply, socket}
+  end
+
+  defp update_block_data(socket, new_data) do
+    block = socket.assigns.block
+    block_data_cs = Block.get_block_data_changeset(block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    data_map = Map.from_struct(block_data)
+    Map.merge(data_map, new_data) |> dbg()
   end
 end

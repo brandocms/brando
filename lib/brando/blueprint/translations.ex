@@ -69,27 +69,6 @@ defmodule Brando.Blueprint.Translations do
     end
   end
 
-  defmacro label(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, label: t(\"Title\")` instead"
-      )
-
-  defmacro placeholder(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, placeholder: t(\"Title\")` instead"
-      )
-
-  defmacro instructions(_),
-    do:
-      raise(Brando.Exception.BlueprintError,
-        message:
-          "translations label/1 has been deprecated. Use `input :title, :text, instructions: t(\"Title\")` instead"
-      )
-
   def t_field(type, value) do
     # type is an atom -> :label | :placeholder | instructions
     # value is a gettext call, for instance -> gettext("Instructions")
@@ -121,8 +100,8 @@ defmodule Brando.Blueprint.Translations do
 
   defmacro t(msgid, schema) do
     schema = Macro.expand(schema, __CALLER__)
-    domain = schema.__naming__.domain
-    schema = schema.__naming__.schema
+    domain = schema.__naming__().domain
+    schema = schema.__naming__().schema
     ctx = Module.get_attribute(__CALLER__.module, :ctx)
     gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
 

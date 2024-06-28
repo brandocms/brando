@@ -15,7 +15,7 @@ defmodule Brando.Sites.GlobalsTest do
     params =
       Factory.params_for(:global_set, creator_id: user.id) |> Brando.Utils.map_from_struct()
 
-    Brando.Sites.create_global_set(params, :system)
+    Brando.Sites.create_global_set(params, user)
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
     assert Brando.Sites.get_global_path("non_existing") == {:error, {:global, :not_found}}
 
@@ -27,7 +27,7 @@ defmodule Brando.Sites.GlobalsTest do
     params =
       Factory.params_for(:global_set, creator_id: user.id) |> Brando.Utils.map_from_struct()
 
-    Brando.Sites.create_global_set(params, :system)
+    Brando.Sites.create_global_set(params, user)
 
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
     assert Brando.Sites.get_global_path!("non_existing") == ""
@@ -40,7 +40,7 @@ defmodule Brando.Sites.GlobalsTest do
     params =
       Factory.params_for(:global_set, creator_id: user.id) |> Brando.Utils.map_from_struct()
 
-    {:ok, c1} = Brando.Sites.create_global_set(params, :system)
+    {:ok, c1} = Brando.Sites.create_global_set(params, user)
 
     assert Brando.Sites.get_global_set(999_999_999) ==
              {:error, {:global_set, :not_found}}

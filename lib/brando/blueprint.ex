@@ -103,6 +103,7 @@ defmodule Brando.Blueprint do
   ```
 
   """
+  alias Brando.Exception.BlueprintError
   alias Ecto.Changeset
 
   alias Brando.Blueprint.Constraints
@@ -200,11 +201,14 @@ defmodule Brando.Blueprint do
       import Brando.Utils.Schema
       import Phoenix.Component, except: [form: 1]
 
-      def __absolute_url__(_) do
-        false
-      end
-
+      def __absolute_url__(_), do: nil
       defoverridable __absolute_url__: 1
+
+      def __has_absolute_url__, do: false
+      defoverridable __has_absolute_url__: 0
+
+      def __persist_identifier__, do: true
+      defoverridable __persist_identifier__: 0
     end
   end
 
@@ -240,10 +244,50 @@ defmodule Brando.Blueprint do
               Ecto.Schema.timestamps()
             end
 
-            def changeset(struct, attrs, sequence) do
+            def changeset(struct, attrs, _user, sequence, _opts) do
               struct
               |> cast(attrs, [:parent_id, :identifier_id])
               |> change(sequence: sequence)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmacro maybe_build_blocks_modules(module, _name, relations) do
+    # check if we have any :blocks fields
+    quote do
+      blocks_rels =
+        Enum.filter(unquote(relations), &(&1.type == :has_many && &1.opts.module == :blocks))
+
+      if blocks_rels != [] do
+        for blocks_rel <- blocks_rels do
+          parent_module = Module.concat([@application, @domain, @schema])
+          parent_table_name = @table_name
+
+          defmodule Module.concat([
+                      unquote(module),
+                      "#{Phoenix.Naming.camelize(to_string(blocks_rel.name))}"
+                    ]) do
+            use Ecto.Schema
+            import Ecto.Query
+
+            schema "#{parent_table_name}_#{blocks_rel.name}" do
+              Ecto.Schema.belongs_to(:entry, parent_module)
+              Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
+              Ecto.Schema.field(:sequence, :integer)
+              Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
+            end
+
+            @parent_table_name parent_table_name
+            def changeset(entry_block, attrs, user, recursive? \\ false) do
+              entry_block
+              |> cast(attrs, [:entry_id, :block_id, :sequence])
+              |> Brando.Content.Block.maybe_cast_recursive(recursive?, user)
+              |> unique_constraint([:entry, :block],
+                name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
+              )
             end
           end
         end
@@ -259,19 +303,6 @@ defmodule Brando.Blueprint do
 
         %{name: :updated_at} ->
           []
-
-        %{type: :villain} = attr ->
-          Ecto.Schema.field(
-            attr.name,
-            to_ecto_type(:villain),
-            to_ecto_opts(attr.type, attr.opts) ++
-              [
-                types: Brando.Villain.Blocks.list_blocks(),
-                type_field: :type,
-                on_type_not_found: :raise,
-                on_replace: :delete
-              ]
-          )
 
         attr ->
           Ecto.Schema.field(
@@ -295,6 +326,15 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:belongs_to, opts)
           )
 
+        %{type: :has_one, name: name, opts: opts} ->
+          referenced_module = Map.fetch!(opts, :module)
+
+          Ecto.Schema.has_one(
+            name,
+            referenced_module,
+            to_ecto_opts(:has_one, opts)
+          )
+
         %{type: :many_to_many, name: name, opts: opts} ->
           Ecto.Schema.many_to_many(
             name,
@@ -307,6 +347,27 @@ defmodule Brando.Blueprint do
             name,
             to_ecto_opts(:has_many, opts)
           )
+
+        %{type: :has_many, name: rel_name, opts: %{module: :blocks}} ->
+          main_module = unquote(module)
+          rel_module = rel_name |> to_string() |> Macro.camelize() |> String.to_atom()
+          block_module = Module.concat([main_module, rel_module])
+
+          [
+            Ecto.Schema.field(:"rendered_#{rel_name}", :string),
+            Ecto.Schema.field(:"rendered_#{rel_name}_at", :utc_datetime),
+            Ecto.Schema.has_many(
+              :"entry_#{rel_name}",
+              block_module,
+              preload_order: [asc: :sequence],
+              on_replace: :delete,
+              foreign_key: :entry_id
+            ),
+            Ecto.Schema.has_many(
+              rel_name,
+              through: [:"entry_#{rel_name}", :block]
+            )
+          ]
 
         %{type: :has_many, name: :alternates, opts: %{module: :alternates}} ->
           main_module = unquote(module)
@@ -336,7 +397,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             name,
             Map.fetch!(opts, :module),
-            to_ecto_opts(:embeds_one, opts) ++ [on_replace: :update]
+            to_ecto_opts(:embeds_one, opts)
           )
 
         %{type: :embeds_many, name: name, opts: opts} ->
@@ -402,14 +463,6 @@ defmodule Brando.Blueprint do
             on_replace: :delete
           )
 
-        %Asset{type: :gallery_images, name: name} ->
-          Ecto.Schema.has_many(
-            name,
-            Brando.Images.GalleryImage,
-            preload_order: [asc: :sequence],
-            on_replace: :delete_if_exists
-          )
-
         asset ->
           require Logger
           Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")
@@ -426,6 +479,8 @@ defmodule Brando.Blueprint do
         build_assets(unquote(assets))
         build_relations(unquote(module), unquote(relations))
       end
+
+      maybe_build_blocks_modules(unquote(module), unquote(name), unquote(relations))
     end
   end
 
@@ -634,6 +689,17 @@ defmodule Brando.Blueprint do
         end
       end
 
+      def __relation__(unknown_relation) do
+        raise BlueprintError,
+          message: """
+          Unknown relation: #{inspect(unknown_relation)} in schema #{inspect(__MODULE__)}
+
+          Check that you are not referencing a relation that does not exists,
+          usually this is due to a typo when declaring your forms.
+
+          """
+      end
+
       unless Enum.empty?(@all_relations) do
         def __relation_opts__(name) do
           Map.get(__relation__(name), :opts, [])
@@ -753,21 +819,21 @@ defmodule Brando.Blueprint do
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}ListLive"
+            "#{Macro.camelize(@singular)}ListLive"
           ])
 
         admin_create_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}CreateLive"
+            "#{Macro.camelize(@singular)}CreateLive"
           ])
 
         admin_update_view =
           Module.concat([
             admin_module,
             @domain,
-            "#{Recase.to_pascal(@singular)}UpdateLive"
+            "#{Macro.camelize(@singular)}UpdateLive"
           ])
 
         %{
@@ -803,8 +869,8 @@ defmodule Brando.Blueprint do
         @gallery_fields
       end
 
-      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
-      def __villain_fields__ do
+      @villain_fields Enum.filter(@all_relations, &(&1.opts.module == :blocks))
+      def __blocks_fields__ do
         @villain_fields
       end
 
@@ -826,7 +892,7 @@ defmodule Brando.Blueprint do
 
       @poly_fields Enum.filter(
                      @attrs,
-                     &(&1.type in [{:array, Brando.PolymorphicEmbed}, Brando.PolymorphicEmbed])
+                     &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
                    )
       def __poly_fields__ do
         @poly_fields
@@ -879,11 +945,12 @@ defmodule Brando.Blueprint do
       end
 
       # generate changeset
-      def changeset(schema, params \\ %{}, user \\ :system, opts \\ []) do
+      def changeset(schema, params \\ %{}, user \\ :system, sequence \\ nil, opts \\ []) do
         run_changeset(
           __MODULE__,
           schema,
           params,
+          sequence,
           user,
           @all_traits,
           @all_attributes,
@@ -929,6 +996,7 @@ defmodule Brando.Blueprint do
         module,
         schema,
         params,
+        sequence,
         user,
         all_traits,
         all_attributes,
@@ -949,6 +1017,16 @@ defmodule Brando.Blueprint do
       (all_required_attrs ++ all_optional_attrs ++ castable_relations ++ castable_assets)
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
+
+    if module != schema.__struct__ do
+      require Logger
+
+      Logger.error(
+        "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(module)}, schema struct: #{inspect(schema.__struct__)}"
+      )
+
+      Logger.error(inspect(schema, pretty: true))
+    end
 
     changeset =
       schema
@@ -979,6 +1057,7 @@ defmodule Brando.Blueprint do
         opts
       )
       |> maybe_mark_for_deletion(module)
+      |> maybe_sequence(module, sequence)
 
     :telemetry.execute(
       [:brando, :run_changeset],
@@ -991,9 +1070,19 @@ defmodule Brando.Blueprint do
     changeset
   end
 
-  def maybe_validate_required(changeset, all_required_attrs) do
-    require Logger
+  def maybe_sequence(changeset, _module, nil) do
+    changeset
+  end
 
+  def maybe_sequence(changeset, module, sequence) do
+    if module.has_trait(Brando.Trait.Sequenced) do
+      Changeset.change(changeset, sequence: sequence)
+    else
+      changeset
+    end
+  end
+
+  def maybe_validate_required(changeset, all_required_attrs) do
     case Changeset.get_field(changeset, :status) do
       :draft -> changeset
       _ -> Changeset.validate_required(changeset, all_required_attrs)
@@ -1029,13 +1118,32 @@ defmodule Brando.Blueprint do
   end
 
   defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
-    villain_fields = Enum.map(module.__villain_fields__(), & &1.name)
+    villain_fields = Enum.map(module.__blocks_fields__(), & &1.name)
     Enum.reject(fields_to_cast, &(&1 in villain_fields))
   end
 
   defp strip_polymorphic_embeds_from_fields_to_cast(fields_to_cast, module) do
     poly_fields = Enum.map(module.__poly_fields__(), & &1.name)
     Enum.reject(fields_to_cast, &(&1 in poly_fields))
+  end
+
+  @doc """
+  Return a list of preloads for a given schema
+  """
+  def preloads_for(schema) do
+    asset_preloads = Brando.Blueprint.Assets.preloads_for(schema)
+    rel_preloads = Brando.Blueprint.Relations.preloads_for(schema)
+    blocks_preloads = Brando.Villain.preloads_for(schema)
+    alternates_preload = Brando.Content.AlternateEntries.preloads_for(schema)
+    identifiers_preloads = Brando.Content.Identifier.preloads_for(schema)
+
+    Enum.uniq(
+      asset_preloads ++
+        rel_preloads ++
+        blocks_preloads ++
+        alternates_preload ++
+        identifiers_preloads
+    )
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
@@ -1050,6 +1158,10 @@ defmodule Brando.Blueprint do
     app_modules
     |> Enum.uniq()
     |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  def list_blueprints(:include_brando) do
+    list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
   end
 
   def get_plural(module) do

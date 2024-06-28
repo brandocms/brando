@@ -1,6 +1,7 @@
 .blocks-wrapper {
   padding: 0.7rem;
-  background-color: var(--brando-color-peach);
+  background-color: #fbfbfb;
+  border-radius: 12px;
 
   .modules-header {
     display: flex;

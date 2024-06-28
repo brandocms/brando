@@ -88,7 +88,18 @@ defmodule Brando.Pages do
   mutation :create, Page
   mutation :update, Page
   mutation :delete, Page
-  mutation :duplicate, {Page, delete_fields: [:children, :parent], change_fields: [:uri, :title]}
+
+  mutation :duplicate,
+           {Page,
+            delete_fields: [:children, :parent],
+            change_fields: [:uri, :title, vars: &__MODULE__.duplicate_vars/2]}
+
+  def duplicate_vars(entry, _) do
+    entry
+    |> Brando.repo().preload(:vars)
+    |> Map.get(:vars)
+    |> Enum.map(&Map.put(&1, :id, nil))
+  end
 
   @doc """
   Only gets schemas that are parents
@@ -147,24 +158,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Re-render page
-  """
-  def rerender_page(page_id) do
-    Villain.rerender_html_from_id({Brando.Pages.Page, :data, :html}, page_id)
-  end
-
-  @doc """
-  Rerender all pages
-  """
-  def rerender_pages do
-    {:ok, pages} = list_pages()
-
-    for page <- pages do
-      Villain.rerender_html(Changeset.change(page))
-    end
-  end
-
   query :list, Fragment do
     fn query ->
       from q in query,
@@ -209,16 +202,16 @@ defmodule Brando.Pages do
   mutation :create, Fragment
 
   mutation :update, Fragment do
-    fn entry ->
-      Villain.update_module_in_fields(entry.id)
-      {:ok, entry}
+    fn fragment ->
+      Villain.render_entries_with_fragment_id(fragment.id)
+      {:ok, fragment}
     end
   end
 
   mutation :delete, Fragment do
-    fn entry ->
-      Villain.update_module_in_fields(entry.id)
-      {:ok, entry}
+    fn fragment ->
+      Villain.render_entries_with_fragment_id(fragment.id)
+      {:ok, fragment}
     end
   end
 
@@ -267,16 +260,11 @@ defmodule Brando.Pages do
   """
   def rerender_fragments do
     {:ok, fragments} = list_fragments()
-
-    for fragment <- fragments do
-      Villain.rerender_html(Changeset.change(fragment))
-    end
+    Villain.render_entries(Fragment, Enum.map(fragments, & &1.id))
   end
 
   def rerender_fragment(id) do
-    {:ok, fragment} = get_fragment(id)
-    changeset = Changeset.change(fragment)
-    Villain.rerender_html(changeset)
+    Villain.render_entry(Fragment, id)
   end
 
   def list_fragments_translations(parent_key, opts \\ []) do
@@ -348,20 +336,6 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Check all fields for references to `fragment`.
-  Rerender if found.
-  """
-  @spec update_villains_referencing_fragment(fragment) :: [any]
-  def update_villains_referencing_fragment(fragment) do
-    search_term = [
-      fragment: "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
-    ]
-
-    villains = Villain.list_villains()
-    Villain.rerender_matching_villains(villains, search_term)
-  end
-
-  @doc """
   Fetch a page fragment by `key`.
 
   ## Example:
@@ -390,11 +364,11 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       fragment ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 
-  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.html)
+  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.rendered_blocks)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -406,7 +380,7 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       fragment ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 
@@ -424,7 +398,7 @@ defmodule Brando.Pages do
            </div>) |> Phoenix.HTML.raw()
 
       {:ok, fragment} ->
-        Phoenix.HTML.raw(fragment.html)
+        Phoenix.HTML.raw(fragment.rendered_blocks)
     end
   end
 

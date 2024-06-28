@@ -27,6 +27,7 @@ defmodule Brando.HTML.Images do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
+    * `fetchpriority` - set to "high" for high fetch priority
     * `moonwalk` - set moonwalk attr
     * `media_queries` - list of media queries to add to source.
        I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
@@ -70,8 +71,8 @@ defmodule Brando.HTML.Images do
     """
   end
 
-  def picture(%{src: %Brando.Content.Var.Image{} = var} = assigns) do
-    assigns = assign(assigns, src: var.value)
+  def picture(%{src: %Brando.Content.Var{type: :image} = var} = assigns) do
+    assigns = assign(assigns, src: var.image)
     picture(assigns)
   end
 
@@ -102,6 +103,7 @@ defmodule Brando.HTML.Images do
       |> add_mq(image_struct)
       |> add_dims(image_struct)
       |> add_src(image_struct)
+      |> add_fetchpriority()
       |> add_dominant_color(image_struct)
       |> add_extra_attrs()
       |> add_classes()
@@ -398,6 +400,14 @@ defmodule Brando.HTML.Images do
     end
   end
 
+  defp add_fetchpriority(attrs) do
+    if fetchpriority = Keyword.get(attrs.opts, :fetchpriority, false) do
+      put_in(attrs, [:img, "fetchpriority"], fetchpriority)
+    else
+      attrs
+    end
+  end
+
   defp add_src(%{type: :svg, lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
     src = Utils.img_url(image_struct, :original, attrs.opts)
@@ -470,7 +480,14 @@ defmodule Brando.HTML.Images do
   defp add_dominant_color(attrs, image_struct) do
     case Keyword.get(attrs.opts, :placeholder) do
       pl when pl in [:dominant_color, "dominant_color"] ->
-        style = "background-color: #{image_struct.dominant_color || "transparent"}"
+        color =
+          case image_struct.dominant_color do
+            nil -> "transparent"
+            "transparent" -> "transparent"
+            color -> color
+          end
+
+        style = "background-color: #{color}"
 
         attrs
         |> put_in([:picture, "style"], style)
@@ -478,7 +495,11 @@ defmodule Brando.HTML.Images do
 
       pl when pl in [:dominant_color_faded, "dominant_color_faded"] ->
         color =
-          (image_struct.dominant_color && image_struct.dominant_color <> "11") || "transparent"
+          case image_struct.dominant_color do
+            nil -> "transparent"
+            "transparent" -> "transparent"
+            color -> color <> "11"
+          end
 
         style = "background-color: #{color}"
 
@@ -753,7 +774,14 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+            (placeholder not in [
+               :svg,
+               :dominant_color,
+               :dominant_color_faded,
+               "svg",
+               "dominant_color",
+               "dominant_color_faded"
+             ] && placeholder) ||
               k,
             opts
           )

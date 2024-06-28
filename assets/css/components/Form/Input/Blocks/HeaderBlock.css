@@ -3,9 +3,11 @@
   textarea {
     border: 0;
     width: 100%;
-    padding: 0;
+    padding: 0 0 5px;
     line-height: 1.1;
     font-weight: 500;
+    field-sizing: content;
+    overflow: visible;
 
     &.h1 {
       font-size: 2.75rem;

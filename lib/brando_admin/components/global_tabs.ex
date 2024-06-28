@@ -19,26 +19,28 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     <div>
       <%= if @global_sets == [] do %>
         <.alert type={:info}>
-          <%= gettext "The application currently has no globals configured" %>
+          <%= gettext("The application currently has no globals configured") %>
         </.alert>
       <% else %>
         <div class="global-tabs">
           <.live_component module={ImagePicker} id="image-picker" />
           <div class="form-tabs">
-            <div
-              :for={{global_set, index} <- @indexed_global_sets}
-              class="form-tab-customs">
+            <div :for={{global_set, index} <- @indexed_global_sets} class="form-tab-customs">
               <button
                 id={"set-#{global_set.key}-#{global_set.language}"}
                 type="button"
                 class={[@active_tab == index && "active"]}
-                phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}><%= global_set.label %></button>
+                phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}
+              >
+                <%= global_set.label %>
+              </button>
             </div>
           </div>
           <div
             :for={{global_set, index} <- @indexed_global_sets}
             :if={index == @active_tab}
-            id={"set-#{index}"}>
+            id={"set-#{index}"}
+          >
             <.set_form global_set={global_set} index={index} target={@myself} />
           </div>
         </div>
@@ -56,23 +58,20 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       end)
 
     ~H"""
-    <.form
-      for={@changeset}
-      phx-target={@target}
-      phx-change="validate"
-      phx-submit="submit"
-      :let={f}>
+    <.form :let={f} for={@changeset} phx-target={@target} phx-change="validate" phx-submit="submit">
       <Input.input type={:hidden} field={f[:id]} />
       <Input.input type={:hidden} field={f[:language]} />
       <Input.input type={:hidden} field={f[:label]} />
       <Input.input type={:hidden} field={f[:key]} />
 
       <%= for var <- inputs_for_poly(f[:globals], []) do %>
-        <.live_component module={RenderVar}
+        <.live_component
+          module={RenderVar}
           id={"set-#{@global_set.id}-#{var.id}-#{@index}"}
           var={var}
           render={:all}
-          in_block />
+          publish
+        />
       <% end %>
 
       <button class="primary"><%= gettext("Save") %></button>

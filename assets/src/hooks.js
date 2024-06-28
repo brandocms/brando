@@ -16,14 +16,18 @@ import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
+import PublishClosestInputHook from './hooks/PublishClosestInput'
+import PublishInputHook from './hooks/PublishInput'
 import QueuedUploaderHook from './hooks/QueuedUploader'
-import SelectFilterHook from './hooks/SelectFilter'
 import RememberScrollPositionHook from './hooks/RememberScrollPosition'
+import SelectFilterHook from './hooks/SelectFilter'
 import SchedulerHook from './hooks/Scheduler'
 import SlugHook from './hooks/Slug'
 import SortableHook from './hooks/Sortable'
 import SortableInputsForHook from './hooks/SortableInputsFor'
+import SortableAssocsHook from './hooks/SortableAssocs'
 import SortableBlocksHook from './hooks/SortableBlocks'
+import SortableEmbedsHook from './hooks/SortableEmbeds'
 import SubFormSortableHook from './hooks/SubFormSortable'
 import SubmitHook from './hooks/Submit'
 import SVGDropHook from './hooks/SVGDrop'
@@ -50,14 +54,18 @@ export default app => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
+    'Brando.PublishClosestInput': PublishClosestInputHook(app),
+    'Brando.PublishInput': PublishInputHook(app),
     'Brando.QueuedUploader': QueuedUploaderHook(app),
-    'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.RememberScrollPosition': RememberScrollPositionHook(app),
+    'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.Scheduler': SchedulerHook(app),
     'Brando.Slug': SlugHook(app),
     'Brando.Sortable': SortableHook(app),
     'Brando.SortableInputsFor': SortableInputsForHook(app),
+    'Brando.SortableAssocs': SortableAssocsHook(app),
     'Brando.SortableBlocks': SortableBlocksHook(app),
+    'Brando.SortableEmbeds': SortableEmbedsHook(app),
     'Brando.SubFormSortable': SubFormSortableHook(app),
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),

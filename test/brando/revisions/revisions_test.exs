@@ -13,7 +13,20 @@ defmodule Brando.Revisions.RevisionsTest do
   end
 
   test "create_revision", %{user: user} do
-    s1a = %Page{id: 1, title: "My title!"}
+    s1a = %Page{
+      id: 1,
+      title: "My title!",
+      alternate_entries: [],
+      alternates: [],
+      blocks: [],
+      children: [],
+      entry_blocks: [],
+      fragments: [],
+      parent: nil,
+      meta_image: nil,
+      vars: []
+    }
+
     s1b = %{s1a | title: "A new title!"}
     {:ok, r1} = Revisions.create_revision(s1a, user)
     {:ok, r2} = Revisions.create_revision(s1b, user)
@@ -38,7 +51,7 @@ defmodule Brando.Revisions.RevisionsTest do
   end
 
   test "set", %{user: user} do
-    {:ok, p1} = Pages.create_page(Factory.params_for(:page), user)
+    {:ok, p1} = Pages.create_page(Factory.params_for(:page, vars: []), user)
     {:ok, p2} = Pages.update_page(p1.id, %{title: "Title no. 2"}, user)
     {:ok, p3} = Pages.update_page(p2.id, %{title: "Title no. 3"}, user)
 

@@ -12,7 +12,8 @@ defmodule Brando.Sites.Identity do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
 
-  identifier "{{ entry.name }}"
+  identifier false
+  persist_identifier false
 
   @logo_cfg [
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

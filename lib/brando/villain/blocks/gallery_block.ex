@@ -12,7 +12,8 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
+    persist_identifier false
 
     attributes do
       attribute :class, :string
@@ -36,7 +37,10 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     end
 
     relations do
-      relation :images, :embeds_many, module: Blocks.PictureBlock.Data
+      relation :images, :embeds_many,
+        module: Blocks.PictureBlock.Data,
+        on_replace: :delete,
+        sort_param: :sort_images
     end
   end
 

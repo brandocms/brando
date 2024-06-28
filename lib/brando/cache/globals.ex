@@ -41,7 +41,7 @@ defmodule Brando.Cache.Globals do
 
   defp process_globals(global_sets) do
     Enum.reduce(global_sets, %{}, fn
-      %{language: language, globals: nil} = set, acc ->
+      %{language: language, vars: vars} = set, acc when vars in [nil, []] ->
         put_in(
           acc,
           [
@@ -51,9 +51,9 @@ defmodule Brando.Cache.Globals do
           []
         )
 
-      %{language: language, globals: globals} = set, acc ->
+      %{language: language, vars: vars} = set, acc ->
         set_globals =
-          globals
+          vars
           |> Enum.map(&preload_images/1)
           |> Enum.map(&{&1.key, &1})
           |> Enum.into(%{})
@@ -69,8 +69,8 @@ defmodule Brando.Cache.Globals do
     end)
   end
 
-  defp preload_images(%Brando.Content.Var.Image{} = image_var),
-    do: Brando.repo().preload(image_var, :value)
+  defp preload_images(%Brando.Content.Var{type: :image} = image_var),
+    do: Brando.repo().preload(image_var, :image)
 
   defp preload_images(var), do: var
 end

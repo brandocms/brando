@@ -260,7 +260,7 @@ module.exports = {
           ipad_portrait: '20px',
           ipad_landscape: '18px',
           desktop_md: '18px',
-          desktop_lg: '19px',
+          desktop_lg: '18px',
           desktop_xl: '20px'
         },
 
@@ -374,37 +374,30 @@ module.exports = {
         h1: {
           iphone: {
             'font-size': '27px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           mobile: {
             'font-size': '30px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           ipad_portrait: {
             'font-size': '30px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           ipad_landscape: {
             'font-size': '30px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_md: {
             'font-size': '50px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_lg: {
             'font-size': '55px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_xl: {
             'font-size': '65px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           }
         },
@@ -413,69 +406,55 @@ module.exports = {
           //
           iphone: {
             'font-size': '22px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           mobile: {
             'font-size': '24px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           ipad_portrait: {
             'font-size': '27px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           ipad_landscape: {
             'font-size': '30px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_md: {
             'font-size': '32px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_lg: {
             'font-size': '35px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           },
           desktop_xl: {
             'font-size': '35px',
-            'letter-spacing': '-0.05em',
             'font-weight': '600'
           }
         },
 
         h3: {
           iphone: {
-            'font-size': '21px',
-            'letter-spacing': '-0.02em'
+            'font-size': '21px'
           },
           mobile: {
-            'font-size': '22px',
-            'letter-spacing': '-0.02em'
+            'font-size': '22px'
           },
           ipad_portrait: {
-            'font-size': '23px',
-            'letter-spacing': '-0.02em'
+            'font-size': '23px'
           },
           ipad_landscape: {
-            'font-size': '24px',
-            'letter-spacing': '-0.02em'
+            'font-size': '24px'
           },
           desktop_md: {
-            'font-size': '27px',
-            'letter-spacing': '-0.02em'
+            'font-size': '27px'
           },
           desktop_lg: {
-            'font-size': '28px',
-            'letter-spacing': '-0.02em'
+            'font-size': '28px'
           },
           desktop_xl: {
-            'font-size': '30px',
-            'letter-spacing': '-0.02em'
+            'font-size': '30px'
           }
         },
 

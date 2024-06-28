@@ -10,7 +10,8 @@ defmodule Brando.Villain.Blocks.MapBlock do
 
     @primary_key false
     data_layer :embedded
-    identifier "{{ entry.type }}"
+    identifier false
+    persist_identifier false
 
     attributes do
       attribute :embed_url, :string

@@ -5,11 +5,14 @@ defmodule BrandoAdmin.Content.PaletteUpdateLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component module={Form}
+    <.live_component
+      module={Form}
       id="palette_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}>
+      presences={@presences}
+      schema={@schema}
+    >
       <:header>
         <%= gettext("Edit palette") %>
       </:header>
