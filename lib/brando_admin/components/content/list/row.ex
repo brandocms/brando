@@ -551,7 +551,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign_new(:soft_delete?, fn -> entry_schema.has_trait(Trait.SoftDelete) end)
       |> assign_new(:listing, fn ->
         listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
-        listing = Enum.find(schema.__listings__, &(&1.name == listing_for_schema))
+        listing = Enum.find(schema.__listings__(), &(&1.name == listing_for_schema))
 
         if !listing do
           raise "No listing `#{inspect(listing_for_schema)}` found for `#{inspect(entry_schema)}`"
