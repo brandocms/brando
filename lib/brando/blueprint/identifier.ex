@@ -88,17 +88,13 @@ defmodule Brando.Blueprint.Identifier do
 
   defmacro identifier(nil) do
     quote location: :keep do
-      def __has_identifier__ do
-        false
-      end
+      def __has_identifier__, do: false
     end
   end
 
   defmacro identifier(false) do
     quote location: :keep do
-      def __has_identifier__ do
-        false
-      end
+      def __has_identifier__, do: false
     end
   end
 

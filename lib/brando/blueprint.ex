@@ -207,6 +207,9 @@ defmodule Brando.Blueprint do
       def __has_absolute_url__, do: false
       defoverridable __has_absolute_url__: 0
 
+      def __has_identifier__, do: false
+      defoverridable __has_identifier__: 0
+
       def __persist_identifier__, do: true
       defoverridable __persist_identifier__: 0
     end

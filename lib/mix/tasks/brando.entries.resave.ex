@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Brando.Resave.Entries do
+defmodule Mix.Tasks.Brando.Entries.Resave do
   use Mix.Task
 
   @shortdoc "Re-save all entries"
@@ -6,11 +6,11 @@ defmodule Mix.Tasks.Brando.Resave.Entries do
   @moduledoc """
   Re-save all entries
 
-      mix brando.resave.entries
+      mix brando.entries.resave
 
   Re-save entries for specific blueprint
 
-      mix brando.resave.entries MyApp.Projects.Project
+      mix brando.entries.resave MyApp.Projects.Project
 
   """
   @spec run(any) :: no_return
@@ -27,13 +27,25 @@ defmodule Mix.Tasks.Brando.Resave.Entries do
     ------------------------------
     """)
 
-    blueprints = Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
+    blueprints =
+      [Brando.Pages.Fragment] ++
+        Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page]
+
+    Mix.shell().info([:yellow, "\n==> Blueprint schemas that will be resaved:\n\n"])
 
     for blueprint <- blueprints do
-      resave_entries(blueprint)
+      Mix.shell().info([:green, "    * #{inspect(blueprint, pretty: true)}"])
     end
 
-    Mix.shell().info([:green, "\n==> Done.\n"])
+    if Mix.shell().yes?("\n\nProceed?") do
+      for blueprint <- blueprints do
+        if blueprint.__has_identifier__ do
+          resave_entries(blueprint)
+        end
+      end
+
+      Mix.shell().info([:green, "\n==> Done.\n"])
+    end
   end
 
   def run([blueprint_binary]) do
@@ -50,24 +62,45 @@ defmodule Mix.Tasks.Brando.Resave.Entries do
     """)
 
     blueprint = Module.concat([blueprint_binary])
-    resave_entries(blueprint)
-    Mix.shell().info([:green, "\n==> Done.\n"])
+
+    if blueprint.__has_identifier__ do
+      resave_entries(blueprint)
+      Mix.shell().info([:green, "\n==> Done.\n"])
+    end
   end
 
   defp resave_entries(blueprint) do
     context = blueprint.__modules__().context
     singular = blueprint.__naming__().singular
     plural = blueprint.__naming__().plural
-    {:ok, entries} = apply(context, :"list_#{plural}", [%{order: "asc id"}])
+    preloads = Brando.Blueprint.preloads_for(blueprint)
+    {:ok, entries} = apply(context, :"list_#{plural}", [%{order: "asc id", preload: preloads}])
 
     Mix.shell().info([:green, "\n==> Resaving #{singular} entries\n"])
 
     for entry <- entries do
+      title = blueprint.__identifier__(entry, skip_cover: true).title
+
       IO.write([
-        "* [#{singular}:#{entry.id}] → #{blueprint.__identifier__(entry, skip_cover: true).title} ... "
+        "* [",
+        IO.ANSI.blue(),
+        "#{singular}",
+        IO.ANSI.reset(),
+        ":",
+        IO.ANSI.blue(),
+        "#{entry.id}",
+        IO.ANSI.reset(),
+        "] → ",
+        IO.ANSI.blue(),
+        title,
+        IO.ANSI.reset(),
+        " ... "
       ])
 
-      changeset = Ecto.Changeset.change(entry)
+      changeset =
+        entry
+        |> Ecto.Changeset.change()
+        |> Brando.Villain.render_all_block_fields_and_add_to_changeset(blueprint, entry)
 
       case Brando.repo().update(changeset, force: true) do
         {:ok, _} ->
