@@ -40,6 +40,7 @@ defmodule Brando.Content.Block do
     :link_identifier_schemas,
     :link_target_blank,
     :link_allow_custom_text,
+    :width,
     :sequence,
     :creator_id,
     :module_id,
