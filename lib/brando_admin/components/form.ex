@@ -1420,6 +1420,15 @@ defmodule BrandoAdmin.Components.Form do
               </div>
             </div>
           <% end %>
+
+          <%= for entry <- @upload_field.entries do %>
+            <%= for err <- upload_errors(@upload_field, entry) do %>
+              <div class="alert alert-danger">
+                <.icon name="hero-exclamation-triangle" />
+                <%= Brando.Upload.error_to_string(err) %>
+              </div>
+            <% end %>
+          <% end %>
         </div>
 
         <div class="button-group vertical">
