@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         %{opts: %{module: rel_module}} = module.__relation__(field.field)
 
         # the rel module must have `@allow_mark_as_deleted true`
-        if not rel_module.__allow_mark_as_deleted__ do
+        if not rel_module.__allow_mark_as_deleted__() do
           raise BlueprintError,
             message: """
             Missing @allow_mark_as_deleted
@@ -114,9 +114,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         end
 
         fields =
-          Enum.map(rel_module.__relations__, &:"#{&1.name}_id") ++
-            Enum.map(rel_module.__assets__, &:"#{&1.name}_id") ++
-            Enum.map(rel_module.__attributes__, & &1.name)
+          Enum.map(rel_module.__relations__(), &:"#{&1.name}_id") ++
+            Enum.map(rel_module.__assets__(), &:"#{&1.name}_id") ++
+            Enum.map(rel_module.__attributes__(), & &1.name)
 
         Enum.reject(fields, &(&1 == :sequence))
       else
