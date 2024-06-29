@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.AddTableRows do
   use Ecto.Migration
-  import Ecto.Query
 
   def up do
     create table(:content_table_rows) do
