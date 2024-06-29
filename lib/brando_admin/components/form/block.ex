@@ -3018,14 +3018,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_changeset = get_block_changeset(changeset, belongs_to)
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
 
-    # does it have the identifier already?
+    # check if the identifier is already assigned and if it is, remove it
+    # also filter out any :replace actions
+    # https://elixirforum.com/t/ecto-put-change-not-working-on-nested-changeset-when-updating/32681/2
     updated_block_identifiers =
-      case Enum.find(
-             block_identifiers,
-             &(Changeset.get_field(&1, :identifier_id) == identifier_id)
-           ) do
+      block_identifiers
+      |> Enum.find(&(Changeset.get_field(&1, :identifier_id) == identifier_id))
+      |> case do
         nil ->
-          # add it
           insert_identifier(block_identifiers, identifier_id)
 
         %{action: :replace} = replaced_changeset ->
@@ -3043,10 +3043,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         _ ->
           remove_identifier(block_identifiers, identifier_id)
       end
-
-    # filter out any :replace actions
-    # https://elixirforum.com/t/ecto-put-change-not-working-on-nested-changeset-when-updating/32681/2
-    updated_block_identifiers = Enum.filter(updated_block_identifiers, &(&1.action != :replace))
+      |> Enum.filter(&(&1.action != :replace))
 
     updated_block_changeset =
       Changeset.put_assoc(
