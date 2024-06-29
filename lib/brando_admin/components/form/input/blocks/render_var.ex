@@ -589,7 +589,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       assigns
       |> assign(:link_type, link_type)
       |> assign(:link_text, link_text)
-      |> assign(:value, value)
+      |> assign(:value, split_url_with_wbr(value))
       |> assign(:external?, external?)
 
     ~H"""
@@ -606,7 +606,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
           <dl>
             <dt><%= gettext("URL") %>=</dt>
-            <dd><%= @value || gettext("<No URL>") %></dd>
+            <dd><%= raw(@value) || gettext("<No URL>") %></dd>
           </dl>
         <% else %>
           <.link_identifier identifier={@identifier} link_text={@link_text} />
@@ -614,6 +614,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       </div>
     </div>
     """
+  end
+
+  defp split_url_with_wbr(url) do
+    url
+    |> String.split("/")
+    |> Enum.map_join("/", &"#{&1}<wbr />")
   end
 
   attr :link_text, :string, default: nil
