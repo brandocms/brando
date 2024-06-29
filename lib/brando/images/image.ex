@@ -37,6 +37,7 @@ defmodule Brando.Images.Image do
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
     attribute :config_target, :text
+    attribute :fetchpriority, Ecto.Enum, values: [:high, :low, :auto], default: :auto
   end
 
   relations do

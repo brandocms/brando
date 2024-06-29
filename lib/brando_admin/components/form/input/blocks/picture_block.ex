@@ -49,7 +49,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     :moonwalk,
     :dominant_color,
     :placeholder,
-    :focal
+    :focal,
+    :fetchpriority
   ]
 
   def mount(socket) do
@@ -186,6 +187,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 <Input.rich_text field={block_data[:title]} label={gettext("Title")} />
                 <Input.text field={block_data[:alt]} label={gettext("Alt")} />
                 <Input.text field={block_data[:link]} label={gettext("Link")} />
+                <Input.radios
+                  field={block_data[:fetchpriority]}
+                  label={gettext("Fetch priority")}
+                  opts={[
+                    options: [
+                      %{label: gettext("Auto"), value: :auto},
+                      %{label: gettext("High"), value: :high},
+                      %{label: gettext("Low"), value: :low}
+                    ]
+                  ]}
+                />
 
                 <div class="button-group-vertical">
                   <button
@@ -230,13 +242,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             </.inputs_for>
 
             <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
-              <%!-- TODO: Remove the _unused check when https://github.com/phoenixframework/phoenix_live_view/pull/3244 is merged --%>
-              <input
-                :if={!String.starts_with?(name, "_unused")}
-                type="hidden"
-                name={name}
-                value={value}
-              />
+              <input type="hidden" name={name} value={value} />
             </Form.map_inputs>
 
             <Form.array_inputs

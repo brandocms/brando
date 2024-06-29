@@ -41,6 +41,10 @@ defmodule Brando.Villain.Blocks.PictureBlock do
       attribute :placeholder, :enum,
         values: [:svg, :dominant_color, :dominant_color_faded, :micro, :none],
         default: :dominant_color
+
+      attribute :fetchpriority, :enum,
+        values: [:high, :low, :auto],
+        default: :auto
     end
 
     relations do
@@ -52,7 +56,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
     type: "picture"
 
   def protected_attrs do
-    [:sizes, :path, :dominant_color, :focal, :height, :width, :formats]
+    [:sizes, :path, :dominant_color, :focal, :height, :width, :formats, :fetchpriority]
   end
 
   def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target) do

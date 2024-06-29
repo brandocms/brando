@@ -103,7 +103,7 @@ defmodule Brando.HTML.Images do
       |> add_mq(image_struct)
       |> add_dims(image_struct)
       |> add_src(image_struct)
-      |> add_fetchpriority()
+      |> add_fetchpriority(image_struct)
       |> add_dominant_color(image_struct)
       |> add_extra_attrs()
       |> add_classes()
@@ -400,11 +400,15 @@ defmodule Brando.HTML.Images do
     end
   end
 
-  defp add_fetchpriority(attrs) do
+  defp add_fetchpriority(attrs, image_struct) do
     if fetchpriority = Keyword.get(attrs.opts, :fetchpriority, false) do
       put_in(attrs, [:img, "fetchpriority"], fetchpriority)
     else
-      attrs
+      if image_struct.fetchpriority in [:high, :low] do
+        put_in(attrs, [:img, "fetchpriority"], image_struct.fetchpriority)
+      else
+        attrs
+      end
     end
   end
 
