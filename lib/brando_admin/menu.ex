@@ -197,7 +197,7 @@ defmodule BrandoAdmin.Menu do
       msgid = Brando.Utils.humanize(plural, :downcase)
 
       url_base = "/admin/#{snake_domain}/#{plural}"
-      default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
+      default_listing = Enum.find(schema.__listings__(), &(&1.name == :default))
 
       if !default_listing do
         raise Brando.Exception.BlueprintError,
