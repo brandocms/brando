@@ -9,6 +9,20 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
   Run `mix brando.identifiers.sync` to create missing identifiers, delete orphaned identifiers and update URLs
 
+* BREAKING: added `link` type vars to navigation items. You can iterate menu items with some new components:
+  ```
+  <section :if={assigns[:navigation]} class="main">
+    <ul>
+      <.menu :let={item} menu={@navigation}>
+        <li>
+          <.menu_item :let={text} conn={@conn} item={item}>
+            <%= text %>
+          </.menu_item>
+        </li>
+      </.menu>
+    </ul>
+  </section>
+  ```
 
 ## 0.53.0
 
