@@ -526,6 +526,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <.image_modal field={@var} image={@image} target={@target} />
         </div>
       </Form.field_base>
+      <div :if={@edit} class="brando-input">
+        <Input.text
+          field={@var[:config_target]}
+          label={gettext("Config target")}
+          instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
+          monospace
+        />
+      </div>
     </div>
     """
   end
@@ -757,6 +765,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               data-text-uploading={gettext("Uploading...")}
               data-block-uid={"var-#{@field.id}"}
               data-upload-event-target={@target}
+              data-upload-config-target={@field[:config_target].value}
             >
               <input class="file-input" type="file" />
               <div class="img-placeholder empty upload-canvas">

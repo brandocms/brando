@@ -8,15 +8,6 @@ defmodule BrandoAdmin.API.Content.Upload.FileController do
   def create(conn, %{"uid" => uid} = params) do
     user = Brando.Utils.current_user(conn)
 
-    require Logger
-
-    Logger.error("""
-
-    params
-    #{inspect(params, pretty: true)}
-
-    """)
-
     {cfg, params} =
       case Map.get(params, "config_target") do
         nil ->

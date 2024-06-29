@@ -101,12 +101,20 @@ defmodule Brando.Images do
   end
 
   def get_config_for(%{config_target: nil}) do
-    struct(Brando.Type.ImageConfig, Brando.config(Brando.Images)[:default_config])
+    maybe_struct(
+      Brando.Type.ImageConfig,
+      Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
+    )
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
+        [type, schema, "function", fn_string] when type in ["image", "gallery"] ->
+          schema_module = Module.concat([schema])
+          fn_atom = String.to_atom(fn_string)
+          apply(schema_module, fn_atom, [])
+
         [type, schema, field_name] when type in ["image", "gallery"] ->
           schema_module = Module.concat([schema])
 
@@ -116,8 +124,11 @@ defmodule Brando.Images do
           |> Map.get(:cfg)
 
         ["default"] ->
-          default_config = Keyword.get(Brando.config(Brando.Images), :default_config, %{})
-          struct(Brando.Type.ImageConfig, default_config)
+          maybe_struct(
+            Brando.Type.ImageConfig,
+            Brando.config(Brando.Images)[:default_config] ||
+              Brando.Type.ImageConfig.default_config()
+          )
       end
 
     {:ok, config}
@@ -172,4 +183,7 @@ defmodule Brando.Images do
       create_image(new_image_params, user)
     end
   end
+
+  defp maybe_struct(_struct_type, %Brando.Type.ImageConfig{} = config), do: config
+  defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end

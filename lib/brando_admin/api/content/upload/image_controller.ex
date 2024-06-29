@@ -19,12 +19,20 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
           |> Enum.map(&String.to_existing_atom/1)
       end
 
-    cfg = struct(Brando.Type.ImageConfig, Brando.config(Brando.Images)[:default_config])
+    {cfg, params} =
+      case Map.get(params, "config_target") do
+        nil ->
+          {Brando.config(Brando.Images)[:default_config] ||
+             Brando.Type.ImageConfig.default_config(),
+           Map.put(params, "config_target", "default")}
+
+        config_target ->
+          {:ok, image_cfg} = Brando.Images.get_config_for(config_target)
+          {image_cfg, params}
+      end
 
     # insert the formats we have in the block
     cfg = Map.put(cfg, :formats, upload_formats)
-
-    params = Map.put(params, "config_target", "default")
 
     payload =
       case Schema.handle_upload(params, cfg, user) do

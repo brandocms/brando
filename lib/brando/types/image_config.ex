@@ -71,4 +71,37 @@ defmodule Brando.Type.ImageConfig do
 
   defp ensure_atom(atom) when is_atom(atom), do: atom
   defp ensure_atom(binary) when is_binary(binary), do: String.to_existing_atom(binary)
+
+  def default_config do
+    %Brando.Type.ImageConfig{
+      allowed_mimetypes: [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/avif",
+        "image/webp",
+        "image/svg+xml"
+      ],
+      upload_path: Path.join(["images", "site", "default"]),
+      default_size: :xlarge,
+      random_filename: true,
+      size_limit: 10_240_000,
+      sizes: %{
+        "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+        "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
+        "small" => %{"size" => "700", "quality" => 75},
+        "medium" => %{"size" => "1100", "quality" => 75},
+        "large" => %{"size" => "1700", "quality" => 75},
+        "xlarge" => %{"size" => "2100", "quality" => 75}
+      },
+      srcset: %{
+        default: [
+          {"small", "700w"},
+          {"medium", "1100w"},
+          {"large", "1700w"},
+          {"xlarge", "2100w"}
+        ]
+      }
+    }
+  end
 end
