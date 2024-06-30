@@ -1,3 +1,45 @@
+.alert {
+  margin-top: 10px;
+  color: var(--brando-color-dark);  
+  font-family: 'Mono';
+  font-size: 12px;
+  padding: 10px;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+
+  strong {
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+
+  .icon {
+    margin-top: 2px;
+  }
+
+  .close {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+
+    button {
+      border: none;
+      background-color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background-color: var(--brando-color-dark);
+        span[data-icon] {
+          background-color: white;
+        }
+      }
+    }
+  }
+}
+
 .brando-form {
   display: flex;
   flex-direction: row;

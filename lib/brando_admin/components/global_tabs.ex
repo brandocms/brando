@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     <div>
       <%= if @global_sets == [] do %>
         <.alert type={:info}>
+          <:icon><.icon name="hero-exclamation-circle" /></:icon>
           <%= gettext("The application currently has no globals configured") %>
         </.alert>
       <% else %>

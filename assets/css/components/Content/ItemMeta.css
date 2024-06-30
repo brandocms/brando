@@ -103,6 +103,10 @@
   border: 1px dashed #3b3b3b;
   border-radius: 8px;
 
+  &.draggable {
+    cursor: move;
+  }
+
   .icon {
     opacity: 0;
     transition: 450ms ease;

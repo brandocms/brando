@@ -122,6 +122,33 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               <%= gettext("Select images") %>
             </button>
           </div>
+
+          <%= for entry <- @parent_uploads[@field.field].entries do %>
+            <progress value={entry.progress} max="100"><%= entry.progress %>%</progress>
+            <%= for err <- upload_errors(@parent_uploads[@field.field], entry) do %>
+              <.alert type={:danger}>
+                <:icon>
+                  <.icon name="hero-exclamation-triangle" />
+                </:icon>
+                <:close>
+                  <button
+                    type="button"
+                    phx-click="cancel_upload"
+                    phx-value-ref={entry.ref}
+                    phx-value-field_name={@field.field}
+                    phx-target={@form_cid}
+                    aria-label="cancel"
+                  >
+                    <.icon name="hero-x-circle" />
+                  </button>
+                </:close>
+                <strong><%= Brando.Upload.error_to_string(err) %></strong>
+                <br /><br />
+                <%= gettext("Filename") %> <%= entry.client_name %><br />
+                <%= gettext("Filesize") %> <%= Brando.Utils.human_size(entry.client_size) %>
+              </.alert>
+            <% end %>
+          <% end %>
           <%= if @gallery_images == [] do %>
             <small>
               <%= gettext("No associated gallery") %>
@@ -215,6 +242,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     gallery_images
     |> Enum.with_index()
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
+  end
+
+  def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
+    {:noreply, cancel_upload(socket, field_name, ref)}
   end
 
   def handle_event("reposition", _, socket) do

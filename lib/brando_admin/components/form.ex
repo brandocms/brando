@@ -1239,6 +1239,9 @@ defmodule BrandoAdmin.Components.Form do
     <%= for {fieldset, idx} <- @indexed_fields do %>
       <%= if fieldset.__struct__ == Brando.Blueprint.Forms.Alert do %>
         <.alert type={fieldset.type}>
+          <:icon>
+            <.icon name="hero-exclamation-triangle" />
+          </:icon>
           <%= raw(g(@form.source.data.__struct__, fieldset.content)) %>
         </.alert>
       <% else %>
@@ -1258,6 +1261,25 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def file_drawer(assigns) do
+    upload_field =
+      case Map.get(assigns.parent_uploads, assigns.edit_file.field) do
+        nil ->
+          # if we have a path with length > 1
+          if Enum.count(assigns.edit_file.path) > 1 do
+            [sub | _] = assigns.edit_file.path
+            nested_field = :"#{to_string(sub)}|#{to_string(assigns.edit_file.field)}"
+            get_in(assigns.parent_uploads, [Access.key(nested_field)])
+          end
+
+        upload ->
+          upload
+      end
+
+    assigns =
+      assigns
+      |> assign(:upload_field, upload_field)
+      |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
+
     ~H"""
     <Content.drawer id="file-drawer" title={gettext("File")} close={close_file()} z={1001} narrow>
       <.form
@@ -1273,7 +1295,7 @@ defmodule BrandoAdmin.Components.Form do
           id="file-drawer-form-preview"
           phx-hook="Brando.DragDrop"
           class="file-drawer-preview"
-          phx-drop-target={@parent_uploads[@edit_file.field].ref}
+          phx-drop-target={@drop_target}
         >
           <div :if={@processing} class="processing">
             <div>
@@ -1291,6 +1313,15 @@ defmodule BrandoAdmin.Components.Form do
               </div>
             </div>
           </div>
+
+          <%= for entry <- @upload_field.entries do %>
+            <%= for err <- upload_errors(@upload_field, entry) do %>
+              <div class="alert alert-danger">
+                <.icon name="hero-exclamation-triangle" />
+                <%= Brando.Upload.error_to_string(err) %>
+              </div>
+            <% end %>
+          <% end %>
 
           <div
             :if={
@@ -1312,7 +1343,7 @@ defmodule BrandoAdmin.Components.Form do
             <span class="label">
               <%= gettext("Upload file") %>
             </span>
-            <.live_file_input upload={@parent_uploads[@edit_file.field]} />
+            <.live_file_input upload={@upload_field} />
           </div>
 
           <button class="secondary" type="button" phx-click={toggle_drawer("#file-picker")}>
@@ -1919,6 +1950,11 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
+    field_name_atom = String.to_existing_atom(field_name)
+    {:noreply, cancel_upload(socket, field_name_atom, ref)}
+  end
+
   def handle_event("change_preview_target", %{"target" => target}, socket) do
     {:noreply, assign(socket, :live_preview_target, target)}
   end
@@ -2461,6 +2497,8 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    socket = assign(socket, :processing, upload_entry.progress)
+
     if upload_entry.done? do
       %{cfg: cfg} = schema.__asset_opts__(key)
       config_target = "gallery:#{inspect(schema)}:#{key}"
@@ -3187,6 +3225,7 @@ defmodule BrandoAdmin.Components.Form do
           parent_uploads={@parent_uploads}
           opts={@opts}
           current_user={@current_user}
+          form_cid={@form_cid}
           on_change={fn params -> send_update(@form_cid, params) end}
         />
       </div>

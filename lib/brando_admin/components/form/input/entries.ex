@@ -406,7 +406,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <article
       data-id={@identifier.id}
       class={[
-        "draggable",
         "identifier",
         @selected && "selected"
       ]}
@@ -476,6 +475,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   slot :inner_block, default: nil
   slot :delete
 
+  # shown as selected
   def assoc_identifier(%{assoc_identifier: assoc_identifier} = assigns) do
     changeset = assoc_identifier.source
     identifier_changeset = Changeset.get_assoc(changeset, :identifier)
@@ -538,7 +538,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <article
       data-id={@identifier.id}
       class={[
-        "draggable",
         "identifier",
         @selected && "selected"
       ]}
