@@ -938,7 +938,7 @@ h3 {
 }
 
 .mt-1 {
-  margin-top: 1vw;
+  margin-top: 10px !important;
 }
 
 .mt-2 {
