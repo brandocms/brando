@@ -641,16 +641,6 @@ button.btn-palette {
         }
       }
     }
-
-    .module-datasource-selected {
-      .selected-entries {
-        display: grid;
-        margin-bottom: 18px;
-        grid-template-columns: fit-content(500px);
-        max-width: 500px;
-        grid-gap: 6px;
-      }
-    }
   }
 
   .module-description,

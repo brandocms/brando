@@ -2802,6 +2802,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           title={gettext("Select entries")}
           id={"select-entries-#{@uid}"}
           remember_scroll_position
+          narrow
         >
           <h2 class="titlecase"><%= gettext("Available entries") %></h2>
           <Entries.block_identifier
@@ -2817,17 +2818,17 @@ defmodule BrandoAdmin.Components.Form.Block do
           <div
             id={"sortable-#{@uid}-identifiers"}
             class="selected-entries"
-            phx-hook="Brando.SortableInputsFor"
+            phx-hook="Brando.SortableAssocs"
             data-target={@target}
             data-sortable-id={"sortable-#{@uid}-identifiers"}
-            data-sortable-handle=".sort-handle"
+            data-sortable-handle=".identifier"
             data-sortable-selector=".identifier"
+            data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={block_identifier} field={@block_identifiers}>
               <Entries.block_identifier
                 block_identifier={block_identifier}
                 available_identifiers={@available_identifiers}
-                sortable
               >
                 <input
                   type="hidden"
@@ -2835,15 +2836,14 @@ defmodule BrandoAdmin.Components.Form.Block do
                   value={block_identifier.index}
                 />
                 <:delete>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
-                      value={block_identifier.index}
-                      class="hidden"
-                    />
-                    <.icon name="hero-x-mark" />
-                  </label>
+                  <button
+                    type="button"
+                    name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
+                    value={block_identifier.index}
+                    phx-click={JS.dispatch("change")}
+                  >
+                    <.icon name="hero-x-circle" />
+                  </button>
                 </:delete>
               </Entries.block_identifier>
             </.inputs_for>
@@ -4028,7 +4028,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_change(changeset, :table_rows, table_rows_without_pk)
   end
 
-  def insert_identifier(block_identifiers, identifier_id) do
+  defp insert_identifier(block_identifiers, identifier_id) do
     new_block_identifier =
       %BlockIdentifier{}
       |> Changeset.change()
@@ -4038,7 +4038,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_identifiers ++ [new_block_identifier]
   end
 
-  def remove_identifier(block_identifiers, identifier_id) do
+  defp remove_identifier(block_identifiers, identifier_id) do
     Enum.reject(
       block_identifiers,
       &(Changeset.get_field(&1, :identifier_id) == identifier_id)

@@ -30,6 +30,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def update(assigns, socket) do
     join_field_name = :"#{assigns.field.field}_identifiers"
     join_field = assigns.field.form[join_field_name]
+    schema = assigns.field.form.source.data.__struct__
+    {:assoc, %{queryable: join_schema}} = Map.get(schema.__changeset__(), join_field_name)
 
     wanted_schemas = Keyword.get(assigns.opts, :for)
 
@@ -67,12 +69,23 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign_new(:selected_schema, fn -> nil end)
+     |> assign_new(:join_schema, fn -> join_schema end)
      |> assign(:identifiers_field, join_field)
      |> assign(:join_field_name, join_field_name)
      |> assign_new(:selected_identifiers, fn -> Enum.map(join_field.value, & &1.identifier) end)
-     |> assign_new(:identifiers, fn %{selected_identifiers: ids} -> ids end)
+     |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
+       selected_identifiers
+     end)
      |> assign(:delete_field_name, delete_field_name)
      |> assign(:sort_field_name, sort_field_name)
+     |> assign_new(:max_length, fn ->
+       relation_opts = Map.get(schema.__relation__(:related_entries), :opts)
+       get_in(relation_opts, [:constraints, :max_length])
+     end)
+     |> assign_new(:min_length, fn ->
+       relation_opts = Map.get(schema.__relation__(:related_entries), :opts)
+       get_in(relation_opts, [:constraints, :min_length])
+     end)
      |> assign_available_schemas(wanted_schemas)
      |> assign_selected_schema()}
   end
@@ -112,47 +125,36 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <div
             id={"sortable-#{@field.id}-identifiers"}
             class="selected-entries"
-            phx-hook="Brando.SortableInputsFor"
+            phx-hook="Brando.SortableAssocs"
             data-target={@myself}
             data-sortable-id={"sortable-#{@field.id}-identifiers"}
-            data-sortable-handle=".sort-handle"
+            data-sortable-handle=".identifier"
             data-sortable-selector=".identifier"
+            data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={identifier_form} field={@identifiers_field}>
-              <Input.input type={:hidden} field={identifier_form[:identifier_id]} />
-              <.identifier
-                identifier_id={identifier_form[:identifier_id].value}
-                available_identifiers={@identifiers}
-                sortable
+              <.assoc_identifier
+                assoc_identifier={identifier_form}
+                available_identifiers={@selected_identifiers}
               >
+                <input type="hidden" name={@sort_field_name} value={identifier_form.index} />
                 <:delete>
-                  <input type="hidden" name={@sort_field_name} value={identifier_form.index} />
-                  <label>
-                    <input
-                      type="checkbox"
-                      name={@delete_field_name}
-                      value={identifier_form.index}
-                      class="hidden"
-                    />
-                    <.icon name="hero-x-mark" />
-                  </label>
+                  <button
+                    type="button"
+                    name={@delete_field_name}
+                    value={identifier_form.index}
+                    phx-click={JS.dispatch("change")}
+                  >
+                    <.icon name="hero-x-circle" />
+                  </button>
                 </:delete>
-              </.identifier>
+              </.assoc_identifier>
             </.inputs_for>
+            <input type="hidden" name={@delete_field_name} />
           </div>
         <% end %>
 
-        <button
-          type="button"
-          class="add-entry-button"
-          phx-click={show_modal("##{@field.id}-select-entries")}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-            <path fill="none" d="M0 0h24v24H0z" /><path
-              d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z"
-              fill="rgba(252,245,243,1)"
-            />
-          </svg>
+        <button type="button" class="tiny" phx-click={show_modal("##{@field.id}-select-entries")}>
           <%= gettext("Select entries") %>
         </button>
 
@@ -171,12 +173,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
           <%= if @selected_schema do %>
             <h2 class="titlecase"><%= gettext("Available entries") %></h2>
-            <.identifier
-              :for={identifier <- @identifiers}
-              identifier_id={identifier.id}
-              select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
-              selected_identifiers={@selected_identifiers}
-              available_identifiers={@identifiers}
+            <.assoc_identifier
+              :for={identifier <- @available_identifiers}
+              identifier={identifier}
+              select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
+              available_identifiers={@available_identifiers}
+              assoc_identifiers={@identifiers_field}
             />
           <% end %>
         </Content.modal>
@@ -185,48 +187,82 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     """
   end
 
-  def handle_event(
-        "select_identifier",
-        %{"id" => identifier_id},
-        %{
-          assigns: %{
-            field: field,
-            identifiers: identifiers,
-            selected_identifiers: selected_identifiers
-          }
-        } = socket
-      ) do
-    field_name = field.field
-    form = field.form
+  def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
+    identifiers_field = socket.assigns.identifiers_field
+    field_name = identifiers_field.field
+    form = identifiers_field.form
     changeset = form.source
-    selected_identifier = Enum.find(identifiers, &(to_string(&1.id) == to_string(identifier_id)))
-
-    updated_identifiers =
-      case Enum.find(selected_identifiers, &(&1 == selected_identifier)) do
-        nil -> selected_identifiers ++ List.wrap(selected_identifier)
-        _ -> Enum.reject(selected_identifiers, &(&1 == selected_identifier))
-      end
-
-    built_join_entries =
-      Enum.map(updated_identifiers, fn identifier ->
-        %{}
-        |> Map.put(:identifier_id, identifier.id)
-        |> Map.put(:sequence, Enum.count(updated_identifiers))
-      end)
-
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
+    assoc_schema = socket.assigns.join_schema
+    available_identifiers = socket.assigns.available_identifiers
+    selected_identifiers = socket.assigns.selected_identifiers
+    max_length = socket.assigns.max_length
 
-    updated_changeset =
-      Changeset.put_assoc(changeset, :"#{field_name}_identifiers", built_join_entries)
+    selected_identifier =
+      Enum.find(available_identifiers, &(to_string(&1.id) == to_string(identifier_id)))
 
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
+    assoc_identifiers = Changeset.get_assoc(changeset, field_name)
 
-    {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
+    updated_assoc_identifiers =
+      assoc_identifiers
+      |> Enum.find(&(Changeset.get_field(&1, :identifier_id) == identifier_id))
+      |> case do
+        nil ->
+          insert_identifier(assoc_identifiers, identifier_id, assoc_schema)
+
+        %{action: :replace} = replaced_changeset ->
+          Enum.map(assoc_identifiers, fn assoc_identifier ->
+            case Changeset.get_field(assoc_identifier, :identifier_id) == identifier_id do
+              true ->
+                action = (Changeset.get_field(assoc_identifier, :id) == nil && :insert) || nil
+                Map.put(replaced_changeset, :action, action)
+
+              false ->
+                assoc_identifier
+            end
+          end)
+
+        _ ->
+          remove_identifier(assoc_identifiers, identifier_id)
+      end
+      |> Enum.filter(&(&1.action != :replace))
+
+    if Enum.count(updated_assoc_identifiers) > max_length do
+      alert = %{
+        title: gettext("Too many selections"),
+        message: gettext("You can only select %{max_length} entries", max_length: max_length),
+        type: "info"
+      }
+
+      socket
+      |> push_event("b:alert", alert)
+      |> then(&{:noreply, &1})
+    else
+      updated_changeset =
+        Changeset.put_assoc(
+          changeset,
+          field_name,
+          updated_assoc_identifiers
+        )
+
+      # ship this changeset off to the form component
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        action: :update_changeset,
+        changeset: updated_changeset
+      )
+
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
+        event: "update_entry_relation",
+        path: [:"#{field_name}_identifiers"],
+        updated_relation: updated_assoc_identifiers
+      )
+
+      updated_identifiers = [selected_identifier | selected_identifiers]
+      {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
+    end
   end
 
   def handle_event(
@@ -259,7 +295,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     {:noreply,
      socket
-     |> assign(:identifiers, identifiers)
+     |> assign(:available_identifiers, identifiers)
      |> assign(:selected_schema, schema_module)}
   end
 
@@ -305,7 +341,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :identifier_id, :integer
   attr :available_identifiers, :list, default: []
   attr :select, :any, default: false
-  attr :sortable, :boolean, default: false
   slot :inner_block, default: nil
   slot :delete
 
@@ -321,17 +356,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         identifier_changeset.data
       end
 
-    schema = identifier.schema
-
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
     assigns =
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:type, String.upcase(translated_type))
 
     ~H"""
     <article
@@ -347,65 +375,18 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <Input.hidden field={@block_identifier[:block_id]} />
       <Input.hidden field={@block_identifier[:identifier_id]} />
 
-      <%= render_slot(@inner_block) %>
-
-      <%= if @sortable do %>
-        <section class="sort-handle">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 15 15"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="1.5" cy="1.5" r="1.5"></circle>
-            <circle cx="7.5" cy="1.5" r="1.5"></circle>
-            <circle cx="13.5" cy="1.5" r="1.5"></circle>
-            <circle cx="1.5" cy="7.5" r="1.5"></circle>
-            <circle cx="7.5" cy="7.5" r="1.5"></circle>
-            <circle cx="13.5" cy="7.5" r="1.5"></circle>
-            <circle cx="1.5" cy="13.5" r="1.5"></circle>
-            <circle cx="7.5" cy="13.5" r="1.5"></circle>
-            <circle cx="13.5" cy="13.5" r="1.5"></circle>
-          </svg>
-        </section>
-      <% end %>
-      <section class="cover-wrapper">
-        <div class="cover">
-          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-        </div>
-      </section>
-      <section class="content">
-        <div class="info">
-          <div class="name">
-            <%= if @identifier.language do %>
-              [<%= @identifier.language %>]
-            <% end %>
-            <%= @identifier.title %>
-          </div>
-          <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
-              @identifier.entry_id
-            ) %>
-            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
-          </div>
-        </div>
-      </section>
-      <div class="remove">
-        <%= render_slot(@delete) %>
-      </div>
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
     </article>
     """
   end
 
   def block_identifier(%{identifier: identifier, block_identifiers: block_identifiers} = assigns)
       when not is_nil(block_identifiers) do
-    schema = identifier.schema
-
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
     block_identifiers_changesets =
       Changeset.get_assoc(block_identifiers.form.source, :block_identifiers)
 
@@ -419,7 +400,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:type, String.upcase(translated_type))
       |> assign(:selected, selected && selected.action != :replace)
 
     ~H"""
@@ -434,35 +414,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <%= render_slot(@inner_block) %>
-
-      <section class="cover-wrapper">
-        <div class="cover">
-          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-        </div>
-      </section>
-      <section class="content">
-        <div class="info">
-          <div class="name">
-            <%= if @identifier.language do %>
-              [<%= @identifier.language %>]
-            <% end %>
-            <%= @identifier.title %>
-          </div>
-          <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
-              @identifier.entry_id
-            ) %>
-            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
-          </div>
-        </div>
-        <div class="icon">
-          <.icon name="hero-check-circle" />
-        </div>
-      </section>
-      <div class="remove">
-        <%= render_slot(@delete) %>
-      </div>
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
     </article>
     """
   end
@@ -471,7 +428,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :available_identifiers, :list, default: []
   attr :selected_identifiers, :list, default: []
   attr :select, :any, default: false
-  attr :sortable, :boolean, default: false
   slot :delete
 
   def identifier(%{identifier_id: identifier_id} = assigns) when not is_nil(identifier_id) do
@@ -483,17 +439,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         &(to_string(&1.id) == to_string(identifier_id))
       )
 
-    schema = identifier.schema
-
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
     assigns =
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:type, String.upcase(translated_type))
 
     ~H"""
     <article
@@ -508,51 +457,101 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
-      <%= if @sortable do %>
-        <section class="sort-handle">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 15 15"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="1.5" cy="1.5" r="1.5"></circle>
-            <circle cx="7.5" cy="1.5" r="1.5"></circle>
-            <circle cx="13.5" cy="1.5" r="1.5"></circle>
-            <circle cx="1.5" cy="7.5" r="1.5"></circle>
-            <circle cx="7.5" cy="7.5" r="1.5"></circle>
-            <circle cx="13.5" cy="7.5" r="1.5"></circle>
-            <circle cx="1.5" cy="13.5" r="1.5"></circle>
-            <circle cx="7.5" cy="13.5" r="1.5"></circle>
-            <circle cx="13.5" cy="13.5" r="1.5"></circle>
-          </svg>
-        </section>
-      <% end %>
-      <section class="cover-wrapper">
-        <div class="cover">
-          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-        </div>
-      </section>
-      <section class="content">
-        <div class="info">
-          <div class="name">
-            <%= if @identifier.language do %>
-              [<%= @identifier.language %>]
-            <% end %>
-            <%= @identifier.title %>
-          </div>
-          <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
-              @identifier.entry_id
-            ) %>
-            <span>|</span> <%= format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
-          </div>
-        </div>
-      </section>
-      <div class="remove">
-        <%= render_slot(@delete) %>
-      </div>
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
+    </article>
+    """
+  end
+
+  attr :assoc_identifier, :any
+  attr :identifier, :any
+  attr :assoc_identifiers, :list, default: nil
+  attr :identifier_id, :integer
+  attr :available_identifiers, :list, default: []
+  attr :select, :any, default: false
+  slot :inner_block, default: nil
+  slot :delete
+
+  def assoc_identifier(%{assoc_identifier: assoc_identifier} = assigns) do
+    changeset = assoc_identifier.source
+    identifier_changeset = Changeset.get_assoc(changeset, :identifier)
+
+    identifier =
+      if identifier_changeset == nil do
+        identifier_id = Changeset.get_field(changeset, :identifier_id)
+        Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
+      else
+        identifier_changeset.data
+      end
+
+    assigns =
+      assigns
+      |> assign(:identifier, identifier)
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+
+    ~H"""
+    <article
+      data-id={@identifier.id}
+      class={[
+        "draggable",
+        "identifier"
+      ]}
+      phx-page-loading
+      phx-click={@select}
+      phx-value-param={@identifier.id}
+    >
+      <Input.hidden field={@assoc_identifier[:parent_id]} />
+      <Input.hidden field={@assoc_identifier[:identifier_id]} />
+
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
+    </article>
+    """
+  end
+
+  def assoc_identifier(%{identifier: identifier, assoc_identifiers: assoc_identifiers} = assigns)
+      when not is_nil(assoc_identifiers) do
+    assoc_identifiers_changesets =
+      Changeset.get_assoc(assoc_identifiers.form.source, assoc_identifiers.field)
+
+    selected =
+      Enum.find(
+        assoc_identifiers_changesets,
+        &(Changeset.get_field(&1, :identifier_id) == identifier.id)
+      )
+
+    assigns =
+      assigns
+      |> assign(:identifier, identifier)
+      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:selected, selected && selected.action != :replace)
+
+    ~H"""
+    <article
+      data-id={@identifier.id}
+      class={[
+        "draggable",
+        "identifier",
+        @selected && "selected"
+      ]}
+      phx-page-loading
+      phx-click={@select}
+      phx-value-param={@identifier.id}
+    >
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
     </article>
     """
   end
@@ -566,17 +565,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   slot :delete
 
   def dumb_identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
-    schema = identifier.schema
-
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
     assigns =
       assigns
       |> assign(:identifier, identifier)
       |> assign(:has_cover?, Map.has_key?(identifier, :cover))
-      |> assign(:type, String.upcase(translated_type))
 
     ~H"""
     <article
@@ -589,35 +581,79 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-page-loading
       phx-click={@select}
     >
-      <section class="cover-wrapper">
-        <div class="cover">
-          <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
-        </div>
-      </section>
-      <section class="content">
-        <div class="info">
-          <div class="name">
-            <%= if @identifier.language do %>
-              [<%= @identifier.language %>]
-            <% end %>
-            <%= @identifier.title %>
-          </div>
-          <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
-              @identifier.entry_id
-            ) %>
-            <span>|</span> <%= format_datetime(@identifier.updated_at) %>
-          </div>
-        </div>
-      </section>
-      <div class="remove">
-        <%= render_slot(@delete) %>
-      </div>
+      <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
+        <:delete>
+          <%= render_slot(@delete) %>
+        </:delete>
+        <%= render_slot(@inner_block) %>
+      </.identifier_content>
     </article>
+    """
+  end
+
+  attr :identifier, :map, required: true
+  attr :has_cover?, :boolean, default: false
+  slot :delete
+  slot :inner_block
+
+  def identifier_content(assigns) do
+    identifier = assigns.identifier
+    schema = identifier.schema
+
+    translated_type =
+      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
+    assigns = assign(assigns, :type, String.upcase(translated_type))
+
+    ~H"""
+    <section class="cover-wrapper">
+      <div class="cover">
+        <img src={(@has_cover? && @identifier.cover) || "/images/admin/avatar.svg"} />
+      </div>
+    </section>
+    <section class="content">
+      <%= render_slot(@inner_block) %>
+      <div class="info">
+        <div class="name">
+          <%= if @identifier.language do %>
+            [<%= @identifier.language %>]
+          <% end %>
+          <%= @identifier.title %>
+        </div>
+        <div class="meta-info">
+          <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+            @identifier.entry_id
+          ) %>
+          <span>|</span> <%= format_datetime(@identifier.updated_at) %>
+        </div>
+      </div>
+    </section>
+    <div class="remove">
+      <%= render_slot(@delete) %>
+    </div>
     """
   end
 
   defp get_list_opts(schema_module, available_schemas) do
     Enum.find(available_schemas, &(elem(&1, 1) == schema_module))
+  end
+
+  def insert_identifier(assoc_identifiers, identifier_id, assoc_schema) do
+    new_assoc_identifier =
+      assoc_schema
+      |> struct(%{})
+      |> Changeset.change()
+      |> Changeset.put_change(:identifier_id, identifier_id)
+      |> Map.put(:action, :insert)
+
+    (assoc_identifiers ++ [new_assoc_identifier]) |> dbg
+  end
+
+  def remove_identifier(assoc_identifiers, identifier_id) do
+    Enum.reject(
+      assoc_identifiers,
+      &(Changeset.get_field(&1, :identifier_id) == identifier_id)
+    )
   end
 end
