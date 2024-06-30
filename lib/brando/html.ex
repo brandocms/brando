@@ -44,12 +44,15 @@ defmodule Brando.HTML do
   end
 
   attr :menu, :map, required: true
+  attr :statuses, :list, default: [:published]
   slot :inner_block, required: true
 
   def menu(assigns) do
     ~H"""
     <%= for item <- @menu.items do %>
-      <%= render_slot(@inner_block, item) %>
+      <%= if Enum.member?(@statuses, item.status) do %>
+        <%= render_slot(@inner_block, item) %>
+      <% end %>
     <% end %>
     """
   end
