@@ -940,6 +940,9 @@ defmodule Brando.Villain do
     :module_id,
     :global_set_id,
     :menu_item_id,
+    :link_text,
+    :link_target_blank,
+    :link_type,
     # ignored
     :block,
     :id,
