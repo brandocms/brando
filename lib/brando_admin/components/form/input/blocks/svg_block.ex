@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           target={@target}
         >
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               <%= @ref_description %>
             <% end %>
           </:description>

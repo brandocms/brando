@@ -2243,7 +2243,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               <%= @ref_description %>
             <% end %>
           </:description>
@@ -2264,7 +2264,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               <%= @ref_description %>
             <% end %>
           </:description>
@@ -2316,7 +2316,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               <%= @ref_description %>
             <% end %>
           </:description>
@@ -2411,7 +2411,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <div id={"ref-#{@uid}-wrapper"} data-block-uid={@uid}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in [nil, ""] do %>
               <%= @ref_description %>
             <% else %>
               <%= @text_type %>
@@ -3539,9 +3539,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     has_vars? = socket.assigns.has_vars?
     has_table_rows? = socket.assigns.has_table_rows?
 
-    require Logger
-    Logger.error("=> validate_block –– child")
-
     updated_changeset =
       changeset.data
       |> Brando.Content.Block.block_changeset(params, current_user_id)
@@ -3577,9 +3574,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     has_vars? = socket.assigns.has_vars?
     has_children? = socket.assigns.has_children?
     has_table_rows? = socket.assigns.has_table_rows?
-
-    require Logger
-    Logger.error("=> validate_block –– root")
 
     updated_changeset =
       changeset.data

@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         >
           <:description>
             <%= block_data[:type].value %>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               — <%= @ref_description %>
             <% end %>
           </:description>

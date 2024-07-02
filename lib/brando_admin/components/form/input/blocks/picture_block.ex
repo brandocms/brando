@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           target={@target}
         >
           <:description>
-            <%= if @ref_description do %>
+            <%= if @ref_description not in ["", nil] do %>
               <%= @ref_description %>
             <% else %>
               <%= @extracted_filename %>
