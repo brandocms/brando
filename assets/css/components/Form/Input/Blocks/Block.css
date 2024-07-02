@@ -251,8 +251,7 @@ button.btn-palette {
   .vars-info {
     @font mono;
     @space margin-bottom 15px;
-    padding-left: 15px;
-    display: flex;      
+    display: flex;
     align-items: center;
     gap: 10px;
     cursor: help;
@@ -292,8 +291,7 @@ button.btn-palette {
   .table-info {
     @font mono;
     @space margin-bottom 15px;
-    padding-left: 15px;
-    display: flex;      
+    display: flex;
     align-items: center;
     gap: 10px;
     cursor: help;
@@ -333,14 +331,15 @@ button.btn-palette {
   .block-vars {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 10px;
 
     .variable {
-      padding: 0 15px 0 15px;
+      padding: 0 15px 0 0;
 
       &:nth-of-type(2), 
       &:nth-of-type(3) {
         border-left: 1px solid #eee;
+        padding-left: 15px;
       }
     }
 
@@ -350,18 +349,16 @@ button.btn-palette {
 
     .variable[data-size="half"] {
       width: 50%;
-      flex: calc((100% - 1rem) / 2);
-      max-width: calc((100% - 1rem) / 2);
+      flex: calc((100% - 10px) / 2);
+      max-width: calc((100% - 10px) / 2);
     }
 
     .variable[data-size="third"] {
-      flex: calc((100% - 2rem) / 3);
-      max-width: calc((100% - 2rem) / 3);
+      flex: calc((100% - 20px) / 3);
+      max-width: calc((100% - 20px) / 3);
     }
 
     .variable .field-wrapper {
-      margin-bottom: 15px;
-
       .label-wrapper {
         margin-bottom: 10px;
 
@@ -590,11 +587,8 @@ button.btn-palette {
   .block-datasource {
     @font mono;
     font-size: 10px;
-    margin-bottom: 17px;
-    padding-bottom: 15px;
     padding-top: 15px;
     width: 100%;
-    padding-left: 15px;
     padding-right: 15px;
     border-top: 1px solid #eee;
 

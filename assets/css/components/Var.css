@@ -1,8 +1,13 @@
 .variable {
-
-  &:last-of-type {
+  /* &:last-of-type {
     .brando-input .field-wrapper {
       margin-bottom: 20px;
+    }
+  } */
+
+  &.boolean {
+    .field-base {
+      display: flex;
     }
   }
 
@@ -94,7 +99,7 @@
 }
 
 .link-preview {
-  display: flex;      
+  display: flex;
   align-items: center;
   gap: 10px;
   background-color: #fafafa;
@@ -102,6 +107,7 @@
   padding: 7px 15px 7px 7px;
   border-radius: 7px;
   cursor: cell;
+  border: 1px dashed;
 
   .icon {
     width: 30px;

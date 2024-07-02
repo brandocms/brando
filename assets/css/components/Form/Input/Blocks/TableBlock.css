@@ -14,7 +14,7 @@
   .table-row {
     @space margin-bottom 8px;
     @space padding-top 8px;
-    @space padding-x 8px;
+    @space padding-right 8px;
 
     display: flex;
 
