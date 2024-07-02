@@ -624,6 +624,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  defp split_url_with_wbr(nil) do
+    ""
+  end
+
   defp split_url_with_wbr(url) do
     url
     |> String.split("/")
