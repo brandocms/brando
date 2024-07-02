@@ -35,9 +35,10 @@ defmodule Brando.Content.Var do
         :color,
         :select,
         :file,
+        :link,
         # todo
-        :date,
-        :link
+        :date
+        # :table?
       ]
 
     attribute :label, :string, required: true
