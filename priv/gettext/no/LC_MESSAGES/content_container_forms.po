@@ -1,47 +1,49 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+# # "msgid"s in this file come from POT (.pot) files.
+# ##
+# ## Do not add, change, or remove "msgid"s manually here as
+# ## they're tied to the ones in the corresponding POT file
+# ## (with the same domain).
+# ##
+# ## Use "mix gettext.extract --merge" or "mix gettext.merge"
+# ## to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "Language: no\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.4.4\n"
 
 #: lib/brando/content/container.ex:57
-#, elixir-autogen, elixir-format
 msgid "Allow custom palette"
-msgstr ""
+msgstr "Tillat egendefinert palett"
 
 #: lib/brando/content/container.ex:55
-#, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/content/container.ex:56
-#, elixir-autogen, elixir-format
 msgid "Namespace"
-msgstr ""
+msgstr "Kategori"
 
 #: lib/brando/content/container.ex:64
-#, elixir-autogen, elixir-format
 msgid "Palette"
-msgstr ""
+msgstr "Palett"
 
 #: lib/brando/content/container.ex:58
-#, elixir-autogen, elixir-format
 msgid "Palette namespace"
-msgstr ""
+msgstr "Palettkategori"
 
 #: lib/brando/content/container.ex:70
-#, elixir-autogen, elixir-format
 msgid "Use `{{ content }}` to render inner content"
-msgstr ""
+msgstr "Bruk `{{ content }}` for å integrere indre innhold"
 
 #: lib/brando/content/container.ex:69
-#, elixir-autogen, elixir-format
 msgid "Wrapper code"
-msgstr ""
+msgstr "Innpakningskode"

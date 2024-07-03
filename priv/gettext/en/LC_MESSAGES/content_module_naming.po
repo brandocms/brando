@@ -9,7 +9,7 @@
 msgid ""
 msgstr ""
 "Language: en"
-"Plural-Forms: nplurals=2; plural=(n != 1);;"
+"Plural-Forms: nplurals=2; plural=(n != 1);"
 "Project-Id-Version: "
 "POT-Creation-Date: "
 "PO-Revision-Date: "
