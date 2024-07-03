@@ -311,7 +311,7 @@ defmodule Brando.Villain do
   """
 
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
-          {:ok, map} | {:error, changeset}
+          :ok | {:ok, map} | {:error, changeset}
   def render_entry(schema, id) do
     case Brando.Query.get_entry(schema, id) do
       {:ok, entry} ->
@@ -324,6 +324,7 @@ defmodule Brando.Villain do
           {:ok, %Pages.Fragment{} = fragment} ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
+            :ok
 
           {:ok, result} ->
             Brando.Cache.Query.evict({:ok, result})
@@ -699,12 +700,6 @@ defmodule Brando.Villain do
     |> distinct(true)
     |> Brando.repo().all()
     |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
-      require Logger
-
-      Logger.error("""
-      ==> source: #{inspect(source)} // casted_module: #{inspect(Brando.Type.Module.cast(source))}
-      """)
-
       {:ok, casted_module} = Brando.Type.Module.cast(source)
       Map.update(acc, casted_module, [id], &(&1 ++ [id]))
     end)
