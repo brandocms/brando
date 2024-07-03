@@ -10,8 +10,8 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/sites/seo.ex:86
-#: lib/brando/sites/seo.ex:87
+#: lib/brando/sites/seo.ex:88
+#: lib/brando/sites/seo.ex:89
 #, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr ""

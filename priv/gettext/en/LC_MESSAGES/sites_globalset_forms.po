@@ -11,27 +11,27 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/global_set.ex:33
+#: lib/brando/sites/global_set.ex:36
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/sites/global_set.ex:42
+#: lib/brando/sites/global_set.ex:45
 #, elixir-autogen, elixir-format
 msgid "Globals"
 msgstr ""
 
-#: lib/brando/sites/global_set.ex:37
+#: lib/brando/sites/global_set.ex:40
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/sites/global_set.ex:36
+#: lib/brando/sites/global_set.ex:39
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
 
-#: lib/brando/sites/global_set.ex:35
+#: lib/brando/sites/global_set.ex:38
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""

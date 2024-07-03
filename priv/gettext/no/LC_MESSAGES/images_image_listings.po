@@ -20,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
 
-#: lib/brando/images/image.ex:52
+#: lib/brando/images/image.ex:54
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr "Filbane"

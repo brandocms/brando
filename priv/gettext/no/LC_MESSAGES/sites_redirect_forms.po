@@ -20,17 +20,17 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
 
-#: lib/brando/sites/seo.ex:75
+#: lib/brando/sites/seo.ex:77
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr "Kode"
 
-#: lib/brando/sites/seo.ex:76
+#: lib/brando/sites/seo.ex:78
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Fra"
 
-#: lib/brando/sites/seo.ex:77
+#: lib/brando/sites/seo.ex:79
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr "Til"

@@ -20,22 +20,22 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.1.1"
 
-#: lib/brando/content/module.ex:86
+#: lib/brando/content/module.ex:104
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando/content/module.ex:84
+#: lib/brando/content/module.ex:102
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/module.ex:85
+#: lib/brando/content/module.ex:103
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Navneområde"
 
-#: lib/brando/content/module.ex:91
+#: lib/brando/content/module.ex:109
 #, elixir-autogen, elixir-format
 msgid "Export modules"
 msgstr "Eksporter moduler"

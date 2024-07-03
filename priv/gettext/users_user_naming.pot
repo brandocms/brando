@@ -10,12 +10,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/users/user.ex:92
+#: lib/brando/users/user.ex:95
 #, elixir-autogen, elixir-format
 msgid "user"
 msgstr ""
 
-#: lib/brando/users/user.ex:93
+#: lib/brando/users/user.ex:96
 #, elixir-autogen, elixir-format
 msgid "users"
 msgstr ""

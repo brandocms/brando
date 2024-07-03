@@ -20,52 +20,52 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.2"
 
-#: lib/brando/images/image.ex:86
+#: lib/brando/images/image.ex:88
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
 msgstr "Alternativ tekst"
 
-#: lib/brando/images/image.ex:93
+#: lib/brando/images/image.ex:95
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
 msgstr "Ressursen er overført til CDN"
 
-#: lib/brando/images/image.ex:92
+#: lib/brando/images/image.ex:94
 #, elixir-autogen, elixir-format
 msgid "CDN"
 msgstr "CDN"
 
-#: lib/brando/images/image.ex:98
+#: lib/brando/images/image.ex:100
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr "Konfigurasjonsmål"
 
-#: lib/brando/images/image.ex:85
+#: lib/brando/images/image.ex:87
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/images/image.ex:97
+#: lib/brando/images/image.ex:99
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
 msgstr "Dominerende farge"
 
-#: lib/brando/images/image.ex:96
+#: lib/brando/images/image.ex:98
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr "Høyde"
 
-#: lib/brando/images/image.ex:87
+#: lib/brando/images/image.ex:89
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr "Filbane"
 
-#: lib/brando/images/image.ex:84
+#: lib/brando/images/image.ex:86
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/images/image.ex:95
+#: lib/brando/images/image.ex:97
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr "Bredde"

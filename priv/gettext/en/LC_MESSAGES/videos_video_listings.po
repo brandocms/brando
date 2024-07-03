@@ -11,7 +11,7 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/videos/video.ex:71
+#: lib/brando/videos/video.ex:74
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""

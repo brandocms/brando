@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit"
 "X-Generator: Poedit 3.0"
 
-#: lib/brando/pages/page.ex:99
+#: lib/brando/pages/page.ex:104
 #, elixir-autogen, elixir-format
 msgid "page"
 msgstr "side"
 
-#: lib/brando/pages/page.ex:100
+#: lib/brando/pages/page.ex:105
 #, elixir-autogen, elixir-format
 msgid "pages"
 msgstr "sider"

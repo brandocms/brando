@@ -11,7 +11,7 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/files/file.ex:38
+#: lib/brando/files/file.ex:39
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr ""

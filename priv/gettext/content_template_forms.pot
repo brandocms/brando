@@ -10,7 +10,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/template.ex:70
+#: lib/brando/content/template.ex:76
 #, elixir-autogen, elixir-format
 msgid "Content"
+msgstr ""
+
+#: lib/brando/content/template.ex:74
+#, elixir-autogen, elixir-format
+msgid "Blocks"
 msgstr ""

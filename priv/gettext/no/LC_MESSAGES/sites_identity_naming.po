@@ -11,8 +11,8 @@ msgstr ""
 "Language: no"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/identity.ex:137
 #: lib/brando/sites/identity.ex:138
+#: lib/brando/sites/identity.ex:139
 #, elixir-autogen, elixir-format
 msgid "identity"
 msgstr "identitet"

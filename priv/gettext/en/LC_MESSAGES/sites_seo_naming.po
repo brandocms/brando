@@ -11,8 +11,8 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/seo.ex:86
-#: lib/brando/sites/seo.ex:87
+#: lib/brando/sites/seo.ex:88
+#: lib/brando/sites/seo.ex:89
 #, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr ""

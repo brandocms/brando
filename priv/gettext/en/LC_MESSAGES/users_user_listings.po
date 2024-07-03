@@ -11,27 +11,27 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/users/user.ex:116
+#: lib/brando/users/user.ex:119
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/users/user.ex:114
+#: lib/brando/users/user.ex:117
 #, elixir-autogen, elixir-format
 msgid "Disable user"
 msgstr ""
 
-#: lib/brando/users/user.ex:112
+#: lib/brando/users/user.ex:115
 #, elixir-autogen, elixir-format
 msgid "Edit user"
 msgstr ""
 
-#: lib/brando/users/user.ex:107
+#: lib/brando/users/user.ex:110
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
 
-#: lib/brando/users/user.ex:106
+#: lib/brando/users/user.ex:109
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""

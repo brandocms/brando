@@ -20,12 +20,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit"
 "X-Generator: Poedit 3.0"
 
-#: lib/brando/pages/fragment.ex:65
+#: lib/brando/pages/fragment.ex:64
 #, elixir-autogen, elixir-format
 msgid "fragment"
 msgstr "fragment"
 
-#: lib/brando/pages/fragment.ex:66
+#: lib/brando/pages/fragment.ex:65
 #, elixir-autogen, elixir-format
 msgid "fragments"
 msgstr "fragmenter"

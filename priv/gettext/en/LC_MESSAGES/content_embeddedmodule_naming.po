@@ -10,13 +10,3 @@ msgid ""
 msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
-
-#: lib/brando/content/module/embedded_module.ex:54
-#, elixir-autogen, elixir-format
-msgid "embedded module"
-msgstr ""
-
-#: lib/brando/content/module/embedded_module.ex:55
-#, elixir-autogen, elixir-format
-msgid "embedded modules"
-msgstr ""

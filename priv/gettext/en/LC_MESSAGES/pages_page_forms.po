@@ -11,77 +11,77 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/pages/page.ex:279
+#: lib/brando/pages/page.ex:291
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
 
-#: lib/brando/pages/page.ex:275
+#: lib/brando/pages/page.ex:266
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/pages/page.ex:290
+#: lib/brando/pages/page.ex:306
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:252
+#: lib/brando/pages/page.ex:268
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/pages/page.ex:282
+#: lib/brando/pages/page.ex:294
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:266
+#: lib/brando/pages/page.ex:282
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/pages/page.ex:295
+#: lib/brando/pages/page.ex:311
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr ""
 
-#: lib/brando/pages/page.ex:254
+#: lib/brando/pages/page.ex:270
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/pages/page.ex:289
+#: lib/brando/pages/page.ex:304
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr ""
 
-#: lib/brando/pages/page.ex:258
+#: lib/brando/pages/page.ex:274
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/pages/page.ex:259
+#: lib/brando/pages/page.ex:275
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
 
-#: lib/brando/pages/page.ex:271
+#: lib/brando/pages/page.ex:287
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:283
+#: lib/brando/pages/page.ex:295
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr ""
 
-#: lib/brando/pages/page.ex:286
+#: lib/brando/pages/page.ex:298
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr ""
 
-#: lib/brando/pages/page.ex:287
+#: lib/brando/pages/page.ex:299
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr ""

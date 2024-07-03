@@ -19,13 +19,3 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit"
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
-
-#: lib/brando/content/module/embedded_module.ex:54
-#, elixir-autogen, elixir-format
-msgid "embedded module"
-msgstr "innebygd modul"
-
-#: lib/brando/content/module/embedded_module.ex:55
-#, elixir-autogen, elixir-format
-msgid "embedded modules"
-msgstr "innebygde moduler"

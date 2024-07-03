@@ -11,12 +11,12 @@ msgstr ""
 "Language: en"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/global_set.ex:55
+#: lib/brando/sites/global_set.ex:58
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
 
-#: lib/brando/sites/global_set.ex:81
+#: lib/brando/sites/global_set.ex:84
 #, elixir-autogen, elixir-format
 msgid "variables in set"
 msgstr ""

@@ -10,7 +10,7 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/images/image.ex:52
+#: lib/brando/images/image.ex:54
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""

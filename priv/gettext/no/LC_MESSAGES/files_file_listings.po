@@ -20,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);;"
 "X-Generator: Poedit 3.0.1"
 
-#: lib/brando/files/file.ex:38
+#: lib/brando/files/file.ex:39
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr "Filnavn"
