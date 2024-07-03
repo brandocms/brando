@@ -8,8 +8,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def mount(socket) do
     socket
     |> stream_configure(:entry_blocks_forms,
-      dom_id: fn form ->
-        changeset = form.source
+      dom_id: fn %{source: changeset} ->
         block_cs = Changeset.get_assoc(changeset, :block)
         uid = Changeset.get_field(block_cs, :uid)
         "base-#{uid}"
@@ -145,6 +144,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> struct(%{})
       |> Changeset.change(%{entry_id: socket.assigns.entry.id})
       |> Changeset.put_assoc(:block, empty_block_cs)
+      |> Changeset.put_change(:sequence, sequence)
       |> Map.put(:action, :insert)
 
     uid = Changeset.get_field(empty_block_cs, :uid)
@@ -161,6 +161,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
+    selector = "[data-block-uid=\"#{uid}\"]"
+
     socket
     |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
     |> assign(:block_list, new_block_list)
@@ -168,6 +170,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> update(:block_count, &(&1 + 1))
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
+    |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
 
@@ -373,8 +376,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
     |> maybe_stream(entry_blocks_forms)
     |> assign_templates()
+    |> reset_position_response_tracker()
+    |> maybe_sequence_blocks()
     |> assign(:first_run, false)
     |> then(&{:ok, &1})
+  end
+
+  defp maybe_sequence_blocks(%{assigns: %{first_run: true}} = socket) do
+    block_list = socket.assigns.block_list
+    send_block_entry_position_update(socket, block_list)
+  end
+
+  defp maybe_sequence_blocks(socket) do
+    socket
   end
 
   def maybe_stream(%{assigns: %{first_run: true}} = socket, entry_blocks_forms) do
