@@ -13,6 +13,10 @@
     text-decoration-style: wavy;
   }
 
+  .content {
+    margin-top: 0.5em;
+  }
+
   .icon {
     margin-top: 2px;
   }
