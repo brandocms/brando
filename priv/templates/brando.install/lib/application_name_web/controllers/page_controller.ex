@@ -17,7 +17,7 @@ defmodule <%= application_module %>Web.PageController do
     page_opts = %{
       matches: %{uri: parsed_path, language: language},
       status: :published,
-      preload: [:alternate_entries],
+      preload: [:alternate_entries, :vars],
       cache: {:ttl, :infinite}
     }
 
@@ -50,7 +50,7 @@ defmodule <%= application_module %>Web.PageController do
       page_opts = %{
         matches: %{path: parsed_path, language: language, has_url: true},
         status: :published,
-        preload: [:alternate_entries],
+        preload: [:alternate_entries, :vars],
         cache: {:ttl, :infinite}
       }
 
