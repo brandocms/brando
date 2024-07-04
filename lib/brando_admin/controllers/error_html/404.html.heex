@@ -19,12 +19,12 @@
   </style>
 </head>
 <body>
-  <div id="wrapper">
+  <div id="wrapper" class="error error-404">
     <div class="container">
-    <h2>404<br><br>
-    <%= gettext "Page not found." %>.<br />
-    <%= gettext "Maybe it was outdated and has been deleted?" %><br /><br />
-    <%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
+      <h2>404<br><br>
+      <%= gettext "Page not found." %>.<br />
+      <%= gettext "Maybe it was outdated and has been deleted?" %><br /><br />
+      <%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
     </div>
   </div>
 </body>
