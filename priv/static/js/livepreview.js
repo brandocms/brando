@@ -183,33 +183,48 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
       block.els = elsWithChildren
     }
 
-    block.els.forEach((el, idx) => {
-      if (has_children) {
-        var childInsertionPoint = getInsertionPoint(newBlocks[idx], block.uid)
+    // if current block has no elements, just insert the new
+    // blocks and add them to the block.els array
+    if (!block.els.length) {
+      for (let idx = 0; idx < newBlocks.length; idx++) {
+        var newElement = block.insertionPoint.parentNode.insertBefore(
+          newBlocks[idx],
+          block.insertionPoint
+        )
 
-        for (var i = 0; i < el.children.length; i++) {
-          childInsertionPoint.parentNode.insertBefore(el.children[i], childInsertionPoint)
+        block.els[idx] = { element: newElement }
+        forceLazyloadAllImages(newElement)
+        forceLazyloadAllVideos(newElement)
+      }
+    } else {
+      block.els.forEach((el, idx) => {
+        if (has_children) {
+          var childInsertionPoint = getInsertionPoint(newBlocks[idx], block.uid)
+
+          for (var i = 0; i < el.children.length; i++) {
+            childInsertionPoint.parentNode.insertBefore(el.children[i], childInsertionPoint)
+          }
+
+          childInsertionPoint.remove()
+
+          var newElement = block.insertionPoint.parentNode.insertBefore(
+            newBlocks[idx],
+            block.insertionPoint
+          )
+        } else {
+          var newElement = block.insertionPoint.parentNode.insertBefore(
+            newBlocks[idx],
+            block.insertionPoint
+          )
         }
 
-        childInsertionPoint.remove()
+        el.element.remove()
+        block.els[idx].element = newElement
 
-        var newElement = block.insertionPoint.parentNode.insertBefore(
-          newBlocks[idx],
-          block.insertionPoint
-        )
-      } else {
-        var newElement = block.insertionPoint.parentNode.insertBefore(
-          newBlocks[idx],
-          block.insertionPoint
-        )
-      }
-
-      el.element.remove()
-      block.els[idx].element = newElement
-
-      forceLazyloadAllImages(newElement)
-      forceLazyloadAllVideos(newElement)
-    })
+        forceLazyloadAllImages(newElement)
+        forceLazyloadAllVideos(newElement)
+      })
+    }
   }
 })
 

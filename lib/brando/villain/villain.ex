@@ -61,7 +61,6 @@ defmodule Brando.Villain do
       entry_blocks_list
       |> Enum.reduce([], fn
         nil, acc -> acc
-        %{block: %{active: false}}, acc -> acc
         %{block: %{marked_as_deleted: true}}, acc -> acc
         %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
       end)

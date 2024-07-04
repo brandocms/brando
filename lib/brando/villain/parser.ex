@@ -171,6 +171,11 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert module to html.
       """
+      def module(%{active: false} = block, opts) do
+        # we might want to annotate disabled modules
+        maybe_annotate("", block.uid, opts)
+      end
+
       def module(
             %{
               multi: true,
@@ -920,6 +925,20 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
+      def container(%{active: false, children: children} = block, opts) do
+        skip_children? = Map.get(opts, :skip_children, false)
+
+        children_html =
+          if skip_children? do
+            "{$ content $}"
+            |> annotate_children(block.uid)
+          else
+            ""
+          end
+        # we might want to annotate disabled containers
+        maybe_annotate(children_html, block.uid, opts)
+      end
+
       def container(
             %{children: children, palette_id: palette_id, anchor: target_id, container_id: nil} =
               block,
