@@ -63,7 +63,8 @@ Create your frontend translation directories: (for norwegian)
 
 Merge frontend translations
 
-    $ mix gettext.merge priv/gettext/frontend --plural-forms=2
+    $ mix gettext.merge priv/gettext/frontend --locale no --plural-forms=2
+    $ mix gettext.merge priv/gettext/backend --locale no
 
 
 ## Generators
@@ -98,17 +99,6 @@ config :ex_aws, :s3, %{
   host: %{"fra1" => "SPACES_NAME.fra1.digitaloceanspaces.com"},
   region: "fra1"
 }
-```
-Add to your frontend `package.json`
-```
-"build": "webpack --mode=production --config webpack.prod.js",
-"build:cdn": "BRANDO_CDN=<%= application_name %> NODE_ENV=production webpack --mode=production --config ./webpack.config.prod.js",
-```
-
-Make sure you build frontend with:
-
-```dockerfile
-RUN yarn run build.cdn
 ```
 
 Add to Dockerfile build:
