@@ -7,7 +7,7 @@ defmodule Brando.Meta do
     plural: "metas",
     gettext_module: Brando.Gettext
 
-  data_layer :embedded1
+  data_layer :embedded
 
   identifier false
   persist_identifier false
