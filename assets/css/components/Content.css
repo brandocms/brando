@@ -10,7 +10,7 @@ main {
 
   > .content {
     @space padding-x sm;
-    @space padding-bottom md;
+    @space padding-bottom 12px;
     min-height: 100vh;
   }
 

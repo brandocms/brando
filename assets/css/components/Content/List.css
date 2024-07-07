@@ -1,4 +1,19 @@
+#brando-main > .content {
+  display: flex;
+  flex-direction: column;
+}
+
+.content-list-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .content-list { 
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+
   .empty-list {
     @space padding-y 7vw;
     background-color: var(--brando-color-peach);
@@ -16,11 +31,14 @@
   }
 
   .sort-container {
-    margin-top: 25px;
+    flex-grow: 1;
+    margin-top: 0;
   }
 
   .pagination {
-    margin-top: 25px;
+    margin-top: 10px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
 
     .pagination-entries {
       font-size: 12px;
@@ -546,18 +564,45 @@
 }
 
 .active-filters {
-  margin-top: 0.8vw;
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
   font-size: 13px;
 
   .filter {
     @font mono;
-    background-color: palegoldenrod;
+    background-color: #ffef45;
     border: 0;
     font-size: 12px;
     text-transform: uppercase;
-    padding: 3px 11px 3px 7px;
+    padding: 4px 10px 4px 4px;
     border-radius: 20px;
     margin-left: 5px;
+    display: flex;
+    gap: 5px;
+
+    .icon-wrapper {
+      display: inline-flex;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    [data-icon] {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      .icon-wrapper {
+        background-color: var(--brando-color-dark);
+      }
+      [data-icon] {
+        background-color: white;
+      }
+    }
   }
 }
 

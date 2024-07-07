@@ -446,7 +446,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <%= gettext("Active filters") %> &rarr;
       <%= for {name, value} <- @active_filters do %>
         <button class="filter" phx-click={@delete} phx-value-filter={name}>
-          &times; <%= name %>: <%= inspect(value) %>
+          <div class="icon-wrapper"><.icon name="hero-x-circle" /></div> <%= name %>: <%= inspect(value) %>
         </button>
       <% end %>
     </div>
