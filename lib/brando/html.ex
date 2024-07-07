@@ -582,6 +582,55 @@ defmodule Brando.HTML do
 </style>|
   end
 
+  attr :conn, :map, required: true
+  attr :charset, :string, default: "utf-8"
+  attr :viewport, :string, default: "width=device-width, initial-scale=1"
+  attr :fonts, :list, default: []
+  slot :pragma, default: nil
+  slot :title, default: nil
+  slot :preconnect, default: nil
+  slot :async_scripts, default: nil
+  slot :import_styles, default: nil
+  slot :scripts, default: nil
+  slot :styles, default: nil
+  slot :preload, default: nil
+  slot :deferred_scripts, default: nil
+  slot :prefetch, default: nil
+  slot :inner_block, default: nil
+
+  def head(assigns) do
+    ~H"""
+    <head phx-no-format>
+      <meta charset={@charset} />
+      <meta name="viewport" content={@viewport} />
+      <%= if @pragma do %><%= render_slot(@pragma) %><% end %>
+      <%= if @title do %><title><%= render_slot(@title) %></title><% else %><title><%= Brando.Utils.get_page_title(@conn) %></title><% end %>
+      <%= if @preconnect do %><%= render_slot(@preconnect) %><% end %>
+      <%= if @async_scripts do %><%= render_slot(@async_scripts) %><% end %>
+      <.init_js />
+      <%= if @import_styles do %><%= render_slot(@import_styles) %><% end %>
+      <.inject_critical_css />
+      <%= if @scripts do %><%= render_slot(@scripts) %><% end %>
+      <.include_assets only_css />
+      <%= if @styles do %><%= render_slot(@styles) %><% end %>
+      <.preload_fonts fonts={@fonts} />
+      <%= if @preload do %><%= render_slot(@preload) %><% end %>
+      <.include_assets only_js />
+      <%= if @deferred_scripts do %><%= render_slot(@deferred_scripts) %><% end %>
+      <%= if @prefetch do %><%= render_slot(@prefetch) %><% end %>
+
+      <.render_meta conn={@conn} />
+      <.render_rel conn={@conn} />
+      <.render_palettes_css />
+
+      <.render_json_ld conn={@conn} />
+      <.render_hreflangs conn={@conn} />
+
+      <%= render_slot(@inner_block) %>
+    </head>
+    """
+  end
+
   @doc """
   If you use Vite assets pipeline
   """
@@ -605,9 +654,46 @@ defmodule Brando.HTML do
   end
 
   def include_assets(%{only_css: true} = assigns) do
-    ~H"""
-    <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
-    """
+    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
+      ~H"""
+      <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+      """
+    else
+      if Application.get_env(Brando.otp_app(), :hmr) === false do
+        ~H"""
+        <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+        """
+      else
+        ~H"""
+        <!-- dev/test -->
+        <script type="module" src="http://localhost:3000/@vite/client" phx-no-format>
+        </script>
+        <script type="module" src="http://localhost:3000/js/critical.js" phx-no-format>
+        </script>
+        <script type="module" src="http://localhost:3000/js/index.js" phx-no-format>
+        </script>
+        <!-- end dev/test -->
+        """
+      end
+    end
+  end
+
+  def include_assets(%{only_js: true} = assigns) do
+    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
+      ~H"""
+      <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+      """
+    else
+      if Application.get_env(Brando.otp_app(), :hmr) === false do
+        ~H"""
+        <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+        """
+      else
+        ~H"""
+        <!-- prevent double loading of vite client, handled in only_css -->
+        """
+      end
+    end
   end
 
   def include_assets(assigns) do

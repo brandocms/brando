@@ -1,33 +1,24 @@
 <!DOCTYPE html>
 <html class="no-js" lang={@language}>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><%%= Brando.Utils.get_page_title(@conn) %></title>
-    <.inject_critical_css />
-
-    <.preload_fonts fonts={[]} />
-    <.init_js />
-
-    <.render_meta conn={@conn} />
-    <.render_rel conn={@conn} />
-    <.render_palettes_css />
+  <.head
+    conn={@conn}
+    fonts={[{:woff2, "/fonts/MyFont-Regular.woff2?vsn=d"}]}
+  >
+    <:prefetch>
+      <link href="//player.vimeo.com" rel="dns-prefetch" />
+    </:prefetch>
 
     <link rel="shortcut icon" href="/ico/favicon.ico">
-
-    <.include_assets />
-    <.render_json_ld conn={@conn} />
-    <.render_hreflangs conn={@conn} />
-    <meta name="format-detection" content="telephone=no">
-  </head>
+    <meta name="format-detection" content="telephone=no" />
+  </.head>
   <.body_tag conn={@conn} id="top">
-    <.cookie_law 
+    <%!-- <.cookie_law 
       button_text="OK"
       info_link="/privacy"
       info_text="Privacy">
       This webpage is using cookies for analytics (Not really, just an example).<br>
       Click OK to accept
-    </.cookie_law>
+    </.cookie_law> --%>
     <div class="backdrop"></div>
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <.navigation {assigns} />

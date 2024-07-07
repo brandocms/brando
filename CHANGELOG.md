@@ -30,6 +30,22 @@ See `UPGRADE.md` for instructions on upgrading between versions.
   </section>
   ```
 
+* BREAKING: added `<.head>` component. Switch out your regular `<head>` in your frontend
+  app with this to take advantage of properly ordered head elements:
+  ```
+  <.head
+    conn={@conn}
+    fonts={[{:woff2, "/fonts/MyFont-Regular.woff2?vsn=d"}]}
+  >
+    <:prefetch>
+      <link href="//player.vimeo.com" rel="dns-prefetch" />
+    </:prefetch>
+
+    <link rel="shortcut icon" href="/ico/favicon.ico" />
+    <meta name="format-detection" content="telephone=no" />
+  </.head>
+  ```
+
 ## 0.53.0
 
 * BREAKING: Switch out `import Phoenix.LiveView.Helpers` with `import Phoenix.Component`
