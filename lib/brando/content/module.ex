@@ -40,7 +40,7 @@ defmodule Brando.Content.Module do
   identifier "[{{ entry.namespace }}] {{ entry.name}}"
   persist_identifier false
 
-  @derived_fields ~w(id type name sequence namespace help_text wrapper class code refs vars svg deleted_at)a
+  @derived_fields ~w(id type name sequence namespace help_text multi class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait Brando.Trait.Sequenced
@@ -56,7 +56,7 @@ defmodule Brando.Content.Module do
     attribute :class, :string, required: true
     attribute :code, :text, required: true
     attribute :svg, :text
-    attribute :wrapper, :boolean
+    attribute :multi, :boolean
 
     attribute :datasource, :boolean, default: false
     attribute :datasource_module, :string
@@ -221,7 +221,7 @@ defmodule Brando.Content.Module do
       }
     ],
     vars: [],
-    wrapper: false,
+    multi: false,
     uid: "abcdef"
   }
 end

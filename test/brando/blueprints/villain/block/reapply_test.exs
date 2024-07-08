@@ -170,7 +170,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
           value: "#000000"
         }
       ],
-      wrapper: false
+      multi: false
     }
 
     original_block = %Brando.Content.Block{
@@ -449,7 +449,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       svg: nil,
       updated_at: ~N[2022-02-10 15:31:01],
       vars: [],
-      wrapper: false
+      multi: false
     }
 
     original_block = %Brando.Content.Block{

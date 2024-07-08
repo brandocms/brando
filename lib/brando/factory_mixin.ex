@@ -84,7 +84,7 @@ defmodule Brando.FactoryMixin do
             }
           ],
           vars: [],
-          wrapper: false
+          multi: false
         }
       end
 

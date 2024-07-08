@@ -206,7 +206,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :svg, :string
       add :type, :string
       add :multi, :boolean
-      add :wrapper, :boolean
       add :datasource, :boolean
       add :datasource_module, :string
       add :datasource_type, :string

@@ -625,7 +625,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         creator_id: user_id,
         module_id: module_id,
         parent_id: parent_id,
-        multi: module.wrapper,
+        multi: module.multi,
         source: source,
         children: [],
         block_identifiers: [],

@@ -112,7 +112,7 @@ defmodule Brando.Factory do
       refs: [],
       vars: [],
       svg: nil,
-      wrapper: false
+      multi: false
     }
   end
 
