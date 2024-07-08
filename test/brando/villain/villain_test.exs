@@ -375,8 +375,6 @@ defmodule Brando.VillainTest do
           vars: []
         }
       }
-      |> Ecto.Changeset.change()
-      |> Map.put(:action, :insert)
     ]
 
     page_params = Factory.params_for(:page, %{creator_id: user.id})
@@ -857,11 +855,11 @@ defmodule Brando.VillainTest do
     )
   end
 
-  test "fragment tag", %{user: user} do
+  test "fragment block", %{user: user} do
     f1 =
       Factory.insert(:fragment, %{
-        parent_key: "parent_test",
-        key: "frag_key",
+        parent_key: "parent_test_fragment_block",
+        key: "frag_key_fragment_block",
         rendered_blocks: "Hello from the FRAGMENT!"
       })
 

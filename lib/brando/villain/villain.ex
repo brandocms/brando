@@ -13,12 +13,12 @@ defmodule Brando.Villain do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @module_cache_ttl (Brando.config(:env) == :e2e && %{preload: [:vars]}) ||
+  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:vars]}) ||
                       %{cache: {:ttl, :infinite}, preload: [:vars]}
-  @container_cache_ttl (Brando.config(:env) == :e2e && %{preload: [:palette]}) ||
+  @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
-  @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
-  @fragment_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @palette_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
+  @fragment_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parse blocks

@@ -935,6 +935,7 @@ defmodule Brando.Villain.Parser do
           else
             ""
           end
+
         # we might want to annotate disabled containers
         maybe_annotate(children_html, block.uid, opts)
       end
