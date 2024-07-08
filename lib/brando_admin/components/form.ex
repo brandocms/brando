@@ -236,7 +236,6 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:updated_entry_assocs, updated_entry_assocs)
     |> maybe_full_rerender_live_preview(full_rerender?)
     |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
-    #  |> force_svelte_remounts()
     |> then(&{:ok, &1})
   end
 

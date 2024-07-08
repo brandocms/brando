@@ -8,6 +8,7 @@ defmodule Brando.SoftDelete.QueryTest do
   test "list_soft_delete_schemas" do
     assert Enum.sort(Query.list_soft_delete_schemas()) == [
              Brando.BlueprintTest.Project,
+             Brando.Content.Container,
              Brando.Content.Module,
              Brando.Content.Palette,
              Brando.Content.Template,
@@ -27,6 +28,7 @@ defmodule Brando.SoftDelete.QueryTest do
   test "count_soft_deletions" do
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Container, 0},
              {Brando.Content.Module, 0},
              {Brando.Content.Palette, 0},
              {Brando.Content.Template, 0},
@@ -65,6 +67,7 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Container, 0},
              {Brando.Content.Module, 0},
              {Brando.Content.Palette, 0},
              {Brando.Content.Template, 0},
@@ -90,6 +93,7 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
+             {Brando.Content.Container, 0},
              {Brando.Content.Module, 0},
              {Brando.Content.Palette, 0},
              {Brando.Content.Template, 0},

@@ -973,12 +973,32 @@ defmodule Brando.HTMLTest do
     Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
     conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
 
+    module_params =
+      Factory.params_for(:module, %{vars: [], refs: [], code: "{% ref refs.text %}"})
+
+    module = Factory.insert(:module, module_params)
+
     entry = %{
-      data: [
+      entry_blocks: [
         %{
-          type: "text",
-          data: %{
-            text: "SOMETHING -> $__CONTENT__ <- ANYTHING"
+          block: %{
+            uid: "1asdf2asdf",
+            module_id: module.id,
+            type: :module,
+            vars: [],
+            refs: [
+              %{
+                name: "text",
+                description: "text",
+                data: %Brando.Villain.Blocks.TextBlock{
+                  uid: "asdfasdf",
+                  data: %Brando.Villain.Blocks.TextBlock.Data{
+                    type: "text",
+                    text: "SOMETHING -> $__CONTENT__ <- ANYTHING"
+                  }
+                }
+              }
+            ]
           }
         }
       ]
@@ -993,26 +1013,41 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) ==
-             "\n  SOMETHING -> \n  \n  HELLO WORLD\n\n   <- ANYTHING\n"
+             "\n  <div class=\"text\">SOMETHING -> \n  \n  HELLO WORLD\n\n   <- ANYTHING</div>\n"
 
-    entry = %{
-      data: [
+    entry2 = %{
+      entry_blocks: [
         %{
-          type: "text",
-          data: %{
-            text: "SOMETHING -><- ANYTHING"
+          block: %{
+            uid: "1asdf2asdf",
+            module_id: module.id,
+            type: :module,
+            vars: [],
+            refs: [
+              %{
+                name: "text",
+                description: "text",
+                data: %Brando.Villain.Blocks.TextBlock{
+                  uid: "asdfasdf",
+                  data: %Brando.Villain.Blocks.TextBlock.Data{
+                    type: "text",
+                    text: "SOMETHING -><- ANYTHING"
+                  }
+                }
+              }
+            ]
           }
         }
       ]
     }
 
-    assigns = %{conn: conn, entry: entry}
+    assigns = %{conn: conn, entry: entry2}
 
     comp = ~H"""
     <.render_data conn={@conn} entry={@entry} />
     """
 
-    assert rendered_to_string(comp) == "\n  SOMETHING -><- ANYTHING\n"
+    assert rendered_to_string(comp) == "\n  <div class=\"text\">SOMETHING -><- ANYTHING</div>\n"
   end
 
   test "breakpoint_debug_tag" do

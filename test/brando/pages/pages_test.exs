@@ -168,7 +168,7 @@ defmodule Brando.PagesTest do
         key: "frag1",
         parent_key: "parent",
         language: "no",
-        html: "hello!"
+        rendered_blocks: "hello!"
       )
 
     assert Pages.fetch_fragment("frag1", "no") |> Phoenix.HTML.safe_to_string() == "hello!"
@@ -180,16 +180,36 @@ defmodule Brando.PagesTest do
         key: "frag1",
         parent_key: "parent",
         language: "no",
-        html: "hello!"
+        rendered_blocks: "hello!"
       )
 
     assert Pages.render_fragment(pf1) |> Phoenix.HTML.safe_to_string() == "hello!"
   end
 
   test "render_fragment map of fragments" do
-    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf1 =
+      Factory.insert(:fragment,
+        key: "frag1",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content!"
+      )
+
+    _pf2 =
+      Factory.insert(:fragment,
+        key: "frag2",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content! 2"
+      )
+
+    _pf3 =
+      Factory.insert(:fragment,
+        key: "frag3",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content! 3"
+      )
 
     frags = Pages.get_fragments("parent", "no")
 
@@ -201,9 +221,29 @@ defmodule Brando.PagesTest do
   end
 
   test "render_fragment parent_key + key" do
-    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf1 =
+      Factory.insert(:fragment,
+        key: "frag1",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content!"
+      )
+
+    _pf2 =
+      Factory.insert(:fragment,
+        key: "frag2",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content! 2"
+      )
+
+    _pf3 =
+      Factory.insert(:fragment,
+        key: "frag3",
+        parent_key: "parent",
+        language: "no",
+        rendered_blocks: "fragment content! 3"
+      )
 
     assert Pages.render_fragment("parent", "non_existing") |> Phoenix.HTML.safe_to_string() =~
              "Missing page fragment"

@@ -223,7 +223,7 @@ defmodule Brando.Sites do
     end
   end
 
-  query :single, GlobalSet, do: fn query -> from(q in query) end
+  query :single, GlobalSet, do: fn query -> from(q in query, preload: [:vars]) end
 
   matches GlobalSet do
     fn

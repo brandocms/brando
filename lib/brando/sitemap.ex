@@ -93,7 +93,7 @@ defmodule Brando.Sitemap do
     File.mkdir_p!(sitemap_path)
 
     default_opts = [
-      sitemap_url: Path.join(Brando.endpoint().url, "sitemaps"),
+      sitemap_url: Path.join(Brando.endpoint().url(), "sitemaps"),
       store: Sitemapper.FileStore,
       store_config: [
         path: sitemap_path

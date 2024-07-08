@@ -310,7 +310,7 @@ defmodule Brando.Villain do
   """
 
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
-          :ok | {:ok, map} | {:error, changeset}
+          {:ok, map} | {:error, changeset}
   def render_entry(schema, id) do
     case Brando.Query.get_entry(schema, id) do
       {:ok, entry} ->
@@ -323,7 +323,7 @@ defmodule Brando.Villain do
           {:ok, %Pages.Fragment{} = fragment} ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
-            :ok
+            {:ok, fragment}
 
           {:ok, result} ->
             Brando.Cache.Query.evict({:ok, result})
@@ -488,7 +488,7 @@ defmodule Brando.Villain do
   def render_entries_matching_regex(search_terms) do
     search_terms
     |> list_block_ids_matching_regex()
-    |> render_blocks()
+    |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()
   end
@@ -655,18 +655,22 @@ defmodule Brando.Villain do
     list_block_ids_using_modules(module_ids)
   end
 
-  defp list_entry_ids_for_root_blocks_by_source(source_map) do
-    Enum.reduce(source_map, %{}, fn {join_source, ids}, acc ->
-      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
+  def list_entry_ids_for_root_blocks_by_source(source_map) do
+    Enum.reduce(source_map, %{}, fn
+      {nil, _ids}, acc ->
+        acc
 
-      query =
-        from js in join_source,
-          where: js.block_id in ^ids,
-          select: js.entry_id,
-          distinct: true
+      {join_source, ids}, acc ->
+        {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
 
-      entry_ids = Brando.repo().all(query)
-      Map.put(acc, schema, entry_ids)
+        query =
+          from js in join_source,
+            where: js.block_id in ^ids,
+            select: js.entry_id,
+            distinct: true
+
+        entry_ids = Brando.repo().all(query)
+        Map.put(acc, schema, entry_ids)
     end)
   end
 
@@ -675,7 +679,7 @@ defmodule Brando.Villain do
     Brando.repo().all(query)
   end
 
-  defp list_root_block_ids_by_source(block_ids) when is_list(block_ids) do
+  def list_root_block_ids_by_source(block_ids) when is_list(block_ids) do
     base_case =
       from(cb in "content_blocks",
         select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},

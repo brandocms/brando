@@ -612,7 +612,7 @@ defmodule Brando.Utils do
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
+  def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__()
 
   @doc """
   Return the current user

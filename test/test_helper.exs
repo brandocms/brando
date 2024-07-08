@@ -229,4 +229,4 @@ File.cp!(fixture_src, Path.join([media_path, "images", "avatars", "27i97a.jpeg"]
 
 Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, :manual)
 
-Brando.endpoint().start_link
+Brando.endpoint().start_link()

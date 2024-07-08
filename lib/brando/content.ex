@@ -526,7 +526,7 @@ defmodule Brando.Content do
   end
 
   def has_identifier(module) do
-    case module.__has_identifier__ do
+    case module.__has_identifier__() do
       true -> {:ok, :has_identifier}
       false -> {:error, :no_identifier}
     end
@@ -535,7 +535,7 @@ defmodule Brando.Content do
   end
 
   def persist_identifier(module) do
-    case module.__persist_identifier__ do
+    case module.__persist_identifier__() do
       true -> {:ok, :persist_identifier}
       false -> {:error, :ignore_identifier}
     end

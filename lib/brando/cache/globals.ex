@@ -34,6 +34,7 @@ defmodule Brando.Cache.Globals do
     {:ok, global_sets} = Sites.list_global_sets()
     global_map = process_globals(global_sets)
     Cachex.update(:cache, :globals, global_map)
+
     {:ok, global_set}
   end
 

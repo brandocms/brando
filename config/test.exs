@@ -97,4 +97,4 @@ config :bcrypt_elixir, log_rounds: 1
 
 config :phoenix, :stacktrace_depth, 30
 # Print only warnings and errors during test
-config :logger, level: :warning
+config :logger, level: :error

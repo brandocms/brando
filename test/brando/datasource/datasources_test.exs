@@ -4,6 +4,16 @@ defmodule Brando.DatasourcesTest do
 
   alias Brando.Factory
 
+  @dummy_module %{
+    code: """
+    TEST
+    """,
+    name: "Module",
+    help_text: "Help text",
+    refs: [],
+    namespace: "Namespace",
+    class: "css class"
+  }
   @dummy_datamodule %{
     code: """
     {% for entry in entries %}
@@ -30,12 +40,6 @@ defmodule Brando.DatasourcesTest do
     namespace: "Namespace",
     class: "css class"
   }
-
-  @data_no_datasource [
-    block: %{
-      type: :module
-    }
-  ]
 
   defmodule TestDatasource do
     use Brando.Datasource
@@ -143,35 +147,39 @@ defmodule Brando.DatasourcesTest do
     user = Factory.insert(:random_user)
     {:ok, module} = Brando.Content.create_module(@dummy_datamodule, user)
 
-    data = [
-      %{
-        type: "module",
-        data: %{
-          datasource: true,
-          module_id: module.id
+    page_params = Factory.params_for(:page)
+
+    simple_blocks = [
+      %Brando.Pages.Page.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          module_id: module.id,
+          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          refs: [],
+          vars: []
         }
       }
+      |> Ecto.Changeset.change()
+      |> Map.put(:action, :insert)
     ]
 
-    page_params = Factory.params_for(:page, data: data)
-    user = Factory.insert(:random_user)
-    {:ok, p1} = Brando.Pages.create_page(page_params, user)
-    assert p1.html == "\n<li>1</li>\n\n<li>2</li>\n\n<li>3</li>\n\n"
+    page_cs = Brando.Pages.Page.changeset(%Brando.Pages.Page{}, page_params, user)
+    page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, simple_blocks)
+    page_cs = Map.put(page_cs, :action, :insert)
 
-    assert Brando.Datasource.update_datasource(TestDatasource, :pass_through) ==
-             {:ok, :pass_through}
+    {:ok, p1} = Brando.Pages.create_page(page_cs, user)
+    {:ok, p1} = Brando.Villain.render_entry(Brando.Pages.Page, p1.id)
+    assert p1.rendered_blocks == "\n<li>1</li>\n\n<li>2</li>\n\n<li>3</li>\n\n"
   end
 
   test "list_ids_with_datamodule" do
     schema = Brando.Pages.Page
-
     datasource_module = __MODULE__.TestDatasource
-    datasource_type = "list"
-    datasource_query = "all_of_them"
-    data_field = :data
 
     user = Factory.insert(:random_user)
     {:ok, module} = Brando.Content.create_module(@dummy_datamodule, user)
+    {:ok, m2} = Brando.Content.create_module(@dummy_module, user)
 
     data_refed_datasource = [
       %{
@@ -179,12 +187,35 @@ defmodule Brando.DatasourcesTest do
           type: :module,
           datasource: true,
           module_id: module.id,
+          source: "Elixir.Brando.Pages.Page.Blocks",
           refs: [
             %{
               name: "p",
-              data: %{
+              data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
-                data: %{
+                data: %Brando.Villain.Blocks.TextBlock.Data{
+                  text: "<p>Hello world</p>"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+
+    data_no_datasource = [
+      %{
+        block: %{
+          type: :module,
+          datasource: false,
+          module_id: m2.id,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          refs: [
+            %{
+              name: "p",
+              data: %Brando.Villain.Blocks.TextBlock{
+                type: "text",
+                data: %Brando.Villain.Blocks.TextBlock.Data{
                   text: "<p>Hello world</p>"
                 }
               }
@@ -213,6 +244,7 @@ defmodule Brando.DatasourcesTest do
       %{
         block: %{
           type: :container,
+          source: "Elixir.Brando.Pages.Page.Blocks",
           palette_id: palette.id,
           children: [
             %{
@@ -222,9 +254,10 @@ defmodule Brando.DatasourcesTest do
               refs: [
                 %{
                   name: "p",
-                  data: %{
+                  data: %Brando.Villain.Blocks.TextBlock{
+                    uid: "12323fdf",
                     type: "text",
-                    data: %{
+                    data: %Brando.Villain.Blocks.TextBlock.Data{
                       text: "<p>Hello world</p>"
                     }
                   }
@@ -237,41 +270,38 @@ defmodule Brando.DatasourcesTest do
     ]
 
     # insert pages
-    page_params = Factory.params_for(:page, entry_blocks: data_refed_datasource)
-    {:ok, page_with_refed_datasource} = Brando.Pages.create_page(page_params, user)
+    page_params = Factory.params_for(:page)
 
-    require Logger
+    page_cs =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(page_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, data_refed_datasource)
+      |> Map.put(:action, :insert)
 
-    Logger.error("""
-    page_with_refed_datasource:
-    #{inspect(Brando.repo().preload(page_with_refed_datasource, entry_blocks: [block: [:vars, :module]]))}
-    """)
+    {:ok, page_with_refed_datasource} = Brando.Pages.create_page(page_cs, user)
 
-    page_params = Factory.params_for(:page, entry_blocks: data_contained_datasource)
-    {:ok, page_with_contained_datasource} = Brando.Pages.create_page(page_params, user)
+    page_cs =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(page_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, data_contained_datasource)
+      |> Map.put(:action, :insert)
 
-    page_params = Factory.params_for(:page, entry_blocks: @data_no_datasource)
-    {:ok, page_with_no_datasource} = Brando.Pages.create_page(page_params, user)
+    {:ok, page_with_contained_datasource} = Brando.Pages.create_page(page_cs, user)
 
-    found_ids =
-      Brando.Villain.list_block_ids_using_datamodule(datasource_module)
+    page_cs =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(page_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, data_no_datasource)
+      |> Map.put(:action, :insert)
 
-    # Brando.Datasource.list_ids_with_datamodule(
-    #   schema,
-    #   {datasource_module, datasource_type, datasource_query},
-    #   data_field
-    # )
-
-    assert page_with_refed_datasource.id in found_ids
-    assert page_with_contained_datasource.id in found_ids
-    refute page_with_no_datasource.id in found_ids
+    {:ok, page_with_no_datasource} = Brando.Pages.create_page(page_cs, user)
 
     found_ids =
-      Brando.Datasource.list_ids_with_datamodule(
-        schema,
-        datasource_module,
-        data_field
-      )
+      datasource_module
+      |> Brando.Villain.list_block_ids_using_datamodule()
+      |> Brando.Villain.list_root_block_ids_by_source()
+      |> Brando.Villain.list_entry_ids_for_root_blocks_by_source()
+      |> Map.get(schema)
 
     assert page_with_refed_datasource.id in found_ids
     assert page_with_contained_datasource.id in found_ids

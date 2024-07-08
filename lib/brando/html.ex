@@ -784,11 +784,19 @@ defmodule Brando.HTML do
 
   """
   attr :entry, :map, required: true
+  attr :block_field, :atom, default: :blocks
   attr :conn, :map, required: true
   slot :inner_block, default: nil
 
   def render_data(assigns) do
-    parsed_data = Brando.Villain.parse(assigns.entry.data, assigns.entry, conn: assigns.conn)
+    entry_blocks_field = :"entry_#{assigns.block_field}"
+
+    parsed_data =
+      Brando.Villain.parse(
+        Map.get(assigns.entry, entry_blocks_field),
+        assigns.entry,
+        conn: assigns.conn
+      )
 
     [pre, post] =
       case String.split(parsed_data, "$__CONTENT__") do

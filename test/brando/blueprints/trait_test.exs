@@ -61,6 +61,7 @@ defmodule Brando.Blueprint.TraitTest do
     test "list" do
       assert Enum.sort(Trait.list_implementations(Brando.Trait.SoftDelete)) == [
                Brando.BlueprintTest.Project,
+               Brando.Content.Container,
                Brando.Content.Module,
                Brando.Content.Palette,
                Brando.Content.Template,

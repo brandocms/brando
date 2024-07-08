@@ -20,6 +20,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :dominant_color, :text
       add :focal, :jsonb
       add :config_target, :text, default: "default"
+      add :fetchpriority, :string, default: "auto"
       soft_delete()
       sequenced()
       timestamps()
@@ -194,8 +195,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-
-
     create table(:content_modules) do
       add :name, :string
       add :namespace, :string
@@ -248,6 +247,22 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+
+    create table(:content_containers) do
+      add :name, :string
+      add :namespace, :string
+      add :help_text, :text
+      add :code, :text
+      add :type, :string
+      add :allow_custom_palette, :boolean, default: false
+      add :palette_namespace, :string
+      add :palette_id, references(:content_palettes, on_delete: :nilify_all)
+      add :deleted_at, :utc_datetime
+      add :sequence, :integer
+      timestamps()
+    end
+
+
     create table(:content_blocks) do
       add :uid, :text
       add :type, :text
@@ -264,9 +279,30 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
       add :module_id, references(:content_modules, on_delete: :delete_all)
       add :parent_id, references(:content_blocks, on_delete: :delete_all)
+      add :container_id, references(:content_containers, on_delete: :delete_all)
+      add :fragment_id, references(:pages_fragments, on_delete: :delete_all)
       add :palette_id, references(:content_palettes, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
       add :refs, :jsonb
+    end
+
+    create table(:content_identifiers) do
+      add :entry_id, :id
+      add :schema, :string
+      add :title, :text
+      add :status, :integer
+      add :language, :string
+      add :url, :string
+      add :cover, :string
+      add :updated_at, :utc_datetime
+    end
+
+    create unique_index(:content_identifiers, [:entry_id, :schema])
+
+    create table(:content_block_identifiers) do
+      add :sequence, :integer
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
     end
 
     create table(:content_table_rows) do
@@ -283,7 +319,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:pages_fragments_blocks) do
-      add :entry_id, references(:pages, on_delete: :delete_all)
+      add :entry_id, references(:pages_fragments, on_delete: :delete_all)
       add :block_id, references(:content_blocks, on_delete: :delete_all)
       add :sequence, :integer
     end
@@ -397,6 +433,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+    create table(:navigation_items) do
+      add :status, :integer
+      add :sequence, :integer
+      add :key, :string, null: false
+      add :menu_id, references(:navigation_menus, on_delete: :delete_all)
+      add :creator_id, references(:users, on_delete: :nilify_all)
+      add :parent_id, references(:navigation_items, on_delete: :delete_all)
+      timestamps()
+    end
+
     create table(:tags) do
     end
 
@@ -423,18 +469,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create unique_index(:revisions, [:entry_type, :entry_id, :revision])
 
-    create table(:content_identifiers) do
-      add :entry_id, :id
-      add :schema, :string
-      add :title, :text
-      add :status, :integer
-      add :language, :string
-      add :url, :string
-      add :cover, :string
-      add :updated_at, :utc_datetime
-    end
 
-    create unique_index(:content_identifiers, [:entry_id, :schema])
 
     create table(:content_vars) do
       add :type, :text
@@ -468,6 +503,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :identifier_id, references(:content_identifiers, on_delete: :nilify_all)
       add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
       add :table_row_id, references(:content_table_rows, on_delete: :nilify_all)
+      add :menu_item_id, references(:navigation_items, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
 
       timestamps()

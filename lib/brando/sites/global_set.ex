@@ -28,7 +28,8 @@ defmodule Brando.Sites.GlobalSet do
       on_replace: :delete_if_exists,
       cast: true,
       sort_param: :sort_var_ids,
-      drop_param: :drop_var_ids
+      drop_param: :drop_var_ids,
+      preload_order: [asc: :sequence]
   end
 
   forms do

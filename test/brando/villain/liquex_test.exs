@@ -11,16 +11,14 @@ defmodule Brando.Villain.LiquexTest do
       "label" => "System",
       "key" => "system",
       "language" => "en",
-      "globals" => [
+      "vars" => [
         %{type: "text", label: "Text", key: "text", value: "My text"},
-        %{type: "boolean", label: "Text", key: "boolean", value: false}
+        %{type: "boolean", label: "Text", key: "boolean", value_boolean: false}
       ]
     }
 
     usr = Factory.insert(:random_user)
-
     {:ok, _gc1} = Brando.Sites.create_global_set(global_set_params, usr)
-
     context = Brando.Villain.get_base_context()
 
     html =

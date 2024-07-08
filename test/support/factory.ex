@@ -119,7 +119,7 @@ defmodule Brando.Factory do
   def page_factory do
     %Page{
       uri: sequence(:uri, &"test#{&1}"),
-      language: "en",
+      language: :en,
       status: :published,
       title: "Title",
       template: "default.html",
@@ -132,7 +132,7 @@ defmodule Brando.Factory do
       parent_key: "index",
       key: "header",
       status: :published,
-      language: "en",
+      language: :en,
       creator: build(:random_user)
     }
   end
