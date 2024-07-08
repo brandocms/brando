@@ -428,7 +428,7 @@ defmodule Brando.VillainTest do
           data: %{
             uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",
-            hidden: false,
+            active: true,
             data: %{
               text: "<p>Lede</p>",
               extensions: nil,
@@ -461,116 +461,72 @@ defmodule Brando.VillainTest do
 
     {:ok, palette} = Brando.Content.create_palette(palette_params, user)
 
-    data = [
+    simple_blocks = [
       %{
-        type: "container",
-        data: %{
+        block: %{
+          type: :container,
+          uid: "container-a1",
+          source: "Elixir.Brando.Pages.Page.Blocks",
           palette_id: palette.id,
-          blocks: [
+          children: [
             %{
-              type: "module",
-              data: %{
-                module_id: tp1.id,
-                multi: false,
-                refs: [
-                  %{
-                    data: %{
-                      uid: "1wUr4ZLoOx53fqIslbP1dg",
-                      type: "text",
-                      hidden: false,
-                      data: %{
-                        text: "<p>A REF!</p>",
-                        extensions: nil,
-                        type: "paragraph"
-                      }
-                    },
-                    description: nil,
-                    name: "lede"
-                  }
-                ],
-                sequence: 0,
-                vars: [
-                  %{
-                    key: "testvar",
-                    label: "Field name",
+              type: :module,
+              module_id: tp1.id,
+              source: "Elixir.Brando.Pages.Page.Blocks",
+              multi: false,
+              refs: [
+                %{
+                  data: %Brando.Villain.Blocks.TextBlock{
+                    uid: "1wUr4ZLoOx53fqIslbP1dg",
                     type: "text",
-                    value: "Some text!"
-                  }
-                ]
-              }
+                    active: true,
+                    data: %Brando.Villain.Blocks.TextBlock.Data{
+                      text: "<p>A REF!</p>",
+                      extensions: nil,
+                      type: "paragraph"
+                    }
+                  },
+                  description: nil,
+                  name: "lede"
+                }
+              ],
+              sequence: 0,
+              vars: [
+                %{
+                  key: "testvar",
+                  label: "Field name",
+                  type: :text,
+                  value: "Some text!"
+                }
+              ]
             }
           ]
         }
       }
     ]
 
-    params = Factory.params_for(:page, %{data: data}) |> Brando.Utils.map_from_struct()
-    {:ok, page} = Brando.Pages.create_page(params, user)
+    page_params = Factory.params_for(:page)
+    page_cs = Brando.Pages.Page.changeset(%Brando.Pages.Page{}, page_params, user)
+    page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, simple_blocks)
+    page_cs = Map.put(page_cs, :action, :insert)
+    {:ok, page} = Brando.Pages.create_page(page_cs, user)
+    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
 
-    assert page.html ==
-             "<section b-section=\"general-green\">\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n</section>\n"
+    assert page.rendered_blocks ==
+             "<section b-section=\"general-green\">\n  <!-- B:CHILDREN{container-a1} -->\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n<!-- E:CHILDREN{container-a1} -->\n\n</section>\n"
 
-    data = [
-      %{
-        type: "container",
-        data: %{
-          palette_id: palette.id,
-          blocks: [
-            %{
-              type: "module",
-              data: %{
-                deleted_at: nil,
-                module_id: tp1.id,
-                multi: false,
-                refs: [
-                  %{
-                    data: %{
-                      uid: "1wUr4ZLoOx53fqIslbP1dg",
-                      type: "text",
-                      hidden: false,
-                      data: %{
-                        text: "<p>A REF!</p>",
-                        extensions: nil,
-                        type: "paragraph"
-                      }
-                    },
-                    description: nil,
-                    name: "lede"
-                  }
-                ],
-                sequence: 0,
-                vars: [
-                  %{
-                    key: "testvar",
-                    label: "Field name",
-                    type: "text",
-                    value: "Some text!"
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      }
-    ]
-
-    params = Factory.params_for(:page, %{data: data}) |> Brando.Utils.map_from_struct()
-    {:ok, page2} = Brando.Pages.create_page(params, user)
-
-    assert page2.html ==
-             "<section b-section=\"general-green\">\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n</section>\n"
-
-    tp2 =
-      tp1
-      |> Map.put(:code, "-- this is some NEW code {{ testvar }} -- {% ref refs.lede %}")
-      |> Map.put(:refs, [
+    module2_params = %{
+      code: "-- this is some NEW code {{ testvar }} -- {% ref refs.lede %}",
+      name: "Name",
+      help_text: "Help text",
+      refs: [
         %{
           data: %{
             uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",
-            hidden: false,
+            active: true,
             data: %{
-              text: "<p>A REFZZZ!</p>",
+              text: "<p>NEW REF</p>",
               extensions: nil,
               type: "lede"
             }
@@ -578,16 +534,18 @@ defmodule Brando.VillainTest do
           description: nil,
           name: "lede"
         }
-      ])
-      |> Map.from_struct()
-      |> Brando.Utils.stringify_keys()
+      ],
+      vars: [],
+      namespace: "all",
+      class: "css class"
+    }
 
-    Brando.Content.update_module(tp1.id, tp2, user)
+    Brando.Content.update_module(tp1.id, module2_params, user)
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
-    assert updated_page.html ==
-             "<section b-section=\"general-green\">\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n</section>\n"
+    assert updated_page.rendered_blocks ==
+             "<section b-section=\"general-green\">\n  <!-- B:CHILDREN{container-a1} -->\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n<!-- E:CHILDREN{container-a1} -->\n\n</section>\n"
   end
 
   test "access refs in context", %{user: user} do
@@ -602,43 +560,51 @@ defmodule Brando.VillainTest do
 
     {:ok, tp1} = Brando.Content.create_module(module_params, user)
 
-    data = %{
-      data: %{
-        deleted_at: nil,
-        module_id: tp1.id,
-        multi: false,
-        refs: [
-          %{
-            data: %{
-              uid: "1wUr4ZLoOx53fqIslbP1dg",
-              type: "text",
-              hidden: false,
-              data: %{
-                text: "<p>A REF!</p>",
-                extensions: nil,
-                type: "lede"
-              }
-            },
-            description: nil,
-            name: "lede"
-          }
-        ],
-        sequence: 0,
-        vars: [
-          %{
-            key: "testvar",
-            label: "Field name",
-            type: "text",
-            value: "VARIABLE!"
-          }
-        ]
-      },
-      type: "module"
-    }
+    simple_blocks = [
+      %{
+        block: %{
+          type: :module,
+          module_id: tp1.id,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          multi: false,
+          refs: [
+            %{
+              data: %Brando.Villain.Blocks.TextBlock{
+                uid: "1wUr4ZLoOx53fqIslbP1dg",
+                type: "text",
+                active: true,
+                data: %Brando.Villain.Blocks.TextBlock.Data{
+                  text: "<p>A REF!</p>",
+                  extensions: nil,
+                  type: "lede"
+                }
+              },
+              description: nil,
+              name: "lede"
+            }
+          ],
+          sequence: 0,
+          vars: [
+            %{
+              key: "testvar",
+              label: "Field name",
+              type: :text,
+              value: "VARIABLE!"
+            }
+          ]
+        }
+      }
+    ]
 
-    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+    page_params = Factory.params_for(:page, %{creator_id: user.id})
+    page_cs = Brando.Pages.Page.changeset(%Brando.Pages.Page{}, page_params, user)
+    page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, simple_blocks)
+    page_cs = Map.put(page_cs, :action, :insert)
+    {:ok, page} = Brando.Pages.create_page(page_cs, user)
+    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
 
-    assert page.html == "A variable: VARIABLE! -- A ref: <div class=\"lede\"><p>A REF!</p></div>"
+    assert page.rendered_blocks ==
+             "A variable: VARIABLE! -- A ref: <div class=\"lede\"><p>A REF!</p></div>"
   end
 
   test "headless refs are ignored", %{user: user} do
@@ -892,55 +858,32 @@ defmodule Brando.VillainTest do
   end
 
   test "fragment tag", %{user: user} do
-    pf_params1 =
-      Factory.params_for(:fragment, %{
+    f1 =
+      Factory.insert(:fragment, %{
         parent_key: "parent_test",
         key: "frag_key",
-        data: [
-          %{
-            type: "html",
-            data: %{
-              text: "Hello from the fragment!"
-            }
-          }
-        ]
+        rendered_blocks: "Hello from the FRAGMENT!"
       })
 
-    pf_params2 =
-      Factory.params_for(:fragment, %{
-        parent_key: "parent_test",
-        key: "test_key",
-        data: [
-          %{
-            type: "html",
-            data: %{
-              text: "--> {% fragment parent_test frag_key en %} <--"
-            }
-          }
-        ]
-      })
+    fragment_block = [
+      %{
+        block: %{
+          type: :fragment,
+          source: "Elixir.Brando.Pages.Fragment.Blocks",
+          fragment_id: f1.id,
+          sequence: 0
+        }
+      }
+    ]
 
-    pf_params3 =
-      Factory.params_for(:fragment, %{
-        parent_key: "parent_test",
-        key: "test_key",
-        data: [
-          %{
-            type: "html",
-            data: %{
-              text: "--> {% hide %}parent_test{% endhide %} <--"
-            }
-          }
-        ]
-      })
+    page_params = Factory.params_for(:page, %{creator_id: user.id})
+    page_cs = Brando.Pages.Page.changeset(%Brando.Pages.Page{}, page_params, user)
+    page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, fragment_block)
+    page_cs = Map.put(page_cs, :action, :insert)
+    {:ok, page} = Brando.Pages.create_page(page_cs, user)
+    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
 
-    {:ok, pf1} = Brando.Pages.create_fragment(pf_params1, user)
-    {:ok, pf2} = Brando.Pages.create_fragment(pf_params2, user)
-    {:ok, pf3} = Brando.Pages.create_fragment(pf_params3, user)
-
-    assert pf1.html == "Hello from the fragment!"
-    assert pf2.html == "--> Hello from the fragment! <--"
-    assert pf3.html == "--> parent_test <--"
+    assert page.rendered_blocks == "Hello from the FRAGMENT!"
   end
 
   test "search modules for regex" do

@@ -109,7 +109,7 @@ defmodule Brando.Content do
     end
   end
 
-  query(:single, Module, do: fn query -> from(q in query) end)
+  query(:single, Module, do: fn query -> from(q in query, preload: [:vars]) end)
 
   matches Module do
     fn

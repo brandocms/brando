@@ -71,8 +71,7 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Liquid templates
-      # {:liquex, "~> 0.11"},
-      {:liquex, path: "../oss/liquex"},
+      {:liquex, "~> 0.11"},
       {:html_sanitize_ex, "~> 1.4"},
 
       # Misc
