@@ -13,7 +13,7 @@
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.4.39",
     "postcss-import": "^16.1.0",
-    "postcss-preset-env": "^9.5.15",
+    "postcss-preset-env": "^9.6.0",
     "postcss-reporter": "^7.1.0",
     "stylelint": "^16.6.1",
     "terser": "^5.31.1",
@@ -27,5 +27,6 @@
     "intersection-observer": "^0.12.2",
     "objectFitPolyfill": "^2.3.5",
     "picturefill": "^3.0.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
