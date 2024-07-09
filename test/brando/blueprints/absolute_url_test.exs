@@ -2,18 +2,13 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
   use ExUnit.Case
   alias Brando.Pages.Page
 
-  test "extract_preloads_from_absolute_url" do
-    assert Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(
-             Brando.BlueprintTest.Project
-           ) == [:creator, :properties]
+  test "__absolute_url_preloads__" do
+    assert Brando.BlueprintTest.Project.__absolute_url_preloads__() == [:creator, :properties]
+    assert Brando.MigrationTest.Project.__absolute_url_preloads__() == [:creator, :properties]
+    assert Brando.Pages.Page.__absolute_url_preloads__() == []
+  end
 
-    assert Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(
-             Brando.MigrationTest.Project
-           ) == [:creator, :properties]
-
-    assert Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(Brando.Pages.Page) ==
-             []
-
+  test "__absolute_url__" do
     # test absolute url for index
     assert Page.__absolute_url__(%Page{language: "no", uri: "om-oss"}) == "/no/om-oss"
     assert Page.__absolute_url__(%Page{language: "en", uri: "about"}) == "/en/about"

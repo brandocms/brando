@@ -24,10 +24,12 @@ defmodule Brando.Blueprint.AbsoluteURL do
   end
 
   defmacro absolute_url(tpl) when is_binary(tpl) do
-    {:ok, parsed_absolute_url} = Liquex.parse(tpl, Villain.LiquexParser)
+    {:ok, parsed_absolute_url_tpl} = Liquex.parse(tpl, Villain.LiquexParser)
 
     quote location: :keep do
-      @parsed_absolute_url unquote(parsed_absolute_url)
+      @absolute_url_tpl unquote(tpl)
+      @absolute_url_type :liquid
+      @parsed_absolute_url_tpl unquote(parsed_absolute_url_tpl)
       def __absolute_url__(entry) do
         context =
           entry
@@ -38,7 +40,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
           })
 
         []
-        |> Liquex.Render.render!(@parsed_absolute_url, context)
+        |> Liquex.Render.render!(@parsed_absolute_url_tpl, context)
         |> elem(0)
         |> Enum.join()
         |> String.trim()
@@ -52,7 +54,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
       def __absolute_url_parsed__ do
-        unquote(parsed_absolute_url)
+        unquote(parsed_absolute_url_tpl)
       end
 
       def __absolute_url_type__, do: :liquid
@@ -62,6 +64,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
   defmacro absolute_url({:{}, _, [:i18n, fun, fun_target, args_tpl]}) do
     quote location: :keep do
+      @absolute_url_tpl unquote(args_tpl)
+      @absolute_url_type :i18n
       def __absolute_url__(entry) do
         locale =
           if Map.has_key?(entry, :language) do
@@ -96,64 +100,5 @@ defmodule Brando.Blueprint.AbsoluteURL do
       def __absolute_url_template__, do: unquote(args_tpl)
       def __has_absolute_url__, do: true
     end
-  end
-
-  @doc """
-  Attempt to extract necessary preloads from absolute_url template
-  """
-  def extract_preloads_from_absolute_url(schema) do
-    if schema.__has_absolute_url__() do
-      type = schema.__absolute_url_type__()
-      do_extract_preloads_from_absolute_url(type, schema)
-    else
-      []
-    end
-  end
-
-  defp do_extract_preloads_from_absolute_url(:liquid, schema) do
-    tpl = schema.__absolute_url_template__()
-    regex = ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
-
-    matches =
-      regex
-      |> Regex.scan(tpl, capture: :all_but_first)
-      |> Enum.map(&String.split(List.first(&1), "."))
-      |> Enum.filter(&(Enum.count(&1) > 1))
-
-    matches
-    |> Enum.map(fn
-      [_, rel, _] -> try_relation(schema, rel)
-      [_, rel] -> try_relation(schema, rel)
-    end)
-    |> Enum.reject(&is_nil(&1))
-    |> Enum.uniq()
-  end
-
-  defp do_extract_preloads_from_absolute_url(:i18n, schema) do
-    tpl = schema.__absolute_url_template__()
-
-    matches = Enum.filter(tpl, &(Enum.count(&1) > 1))
-
-    matches
-    |> Enum.map(fn
-      [rel, _] -> try_relation(schema, rel)
-      [rel] -> try_relation(schema, rel)
-    end)
-    |> Enum.reject(&is_nil(&1))
-    |> Enum.uniq()
-  end
-
-  defp try_relation(schema, rel) when is_atom(rel) do
-    %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(rel)
-    rel_name
-  rescue
-    Brando.Exception.BlueprintError -> nil
-  end
-
-  defp try_relation(schema, rel) when is_binary(rel) do
-    %Brando.Blueprint.Relation{name: rel_name} = schema.__relation__(String.to_existing_atom(rel))
-    rel_name
-  rescue
-    Brando.Exception.BlueprintError -> nil
   end
 end

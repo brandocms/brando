@@ -601,7 +601,61 @@ defmodule Brando.Blueprint do
     end
   end
 
+  def extract_absolute_url_preloads(env) do
+    absolute_url_type = Module.get_attribute(env.module, :absolute_url_type)
+    absolute_url_tpl = Module.get_attribute(env.module, :absolute_url_tpl)
+
+    attrs = Module.get_attribute(env.module, :attrs)
+    assets = Module.get_attribute(env.module, :assets)
+    relations = Module.get_attribute(env.module, :relations)
+    traits = Module.get_attribute(env.module, :traits)
+
+    aux_relations = Brando.Trait.get_relations(attrs, assets, relations, traits)
+    all_relations = relations ++ aux_relations
+
+    try_relation = fn name ->
+      all_relations
+      |> Enum.find(fn rel ->
+        atom_name = (is_atom(name) && name) || String.to_existing_atom(name)
+        rel.name == atom_name
+      end)
+      |> case do
+        nil -> nil
+        rel -> rel.name
+      end
+    end
+
+    case absolute_url_type do
+      :liquid ->
+        ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
+        |> Regex.scan(absolute_url_tpl || "", capture: :all_but_first)
+        |> Enum.map(&String.split(List.first(&1), "."))
+        |> Enum.filter(&(Enum.count(&1) > 1))
+        |> Enum.map(fn
+          [_, rel, _] -> try_relation.(rel)
+          [_, rel] -> try_relation.(rel)
+        end)
+        |> Enum.reject(&is_nil(&1))
+        |> Enum.uniq()
+
+      :i18n ->
+        absolute_url_tpl
+        |> Enum.filter(&(Enum.count(&1) > 1))
+        |> Enum.map(fn
+          [rel, _] -> try_relation.(rel)
+          [rel] -> try_relation.(rel)
+        end)
+        |> Enum.reject(&is_nil(&1))
+        |> Enum.uniq()
+
+      nil ->
+        []
+    end
+  end
+
   defmacro __before_compile__(env) do
+    absolute_url_preloads = extract_absolute_url_preloads(env)
+
     imported_form_modules =
       Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
 
@@ -631,11 +685,17 @@ defmodule Brando.Blueprint do
     quote location: :keep,
           bind_quoted: [
             imported_forms: imported_forms,
-            imported_listings: imported_listings
+            imported_listings: imported_listings,
+            absolute_url_preloads: absolute_url_preloads
           ],
           unquote: false do
       @imported_forms List.flatten(imported_forms)
       @imported_listings List.flatten(imported_listings)
+      @absolute_url_preloads absolute_url_preloads
+
+      def __absolute_url_preloads__ do
+        @absolute_url_preloads
+      end
 
       def __primary_key__ do
         @primary_key

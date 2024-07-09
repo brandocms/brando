@@ -4,7 +4,7 @@ defmodule Brando.Content.AlternateEntries do
   """
   def preloads_for(schema) do
     if schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() do
-      case Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(schema) do
+      case schema.__absolute_url_preloads__() do
         [] ->
           [:alternate_entries]
 

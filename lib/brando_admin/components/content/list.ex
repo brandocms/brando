@@ -392,7 +392,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp maybe_preload_alternates(list_opts, schema) do
     if schema.has_trait(Translatable) and schema.has_alternates?() do
       preloads =
-        case Brando.Blueprint.AbsoluteURL.extract_preloads_from_absolute_url(schema) do
+        case schema.__absolute_url_preloads__() do
           [] ->
             :alternate_entries
 
@@ -446,7 +446,8 @@ defmodule BrandoAdmin.Components.Content.List do
       <%= gettext("Active filters") %> &rarr;
       <%= for {name, value} <- @active_filters do %>
         <button class="filter" phx-click={@delete} phx-value-filter={name}>
-          <div class="icon-wrapper"><.icon name="hero-x-circle" /></div> <%= name %>: <%= inspect(value) %>
+          <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
+           <%= name %>: <%= inspect(value) %>
         </button>
       <% end %>
     </div>
