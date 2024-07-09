@@ -27,7 +27,7 @@ defmodule Brando.Content.Module.Ref do
 
     attribute :data, PolymorphicEmbed,
       types: Blocks.list_blocks(),
-      type_field: :type,
+      type_field_name: :type,
       on_type_not_found: :raise,
       on_replace: :update
   end
