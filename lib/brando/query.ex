@@ -398,6 +398,9 @@ defmodule Brando.Query do
 
   def with_order(query, order) when is_list(order) do
     Enum.reduce(order, query, fn
+      {_, {:array_position, ids}}, query ->
+        order_by(query, [q], fragment("array_position(?, ?)", ^ids, q.id))
+
       {_, :status}, query ->
         query
         |> order_by(fragment("status=0 DESC"))
