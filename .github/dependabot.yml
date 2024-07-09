@@ -11,6 +11,8 @@ updates:
     interval: weekly
     time: '00:00'
   open-pull-requests-limit: 10
+  allow:
+  - dependency-type: production
   reviewers:
   - tmjoen
   assignees:
@@ -28,6 +30,8 @@ updates:
     interval: weekly
     time: '00:00'
   open-pull-requests-limit: 10
+  allow:
+  - dependency-type: production
   reviewers:
   - tmjoen
   assignees:
