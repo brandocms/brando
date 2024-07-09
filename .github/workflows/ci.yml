@@ -37,7 +37,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4.1.2
+      - uses: actions/checkout@v4.1.7
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
