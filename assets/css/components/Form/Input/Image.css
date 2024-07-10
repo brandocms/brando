@@ -179,12 +179,16 @@
       }
 
       .image-info {
-        font-family: 'Mono';
+        @font mono;
         font-size: 13px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         padding-left: 12px;
+        
+        .title {
+          @font main;
+        }
 
         .tiny {
           width: fit-content;

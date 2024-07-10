@@ -290,6 +290,15 @@ figcaption.tiny {
     .prefill-small {
       border-color: azure !important;
     }
+
+    .input-image .image-wrapper-compact {
+      border: 1px dashed azure;
+    }
+
+    button.tiny {
+      color: azure;
+      border: 1px solid azure;
+    }
   }
 
   .revisions-table {
