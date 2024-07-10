@@ -109,21 +109,22 @@ defmodule Brando.Content.Block do
       on_replace: :delete,
       cast: true
 
-    relation :block_identifiers, :has_many,
-      module: Brando.Content.BlockIdentifier,
-      preload_order: [asc: :sequence],
-      on_replace: :delete_if_exists,
-      cast: true
-
     relation :table_rows, :has_many,
       module: Brando.Content.TableRow,
       preload_order: [asc: :sequence],
       on_replace: :delete_if_exists,
       cast: true
 
+    relation :block_identifiers, :has_many,
+      module: Brando.Content.BlockIdentifier,
+      preload_order: [asc: :sequence],
+      on_replace: :delete_if_exists,
+      cast: true
+
     relation :identifiers, :has_many,
       module: Brando.Content.Identifier,
-      through: [:block_identifiers, :identifier]
+      through: [:block_identifiers, :identifier],
+      preload_order: [asc: :sequence]
   end
 
   absolute_url ""

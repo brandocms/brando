@@ -2,6 +2,19 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.54.0
 
+* BREAKING: Simplified `:entries` (for related entries) -- removed the indirection
+  of adding `_identifiers` to the assoc's name, so if you have 
+  ```
+  relation :related_entries, :entries, constraints: [max_length: 3]
+  ```
+  in your code, there will be no auto generated `:related_entries_identifiers`. This means
+  the `:related_entries` will be the join table between your schema and the identifiers table.
+  ```
+  identifiers = Enum.map(case.related_entries, &1.identifier)
+  case_ids = Enum.map(case.related_entries, &1.identifier.entry_id)
+  related_cases = Cases.list_cases!(%{matches: %{ids: ids}})
+  ```
+
 * BREAKING: `Brando.Villain.list_villains/0` is now `Brando.Villain.list_blocks/0`
 * BREAKING: change `trait Brando.Trait.Villain` to `trait Brando.Trait.Blocks`
 * BREAKING: remove old `data` attributes with type `:villain` and add has_many relation `:blocks`:
@@ -183,7 +196,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
   relation :contributors, :has_many,
     module: Articles.Contributor,
-    through: [:article_contributors, :contributor]
+    through: [:article_contributors, :contributor],
+    preload_order: [asc: :sequence]
   ```
 
   If you use the `ArticleContributor` schema for a multi select, you must

@@ -71,7 +71,8 @@ defmodule Brando.Blueprint.Relations do
 
       relation :contributors, :has_many,
         module: Articles.Contributor,
-        through: [:article_contributors, :contributor]
+        through: [:article_contributors, :contributor],
+        preload_order: [asc: :sequence]
 
   This enables us to use other fields from the join table, such as `sequence` in the example above.
 
@@ -138,9 +139,10 @@ defmodule Brando.Blueprint.Relations do
               on_replace: :delete,
               cast: true
 
-            relation :contributors, :has_many,
+              relation :contributors, :has_many,
               module: Articles.Contributor,
-              through: [:article_contributors, :contributor]
+              through: [:article_contributors, :contributor],
+              preload_order: [asc: :sequence]
 
         We can then set up a multi select for this relation:
 
@@ -333,19 +335,19 @@ defmodule Brando.Blueprint.Relations do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
-    case Map.get(changeset.params, "#{to_string(name)}_identifiers") do
+    case Map.get(changeset.params, to_string(name)) do
       "" ->
-        put_assoc(changeset, :"#{name}_identifiers", [])
+        put_assoc(changeset, name, [])
 
       _ ->
         cast_assoc(
           changeset,
-          :"#{name}_identifiers",
+          name,
           to_changeset_opts(:has_many, opts) ++
             [
               with: &module.changeset(&1, &2, user, &3, []),
-              sort_param: :"#{to_string(name)}_sequence",
-              drop_param: :"#{to_string(name)}_delete"
+              sort_param: :"sort_#{to_string(name)}_ids",
+              drop_param: :"drop_#{to_string(name)}_ids"
             ]
         )
     end

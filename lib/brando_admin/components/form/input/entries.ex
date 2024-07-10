@@ -28,19 +28,18 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   # data compact, :boolean
 
   def update(assigns, socket) do
-    join_field_name = :"#{assigns.field.field}_identifiers"
-    join_field = assigns.field.form[join_field_name]
-    schema = assigns.field.form.source.data.__struct__
-    {:assoc, %{queryable: join_schema}} = Map.get(schema.__changeset__(), join_field_name)
+    field = assigns.field
+    schema = field.form.source.data.__struct__
+    %{opts: %{module: join_schema} = field_opts} = schema.__relation__(field.field)
 
     wanted_schemas = Keyword.get(assigns.opts, :for)
 
     if !wanted_schemas do
       raise Brando.Exception.BlueprintError,
         message: """
-        Missing `for` option for `:entries` field `#{inspect(assigns.field.field)}`
+        Missing `for` option for `:entries` field `#{inspect(field.field)}`
 
-            input :related_entries, :entries, for: [
+            input :#{inspect(field.field)}, :entries, for: [
               {MyApp.Projects.Project, %{preload: [:category]}},
               {Brando.Pages.Page, %{}}
             ]
@@ -48,44 +47,18 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         """
     end
 
-    delete_field_name =
-      String.replace(
-        assigns.field.name,
-        "#{assigns.field.field}",
-        "#{assigns.field.field}_delete"
-      ) <>
-        "[]"
-
-    sort_field_name =
-      String.replace(
-        assigns.field.name,
-        "#{assigns.field.field}",
-        "#{assigns.field.field}_sequence"
-      ) <>
-        "[]"
-
     {:ok,
      socket
      |> assign(assigns)
      |> prepare_input_component()
      |> assign_new(:selected_schema, fn -> nil end)
      |> assign_new(:join_schema, fn -> join_schema end)
-     |> assign(:identifiers_field, join_field)
-     |> assign(:join_field_name, join_field_name)
-     |> assign_new(:selected_identifiers, fn -> Enum.map(join_field.value, & &1.identifier) end)
+     |> assign_new(:selected_identifiers, fn -> Enum.map(field.value, & &1.identifier) end)
      |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
        selected_identifiers
      end)
-     |> assign(:delete_field_name, delete_field_name)
-     |> assign(:sort_field_name, sort_field_name)
-     |> assign_new(:max_length, fn ->
-       relation_opts = Map.get(schema.__relation__(:related_entries), :opts)
-       get_in(relation_opts, [:constraints, :max_length])
-     end)
-     |> assign_new(:min_length, fn ->
-       relation_opts = Map.get(schema.__relation__(:related_entries), :opts)
-       get_in(relation_opts, [:constraints, :min_length])
-     end)
+     |> assign_new(:max_length, fn -> get_in(field_opts, [:constraints, :max_length]) end)
+     |> assign_new(:min_length, fn -> get_in(field_opts, [:constraints, :min_length]) end)
      |> assign_available_schemas(wanted_schemas)
      |> assign_selected_schema()}
   end
@@ -109,17 +82,16 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Form.field_base
-        field={@identifiers_field}
+        field={@field}
         label={@label}
         instructions={@instructions}
         class={@class}
         compact={@compact}
       >
-        <input type="hidden" name={@delete_field_name} />
-
         <%= if Enum.empty?(@selected_identifiers) do %>
           <div class="empty-list">
             <%= gettext("No selected entries") %>
+            <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
           </div>
         <% else %>
           <div
@@ -131,17 +103,34 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             data-sortable-handle=".identifier"
             data-sortable-selector=".identifier"
             data-sortable-dispatch-event="true"
+            data-sortable-dispatch-event-target-id={@field.id}
+            data-sortable-filter=".remove button"
           >
-            <.inputs_for :let={identifier_form} field={@identifiers_field}>
+            <input type="hidden" name={@field.name} id={@field.id} />
+            <.inputs_for :let={identifier_form} field={@field}>
               <.assoc_identifier
                 assoc_identifier={identifier_form}
                 available_identifiers={@selected_identifiers}
               >
-                <input type="hidden" name={@sort_field_name} value={identifier_form.index} />
+                <%!-- <input
+                  type="hidden"
+                  name={identifier_form[:id].name}
+                  value={identifier_form[:id].value}
+                />
+                <input
+                  type="hidden"
+                  name={identifier_form[:_persistent_id].name}
+                  value={identifier_form.index}
+                /> --%>
                 <:delete>
+                  <input
+                    type="hidden"
+                    name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
+                    value={identifier_form.index}
+                  />
                   <button
                     type="button"
-                    name={@delete_field_name}
+                    name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
                     value={identifier_form.index}
                     phx-click={JS.dispatch("change")}
                   >
@@ -150,7 +139,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
                 </:delete>
               </.assoc_identifier>
             </.inputs_for>
-            <input type="hidden" name={@delete_field_name} />
+            <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
           </div>
         <% end %>
 
@@ -178,7 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
               identifier={identifier}
               select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
               available_identifiers={@available_identifiers}
-              assoc_identifiers={@identifiers_field}
+              assoc_identifiers={@field}
             />
           <% end %>
         </Content.modal>
@@ -188,7 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   end
 
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
-    identifiers_field = socket.assigns.identifiers_field
+    identifiers_field = socket.assigns.field
     field_name = identifiers_field.field
     form = identifiers_field.form
     changeset = form.source
@@ -253,14 +242,26 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         changeset: updated_changeset
       )
 
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "update_entry_relation",
-        path: [:"#{field_name}_identifiers"],
-        updated_relation: updated_assoc_identifiers
-      )
-
       updated_identifiers = [selected_identifier | selected_identifiers]
+
+      # flattened_assoc_identifiers =
+      #   Enum.map(updated_assoc_identifiers, fn assoc_identifier ->
+      #     applied_assoc_identifier = Changeset.apply_changes(assoc_identifier)
+
+      #     if applied_assoc_identifier.identifier_id == identifier_id do
+      #       Map.put(applied_assoc_identifier, :identifier, selected_identifier)
+      #     else
+      #       applied_assoc_identifier
+      #     end
+      #   end)
+
+      # send_update(BrandoAdmin.Components.Form,
+      #   id: form_id,
+      #   event: "update_entry_relation",
+      #   path: [field_name],
+      #   updated_relation: flattened_assoc_identifiers
+      # )
+
       {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
     end
   end
@@ -297,42 +298,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      socket
      |> assign(:available_identifiers, identifiers)
      |> assign(:selected_schema, schema_module)}
-  end
-
-  def handle_event(
-        "sequenced",
-        %{"ids" => ordered_ids},
-        %{
-          assigns: %{
-            field: field,
-            selected_identifiers: selected_identifiers
-          }
-        } = socket
-      ) do
-    field_name = field.field
-    form = field.form
-    changeset = form.source
-    current_data = Changeset.get_change(changeset, field_name)
-    applied_data = Enum.map(current_data, &Changeset.apply_changes/1)
-    deduped_data = Enum.dedup(applied_data)
-    sorted_data = Enum.map(ordered_ids, fn id -> Enum.find(deduped_data, &(&1.id == id)) end)
-
-    updated_changeset = Changeset.put_change(changeset, field_name, sorted_data)
-
-    schema = changeset.data.__struct__
-    form_id = "#{schema.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    updated_identifiers =
-      Enum.map(ordered_ids, fn id -> Enum.find(selected_identifiers, &(&1.id == id)) end)
-
-    {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
   end
 
   attr :block_identifier, :any

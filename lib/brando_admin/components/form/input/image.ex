@@ -280,25 +280,10 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       image: image
     )
 
-    require Logger
-
-    Logger.error("""
-
-    => select_image #{inspect(selected_image_id)}
-    on_change = #{inspect(on_change, pretty: true)}
-
-    """)
-
     if on_change do
       path = socket.assigns.path
       field_name = socket.assigns.field.field
       field_path = path ++ [field_name]
-
-      require Logger
-
-      Logger.error("""
-      field_path = #{inspect(field_path, pretty: true)}
-      """)
 
       on_change.(%{
         event: "update_entry_relation",

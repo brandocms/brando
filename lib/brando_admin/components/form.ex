@@ -388,9 +388,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
 
-    {:ok,
-     socket
-     |> assign(:form, updated_form)}
+    {:ok, assign(socket, :form, updated_form)}
   end
 
   def update(

@@ -368,7 +368,8 @@ defmodule Brando.Blueprint do
             ),
             Ecto.Schema.has_many(
               rel_name,
-              through: [:"entry_#{rel_name}", :block]
+              through: [:"entry_#{rel_name}", :block],
+              preload_order: [asc: :sequence]
             )
           ]
 
@@ -415,15 +416,11 @@ defmodule Brando.Blueprint do
 
           [
             Ecto.Schema.has_many(
-              :"#{name}_identifiers",
+              name,
               entries_module,
               foreign_key: :parent_id,
               preload_order: [asc: :sequence],
               on_replace: :delete
-            ),
-            Ecto.Schema.has_many(
-              name,
-              through: [:"#{name}_identifiers", :identifier]
             )
           ]
 

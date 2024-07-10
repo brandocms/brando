@@ -39,9 +39,6 @@ defmodule Brando.Content.Identifier do
   def preloads_for(schema) do
     schema.__relations__()
     |> Enum.filter(&(&1.type == :entries))
-    |> Enum.map(fn rel ->
-      rel_identifiers_field = :"#{rel.name}_identifiers"
-      [rel.name, {rel_identifiers_field, :identifier}]
-    end)
+    |> Enum.map(&{&1.name, [:identifier]})
   end
 end
