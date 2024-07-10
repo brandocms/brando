@@ -451,6 +451,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   </div>
                                 </div>
                               </Form.array_inputs_from_data>
+                              <Input.text
+                                field={block_data[:config_target]}
+                                label={gettext("Config target")}
+                                instructions={
+                                  gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")
+                                }
+                                monospace
+                              />
                             </Form.inputs_for_block>
                           <% "gallery" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
@@ -668,6 +676,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       </div>
                                     </div>
                                   </Form.array_inputs_from_data>
+                                  <Input.text
+                                    field={tpl_data[:config_target]}
+                                    label={gettext("Config target")}
+                                    instructions={
+                                      gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")
+                                    }
+                                    monospace
+                                  />
                                 </.inputs_for>
                               <% end %>
 

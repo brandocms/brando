@@ -3,8 +3,22 @@ defmodule Brando.Images do
   Context for Images.
   Handles uploads too.
   Interfaces with database
-  """
 
+  ## Image config
+
+  You can configure a picture block ref by setting the `config_target` field to a string like this:
+
+      image:Elixir.MyApp.Pages.Page:function:sidebar_image_config
+
+  then in the module `MyApp.Pages.Page` you can define a function like this:
+
+      def sidebar_image_config do
+        %Brando.Type.ImageConfig{
+          upload_path: Path.join(["images", "CUSTOM", "SIDEBAR"]),
+          # ...
+        }
+      end
+  """
   use BrandoAdmin, :context
   use Brando.Query
 
@@ -101,10 +115,13 @@ defmodule Brando.Images do
   end
 
   def get_config_for(%{config_target: nil}) do
-    maybe_struct(
-      Brando.Type.ImageConfig,
-      Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
-    )
+    config =
+      maybe_struct(
+        Brando.Type.ImageConfig,
+        Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
+      )
+
+    {:ok, config}
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do

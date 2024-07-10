@@ -42,6 +42,8 @@ defmodule Brando.Villain.Blocks.PictureBlock do
         values: [:svg, :dominant_color, :dominant_color_faded, :micro, :none],
         default: :dominant_color
 
+      attribute :config_target, :text
+
       attribute :fetchpriority, :enum,
         values: [:high, :low, :auto],
         default: :auto

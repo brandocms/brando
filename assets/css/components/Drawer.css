@@ -98,11 +98,9 @@ figcaption.tiny {
   }
 
   .img-placeholder {
-    background-color: transparent !important;
     color: azure;
-    padding: 2vw;
-    border: 1px solid azure;
-    border-radius: 20px;
+    background-color: #f0ffff0f !important;
+    border-radius: 0;
 
     .instructions {
       text-align: center;
@@ -298,6 +296,12 @@ figcaption.tiny {
     button.tiny {
       color: azure;
       border: 1px solid azure;
+      transition: background-color 250ms ease, color 250ms ease;
+
+      &:hover {
+        background-color: azure;
+        color: #052753;
+      }
     }
   }
 

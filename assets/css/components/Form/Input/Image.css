@@ -158,16 +158,15 @@
       width: fit-content;
 
       img {
-        width: 100px;
-        height: 100px;
+        width: 90px;
+        height: 90px;
         min-width: auto;
       }
 
       .img-placeholder {
         background-color: var(--brando-color-input);
-        border-radius: 50%;
-        width: 100px;
-        height: 100px;
+        width: 90px;
+        height: 90px;
         min-width: auto;
         display: flex;
         align-items: center;

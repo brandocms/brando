@@ -17,6 +17,9 @@ export default app => ({
     this.attachListenersOnUpdate = false
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
+    this.configTarget = this.el.hasAttribute('data-upload-config-target')
+      ? this.el.getAttribute('data-upload-config-target')
+      : null
     this.eventTarget = this.el.hasAttribute('data-upload-event-target')
       ? this.el.getAttribute('data-upload-event-target')
       : this.el
@@ -153,6 +156,9 @@ export default app => ({
       formData.append('slug', 'post')
       formData.append('uid', this.uid)
       formData.append('formats', this.formats)
+      if (this.configTarget) {
+        formData.append('config_target', this.configTarget)
+      }
 
       try {
         this.status = UPLOADING
