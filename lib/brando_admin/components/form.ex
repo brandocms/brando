@@ -1714,30 +1714,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def maybe_invalidate_live_preview_assign(socket, path, path_type \\ :atom_path)
-
-  def maybe_invalidate_live_preview_assign(
-        %{assigns: %{live_preview_active?: true, fields_demanding_live_preview_reassign: fdlpr}} =
-          socket,
-        path,
-        path_type
-      )
-      when fdlpr != [] do
-    path = if path_type == :string_path, do: string_path_to_atom_path(path), else: path
-    cache_key = socket.assigns.live_preview_cache_key
-
-    case Enum.find(fdlpr, fn {_key, trigger_path} -> trigger_path == path end) do
-      {key, _} -> Brando.LivePreview.invalidate_var(cache_key, key)
-      nil -> nil
-    end
-
-    socket
-  end
-
-  def maybe_invalidate_live_preview_assign(socket, _string_path, _) do
-    socket
-  end
-
   def handle_event("focus", params, socket) do
     require Logger
 
@@ -2299,6 +2275,30 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
+  end
+
+  defp maybe_invalidate_live_preview_assign(socket, path, path_type \\ :atom_path)
+
+  defp maybe_invalidate_live_preview_assign(
+         %{assigns: %{live_preview_active?: true, fields_demanding_live_preview_reassign: fdlpr}} =
+           socket,
+         path,
+         path_type
+       )
+       when fdlpr != [] do
+    path = if path_type == :string_path, do: string_path_to_atom_path(path), else: path
+    cache_key = socket.assigns.live_preview_cache_key
+
+    case Enum.find(fdlpr, fn {_key, trigger_path} -> trigger_path == path end) do
+      {key, _} -> Brando.LivePreview.invalidate_var(cache_key, key)
+      nil -> nil
+    end
+
+    socket
+  end
+
+  defp maybe_invalidate_live_preview_assign(socket, _string_path, _) do
+    socket
   end
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
