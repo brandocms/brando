@@ -152,8 +152,12 @@
 
     &-compact {
       display: flex;
+      border: 1px dashed #3b3b3b;
+      border-radius: 8px;
+      padding: 8px 25px 8px 8px;
+      width: fit-content;
+
       img {
-        border-radius: 50%;
         width: 100px;
         height: 100px;
         min-width: auto;
@@ -175,30 +179,16 @@
       }
 
       .image-info {
-        @space padding-left 20px;
-        @fontsize sm;
+        font-family: 'Mono';
+        font-size: 13px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: space-between;
+        padding-left: 12px;
 
-        .title {
-          @fontsize 13px/13px;
-          @space margin-top 5px;
-        }
-
-        .btn-small {
-          @fontsize sm;
+        .tiny {
           width: fit-content;
-          border: 1px solid;
-          padding: 9px 20px;
-          margin-top: 10px;
-          border-radius: 25px;
-          transition: background-color 250ms ease, color 250ms ease;
-
-          &:hover {
-            background-color: var(--brando-color-dark);
-            color: var(--brando-color-peach);
-          }
+          margin-top: 5px;
         }
       }
     }    

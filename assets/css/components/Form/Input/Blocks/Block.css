@@ -216,7 +216,6 @@ button.btn-palette {
   .fragment-info {
     @font mono;
     @space margin-bottom 15px;
-    padding-left: 15px;
     display: flex;      
     align-items: center;
     gap: 10px;

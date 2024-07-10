@@ -344,11 +344,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           </div>
         <% end %>
         <div :if={@editable} class="image-info">
-          <%= @file_name %> — <%= @image.width %>&times;<%= @image.height %>
-          <div :if={@image.title} class="title">
-            <%= gettext("Caption") %>: <%= @image.title %>
+          <div class="info-wrapper">
+            <div class="filename"><%= @file_name %></div>
+            <div class="dims"><%= @image.width %>&times;<%= @image.height %></div>
+            <div :if={@image.title} class="title"><%= gettext("Caption") %>: <%= @image.title %></div>
           </div>
-          <button class="btn-small" type="button" phx-click={@click}>
+          <button class="tiny" type="button" phx-click={@click}>
             <%= gettext("Edit image") %>
           </button>
         </div>
