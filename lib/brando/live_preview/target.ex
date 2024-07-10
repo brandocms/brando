@@ -5,6 +5,7 @@ defmodule Brando.LivePreview.Target do
             template: nil,
             mutate_data: nil,
             rerender_on_change: [],
+            reassign_on_change: [],
             schema_preloads: [],
             template_prop: nil,
             template_section: nil,
@@ -53,6 +54,12 @@ defmodule Brando.LivePreview.Target do
       required: false,
       default: [],
       doc: "Rerender on change"
+    ],
+    reassign_on_change: [
+      type: {:list, :any},
+      required: false,
+      default: [],
+      doc: "Reassign on change"
     ],
     schema_preloads: [
       type: {:list, :atom},

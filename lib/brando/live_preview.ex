@@ -29,6 +29,9 @@ defmodule Brando.LivePreview do
     - `rerender_on_change` – List of key paths that will force a rerender of the entire
       page when changed, for instance `[[:palette]]` if we have code outside of the block
       fields we must rerender when the palette changes.
+    - `reassign_on_change` – List of tuples of assign name and key paths that will force a
+      reassign of the assign when changed, for instance `[{:navigation, [:menu]}]` if we have
+      an assign that depends on the menu.
     - `template` - The template we want to use for rendering
     - `template_prop` - What we are refering to the entry as in our template
     - `template_section` - Run this with `put_section` on conn
@@ -73,6 +76,7 @@ defmodule Brando.LivePreview do
             template: nil,
             mutate_data: nil,
             rerender_on_change: [],
+            reassign_on_change: [],
             schema_preloads: [],
             template_prop: nil,
             template_section: nil,
@@ -390,6 +394,10 @@ defmodule Brando.LivePreview do
   def set_var(cache_key, key, value) do
     Cachex.put(:cache, "#{cache_key}__VAR__#{key}", value, ttl: :timer.seconds(120))
     value
+  end
+
+  def invalidate_var(cache_key, key) do
+    Cachex.del(:cache, "#{cache_key}__VAR__#{key}")
   end
 
   def get_target_config(schema_module) do

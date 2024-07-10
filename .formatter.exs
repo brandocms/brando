@@ -34,6 +34,7 @@ locals_without_parens = [
   template_section: 1,
   template_prop: 1,
   rerender_on_change: 1,
+  reassign_on_change: 1,
   # blueprints
   application: 1,
   domain: 1,

@@ -75,7 +75,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_cache_key, nil)
      |> assign(:blocks_wanting_entry, [])
      |> assign(:blocks_ready_for_sharing, false)
-     |> assign(:fields_demanding_full_live_preview_rerender, [])}
+     |> assign(:fields_demanding_full_live_preview_rerender, [])
+     |> assign(:fields_demanding_live_preview_reassign, [])}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -234,6 +235,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:updated_entry_assocs, updated_entry_assocs)
+    |> maybe_invalidate_live_preview_assign(path)
     |> maybe_full_rerender_live_preview(full_rerender?)
     |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
     |> then(&{:ok, &1})
@@ -858,6 +860,7 @@ defmodule BrandoAdmin.Components.Form do
             |> enable_live_preview_in_blocks()
             |> clear_blocks_root_changesets()
             |> assign_entry_fields_demanding_live_preview_rerender(schema)
+            |> assign_entry_fields_demanding_live_preview_reassign(schema)
             |> push_event("b:live_preview", %{cache_key: cache_key})
 
           {:error, err} ->
@@ -955,6 +958,11 @@ defmodule BrandoAdmin.Components.Form do
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
     lp_opts = Brando.LivePreview.get_target_config(schema)
     assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
+  end
+
+  def assign_entry_fields_demanding_live_preview_reassign(socket, schema) do
+    lp_opts = Brando.LivePreview.get_target_config(schema)
+    assign(socket, :fields_demanding_live_preview_reassign, lp_opts.reassign_on_change)
   end
 
   def render(assigns) do
@@ -1699,12 +1707,37 @@ defmodule BrandoAdmin.Components.Form do
 
         socket
         |> assign(:form, new_form)
+        |> maybe_invalidate_live_preview_assign(rest, :string_path)
         |> maybe_fetch_root_blocks(:live_preview_update, 0)
         |> then(&{:noreply, &1})
 
       [_] ->
         {:noreply, socket}
     end
+  end
+
+  def maybe_invalidate_live_preview_assign(socket, path, path_type \\ :atom_path)
+
+  def maybe_invalidate_live_preview_assign(
+        %{assigns: %{live_preview_active?: true, fields_demanding_live_preview_reassign: fdlpr}} =
+          socket,
+        path,
+        path_type
+      )
+      when fdlpr != [] do
+    path = if path_type == :string_path, do: string_path_to_atom_path(path), else: path
+    cache_key = socket.assigns.live_preview_cache_key
+
+    case Enum.find(fdlpr, fn {_key, trigger_path} -> trigger_path == path end) do
+      {key, _} -> Brando.LivePreview.invalidate_var(cache_key, key)
+      nil -> nil
+    end
+
+    socket
+  end
+
+  def maybe_invalidate_live_preview_assign(socket, _string_path, _) do
+    socket
   end
 
   def handle_event("focus", params, socket) do
@@ -2970,6 +3003,10 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:form, to_form(new_changeset, []))
+  end
+
+  defp string_path_to_atom_path(string_path) do
+    Enum.map(string_path, &String.to_existing_atom/1)
   end
 
   defp string_path_to_access_path(string_path) do
