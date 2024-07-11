@@ -11,9 +11,11 @@ input.text {
 
   &.monospace {
     @font mono;
+    font-size: 16px;
 
     &::placeholder {
       @font mono;
+      font-size: 16px;
     }
   }
 
@@ -35,6 +37,7 @@ textarea.text {
 
   &.monospace {
     @font mono;
+    font-size: 16px;
   }
 
   .counter {
