@@ -262,7 +262,7 @@ defmodule Brando.Pages.Page do
   end
 
   forms do
-    form default_params: %{status: :draft, template: "default.html"} do
+    form default_params: %{status: :draft, template: "default.html", uri: "uri"} do
       blocks :blocks, label: t("Blocks")
 
       tab t("Content") do

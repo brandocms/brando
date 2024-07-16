@@ -26,44 +26,31 @@ defmodule BrandoAdmin.Pages.PageListLive do
   end
 
   def handle_event("create_subpage", %{"id" => parent_id, "language" => language}, socket) do
-    {:noreply,
-     push_navigate(socket,
-       to:
-         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageCreateLive,
-           parent_id: parent_id,
-           language: language
-         )
-     )}
+    create_url =
+      Brando.Pages.Page.__admin_route__(:create, [
+        parent_id,
+        parent_id: parent_id,
+        language: language
+      ])
+
+    {:noreply, push_navigate(socket, to: create_url)}
   end
 
   def handle_event("create_fragment", %{"id" => page_id, "language" => language}, socket) do
-    {:noreply,
-     push_navigate(socket,
-       to:
-         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.FragmentCreateLive,
-           page_id: page_id,
-           language: language
-         )
-     )}
+    create_url =
+      Brando.Pages.Fragment.__admin_route__(:create, page_id: page_id, language: language)
+
+    {:noreply, push_navigate(socket, to: create_url)}
   end
 
   def handle_event("edit_subpage", %{"id" => entry_id}, socket) do
-    {:noreply,
-     push_navigate(socket,
-       to: Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageUpdateLive, entry_id)
-     )}
+    update_url = Brando.Pages.Page.__admin_route__(:update, entry_id)
+    {:noreply, push_navigate(socket, to: update_url)}
   end
 
   def handle_event("edit_fragment", %{"id" => entry_id}, socket) do
-    {:noreply,
-     push_navigate(socket,
-       to:
-         Brando.routes().admin_live_path(
-           socket,
-           BrandoAdmin.Pages.FragmentUpdateLive,
-           entry_id
-         )
-     )}
+    update_url = Brando.Pages.Fragment.__admin_route__(:update, entry_id)
+    {:noreply, push_navigate(socket, to: update_url)}
   end
 
   def handle_event(
@@ -92,11 +79,11 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
     case Pages.delete_fragment(entry_id, user) do
       {:ok, _} ->
-        send(self(), {:toast, "Fragment deleted"})
+        send(self(), {:toast, gettext("Fragment deleted")})
         BrandoAdmin.LiveView.Listing.update_list_entries(schema)
 
       {:error, _error} ->
-        send(self(), {:toast, "Error deleting fragment"})
+        send(self(), {:toast, gettext("Error deleting fragment")})
     end
 
     {:noreply, socket}

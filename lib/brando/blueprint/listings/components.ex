@@ -65,14 +65,7 @@ defmodule Brando.Blueprint.Listings.Components do
 
   def update_link(assigns) do
     schema = assigns.entry.__struct__
-
-    update_url =
-      Brando.routes().admin_live_path(
-        Brando.endpoint(),
-        schema.__modules__().admin_update_view,
-        assigns.entry.id
-      )
-
+    update_url = schema.__admin_route__(:update, [assigns.entry.id])
     assigns = assign(assigns, :update_url, update_url)
 
     ~H"""

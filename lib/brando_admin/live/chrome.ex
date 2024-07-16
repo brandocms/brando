@@ -48,55 +48,6 @@ defmodule BrandoAdmin.Chrome do
     """
   end
 
-  attr :presence, :map, required: true
-  attr :id, :integer, required: true
-  attr :selected_presence, :map
-
-  def presence(assigns) do
-    last_active =
-      if assigns.presence.last_active do
-        assigns.presence.last_active
-        |> String.to_integer()
-        |> DateTime.from_unix!()
-        |> DateTime.shift_zone!(Brando.timezone())
-        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
-      else
-        nil
-      end
-
-    assigns = assign(assigns, :last_active, last_active)
-
-    ~H"""
-    <div
-      class="user-presence visible"
-      data-user-id={@id}
-      data-user-status={@presence.status}
-      phx-mounted={JS.add_class("visible")}
-      phx-click={
-        "select_presence"
-        |> JS.push(value: %{id: @id})
-        |> show_modal("#presence-modal-#{@id}")
-      }
-    >
-      <div class="avatar">
-        <Content.image image={@presence.avatar} size={:thumb} />
-      </div>
-    </div>
-    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"}>
-      <div :if={@selected_presence && @selected_presence.id == @id} class="user-presence-modal">
-        <div class="name"><%= @selected_presence.name %></div>
-        <div class="status badge"><%= @presence.status %></div>
-        <div class="urls">
-          <div :for={url <- @presence.urls} class="text-mono">
-            <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
-          </div>
-        </div>
-        <div class="last-active"><%= gettext("Last activity") %>: <%= @last_active %></div>
-      </div>
-    </Content.modal>
-    """
-  end
-
   def handle_event("select_presence", %{"id" => id}, socket) do
     presence = Map.fetch!(socket.assigns.presences, id)
     {:noreply, assign(socket, :selected_presence, presence)}
@@ -116,6 +67,7 @@ defmodule BrandoAdmin.Chrome do
       status: status,
       urls: urls,
       last_active: last_active,
+      last_login: user.last_login,
       avatar: user.avatar
     }
 
@@ -130,6 +82,7 @@ defmodule BrandoAdmin.Chrome do
         status: "offline",
         urls: [],
         last_active: nil,
+        last_login: user.last_login,
         avatar: user.avatar
       }
 
@@ -145,6 +98,7 @@ defmodule BrandoAdmin.Chrome do
         status: status,
         urls: urls,
         last_active: last_active,
+        last_login: user.last_login,
         avatar: user.avatar
       }
 
@@ -188,6 +142,7 @@ defmodule BrandoAdmin.Chrome do
              status: "offline",
              urls: [],
              last_active: nil,
+             last_login: user.last_login,
              avatar: user.avatar
            }}
 
@@ -202,10 +157,65 @@ defmodule BrandoAdmin.Chrome do
              name: user.name,
              status: status,
              urls: urls,
+             last_login: user.last_login,
              last_active: last_active,
              avatar: user.avatar
            }}
       end
     end)
+  end
+
+  attr :presence, :map, required: true
+  attr :id, :integer, required: true
+  attr :selected_presence, :map
+
+  def presence(assigns) do
+    last_active =
+      if assigns.presence.last_active do
+        assigns.presence.last_active
+        |> String.to_integer()
+        |> DateTime.from_unix!()
+        |> DateTime.shift_zone!(Brando.timezone())
+        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+      else
+        nil
+      end
+
+    assigns = assign(assigns, :last_active, last_active)
+
+    ~H"""
+    <div
+      class="user-presence visible"
+      data-user-id={@id}
+      data-user-status={@presence.status}
+      phx-mounted={JS.add_class("visible")}
+      phx-click={
+        "select_presence"
+        |> JS.push(value: %{id: @id})
+        |> show_modal("#presence-modal-#{@id}")
+      }
+    >
+      <div class="avatar">
+        <Content.image image={@presence.avatar} size={:thumb} />
+      </div>
+    </div>
+    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"}>
+      <div :if={@selected_presence && @selected_presence.id == @id} class="user-presence-modal">
+        <div class="name"><%= @selected_presence.name %></div>
+        <div class="status badge"><%= @presence.status %></div>
+        <div class="urls">
+          <div :for={url <- @presence.urls} class="text-mono">
+            <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
+          </div>
+        </div>
+        <div :if={@presence.status in ["online", "idle"]} class="last-active">
+          <%= gettext("Last activity") %>: <%= @last_active %>
+        </div>
+        <div :if={@presence.status == "offline"} class="last-active">
+          <%= gettext("Last logged in") %>: <%= @presence.last_login %>
+        </div>
+      </div>
+    </Content.modal>
+    """
   end
 end

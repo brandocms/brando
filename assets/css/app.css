@@ -52,6 +52,7 @@
 @import './components/Modal.css';
 @import './components/Progress.css';
 @import './components/Image/ImagePicker.css';
+@import './components/SideBar/SideBar.css';
 @import './components/SideBar/ContentLanguageSelector.css';
 @import './components/SideBar/CurrentUser.css';
 @import './components/SideBar/NavigationHeader.css';
@@ -125,6 +126,7 @@ code {
 
 #admin {
   display: flex;
+  flex-grow: 1;
 }
 
 .avatar img {
@@ -554,10 +556,18 @@ body {
 #app {
   display: flex;
   min-height: 100%;
-  height: 100%;
 
   [data-phx-main="true"], [data-phx-main] {
     width: 100%;
+    display: flex;
+
+    @responsive desktop_xl { --navigation-width: 370px }
+    @responsive desktop_lg { --navigation-width: 370px }
+    @responsive desktop_md { --navigation-width: 330px }
+    @responsive ipad_landscape { --navigation-width: 330px }
+    @responsive ipad_portrait { --navigation-width: 0 }
+    @responsive mobile { --navigation-width: 0 }
+    @responsive iphone { --navigation-width: 0 }
   }
 
   &.noFocus {
@@ -578,19 +588,6 @@ body {
     * {
       outline: 0 !important;
     }
-  }
-
-  main {
-    @responsive desktop_xl { --main-margin-left: 370px }
-    @responsive desktop_lg { --main-margin-left: 370px }
-    @responsive desktop_md { --main-margin-left: 330px }
-    @responsive ipad_landscape { --main-margin-left: 330px }
-    @responsive ipad_portrait { --main-margin-left: 0 }
-    @responsive mobile { --main-margin-left: 0 }
-    @responsive iphone { --main-margin-left: 0 }
-
-    margin-left: var(--main-margin-left);
-    @space width calc(100% - var(--main-margin-left)) >=ipad_landscape;
   }
 }
 
@@ -1116,6 +1113,7 @@ h3 {
   border: 1px solid var(--brando-color-dark);
   border-radius: 12px;
   user-select: none;
+  gap: 3px;
 
   & + .badge {
     margin-left: -1px;

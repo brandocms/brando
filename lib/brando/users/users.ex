@@ -110,7 +110,7 @@ defmodule Brando.Users do
 
   def get_users_map() do
     list_opts = %{
-      select: [:id, :name],
+      select: [:id, :name, :last_login],
       cache: {:ttl, :infinite},
       preload: [{:avatar, :join}]
     }
@@ -121,7 +121,7 @@ defmodule Brando.Users do
   def get_users_map(user_ids) when is_list(user_ids) do
     list_opts = %{
       filter: %{ids: user_ids},
-      select: [:id, :name],
+      select: [:id, :name, :last_login],
       cache: {:ttl, :infinite},
       preload: [{:avatar, :join}]
     }
@@ -139,7 +139,8 @@ defmodule Brando.Users do
          %{
            name: user.name,
            id: user.id,
-           avatar: user.avatar
+           avatar: user.avatar,
+           last_login: user.last_login
          }}
       end
     )

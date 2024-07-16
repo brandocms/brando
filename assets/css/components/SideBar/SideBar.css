@@ -1,0 +1,5 @@
+[data-phx-main] .sidebar {
+  width: var(--navigation-width);
+  flex-grow: 1;
+  flex-shrink: 0;
+}

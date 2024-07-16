@@ -28,7 +28,8 @@ defmodule BrandoAdmin.Presence do
              user: %{
                id: user.id,
                name: user.name,
-               avatar: user.avatar
+               avatar: user.avatar,
+               last_login: user.last_login
              },
              metas: metas
            }}
@@ -85,7 +86,8 @@ defmodule BrandoAdmin.Presence do
             user: %{
               id: presence.user.id,
               name: presence.user.name,
-              avatar: presence.user.avatar
+              avatar: presence.user.avatar,
+              last_login: presence.user.last_login
             },
             metas: metas
           }
@@ -108,7 +110,8 @@ defmodule BrandoAdmin.Presence do
             user: %{
               id: presence.user.id,
               name: presence.user.name,
-              avatar: presence.user.avatar
+              avatar: presence.user.avatar,
+              last_login: presence.user.last_login
             },
             metas: metas
           }

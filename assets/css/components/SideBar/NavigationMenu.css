@@ -4,6 +4,7 @@
   left: 5px;
   cursor: pointer;
   z-index: 9;
+  border: none;
 
   svg {
     #chevron {

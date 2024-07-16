@@ -529,33 +529,35 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_form()
      |> maybe_assign_uploads()
      |> maybe_assign_block_map()
-     |> maybe_assign_entry_for_blocks()}
+     |> maybe_assign_entry_for_blocks()
+     |> assign(:initial_update, false)}
   end
 
-  defp assign_entry(
-         %{assigns: %{entry_id: nil, schema: schema, current_user: current_user}} = socket
-       ) do
-    assign_new(socket, :entry, fn -> prepare_empty_entry(schema, current_user) end)
+  defp assign_entry(%{assigns: %{initial_update: false}} = socket) do
+    socket
   end
 
-  defp assign_entry(
-         %{
-           assigns: %{
-             schema: schema,
-             entry_id: entry_id,
-             singular: singular,
-             context: context,
-             form_blueprint: form_blueprint
-           }
-         } = socket
-       ) do
-    assign_new(socket, :entry, fn ->
-      query_params =
-        entry_id
-        |> maybe_query(form_blueprint)
-        |> add_preloads(schema, form_blueprint)
-        |> Map.put(:with_deleted, true)
+  defp assign_entry(%{assigns: %{entry_id: nil}} = socket) do
+    schema = socket.assigns.schema
+    current_user = socket.assigns.current_user
 
+    assign(socket, :entry, prepare_empty_entry(schema, current_user))
+  end
+
+  defp assign_entry(socket) do
+    schema = socket.assigns.schema
+    form_blueprint = socket.assigns.form_blueprint
+    entry_id = socket.assigns.entry_id
+    singular = socket.assigns.singular
+    context = socket.assigns.context
+
+    query_params =
+      entry_id
+      |> maybe_query(form_blueprint)
+      |> add_preloads(schema, form_blueprint)
+      |> Map.put(:with_deleted, true)
+
+    entry =
       case apply(context, :"get_#{singular}", [query_params]) do
         {:ok, entry} ->
           entry
@@ -563,7 +565,8 @@ defmodule BrandoAdmin.Components.Form do
         {:error, _err} ->
           raise Brando.Exception.EntryNotFoundError
       end
-    end)
+
+    assign(socket, :entry, entry)
   end
 
   defp assign_refreshed_entry(
@@ -597,7 +600,6 @@ defmodule BrandoAdmin.Components.Form do
   defp maybe_assign_uploads(socket) do
     if connected?(socket) && socket.assigns[:initial_update] do
       socket
-      |> assign(:initial_update, false)
       |> allow_uploads()
     else
       socket
@@ -1701,6 +1703,14 @@ defmodule BrandoAdmin.Components.Form do
           send_updated_entry_field_to_blocks(socket, path, change)
         end
 
+        if rest == ["language"] do
+          require Logger
+
+          Logger.error("""
+          => LANGUAGE changed, message all selects/multi_selects to update their options
+          """)
+        end
+
         new_form = to_form(changeset, [])
 
         socket
@@ -1806,11 +1816,16 @@ defmodule BrandoAdmin.Components.Form do
           case save_redirect_target do
             :self ->
               if mutation_type == :create do
-                generated_update_view = schema.__modules__().admin_update_view
+                update_url = schema.__admin_route__(:update, [entry.id])
 
-                push_navigate(socket,
-                  to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
-                )
+                socket
+                |> assign(:processing, false)
+                |> assign(:all_blocks_received?, false)
+                |> assign(:entry_id, entry.id)
+                |> assign_refreshed_entry()
+                |> assign_refreshed_form()
+                |> clear_blocks_root_changesets()
+                |> push_patch(to: update_url)
               else
                 if schema.has_trait(Brando.Trait.Revisioned) do
                   id = "#{socket.assigns.id}-revisions-drawer"
@@ -1900,10 +1915,16 @@ defmodule BrandoAdmin.Components.Form do
           case save_redirect_target do
             :self ->
               if mutation_type == :create do
-                generated_update_view = schema.__modules__().admin_update_view
+                generated_update_view = schema.__modules__().admin_form_view
 
                 push_navigate(socket,
-                  to: Brando.routes().admin_live_path(socket, generated_update_view, entry.id)
+                  to:
+                    Brando.routes().admin_live_path(
+                      socket,
+                      generated_update_view,
+                      :update,
+                      entry.id
+                    )
                 )
               else
                 if schema.has_trait(Brando.Trait.Revisioned) do
@@ -3592,12 +3613,11 @@ defmodule BrandoAdmin.Components.Form do
   attr :uid, :string
 
   def error_tag(assigns) do
-    # errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
-    errors = []
+    errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
 
     assigns =
       assigns
-      |> assign_new(:errors, fn -> errors end)
+      |> assign(:errors, errors)
       |> assign_new(:translate_fn, fn ->
         {mod, fun} = assigns[:translator] || {__MODULE__, :translate_error}
         &apply(mod, fun, [&1])
@@ -3621,7 +3641,7 @@ defmodule BrandoAdmin.Components.Form do
     assigns = assign(assigns, :f_id, f_id)
 
     ~H"""
-    <span :for={error <- @errors} :if={} id={"#{@f_id}-error"} class="field-error">
+    <span :for={error <- @errors} id={"#{@f_id}-error"} class="field-error">
       <%= @translate_fn.(error) %>
     </span>
     """

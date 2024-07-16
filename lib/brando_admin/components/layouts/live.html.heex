@@ -1,4 +1,9 @@
 <%= live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true) %>
+<%= live_render(@socket, BrandoAdmin.Nav,
+  id: "brando-nav",
+  session: %{"current_url" => @uri && @uri.path},
+  sticky: true
+) %>
 
 <div id="admin" phx-hook="Brando.Admin">
   <%= if @socket_connected do %>

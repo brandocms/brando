@@ -1,6 +1,30 @@
-See `UPGRADE.md` for instructions on upgrading between versions.
-
 ## 0.54.0
+
+* BREAKING: Consolidated admin `Create` and `Update` views to `Form`. If you have
+  any custom logic in your `Create` view, move this to your `Update` view and add a
+  conditional check in your mount:
+  ```
+  if socket.assigns.live_action == :create do 
+    # ...
+  end
+  ```
+  Then add a conditional check for the heading in your `render`:
+  ```
+  <%= if @live_action == :create do %>
+    <%= gettext("Create project") %>
+  <% else %>
+    <%= gettext("Update project") %>
+  <% end %>
+  ```
+  Then rename your `Update` view to (i.e.) `ProjectFormLive` and delete your `Create` view,
+  finally change your routes in your `router.ex`:
+  ```
+  scope "/projects", MyAppAdmin.Projects do
+    live "/projects", ProjectListLive
+    live "/projects/create", ProjectFormLive, :create
+    live "/projects/update/:entry_id", ProjectFormLive, :update
+  end
+  ```
 
 * BREAKING: Simplified `:entries` (for related entries) -- removed the indirection
   of adding `_identifiers` to the assoc's name, so if you have 

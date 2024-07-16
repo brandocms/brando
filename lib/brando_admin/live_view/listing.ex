@@ -60,10 +60,8 @@ defmodule BrandoAdmin.LiveView.Listing do
         {:halt, socket}
 
       "edit_entry", %{"id" => id}, socket ->
-        update_view = schema.__modules__().admin_update_view
-
-        {:halt,
-         push_navigate(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
+        update_url = schema.__admin_route__(:update, [id])
+        {:halt, push_navigate(socket, to: update_url)}
 
       "undelete_entry", %{"id" => entry_id}, socket ->
         singular = schema.__naming__().singular
@@ -198,7 +196,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       %{assigns: %{current_user: user, schema: schema}} = socket ->
         singular = schema.__naming__().singular
         context = schema.__modules__().context
-        update_view = schema.__modules__().admin_update_view
+        form_view = schema.__modules__().admin_form_view
 
         override_opts = [
           change_fields: [{:language, language}],
@@ -219,7 +217,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         send(
           self(),
           {:set_content_language_and_navigate, language,
-           Brando.routes().admin_live_path(socket, update_view, duped_entry.id)}
+           Brando.routes().admin_live_path(socket, form_view, :update, duped_entry.id)}
         )
 
         {:halt, socket}
@@ -371,10 +369,7 @@ defmodule BrandoAdmin.LiveView.Listing do
   defp assign_create_url(socket, schema) do
     assign_new(socket, :admin_create_url, fn ->
       try do
-        Brando.helpers().admin_live_path(
-          Brando.endpoint(),
-          schema.__modules__().admin_create_view
-        )
+        schema.__admin_route__(:create, [])
       rescue
         _ -> nil
       end
