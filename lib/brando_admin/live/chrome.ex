@@ -23,7 +23,8 @@ defmodule BrandoAdmin.Chrome do
       {:ok,
        socket
        |> assign(:socket_connected, true)
-       |> assign(:presences, %{})
+       |> assign(:active_presences, %{})
+       |> assign(:inactive_presences, %{})
        |> assign(:selected_presence, nil)
        |> assign_presences()}
     else
@@ -37,19 +38,34 @@ defmodule BrandoAdmin.Chrome do
 
   def render(assigns) do
     ~H"""
-    <div :if={@socket_connected && @presences} class="presences">
-      <.presence
-        :for={{id, presence} <- @presences}
-        presence={presence}
-        id={id}
-        selected_presence={@selected_presence}
-      />
+    <div :if={@socket_connected && @active_presences} class="presences">
+      <div class="presences-active">
+        <.presence
+          :for={{id, presence} <- @active_presences}
+          presence={presence}
+          id={id}
+          selected_presence={@selected_presence}
+        />
+      </div>
+      <div class="presences-inactive">
+        <.presence
+          :for={{id, presence} <- @inactive_presences}
+          presence={presence}
+          id={id}
+          selected_presence={@selected_presence}
+        />
+      </div>
     </div>
     """
   end
 
   def handle_event("select_presence", %{"id" => id}, socket) do
-    presence = Map.fetch!(socket.assigns.presences, id)
+    presence =
+      Map.fetch!(
+        Map.merge(socket.assigns.inactive_presences, socket.assigns.active_presences),
+        id
+      )
+
     {:noreply, assign(socket, :selected_presence, presence)}
   end
 
@@ -71,7 +87,7 @@ defmodule BrandoAdmin.Chrome do
       avatar: user.avatar
     }
 
-    {:noreply, assign_presence(socket, presence)}
+    {:noreply, assign_presence(socket, status, presence)}
   end
 
   def handle_info({_, {:presence, %{user_left: %{metas: metas, user: user}}}}, socket) do
@@ -86,7 +102,7 @@ defmodule BrandoAdmin.Chrome do
         avatar: user.avatar
       }
 
-      {:noreply, assign_presence(socket, presence)}
+      {:noreply, assign_presence(socket, "offline", presence)}
     else
       last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
       urls = metas |> Enum.map(& &1.url)
@@ -102,7 +118,7 @@ defmodule BrandoAdmin.Chrome do
         avatar: user.avatar
       }
 
-      {:noreply, assign_presence(socket, presence)}
+      {:noreply, assign_presence(socket, status, presence)}
     end
   end
 
@@ -113,13 +129,27 @@ defmodule BrandoAdmin.Chrome do
       presences,
       socket,
       fn {_, presence}, updated_socket ->
-        assign_presence(updated_socket, presence)
+        assign_presence(updated_socket, presence.status, presence)
       end
     )
   end
 
-  defp assign_presence(socket, presence) do
-    update(socket, :presences, &Map.put(&1, presence.id, presence))
+  defp assign_presence(socket, "online", presence) do
+    socket
+    |> update(:active_presences, &Map.put(&1, presence.id, presence))
+    |> update(:inactive_presences, &Map.delete(&1, presence.id))
+  end
+
+  defp assign_presence(socket, "idle", presence) do
+    socket
+    |> update(:active_presences, &Map.put(&1, presence.id, presence))
+    |> update(:inactive_presences, &Map.delete(&1, presence.id))
+  end
+
+  defp assign_presence(socket, "offline", presence) do
+    socket
+    |> update(:inactive_presences, &Map.put(&1, presence.id, presence))
+    |> update(:active_presences, &Map.delete(&1, presence.id))
   end
 
   # If we ever will listen for "delete user" events

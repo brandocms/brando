@@ -274,6 +274,10 @@ code {
   right: 10px;
   bottom: 5px;
   width: auto;
+
+  .presences-active, .presences-inactive {
+    display: flex;
+  }
 }
 
 .page-presences {
