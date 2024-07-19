@@ -199,6 +199,8 @@ defmodule Brando.Users.User do
 
   def maybe_update_current_user(entry, current_user) do
     if entry.id == current_user.id do
+      Phoenix.PubSub.broadcast(Brando.pubsub(), "user:#{entry.id}", {:user_update, entry})
+
       send(
         self(),
         {:toast,

@@ -701,11 +701,12 @@ defmodule Brando.Blueprint do
       def __admin_url__(entry) do
         modules = __modules__()
 
-        case Code.ensure_loaded(modules.admin_update_view) do
+        case Code.ensure_loaded(modules.admin_form_view) do
           {:module, _} ->
             Brando.routes().admin_live_path(
               Brando.endpoint(),
-              modules.admin_update_view,
+              modules.admin_form_view,
+              :update,
               entry.id
             )
 
@@ -833,6 +834,36 @@ defmodule Brando.Blueprint do
         }
       end
 
+      def __admin_route__(type, args \\ [])
+
+      def __admin_route__(:create, args) do
+        form_path = :"admin_#{@singular}_form_path"
+        base_args = [Brando.endpoint()]
+
+        require Logger
+
+        Logger.error("""
+        args = #{inspect(base_args ++ [:create] ++ args, pretty: true)}
+        """)
+
+        apply(
+          Brando.routes(),
+          form_path,
+          base_args ++ [:create] ++ args
+        )
+      end
+
+      def __admin_route__(:update, args) do
+        form_path = :"admin_#{@singular}_form_path"
+        base_args = [Brando.endpoint()]
+
+        apply(
+          Brando.routes(),
+          form_path,
+          base_args ++ [:update] ++ args
+        )
+      end
+
       def __modules__ do
         application_module =
           Module.concat([
@@ -882,6 +913,14 @@ defmodule Brando.Blueprint do
             "#{Macro.camelize(@singular)}ListLive"
           ])
 
+        admin_form_view =
+          Module.concat([
+            admin_module,
+            @domain,
+            "#{Macro.camelize(@singular)}FormLive"
+          ])
+
+        # TODO: REMOVE
         admin_create_view =
           Module.concat([
             admin_module,
@@ -889,6 +928,7 @@ defmodule Brando.Blueprint do
             "#{Macro.camelize(@singular)}CreateLive"
           ])
 
+        # TODO: REMOVE
         admin_update_view =
           Module.concat([
             admin_module,
@@ -902,6 +942,7 @@ defmodule Brando.Blueprint do
           schema: schema_module,
           gettext: gettext_module,
           admin_list_view: admin_list_view,
+          admin_form_view: admin_form_view,
           admin_create_view: admin_create_view,
           admin_update_view: admin_update_view
         }

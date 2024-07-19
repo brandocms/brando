@@ -6,7 +6,6 @@ main {
   color: var(--brando-color-foreground);
   display: flex;
   flex-direction: column;
-  margin-left: var(--main-margin-left);
 
   > .content {
     @space padding-x sm;

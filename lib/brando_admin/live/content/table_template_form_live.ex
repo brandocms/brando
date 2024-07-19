@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Content.TableTemplateCreateLive do
+defmodule BrandoAdmin.Content.TableTemplateFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Content.TableTemplate
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
@@ -9,10 +9,16 @@ defmodule BrandoAdmin.Content.TableTemplateCreateLive do
       module={Form}
       id="table_template_form"
       current_user={@current_user}
+      entry_id={@entry_id}
+      presences={@presences}
       schema={@schema}
     >
       <:header>
-        <%= gettext("Create new table template") %>
+        <%= if @live_action == :create do %>
+          <%= gettext("Create template") %>
+        <% else %>
+          <%= gettext("Edit template") %>
+        <% end %>
       </:header>
     </.live_component>
     """

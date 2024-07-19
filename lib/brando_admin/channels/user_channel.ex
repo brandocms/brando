@@ -44,6 +44,10 @@ defmodule Brando.UserChannel do
     {:noreply, socket}
   end
 
+  def handle_info({:user_update, _usr}, socket) do
+    {:noreply, socket}
+  end
+
   def alert(user, message) do
     Brando.endpoint().broadcast!("user:" <> Integer.to_string(user.id), "alert", %{
       message: message

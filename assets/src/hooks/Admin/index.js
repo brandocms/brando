@@ -5,7 +5,6 @@ import { alertError, alertWarning, alertInfo } from '../../alerts'
 export default app => ({
   mounted() {
     console.log('==> Brando/Admin mounted.')
-    this.animateNav()
 
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
@@ -23,7 +22,24 @@ export default app => ({
       }
     })
 
-    console.log('registering event')
+    // watch navigation scroll
+    const $navigation = Dom.find('#navigation')
+    if ($navigation) {
+      // stash scroll top
+      $navigation.addEventListener('scroll', e => {
+        // consider debouncing
+        console.log('setting scroll top', $navigation.scrollTop)
+        localStorage.setItem('stickyNavScrollTop', $navigation.scrollTop)
+      })
+
+      // restore scroll top
+      let scrollTop = localStorage.getItem('stickyNavScrollTop')
+      console.log('stickyNavScrollTop', scrollTop)
+      if (scrollTop) {
+        console.log('restoring scroll top', scrollTop)
+        $navigation.scrollTop = scrollTop
+      }
+    }
 
     this.handleEvent('b:open_window', ({ url }) => {
       console.log('==> Open window standalone')

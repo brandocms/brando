@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Content.PaletteUpdateLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Palette
+defmodule BrandoAdmin.Images.ImageFormLive do
+  use BrandoAdmin.LiveView.Form, schema: Brando.Images.Image
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
@@ -7,14 +7,17 @@ defmodule BrandoAdmin.Content.PaletteUpdateLive do
     ~H"""
     <.live_component
       module={Form}
-      id="palette_form"
+      id="image_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      presences={@presences}
       schema={@schema}
     >
       <:header>
-        <%= gettext("Edit palette") %>
+        <%= if @live_action == :create do %>
+          <%= gettext("Create image") %>
+        <% else %>
+          <%= gettext("Edit image") %>
+        <% end %>
       </:header>
     </.live_component>
     """

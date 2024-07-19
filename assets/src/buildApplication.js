@@ -3,7 +3,6 @@ import { Application, Dom, Moonwalk, Events, gsap } from '@brandocms/jupiter'
 import { Socket } from 'phoenix'
 import topbar from './topbar'
 
-import Navigation from './Navigation'
 import Presence from './Presence'
 import Toast from './Toast'
 
@@ -130,7 +129,6 @@ export default hooks => {
     app.userToken = Dom.find('meta[name="user_token"]').getAttribute('content')
 
     app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
-      app.navigation = new Navigation(app)
       app.presence = new Presence(app)
       app.toast = new Toast(app)
 
@@ -171,7 +169,6 @@ export default hooks => {
         }
 
         if (detail.kind === 'initial' && !app.reconnected) {
-          app.navigation.checkFullscreen()
           app.presence.setUrl(detail.to)
         }
       })

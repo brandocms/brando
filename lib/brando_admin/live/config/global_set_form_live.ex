@@ -1,15 +1,18 @@
-defmodule BrandoAdmin.Sites.GlobalSetUpdateLive do
+defmodule BrandoAdmin.Sites.GlobalSetFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalSet
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
   def render(assigns) do
     ~H"""
-    <.live_component module={Form}
+    <.live_component
+      module={Form}
       id="global_set_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}>
+      initial_params={%{language: @current_user.config.content_language}}
+      schema={@schema}
+    >
       <:header>
         <%= gettext("Edit global set") %>
       </:header>

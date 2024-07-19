@@ -1,5 +1,5 @@
-defmodule BrandoAdmin.Content.TableTemplateUpdateLive do
-  use BrandoAdmin.LiveView.Form, schema: Brando.Content.TableTemplate
+defmodule BrandoAdmin.Content.ContainerFormLive do
+  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Container
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
 
@@ -7,14 +7,18 @@ defmodule BrandoAdmin.Content.TableTemplateUpdateLive do
     ~H"""
     <.live_component
       module={Form}
-      id="table_template_form"
+      id="container_form"
       current_user={@current_user}
       entry_id={@entry_id}
       presences={@presences}
       schema={@schema}
     >
       <:header>
-        <%= gettext("Edit template") %>
+        <%= if @live_action == :create do %>
+          <%= gettext("Create container") %>
+        <% else %>
+          <%= gettext("Edit container") %>
+        <% end %>
       </:header>
     </.live_component>
     """

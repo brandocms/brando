@@ -182,10 +182,8 @@ defmodule Mix.Tasks.Brando.Gen do
           # ADMIN
           {:eex, "admin/list.ex",
            "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_list_live.ex"},
-          {:eex, "admin/create.ex",
-           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_create_live.ex"},
-          {:eex, "admin/update.ex",
-           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_update_live.ex"},
+          {:eex, "admin/form.ex",
+           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_form_live.ex"},
 
           # TEST
           {:eex, "schema_test.exs", schema_test_path}
@@ -198,8 +196,8 @@ defmodule Mix.Tasks.Brando.Gen do
 
         scope "/#{snake_domain}", #{admin_module}.#{domain} do
           live "/#{plural}", #{camel_singular}ListLive
-          live "/#{plural}/create", #{camel_singular}CreateLive
-          live "/#{plural}/update/:entry_id", #{camel_singular}UpdateLive
+          live "/#{plural}/create", #{camel_singular}FormLive, :create
+          live "/#{plural}/update/:entry_id", #{camel_singular}FormLive, :update
         end
 
     ================================================================================================

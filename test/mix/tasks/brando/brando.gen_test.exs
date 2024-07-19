@@ -24,18 +24,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert File.exists?("lib/brando_admin/live/projects")
 
-      assert_file("lib/brando_admin/live/projects/project_create_live.ex", fn file ->
-        assert file =~ "BrandoIntegrationAdmin.Projects.ProjectCreateLive"
+      assert_file("lib/brando_admin/live/projects/project_form_live.ex", fn file ->
+        assert file =~ "BrandoIntegrationAdmin.Projects.ProjectFormLive"
         assert file =~ "use BrandoAdmin.LiveView.Form, schema: Brando.Projects.Project"
         assert file =~ "<.live_component module={Form}\n      id=\"project_form\"\n"
-      end)
-
-      assert_file("lib/brando_admin/live/projects/project_update_live.ex", fn file ->
-        assert file =~ "BrandoIntegrationAdmin.Projects.ProjectUpdateLive"
-        assert file =~ "use BrandoAdmin.LiveView.Form, schema: Brando.Projects.Project"
-
-        assert file =~
-                 "<.live_component module={Form}\n      id=\"project_form\"\n      entry_id={@entry_id}\n"
       end)
 
       assert_file("lib/brando_admin/live/projects/project_list_live.ex", fn file ->
