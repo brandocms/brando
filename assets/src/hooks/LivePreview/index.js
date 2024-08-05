@@ -19,8 +19,9 @@ export default app => ({
   toggle() {
     console.log('==> LivePreview toggle')
     this.active = !this.active
-    app.navigation.fsToggle.classList.toggle('minimized')
-    app.navigation.setFullscreen(this.active)
+    // minimize menu
+    const $nav = Dom.find('#brando-nav')
+    this.pushEventTo($nav, 'toggle_nav', { minimized: this.active })
 
     const lpDivider = Dom.find('.live-preview-divider')
     this.$livePreview = this.el.querySelector('.live-preview')
