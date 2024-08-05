@@ -840,12 +840,6 @@ defmodule Brando.Blueprint do
         form_path = :"admin_#{@singular}_form_path"
         base_args = [Brando.endpoint()]
 
-        require Logger
-
-        Logger.error("""
-        args = #{inspect(base_args ++ [:create] ++ args, pretty: true)}
-        """)
-
         apply(
           Brando.routes(),
           form_path,
@@ -920,31 +914,13 @@ defmodule Brando.Blueprint do
             "#{Macro.camelize(@singular)}FormLive"
           ])
 
-        # TODO: REMOVE
-        admin_create_view =
-          Module.concat([
-            admin_module,
-            @domain,
-            "#{Macro.camelize(@singular)}CreateLive"
-          ])
-
-        # TODO: REMOVE
-        admin_update_view =
-          Module.concat([
-            admin_module,
-            @domain,
-            "#{Macro.camelize(@singular)}UpdateLive"
-          ])
-
         %{
           application: application_module,
           context: context_module,
           schema: schema_module,
           gettext: gettext_module,
           admin_list_view: admin_list_view,
-          admin_form_view: admin_form_view,
-          admin_create_view: admin_create_view,
-          admin_update_view: admin_update_view
+          admin_form_view: admin_form_view
         }
       end
 

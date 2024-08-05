@@ -7,8 +7,6 @@ export default app => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
 
-    console.log('this.skipKeydown', this.skipKeydown)
-
     if (!this.skipKeydown) {
       window.addEventListener('keydown', this.submitListenerEvent, false)
     }

@@ -75,8 +75,6 @@ export default app => ({
 
     const dropdowns = document.querySelectorAll('nav [data-nav-expand]')
 
-    console.log(dropdowns)
-
     dropdowns.forEach(dd => {
       dd.addEventListener('click', () => this.toggleDropdown(dd))
     })

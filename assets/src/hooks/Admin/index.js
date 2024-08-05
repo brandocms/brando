@@ -28,15 +28,12 @@ export default app => ({
       // stash scroll top
       $navigation.addEventListener('scroll', e => {
         // consider debouncing
-        console.log('setting scroll top', $navigation.scrollTop)
         localStorage.setItem('stickyNavScrollTop', $navigation.scrollTop)
       })
 
       // restore scroll top
       let scrollTop = localStorage.getItem('stickyNavScrollTop')
-      console.log('stickyNavScrollTop', scrollTop)
       if (scrollTop) {
-        console.log('restoring scroll top', scrollTop)
         $navigation.scrollTop = scrollTop
       }
     }
