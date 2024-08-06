@@ -29,10 +29,13 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
   def render(assigns) do
     ~H"""
-    <div class="content-language-selector" phx-click={JS.push("show_language_picker", target: @myself)}>
+    <div
+      class="content-language-selector"
+      phx-click={JS.push("show_language_picker", target: @myself)}
+    >
       <div class="inner">
         <div class="top">
-          <h2><%= gettext "Current content language" %></h2>
+          <h2><%= gettext("Current content language") %></h2>
           <div class="selected-language">
             <div class="circle">
               <%= @content_language %>
@@ -42,7 +45,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
         <%= if @show_language_picker do %>
           <div class="instructions">
-            <%= gettext "Choose the content language you wish to edit entries in" %>
+            <%= gettext("Choose the content language you wish to edit entries in") %>
           </div>
           <div class="languages">
             <%= for language <- @languages do %>
@@ -50,7 +53,8 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
                 type="button"
                 phx-click={JS.push("select_language", target: @myself)}
                 phx-value-id={language[:value]}
-                phx-page-loading>
+                phx-page-loading
+              >
                 <%= language[:text] %>
               </button>
             <% end %>
@@ -77,6 +81,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   end
 
   def handle_event("show_language_picker", _, socket) do
-    {:noreply, assign(socket, :show_language_picker, true)}
+    current_status = socket.assigns.show_language_picker
+    {:noreply, assign(socket, :show_language_picker, !current_status)}
   end
 end
