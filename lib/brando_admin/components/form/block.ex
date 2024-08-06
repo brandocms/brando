@@ -1537,6 +1537,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 is_ref?={false}
                 is_datasource?={false}
                 has_table_template?={false}
+                has_children?={@has_children?}
               />
               <.container_config
                 uid={@uid}
@@ -1652,6 +1653,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
                 is_ref?={false}
                 is_datasource?={@is_datasource?}
+                has_children?={@has_children?}
               >
                 <:description>
                   <%= @module_name %>
@@ -1690,6 +1692,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               target={@target}
               is_ref?={false}
               is_datasource?={@is_datasource?}
+              has_children?={@has_children?}
             >
               <:description>
                 <%= @module_name %>
@@ -2529,6 +2532,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :block, Phoenix.HTML.Form, required: true
   attr :target, :any, required: true
   attr :has_table_template?, :boolean, default: false
+  attr :has_children?, :boolean, default: false
   attr :is_datasource?, :boolean, default: false
   attr :instructions, :string, default: nil
   attr :config, :boolean, default: false
@@ -2624,7 +2628,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-question-mark-circle" />
         </div>
         <button
-          :if={@is_ref? == false}
+          :if={@is_ref? == false && @has_children? == false}
           type="button"
           phx-value-block_uid={@uid}
           class="block-action duplicate"
