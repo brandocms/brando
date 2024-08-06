@@ -3,10 +3,11 @@
   color: var(--brando-color-dark);  
   font-family: 'Mono';
   font-size: 12px;
-  padding: 10px;
+  padding: 10px 15px 10px 10px;
   align-items: flex-start;
   gap: 10px;
   position: relative;
+  width: fit-content;
 
   strong {
     text-decoration: underline;
