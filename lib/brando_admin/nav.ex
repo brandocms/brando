@@ -200,4 +200,8 @@ defmodule BrandoAdmin.Nav do
 
     {:noreply, assign(socket, :active, !socket.assigns.active)}
   end
+
+  def handle_event("toggle_nav", %{"minimized" => status}, socket) do
+    {:noreply, assign(socket, :minimized, status)}
+  end
 end
