@@ -11,27 +11,29 @@ defmodule BrandoAdmin.Components.Button do
       |> assign_new(:confirm, fn -> false end)
 
     ~H"""
-      <li>
-        <%= if @confirm do %>
-          <button
-            type="button"
-            id={"dropdown-button-#{@event_name}-#{@value}"}
-            phx-hook="Brando.ConfirmClick"
-            phx-confirm-click-message={@confirm}
-            phx-confirm-click={@event}
-            phx-page-loading={@loading}>
-            <%= render_slot @inner_block %>
-          </button>
-        <% else %>
-          <button
-            type="button"
-            id={"dropdown-button-#{@event_name}-#{@value}"}
-            phx-click={@event}
-            phx-page-loading={@loading}>
-            <%= render_slot @inner_block %>
-          </button>
-        <% end %>
-      </li>
+    <li>
+      <%= if @confirm do %>
+        <button
+          type="button"
+          id={"dropdown-button-#{@event_name}-#{@value}"}
+          phx-hook="Brando.ConfirmClick"
+          phx-confirm-click-message={@confirm}
+          phx-confirm-click={@event}
+          phx-page-loading={@loading}
+        >
+          <%= render_slot(@inner_block) %>
+        </button>
+      <% else %>
+        <button
+          type="button"
+          id={"dropdown-button-#{@event_name}-#{@value}"}
+          phx-click={@event}
+          phx-page-loading={@loading}
+        >
+          <%= render_slot(@inner_block) %>
+        </button>
+      <% end %>
+    </li>
     """
   end
 end

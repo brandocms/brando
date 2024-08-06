@@ -19,7 +19,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
       id="seo_form"
       entry_id={@entry_id}
       current_user={@current_user}
-      schema={@schema}>
+      schema={@schema}
+    >
       <:header>
         <%= gettext("Update SEO") %>
       </:header>
@@ -29,9 +30,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
       <table>
         <h1>404s</h1>
         <tr>
-          <th><%= gettext "URL" %></th>
-          <th><%= gettext "Hits" %></th>
-          <th><%= gettext "Last hit" %></th>
+          <th><%= gettext("URL") %></th>
+          <th><%= gettext("Hits") %></th>
+          <th><%= gettext("Last hit") %></th>
         </tr>
         <%= for item <- @four_oh_fours do %>
           <tr>

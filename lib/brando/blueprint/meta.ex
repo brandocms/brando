@@ -87,8 +87,6 @@ defmodule Brando.Blueprint.Meta do
   defmacro meta_field(name, _) when is_atom(name),
     do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
 
-
-
   defmacro meta_field(list_of_names, path) when is_list(list_of_names) and is_list(path) do
     for name <- list_of_names do
       quote do

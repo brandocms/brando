@@ -135,15 +135,11 @@ defmodule Brando.JSONLD.Schema do
 
   # populate a field as a schema with populator function
   defmacro field(name, schema, nil) do
-    raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{
-            name
-          } - #{inspect(schema)}"
+    raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{name} - #{inspect(schema)}"
   end
 
   defmacro field(name, schema, _) when is_binary(schema) do
-    raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{
-            name
-          } - #{inspect(schema)}"
+    raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{name} - #{inspect(schema)}"
   end
 
   defmacro field(name, schema, path) when is_list(path) do
@@ -207,14 +203,10 @@ defmodule Brando.JSONLD.Schema do
         [{name, {:string, mutation_function}} | acc]
 
       {name, schema, nil}, _acc ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{
-                name
-              } - #{inspect(schema)}"
+        raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{name} - #{inspect(schema)}"
 
       {name, schema, _}, _acc when is_binary(schema) ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{
-                name
-              } - #{inspect(schema)}"
+        raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{name} - #{inspect(schema)}"
 
       {name, schema, path}, acc when is_list(path) ->
         [{name, {schema, path}} | acc]

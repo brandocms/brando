@@ -1,19 +1,17 @@
 <div class="content-list-wrapper">
-  <article 
-    id={"listing-#{@listing.name}"} 
-    class="content-list" 
-    phx-hook="Brando.Listing">
+  <article id={"listing-#{@listing.name}"} class="content-list" phx-hook="Brando.Listing">
     <.tools
       schema={@schema}
       listing={@listing}
       active_filter={@active_filter}
       list_opts={@list_opts}
-      exports={@listing.exports} 
+      exports={@listing.exports}
       select_export={JS.push("export", target: @myself)}
       update_status={JS.push("update_status", target: @myself)}
       update_filter={JS.push("update_filter", target: @myself)}
       next_filter_key={JS.push("next_filter_key", target: @myself)}
-      delete_filter={JS.push("delete_filter", target: @myself)} />
+      delete_filter={JS.push("delete_filter", target: @myself)}
+    />
 
     <.entries
       :let={entry}
@@ -25,13 +23,16 @@
       <:empty>
         <div class="empty-list">
           <figure>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+            </svg>
           </figure>
           <%= gettext("No matching entries found") %>
         </div>
       </:empty>
 
-      <.live_component module={Row}
+      <.live_component
+        module={Row}
         id={"list-row-#{@singular}-#{entry.id}"}
         entry={entry}
         sortable?={@sortable?}
@@ -43,13 +44,15 @@
         selected_rows={@selected_rows}
         content_language={@content_language}
         target={@myself}
-        click={JS.push("select_row", target: @myself)} />
+        click={JS.push("select_row", target: @myself)}
+      />
     </.entries>
 
     <.pagination
       pagination_meta={@entries.pagination_meta}
       change_page={JS.push("change_page", target: @myself)}
-      change_limit={JS.push("change_limit", target: @myself)} />
+      change_limit={JS.push("change_limit", target: @myself)}
+    />
   </article>
 
   <.selected_rows
@@ -57,5 +60,6 @@
     schema={@schema}
     selected_rows={@selected_rows}
     selection_actions={@listing.selection_actions}
-    target={@myself} />
+    target={@myself}
+  />
 </div>

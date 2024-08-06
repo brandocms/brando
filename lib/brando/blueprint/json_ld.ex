@@ -108,8 +108,6 @@ defmodule Brando.Blueprint.JSONLD do
     end
   end
 
-
-
   # populate a field without a path with mutator function
   defmacro json_ld_field(name, :string, mutation_function) when is_function(mutation_function) do
     quote do
@@ -123,15 +121,11 @@ defmodule Brando.Blueprint.JSONLD do
 
   # populate a field as a schema with populator function
   defmacro json_ld_field(name, schema, nil) do
-    raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{
-            name
-          } - #{inspect(schema)}"
+    raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{name} - #{inspect(schema)}"
   end
 
   defmacro json_ld_field(name, schema, _) when is_binary(schema) do
-    raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{
-            name
-          } - #{inspect(schema)}"
+    raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{name} - #{inspect(schema)}"
   end
 
   defmacro json_ld_field(name, schema, path) when is_list(path) do

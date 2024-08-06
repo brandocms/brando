@@ -53,28 +53,39 @@ defmodule BrandoAdmin.Components.FilePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext "Select file"} close={toggle_drawer("##{@id}")} z={@z_index} dark>
+      <Content.drawer
+        id={@id}
+        title={gettext("Select file")}
+        close={toggle_drawer("##{@id}")}
+        z={@z_index}
+        dark
+      >
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">
-              <%= gettext "Select similarly typed file from library" %>
+              <%= gettext("Select similarly typed file from library") %>
             </div>
           <% end %>
         </:info>
 
         <div class="file-picker list" id={"file-picker-drawer-#{@id}"}>
           <%= for file <- @files do %>
-          <div
-            class={["file-picker__file", file.filename in @selected_files && "selected"]}
-            phx-click={if @multi, do: JS.push("select_file", target: @event_target), else: JS.push("select_file", target: @event_target) |> toggle_drawer("#file-picker")}
-            phx-value-id={file.id}
-            phx-value-selected={file.filename in @selected_files && "true" || "false"}
-            phx-page-loading>
-            <div class="file-picker__info">
-              <div class="file-picker__filename">#<%= file.id %> <%= Utils.file_url(file) %></div>
-              <div class="file-picker__size">(<%= Brando.Utils.human_size(file.filesize) %>)</div>
+            <div
+              class={["file-picker__file", file.filename in @selected_files && "selected"]}
+              phx-click={
+                if @multi,
+                  do: JS.push("select_file", target: @event_target),
+                  else: JS.push("select_file", target: @event_target) |> toggle_drawer("#file-picker")
+              }
+              phx-value-id={file.id}
+              phx-value-selected={(file.filename in @selected_files && "true") || "false"}
+              phx-page-loading
+            >
+              <div class="file-picker__info">
+                <div class="file-picker__filename">#<%= file.id %> <%= Utils.file_url(file) %></div>
+                <div class="file-picker__size">(<%= Brando.Utils.human_size(file.filesize) %>)</div>
+              </div>
             </div>
-          </div>
           <% end %>
         </div>
       </Content.drawer>

@@ -51,9 +51,23 @@ defmodule Brando.Sites.Identity do
   end
 
   relations do
-    relation :metas, :embeds_many, module: Brando.Meta, on_replace: :delete, drop_param: :drop_metas_ids, sort_param: :sort_metas_ids
-    relation :links, :embeds_many, module: Brando.Link, on_replace: :delete, drop_param: :drop_links_ids, sort_param: :sort_links_ids
-    relation :configs, :embeds_one, module: Brando.Config, on_replace: :delete, drop_param: :drop_configs_ids, sort_param: :sort_configs_ids
+    relation :metas, :embeds_many,
+      module: Brando.Meta,
+      on_replace: :delete,
+      drop_param: :drop_metas_ids,
+      sort_param: :sort_metas_ids
+
+    relation :links, :embeds_many,
+      module: Brando.Link,
+      on_replace: :delete,
+      drop_param: :drop_links_ids,
+      sort_param: :sort_links_ids
+
+    relation :configs, :embeds_one,
+      module: Brando.Config,
+      on_replace: :delete,
+      drop_param: :drop_configs_ids,
+      sort_param: :sort_configs_ids
   end
 
   forms do

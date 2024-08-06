@@ -11,14 +11,14 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Globals")}
-      subtitle={gettext("Overview")} />
+    <Content.header title={gettext("Globals")} subtitle={gettext("Overview")} />
 
-    <.live_component module={GlobalTabs}
-      id={"global_tabs"}
+    <.live_component
+      module={GlobalTabs}
+      id="global_tabs"
       active_tab={@active_tab}
-      current_user={@current_user}>
+      current_user={@current_user}
+    >
     </.live_component>
     """
   end

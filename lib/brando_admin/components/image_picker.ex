@@ -55,11 +55,17 @@ defmodule BrandoAdmin.Components.ImagePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext "Select image"} close={toggle_drawer("##{@id}")} z={@z_index} dark>
+      <Content.drawer
+        id={@id}
+        title={gettext("Select image")}
+        close={toggle_drawer("##{@id}")}
+        z={@z_index}
+        dark
+      >
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">
-              <%= gettext "Select similarly typed image from library" %>
+              <%= gettext("Select similarly typed image from library") %>
             </div>
           <% end %>
           <div class="button-group-horizontal mb-1">
@@ -74,26 +80,32 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
         <div class="image-picker grid" id={"image-picker-drawer-#{@id}"}>
           <%= for image <- @images do %>
-          <div
-            class={["image-picker__image", image.path in @selected_images && "selected"]}
-            phx-click={if @multi, do: JS.push("select_image", target: @event_target), else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")}
-            phx-value-id={image.id}
-            phx-value-selected={image.path in @selected_images && "true" || "false"}
-            phx-page-loading>
-            <Content.image image={image} size={:smallest} />
-            <div class="image-picker__info">
-              <div class="image-picker__filename"><%= image.path %></div>
-              <div class="image-picker__dims">
-                Dimensions....: <%= image.width %>&times;<%= image.height %>
-              </div>
-              <div class="image-picker__formats">
-                Formats.......: <%= inspect image.formats %>
-              </div>
-              <div class="image-picker__processed">
-                Status........: <%= inspect image.status %>
+            <div
+              class={["image-picker__image", image.path in @selected_images && "selected"]}
+              phx-click={
+                if @multi,
+                  do: JS.push("select_image", target: @event_target),
+                  else:
+                    JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
+              }
+              phx-value-id={image.id}
+              phx-value-selected={(image.path in @selected_images && "true") || "false"}
+              phx-page-loading
+            >
+              <Content.image image={image} size={:smallest} />
+              <div class="image-picker__info">
+                <div class="image-picker__filename"><%= image.path %></div>
+                <div class="image-picker__dims">
+                  Dimensions....: <%= image.width %>&times;<%= image.height %>
+                </div>
+                <div class="image-picker__formats">
+                  Formats.......: <%= inspect(image.formats) %>
+                </div>
+                <div class="image-picker__processed">
+                  Status........: <%= inspect(image.status) %>
+                </div>
               </div>
             </div>
-          </div>
           <% end %>
         </div>
       </Content.drawer>

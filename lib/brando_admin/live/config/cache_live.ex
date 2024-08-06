@@ -23,7 +23,6 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
   def render(%{socket_connected: false} = assigns) do
     ~H"""
-
     """
   end
 

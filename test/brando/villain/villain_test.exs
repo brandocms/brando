@@ -264,7 +264,13 @@ defmodule Brando.VillainTest do
       |> Brando.Villain.list_root_block_ids_by_source()
       |> Brando.Villain.list_entry_ids_for_root_blocks_by_source()
 
-    assert resulting_ids === %{Brando.Pages.Fragment => [pf1.id, pf4.id]}
+    # sort the ids
+    sorted_resulting_ids =
+      resulting_ids
+      |> Enum.map(fn {k, v} -> {k, Enum.sort(v)} end)
+      |> Enum.into(%{})
+
+    assert sorted_resulting_ids === %{Brando.Pages.Fragment => [pf1.id, pf4.id]}
   end
 
   test "create and update dependent module", %{user: user} do

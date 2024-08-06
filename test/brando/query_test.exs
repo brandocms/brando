@@ -161,12 +161,17 @@ defmodule Brando.QueryTest do
       assert p2b.title == "page 2 updated"
 
       {:ok, posts} = __MODULE__.Context.list_pages(%{cache: true})
-      assert Enum.map(posts, & &1.title) == [p1.title, p2.title]
+      sorted_posts = Enum.sort(posts, &(&1.id <= &2.id))
+      assert Enum.map(sorted_posts, & &1.title) == [p1.title, p2.title]
 
       {:ok, p2c} = __MODULE__.Context.update_page(p2b.id, %{title: "bleh"}, :system)
-
       {:ok, posts} = __MODULE__.Context.list_pages(%{cache: true})
-      assert Enum.map(posts, & &1.title) == [p1.title, p2c.title]
+
+      # ensure posts are in the same order as [p1.id, p2c.id]
+      sorted_posts = Enum.sort(posts, &(&1.id <= &2.id))
+      assert Enum.map(sorted_posts, & &1.title) == [p1.title, p2c.title]
+
+      Cachex.clear(:query)
     end
 
     test "query :single revision" do

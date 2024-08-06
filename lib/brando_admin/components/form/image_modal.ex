@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Components.Form.ImageModal do
 
   def render(assigns) do
     ~H"""
-
     """
   end
 end

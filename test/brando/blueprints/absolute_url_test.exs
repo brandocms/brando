@@ -21,5 +21,7 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
     assert Page.__absolute_url__(%Page{language: "en", uri: "about"}) == "/about"
     assert Page.__absolute_url__(%Page{language: "no", uri: "index"}) == "/no/"
     assert Page.__absolute_url__(%Page{language: "en", uri: "index"}) == "/"
+
+    Application.put_env(:brando, :scope_default_language_routes, true)
   end
 end

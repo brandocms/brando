@@ -33,7 +33,8 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
     ~H"""
     <Content.header
       title={gettext("Scheduled Publishing")}
-      subtitle={gettext("Manage and clear publishing queue")} />
+      subtitle={gettext("Manage and clear publishing queue")}
+    />
 
     <div class="scheduled-publishing-live">
       <p class="help">
@@ -44,28 +45,25 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
         <%= for job <- @jobs do %>
           <tr>
             <td class="state fit">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="15"
-                height="15"
-                viewBox="0 0 15 15">
-                <circle
-                  class={job.state}
-                  r="7.5"
-                  cy="7.5"
-                  cx="7.5" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
+                <circle class={job.state} r="7.5" cy="7.5" cx="7.5" />
               </svg>
               #<%= job.id %>
             </td>
             <td>
-              <strong><%= job.meta["identifier"]["title"] %></strong><br>
+              <strong><%= job.meta["identifier"]["title"] %></strong> <br />
               <small><%= job.meta["identifier"]["type"] %>#<%= job.meta["identifier"]["id"] %></small>
             </td>
             <td class="fit date">
-              <%= format_datetime(job.scheduled_at, "%d/%m/%y") %> <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
+              <%= format_datetime(job.scheduled_at, "%d/%m/%y") %>
+              <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
             </td>
             <td class="fit">
-              <button type="button" class="primary small" phx-click={JS.push("delete_job", value: %{id: job.id})}>
+              <button
+                type="button"
+                class="primary small"
+                phx-click={JS.push("delete_job", value: %{id: job.id})}
+              >
                 <%= gettext("Delete job") %>
               </button>
             </td>

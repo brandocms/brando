@@ -30,15 +30,21 @@ defmodule Brando.JSONLD.HTML do
         |> assign(:entity, entity)
 
       ~H"""
-      <%= if @breadcrumbs != "" do %><script type="application/ld+json">
-        <%= @breadcrumbs %>
-      </script><% end %>
-      <%= if @identity != "" do %><script type="application/ld+json">
-        <%= @identity %>
-      </script><% end %>
-      <%= if @entity != "" do %><script type="application/ld+json">
-        <%= @entity %>
-      </script><% end %>
+      <%= if @breadcrumbs != "" do %>
+        <script type="application/ld+json">
+          <%= @breadcrumbs %>
+        </script>
+      <% end %>
+      <%= if @identity != "" do %>
+        <script type="application/ld+json">
+          <%= @identity %>
+        </script>
+      <% end %>
+      <%= if @entity != "" do %>
+        <script type="application/ld+json">
+          <%= @entity %>
+        </script>
+      <% end %>
       """
     else
       ~H""

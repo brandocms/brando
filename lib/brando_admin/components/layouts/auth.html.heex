@@ -3,13 +3,19 @@
   <head>
     <.csrf_meta_tag />
     <.live_title><%= assigns[:page_title] || "Brando" %></.live_title>
-    <script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>
-    <style>html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}</style>
+    <script>
+      (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)
+    </script>
+    <style>
+      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
+    </style>
     <.include_assets admin />
   </head>
   <body id="app" data-env={Brando.env()} class="auth-login">
     <div class="fader" id="fader">
-      <script>var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);</script>
+      <script>
+        var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);
+      </script>
       <div class="loading-container"></div>
     </div>
     <%= @inner_content %>
