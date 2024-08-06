@@ -90,16 +90,6 @@ defmodule Brando.HTML do
   def menu_button(assigns) do
     item = assigns.item
     text = get_menu_item_text(item)
-
-    require Logger
-
-    Logger.error("""
-    menu_button
-    text = #{inspect(text)}
-
-    item = #{inspect(item)}
-    """)
-
     key = item.key
 
     assigns =
