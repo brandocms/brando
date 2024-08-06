@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Pages.FragmentUpdateLive do
+defmodule BrandoAdmin.Pages.FragmentFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Fragment
   alias BrandoAdmin.Components.Form
   import Brando.Gettext
