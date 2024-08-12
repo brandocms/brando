@@ -413,7 +413,7 @@ defmodule Brando.Villain do
 
   @doc """
   Return block module corresponding to `block_type`
-  Used when creating refs in ModuleUpdateLive
+  Used when creating refs in ModuleFormLive
   """
   def get_block_by_type(block_type) do
     default_blocks = Blocks.list_blocks()
