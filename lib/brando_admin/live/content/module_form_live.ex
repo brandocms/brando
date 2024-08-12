@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Content.ModuleUpdateLive do
+defmodule BrandoAdmin.Content.ModuleFormLive do
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
 
