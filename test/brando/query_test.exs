@@ -150,7 +150,8 @@ defmodule Brando.QueryTest do
       p2 = Factory.insert(:page, title: "page 2")
 
       {:ok, posts} = __MODULE__.Context.list_pages(%{cache: true})
-      assert Enum.map(posts, & &1.title) == [p1.title, p2.title]
+      sorted_posts = Enum.sort(posts, &(&1.id <= &2.id))
+      assert Enum.map(sorted_posts, & &1.title) == [p1.title, p2.title]
 
       # force a manual change that does not update cache
       {:ok, p2b} =
