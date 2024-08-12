@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
   import Brando.Gettext
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Content.ModuleUpdateLive
   alias Phoenix.LiveView.JS
 
   def mount(_, _session, socket) do
@@ -116,7 +115,13 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     }
 
     {:ok, new_module} = Brando.Content.create_module(params, user)
-    new_module_route = Brando.routes().admin_live_path(socket, ModuleUpdateLive, new_module.id)
+
+    new_module_route =
+      Brando.routes().admin_module_form_path(
+        socket,
+        :update,
+        new_module.id
+      )
 
     {:noreply, push_navigate(socket, to: new_module_route)}
   end
