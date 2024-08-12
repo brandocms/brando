@@ -363,6 +363,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
+  def update(%{event: "reload_all_blocks"}, socket) do
+    {:ok, reload_all_blocks(socket)}
+  end
+
   def update(assigns, socket) do
     block_module = assigns.block_module
     user_id = assigns.current_user.id
@@ -380,6 +384,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> maybe_sequence_blocks()
     |> assign(:first_run, false)
     |> then(&{:ok, &1})
+  end
+
+  defp reload_all_blocks(socket) do
+    # reset the stream
+    user_id = socket.assigns.current_user.id
+    block_module = socket.assigns.block_module
+    entry_blocks = socket.assigns.entry_blocks || []
+    entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
+
+    socket
+    |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
+    |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
+    |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
+    |> stream(:entry_blocks_forms, entry_blocks_forms)
   end
 
   defp maybe_sequence_blocks(%{assigns: %{first_run: true}} = socket) do

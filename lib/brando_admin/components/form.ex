@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form do
           event: "update_live_preview_block",
           rendered_html: rendered_html,
           uid: uid,
-          has_children: has_children?
+          has_children?: has_children?
         },
         socket
       ) do
@@ -1785,9 +1785,8 @@ defmodule BrandoAdmin.Components.Form do
         end
 
     # redirect to "create new"
-    redirect_new_fn = fn socket, _entry, _mutation_type ->
-      generated_create_view = schema.__modules__().admin_create_view
-      Brando.routes().admin_live_path(socket, generated_create_view)
+    redirect_new_fn = fn _socket, _entry, _mutation_type ->
+      schema.__admin_route__(:create, [])
     end
 
     new_changeset = assoc_all_block_fields(block_changesets, changeset)
@@ -1815,9 +1814,9 @@ defmodule BrandoAdmin.Components.Form do
         maybe_redirected_socket =
           case save_redirect_target do
             :self ->
-              if mutation_type == :create do
-                update_url = schema.__admin_route__(:update, [entry.id])
+              update_url = schema.__admin_route__(:update, [entry.id])
 
+              if mutation_type == :create do
                 socket
                 |> assign(:processing, false)
                 |> assign(:all_blocks_received?, false)
@@ -1840,6 +1839,9 @@ defmodule BrandoAdmin.Components.Form do
                 |> assign_refreshed_entry()
                 |> assign_refreshed_form()
                 |> clear_blocks_root_changesets()
+                |> assign_block_map()
+                |> assign_entry_for_blocks()
+                |> reload_all_blocks()
               end
 
             :listing ->
@@ -1900,9 +1902,8 @@ defmodule BrandoAdmin.Components.Form do
         end
 
     # redirect to "create new"
-    redirect_new_fn = fn socket, _entry, _mutation_type ->
-      generated_create_view = schema.__modules__().admin_create_view
-      Brando.routes().admin_live_path(socket, generated_create_view)
+    redirect_new_fn = fn _socket, _entry, _mutation_type ->
+      schema.__admin_route__(:create, [])
     end
 
     case apply(context, :"#{mutation_type}_#{singular}", [changeset, current_user]) do
@@ -1936,7 +1937,7 @@ defmodule BrandoAdmin.Components.Form do
                 socket
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
-                |> assign_refreshed_form
+                |> assign_refreshed_form()
               end
 
             :listing ->
@@ -2355,6 +2356,18 @@ defmodule BrandoAdmin.Components.Form do
     for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
       block_field_id = "#{id}-blocks-#{block_field_name}"
       send_update(BlockField, id: block_field_id, event: "clear_root_changesets")
+    end
+
+    socket
+  end
+
+  defp reload_all_blocks(socket) do
+    block_map = socket.assigns.block_map
+    id = socket.assigns.id
+
+    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
+      block_field_id = "#{id}-blocks-#{block_field_name}"
+      send_update(BlockField, id: block_field_id, event: "reload_all_blocks")
     end
 
     socket
