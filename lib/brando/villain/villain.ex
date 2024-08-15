@@ -483,6 +483,17 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Render and update all entries with a block with a var with an identifier
+  """
+  def render_entries_with_identifier(identifier_id) do
+    identifier_id
+    |> list_block_ids_using_identifier()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
   Look through all `villains` for `search_term` and rerender all matching
   """
   def render_entries_matching_regex(search_terms) do
@@ -526,6 +537,19 @@ defmodule Brando.Villain do
       from b in Content.Block,
         select: b.id,
         where: b.palette_id == ^palette_id
+
+    Brando.repo().all(query)
+  end
+
+  @doc """
+  Return list of all blocks using `identifier_id`
+  """
+  def list_block_ids_using_identifier(identifier_id) do
+    query =
+      from b in Content.Block,
+        select: b.id,
+        left_join: v in assoc(b, :vars),
+        where: v.identifier_id == ^identifier_id
 
     Brando.repo().all(query)
   end
