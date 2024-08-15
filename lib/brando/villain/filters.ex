@@ -1118,6 +1118,14 @@ defmodule Brando.Villain.Filters do
     end
   end
 
+  def singular(%{__struct__: module}, _) do
+    module.__naming__().singular
+  end
+
+  def singular(_, _) do
+    ""
+  end
+
   def slugify(nil, _) do
     ""
   end
@@ -1132,6 +1140,24 @@ defmodule Brando.Villain.Filters do
 
   def link_text(%Var{type: :link} = var, _ctx) do
     get_link_text(var) || nil
+  end
+
+  def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
+    preloads = Brando.Blueprint.preloads_for(identifier.schema)
+
+    {:ok, [entry]} =
+      Brando.Content.get_entries_from_identifiers(
+        [identifier],
+        preloads
+      )
+
+    entry
+  rescue
+    _ -> nil
+  end
+
+  def get_entry(_, _) do
+    nil
   end
 
   defp get_link_url(%{link_type: :url, value: url}), do: url
