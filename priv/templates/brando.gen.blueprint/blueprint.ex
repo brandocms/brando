@@ -12,6 +12,7 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   import <%= app_module %>Admin.Gettext
 
+  # trait Brando.Trait.Blocks
   # trait Brando.Trait.Creator
   # trait Brando.Trait.Meta
   # trait Brando.Trait.Revisioned
