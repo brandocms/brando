@@ -5,6 +5,7 @@ defmodule Brando.Plug.LivePreview do
 
   import Plug.Conn
   @behaviour Plug
+  @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
 
   def init(opts), do: opts
 
