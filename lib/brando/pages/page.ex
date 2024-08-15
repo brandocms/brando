@@ -92,6 +92,7 @@ defmodule Brando.Pages.Page do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
+      preload_order: [asc: :sequence],
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids

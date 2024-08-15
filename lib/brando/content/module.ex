@@ -70,13 +70,17 @@ defmodule Brando.Content.Module do
       on_replace: :delete_if_exists,
       foreign_key: :parent_id
 
-    relation :table_template, :belongs_to, module: Brando.Content.TableTemplate
+    relation :table_template, :belongs_to,
+      module: Brando.Content.TableTemplate,
+      on_replace: :delete_if_exists
+
     relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete,
+      preload_order: [asc: :sequence],
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
