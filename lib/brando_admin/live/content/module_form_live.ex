@@ -300,24 +300,19 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     vars =
       Enum.reduce(vars, [], fn
         %{key: ^var_key} = var, acc ->
-          acc ++
-            [
-              put_in(
-                var,
-                [Access.key(:options)],
-                (var.options || []) ++
-                  [%Var.Option{label: "label", value: "option"}]
-              )
-            ]
+          var_changeset = Changeset.change(var)
+          opts = Changeset.get_embed(var_changeset, :options) || []
+          updated_opts = opts ++ [Changeset.change(%Var.Option{label: "label", value: "option"})]
+          updated_var_changeset = Changeset.put_embed(var_changeset, :options, updated_opts)
+
+          acc ++ [updated_var_changeset]
 
         var, acc ->
-          acc ++ [var]
+          acc ++ [Changeset.change(var)]
       end)
 
-    updated_form =
-      changeset
-      |> Changeset.put_change(:vars, vars)
-      |> to_form([])
+    updated_changeset = Changeset.put_assoc(changeset, :vars, vars)
+    updated_form = to_form(updated_changeset, [])
 
     {:noreply, assign(socket, :form, updated_form)}
   end
