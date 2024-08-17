@@ -577,37 +577,37 @@ defmodule Brando.HTML do
   attr :viewport, :string, default: "width=device-width, initial-scale=1"
   attr :fonts, :list, default: []
   slot :pragma, default: nil
-  slot :title, default: nil
-  slot :preconnect, default: nil
-  slot :async_scripts, default: nil
-  slot :import_styles, default: nil
-  slot :scripts, default: nil
-  slot :styles, default: nil
-  slot :preload, default: nil
-  slot :deferred_scripts, default: nil
-  slot :prefetch, default: nil
-  slot :inner_block, default: nil
+  slot :title
+  slot :preconnect
+  slot :async_scripts
+  slot :import_styles
+  slot :scripts
+  slot :styles
+  slot :preload
+  slot :deferred_scripts
+  slot :prefetch
+  slot :inner_block
 
   def head(assigns) do
     ~H"""
     <head phx-no-format>
       <meta charset={@charset} />
       <meta name="viewport" content={@viewport} />
-      <%= if @pragma do %><%= render_slot(@pragma) %><% end %>
-      <%= if @title do %><title><%= render_slot(@title) %></title><% else %><title><%= Brando.Utils.get_page_title(@conn) %></title><% end %>
-      <%= if @preconnect do %><%= render_slot(@preconnect) %><% end %>
-      <%= if @async_scripts do %><%= render_slot(@async_scripts) %><% end %>
+      <%= if @pragma != [] do %><%= render_slot(@pragma) %><% end %>
+      <%= if @title != [] do %><title><%= render_slot(@title) %></title><% else %><title><%= Brando.Utils.get_page_title(@conn) %></title><% end %>
+      <%= if @preconnect != [] do %><%= render_slot(@preconnect) %><% end %>
+      <%= if @async_scripts != [] do %><%= render_slot(@async_scripts) %><% end %>
       <.init_js />
-      <%= if @import_styles do %><%= render_slot(@import_styles) %><% end %>
+      <%= if @import_styles != [] do %><%= render_slot(@import_styles) %><% end %>
       <.inject_critical_css />
-      <%= if @scripts do %><%= render_slot(@scripts) %><% end %>
+      <%= if @scripts != [] do %><%= render_slot(@scripts) %><% end %>
       <.include_assets only_css />
-      <%= if @styles do %><%= render_slot(@styles) %><% end %>
+      <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
       <.preload_fonts fonts={@fonts} />
-      <%= if @preload do %><%= render_slot(@preload) %><% end %>
+      <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
       <.include_assets only_js />
-      <%= if @deferred_scripts do %><%= render_slot(@deferred_scripts) %><% end %>
-      <%= if @prefetch do %><%= render_slot(@prefetch) %><% end %>
+      <%= if @deferred_scripts != [] do %><%= render_slot(@deferred_scripts) %><% end %>
+      <%= if @prefetch != [] do %><%= render_slot(@prefetch) %><% end %>
 
       <.render_meta conn={@conn} />
       <.render_rel conn={@conn} />
