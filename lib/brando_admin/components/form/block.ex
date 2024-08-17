@@ -2715,6 +2715,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           :if={!@is_ref?}
           class="dirty block-action toggler"
           data-popover={gettext("Block has changes")}
+          phx-click={JS.push("show_dirty", target: @target)}
         >
           ●
         </div>
