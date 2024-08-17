@@ -1553,7 +1553,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         data-block-uid={@uid}
         data-block-type={@type}
         data-container-id={@container_id}
-        class={["block"]}
+        class="block"
         phx-hook="Brando.Block"
         style={"background-color: #{@bg_color}"}
       >
