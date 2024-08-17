@@ -364,11 +364,21 @@ defmodule Brando.Blueprint.Relations do
       %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
         sub_assets = Enum.map(mod.__assets__(), & &1.name)
 
+        # filter out sub_rels where the relation's module matches `schema`
+        sub_rels =
+          for rel <- mod.__relations__(),
+              rel.opts.module != schema,
+              rel.type not in [:embeds_many, :embeds_one] do
+            rel.name
+          end
+
+        sub_preloads = sub_assets ++ sub_rels
+
         if mod.has_trait(Brando.Trait.Sequenced) do
-          preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_assets
+          preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_preloads
           {name, preload_query}
         else
-          (sub_assets == [] && name) || {name, sub_assets}
+          (sub_preloads == [] && name) || {name, sub_preloads}
         end
 
       %{name: name} ->
