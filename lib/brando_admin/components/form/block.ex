@@ -3563,6 +3563,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
+  def handle_event("show_dirty", _params, socket) do
+    require Logger
+
+    Logger.error("""
+
+    changeset.changes
+    #{inspect(socket.assigns.form.source.changes)}
+
+    """)
+
+    {:noreply, socket}
+  end
+
   def handle_event("delete_block", _params, socket) do
     uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
