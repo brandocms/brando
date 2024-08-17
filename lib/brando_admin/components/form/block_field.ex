@@ -317,8 +317,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "signal_position_update", uid: uid}, socket) do
-    require Logger
-    Logger.error("!! received signal_position_update for #{uid}")
     form_cid = socket.assigns.form_cid
     position_response_tracker = socket.assigns.position_response_tracker
 
