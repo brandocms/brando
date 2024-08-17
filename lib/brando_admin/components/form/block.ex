@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  # event sent from RenderVar for :file and :image vars
+  # event sent from RenderVar for :file, :image, :link vars
   def update(%{event: "update_block_var"} = params, socket) do
     %{var_key: var_key, var_type: var_type, data: data} = params
 
@@ -621,34 +621,76 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
+    load_path = (belongs_to == :root && [:data, :block, :vars]) || [:data, :vars]
 
     # is the block loaded?
-    if Brando.Utils.try_path(changeset, [:data, :block, :vars]) do
-      updated_changeset =
+    if Brando.Utils.try_path(changeset, load_path) do
+      access_path =
         if belongs_to == :root do
-          put_in(
-            changeset,
-            [
-              Access.key(:data),
-              Access.key(:block),
-              Access.key(:vars),
-              Access.filter(&(&1.key == var_key)),
-              Access.key(type)
-            ],
-            assoc_data
-          )
+          [
+            Access.key(:data),
+            Access.key(:block),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(type)
+          ]
         else
-          put_in(
-            changeset,
-            [
-              Access.key(:data),
-              Access.key(:vars),
-              Access.filter(&(&1.key == var_key)),
-              Access.key(type)
-            ],
-            assoc_data
-          )
+          [
+            Access.key(:data),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(type)
+          ]
         end
+
+      updated_changeset =
+        put_in(
+          changeset,
+          access_path,
+          assoc_data
+        )
+
+      updated_form =
+        build_form_from_changeset(
+          updated_changeset,
+          uid,
+          belongs_to
+        )
+
+      assign(socket, :form, updated_form)
+    else
+      socket
+    end
+  end
+
+  def update_changeset_data_block_var(socket, var_key, :link, data) do
+    identifier = Map.get(data, :identifier)
+    uid = socket.assigns.uid
+    changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+    load_path = (belongs_to == :root && [:data, :block, :vars]) || [:data, :vars]
+
+    # is the block loaded?
+    if Brando.Utils.try_path(changeset, load_path) do
+      access_path =
+        if belongs_to == :root do
+          [
+            Access.key(:data),
+            Access.key(:block),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:identifier)
+          ]
+        else
+          [
+            Access.key(:data),
+            Access.key(:vars),
+            Access.filter(&(&1.key == var_key)),
+            Access.key(:identifier)
+          ]
+        end
+
+      updated_changeset = put_in(changeset, access_path, identifier)
 
       updated_form =
         build_form_from_changeset(

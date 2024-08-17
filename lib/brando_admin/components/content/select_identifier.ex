@@ -18,7 +18,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
        %{selected_identifier_id: nil} -> nil
        %{selected_identifier_id: id} -> Brando.Content.get_identifier!(id)
      end)
+     |> assign_new(:on_change, fn -> nil end)
      |> assign_new(:wanted_schemas, fn -> [] end)
+     |> assign_new(:var_key, fn -> nil end)
+     |> assign_new(:var_type, fn -> nil end)
      |> assign_available_schemas()
      |> assign_selected_schema()}
   end
@@ -153,6 +156,22 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
   def handle_event("select_identifier", %{"id" => id}, socket) do
     {:ok, identifier} = Brando.Content.get_identifier(id)
+
+    on_change = socket.assigns.on_change
+
+    if on_change do
+      var_key = socket.assigns.var_key
+      var_type = socket.assigns.var_type
+
+      params = %{
+        event: "update_block_var",
+        var_key: var_key,
+        var_type: var_type,
+        data: %{identifier: identifier}
+      }
+
+      on_change.(params)
+    end
 
     socket
     |> assign(:selected_identifier, identifier)

@@ -290,6 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 instructions={@instructions}
                 target={@myself}
                 publish={@publish}
+                on_change={@on_change}
               />
 
               <%= case @type do %>
@@ -370,6 +371,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               instructions={@instructions}
               target={@myself}
               publish={@publish}
+              on_change={@on_change}
             />
           </div>
         <% end %>
@@ -396,6 +398,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :instructions, :any
   attr :target, :any
   attr :publish, :any
+  attr :on_change, :any
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -578,7 +581,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             click={show_modal("#var-#{@var.id}-link-config")}
             identifier={@identifier}
           />
-          <.link_modal field={@var} identifier={@identifier} target={@target} />
+          <.link_modal field={@var} identifier={@identifier} target={@target} on_change={@on_change} />
         </div>
       </Form.field_base>
     </div>
@@ -682,12 +685,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     link_type = get_field(changeset, :link_type, :url)
     allow_text? = get_field(changeset, :link_allow_custom_text)
     wanted_schemas = get_field(changeset, :link_identifier_schemas, [])
+    var_key = get_field(changeset, :key)
+    var_type = get_field(changeset, :type)
 
     assigns =
       assigns
       |> assign(:link_type, link_type)
       |> assign(:allow_text?, allow_text?)
       |> assign(:wanted_schemas, wanted_schemas)
+      |> assign(:var_key, var_key)
+      |> assign(:var_type, var_type)
 
     ~H"""
     <Content.modal title={gettext("Link")} id={"var-#{@field.id}-link-config"}>
@@ -734,7 +741,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               module={Content.SelectIdentifier}
               id={"#{@field.id}-identifier-select"}
               field={@field[:identifier_id]}
+              var_key={@var_key}
+              var_type={@var_type}
               wanted_schemas={@wanted_schemas}
+              on_change={@on_change}
               target={@target}
             />
           </div>
