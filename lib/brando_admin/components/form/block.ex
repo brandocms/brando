@@ -2021,7 +2021,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             id={"#{@block.id}-container-select"}
             field={@block[:container_id]}
             label={gettext("Container template")}
-            opts={[options: @containers]}
+            opts={[options: @containers, resetable: true]}
             publish
           />
           <%= if @palette_options do %>
