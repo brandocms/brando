@@ -371,6 +371,7 @@ defmodule Brando.Villain.Parser do
       end
 
       defp map_vars(nil), do: %{}
+      defp map_vars(%Ecto.Association.NotLoaded{}), do: %{}
 
       defp map_vars(vars) do
         Enum.reduce(vars, %{}, fn
