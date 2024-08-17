@@ -222,13 +222,11 @@ defmodule Brando.Datasource do
     end
   end
 
+  defmacro list(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
+    raise "datasource :list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+  end
+
   defmacro list(key, fun) do
-    {_, _, [{_, _, [args, _]}]} = fun
-
-    if Enum.count(args) == 2 do
-      raise "datasource :list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
-    end
-
     quote do
       Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
 
