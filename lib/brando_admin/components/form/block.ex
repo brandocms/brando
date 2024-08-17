@@ -3501,6 +3501,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   def handle_event("insert_block_entry", value, socket) do
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     parent_cid = (Map.get(value, "multi") && socket.assigns.myself) || socket.assigns.parent_cid
+    block_count = socket.assigns.block_count
+    sequence = (Map.get(value, "multi") && block_count) || socket.assigns.form[:sequence].value
 
     module_id =
       if socket.assigns.parent_module_id do
@@ -3514,7 +3516,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       event: :show_module_picker,
       filter: %{parent_id: module_id},
       type: :module_entry,
-      sequence: socket.assigns.form[:sequence].value,
+      sequence: sequence,
       parent_cid: parent_cid
     )
 
