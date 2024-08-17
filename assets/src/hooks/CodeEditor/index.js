@@ -5,6 +5,7 @@ import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, basicSetup } from 'codemirror'
 import { html } from '@codemirror/lang-html'
+import { liquid } from '@codemirror/lang-liquid'
 
 export default app => ({
   mounted() {
@@ -56,7 +57,7 @@ export default app => ({
           }),
           keymap.of([indentWithTab]),
           EditorState.tabSize.of(4),
-          html()
+          liquid()
         ]
       })
     })
