@@ -293,7 +293,7 @@ defmodule Brando.Villain.Parser do
               |> add_admin_to_context(opts)
               |> add_parser_to_context(__MODULE__)
               |> add_module_id_to_context(id)
-              |> add_entries_to_context(module, block)
+              |> add_datasource_entries_to_context(module, block)
               |> add_block_to_context(module, block)
 
             module.code
@@ -312,7 +312,7 @@ defmodule Brando.Villain.Parser do
 
       defoverridable module: 2
 
-      defp add_entries_to_context(
+      defp add_datasource_entries_to_context(
              context,
              %{
                datasource: true,
@@ -324,14 +324,18 @@ defmodule Brando.Villain.Parser do
            ) do
         language = Context.get(context, "language")
         request = Context.get(context, "request")
-        mapped_vars = Map.merge(map_vars(vars), %{"request" => request})
+
+        mapped_vars =
+          vars
+          |> map_vars()
+          |> Map.merge(%{"request" => request})
 
         {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
 
         Context.assign(context, :entries, entries || [])
       end
 
-      defp add_entries_to_context(
+      defp add_datasource_entries_to_context(
              context,
              %{
                datasource: true,
@@ -346,7 +350,8 @@ defmodule Brando.Villain.Parser do
         Context.assign(context, :entries, entries)
       end
 
-      defp add_entries_to_context(context, _, _), do: Context.assign(context, :entries, [])
+      defp add_datasource_entries_to_context(context, _, _),
+        do: Context.assign(context, :entries, [])
 
       defp add_block_to_context(context, _module, block) do
         simple_block =
