@@ -2624,7 +2624,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= if @container do %>
             <%= @container.name %>
           <% else %>
-            <%= gettext("<No template>") %>
+            Standard
           <% end %>
           <%= if @palette do %>
             <div class="arrow">&rarr;</div>
