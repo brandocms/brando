@@ -1860,9 +1860,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <Input.hidden field={@block_form[:anchor]} />
       <Input.hidden field={@block_form[:multi]} />
       <Input.hidden field={@block_form[:module_id]} />
-      <Input.hidden field={@block_form[:container_id]} />
       <Input.hidden field={@block_form[:parent_id]} />
-      <Input.hidden field={@block_form[:palette_id]} />
       <Input.hidden field={@block_form[:creator_id]} />
       <Input.hidden field={@block_form[:marked_as_deleted]} />
       <Input.input type={:hidden} field={@block_form[:source]} value={@block_module} />
@@ -2033,6 +2031,8 @@ defmodule BrandoAdmin.Components.Form.Block do
               opts={[options: @palette_options]}
               publish
             />
+          <% else %>
+            <Input.hidden field={@block[:palette_id]} />
           <% end %>
           <Input.text field={@block[:anchor]} />
           <Input.text
