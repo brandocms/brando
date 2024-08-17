@@ -84,6 +84,7 @@ defmodule Brando.HTML do
   end
 
   attr :item, :map, required: true
+  attr :type, :atom, default: :button
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to button"
   slot :inner_block, default: nil
 
@@ -98,7 +99,7 @@ defmodule Brando.HTML do
       |> assign(:key, key)
 
     ~H"""
-    <button data-menu-item-key={@key} {@rest}>
+    <button data-menu-item-key={@key} type={@type} {@rest}>
       <%= render_slot(@inner_block, @text) %>
     </button>
     """
