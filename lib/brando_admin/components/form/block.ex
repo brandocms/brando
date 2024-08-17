@@ -797,7 +797,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_assign_container(%{assigns: %{container_id: nil}} = socket) do
     socket
     |> assign_new(:container, fn -> nil end)
-    |> assign_new(:palette_options, fn -> [] end)
+    |> assign_new(:palette_options, fn ->
+      Brando.Content.list_palettes!()
+    end)
   end
 
   def maybe_assign_container(%{assigns: %{container_id: container_id}} = socket) do
@@ -817,7 +819,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 %{}
               end
 
-            Brando.Content.list_palettes(opts)
+            Brando.Content.list_palettes!(opts)
           else
             []
           end
