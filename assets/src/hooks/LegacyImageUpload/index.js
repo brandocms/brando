@@ -174,6 +174,8 @@ export default app => ({
 
           const image = data.image
           this.pushEventTo(this.eventTarget, 'image_uploaded', { id: image.id })
+          this.status = IDLE
+          this.setStatusText()
           resolve()
         } else {
           this.status = IDLE
