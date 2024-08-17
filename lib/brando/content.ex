@@ -594,7 +594,16 @@ defmodule Brando.Content do
       }
 
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
-      Brando.repo().update(changeset)
+
+      case Brando.repo().update(changeset) do
+        {:ok, entry} ->
+          # check if there are any blocks/vars that need to be updated
+          Villain.render_entries_with_identifier(entry.id)
+          {:ok, entry}
+
+        {:error, changeset} ->
+          {:error, changeset}
+      end
     else
       {:error, {:identifier, :not_found}} ->
         create_identifier(module, entry)
