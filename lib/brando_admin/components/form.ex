@@ -1916,17 +1916,9 @@ defmodule BrandoAdmin.Components.Form do
           case save_redirect_target do
             :self ->
               if mutation_type == :create do
-                generated_update_view = schema.__modules__().admin_form_view
+                generated_route = schema.__admin_route__(:update, [entry.id])
 
-                push_navigate(socket,
-                  to:
-                    Brando.routes().admin_live_path(
-                      socket,
-                      generated_update_view,
-                      :update,
-                      entry.id
-                    )
-                )
+                push_navigate(socket, to: generated_route)
               else
                 if schema.has_trait(Brando.Trait.Revisioned) do
                   id = "#{socket.assigns.id}-revisions-drawer"
