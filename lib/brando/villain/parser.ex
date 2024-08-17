@@ -1083,6 +1083,20 @@ defmodule Brando.Villain.Parser do
 
       defp process_var(
              %Brando.Content.Var{
+               type: :link,
+               key: key,
+               label: _,
+               identifier_id: identifier_id,
+               identifier: %Ecto.Association.NotLoaded{}
+             } = var
+           )
+           when not is_nil(identifier_id) do
+        preloaded_var = Brando.repo().preload(var, [:identifier])
+        {key, preloaded_var}
+      end
+
+      defp process_var(
+             %Brando.Content.Var{
                type: :image,
                key: key,
                label: _,
