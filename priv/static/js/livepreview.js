@@ -1,3 +1,4 @@
+console.log('Live Preview')
 /* Add live preview class to html */
 document.documentElement.classList.add('is-live-preview')
 var token = document.querySelector('meta[name="user_token"]').getAttribute('content')
@@ -14,6 +15,7 @@ var MOONWALK_OVERRIDE_STYLES = `
       .is-live-preview [data-moonwalk-section], 
       .is-live-preview [b-section] {
         opacity: 1 !important;
+        transform: none !important;
         visibility: visible !important;
       }
       .is-live-preview [data-smart-video][data-revealed] {
@@ -23,6 +25,10 @@ var MOONWALK_OVERRIDE_STYLES = `
     `
 
 function forceLazyloadAllImages(target = document) {
+  // ensure target is an element, not comment
+  if (target.nodeType !== 1) {
+    return
+  }
   target
     .querySelectorAll(
       '[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])'
@@ -44,6 +50,10 @@ function forceLazyloadAllImages(target = document) {
 }
 
 function forceLazyloadAllVideos(target = document) {
+  if (target.nodeType !== 1) {
+    return
+  }
+
   target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(llVideo => {
     llVideo.src = llVideo.dataset.src
     llVideo.dataset.booted = ''
@@ -76,16 +86,16 @@ function buildMap() {
   var curNode
 
   while ((curNode = iterator.nextNode())) {
-    if (curNode.nodeValue.trim().startsWith('B:LP')) {
+    if (curNode.nodeValue.trim().startsWith('{+:B')) {
       // extract uid
-      var uidStart = curNode.nodeValue.indexOf('{')
-      var uidEnd = curNode.nodeValue.indexOf('}')
+      var uidStart = curNode.nodeValue.indexOf('<')
+      var uidEnd = curNode.nodeValue.indexOf('>')
       var uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
       var els = []
       // loop through the next siblings until we find the end comment
       let sibling = curNode.nextSibling
       while (sibling) {
-        if (sibling.nodeType === 8 && sibling.nodeValue.trim().startsWith(`E:LP{${uid}`)) {
+        if (sibling.nodeType === 8 && sibling.nodeValue.trim().startsWith(`{-:B<${uid}`)) {
           blockMap.push({ uid, els, insertionPoint: sibling })
           els = []
           break
@@ -117,19 +127,16 @@ function getChildren(els) {
     var curNode
 
     while ((curNode = iterator.nextNode())) {
-      if (curNode.nodeValue.trim().startsWith('B:CHILDREN')) {
+      if (curNode.nodeValue.trim().startsWith('{+:C')) {
         // extract uid
-        var uidStart = curNode.nodeValue.indexOf('{')
-        var uidEnd = curNode.nodeValue.indexOf('}')
+        var uidStart = curNode.nodeValue.indexOf('<')
+        var uidEnd = curNode.nodeValue.indexOf('>')
         var uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
 
         // loop through the next siblings until we find the end comment
         let sibling = curNode.nextSibling
         while (sibling) {
-          if (
-            sibling.nodeType === 8 &&
-            sibling.nodeValue.trim().startsWith(`E:CHILDREN{${uid}`)
-          ) {
+          if (sibling.nodeType === 8 && sibling.nodeValue.trim().startsWith(`{-:C<${uid}`)) {
             el.childInsertionPoint = sibling
             break
           } else if (sibling.nodeType === 1) {
@@ -168,6 +175,14 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   }
 
   var blockIndex = blockMap.findIndex(block => block.uid === uid)
+  if (blockIndex === -1) {
+    // block not found —— rescan map
+    buildMap()
+    blockIndex = blockMap.findIndex(block => block.uid === uid)
+    if (blockIndex === -1) {
+      console.error('Block not found')
+    }
+  }
   if (blockIndex >= 0) {
     var block = blockMap[blockIndex]
     if (rendered_html === '') {
@@ -187,6 +202,13 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
     // blocks and add them to the block.els array
     if (!block.els.length) {
       for (let idx = 0; idx < newBlocks.length; idx++) {
+        if (
+          newBlocks[idx].nodeType === 8 &&
+          newBlocks[idx].nodeValue.trim().startsWith(`{-:B<${block.uid}`)
+        ) {
+          continue
+        }
+
         var newElement = block.insertionPoint.parentNode.insertBefore(
           newBlocks[idx],
           block.insertionPoint
@@ -200,12 +222,19 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
       block.els.forEach((el, idx) => {
         if (has_children) {
           var childInsertionPoint = getInsertionPoint(newBlocks[idx], block.uid)
-
-          for (var i = 0; i < el.children.length; i++) {
-            childInsertionPoint.parentNode.insertBefore(el.children[i], childInsertionPoint)
+          if (childInsertionPoint) {
+            // remove exitPoint from children array
+            for (var i = 0; i < el.children.length; i++) {
+              if (
+                el.children[i].nodeType === 8 &&
+                el.children[i].nodeValue.trim().startsWith(`{-:C<${block.uid}`)
+              ) {
+                continue
+              }
+              childInsertionPoint.parentNode.insertBefore(el.children[i], childInsertionPoint)
+            }
+            childInsertionPoint.remove()
           }
-
-          childInsertionPoint.remove()
 
           var newElement = block.insertionPoint.parentNode.insertBefore(
             newBlocks[idx],
@@ -268,8 +297,6 @@ channel.on('rerender', function (payload) {
   document.documentElement.classList.add('is-updated-live-preview')
   var doc = parser.parseFromString(payload.html, 'text/html')
   var newBody = doc.querySelector('body')
-
-  console.log('=> Re-rendering Live Preview', newBody)
 
   morphdom(body, newBody, {
     onBeforeElUpdated: (a, b) => {

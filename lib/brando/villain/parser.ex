@@ -206,16 +206,8 @@ defmodule Brando.Villain.Parser do
 
               {child_block, index} ->
                 {:ok, child_module} = Content.find_module(modules, child_block.module_id)
+
                 vars = process_vars(child_block.vars)
-
-                require Logger
-
-                Logger.error("""
-                processed_vars
-                #{inspect(vars, pretty: true)}
-
-                """)
-
                 refs = process_refs(child_block.refs)
 
                 forloop = %{
@@ -267,8 +259,6 @@ defmodule Brando.Villain.Parser do
           |> add_block_to_context(module, block)
           |> Context.assign("entries", children)
           |> Context.assign("content", content)
-
-        code = maybe_annotate(module.code, block.uid, opts)
 
         module.code
         |> maybe_annotate(block.uid, opts)
@@ -935,11 +925,24 @@ defmodule Brando.Villain.Parser do
         skip_children? = Map.get(opts, :skip_children, false)
 
         children_html =
-          if skip_children? do
-            "{$ content $}"
-            |> annotate_children(block.uid)
-          else
-            ""
+          case skip_children? do
+            true ->
+              "{$ content $}"
+              |> annotate_children(block.uid)
+
+            false ->
+              ""
+
+            :force_render ->
+              (children || [])
+              |> Enum.reduce([], fn
+                %{hidden: true}, acc -> acc
+                %{marked_as_deleted: true}, acc -> acc
+                d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+              end)
+              |> Enum.reverse()
+              |> Enum.join("")
+              |> annotate_children(block.uid)
           end
 
         # we might want to annotate disabled containers
@@ -955,7 +958,7 @@ defmodule Brando.Villain.Parser do
         skip_children? = Map.get(opts, :skip_children, false)
 
         children_html =
-          if skip_children? do
+          if skip_children? === true do
             "{$ content $}"
             |> annotate_children(block.uid)
           else
@@ -1010,7 +1013,7 @@ defmodule Brando.Villain.Parser do
         {:ok, container} = Content.find_container(containers, container_id)
 
         children_html =
-          if skip_children? do
+          if skip_children? === true do
             "{$ content $}"
             |> annotate_children(block.uid)
           else
@@ -1201,9 +1204,9 @@ defmodule Brando.Villain.Parser do
 
       def maybe_annotate(code, uid, %{annotate_blocks: true}) do
         """
-        <!-- B:LP{#{uid}} -->
+        <!-- {+:B<#{uid}>} -->
           #{code}
-        <!-- E:LP{#{uid}} -->
+        <!-- {-:B<#{uid}>} -->
         """
       end
 
@@ -1211,9 +1214,9 @@ defmodule Brando.Villain.Parser do
 
       def annotate_children(code, uid) do
         """
-        <!-- B:CHILDREN{#{uid}} -->
+        <!-- {+:C<#{uid}>} -->
           #{code}
-        <!-- E:CHILDREN{#{uid}} -->
+        <!-- {-:C<#{uid}>} -->
         """
       end
 

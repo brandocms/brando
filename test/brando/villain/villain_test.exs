@@ -517,7 +517,7 @@ defmodule Brando.VillainTest do
     {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks ==
-             "<section b-section=\"general-green\">\n  <!-- B:CHILDREN{container-a1} -->\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n<!-- E:CHILDREN{container-a1} -->\n\n</section>\n"
+             "<section b-section=\"general-green\">\n  <!-- {+:C<container-a1>} -->\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n<!-- {-:C<container-a1>} -->\n\n</section>\n"
 
     module2_params = %{
       code: "-- this is some NEW code {{ testvar }} -- {% ref refs.lede %}",
@@ -549,7 +549,7 @@ defmodule Brando.VillainTest do
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
     assert updated_page.rendered_blocks ==
-             "<section b-section=\"general-green\">\n  <!-- B:CHILDREN{container-a1} -->\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n<!-- E:CHILDREN{container-a1} -->\n\n</section>\n"
+             "<section b-section=\"general-green\">\n  <!-- {+:C<container-a1>} -->\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n<!-- {-:C<container-a1>} -->\n\n</section>\n"
   end
 
   test "access refs in context", %{user: user} do

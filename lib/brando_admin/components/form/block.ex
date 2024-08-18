@@ -3643,7 +3643,14 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset.data
       |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
-      |> render_and_update_entry_block_changeset(entry, has_vars?, has_table_rows?)
+
+    # if this is a container and it's flipped from active = false to true,
+    # then we must force an update to the live preview to get the rendered children.
+    force_render? = should_force_live_preview_update?(changeset, updated_changeset, :root)
+
+    updated_changeset =
+      updated_changeset
+      |> render_and_update_entry_block_changeset(entry, has_vars?, has_table_rows?, force_render?)
       |> maybe_put_empty_children(has_children?)
 
     updated_form =
@@ -3661,6 +3668,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})
+  end
+
+  defp should_force_live_preview_update?(changeset, updated_changeset, :root) do
+    block_changeset = Changeset.get_assoc(changeset, :block)
+    updated_block_changeset = Changeset.get_assoc(updated_changeset, :block)
+
+    Changeset.get_field(block_changeset, :type) == :container &&
+      Changeset.get_field(block_changeset, :active) == false &&
+      Changeset.get_field(updated_block_changeset, :active) == true
   end
 
   defp build_form_from_changeset(changeset, uid, belongs_to) do
@@ -3715,7 +3731,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       event: "update_live_preview_block",
       rendered_html: rendered_html,
       uid: uid,
-      has_children: has_children?
+      has_children?: has_children?
     })
 
     socket
@@ -3757,13 +3773,29 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
+  def render_and_update_entry_block_changeset(
+        changeset,
+        entry,
+        has_vars?,
+        has_table_rows?,
+        force_render? \\ false
+      ) do
+    skip_children =
+      case force_render? do
+        true -> :force_render
+        false -> true
+      end
+
     rendered_html =
       changeset
       |> Brando.Utils.apply_changes_recursively()
       |> reset_empty_vars(has_vars?, true)
       |> reset_table_rows(has_table_rows?, true)
-      |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
+      |> Brando.Villain.render_block(entry,
+        skip_children: skip_children,
+        format_html: true,
+        annotate_blocks: true
+      )
 
     updated_block_changeset =
       changeset
@@ -3780,7 +3812,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> Brando.Utils.apply_changes_recursively()
       |> reset_empty_vars(has_vars?, false)
       |> reset_table_rows(has_table_rows?, false)
-      |> Brando.Villain.render_block(entry, skip_children: true, format_html: true)
+      |> Brando.Villain.render_block(entry,
+        skip_children: true,
+        format_html: true,
+        annotate_blocks: true
+      )
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
