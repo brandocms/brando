@@ -1,9 +1,10 @@
 .variable {
-  /* &:last-of-type {
-    .brando-input .field-wrapper {
-      margin-bottom: 20px;
+
+  &.text {
+    textarea.text {
+      background-color: #fafafa;
     }
-  } */
+  }
 
   &.boolean {
     .field-base {
