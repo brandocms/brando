@@ -143,6 +143,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
            |> assign(:image, image_from_changeset)
            |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image}
 
+        # we have an image, and an image from the changeset, but the title, credits or alt has changed
+        image && image_from_changeset &&
+            (image.title != image_from_changeset.title ||
+               image.credits != image_from_changeset.credits ||
+               image.alt != image_from_changeset.alt) ->
+          {assign(socket, :image, image_from_changeset), image_from_changeset}
+
         true ->
           if image && image.status == :unprocessed do
             # if the image is unprocessed, we can try to reload and see if it's done.
