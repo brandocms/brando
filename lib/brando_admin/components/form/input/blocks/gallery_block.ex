@@ -272,6 +272,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <span><%= gettext("Alt. text") %></span>
           <%= @img.alt || "{ #{gettext("No alt text")} }" %>
         </div>
+        <div>
+          <span><%= gettext("Credits") %></span>
+          <%= @img.credits || "{ #{gettext("No credits")} }" %>
+        </div>
       </figcaption>
     </div>
     """

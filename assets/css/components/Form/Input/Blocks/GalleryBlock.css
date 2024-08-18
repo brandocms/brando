@@ -8,10 +8,14 @@
   }
 
   .images-grid {
-    @row 3/wrap/1em;
+    @row 3/wrap/1em desktop_md;
+    @row 4/wrap/1em desktop_lg;
+    @row 5/wrap/1em desktop_xl;
     
     .preview {
-      @column 4/12;
+      @column 4/12 desktop_md;
+      @column 3/12 desktop_lg;
+      @column 2/10 desktop_xl;
       background-color: var(--brando-color-peach);
       padding: 10px;
       display: flex;
@@ -24,6 +28,7 @@
 
       .delete-x {
         cursor: pointer;
+        z-index: 1;
         position: absolute;
         top: 15px;
         right: 15px;
@@ -69,30 +74,52 @@
       padding: 10px;
       align-items: center;
 
-      figure {
-        @column 2/12;
+      .image-content {
+        @column 2/12 desktop_xl;
+        @column 2/12 desktop_lg;
+        @column 2/12 desktop_md;
+        @order 0;
       }
 
       figcaption {
+        @order 1;
         @column 7/12;
         @fontsize sm;
-        border-left: 1px solid var(--brando-color-dark);
         padding-left: 15px;
         margin-left: 15px;
-
-        display: block;
+        align-self: flex-start;
+        display: flex;
+        row-gap: 2em;
 
         div {
           @space margin-bottom 8px;
+          width: 30%;
           display: block;
           text-align: left;
         }
       }
 
       button {
+        @order 2;
         margin-left: auto;
         align-self: flex-start;
-        margin-top: 8px;
+        @font mono;
+        border-radius: 5px;
+        border: 1px solid var(--brando-color-dark);
+        color: var(--brando-color-dark);
+        font-size: 11px;
+        display: inline-block;
+        text-transform: uppercase;
+        padding: 4px 7px;
+        transition: background-color .35s ease, color .35s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+
+        [data-icon] {
+          width: 1rem;
+          height: 1rem;
+        }
       }
     }
   }
