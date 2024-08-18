@@ -40,138 +40,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   import Brando.Gettext
 
-  def mount(socket) do
-    {:ok,
-     socket
-     |> assign(:open, false)
-     |> assign(:filter_string, "")
-     |> assign_new(:publish, fn -> true end)}
-  end
-
-  def update(assigns, socket) do
-    selected_option = get_selected_option(assigns.field)
-
-    show_filter = Keyword.get(assigns.opts, :filter, true)
-    narrow = Keyword.get(assigns.opts, :narrow)
-    resetable = Keyword.get(assigns.opts, :resetable)
-
-    changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
-    default = Keyword.get(assigns.opts, :default)
-    entry_form = Keyword.get(assigns.opts, :form)
-    update_relation = Keyword.get(assigns.opts, :update_relation)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> prepare_input_component()
-     |> assign_input_options()
-     |> assign(:selected_option, selected_option)
-     |> assign_label()
-     |> assign_new(:narrow, fn -> narrow end)
-     |> assign_new(:resetable, fn -> resetable end)
-     |> assign_new(:show_filter, fn -> show_filter end)
-     |> assign_new(:changeset_fun, fn -> changeset_fun end)
-     |> assign_new(:update_relation, fn -> update_relation end)
-     |> assign_new(:default, fn -> default end)
-     |> assign_new(:entry_form, fn -> entry_form end)
-     |> maybe_assign_select_changeset()
-     |> maybe_assign_select_form()
-     |> assign_new(:inner_block, fn -> nil end)
-     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
-  end
-
-  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(field, opts) end)
-  end
-
-  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(field, opts))
-  end
-
-  defp get_selected_option(field) do
-    case field.value do
-      "" -> ""
-      nil -> nil
-      res when is_atom(res) -> to_string(res)
-      res when is_integer(res) -> to_string(res)
-      res -> res
-    end
-  end
-
-  defp get_input_options(field, opts) do
-    case Keyword.get(opts, :options) do
-      :languages ->
-        languages = Brando.config(:languages)
-        Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
-
-      :admin_languages ->
-        admin_languages = Brando.config(:admin_languages)
-
-        Enum.map(admin_languages, fn [{:value, val}, {:text, text}] ->
-          %{label: text, value: val}
-        end)
-
-      nil ->
-        []
-
-      options_fun when is_function(options_fun) ->
-        options_fun.(field.form, opts)
-
-      options when is_list(options) ->
-        options
-    end
-    |> Enum.map(&ensure_string_values/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
-    %{label: label, value: to_string(value)}
-  end
-
-  defp ensure_string_values(%Ecto.Changeset{action: :replace}), do: nil
-
-  defp ensure_string_values(%Ecto.Changeset{} = changeset),
-    do: Ecto.Changeset.apply_changes(changeset)
-
-  defp ensure_string_values(map), do: map
-
-  def assign_label(
-        %{assigns: %{input_options: input_options, selected_option: selected_option}} = socket
-      ) do
-    assign(socket, :select_label, get_label(input_options, selected_option))
-  end
-
-  def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
-    select_form = target_module.__form__(form_name)
-    form_translations = target_module.__translations__()
-
-    socket
-    |> assign(:select_form, select_form)
-    |> assign(:form_translations, form_translations)
-  end
-
-  def maybe_assign_select_form(socket) do
-    assign(socket, :select_form, nil)
-  end
-
-  def maybe_assign_select_changeset(%{assigns: %{changeset_fun: nil}} = socket) do
-    assign(socket, :select_changeset, nil)
-  end
-
-  def maybe_assign_select_changeset(
-        %{assigns: %{changeset_fun: changeset_fun, default: default, current_user: current_user}} =
-          socket
-      ) do
-    select_changeset = changeset_fun.(default, %{}, current_user, [])
-    module = select_changeset.data.__struct__
-    singular = module.__naming__().singular
-
-    socket
-    |> assign(:select_changeset, select_changeset)
-    |> assign(:singular, singular)
-    |> assign(:module, module)
-  end
-
   def render(assigns) do
     ~H"""
     <div>
@@ -332,6 +200,142 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       </Form.field_base>
     </div>
     """
+  end
+
+  def mount(socket) do
+    {:ok,
+     socket
+     |> assign(:open, false)
+     |> assign(:filter_string, "")
+     |> assign_new(:publish, fn -> true end)}
+  end
+
+  def update(%{action: :force_refresh_options}, socket) do
+    {:ok, update_input_options(socket)}
+  end
+
+  def update(assigns, socket) do
+    selected_option = get_selected_option(assigns.field)
+
+    show_filter = Keyword.get(assigns.opts, :filter, true)
+    narrow = Keyword.get(assigns.opts, :narrow)
+    resetable = Keyword.get(assigns.opts, :resetable)
+
+    changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
+    default = Keyword.get(assigns.opts, :default)
+    entry_form = Keyword.get(assigns.opts, :form)
+    update_relation = Keyword.get(assigns.opts, :update_relation)
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> prepare_input_component()
+     |> assign_input_options()
+     |> assign(:selected_option, selected_option)
+     |> assign_label()
+     |> assign_new(:narrow, fn -> narrow end)
+     |> assign_new(:resetable, fn -> resetable end)
+     |> assign_new(:show_filter, fn -> show_filter end)
+     |> assign_new(:changeset_fun, fn -> changeset_fun end)
+     |> assign_new(:update_relation, fn -> update_relation end)
+     |> assign_new(:default, fn -> default end)
+     |> assign_new(:entry_form, fn -> entry_form end)
+     |> maybe_assign_select_changeset()
+     |> maybe_assign_select_form()
+     |> assign_new(:inner_block, fn -> nil end)
+     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
+  end
+
+  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign_new(socket, :input_options, fn -> get_input_options(field, opts) end)
+  end
+
+  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
+    assign(socket, :input_options, get_input_options(field, opts))
+  end
+
+  defp get_selected_option(field) do
+    case field.value do
+      "" -> ""
+      nil -> nil
+      res when is_atom(res) -> to_string(res)
+      res when is_integer(res) -> to_string(res)
+      res -> res
+    end
+  end
+
+  defp get_input_options(field, opts) do
+    case Keyword.get(opts, :options) do
+      :languages ->
+        languages = Brando.config(:languages)
+        Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
+
+      :admin_languages ->
+        admin_languages = Brando.config(:admin_languages)
+
+        Enum.map(admin_languages, fn [{:value, val}, {:text, text}] ->
+          %{label: text, value: val}
+        end)
+
+      nil ->
+        []
+
+      options_fun when is_function(options_fun) ->
+        options_fun.(field.form, opts)
+
+      options when is_list(options) ->
+        options
+    end
+    |> Enum.map(&ensure_string_values/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
+    %{label: label, value: to_string(value)}
+  end
+
+  defp ensure_string_values(%Ecto.Changeset{action: :replace}), do: nil
+
+  defp ensure_string_values(%Ecto.Changeset{} = changeset),
+    do: Ecto.Changeset.apply_changes(changeset)
+
+  defp ensure_string_values(map), do: map
+
+  def assign_label(
+        %{assigns: %{input_options: input_options, selected_option: selected_option}} = socket
+      ) do
+    assign(socket, :select_label, get_label(input_options, selected_option))
+  end
+
+  def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
+    select_form = target_module.__form__(form_name)
+    form_translations = target_module.__translations__()
+
+    socket
+    |> assign(:select_form, select_form)
+    |> assign(:form_translations, form_translations)
+  end
+
+  def maybe_assign_select_form(socket) do
+    assign(socket, :select_form, nil)
+  end
+
+  def maybe_assign_select_changeset(%{assigns: %{changeset_fun: nil}} = socket) do
+    assign(socket, :select_changeset, nil)
+  end
+
+  def maybe_assign_select_changeset(
+        %{assigns: %{changeset_fun: changeset_fun, default: default, current_user: current_user}} =
+          socket
+      ) do
+    select_changeset = changeset_fun.(default, %{}, current_user, [])
+    module = select_changeset.data.__struct__
+    singular = module.__naming__().singular
+
+    socket
+    |> assign(:select_changeset, select_changeset)
+    |> assign(:singular, singular)
+    |> assign(:module, module)
   end
 
   defp is_selected?(%{value: value}, opt) do

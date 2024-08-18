@@ -22,6 +22,8 @@ defmodule BrandoAdmin.Components.Form do
 
 
   """
+  alias BrandoAdmin.Components.Form.Input.MultiSelect
+  alias BrandoAdmin.Components.Form.Input.Select
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "forms"
 
@@ -1704,11 +1706,7 @@ defmodule BrandoAdmin.Components.Form do
         end
 
         if rest == ["language"] do
-          require Logger
-
-          Logger.error("""
-          => LANGUAGE changed, message all selects/multi_selects to update their options
-          """)
+          request_select_options_update(socket)
         end
 
         new_form = to_form(changeset, [])
@@ -2313,6 +2311,34 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_invalidate_live_preview_assign(socket, _string_path, _) do
     socket
+  end
+
+  defp request_select_options_update(socket) do
+    form_blueprint = socket.assigns.form_blueprint
+    singular = socket.assigns.singular
+
+    form_blueprint
+    |> Brando.Blueprint.Forms.list_fields(:select)
+    |> Enum.reject(&(&1 == :language))
+    |> build_lc_ids(singular)
+    |> send_select_options_update(Select)
+
+    form_blueprint
+    |> Brando.Blueprint.Forms.list_fields(:multi_select)
+    |> build_lc_ids(singular)
+    |> send_select_options_update(MultiSelect)
+
+    socket
+  end
+
+  defp send_select_options_update(field_ids, component) do
+    Enum.map(field_ids, fn field_id ->
+      send_update(component, id: field_id, action: :force_refresh_options)
+    end)
+  end
+
+  defp build_lc_ids(fields, singular) do
+    Enum.map(fields, fn field -> "#{singular}_#{field}" end)
   end
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do

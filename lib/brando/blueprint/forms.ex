@@ -682,6 +682,30 @@ defmodule Brando.Blueprint.Forms do
     }
   end
 
+  def list_fields(%__MODULE__{tabs: tabs}) do
+    for tab <- tabs,
+        %__MODULE__.Fieldset{fields: inputs} <- tab.fields,
+        input <- inputs do
+      input.name
+    end
+  end
+
+  def list_fields(%__MODULE__{tabs: tabs}, :select) do
+    for tab <- tabs,
+        %__MODULE__.Fieldset{fields: inputs} <- tab.fields,
+        %{type: type, name: name} when type == :select <- inputs do
+      name
+    end
+  end
+
+  def list_fields(%__MODULE__{tabs: tabs}, :multi_select) do
+    for tab <- tabs,
+        %__MODULE__.Fieldset{fields: inputs} <- tab.fields,
+        %{type: type, name: name} when type == :multi_select <- inputs do
+      name
+    end
+  end
+
   def get_tab_for_field(field, %__MODULE__{tabs: tabs}) do
     tab =
       for tab <- tabs,

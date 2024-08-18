@@ -54,6 +54,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:filter_string, "")}
   end
 
+  def update(%{action: :force_refresh_options}, socket) do
+    {:ok, update_input_options(socket)}
+  end
+
   def update(assigns, socket) do
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
