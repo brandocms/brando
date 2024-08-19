@@ -591,9 +591,13 @@ button.btn-palette {
     padding-right: 15px;
     border-top: 1px solid #eee;
 
+    .select-button {
+      margin-bottom: 15px;
+    }
+
     .datasource-info {
       @space margin-bottom 15px;
-      display: flex;      
+      display: flex;
       align-items: center;
       gap: 10px;
       cursor: help;
