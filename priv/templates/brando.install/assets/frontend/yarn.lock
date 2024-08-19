@@ -1058,14 +1058,14 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.50.1":
-  version "3.50.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.50.1.tgz#781d1076ce505016b26d1ee249c2b79adf2bd2a7"
-  integrity sha512-2nujEH/GmaX8Q2sGW2qmOr7S6M1bn/NheV+M3NO5OKSJDpnmEYeK76ZGEjzK1/Go/J7zY19belQjdMlf/NOMUQ==
+"@brandocms/jupiter@^3.51.1":
+  version "3.51.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.51.1.tgz#973e1564b917b241e6313bcc322b7e7a823997b3"
+  integrity sha512-5TJEc3gcERjYGThhFGGtBBQEkLTZSvA5Xy5YuM9nmzKONP1ir0Mbi/oG3lyO9kpmzY1R64AtFHlFvxCaKVrp1Q==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
-    gsap "3.12.2"
+    gsap "3.12.5"
     lodash.defaultsdeep "^4.6.1"
 
 "@csstools/cascade-layer-name-parser@^1.0.13":
@@ -2311,10 +2311,10 @@ globjoin@^0.1.4:
   resolved "https://registry.yarnpkg.com/globjoin/-/globjoin-0.1.4.tgz#2f4494ac8919e3767c5cbb691e9f463324285d43"
   integrity sha1-L0SUrIkZ43Z8XLtpHp9GMyQoXUM=
 
-gsap@3.12.2:
-  version "3.12.2"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.12.2.tgz#6e88203eed360761cbf2a2cb3a8d702aa87f3f6d"
-  integrity sha512-EkYnpG8qHgYBFAwsgsGEqvT1WUidX0tt/ijepx7z8EUJHElykg91RvW1XbkT59T0gZzzszOpjQv7SE41XuIXyQ==
+gsap@3.12.5:
+  version "3.12.5"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.12.5.tgz#136c02dad4c673b441bdb1ca00104bfcb4eae7f4"
+  integrity sha512-srBfnk4n+Oe/ZnMIOXt3gT605BX9x5+rh/prT2F1SsNJsU1XuMiP0E2aptW481OnonOGACZWBqseH5Z7csHxhQ==
 
 has-flag@^3.0.0:
   version "3.0.0"
