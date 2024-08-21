@@ -27,7 +27,7 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "forms"
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Ecto.Changeset
   import Phoenix.LiveView.TagEngine
 

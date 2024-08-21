@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "listings"
   import Brando.Utils.Datetime
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Badge
   alias BrandoAdmin.Components.Content

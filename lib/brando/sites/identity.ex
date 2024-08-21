@@ -7,7 +7,7 @@ defmodule Brando.Sites.Identity do
     plural: "identities",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false

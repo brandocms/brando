@@ -1,5 +1,5 @@
 defmodule Brando.Query.Mutations do
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Content
   alias Brando.Datasource

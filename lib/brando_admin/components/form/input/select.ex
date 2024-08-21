@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Select do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Content
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   # slot default
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

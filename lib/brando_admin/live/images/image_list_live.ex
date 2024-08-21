@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Images.Image
 
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

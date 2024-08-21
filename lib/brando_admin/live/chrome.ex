@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Chrome do
   use Phoenix.LiveView
   alias Phoenix.LiveView.JS
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Utils, only: [show_modal: 2]
 

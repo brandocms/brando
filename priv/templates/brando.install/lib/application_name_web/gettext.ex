@@ -5,7 +5,7 @@ defmodule <%= application_module %>Web.Gettext do
   By using [Gettext](http://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import <%= application_module %>Web.Gettext
+      use Gettext, backend: <%= application_module %>Web.Gettext
 
       # Simple translation
       gettext "Here is the string to translate"
@@ -20,7 +20,7 @@ defmodule <%= application_module %>Web.Gettext do
 
   See the [Gettext Docs](http://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/frontend"
+  use Gettext.Backend, otp_app: :<%= application_name %>, priv: "priv/gettext/frontend"
 end
 
 defmodule <%= application_module %>Admin.Gettext do
@@ -30,7 +30,7 @@ defmodule <%= application_module %>Admin.Gettext do
   By using [Gettext](http://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import <%= application_module %>Admin.Gettext
+      use Gettext, backend: <%= application_module %>Admin.Gettext
 
       # Simple translation
       gettext "Here is the string to translate"
@@ -45,5 +45,5 @@ defmodule <%= application_module %>Admin.Gettext do
 
   See the [Gettext Docs](http://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/backend"
+  use Gettext.Backend, otp_app: :<%= application_name %>, priv: "priv/gettext/backend"
 end

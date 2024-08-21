@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Pages.PageFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Page
   alias BrandoAdmin.Components.Form
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(
         %{"parent_id" => parent_id, "language" => language},

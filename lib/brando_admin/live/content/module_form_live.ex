@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias Ecto.Changeset
   alias Brando.Villain

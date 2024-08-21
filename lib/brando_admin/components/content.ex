@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Content do
   use BrandoAdmin, :component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def header(assigns) do
     assigns =

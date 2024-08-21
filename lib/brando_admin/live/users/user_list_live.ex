@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Users.UserListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Users.User
 
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

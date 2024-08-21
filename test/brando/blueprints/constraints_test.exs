@@ -8,7 +8,8 @@ defmodule Brando.Blueprint.ConstraintsTest do
       domain: "Projects",
       schema: "Project",
       singular: "project",
-      plural: "projects"
+      plural: "projects",
+      gettext_module: Brando.Gettext
 
     attributes do
       attribute :title, :string, unique: true

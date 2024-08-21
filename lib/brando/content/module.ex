@@ -34,7 +34,7 @@ defmodule Brando.Content.Module do
     plural: "modules",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Phoenix.LiveView.JS
 
   identifier "[{{ entry.namespace }}] {{ entry.name}}"

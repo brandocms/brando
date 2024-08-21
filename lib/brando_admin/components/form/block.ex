@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   alias Brando.Content.BlockIdentifier
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
@@ -671,7 +671,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     load_path = (belongs_to == :root && [:data, :block, :vars]) || [:data, :vars]
 
     # is the block loaded?
-    if Brando.Utils.try_path(changeset, load_path) do
+    vars = Brando.Utils.try_path(changeset, load_path)
+    loaded? = is_list(vars)
+
+    if loaded? do
       access_path =
         if belongs_to == :root do
           [

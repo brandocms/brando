@@ -1,6 +1,6 @@
 # # TODO: Delete after moving all events to `Block` / `BlockField`
 # defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
-#   import Brando.Gettext
+#   use Gettext, backend: Brando.Gettext
 #   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
 #   alias Brando.Villain

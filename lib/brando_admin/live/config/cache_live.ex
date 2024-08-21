@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
   use BrandoAdmin, :live_view
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Phoenix.Component
   alias BrandoAdmin.Components.Content
 

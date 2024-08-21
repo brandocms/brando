@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # use Phoenix.HTML
 
   import Ecto.Changeset
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Images.GalleryImage
   alias Brando.Utils

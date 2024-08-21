@@ -19,7 +19,7 @@ defmodule Brando.Upload do
   @type upload_error_input :: :error | {:error, any}
   @type upload_error_result :: {:error, binary}
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Brando.Utils
 
   alias Brando.Files

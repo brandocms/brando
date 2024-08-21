@@ -59,7 +59,7 @@ defmodule Brando.Blueprint.Forms do
 
   ### `text`: Standard form element
   """
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   defstruct name: :default,
             query: nil,

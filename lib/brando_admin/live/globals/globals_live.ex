@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.GlobalTabs
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :active_tab, nil)}

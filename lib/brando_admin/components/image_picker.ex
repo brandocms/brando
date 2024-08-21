@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.ImagePicker do
   use BrandoAdmin, :live_component
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(socket) do
     {:ok, assign_new(socket, :z_index, fn -> 1100 end)}

@@ -21,11 +21,11 @@ defmodule BrandoIntegration.Presence do
 end
 
 defmodule BrandoIntegrationWeb.Gettext do
-  use Gettext, otp_app: :brando, priv: "priv/gettext/frontend"
+  use Gettext.Backend, otp_app: :brando, priv: "priv/gettext/frontend"
 end
 
 defmodule BrandoIntegrationAdmin.Gettext do
-  use Gettext, otp_app: :brando, priv: "priv/gettext/backend"
+  use Gettext.Backend, otp_app: :brando, priv: "priv/gettext/backend"
 end
 
 defmodule BrandoIntegrationWeb.Villain.Filters do

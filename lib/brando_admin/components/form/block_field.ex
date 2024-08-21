@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias Ecto.Changeset
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(socket) do
     socket

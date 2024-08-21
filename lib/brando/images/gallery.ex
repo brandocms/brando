@@ -10,7 +10,7 @@ defmodule Brando.Images.Gallery do
     plural: "galleries",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Ecto.Query
 
   trait Brando.Trait.Timestamped

@@ -15,7 +15,7 @@ defmodule Brando.Content.TableRow do
     plural: "table_rows",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias Brando.Exception.BlueprintError
@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   # slot default
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(socket) do
     {:ok,

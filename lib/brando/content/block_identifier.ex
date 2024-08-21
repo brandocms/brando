@@ -4,7 +4,8 @@ defmodule Brando.Content.BlockIdentifier do
     domain: "Content",
     schema: "BlockIdentifier",
     singular: "block_identifier",
-    plural: "block_identifiers"
+    plural: "block_identifiers",
+    gettext_module: Brando.Gettext
 
   @allow_mark_as_deleted true
   trait Brando.Trait.Sequenced

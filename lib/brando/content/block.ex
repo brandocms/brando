@@ -62,7 +62,7 @@ defmodule Brando.Content.Block do
     plural: "blocks",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   # ++ Traits
   trait Brando.Trait.Creator

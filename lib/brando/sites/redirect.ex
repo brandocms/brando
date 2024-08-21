@@ -7,7 +7,7 @@ defmodule Brando.Sites.Redirect do
     plural: "redirects",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   data_layer :embedded
 

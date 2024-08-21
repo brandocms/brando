@@ -15,7 +15,7 @@ defmodule Brando.Content.TableTemplate do
     plural: "table_templates",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.UserSessionHTML do
   use BrandoAdmin, :html
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   @doc """
   Renders an input with label and error messages.

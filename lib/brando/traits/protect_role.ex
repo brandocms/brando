@@ -5,7 +5,7 @@ defmodule Brando.Trait.ProtectRole do
   use Brando.Trait
   alias Ecto.Changeset
   import Ecto.Changeset
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   @type changeset :: Changeset.t()
   @type config :: list()

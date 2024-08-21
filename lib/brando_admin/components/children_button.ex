@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.ChildrenButton do
   # TODO: Can this be a function component with its event handled in the row instead?
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(socket) do
     {:ok,

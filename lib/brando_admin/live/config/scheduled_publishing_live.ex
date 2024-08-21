@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Brando.Utils.Datetime
   import Phoenix.Component
 

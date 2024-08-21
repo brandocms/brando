@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Pages.FragmentFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Fragment
   alias BrandoAdmin.Components.Form
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(%{"page_id" => page_id, "language" => language}, _session, socket) do
     if socket.assigns.live_action == :create do

@@ -7,7 +7,7 @@ defmodule Brando.Sites.GlobalSet do
     plural: "global_sets",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.CastPolymorphicEmbeds

@@ -9,7 +9,7 @@ defmodule BrandoAdmin.LiveView.Form do
   """
   import Phoenix.LiveView
   import Phoenix.Component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Utils
 
   defmacro __using__(opts) do

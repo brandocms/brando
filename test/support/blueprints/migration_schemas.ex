@@ -4,7 +4,8 @@ defmodule Brando.MigrationTest.Project do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
@@ -45,7 +46,8 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Meta
@@ -97,7 +99,8 @@ defmodule Brando.MigrationTest.ProjectUpdate2 do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
@@ -115,7 +118,8 @@ defmodule Brando.MigrationTest.Property do
     domain: "Projects",
     schema: "Property",
     singular: "property",
-    plural: "properties"
+    plural: "properties",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
 
@@ -131,7 +135,8 @@ defmodule Brando.MigrationTest.Profile do
     domain: "Persons",
     schema: "Person",
     singular: "profiles",
-    plural: "profile"
+    plural: "profile",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
@@ -151,7 +156,8 @@ defmodule Brando.Persons.Person do
     domain: "Persons",
     schema: "Person",
     singular: "person",
-    plural: "persons"
+    plural: "persons",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete

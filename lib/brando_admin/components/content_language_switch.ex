@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def mount(socket) do
     {:ok, assign(socket, :show_language_picker, false)}

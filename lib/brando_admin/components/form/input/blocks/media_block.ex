@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Content.TableTemplateFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Content.TableTemplate
   alias BrandoAdmin.Components.Form
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

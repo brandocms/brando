@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Menu do
       end
   """
 
-  require Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   defmacro __using__(_) do
     quote do
@@ -240,96 +240,96 @@ defmodule BrandoAdmin.Menu do
 
     [
       %{
-        name: Brando.Gettext.gettext("System"),
+        name: gettext("System"),
         items: [
           %{
-            name: Brando.Gettext.gettext("Dashboard"),
+            name: gettext("Dashboard"),
             url: "/admin"
           },
           %{
-            name: Brando.Gettext.gettext("Configuration"),
+            name: gettext("Configuration"),
             url: nil,
             items: [
               %{
-                name: Brando.Gettext.gettext("Navigation"),
+                name: gettext("Navigation"),
                 url: "/admin/config/navigation/menus"
               },
               %{
-                name: Brando.Gettext.gettext("Identity"),
+                name: gettext("Identity"),
                 url: "/admin/config/identity"
               },
               %{
-                name: Brando.Gettext.gettext("SEO"),
+                name: gettext("SEO"),
                 url: "/admin/config/seo"
               },
               %{
-                name: Brando.Gettext.gettext("Globals"),
+                name: gettext("Globals"),
                 url: "/admin/config/global_sets"
               },
               %{
-                name: Brando.Gettext.gettext("Scheduled publishing"),
+                name: gettext("Scheduled publishing"),
                 url: "/admin/config/scheduled_publishing"
               },
               %{
-                name: Brando.Gettext.gettext("Cache"),
+                name: gettext("Cache"),
                 url: "/admin/config/cache"
               },
               %{
-                name: Brando.Gettext.gettext("Block modules"),
+                name: gettext("Block modules"),
                 url: "/admin/config/content/modules"
               },
               %{
-                name: Brando.Gettext.gettext("Containers"),
+                name: gettext("Containers"),
                 url: "/admin/config/content/containers"
               },
               %{
-                name: Brando.Gettext.gettext("Table Templates"),
+                name: gettext("Table Templates"),
                 url: "/admin/config/content/table_templates"
               },
               %{
-                name: Brando.Gettext.gettext("Templates"),
+                name: gettext("Templates"),
                 url: "/admin/config/content/templates"
               },
               %{
-                name: Brando.Gettext.gettext("Palettes"),
+                name: gettext("Palettes"),
                 url: "/admin/config/content/palettes"
               }
             ]
           },
           %{
-            name: Brando.Gettext.gettext("Assets"),
+            name: gettext("Assets"),
             url: nil,
             items: [
               %{
-                name: Brando.Gettext.gettext("Images"),
+                name: gettext("Images"),
                 url: "/admin/assets/images"
               },
               %{
-                name: Brando.Gettext.gettext("Files"),
+                name: gettext("Files"),
                 url: "/admin/assets/files"
               },
               %{
-                name: Brando.Gettext.gettext("Videos"),
+                name: gettext("Videos"),
                 url: "/admin/assets/videos"
               }
             ]
           },
           %{
-            name: Brando.Gettext.gettext("Users"),
+            name: gettext("Users"),
             url: "/admin/users"
           }
         ]
       },
       %{
-        name: Brando.Gettext.gettext("Content"),
+        name: gettext("Content"),
         items:
           [
             %{
-              name: Brando.Gettext.gettext("Pages & Sections"),
+              name: gettext("Pages & Sections"),
               url: "/admin/pages"
             },
             %{
-              name: Brando.Gettext.gettext("Globals"),
+              name: gettext("Globals"),
               url: "/admin/globals"
             }
           ] ++ content_menus

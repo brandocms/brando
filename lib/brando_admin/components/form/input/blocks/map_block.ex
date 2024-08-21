@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.Block

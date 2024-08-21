@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form

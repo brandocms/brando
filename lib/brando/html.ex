@@ -8,7 +8,7 @@ defmodule Brando.HTML do
   @type conn :: Plug.Conn.t()
 
   use Phoenix.Component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Phoenix.HTML
   alias Brando.Utils
 

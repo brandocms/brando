@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Ecto.Changeset
   alias Brando.Villain.Blocks.PictureBlock
 

@@ -8,7 +8,7 @@ defmodule Brando.Users do
   alias Brando.Users.UserToken
   alias Brando.Utils
   import Ecto.Query
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   @type user :: User.t()
 

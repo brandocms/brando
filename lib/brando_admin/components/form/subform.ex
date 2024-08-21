@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Subform
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   # prop subform, :any
   # prop form, :any

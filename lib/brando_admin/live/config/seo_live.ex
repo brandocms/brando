@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Sites.SEOLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.SEO
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
 

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Entries do
   use BrandoAdmin, :live_component
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
   alias Brando.Utils

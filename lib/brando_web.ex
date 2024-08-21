@@ -12,7 +12,7 @@ defmodule BrandoWeb do
         namespace: Brando.config(:web_module),
         layouts: [html: Brando.web_module(Layouts)]
 
-      import unquote(gettext_module)
+      use Gettext, backend: unquote(gettext_module)
       import Brando.Plug.HTML
       import Plug.Conn
 
@@ -30,7 +30,7 @@ defmodule BrandoWeb do
         formats: [:html, :json],
         layouts: [html: Brando.web_module(Layouts), json: Brando.web_module(Layouts)]
 
-      import unquote(gettext_module)
+      use Gettext, backend: unquote(gettext_module)
       import Brando.Plug.HTML
       import Plug.Conn
 
@@ -74,6 +74,8 @@ defmodule BrandoWeb do
   end
 
   def channel do
+    gettext_module = Brando.web_module(Gettext)
+
     quote do
       use Phoenix.Channel
 
@@ -81,7 +83,7 @@ defmodule BrandoWeb do
       import Ecto
       import Ecto.Query
 
-      import Brando.web_module(Gettext)
+      use Gettext, backend: unquote(gettext_module)
     end
   end
 
@@ -100,6 +102,7 @@ defmodule BrandoWeb do
     routes_module = Brando.web_module(Router.Helpers)
 
     quote do
+      use Gettext, backend: unquote(gettext_module)
       import Phoenix.HTML
       import Phoenix.HTML.Form
       alias Phoenix.LiveView.JS
@@ -116,7 +119,6 @@ defmodule BrandoWeb do
       import Phoenix.Component
       import Plug.Conn, only: [get_session: 2]
 
-      import unquote(gettext_module)
       alias unquote(routes_module), as: Routes
 
       # Routes generation with the ~p sigil
@@ -129,6 +131,7 @@ defmodule BrandoWeb do
     routes_module = Brando.web_module(Router.Helpers)
 
     quote do
+      use Gettext, backend: unquote(gettext_module)
       # Use all HTML functionality (forms, tags, etc)
       import Phoenix.HTML
       import Phoenix.HTML.Form
@@ -140,7 +143,6 @@ defmodule BrandoWeb do
       import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_var: 2]
       import Brando.I18n.Helpers
 
-      import unquote(gettext_module)
       alias unquote(routes_module), as: Routes
     end
   end

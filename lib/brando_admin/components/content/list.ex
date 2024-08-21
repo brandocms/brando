@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Content.List do
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "listings"
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Trait.Creator
   alias Brando.Trait.Sequenced

@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   use BrandoAdmin, :live_component
 
   import Ecto.Changeset
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form

@@ -4,7 +4,7 @@ defmodule Brando.Type.Status do
   """
 
   use Ecto.Type
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   @type status :: :disabled | :draft | :pending | :published
   @status_codes [draft: 0, published: 1, pending: 2, disabled: 3]

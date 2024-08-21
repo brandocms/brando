@@ -33,7 +33,7 @@ defmodule Brando.Trait.Translatable do
           end
 
           def changeset(struct, params \\ %{}) do
-            cast(struct, params, [:entry_id, :linked_entry_id])
+            Ecto.Changeset.cast(struct, params, [:entry_id, :linked_entry_id])
           end
 
           def add(id, parent_id) do

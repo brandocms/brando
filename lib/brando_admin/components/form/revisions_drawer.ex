@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   # prop form, :form, required: true
   # prop current_user, :any, required: true

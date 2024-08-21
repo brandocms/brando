@@ -7,7 +7,7 @@ defmodule Brando.Navigation.Menu do
     plural: "menus",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import Ecto.Query
   alias Brando.Navigation.Item
   alias Brando.Content.Var

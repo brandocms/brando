@@ -21,7 +21,7 @@ defmodule Brando.Sites.SEO do
     }
   ]
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false

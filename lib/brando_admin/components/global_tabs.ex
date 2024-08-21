@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.GlobalTabs do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Sites
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar

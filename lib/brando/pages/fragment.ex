@@ -13,7 +13,7 @@ defmodule Brando.Pages.Fragment do
     plural: "fragments",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Pages
 
   trait Brando.Trait.Creator

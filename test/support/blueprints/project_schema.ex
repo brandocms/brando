@@ -4,7 +4,8 @@ defmodule Brando.BlueprintTest.Project do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   @image_cfg [
     allowed_mimetypes: [
@@ -144,7 +145,8 @@ defmodule Brando.TraitTest.Project do
     domain: "TraitTest",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   @image_cfg [
     allowed_mimetypes: [
@@ -196,7 +198,8 @@ defmodule Brando.BlueprintTest.Property do
     domain: "Projects",
     schema: "Property",
     singular: "property",
-    plural: "properties"
+    plural: "properties",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
 

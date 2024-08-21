@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Nav do
   use BrandoAdmin, :child_live_view
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Content
 
   def mount(_, %{"user_token" => _token, "current_url" => url}, socket) do
@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Nav do
       |> assign(:socket_connected, true)
       |> subscribe()
       |> assign(:current_url, url)
+      |> put_locale()
       |> assign(:menu_sections, BrandoAdmin.Menu.get_menu())
       |> then(&{:ok, &1})
     else
@@ -19,6 +20,16 @@ defmodule BrandoAdmin.Nav do
       |> assign(:menu_sections, [])
       |> then(&{:ok, &1})
     end
+  end
+
+  def put_locale(socket) do
+    current_user = socket.assigns.current_user
+
+    current_user.language
+    |> to_string
+    |> Gettext.put_locale()
+
+    socket
   end
 
   def update(assigns, socket) do

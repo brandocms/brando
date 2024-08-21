@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Navigation.MenuListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Navigation.Menu
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Content
 
   def render(assigns) do

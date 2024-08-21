@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
 

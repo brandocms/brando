@@ -11,7 +11,7 @@ defmodule Brando.Files.File do
     plural: "files",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete

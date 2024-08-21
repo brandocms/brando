@@ -9,7 +9,6 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
   def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: {:array, PolymorphicEmbed}
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
@@ -33,6 +32,22 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(:embeds_many, opts) do
     opts
     |> Map.put_new(:on_replace, :delete)
+    |> Map.drop(@strip_ecto_opts)
+    |> Map.to_list()
+  end
+
+  def to_ecto_opts(PolymorphicEmbed, opts) do
+    opts
+    |> Map.put(:array?, false)
+    |> Map.put(:default, nil)
+    |> Map.drop(@strip_ecto_opts)
+    |> Map.to_list()
+  end
+
+  def to_ecto_opts({:array, PolymorphicEmbed}, opts) do
+    opts
+    |> Map.put(:array?, true)
+    |> Map.put(:default, [])
     |> Map.drop(@strip_ecto_opts)
     |> Map.to_list()
   end

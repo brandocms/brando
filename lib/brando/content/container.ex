@@ -15,7 +15,7 @@ defmodule Brando.Content.Container do
     plural: "containers",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   identifier "[{{ entry.namespace }}] {{ entry.name}}"
   persist_identifier false

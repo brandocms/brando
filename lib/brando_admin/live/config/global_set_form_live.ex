@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Sites.GlobalSetFormLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalSet
   alias BrandoAdmin.Components.Form
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

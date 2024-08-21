@@ -11,7 +11,7 @@ defmodule Brando.Images.Image do
     gettext_module: Brando.Gettext
 
   alias Brando.Images.Focal
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
   alias Brando.Pages
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

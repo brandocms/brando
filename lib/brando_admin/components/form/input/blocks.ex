@@ -4,7 +4,7 @@
 #   # use Phoenix.HTML
 
 #   import BrandoAdmin.Components.Form.Input.Blocks.Utils
-#   import Brando.Gettext
+#   use Gettext, backend: Brando.Gettext
 #   import Ecto.Changeset
 #   import Phoenix.LiveView.TagEngine
 

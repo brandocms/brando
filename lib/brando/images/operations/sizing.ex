@@ -2,7 +2,7 @@ defmodule Brando.Images.Operations.Sizing do
   @moduledoc """
   Sizing operations
   """
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Images
   alias Brando.Images.Focal
   alias BrandoAdmin.Progress

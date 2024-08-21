@@ -13,7 +13,7 @@ defmodule Brando.Content.Template do
     plural: "templates",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   identifier false
   persist_identifier false

@@ -51,7 +51,7 @@ defmodule Brando.CDN do
   """
   require Logger
   import Ecto.Query
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Brando.Worker
   alias ExAws.S3
   alias ExAws.S3.Upload

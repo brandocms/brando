@@ -10,7 +10,7 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
     singular: "<%= Macro.underscore(schema) %>",
     plural: "<%= Macro.underscore(schema) %>s"
 
-  import <%= app_module %>Admin.Gettext
+  use Gettext, backend: <%= app_module %>Admin.Gettext
 
   # trait Brando.Trait.Blocks
   # trait Brando.Trait.Creator

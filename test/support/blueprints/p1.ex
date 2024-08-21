@@ -20,7 +20,8 @@ defmodule Brando.BlueprintTest.P1 do
       domain: "Projects",
       schema: "Contributor",
       singular: "contributor",
-      plural: "contributors"
+      plural: "contributors",
+      gettext_module: Brando.Gettext
 
     trait Brando.Trait.Sequenced
 
@@ -35,7 +36,8 @@ defmodule Brando.BlueprintTest.P1 do
       domain: "Projects",
       schema: "ProjectContributor",
       singular: "project_contributor",
-      plural: "project_contributors"
+      plural: "project_contributors",
+      gettext_module: Brando.Gettext
 
     trait Brando.Trait.Sequenced
 
@@ -52,7 +54,8 @@ defmodule Brando.BlueprintTest.P1 do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    gettext_module: Brando.Gettext
 
   attributes do
     attribute :title, :string, unique: true

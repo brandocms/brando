@@ -10,7 +10,7 @@ defmodule Brando.Videos.Video do
     plural: "videos",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

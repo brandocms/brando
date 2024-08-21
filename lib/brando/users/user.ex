@@ -37,7 +37,7 @@ defmodule Brando.Users.User do
     plural: "users",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Password
   trait Brando.Trait.SoftDelete

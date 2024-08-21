@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Videos.Video
 
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""

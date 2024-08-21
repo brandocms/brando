@@ -4,7 +4,7 @@ defmodule Brando.ErrorHTML do
   """
 
   use BrandoAdmin, :html
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   embed_templates "error_html/*"
 

@@ -3,7 +3,7 @@ defmodule Brando.Trait.Blocks.PreventCircularReferences do
   Ensure that the fragment is not referencing itself.
   """
   use Brando.Trait
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def changeset_mutator(_module, _config, %{changes: %{data: data}} = changeset, _user, _) do
     json = inspect(data)

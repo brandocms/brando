@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   # prop form, :form

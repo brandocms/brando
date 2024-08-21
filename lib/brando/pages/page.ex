@@ -13,10 +13,9 @@ defmodule Brando.Pages.Page do
     plural: "pages",
     gettext_module: Brando.Gettext
 
+  use Gettext, backend: Brando.Gettext
   alias Brando.Pages
   alias Brando.Pages.Fragment
-
-  import Brando.Gettext
 
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds

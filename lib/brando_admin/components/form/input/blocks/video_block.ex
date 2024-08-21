@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form

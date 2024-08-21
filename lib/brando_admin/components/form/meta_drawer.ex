@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.MetaDrawer do
   use BrandoAdmin, :component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Content
 

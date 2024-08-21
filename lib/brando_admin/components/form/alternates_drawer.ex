@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   use BrandoAdmin, :live_component
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input.Entries
 

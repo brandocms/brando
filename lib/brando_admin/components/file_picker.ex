@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.FilePicker do
   use BrandoAdmin, :live_component
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   def update(
         %{

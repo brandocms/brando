@@ -136,15 +136,20 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
-    Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
     Module.register_attribute(__CALLER__.module, :brando_macro_context, accumulate: false)
     Module.put_attribute(__CALLER__.module, :brando_macro_context, nil)
 
-    Module.put_attribute(
-      __CALLER__.module,
-      :gettext_module,
-      Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__)
-    )
+    gettext_module =
+      case Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__) do
+        nil ->
+          Module.concat([:"#{Keyword.fetch!(opts, :application)}Admin", Gettext])
+
+        module ->
+          module
+      end
+
+    Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :gettext_module, gettext_module)
 
     Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
     Module.register_attribute(__CALLER__.module, :json_ld_fields, accumulate: true)
@@ -180,6 +185,7 @@ defmodule Brando.Blueprint do
       @after_compile Brando.Blueprint
 
       use Ecto.Schema
+      require PolymorphicEmbed
       import Ecto.Changeset
 
       import unquote(__MODULE__)
@@ -249,8 +255,8 @@ defmodule Brando.Blueprint do
 
             def changeset(struct, attrs, _user, sequence, _opts) do
               struct
-              |> cast(attrs, [:parent_id, :identifier_id])
-              |> change(sequence: sequence)
+              |> Ecto.Changeset.cast(attrs, [:parent_id, :identifier_id])
+              |> Ecto.Changeset.change(sequence: sequence)
             end
           end
         end
@@ -286,9 +292,9 @@ defmodule Brando.Blueprint do
             @parent_table_name parent_table_name
             def changeset(entry_block, attrs, user, recursive? \\ false) do
               entry_block
-              |> cast(attrs, [:entry_id, :block_id, :sequence])
+              |> Ecto.Changeset.cast(attrs, [:entry_id, :block_id, :sequence])
               |> Brando.Content.Block.maybe_cast_recursive(recursive?, user)
-              |> unique_constraint([:entry, :block],
+              |> Ecto.Changeset.unique_constraint([:entry, :block],
                 name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
               )
             end
@@ -306,6 +312,14 @@ defmodule Brando.Blueprint do
 
         %{name: :updated_at} ->
           []
+
+        # %{type: {:array, PolymorphicEmbed}} = attr ->
+        #   opts = Map.to_list(attr.opts)
+        #   PolymorphicEmbed.polymorphic_embeds_many(attr.name, opts)
+
+        # %{type: PolymorphicEmbed} = attr ->
+        #   opts = Map.to_list(attr.opts)
+        #   PolymorphicEmbed.polymorphic_embeds_one(attr.name, opts)
 
         attr ->
           Ecto.Schema.field(

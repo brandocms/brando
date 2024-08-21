@@ -10,7 +10,7 @@ defmodule Brando.Users.UserConfig do
     plural: "user_configs",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   @primary_key false
   data_layer :embedded

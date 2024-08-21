@@ -7,7 +7,7 @@ defmodule Brando.Navigation.Item do
     plural: "items",
     gettext_module: Brando.Gettext
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

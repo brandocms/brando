@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   use BrandoAdmin.Translator, "forms"
   # use Phoenix.HTML
 
-  import Brando.Gettext
+  use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Form

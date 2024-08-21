@@ -54,7 +54,8 @@ defmodule Brando.MetaRenderTest do
       domain: "Pages",
       schema: "Page",
       singular: "page",
-      plural: "pages"
+      plural: "pages",
+      gettext_module: Brando.Gettext
 
     meta_schema do
       meta_field "title", [:title]

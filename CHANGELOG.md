@@ -1,5 +1,16 @@
 ## 0.54.0
 
+* BREAKING: The new `gettext` update requires some changes to your code.
+  Replace all occurrances of 
+      `import MyAppAdmin.Gettext`
+  with
+      `use Gettext, backend: MyAppAdmin.Gettext`
+
+  Also update your app's `gettext.ex` from
+      `use Gettext, otp_app: :my_app, priv: "priv/gettext/backend"`
+  to
+      `use Gettext.Backend, otp_app: :my_app, priv: "priv/gettext/backend"`
+
 * BREAKING: Consolidated admin `Create` and `Update` views to `Form`. If you have
   any custom logic in your `Create` view, move this to your `Update` view and add a
   conditional check in your mount:
