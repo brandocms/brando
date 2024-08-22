@@ -67,6 +67,7 @@ defmodule Brando.HTML do
 
     url = get_menu_item_url(item) || ""
     text = get_menu_item_text(item)
+    target_blank? = get_menu_item_target_blank(item)
     key = item.key
 
     assigns =
@@ -75,9 +76,16 @@ defmodule Brando.HTML do
       |> assign(:text, text)
       |> assign(:key, key)
       |> assign(:active, Utils.active_path?(assigns.conn, url))
+      |> assign(:target_blank?, target_blank?)
 
     ~H"""
-    <a class={@class} data-link-active={@active} data-menu-item-key={@key} href={@url}>
+    <a
+      class={@class}
+      data-link-active={@active}
+      data-menu-item-key={@key}
+      href={@url}
+      target={@target_blank? && "_blank"}
+    >
       <%= render_slot(@inner_block, @text) %>
     </a>
     """
@@ -141,6 +149,9 @@ defmodule Brando.HTML do
        do: text
 
   defp get_menu_item_text(_), do: nil
+
+  defp get_menu_item_target_blank(%{link: %{link_target_blank: true}}), do: true
+  defp get_menu_item_target_blank(_), do: false
 
   @doc """
   Renders a [Heroicon](https://heroicons.com).
