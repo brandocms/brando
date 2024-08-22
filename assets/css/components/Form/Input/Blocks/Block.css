@@ -344,6 +344,11 @@ button.btn-palette {
 
     .variable[data-size="full"] {
       width: 100%;
+
+      + .variable[data-size="full"] {
+        border-left: none;
+        padding-left: 0;
+      }
     }
 
     .variable[data-size="half"] {
