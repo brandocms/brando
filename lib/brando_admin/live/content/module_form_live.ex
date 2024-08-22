@@ -207,15 +207,6 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   end
 
   def handle_event("validate", %{"module" => module_params}, socket) do
-    require Logger
-
-    Logger.error("""
-    validate event
-
-    #{inspect(module_params, pretty: true, limit: :infinity)}
-
-    """)
-
     %{current_user: current_user, entry: entry} = socket.assigns
     changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
     updated_changeset = %{changeset | action: :update}
@@ -246,15 +237,6 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       else
         updated_changeset
       end
-
-    require Logger
-
-    Logger.error("""
-
-    changeset
-    #{inspect(changeset, pretty: true)}
-
-    """)
 
     case Brando.Content.update_module(changeset, user) do
       {:ok, _entry} ->

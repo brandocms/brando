@@ -4010,15 +4010,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     #
     # Everything here will hopefully improve when we can update poly changesets instead
     # of replacing/inserting new every time.
-
-    require Logger
-
-    Logger.error("""
-    => liquid_render_module_picture_src #{inspect(var_name, pretty: true)}
-
-    #{inspect(vars, pretty: true)}
-    """)
-
     if var_cs = Enum.find(vars, &(Changeset.get_field(&1, :key) == var_name)) do
       image_id = Changeset.get_field(var_cs, :image_id)
       image = Changeset.get_field(var_cs, :image)

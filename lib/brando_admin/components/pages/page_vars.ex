@@ -143,9 +143,6 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     updated_field = current_entries ++ List.wrap(default)
     updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_field)
 
-    require Logger
-    Logger.error(inspect(updated_changeset, pretty: true))
-
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_changeset,
