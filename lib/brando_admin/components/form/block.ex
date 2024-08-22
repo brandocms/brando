@@ -3484,6 +3484,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # message block picker —— special case for empty container.
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     block_count = socket.assigns.block_count
+    module_namespace = socket.assigns.module_namespace
 
     {parent_cid, sequence} =
       (Map.get(value, "container") && {socket.assigns.myself, block_count}) ||
@@ -3492,7 +3493,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
-      filter: %{parent_id: nil},
+      filter: %{parent_id: nil, namespace: module_namespace},
+      module_namespace: module_namespace,
       type: :module,
       sequence: sequence,
       parent_cid: parent_cid
@@ -3517,7 +3519,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
-      filter: %{parent_id: module_id},
+      filter: %{parent_id: module_id, namespace: "all"},
+      module_namespace: "all",
       type: :module_entry,
       sequence: sequence,
       parent_cid: parent_cid

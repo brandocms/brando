@@ -1,21 +1,13 @@
 defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
   use Gettext, backend: Brando.Gettext
-
   alias BrandoAdmin.Components.Content
 
   def mount(socket) do
-    {:ok, assign(socket, active_namespace: nil, show: false)}
+    {:ok, assign(socket, active_namespace: nil, module_namespace: "all", show: false)}
   end
 
   def update(%{event: :refresh_modules}, socket) do
-    require Logger
-
-    Logger.error("""
-    ==> REFRESH MODULES
-    """)
-
     {:ok, assign_modules(socket)}
   end
 
@@ -24,27 +16,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           event: :show_module_picker,
           sequence: sequence,
           parent_cid: parent_cid,
+          module_namespace: module_namespace,
           type: type
         } = assigns,
         socket
       ) do
     socket
-    |> assign(show: true, sequence: sequence, parent_cid: parent_cid, type: type)
+    |> assign(
+      show: true,
+      sequence: sequence,
+      parent_cid: parent_cid,
+      type: type,
+      module_namespace: module_namespace
+    )
     |> maybe_update_modules_by_filter(assigns)
     |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
+    module_namespace = socket.assigns.module_namespace
+
     {:ok, modules} =
       Brando.Content.list_modules(%{
-        filter: %{parent_id: nil},
+        filter: %{parent_id: nil, namespace: module_namespace},
         cache: {:ttl, :infinite}
       })
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:filter, %{parent_id: nil})
+     |> assign(:filter, %{parent_id: nil, namespace: module_namespace})
      |> assign_new(:modules_by_namespace, fn ->
        modules
        |> Brando.Utils.split_by(:namespace)
@@ -180,10 +181,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def handle_event("close_modal", _, socket) do
+    module_namespace = socket.assigns.module_namespace
+
     {:noreply,
      socket
      |> assign(:show, false)
-     |> assign(:filter, %{parent_id: nil})}
+     |> assign(:filter, %{parent_id: nil, namespace: module_namespace})}
   end
 
   def handle_event("toggle_namespace", %{"id" => namespace}, socket) do

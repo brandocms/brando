@@ -378,10 +378,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
     |> maybe_stream(entry_blocks_forms)
     |> assign_templates()
+    |> assign_module_namespace()
     |> reset_position_response_tracker()
     |> maybe_sequence_blocks()
     |> assign(:first_run, false)
     |> then(&{:ok, &1})
+  end
+
+  defp assign_module_namespace(socket) do
+    assign_new(socket, :module_namespace, fn ->
+      opts = socket.assigns.opts
+      opts[:module_namespace] || "all"
+    end)
   end
 
   defp reload_all_blocks(socket) do
@@ -510,11 +518,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # message block picker
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     block_count = socket.assigns.block_count
+    module_namespace = socket.assigns.module_namespace
 
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
-      filter: %{parent_id: nil},
+      filter: %{parent_id: nil, namespace: module_namespace},
+      module_namespace: module_namespace,
       type: :module,
       sequence: block_count + 1,
       parent_cid: socket.assigns.myself
@@ -593,6 +603,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 parent_cid={@myself}
                 parent_uid={}
                 parent_path={[]}
+                module_namespace={@module_namespace}
                 entry={@entry}
                 form={entry_block_form}
                 form_cid={@form_cid}
