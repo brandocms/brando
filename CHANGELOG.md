@@ -1,5 +1,11 @@
 ## 0.54.0
 
+* BREAKING: Run `mix brando.identifiers.sync` to create missing identifiers, 
+  delete orphaned identifiers and update URLs
+
+* BREAKING: If you are updating to the new block system, resave your entries:
+  `mix brando.entries.resave`
+
 * BREAKING: The new `gettext` update requires some changes to your code.
   Replace all occurrances of 
       `import MyAppAdmin.Gettext`
@@ -48,6 +54,10 @@
   identifiers = Enum.map(case.related_entries, &1.identifier)
   case_ids = Enum.map(case.related_entries, &1.identifier.entry_id)
   related_cases = Cases.list_cases!(%{matches: %{ids: ids}})
+
+  # or 
+  identifiers = Enum.map(case.related_entries, &1.identifier)
+  Brando.Content.get_entries_from_identifiers(identifiers, [:categories, :cover])
   ```
 
 * BREAKING: `Brando.Villain.list_villains/0` is now `Brando.Villain.list_blocks/0`
