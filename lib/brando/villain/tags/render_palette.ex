@@ -4,7 +4,7 @@ defmodule Brando.Villain.Tags.RenderPalette do
 
   import NimbleParsec
   alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
+  alias Liquex.Parser.Argument
   alias Liquex.Parser.Tag
 
   @impl true
