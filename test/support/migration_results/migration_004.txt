@@ -17,8 +17,8 @@ defmodule Brando.Migrations.Persons.Person.Blueprint001 do
     create index(:persons, [:language])
 
     create table(:persons_alternates) do
-      add :entry_id, references(:persons, on_delete: :nilify_all)
-      add :linked_entry_id, references(:persons, on_delete: :nilify_all)
+      add :entry_id, references(:persons, on_delete: :delete_all)
+      add :linked_entry_id, references(:persons, on_delete: :delete_all)
       timestamps()
     end
 

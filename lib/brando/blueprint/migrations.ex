@@ -119,7 +119,6 @@ defmodule Brando.Blueprint.Migrations do
     alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
     entries? = opts[:add_entries] != []
     blocks? = opts[:add_blocks] != []
-
     uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
 
     create_table =
@@ -139,89 +138,13 @@ defmodule Brando.Blueprint.Migrations do
       end
 
     {up_alternates, down_alternates} =
-      if alternates? do
-        {"""
-         create table(:#{alternates_source}) do
-           add :entry_id, references(:#{table_name}, on_delete: :nilify_all)
-           add :linked_entry_id, references(:#{table_name}, on_delete: :nilify_all)
-           timestamps()
-         end
-
-         create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
-         """,
-         """
-         drop table(:#{alternates_source})
-         """}
-      else
-        {"", ""}
-      end
+      build_alternates(table_name, alternates_source, alternates?)
 
     {up_entries, down_entries} =
-      if entries? do
-        up =
-          for f <- opts[:add_entries] do
-            entries_source = "#{table_name}_#{f.name}_identifiers"
-
-            """
-            create table(:#{entries_source}) do
-              add :parent_id, references(:#{table_name}, on_delete: :delete_all)
-              add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
-              add :sequence, :integer
-              timestamps()
-            end
-
-            create unique_index(:#{entries_source}, [:parent_id, :identifier_id])
-            """
-          end
-          |> Enum.join("\r\n\r\n")
-
-        down =
-          for f <- opts[:add_entries] do
-            entries_source = "#{table_name}_#{f.name}_identifiers"
-
-            """
-            drop table(:#{entries_source})
-            """
-          end
-          |> Enum.join("\r\n\r\n")
-
-        {up, down}
-      else
-        {"", ""}
-      end
+      build_entries(table_name, opts, entries?)
 
     {up_blocks, down_blocks} =
-      if blocks? do
-        up =
-          for f <- opts[:add_blocks] do
-            join_source = Enum.join([table_name, f.name], "_")
-
-            """
-            create table(:#{join_source}) do
-              add :entry_id, references(:#{table_name}, on_delete: :delete_all)
-              add :block_id, references(:content_blocks, on_delete: :delete_all)
-              add :sequence, :integer
-            end
-
-            create unique_index(:#{join_source}, [:entry_id, :block_id])
-            """
-          end
-          |> Enum.join("\r\n\r\n")
-
-        down =
-          for f <- opts[:add_blocks] do
-            join_source = Enum.join([table_name, f.name], "_")
-
-            """
-            drop table(:#{join_source})
-            """
-          end
-          |> Enum.join("\r\n\r\n")
-
-        {up, down}
-      else
-        {"", ""}
-      end
+      build_blocks(table_name, opts, blocks?)
 
     """
     defmodule #{migration_module} do
@@ -270,24 +193,17 @@ defmodule Brando.Blueprint.Migrations do
 
     alternates_source = "#{table_name}_alternates"
     alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
+    entries? = opts[:add_entries] != []
+    blocks? = opts[:add_blocks] != []
 
     {up_alternates, down_alternates} =
-      if alternates? do
-        {"""
-         create table(:#{alternates_source}) do
-           add :entry_id, references(:#{table_name}, on_delete: :delete_all)
-           add :linked_entry_id, references(:#{table_name}, on_delete: :delete_all)
-           timestamps()
-         end
+      build_alternates(table_name, alternates_source, alternates?)
 
-         create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
-         """,
-         """
-         drop table(:#{alternates_source})
-         """}
-      else
-        {"", ""}
-      end
+    {up_entries, down_entries} =
+      build_entries(table_name, opts, entries?)
+
+    {up_blocks, down_blocks} =
+      build_blocks(table_name, opts, blocks?)
 
     """
     defmodule #{migration_module} do
@@ -301,6 +217,10 @@ defmodule Brando.Blueprint.Migrations do
         #{up_indexes}
 
         #{up_alternates}
+
+        #{up_entries}
+
+        #{up_blocks}
       end
 
       def down do
@@ -311,9 +231,101 @@ defmodule Brando.Blueprint.Migrations do
         #{down_indexes}
 
         #{down_alternates}
+
+        #{down_entries}
+
+        #{down_blocks}
       end
     end
     """
+  end
+
+  defp build_blocks(table_name, opts, blocks?) do
+    if blocks? do
+      up =
+        for f <- opts[:add_blocks] do
+          join_source = Enum.join([table_name, f.name], "_")
+
+          """
+          create table(:#{join_source}) do
+            add :entry_id, references(:#{table_name}, on_delete: :delete_all)
+            add :block_id, references(:content_blocks, on_delete: :delete_all)
+            add :sequence, :integer
+          end
+
+          create unique_index(:#{join_source}, [:entry_id, :block_id])
+          """
+        end
+        |> Enum.join("\r\n\r\n")
+
+      down =
+        for f <- opts[:add_blocks] do
+          join_source = Enum.join([table_name, f.name], "_")
+
+          """
+          drop table(:#{join_source})
+          """
+        end
+        |> Enum.join("\r\n\r\n")
+
+      {up, down}
+    else
+      {"", ""}
+    end
+  end
+
+  defp build_entries(table_name, opts, entries?) do
+    if entries? do
+      up =
+        for f <- opts[:add_entries] do
+          entries_source = "#{table_name}_#{f.name}_identifiers"
+
+          """
+          create table(:#{entries_source}) do
+            add :parent_id, references(:#{table_name}, on_delete: :delete_all)
+            add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
+            add :sequence, :integer
+            timestamps()
+          end
+
+          create unique_index(:#{entries_source}, [:parent_id, :identifier_id])
+          """
+        end
+        |> Enum.join("\r\n\r\n")
+
+      down =
+        for f <- opts[:add_entries] do
+          entries_source = "#{table_name}_#{f.name}_identifiers"
+
+          """
+          drop table(:#{entries_source})
+          """
+        end
+        |> Enum.join("\r\n\r\n")
+
+      {up, down}
+    else
+      {"", ""}
+    end
+  end
+
+  defp build_alternates(table_name, alternates_source, alternates?) do
+    if alternates? do
+      {"""
+       create table(:#{alternates_source}) do
+         add :entry_id, references(:#{table_name}, on_delete: :delete_all)
+         add :linked_entry_id, references(:#{table_name}, on_delete: :delete_all)
+         timestamps()
+       end
+
+       create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
+       """,
+       """
+       drop table(:#{alternates_source})
+       """}
+    else
+      {"", ""}
+    end
   end
 
   def diff_against(current_snapshot, nil) do
