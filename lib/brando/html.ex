@@ -250,7 +250,7 @@ defmodule Brando.HTML do
 
   def fragment(%{fragment: fragment} = assigns) when not is_nil(fragment) do
     ~H"""
-    <%= raw(@fragment.html) %>
+    <%= raw(@fragment.rendered_blocks) %>
     """
   end
 
@@ -263,7 +263,7 @@ defmodule Brando.HTML do
       )
 
     ~H"""
-    <%= raw(@fragment.html) %>
+    <%= raw(@fragment.rendered_blocks) %>
     """
   end
 
