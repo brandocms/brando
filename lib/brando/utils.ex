@@ -538,9 +538,7 @@ defmodule Brando.Utils do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  @spec media_url :: binary | nil
   def media_url, do: Brando.config(:media_url)
-  @spec media_url(binary | nil) :: binary | nil
   def media_url(nil), do: Brando.config(:media_url)
   def media_url(%Ecto.Association.NotLoaded{}), do: ""
 
