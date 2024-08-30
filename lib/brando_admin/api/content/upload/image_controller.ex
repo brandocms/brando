@@ -22,9 +22,14 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
     {cfg, params} =
       case Map.get(params, "config_target") do
         nil ->
-          {Brando.config(Brando.Images)[:default_config] ||
-             Brando.Type.ImageConfig.default_config(),
-           Map.put(params, "config_target", "default")}
+          default_config =
+            Brando.config(Brando.Images)[:default_config] ||
+              Brando.Type.ImageConfig.default_config()
+
+          default_config_struct =
+            maybe_struct(Brando.Type.ImageConfig, default_config)
+
+          {default_config_struct, Map.put(params, "config_target", "default")}
 
         config_target ->
           {:ok, image_cfg} = Brando.Images.get_config_for(config_target)
@@ -84,4 +89,7 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
     |> Enum.map(fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
     |> Enum.into(%{})
   end
+
+  defp maybe_struct(_struct_type, %Brando.Type.ImageConfig{} = config), do: config
+  defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end
