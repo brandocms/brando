@@ -2,6 +2,7 @@ import Config
 
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   secret_key_base: System.get_env("BRANDO_SECRET_KEY_BASE"),
+  http: [:inet6, port: System.get_env("PORT")],
   url: [
     scheme: System.get_env("BRANDO_URL_SCHEME"),
     host: System.get_env("BRANDO_URL_HOST"),
