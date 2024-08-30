@@ -26,7 +26,7 @@ var MOONWALK_OVERRIDE_STYLES = `
 
 function forceLazyloadAllImages(target = document) {
   // ensure target is an element, not comment
-  if (target.nodeType !== 1) {
+  if (![1, 9, 11].includes(target.nodeType)) {
     return
   }
   target
@@ -50,7 +50,7 @@ function forceLazyloadAllImages(target = document) {
 }
 
 function forceLazyloadAllVideos(target = document) {
-  if (target.nodeType !== 1) {
+  if (![1, 9, 11].includes(target.nodeType)) {
     return
   }
 
