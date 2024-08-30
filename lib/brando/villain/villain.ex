@@ -227,7 +227,9 @@ defmodule Brando.Villain do
   end
 
   def parse_and_render(html, context) do
-    with {:ok, parsed_doc} <- Liquex.parse(html, Brando.Villain.LiquexParser),
+    liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+
+    with {:ok, parsed_doc} <- Liquex.parse(html, liquex_parser),
          {result, _} <- Liquex.Render.render!([], parsed_doc, context) do
       Enum.join(result)
     else
