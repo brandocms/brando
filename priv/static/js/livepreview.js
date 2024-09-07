@@ -13,6 +13,7 @@ var MOONWALK_OVERRIDE_STYLES = `
       .is-live-preview [data-moonwalk],
       .is-live-preview [data-moonwalk-run], 
       .is-live-preview [data-moonwalk-section], 
+      .is-live-preview [data-moonwalk-children] > *,
       .is-live-preview [b-section] {
         opacity: 1 !important;
         transform: none !important;
