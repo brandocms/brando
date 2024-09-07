@@ -690,7 +690,14 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
+            (placeholder not in [
+               :svg,
+               :dominant_color,
+               :dominant_color_faded,
+               "svg",
+               "dominant_color",
+               "dominant_color_faded"
+             ] && placeholder) ||
               k,
             opts
           )
