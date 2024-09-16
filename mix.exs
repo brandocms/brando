@@ -56,7 +56,7 @@ defmodule Brando.Mixfile do
       {:oban, "~> 2.18.0"},
 
       # sitemaps
-      {:sitemapper, "0.8.0"},
+      {:sitemapper, "~> 0.9.0"},
 
       # images
       {:fastimage, "~> 1.0.0-rc4"},

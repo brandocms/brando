@@ -159,7 +159,9 @@ defmodule Brando.Villain do
   end
 
   def get_base_context(entry) do
-    locale = Gettext.get_locale(Brando.gettext())
+    # the entry has no language set, so we fall back to the default language
+    # locale = Gettext.get_locale(Brando.gettext())
+    locale = Brando.config(:default_language)
 
     do_get_base_context(locale)
     |> add_to_context("language", locale)
