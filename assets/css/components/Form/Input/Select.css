@@ -29,10 +29,24 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
 .selected-labels {
   @space margin-bottom 5px;
+
+  &[data-sequenced] {
+    .selected-label {
+      cursor: move;
+      &:hover {
+        background-color: lightgoldenrodyellow;
+      }
+    }
+  }
+
   .selected-label {
     display: flex;
-    align-items: baseline;
-    padding: 3px 0px;
+    align-items: baseline;    
+    user-select: none;
+    width: fit-content;
+    margin-left: -5px;
+    padding: 3px 10px 3px 5px;
+    border-radius: 16px;
 
     .modal-body & {
       @space padding-y 5px;
