@@ -308,6 +308,8 @@ defmodule Brando.HTML do
   def replace_csrf_token(html) when is_binary(html),
     do: String.replace(html, "$csrftoken", Plug.CSRFProtection.get_csrf_token())
 
+  def replace_csrf_token(html), do: html
+
   def replace_timestamp(html) when is_binary(html) do
     timestamp =
       DateTime.utc_now()
