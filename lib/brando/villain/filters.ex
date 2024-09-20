@@ -804,6 +804,14 @@ defmodule Brando.Villain.Filters do
     Brando.HTML.zero_pad(number, length)
   end
 
+  def timezone(date, "default", _) do
+    DateTime.shift_zone!(date, Brando.timezone())
+  end
+
+  def timezone(date, timezone, _) do
+    DateTime.shift_zone!(date, timezone)
+  end
+
   @doc """
   Converts `value` timestamp into another date `format`.
   The format for this syntax is the same as strftime. The input uses the same format as Ruby’s Time.parse.
@@ -817,8 +825,7 @@ defmodule Brando.Villain.Filters do
   """
 
   def date(%Date{} = value, format, _) do
-    value
-    |> Utils.Datetime.format_datetime(format, nil)
+    Utils.Datetime.format_datetime(value, format, nil)
   end
 
   def date(%DateTime{} = value, format, _) do
