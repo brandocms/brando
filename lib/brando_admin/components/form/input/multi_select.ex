@@ -512,29 +512,41 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         data-sortable-selector=".selected-label"
         data-sortable-dispatch-event="true"
       >
-        <.inputs_for :let={selected_option} field={@field}>
-          <.selected_label
-            :let={opt}
-            selected_option={selected_option}
-            selected_options={@selected_options}
-            input_options={@input_options}
-            relation_type={@relation_type}
-            relation_key={@relation_key}
-          >
-            <.get_label opt={opt} />
-            <%= if @sequenced? do %>
+        <.inputs_for :let={selected_option} field={@field} skip_hidden>
+          <%= if Ecto.Changeset.get_change(selected_option.source, :marked_as_deleted) in [false, nil] do %>
+            <.selected_label
+              :let={opt}
+              selected_option={selected_option}
+              input_options={@input_options}
+              relation_type={@relation_type}
+              relation_key={@relation_key}
+            >
+              <.get_label opt={opt} />
+
               <input
                 type="hidden"
-                name={"#{@field.form.name}[#{@sequenced?.sort_param}][]"}
+                name={selected_option[:id].name}
+                value={selected_option[:id].value}
+              />
+              <input
+                type="hidden"
+                name={selected_option[:_persistent_id].name}
                 value={selected_option.index}
               />
-            <% end %>
-            <Input.input
-              :for={efield <- @relation_fields}
-              type={:hidden}
-              field={selected_option[efield]}
-            />
-          </.selected_label>
+              <%= if @sequenced? do %>
+                <input
+                  type="hidden"
+                  name={"#{@field.form.name}[#{@sequenced?.sort_param}][]"}
+                  value={selected_option.index}
+                />
+              <% end %>
+              <Input.input
+                :for={efield <- @relation_fields}
+                type={:hidden}
+                field={selected_option[efield]}
+              />
+            </.selected_label>
+          <% end %>
         </.inputs_for>
       </div>
     <% end %>
@@ -779,6 +791,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     count =
       selected_options
       |> Enum.reject(&Ecto.Changeset.get_change(&1, :marked_as_deleted))
+      |> Enum.reject(&(&1.action == :replace))
       |> Enum.count()
 
     gettext("%{count} selected", count: count)
