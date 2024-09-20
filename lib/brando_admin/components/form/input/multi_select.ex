@@ -506,7 +506,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         id={"#{@field.id}-selected-options"}
         class="selected-labels"
         data-sequenced={@sequenced? != false}
-        phx-hook="Brando.SortableAssocs"
+        phx-hook={@sequenced? != false && "Brando.SortableAssocs"}
         data-sortable-id={"sortable-#{@field.id}-identifiers"}
         data-sortable-handle=".selected-label"
         data-sortable-selector=".selected-label"
@@ -533,7 +533,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 name={selected_option[:_persistent_id].name}
                 value={selected_option.index}
               />
-              <%= if @sequenced? do %>
+              <%= if @sequenced? && @sequenced?.sort_param do %>
                 <input
                   type="hidden"
                   name={"#{@field.form.name}[#{@sequenced?.sort_param}][]"}

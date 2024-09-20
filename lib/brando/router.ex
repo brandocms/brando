@@ -108,6 +108,9 @@ defmodule Brando.Router do
             live "/content/containers/update/:entry_id", ContainerFormLive, :update
             live "/content/modules", ModuleListLive
             live "/content/modules/update/:entry_id", ModuleFormLive, :update
+            live "/content/module_sets", ModuleSetListLive
+            live "/content/module_sets/create", ModuleSetFormLive, :create
+            live "/content/module_sets/update/:entry_id", ModuleSetFormLive, :update
             live "/content/palettes", PaletteListLive
             live "/content/palettes/create", PaletteFormLive, :create
             live "/content/palettes/update/:entry_id", PaletteFormLive, :update

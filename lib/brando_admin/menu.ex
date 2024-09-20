@@ -279,6 +279,10 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/content/modules"
               },
               %{
+                name: gettext("Block module sets"),
+                url: "/admin/config/content/module_sets"
+              },
+              %{
                 name: gettext("Containers"),
                 url: "/admin/config/content/containers"
               },

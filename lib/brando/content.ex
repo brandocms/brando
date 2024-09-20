@@ -33,6 +33,7 @@ defmodule Brando.Content do
   alias Brando.Content.Block
   alias Brando.Content.Container
   alias Brando.Content.Module
+  alias Brando.Content.ModuleSet
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
@@ -402,6 +403,37 @@ defmodule Brando.Content do
   mutation :update, Container
   mutation :delete, Container
   mutation :duplicate, {Container, change_fields: [:name]}
+
+  ## Module Sets
+  ##
+
+  query(:list, ModuleSet, do: fn query -> from(q in query) end)
+
+  filters ModuleSet do
+    fn
+      {:title, title}, query ->
+        from(q in query, where: ilike(q.title, ^"%#{title}%"))
+    end
+  end
+
+  query(:single, ModuleSet, do: fn query -> from(q in query) end)
+
+  matches ModuleSet do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:title, title}, query ->
+        from(t in query,
+          where: t.title == ^title
+        )
+    end
+  end
+
+  mutation :create, ModuleSet
+  mutation :update, ModuleSet
+  mutation :delete, ModuleSet
+  mutation :duplicate, {ModuleSet, change_fields: [:title]}
 
   def list_identifiers do
     query =
