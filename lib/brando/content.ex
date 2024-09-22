@@ -427,6 +427,18 @@ defmodule Brando.Content do
         from(t in query,
           where: t.title == ^title
         )
+
+      {:filter_modules, %{parent_id: nil}}, query ->
+        from t in query,
+          join: msm in assoc(t, :module_set_modules),
+          join: m in assoc(msm, :module),
+          where: is_nil(m.parent_id)
+
+      {:filter_modules, %{parent_id: parent_id}}, query ->
+        from t in query,
+          join: msm in assoc(t, :module_set_modules),
+          join: m in assoc(msm, :module),
+          where: m.parent_id == ^parent_id
     end
   end
 

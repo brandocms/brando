@@ -36,11 +36,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   def update(assigns, socket) do
     module_namespace = socket.assigns.module_namespace
 
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        filter: %{parent_id: nil, namespace: module_namespace},
-        cache: {:ttl, :infinite}
-      })
+    {:ok, modules} = list_modules_by_namespace(module_namespace)
 
     {:ok,
      socket
@@ -53,8 +49,54 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
      end)}
   end
 
-  def maybe_update_modules_by_filter(socket, %{filter: filter}) do
+  defp list_modules_by_namespace({:set, set_title}) do
+    {:ok, set} =
+      Brando.Content.get_module_set(%{
+        matches: %{title: set_title},
+        cache: {:ttl, :infinite}
+      })
+
+    {:ok, Enum.map(set.module_set_modules, & &1.module)}
+  end
+
+  defp list_modules_by_namespace(module_namespace) do
+    Brando.Content.list_modules(%{
+      filter: %{parent_id: nil, namespace: module_namespace},
+      cache: {:ttl, :infinite}
+    })
+  end
+
+  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: {:set, set_title}} = filter}) do
+    {:ok, set} =
+      Brando.Content.get_module_set(%{
+        matches: %{title: set_title, filter_modules: filter},
+        preload: [module_set_modules: :module],
+        cache: {:ttl, :infinite}
+      })
+
+    modules = Enum.map(set.module_set_modules, & &1.module)
+
+    modules_by_namespace =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    assign(socket, :modules_by_namespace, modules_by_namespace)
+  end
+
+  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: _} = filter}) do
     {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
+
+    modules_by_namespace =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    assign(socket, :modules_by_namespace, modules_by_namespace)
+  end
+
+  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: parent_id}}) do
+    {:ok, modules} = Brando.Content.list_modules(%{filter: %{parent_id: parent_id}})
 
     modules_by_namespace =
       modules
