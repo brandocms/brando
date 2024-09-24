@@ -425,6 +425,20 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  List all entries with blocks using modules
+  """
+  def list_module_usage do
+    {:ok, module_ids} = Content.list_modules(%{select: [:id], with_deleted: false})
+
+    Enum.map(module_ids, fn %{id: module_id} ->
+      module_id
+      |> list_block_ids_using_module()
+      |> list_root_block_ids_by_source()
+      |> list_entry_ids_for_root_blocks_by_source()
+    end)
+  end
+
+  @doc """
   List all entries with blocks a module is used in
   """
   def list_module_usage(module_id) do
@@ -442,13 +456,33 @@ defmodule Brando.Villain do
       from m in Content.Module,
         left_join: b in Content.Block,
         on: b.module_id == m.id,
-        where: is_nil(b.id),
+        where: is_nil(b.id) and is_nil(m.deleted_at),
         order_by: [asc: m.namespace, asc: m.name],
         select: m
 
     query
     |> Brando.repo().all()
     |> Enum.map(&%{name: &1.name, namespace: &1.namespace, id: &1.id})
+  end
+
+  @doc """
+  List all "orphaned" blocks, i.e. blocks that are not associated with any entry
+  """
+  def list_orphaned_blocks do
+    blocks_query =
+      from(b in Brando.Content.Block,
+        as: :block,
+        select: %{id: b.id, source: b.source},
+        where:
+          not exists(
+            from(j in "pages_blocks",
+              select: [:block_id],
+              where: j.block_id == parent_as(:block).id
+            )
+          )
+      )
+
+    Brando.repo().all(blocks_query)
   end
 
   @doc """
