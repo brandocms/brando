@@ -66,7 +66,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     })
   end
 
-  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: {:set, set_title}} = filter}) do
+  def maybe_update_modules_by_filter(socket, %{
+        filter: %{parent_id: nil, namespace: {:set, set_title}} = filter
+      }) do
     {:ok, set} =
       Brando.Content.get_module_set(%{
         matches: %{title: set_title, filter_modules: filter},
