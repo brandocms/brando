@@ -469,6 +469,7 @@ defmodule Brando.Query do
 
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
   def with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
+  def with_select(query, {:raw, fields}), do: from(q in query, select: ^fields)
   def with_select(query, fields), do: from(q in query, select: map(q, ^fields))
 
   # def with_exclude(query, fields),
