@@ -41,7 +41,12 @@ defmodule Brando.Sites.SEO do
   end
 
   relations do
-    relation :redirects, :embeds_many, module: Brando.Sites.Redirect, on_replace: :delete
+    relation :redirects,
+             :embeds_many,
+             module: Brando.Sites.Redirect,
+             sort_param: :sort_redirects_ids,
+             drop_param: :drop_redirects_ids,
+             on_replace: :delete
   end
 
   forms do
