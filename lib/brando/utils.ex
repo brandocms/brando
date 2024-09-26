@@ -885,6 +885,8 @@ defmodule Brando.Utils do
   iex(1)> Brando.Utils.human_size(100000000)
   "95 MB"
   """
+  def human_size(nil), do: "0 B"
+
   def human_size(size) when size < @kb_size * 10,
     do: "#{human_spaced_number(size)} B"
 
