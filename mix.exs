@@ -75,7 +75,7 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.4"},
 
       # Misc
-      {:req, "~> 0.5"},
+      {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 0.26.1"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
