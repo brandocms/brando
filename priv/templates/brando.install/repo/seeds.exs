@@ -112,8 +112,7 @@ example_module = %Brando.Content.Module{
   ],
   sequence: 0,
   svg: nil,
-  vars: [],
-  wrapper: nil
+  vars: []
 }
 
 m1 = <%= application_module %>.Repo.insert!(example_module)
