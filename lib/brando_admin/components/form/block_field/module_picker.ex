@@ -184,7 +184,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                     phx-target={@myself}
                     phx-value-module-id={module.id}
                   >
-                    <figure>
+                    <figure class={!module.svg && "empty-preview"}>
                       <%= if module.svg do %>
                         <img src={"data:image/svg+xml;base64,#{module.svg}"} />
                       <% end %>
@@ -208,7 +208,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                 phx-target={@myself}
                 phx-value-module-id={module.id}
               >
-                <figure>
+                <figure class={!module.svg && "empty-preview"}>
                   <%= module.svg |> raw %>
                 </figure>
                 <div class="info">

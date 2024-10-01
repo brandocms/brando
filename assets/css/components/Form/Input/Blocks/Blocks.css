@@ -177,23 +177,6 @@ section.alert.danger {
   }
 }
 
-.module-button {
-  border: none;
-  border-bottom: 1px solid #f0f0f0;
-
-  figure {
-    min-width: 115px;
-    img {
-      width: 115px;
-      height: auto;
-    }
-  }
-
-  &:hover {
-    background-color: var(--brando-color-peach);
-  }
-}
-
 .builtin-button {
   @fontsize button;
   border: 1px solid #666;
@@ -255,6 +238,36 @@ section.alert.danger {
       @space padding-top 3px;
       @fontsize sm;
     }
+  }
+}
+
+.module-button {
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+
+  figure {
+    min-width: 115px;
+
+    &.empty-preview {
+      min-width: 35px;
+    }
+
+    img {
+      width: 115px;
+      height: auto;
+    }
+  }
+
+  .info {
+    .name {
+      font-weight: bold;
+      font-size: 18px;
+      @font main;
+    }
+  }
+
+  &:hover {
+    background-color: var(--brando-color-peach);
   }
 }
 
