@@ -82,15 +82,17 @@ defmodule BrandoAdmin.Components.Content do
       end
 
     focal = assigns.image && Map.get(assigns.image, :focal, %{x: 50, y: 50})
+    orientation = Brando.Images.get_image_orientation(assigns.image)
 
     assigns =
       assigns
       |> assign(:path, path)
       |> assign(:focal, focal)
+      |> assign(:orientation, orientation)
 
     ~H"""
     <%= if @image do %>
-      <div class="image-content">
+      <div class="image-content" data-orientation={@orientation}>
         <img
           width={@image.width}
           height={@image.height}
