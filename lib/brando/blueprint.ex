@@ -103,6 +103,7 @@ defmodule Brando.Blueprint do
   ```
 
   """
+
   alias Brando.Exception.BlueprintError
   alias Ecto.Changeset
 
@@ -152,8 +153,6 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :gettext_module, gettext_module)
 
     Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
-    Module.register_attribute(__CALLER__.module, :json_ld_fields, accumulate: true)
-    Module.register_attribute(__CALLER__.module, :json_ld_schema, accumulate: false)
     Module.register_attribute(__CALLER__.module, :meta_fields, accumulate: true)
     Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
     Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
@@ -185,6 +184,8 @@ defmodule Brando.Blueprint do
       @after_compile Brando.Blueprint
 
       use Ecto.Schema
+      use Brando.Blueprint.JSONLD
+
       require PolymorphicEmbed
       import Ecto.Changeset
 
@@ -194,7 +195,6 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).Attributes
       import unquote(__MODULE__).Forms
       import unquote(__MODULE__).Identifier
-      import unquote(__MODULE__).JSONLD
       import unquote(__MODULE__).Listings
       import unquote(__MODULE__).Listings.Components
       import unquote(__MODULE__).Meta

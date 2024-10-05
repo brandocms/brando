@@ -1,22 +1,19 @@
 defmodule BrandoAdmin.Components.Form.Block do
-  alias Brando.Content.Var
   use BrandoAdmin, :live_component
+  use Gettext, backend: Brando.Gettext
+  import Phoenix.LiveView.TagEngine
+  import PolymorphicEmbed.HTML.Component
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
-
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
-
   alias Brando.Content.BlockIdentifier
-
-  use Gettext, backend: Brando.Gettext
-  import Phoenix.LiveView.TagEngine
-  import PolymorphicEmbed.HTML.Component
+  alias Brando.Content.Var
 
   def mount(socket) do
     {:ok,
@@ -2675,7 +2672,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-question-mark-circle" />
         </div>
         <button
-          :if={@is_ref? == false && @has_children? == false}
+          :if={@is_ref? == false}
           type="button"
           phx-value-block_uid={@uid}
           class="block-action duplicate"
@@ -2931,7 +2928,23 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     if has_children? do
       # if the block has children we need to fetch their changesets
-      # todo
+      parent_cid = socket.assigns.parent_cid
+
+      require Logger
+
+      Logger.error("""
+
+      assigns:
+      #{inspect(Map.keys(socket.assigns), pretty: true, width: 0)}
+
+      changesets:
+      #{inspect(socket.assigns.changesets, pretty: true, width: 0)}
+
+      """)
+
+      #
+
+      send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
     else
       # if not, we can just duplicate the block
       parent_cid = socket.assigns.parent_cid

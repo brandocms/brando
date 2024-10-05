@@ -15,7 +15,6 @@ defmodule Brando.HTML do
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
   defdelegate picture(assigns), to: Brando.HTML.Images
   defdelegate render_json_ld(assigns), to: Brando.JSONLD.HTML
-  defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(assigns), to: Brando.Meta.HTML
   defdelegate video(assigns), to: Brando.HTML.Video
 

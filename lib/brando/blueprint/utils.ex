@@ -106,4 +106,58 @@ defmodule Brando.Blueprint.Utils do
       end
     end
   end
+
+  @doc """
+  Processes a list of values and returns the first non-nil value. If a value is a tuple with `:strip_tags` as the first element, it sanitizes the value by stripping HTML tags.
+
+  ## Parameters
+
+    - `values`: A list of values to process.
+
+  ## Returns
+
+    - The first non-nil value from the list, with HTML tags stripped if the value is a tuple with `:strip_tags`.
+
+  ## Examples
+      iex> fallback([nil, {:strip_tags, "<p>text</p>"}, "default"])
+      "text"
+
+      iex> fallback([nil, nil, "default"])
+      "default"
+
+      iex> fallback([nil, {:strip_tags, nil}, "default"])
+      "default"
+  """
+  def fallback(values) when is_list(values) do
+    Enum.reduce_while(values, nil, fn
+      {:strip_tags, value}, _ ->
+        case value do
+          nil -> {:cont, nil}
+          _ -> {:halt, HtmlSanitizeEx.strip_tags(value)}
+        end
+
+      nil, _ ->
+        {:cont, nil}
+
+      value, _ ->
+        {:halt, value}
+    end)
+  end
+
+  # TODO: Deprecate this function
+  def fallback(data, keys) when is_list(keys) do
+    Enum.reduce_while(keys, nil, fn
+      {:strip_tags, key}, _ ->
+        case Map.get(data, key) do
+          nil -> {:cont, nil}
+          val -> {:halt, HtmlSanitizeEx.strip_tags(val)}
+        end
+
+      key, _ ->
+        case Map.get(data, key) do
+          nil -> {:cont, nil}
+          val -> {:halt, val}
+        end
+    end)
+  end
 end

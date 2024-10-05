@@ -69,11 +69,13 @@ defmodule Brando.JSONLDRenderTest do
 
     extracted_json =
       ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
-      |> Regex.run(rendered_comp, capture: :all_but_first)
-      |> List.first()
-      |> Jason.decode!()
+      |> Regex.scan(rendered_comp, capture: :all_but_first)
+      |> Enum.map(&Jason.decode!/1)
 
-    assert extracted_json == %{
+    identity_json = Enum.at(extracted_json, 0)
+    article_json = Enum.at(extracted_json, 1)
+
+    assert identity_json == %{
              "@context" => "http://schema.org",
              "@id" => "http://localhost/#identity",
              "@type" => "Organization",
@@ -82,7 +84,8 @@ defmodule Brando.JSONLDRenderTest do
                "addressCountry" => "NO",
                "addressLocality" => "Oslo",
                "addressRegion" => "Oslo",
-               "postalCode" => "0000"
+               "postalCode" => "0000",
+               "streetAddress" => "Testveien 1"
              },
              "alternateName" => "Shortform name",
              "description" => "Fallback meta description",
@@ -96,7 +99,26 @@ defmodule Brando.JSONLDRenderTest do
              },
              "name" => "Organization name",
              "sameAs" => ["https://instagram.com/test", "https://facebook.com/test"],
-             "url" => "https://www.domain.tld"
+             "url" => "https://www.domain.tld",
+             "telephone" => "+47 00 00 00 00"
+           }
+
+    assert article_json == %{
+             "@context" => "http://schema.org",
+             "@type" => "Article",
+             "author" => %{"@id" => "http://localhost/#identity"},
+             "copyrightHolder" => %{"@id" => "http://localhost/#identity"},
+             "copyrightYear" => 2000,
+             "creator" => %{"@id" => "http://localhost/#identity"},
+             "dateModified" => "2000-01-01T23:30:00Z",
+             "datePublished" => "2000-01-01T23:00:00Z",
+             "description" => "Meta description",
+             "headline" => "Title of page",
+             "inLanguage" => "no",
+             "mainEntityOfPage" => "http://localhost",
+             "name" => "Title of page",
+             "publisher" => %{"@id" => "http://localhost/#identity"},
+             "url" => "http://localhost"
            }
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
@@ -134,26 +156,28 @@ defmodule Brando.JSONLDRenderTest do
     extracted_json =
       ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
       |> Regex.run(rendered_comp, capture: :all_but_first)
-      |> List.first()
-      |> Jason.decode!()
+      |> Enum.map(&Jason.decode!/1)
 
-    assert extracted_json == %{
-             "@context" => "http://schema.org",
-             "@id" => "http://localhost/#identity",
-             "@type" => "Organization",
-             "address" => %{
-               "@type" => "PostalAddress",
-               "addressCountry" => "NO",
-               "addressLocality" => "Oslo",
-               "addressRegion" => "Oslo",
-               "postalCode" => "0000"
-             },
-             "alternateName" => "Shortform name",
-             "description" => "Fallback meta description",
-             "email" => "mail@domain.tld",
-             "name" => "Organization name",
-             "sameAs" => ["https://instagram.com/test", "https://facebook.com/test"],
-             "url" => "https://www.domain.tld"
+    breadcrumbs_json = Enum.at(extracted_json, 0)
+
+    assert breadcrumbs_json == %{
+             "@context" => "https://schema.org",
+             "@type" => "BreadcrumbList",
+             "itemListElement" => [
+               %{"@type" => "ListItem", "item" => "/", "name" => "Home", "position" => 1},
+               %{
+                 "@type" => "ListItem",
+                 "item" => "/about",
+                 "name" => "About",
+                 "position" => 2
+               },
+               %{
+                 "@type" => "ListItem",
+                 "item" => "/about/contact",
+                 "name" => "Contact",
+                 "position" => 3
+               }
+             ]
            }
   end
 end

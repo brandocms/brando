@@ -159,22 +159,6 @@ defmodule Brando.Blueprint.Meta do
     )
   end
 
-  def fallback(data, keys) when is_list(keys) do
-    Enum.reduce_while(keys, nil, fn
-      {:strip_tags, key}, _ ->
-        case Map.get(data, key) do
-          nil -> {:cont, nil}
-          val -> {:halt, HtmlSanitizeEx.strip_tags(val)}
-        end
-
-      key, _ ->
-        case Map.get(data, key) do
-          nil -> {:cont, nil}
-          val -> {:halt, val}
-        end
-    end)
-  end
-
   def encode_locale("en"), do: "en_US"
   def encode_locale("no"), do: "nb_NO"
   def encode_locale("nb"), do: "nb_NO"

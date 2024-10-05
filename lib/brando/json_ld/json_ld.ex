@@ -2,39 +2,59 @@ defmodule Brando.JSONLD do
   @moduledoc """
   JSON-LD is a lightweight Linked Data format.
   """
+  def extract_json_ld(module, data, extra_fields \\ []) do
+    json_ld_data =
+      module
+      |> Spark.Dsl.Extension.get_entities(:json_ld_schemas)
+      |> List.first()
 
-  @doc """
-  Allows us to have same formatting when adding additional json_ld fields in a controller
-  """
-  def convert_format(fields) do
-    Enum.reduce(fields, [], fn
-      {name, {:references, target}}, acc ->
-        [{name, {:references, target}} | acc]
+    fields = json_ld_data.fields ++ extra_fields
+    schema = json_ld_data.schema
 
-      {name, :string, path}, acc when is_list(path) ->
-        [{name, {:string, path}} | acc]
+    Enum.reduce(fields, struct(schema), fn
+      %{name: name, type: :identity, value_fn: _}, acc ->
+        result = %{"@id": "#{Brando.Utils.hostname()}/#identity"}
+        Map.put(acc, name, result)
 
-      {name, :string, path, mutation_function}, acc when is_list(path) ->
-        [{name, {{:string, path}, {:mutator, mutation_function}}} | acc]
+      %{name: name, type: :datetime, value_fn: value_fn}, acc ->
+        result =
+          data
+          |> value_fn.()
+          |> Brando.JSONLD.to_datetime()
 
-      {name, :string, mutation_function}, acc when is_function(mutation_function) ->
-        [{name, {:string, mutation_function}} | acc]
+        Map.put(acc, name, result)
 
-      {name, schema, nil}, _acc ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a populator function - #{name} - #{inspect(schema)}"
+      %{name: name, type: :date, value_fn: value_fn}, acc ->
+        result =
+          data
+          |> value_fn.()
+          |> Brando.JSONLD.to_date()
 
-      {name, schema, _}, _acc when is_binary(schema) ->
-        raise "=> JSONLD/Schema >> Populating a field as schema requires a schema as second arg - #{name} - #{inspect(schema)}"
+        Map.put(acc, name, result)
 
-      {name, schema, path}, acc when is_list(path) ->
-        [{name, {schema, path}} | acc]
+      %{name: name, type: :image, value_fn: value_fn}, acc ->
+        result = Brando.JSONLD.Schema.ImageObject.build(value_fn.(data))
+        Map.put(acc, name, result)
 
-      {name, schema, populator_function}, acc ->
-        [{name, {schema, populator_function}} | acc]
+      %{name: name, type: :current_url, value_fn: _}, acc ->
+        result = data.__meta__.current_url
+        Map.put(acc, name, result)
 
-      {name, schema, path, mutation_function}, acc
-      when not is_binary(schema) and is_list(path) ->
-        [{name, {{schema, path}, mutation_function}} | acc]
+      %{name: name, type: :language, value_fn: _}, acc ->
+        result = Map.get(data, :language, get_in(data, [Access.key(:__meta__, %{}), :language]))
+        Map.put(acc, name, result)
+
+      %{name: name, type: :string, value_fn: value_fn}, acc ->
+        result = value_fn.(data)
+        Map.put(acc, name, result)
+
+      %{name: name, type: :integer, value_fn: value_fn}, acc ->
+        result = value_fn.(data)
+        Map.put(acc, name, result)
+
+      %{name: name, type: schema, value_fn: value_fn}, acc ->
+        result = schema.build(value_fn.(data))
+        Map.put(acc, name, result)
     end)
   end
 
@@ -46,23 +66,6 @@ defmodule Brando.JSONLD do
     map = to_slim_map(struct)
     Jason.encode!(map)
   end
-
-  @doc """
-  Convert date to ISO friendly string
-  """
-  @spec to_date(date :: any) :: binary
-  def to_date(date),
-    do: Calendar.strftime(date, "%Y-%m-%d")
-
-  @doc """
-  Convert datetime to ISO friendly string
-  """
-  @spec to_datetime(datetime :: any) :: binary
-  def to_datetime(%NaiveDateTime{} = datetime),
-    do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
-
-  def to_datetime(%DateTime{} = datetime),
-    do: datetime |> DateTime.to_iso8601()
 
   defp to_slim_map(%_{} = struct) do
     for {k, v} <- Map.from_struct(struct),
@@ -93,4 +96,21 @@ defmodule Brando.JSONLD do
   end
 
   defp slim_map(value), do: value
+
+  @doc """
+  Convert date to ISO friendly string
+  """
+  @spec to_date(date :: any) :: binary
+  def to_date(date),
+    do: Calendar.strftime(date, "%Y-%m-%d")
+
+  @doc """
+  Convert datetime to ISO friendly string
+  """
+  @spec to_datetime(datetime :: any) :: binary
+  def to_datetime(%NaiveDateTime{} = datetime),
+    do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  def to_datetime(%DateTime{} = datetime),
+    do: datetime |> DateTime.to_iso8601()
 end

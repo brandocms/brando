@@ -12,16 +12,18 @@ defmodule Brando.JSONLD.HTML do
   @doc """
   Renders all JSON LD
   """
-  def render_json_ld(%{conn: %{assigns: %{language: language} = conn}} = assigns) do
+  def render_json_ld(assigns) do
+    conn = assigns.conn
+    language = conn.assigns.language
     cached_identity = Brando.Cache.Identity.get(language)
 
     if map_size(cached_identity) > 0 do
       cached_identity_type = String.to_existing_atom(cached_identity.type)
       cached_seo = Brando.Cache.SEO.get(language)
 
-      breadcrumbs = render_json_ld(:breadcrumbs, conn)
-      identity = render_json_ld(cached_identity_type, {cached_identity, cached_seo})
-      entity = render_json_ld(:entity, conn)
+      breadcrumbs = output_json_ld(:breadcrumbs, conn)
+      identity = output_json_ld(cached_identity_type, {cached_identity, cached_seo})
+      entity = output_json_ld(:entity, conn)
 
       assigns =
         assigns
@@ -51,7 +53,7 @@ defmodule Brando.JSONLD.HTML do
     end
   end
 
-  def render_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
+  def output_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
     breadcrumb_json =
       Enum.map(Enum.with_index(breadcrumbs), fn {{name, url}, idx} ->
         JSONLD.Schema.ListItem.build(idx + 1, name, url)
@@ -62,7 +64,7 @@ defmodule Brando.JSONLD.HTML do
     raw(breadcrumb_json)
   end
 
-  def render_json_ld(:corporation, {cached_identity, cached_seo}) do
+  def output_json_ld(:corporation, {cached_identity, cached_seo}) do
     corporation_json =
       {cached_identity, cached_seo}
       |> JSONLD.Schema.Corporation.build()
@@ -71,7 +73,7 @@ defmodule Brando.JSONLD.HTML do
     raw(corporation_json)
   end
 
-  def render_json_ld(:organization, {cached_identity, cached_seo}) do
+  def output_json_ld(:organization, {cached_identity, cached_seo}) do
     organization_json =
       {cached_identity, cached_seo}
       |> JSONLD.Schema.Organization.build()
@@ -80,10 +82,10 @@ defmodule Brando.JSONLD.HTML do
     raw(organization_json)
   end
 
-  def render_json_ld(:entity, %{assigns: %{json_ld_entity: entity}}) do
+  def output_json_ld(:entity, %{assigns: %{json_ld_entity: entity}}) do
     entity_json = JSONLD.to_json(entity)
     raw(entity_json)
   end
 
-  def render_json_ld(_, _), do: ""
+  def output_json_ld(_, _), do: ""
 end

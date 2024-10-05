@@ -5,6 +5,7 @@ defmodule Brando.LivePreview.Dsl do
     target: Brando.LivePreview.Target.Assign,
     schema: Brando.LivePreview.Target.Assign.schema()
   }
+
   @preview_target %Spark.Dsl.Entity{
     name: :preview_target,
     identifier: :schema,
@@ -19,6 +20,7 @@ defmodule Brando.LivePreview.Dsl do
     entities: [@preview_target],
     top_level?: true
   }
+
   @sections [@root]
 
   @moduledoc false

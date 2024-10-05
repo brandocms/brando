@@ -1,5 +1,7 @@
 ## 0.54.0
 
+* BREAKING: Changed JSON-LD dsl (moved to Spark). See examples in jsonld.md in guides.
+
 * BREAKING: Run `mix brando.identifiers.sync` to create missing identifiers, 
   delete orphaned identifiers and update URLs
 

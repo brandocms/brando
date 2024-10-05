@@ -13,8 +13,8 @@ defmodule Brando.JSONLDSchemaTest do
   }
 
   @extra_fields [
-    {:image, Brando.JSONLD.Schema.ImageObject, &__MODULE__.get_org_image/1},
-    {:copyrightYear, :string, [:inserted_at, :year]}
+    %{name: :image, type: :image, value_fn: &__MODULE__.get_org_image/1},
+    %{name: :copyrightYear, type: :integer, value_fn: &__MODULE__.get_year/1}
   ]
 
   @image %Brando.Images.Image{
@@ -31,44 +31,11 @@ defmodule Brando.JSONLDSchemaTest do
     }
   }
 
-  def get_org_image(_) do
-    @image
-  end
-
-  import CompileTimeAssertions
-
-  test "field without populator function raises" do
-    assert_compile_time_raise(RuntimeError, "requires a populator function - someField", fn ->
-      import Brando.Blueprint.JSONLD
-      json_ld_field("someField", Brando.JSONLD.Schema.ImageObject, nil)
-    end)
-  end
-
-  test "field without schema raises" do
-    assert_compile_time_raise(RuntimeError, "requires a schema as second arg - someField", fn ->
-      import Brando.Blueprint.JSONLD
-      json_ld_field("someField", "what is this?", :something)
-    end)
-  end
-
-  test "convert_format raises on missing populator" do
-    assert_raise RuntimeError, fn ->
-      Brando.JSONLD.convert_format([
-        {"fieldName", Brando.JSONLD.Schema.ImageObject, nil}
-      ])
-    end
-  end
-
-  test "convert_format raises on binary schema" do
-    assert_raise RuntimeError, fn ->
-      Brando.JSONLD.convert_format([
-        {"fieldName", "Binary.Schema", :dummy}
-      ])
-    end
-  end
+  def get_org_image(_), do: @image
+  def get_year(data), do: data.inserted_at.year
 
   test "extract json-ld" do
-    extracted_json_ld = Brando.Pages.Page.extract_json_ld(@mock_data)
+    extracted_json_ld = Brando.JSONLD.extract_json_ld(Brando.Pages.Page, @mock_data)
 
     assert extracted_json_ld ==
              %Brando.JSONLD.Schema.Article{
@@ -91,9 +58,10 @@ defmodule Brando.JSONLDSchemaTest do
              }
 
     extracted_json_ld =
-      Brando.Pages.Page.extract_json_ld(
+      Brando.JSONLD.extract_json_ld(
+        Brando.Pages.Page,
         @mock_data,
-        Brando.JSONLD.convert_format(@extra_fields)
+        @extra_fields
       )
 
     assert extracted_json_ld ==
@@ -136,7 +104,8 @@ defmodule Brando.JSONLDSchemaTest do
                  addressCountry: "NO",
                  addressLocality: "Oslo",
                  addressRegion: "Oslo",
-                 postalCode: "0000"
+                 postalCode: "0000",
+                 streetAddress: "Testveien 1"
                },
                alternateName: "Shortform name",
                description: "Fallback meta description",
@@ -145,7 +114,8 @@ defmodule Brando.JSONLDSchemaTest do
                logo: nil,
                name: "Organization name",
                sameAs: ["https://instagram.com/test", "https://facebook.com/test"],
-               url: "https://www.domain.tld"
+               url: "https://www.domain.tld",
+               telephone: "+47 00 00 00 00"
              }
   end
 

@@ -322,19 +322,19 @@ defmodule Brando.Pages.Page do
   end
 
   json_ld_schema JSONLD.Schema.Article do
-    json_ld_field :author, {:references, :identity}
-    json_ld_field :copyrightHolder, {:references, :identity}
-    json_ld_field :copyrightYear, :string, [:inserted_at, :year]
-    json_ld_field :creator, {:references, :identity}
-    json_ld_field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
-    json_ld_field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
-    json_ld_field :description, :string, [:meta_description]
-    json_ld_field :headline, :string, [:title]
-    json_ld_field :inLanguage, :string, [:language]
-    json_ld_field :mainEntityOfPage, :string, [:__meta__, :current_url]
-    json_ld_field :name, :string, [:title]
-    json_ld_field :publisher, {:references, :identity}
-    json_ld_field :url, :string, [:__meta__, :current_url]
+    field :author, :identity
+    field :copyrightHolder, :identity
+    field :creator, :identity
+    field :publisher, :identity
+    field :copyrightYear, :integer, & &1.inserted_at.year
+    field :dateModified, :datetime, & &1.updated_at
+    field :datePublished, :datetime, & &1.inserted_at
+    field :description, :string, & &1.meta_description
+    field :headline, :string, & &1.title
+    field :inLanguage, :language
+    field :mainEntityOfPage, :current_url
+    field :name, :string, & &1.title
+    field :url, :current_url
   end
 
   def get_templates(_, _) do

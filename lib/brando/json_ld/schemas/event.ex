@@ -2,7 +2,6 @@ defmodule Brando.JSONLD.Schema.Event do
   @moduledoc """
    Event schema
   """
-
   @derive Jason.Encoder
   defstruct "@context": "http://schema.org",
             "@type": "Event",
