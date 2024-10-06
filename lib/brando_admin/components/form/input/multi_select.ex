@@ -60,6 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           relation_type={@relation_type}
           relation_key={@relation_key}
           input_options={@input_options}
+          wrapped_labels={@wrapped_labels}
           sequenced?={@sequenced?}
           field={@field}
         />
@@ -233,6 +234,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_new(:subform_id, fn -> nil end)
      |> assign(:open, false)
      |> assign(:creating, false)
+     |> assign(:wrapped_labels, false)
      |> assign(:filter_string, "")}
   end
 
@@ -242,6 +244,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def update(assigns, socket) do
     show_filter = Keyword.get(assigns.opts, :filter, true)
+    wrapped_labels = Keyword.get(assigns.opts, :wrapped_labels, true)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
     relation_key = Keyword.get(assigns.opts, :relation_key, :id)
@@ -266,6 +269,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_sequenced?(assigns.field)
      |> assign_relation_fields(assigns.field)
      |> assign_label()
+     |> assign(:wrapped_labels, wrapped_labels)
      |> assign(:narrow, narrow)
      |> assign(:resetable, resetable)
      |> assign(:show_filter, show_filter)
@@ -504,7 +508,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     <% else %>
       <div
         id={"#{@field.id}-selected-options"}
-        class="selected-labels"
+        class={["selected-labels", @wrapped_labels && "wrapped"]}
         data-sequenced={@sequenced? != false}
         phx-hook={@sequenced? != false && "Brando.SortableAssocs"}
         data-sortable-id={"sortable-#{@field.id}-identifiers"}

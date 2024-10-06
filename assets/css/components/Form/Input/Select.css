@@ -39,6 +39,11 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     }
   }
 
+  &.wrapped {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
   .selected-label {
     display: flex;
     align-items: baseline;    

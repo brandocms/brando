@@ -110,6 +110,9 @@
   </.head>
   ```
 
+* Added `wrapped_labels` option to multi select.
+
+
 ## 0.53.0
 
 * BREAKING: Switch out `import Phoenix.LiveView.Helpers` with `import Phoenix.Component`
