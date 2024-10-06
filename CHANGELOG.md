@@ -1,6 +1,10 @@
 ## 0.54.0
 
-* BREAKING: Changed JSON-LD dsl (moved to Spark). See examples in jsonld.md in guides.
+* BREAKING: Changed JSON-LD dsl (moved to Spark). See full example in jsonld.md in guides.
+  `json_ld_field` has been renamed to `field`
+
+* BREAKING: Changed Meta dsl (moved to Spark). See full example in meta.md in guides.
+  `meta_field` has been renamed to `field`
 
 * BREAKING: Run `mix brando.identifiers.sync` to create missing identifiers, 
   delete orphaned identifiers and update URLs

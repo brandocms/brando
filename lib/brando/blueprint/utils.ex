@@ -1,4 +1,6 @@
 defmodule Brando.Blueprint.Utils do
+  alias Brando.Utils
+
   @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param]
   @strip_embeds_opts [:cast, :module, :unique, :constraints]
 
@@ -144,20 +146,32 @@ defmodule Brando.Blueprint.Utils do
     end)
   end
 
-  # TODO: Deprecate this function
   def fallback(data, keys) when is_list(keys) do
     Enum.reduce_while(keys, nil, fn
       {:strip_tags, key}, _ ->
-        case Map.get(data, key) do
+        keys = (is_list(key) && key) || List.wrap(key)
+
+        case Utils.try_path(data, keys) do
           nil -> {:cont, nil}
           val -> {:halt, HtmlSanitizeEx.strip_tags(val)}
         end
 
       key, _ ->
-        case Map.get(data, key) do
+        keys = (is_list(key) && key) || List.wrap(key)
+
+        case Utils.try_path(data, keys) do
           nil -> {:cont, nil}
           val -> {:halt, val}
         end
     end)
   end
+
+  # convert language to a format facebook/opengraph understands
+  def encode_locale("en"), do: "en_US"
+  def encode_locale("no"), do: "nb_NO"
+  def encode_locale("nb"), do: "nb_NO"
+  def encode_locale("nn"), do: "nn_NO"
+  def encode_locale(locale), do: locale
+
+  defdelegate try_path(map, path), to: Brando.Utils
 end

@@ -8,7 +8,11 @@ defmodule Brando.MetaSchemaTest do
 
   @data %{
     title: "Our title",
-    meta_description: "Our description"
+    meta_description: "Our description",
+    __meta__: %{
+      current_url: "http://localhost",
+      language: "en"
+    }
   }
 
   defmodule Page do
@@ -21,10 +25,10 @@ defmodule Brando.MetaSchemaTest do
       gettext_module: Brando.Gettext
 
     meta_schema do
-      meta_field "title", [:title]
-      meta_field "mutated_title", [:title], fn data -> ">> #{data}" end
-      meta_field "generated_title", fn _ -> "Generated." end
-      meta_field ["description", "og:description"], [:description], fn data -> "@ #{data}" end
+      field "title", & &1.title
+      field "mutated_title", fn data -> ">> #{data.title}" end
+      field "generated_title", fn _ -> "Generated." end
+      field ["description", "og:description"], fn data -> "@ #{data.description}" end
     end
 
     def mutator_function(data), do: "@ #{data}"
@@ -32,7 +36,7 @@ defmodule Brando.MetaSchemaTest do
   end
 
   test "extract dummy meta" do
-    extracted_meta = Brando.MetaSchemaTest.Page.extract_meta(@mock_data)
+    extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.MetaSchemaTest.Page, @mock_data)
 
     assert extracted_meta["description"] == "@ Our description"
     assert extracted_meta["title"] == "Our title"
@@ -41,12 +45,9 @@ defmodule Brando.MetaSchemaTest do
   end
 
   test "extract real meta" do
-    extracted_meta = Brando.Pages.Page.extract_meta(@data)
-
+    extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.Pages.Page, @data)
     assert extracted_meta["description"] == "Our description"
     assert extracted_meta["title"] == "Our title"
-
-    assert :__meta_field__ in Keyword.keys(Brando.Pages.Page.__info__(:functions))
   end
 
   test "fallback" do
@@ -66,5 +67,9 @@ defmodule Brando.MetaSchemaTest do
 
     assert Brando.Blueprint.Utils.fallback(data, [:meta_title, {:strip_tags, :title}]) ==
              "Title grabbed from a field with rich text"
+
+    data = %{nested: %{nested: "title"}, other: "yes"}
+    assert Brando.Blueprint.Utils.fallback(data, [:non_existant, [:nested, :nested]]) == "title"
+    assert Brando.Blueprint.Utils.fallback(data, [[:nested, :nested], :non_existant]) == "title"
   end
 end

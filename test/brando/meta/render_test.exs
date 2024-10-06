@@ -58,11 +58,11 @@ defmodule Brando.MetaRenderTest do
       gettext_module: Brando.Gettext
 
     meta_schema do
-      meta_field "title", [:title]
-      meta_field "mutated_title", [:title], &mutator_function/1
-      meta_field "generated_title", &generator_function/1
-      meta_field ["description", "og:description"], [:description], &mutator_function/1
-      meta_field "og:url", & &1.__meta__.current_url
+      field "title", & &1.title
+      field "mutated_title", &mutator_function(&1.title)
+      field "generated_title", &generator_function/1
+      field ["description", "og:description"], &mutator_function(&1.description)
+      field "og:url", & &1.__meta__.current_url
     end
 
     def mutator_function(data), do: "@ #{data}"

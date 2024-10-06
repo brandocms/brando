@@ -206,7 +206,7 @@ defmodule Brando.Plug.HTML do
   def put_meta(conn, module, data) when is_atom(module) do
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
-    extracted_meta = module.extract_meta(data_with_meta)
+    extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
     merged_meta = Map.merge(conn.private[:brando_meta] || %{}, extracted_meta)
     put_private(conn, :brando_meta, merged_meta)
   end
