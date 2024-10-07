@@ -97,13 +97,12 @@ defmodule Brando.Navigation.Menu do
 
   listings do
     listing do
-      listing_query %{
+      query %{
         order: [{:asc, :sequence}, {:desc, :inserted_at}],
         preload: &__MODULE__.preloads_for/0
       }
 
-      filters([[label: t("Title"), filter: "title"]])
-      field(:language, :language, columns: 1)
+      filter label: t("Title"), filter: "title"
       component &__MODULE__.listing_row/1
     end
   end

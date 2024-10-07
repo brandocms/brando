@@ -101,7 +101,7 @@ defmodule Brando.BlueprintTest.Project do
 
   listings do
     listing do
-      listing_query %{status: :published}
+      query %{status: :published}
     end
   end
 

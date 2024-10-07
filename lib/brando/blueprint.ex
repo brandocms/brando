@@ -158,7 +158,6 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
     Module.register_attribute(__CALLER__.module, :assets, accumulate: true)
     Module.register_attribute(__CALLER__.module, :forms, accumulate: true)
-    Module.register_attribute(__CALLER__.module, :listings, accumulate: true)
     Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
     Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
@@ -185,6 +184,7 @@ defmodule Brando.Blueprint do
       use Ecto.Schema
       use Brando.Blueprint.JSONLD
       use Brando.Blueprint.Meta
+      use Brando.Blueprint.Listings
 
       require PolymorphicEmbed
       import Ecto.Changeset
@@ -669,9 +669,6 @@ defmodule Brando.Blueprint do
     imported_form_modules =
       Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
 
-    imported_listing_modules =
-      Module.get_attribute(env.module, :__brando_imported_listing_modules__) || []
-
     imported_forms =
       for imported_form_module <- imported_form_modules do
         Code.ensure_compiled!(imported_form_module)
@@ -682,25 +679,13 @@ defmodule Brando.Blueprint do
         |> Macro.escape()
       end
 
-    imported_listings =
-      for imported_listing_module <- imported_listing_modules do
-        Code.ensure_compiled!(imported_listing_module)
-
-        :attributes
-        |> imported_listing_module.__info__()
-        |> Keyword.get_values(:listings)
-        |> Macro.escape()
-      end
-
     quote location: :keep,
           bind_quoted: [
             imported_forms: imported_forms,
-            imported_listings: imported_listings,
             absolute_url_preloads: absolute_url_preloads
           ],
           unquote: false do
       @imported_forms List.flatten(imported_forms)
-      @imported_listings List.flatten(imported_listings)
       @absolute_url_preloads absolute_url_preloads
 
       def __absolute_url_preloads__ do
@@ -863,11 +848,12 @@ defmodule Brando.Blueprint do
       def __admin_route__(:update, args) do
         form_path = :"admin_#{@singular}_form_path"
         base_args = [Brando.endpoint()]
+        full_args = base_args ++ [:update] ++ args
 
         apply(
           Brando.routes(),
           form_path,
-          base_args ++ [:update] ++ args
+          full_args
         )
       end
 
@@ -1019,7 +1005,7 @@ defmodule Brando.Blueprint do
       end
 
       def __listings__ do
-        @listings ++ @imported_listings
+        Spark.Dsl.Extension.get_entities(__MODULE__, [:listings])
       end
 
       def __forms__ do
@@ -1179,22 +1165,6 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defmacro query(arg) do
-    quote generated: true, location: :keep do
-      case Module.get_attribute(__MODULE__, :brando_macro_context) do
-        :form ->
-          Brando.Blueprint.Forms.form_query(unquote(arg))
-
-        :listing ->
-          Brando.Blueprint.Listing.listing_query(unquote(arg))
-
-        _ ->
-          raise Brando.Exception.BlueprintError,
-            message: "query/1 can only be used inside of listing or form declarations"
-      end
-    end
-  end
-
   defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
       %{changeset | action: :delete}
@@ -1267,14 +1237,6 @@ defmodule Brando.Blueprint do
     |> do_import_forms(env)
   end
 
-  defmacro import_listings(listings_module_ast) do
-    env = __CALLER__
-
-    listings_module_ast
-    |> Macro.expand(env)
-    |> do_import_listings(env)
-  end
-
   defp do_import_forms({{:., _, [{:__MODULE__, _, _}, :{}]}, _, modules_ast_list}, env) do
     for {_, _, leaf} <- modules_ast_list do
       type_module = Module.concat([env.module | leaf])
@@ -1310,46 +1272,6 @@ defmodule Brando.Blueprint do
   defp do_import_forms(module, env) do
     Module.put_attribute(env.module, :__brando_imported_form_modules__, [
       module | Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
-    ])
-
-    []
-  end
-
-  defp do_import_listings({{:., _, [{:__MODULE__, _, _}, :{}]}, _, modules_ast_list}, env) do
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([env.module | leaf])
-
-      do_import_listings(type_module, env)
-    end
-  end
-
-  defp do_import_listings(
-         {{:., _, [{:__aliases__, _, [{:__MODULE__, _, _} | tail]}, :{}]}, _, modules_ast_list},
-         env
-       ) do
-    root_module = Module.concat([env.module | tail])
-
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([root_module | leaf])
-
-      do_import_listings(type_module, env)
-    end
-  end
-
-  defp do_import_listings({{:., _, [{:__aliases__, _, root}, :{}]}, _, modules_ast_list}, env) do
-    root_module = Module.concat(root)
-    root_module_with_alias = Keyword.get(env.aliases, root_module, root_module)
-
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([root_module_with_alias | leaf])
-
-      do_import_listings(type_module, env)
-    end
-  end
-
-  defp do_import_listings(module, env) do
-    Module.put_attribute(env.module, :__brando_imported_listing_modules__, [
-      module | Module.get_attribute(env.module, :__brando_imported_listing_modules__) || []
     ])
 
     []

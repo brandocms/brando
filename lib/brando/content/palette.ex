@@ -67,47 +67,38 @@ defmodule Brando.Content.Palette do
 
   listings do
     listing do
-      listing_query %{
+      query %{
         status: :published,
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      filters([
-        [label: t("Name"), filter: "name"],
-        [label: t("Color"), filter: "color"]
-      ])
-
-      template(
-        """
-        <div class="circle-stack">
-          {% for color in entry.colors reversed %}
-            <div class="circle" data-color-no="{{ forloop.index0 }}" data-popover="{{ color.hex_value }}" style="background-color: {{ color.hex_value }}"></div>
-          {% endfor %}
-        </div>
-        """,
-        columns: 3
-      )
-
-      template(
-        """
-        <div class="monospace small">{{ entry.namespace }}</div>
-        """,
-        columns: 3
-      )
-
-      template(
-        """
-        <a
-          data-phx-link="redirect"
-          data-phx-link-state="push"
-          href="/admin/config/content/palettes/update/{{ entry.id }}"
-          class="entry-link">
-          <small>{{ entry.name }}</small>
-        </a>
-        """,
-        columns: 4
-      )
+      filter label: t("Name"), filter: "name"
+      filter label: t("Color"), filter: "color"
+      component &__MODULE__.listing_row/1
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.field columns={3}>
+      <div class="circle-stack">
+        <div
+          :for={{color, idx} <- Enum.with_index(Enum.reverse(@entry.colors))}
+          class="circle"
+          data-color-no={idx}
+          data-popover={color.hex_value}
+          style={"background-color: #{color.hex_value}"}
+        >
+        </div>
+      </div>
+    </.field>
+    <.field columns={3}>
+      <div class="monospace small"><%= @entry.namespace %></div>
+    </.field>
+    <.update_link entry={@entry} columns={4}>
+      <small><%= @entry.name %></small>
+    </.update_link>
+    """
   end
 
   translations do

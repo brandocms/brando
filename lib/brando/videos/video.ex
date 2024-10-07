@@ -66,51 +66,51 @@ defmodule Brando.Videos.Video do
 
   listings do
     listing do
-      listing_query %{
-        order: [{:desc, :id}]
-      }
-
-      filters([
-        [label: t("Path"), filter: "path"]
-      ])
-
-      template(
-        """
-        <div class="padded">
-          {% if entry.cover %}
-            <img
-              width="25"
-              height="25"
-              src="{{ entry.cover|src:"original" }}" />
-          {% else %}
-            {% if entry.thumbnail_url %}
-              <img
-                width="25"
-                height="25"
-                src="{{ entry.thumbnail_url }}" />
-            {% endif %}
-          {% endif %}
-        </div>
-        """,
-        columns: 2
-      )
-
-      template(
-        """
-        <small class="monospace">\#{{ entry.id }}</small><br>
-        <small class="monospace">
-          {% if entry.filename %}
-            {{ entry.filename }}
-          {% else %}
-            {{ entry.url }}
-          {% endif %}
-        </small><br>
-        <small>{{ entry.width }}&times;{{ entry.height }}</small><br>
-        {% if entry.title %}<div class="badge mini">#{gettext("Title")}</div>{% endif %}
-        {% if entry.alt %}<div class="badge mini">Alt</div>{% endif %}
-        """,
-        columns: 9
-      )
+      query %{order: [{:desc, :id}]}
+      filter label: t("Path"), filter: "path"
+      component &__MODULE__.listing_row/1
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.field columns={2}>
+      <div class="padded">
+        <img
+          :if={@entry.cover}
+          width="25"
+          height="25"
+          src={Brando.Utils.img_url(@entry.cover, :smallest)}
+        />
+        <img :if={@entry.thumbnail_url} width="25" height="25" src={@entry.thumbnail_url} />
+      </div>
+    </.field>
+    <.field columns={9}>
+      <small class="monospace">#<%= @entry.id %></small>
+      <br />
+      <small class="monospace">
+        <%= if @entry.filename do %>
+          <%= @entry.filename %>
+        <% else %>
+          <%= @entry.url %>
+        <% end %>
+      </small>
+      <br />
+      <small><%= @entry.width %>&times;<%= @entry.height %></small>
+      <br />
+      <div :if={@entry.title} class="badge mini">#{gettext("Title")}</div>
+      <div :if={@entry.alt} class="badge mini">Alt</div>
+    </.field>
+    <.update_link entry={@entry} columns={6}>
+      <%= @entry.title %>
+      <:outside>
+        <%= if @entry.category do %>
+          <br />
+          <small class="badge"><%= @entry.category.name %></small>
+        <% end %>
+      </:outside>
+    </.update_link>
+    <.url entry={@entry} />
+    """
   end
 end

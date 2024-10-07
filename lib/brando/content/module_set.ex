@@ -60,15 +60,12 @@ defmodule Brando.Content.ModuleSet do
 
   listings do
     listing do
-      listing_query %{
+      query %{
         preload: [:module_set_modules],
         order: [{:asc, :title}, {:desc, :inserted_at}]
       }
 
-      filters([
-        [label: gettext("Title"), filter: "title"]
-      ])
-
+      filter label: gettext("Title"), filter: "title"
       component &__MODULE__.listing_row/1
     end
   end

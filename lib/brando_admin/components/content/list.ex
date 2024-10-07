@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Components.Content.List do
     current_key_idx =
       Enum.find_index(
         filters,
-        &(&1[:filter] == socket.assigns.active_filter[:filter])
+        &(&1.filter == socket.assigns.active_filter.filter)
       )
 
     current_key_idx =
@@ -580,11 +580,11 @@ defmodule BrandoAdmin.Components.Content.List do
           <%= for filter <- @filters do %>
             <div class={[
               "filter",
-              filter[:filter] == @active_filter[:filter] && "visible"
+              filter.filter == @active_filter.filter && "visible"
             ]}>
               <button class="filter-key" phx-click={@next_filter_key}>
                 <span>
-                  <%= g(@schema, filter[:label]) %>
+                  <%= g(@schema, filter.label) %>
                   <%= if Enum.count(@filters) > 1 do %>
                     &darr;
                   <% end %>
@@ -604,7 +604,7 @@ defmodule BrandoAdmin.Components.Content.List do
                   autocomplete="off"
                   phx-debounce="400"
                 />
-                <input type="hidden" name="filter" value={@active_filter[:filter]} />
+                <input type="hidden" name="filter" value={@active_filter.filter} />
               </.form>
             </div>
           <% end %>

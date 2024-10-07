@@ -99,42 +99,28 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
-      listing_query %{
-        order: [{:asc, :name}]
-      }
-
-      field :avatar, :image, columns: 2, class: "padded"
-
-      filters([
-        [label: t("Name"), filter: "name"],
-        [label: t("Email"), filter: "email"]
-      ])
-
-      actions(
-        [
-          [label: t("Edit user"), event: "edit_entry"],
-          [
-            label: t("Disable user"),
-            event: "disable_user",
-            confirm: t("Are you sure?")
-          ]
-        ],
-        default_actions: false
-      )
-
-      template """
-               <a
-                class="entry-link"
-                data-phx-link="redirect"
-                data-phx-link-state="push"
-                href="/admin/users/update/{{ entry.id }}">
-                {{ entry.name }}
-               </a><br>
-               <small>{{ entry.email }}</small><br>
-               <div class="badge">{{ entry.role }}</div>
-               """,
-               columns: 13
+      query %{order: [{:asc, :name}]}
+      component &__MODULE__.listing_row/1
+      filter label: t("Name"), filter: "name"
+      filter label: t("Email"), filter: "email"
+      action label: t("Edit user"), event: "edit_entry"
+      action label: t("Disable user"), event: "disable_user", confirm: t("Are you sure?")
+      default_actions false
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.cover image={@entry.avatar} columns={2} size={:smallest} padded />
+    <.update_link entry={@entry} columns={13}>
+      <%= @entry.name %>
+      <:outside>
+        <small><%= @entry.email %></small>
+        <br />
+        <small class="badge"><%= @entry.role %></small>
+      </:outside>
+    </.update_link>
+    """
   end
 
   forms do

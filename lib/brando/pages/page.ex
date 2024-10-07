@@ -108,7 +108,7 @@ defmodule Brando.Pages.Page do
 
   listings do
     listing do
-      listing_query %{
+      query %{
         filter: %{parents: true},
         preload: [
           fragments: %{
@@ -127,56 +127,29 @@ defmodule Brando.Pages.Page do
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      filters([
-        [label: t("URI"), filter: "uri"],
-        [label: t("Title"), filter: "title"]
-      ])
-
-      actions([
-        [label: t("Create subpage"), event: "create_subpage"],
-        [label: t("Create fragment"), event: "create_fragment"]
-      ])
-
-      child_listing [
-        {Brando.Pages.Fragment, :fragment_children},
-        {Brando.Pages.Page, :page_children}
-      ]
-
+      filter label: t("URI"), filter: "uri"
+      filter label: t("Title"), filter: "title"
+      action label: t("Create subpage"), event: "create_subpage"
+      action label: t("Create fragment"), event: "create_fragment"
+      child_listing name: :fragment_children, schema: Brando.Pages.Fragment
+      child_listing name: :page_children, schema: Brando.Pages.Page
       component &__MODULE__.listing_row/1
     end
 
     listing :fragment_children do
+      action label: t("Edit fragment"), event: "edit_fragment"
+      action label: t("Duplicate fragment"), event: "duplicate_fragment"
+      action label: t("Delete fragment"), event: "delete_fragment", confirm: t("Are you sure?")
+      default_actions false
       component &__MODULE__.listing_fragment_row/1
-
-      actions(
-        [
-          [label: t("Edit fragment"), event: "edit_fragment"],
-          [label: t("Duplicate fragment"), event: "duplicate_fragment"],
-          [
-            label: t("Delete fragment"),
-            event: "delete_fragment",
-            confirm: t("Are you sure?")
-          ]
-        ],
-        default_actions: false
-      )
     end
 
     listing :page_children do
+      action label: t("Edit sub page"), event: "edit_subpage"
+      action label: t("Duplicate sub page"), event: "duplicate_entry"
+      action label: t("Delete sub page"), event: "delete_entry", confirm: t("Are you sure?")
+      default_actions false
       component &__MODULE__.listing_child_row/1
-
-      actions(
-        [
-          [label: t("Edit sub page"), event: "edit_subpage"],
-          [label: t("Duplicate sub page"), event: "duplicate_entry"],
-          [
-            label: t("Delete sub page"),
-            event: "delete_entry",
-            confirm: t("Are you sure?")
-          ]
-        ],
-        default_actions: false
-      )
     end
   end
 

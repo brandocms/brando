@@ -36,38 +36,30 @@ defmodule Brando.Content.Template do
 
   listings do
     listing do
-      listing_query %{
-        order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
-      }
-
-      filters([
-        [label: t("Name"), filter: "name"],
-        [label: t("Namespace"), filter: "namespace"]
-      ])
-
-      template(
-        """
-        <div class="badge">{{ entry.namespace }}</div><br>
-        """,
-        columns: 3
-      )
-
-      template(
-        """
-        <a
-          data-phx-link="redirect"
-          data-phx-link-state="push"
-          href="/admin/config/content/templates/update/{{ entry.id }}"
-          class="entry-link">
-          {{ entry.name }}
-        </a>
-        <br>
-        <small>{{ entry.instructions }}</small>
-        """,
-        columns: 7
-      )
+      query %{order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]}
+      filter label: t("Name"), filter: "name"
+      filter label: t("Namespace"), filter: "namespace"
     end
   end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.cover image={@entry.cover} columns={2} size={:smallest} padded />
+    <.field columns={3}>
+      <div class="badge">{{ entry.namespace }}</div>
+    </.field>
+    <.update_link entry={@entry} columns={6}>
+      <%= @entry.name %>
+      <:outside>
+        <br />
+        <small>{{ entry.instructions }}</small>
+      </:outside>
+    </.update_link>
+    <.url entry={@entry} />
+    """
+  end
+
+  #
 
   forms do
     form do

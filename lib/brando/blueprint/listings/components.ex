@@ -83,6 +83,23 @@ defmodule Brando.Blueprint.Listings.Components do
   end
 
   attr :class, :any, default: nil
+  attr :columns, :integer, required: true
+  attr :offset, :integer, default: nil
+  slot :default
+
+  def field(assigns) do
+    ~H"""
+    <div class={[
+      @class,
+      @columns && "col-#{@columns}",
+      @offset && "offset-#{@offset}"
+    ]}>
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  attr :class, :any, default: nil
   attr :entry, :map, required: true
   attr :fields, :list, required: true
   attr :columns, :integer, default: 1

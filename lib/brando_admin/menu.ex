@@ -105,7 +105,7 @@ defmodule BrandoAdmin.Menu do
 
       if !default_listing do
         raise Brando.Exception.BlueprintError,
-          message: "Missing default listing for menu_subitem `#{inspect(schema)}`"
+          message: "Missing default listing for menu_item `#{inspect(schema)}`"
       end
 
       query_params =

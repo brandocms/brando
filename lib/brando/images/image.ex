@@ -46,37 +46,26 @@ defmodule Brando.Images.Image do
 
   listings do
     listing do
-      listing_query %{
-        order: [{:desc, :id}]
-      }
-
-      filters([
-        [label: t("Path"), filter: "path"]
-      ])
-
-      template(
-        """
-        <div class="padded">
-          <img
-            width="25"
-            height="25"
-            src="{{ entry|src:"smallest" }}" />
-        </div>
-        """,
-        columns: 2
-      )
-
-      template(
-        """
-        <small class="monospace">\#{{ entry.id }}</small><br>
-        <small class="monospace">{{ entry.path }}</small><br>
-        <small>{{ entry.width }}&times;{{ entry.height }}</small><br>
-        {% if entry.title %}<div class="badge mini">#{gettext("Title")}</div>{% endif %}
-        {% if entry.alt %}<div class="badge mini">Alt</div>{% endif %}
-        """,
-        columns: 9
-      )
+      query %{order: [{:desc, :id}]}
+      filter label: t("Path"), filter: "path"
+      component &__MODULE__.listing_row/1
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.cover image={@entry} columns={2} size={:smallest} padded />
+    <.field columns={9}>
+      <small class="monospace">#<%= @entry.id %></small>
+      <br />
+      <small class="monospace"><%= @entry.path %></small>
+      <br />
+      <small><%= @entry.width %>&times;<%= @entry.height %></small>
+      <br />
+      <div :if={@entry.title} class="badge mini"><%= gettext("Title") %></div>
+      <div :if={@entry.alt} class="badge mini">Alt</div>
+    </.field>
+    """
   end
 
   forms do

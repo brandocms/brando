@@ -33,40 +33,6 @@ defmodule Brando.Images.Gallery do
       cast: true
   end
 
-  listings do
-    listing do
-      listing_query %{
-        order: [{:desc, :id}]
-      }
-
-      filters([
-        [label: gettext("Path"), filter: "path"]
-      ])
-
-      template(
-        """
-        <div class="padded">
-          <img
-            width="25"
-            height="25"
-            src="{{ entry|src:"original" }}" />
-        </div>
-        """,
-        columns: 2
-      )
-
-      template(
-        """
-        <small class="monospace">\#{{ entry.id }}</small><br>
-        <small class="monospace">{{ entry.path }}</small><br>
-        <small>{{ entry.width }}&times;{{ entry.height }}</small>
-        """,
-        columns: 8
-      )
-    end
-  end
-
-  # list_projects(%{preload: [gallery: Gallery.preloads_for()]})
   def preloads_for do
     gallery_images_query =
       from gi in Brando.Images.GalleryImage,

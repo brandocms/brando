@@ -38,18 +38,18 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
   def handle_event("create_fragment", %{"id" => page_id, "language" => language}, socket) do
     create_url =
-      Brando.Pages.Fragment.__admin_route__(:create, page_id: page_id, language: language)
+      Brando.Pages.Fragment.__admin_route__(:create, [[page_id: page_id, language: language]])
 
     {:noreply, push_navigate(socket, to: create_url)}
   end
 
   def handle_event("edit_subpage", %{"id" => entry_id}, socket) do
-    update_url = Brando.Pages.Page.__admin_route__(:update, entry_id)
+    update_url = Brando.Pages.Page.__admin_route__(:update, [entry_id])
     {:noreply, push_navigate(socket, to: update_url)}
   end
 
   def handle_event("edit_fragment", %{"id" => entry_id}, socket) do
-    update_url = Brando.Pages.Fragment.__admin_route__(:update, entry_id)
+    update_url = Brando.Pages.Fragment.__admin_route__(:update, [entry_id])
     {:noreply, push_navigate(socket, to: update_url)}
   end
 

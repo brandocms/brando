@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             schema={@schema}
             target={@myself}
             content_language={@content_language}
-            child_listing={@listing.child_listing}
+            child_listing={@listing.child_listings}
           />
         </div>
       <% end %>
@@ -293,11 +293,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </li>
       <% end %>
       <li :for={%{event: event, label: label} = action <- @processed_actions}>
-        <%= if action[:confirm] do %>
+        <%= if action.confirm do %>
           <button
             id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
             phx-hook="Brando.ConfirmClick"
-            phx-confirm-click-message={action[:confirm]}
+            phx-confirm-click-message={action.confirm}
             phx-confirm-click={event}
             phx-value-language={@language}
             phx-value-id={@entry.id}
@@ -550,11 +550,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign_new(:status?, fn -> entry_schema.has_trait(Trait.Status) end)
       |> assign_new(:soft_delete?, fn -> entry_schema.has_trait(Trait.SoftDelete) end)
       |> assign_new(:listing, fn ->
-        listing_for_schema = Keyword.fetch!(child_listing, entry_schema)
-        listing = Enum.find(schema.__listings__(), &(&1.name == listing_for_schema))
+        listing_for_schema = Enum.find(child_listing, &(&1.schema == entry_schema))
+        listing = Enum.find(schema.__listings__(), &(&1.name == listing_for_schema.name))
 
         if !listing do
-          raise "No listing `#{inspect(listing_for_schema)}` found for `#{inspect(entry_schema)}`"
+          raise "No listing `#{inspect(listing_for_schema.name)}` found for `#{inspect(entry_schema)}`"
         end
 
         listing
