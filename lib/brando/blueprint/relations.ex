@@ -12,8 +12,9 @@ defmodule Brando.Blueprint.Relations do
 
       forms do
         form do
-          form_query &__MODULE__.query_with_preloads/1
-          fieldset size: :full do
+          query &__MODULE__.query_with_preloads/1
+          fieldset do
+            size :full
             inputs_for :clients,
               label: t("Clients"),
               cardinality: :many,

@@ -35,15 +35,18 @@ defmodule Brando.Sites.GlobalSet do
   forms do
     form do
       tab t("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :language, :select, options: :languages, narrow: true, label: t("Language")
           input :label, :text, label: t("Label")
           input :key, :text, monospace: true, label: t("Key")
         end
 
-        fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.Vars},
-            label: t("Globals")
+        fieldset do
+          inputs_for :vars do
+            label t("Globals")
+            component BrandoAdmin.Components.Form.Input.Vars
+          end
         end
       end
     end

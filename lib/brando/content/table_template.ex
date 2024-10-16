@@ -39,13 +39,16 @@ defmodule Brando.Content.TableTemplate do
   forms do
     form do
       tab t("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :name, :text
         end
 
-        fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.Vars},
-            label: t("Columns")
+        fieldset do
+          inputs_for :vars do
+            label t("Columns")
+            component BrandoAdmin.Components.Form.Input.Vars
+          end
         end
       end
     end

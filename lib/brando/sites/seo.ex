@@ -71,14 +71,16 @@ defmodule Brando.Sites.SEO do
           input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
         end
 
-        fieldset size: :full do
-          inputs_for :redirects,
-            label: t("Redirects"),
-            style: :inline,
-            cardinality: :many,
-            size: :full,
-            instructions: t("Use `$` at the end of test to prevent matching beyond string."),
-            default: %Brando.Sites.Redirect{from: "/example/:slug", to: "/new/:slug", code: 301} do
+        fieldset do
+          size :full
+
+          inputs_for :redirects do
+            label t("Redirects")
+            style :inline
+            cardinality :many
+            instructions t("Use `$` at the end of test to prevent matching beyond string.")
+            default %Brando.Sites.Redirect{from: "/example/:slug", to: "/new/:slug", code: 301}
+
             input :code, :number, label: t("Code", Brando.Sites.Redirect)
             input :from, :text, label: t("From", Brando.Sites.Redirect)
             input :to, :text, label: t("To", Brando.Sites.Redirect)

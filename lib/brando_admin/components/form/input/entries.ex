@@ -32,14 +32,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     schema = field.form.source.data.__struct__
     %{opts: %{module: join_schema} = field_opts} = schema.__relation__(field.field)
 
-    wanted_schemas = Keyword.get(assigns.opts, :for)
+    wanted_schemas = Keyword.get(assigns.opts, :sources)
 
     if !wanted_schemas do
       raise Brando.Exception.BlueprintError,
         message: """
-        Missing `for` option for `:entries` field `#{inspect(field.field)}`
+        Missing `sources` option for `:entries` field `#{inspect(field.field)}`
 
-            input :#{inspect(field.field)}, :entries, for: [
+            input :#{inspect(field.field)}, :entries, sources: [
               {MyApp.Projects.Project, %{preload: [:category]}},
               {Brando.Pages.Page, %{}}
             ]

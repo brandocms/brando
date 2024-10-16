@@ -40,7 +40,7 @@ defmodule Brando.Content.ModuleSet do
   forms do
     form do
       tab gettext("Content") do
-        fieldset size: :full do
+        fieldset do
           input :title, :text, label: t("Title")
 
           input :module_set_modules, :multi_select,

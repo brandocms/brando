@@ -734,18 +734,15 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :default_params, fn -> initial_params end)
   end
 
-  defp assign_default_params(%{assigns: %{form_blueprint: %{default_params: %{}}}} = socket) do
-    assign_new(socket, :default_params, fn -> %{} end)
-  end
-
   defp assign_default_params(
          %{assigns: %{form_blueprint: %{default_params: default_params}}} = socket
-       ) do
-    assign_new(socket, :default_params, fn ->
-      default_params
-      |> Code.eval_quoted()
-      |> elem(0)
-    end)
+       )
+       when is_map(default_params) and map_size(default_params) > 0 do
+    assign_new(socket, :default_params, fn -> default_params end)
+  end
+
+  defp assign_default_params(%{assigns: %{form_blueprint: %{default_params: %{}}}} = socket) do
+    assign_new(socket, :default_params, fn -> %{} end)
   end
 
   defp assign_default_params(%{assigns: %{name: name, schema: schema}}) do
@@ -1547,12 +1544,40 @@ defmodule BrandoAdmin.Components.Form do
     |> toggle_drawer("#image-drawer")
   end
 
+  defp extract_transformers(%Brando.Blueprint.Forms.Form{tabs: tabs}) do
+    Enum.flat_map(tabs, &extract_from_tab/1)
+  end
+
+  defp extract_from_tab(%Brando.Blueprint.Forms.Tab{fields: fieldsets}) do
+    fieldsets
+    |> Enum.flat_map(&extract_from_fieldset/1)
+  end
+
+  defp extract_from_fieldset(%Brando.Blueprint.Forms.Fieldset{fields: fields}) do
+    fields
+    |> Enum.filter(&match_subform_with_transformer/1)
+    |> Enum.map(&extract_subform_data/1)
+  end
+
+  defp match_subform_with_transformer(%Brando.Blueprint.Forms.Subform{style: {:transformer, _}}),
+    do: true
+
+  defp match_subform_with_transformer(_), do: false
+
+  defp extract_subform_data(%Brando.Blueprint.Forms.Subform{
+         name: name,
+         style: {:transformer, key},
+         default: default
+       }) do
+    {name, key, default}
+  end
+
   def allow_uploads(socket) do
     schema = socket.assigns.schema
     image_fields = schema.__image_fields__()
     gallery_fields = schema.__gallery_fields__()
     file_fields = schema.__file_fields__()
-    transformers = socket.assigns.form_blueprint.transformers
+    transformers = extract_transformers(socket.assigns.form_blueprint)
     # since LV changed to not allow us to set the :uploads assigns to [] or nil,
     # we need to set a "fake" upload key to not error when passing @uploads to
     # child components :(
@@ -3266,8 +3291,21 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
       |> assign_new(:component_target, fn ->
         case assigns.type do
-          {:component, module} ->
+          {:component, _module} ->
+            raise """
+
+            {:component, module} is deprecated. Use {:live_component, module} instead.
+            If you want to pass a function component, pass it as a function capture instead:
+
+            &Components.my_component/1
+
+            """
+
+          {:live_component, module} ->
             module
+
+          fun when is_function(fun, 1) ->
+            fun
 
           type ->
             type_module = type |> to_string |> Macro.camelize()

@@ -1,5 +1,7 @@
 ## 0.54.0
 
+* BREAKING: Changed Listings dsl (moved to Spark). See full example in listings.md in guides.
+
 * BREAKING: Changed JSON-LD dsl (moved to Spark). See full example in jsonld.md in guides.
   `json_ld_field` has been renamed to `field`
 
@@ -13,7 +15,7 @@
   `mix brando.entries.resave`
 
 * BREAKING: The new `gettext` update requires some changes to your code.
-  Replace all occurrances of 
+  Replace all occurrences of 
       `import MyAppAdmin.Gettext`
   with
       `use Gettext, backend: MyAppAdmin.Gettext`
@@ -94,8 +96,7 @@
   </section>
   ```
 
-* BREAKING: added `<.head>` component. Switch out your regular `<head>` in your frontend
-  app with this to take advantage of properly ordered head elements:
+* BREAKING: added `<.head>` component. Switch out your regular `<head>` in your frontend app with this to take advantage of properly ordered head elements:
   ```
   <.head
     conn={@conn}
@@ -193,7 +194,7 @@
 
       input :related_entries, :entries,
         label: t("Related entries"),
-        for: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
+        sources: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
         filter_language: true
 
 
@@ -423,7 +424,8 @@ forms do
               "The administrator has set a mandatory password change on first login for this website."
             )
 
-      fieldset size: :half do
+      fieldset do
+        size :half
         input :password, :password, label: t("Password"), confirmation: true
       end
     end

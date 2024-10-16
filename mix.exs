@@ -44,6 +44,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
+      {:igniter, "~> 0.3"},
       {:spark, "~> 2.2.3"},
 
       # monitoring

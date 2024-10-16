@@ -24,10 +24,6 @@ defmodule Brando.Blueprint.Meta do
   `encode_locale(language)` converts the locale to a format facebook/opengraph understands.
   """
 
-  use Spark.Dsl,
-    default_extensions: [extensions: [Brando.Blueprint.Meta.Dsl]],
-    opts_to_document: []
-
   def extract_meta(module, data) do
     meta_data =
       module

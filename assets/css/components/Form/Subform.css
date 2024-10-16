@@ -229,7 +229,7 @@
             flex-shrink: 1;
           }
 
-          &[data-component="{:component, BrandoAdmin.Components.Form.Input.Link}"][data-compact] {
+          &[data-component="{:live_component, BrandoAdmin.Components.Form.Input.Link}"][data-compact] {
             flex-grow: 0;
             flex-shrink: 0;
             min-width: 280px;

@@ -42,9 +42,13 @@ defmodule Brando.Content.Container do
   end
 
   forms do
-    form default_params: %{"status" => "draft"} do
+    form do
+      default_params %{"status" => "draft"}
+
       tab gettext("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
+
           input :type, :select,
             options: [
               %{label: "Liquid", value: :liquid},
@@ -64,7 +68,7 @@ defmodule Brando.Content.Container do
             label: t("Palette")
         end
 
-        fieldset size: :full do
+        fieldset do
           input :code, :code,
             label: t("Wrapper code"),
             instructions: t("Use `{{ content }}` to render inner content")

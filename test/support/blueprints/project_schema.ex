@@ -110,18 +110,20 @@ defmodule Brando.BlueprintTest.Project do
       blocks :blocks
 
       tab "Content" do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :title, :text
           input :slug, :slug, from: :title
         end
       end
 
       tab "Properties" do
-        fieldset size: :full do
-          inputs_for :properties,
-            cardinality: :many,
-            style: :inline,
-            default: %{} do
+        fieldset do
+          inputs_for :properties do
+            cardinality :many
+            style :inline
+            default %{}
+
             input :key, :text, placeholder: "Key"
             input :value, :text, placeholder: "Val"
           end
@@ -131,7 +133,8 @@ defmodule Brando.BlueprintTest.Project do
 
     form :extra do
       tab "Test" do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :title, :text
         end
       end

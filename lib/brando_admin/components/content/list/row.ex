@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator, "listings"
-  import Brando.Utils.Datetime
   use Gettext, backend: Brando.Gettext
+  import Brando.Utils.Datetime
 
   alias BrandoAdmin.Components.Badge
   alias BrandoAdmin.Components.Content
@@ -10,7 +10,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Form.Input.Entries
 
-  alias Brando.Blueprint.Listings.Template
   alias Brando.Blueprint.Identifier
   alias Brando.Trait
 
@@ -103,39 +102,40 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def field(%{field: %{__struct__: Template}} = assigns) do
-    class = Keyword.get(assigns.field.opts, :class)
-    columns = Keyword.get(assigns.field.opts, :columns)
-    offset = Keyword.get(assigns.field.opts, :offset)
+  # TODO: Deprecated now that we prefer component/1 in listings
+  # def field(%{field: %{__struct__: Template}} = assigns) do
+  #   class = Keyword.get(assigns.field.opts, :class)
+  #   columns = Keyword.get(assigns.field.opts, :columns)
+  #   offset = Keyword.get(assigns.field.opts, :offset)
 
-    assigns =
-      assigns
-      |> assign(:class, class)
-      |> assign(:columns, columns)
-      |> assign(:offset, offset)
+  #   assigns =
+  #     assigns
+  #     |> assign(:class, class)
+  #     |> assign(:columns, columns)
+  #     |> assign(:offset, offset)
 
-    assigns =
-      assign_new(assigns, :rendered_tpl, fn ->
-        if tpl = Map.get(assigns.field, :template) do
-          {:ok, parsed_template} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
-          context = Brando.Villain.get_base_context(assigns.entry)
+  #   assigns =
+  #     assign_new(assigns, :rendered_tpl, fn ->
+  #       if tpl = Map.get(assigns.field, :template) do
+  #         {:ok, parsed_template} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+  #         context = Brando.Villain.get_base_context(assigns.entry)
 
-          Liquex.Render.render!([], parsed_template, context)
-          |> elem(0)
-          |> Enum.join()
-          |> Phoenix.HTML.raw()
-        end
-      end)
+  #         Liquex.Render.render!([], parsed_template, context)
+  #         |> elem(0)
+  #         |> Enum.join()
+  #         |> Phoenix.HTML.raw()
+  #       end
+  #     end)
 
-    ~H"""
-    <div class={[
-      @class,
-      @columns && "col-#{@columns}"
-    ]}>
-      <%= @rendered_tpl %>
-    </div>
-    """
-  end
+  #   ~H"""
+  #   <div class={[
+  #     @class,
+  #     @columns && "col-#{@columns}"
+  #   ]}>
+  #     <%= @rendered_tpl %>
+  #   </div>
+  #   """
+  # end
 
   def field(assigns) do
     attr = assigns.schema.__attribute__(assigns.field.name)

@@ -40,25 +40,26 @@ defmodule Brando.Content.Palette do
   forms do
     form do
       tab t("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :status, :status
           input :global, :toggle
           input :name, :text
-          input :key, :slug, for: :name, camel_case: true
+          input :key, :slug, source: :name, camel_case: true
           input :namespace, :text, monospace: true
           input :instructions, :textarea
         end
 
-        fieldset size: :full do
-          inputs_for :colors,
-            style: :inline,
-            cardinality: :many,
-            size: :full,
-            default: %Brando.Content.Palette.Color{} do
+        fieldset do
+          inputs_for :colors do
+            style :inline
+            cardinality :many
+            default %Brando.Content.Palette.Color{}
+
             input :hex_value, :color, monospace: true
             input :name, :text
             input :key, :text, monospace: true
-            input :instructions, :text, break: true
+            input :instructions, :text
           end
         end
       end

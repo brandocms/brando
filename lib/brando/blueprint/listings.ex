@@ -44,10 +44,6 @@ defmodule Brando.Blueprint.Listings do
 
   """
 
-  use Spark.Dsl,
-    default_extensions: [extensions: [Brando.Blueprint.Listings.Dsl]],
-    opts_to_document: []
-
   defmacro field(_name, _type, _opts \\ []) do
     raise "Deprecated. use component/1 instead"
   end

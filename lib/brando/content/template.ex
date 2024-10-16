@@ -66,7 +66,8 @@ defmodule Brando.Content.Template do
       blocks :blocks, label: t("Blocks")
 
       tab t("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :name, :text
           input :namespace, :text, monospace: true
           input :instructions, :textarea

@@ -157,7 +157,6 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
     Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
     Module.register_attribute(__CALLER__.module, :assets, accumulate: true)
-    Module.register_attribute(__CALLER__.module, :forms, accumulate: true)
     Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
     Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
@@ -182,9 +181,7 @@ defmodule Brando.Blueprint do
       @after_compile Brando.Blueprint
 
       use Ecto.Schema
-      use Brando.Blueprint.JSONLD
-      use Brando.Blueprint.Meta
-      use Brando.Blueprint.Listings
+      use Brando.Blueprint.Dsl
 
       require PolymorphicEmbed
       import Ecto.Changeset
@@ -311,14 +308,6 @@ defmodule Brando.Blueprint do
 
         %{name: :updated_at} ->
           []
-
-        # %{type: {:array, PolymorphicEmbed}} = attr ->
-        #   opts = Map.to_list(attr.opts)
-        #   PolymorphicEmbed.polymorphic_embeds_many(attr.name, opts)
-
-        # %{type: PolymorphicEmbed} = attr ->
-        #   opts = Map.to_list(attr.opts)
-        #   PolymorphicEmbed.polymorphic_embeds_one(attr.name, opts)
 
         attr ->
           Ecto.Schema.field(
@@ -666,26 +655,11 @@ defmodule Brando.Blueprint do
   defmacro __before_compile__(env) do
     absolute_url_preloads = extract_absolute_url_preloads(env)
 
-    imported_form_modules =
-      Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
-
-    imported_forms =
-      for imported_form_module <- imported_form_modules do
-        Code.ensure_compiled!(imported_form_module)
-
-        :attributes
-        |> imported_form_module.__info__()
-        |> Keyword.get_values(:forms)
-        |> Macro.escape()
-      end
-
     quote location: :keep,
           bind_quoted: [
-            imported_forms: imported_forms,
             absolute_url_preloads: absolute_url_preloads
           ],
           unquote: false do
-      @imported_forms List.flatten(imported_forms)
       @absolute_url_preloads absolute_url_preloads
 
       def __absolute_url_preloads__ do
@@ -832,10 +806,12 @@ defmodule Brando.Blueprint do
         }
       end
 
-      def __admin_route__(type, args \\ [])
+      def __admin_route__(type, args \\ [], as \\ nil)
 
-      def __admin_route__(:create, args) do
-        form_path = :"admin_#{@singular}_form_path"
+      def __admin_route__(:create, args, as) do
+        form_path =
+          (as && :"admin_#{as}_#{@singular}_form_path") || :"admin_#{@singular}_form_path"
+
         base_args = [Brando.endpoint()]
 
         apply(
@@ -845,8 +821,10 @@ defmodule Brando.Blueprint do
         )
       end
 
-      def __admin_route__(:update, args) do
-        form_path = :"admin_#{@singular}_form_path"
+      def __admin_route__(:update, args, as) do
+        form_path =
+          (as && :"admin_#{as}_#{@singular}_form_path") || :"admin_#{@singular}_form_path"
+
         base_args = [Brando.endpoint()]
         full_args = base_args ++ [:update] ++ args
 
@@ -1009,7 +987,7 @@ defmodule Brando.Blueprint do
       end
 
       def __forms__ do
-        Enum.reverse(@forms) ++ @imported_forms
+        Spark.Dsl.Extension.get_entities(__MODULE__, [:forms])
       end
 
       def __form__ do
@@ -1227,54 +1205,6 @@ defmodule Brando.Blueprint do
   def get_plural(module) do
     plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
     String.capitalize(plural || module.__naming__().plural)
-  end
-
-  defmacro import_forms(forms_module_ast) do
-    env = __CALLER__
-
-    forms_module_ast
-    |> Macro.expand(env)
-    |> do_import_forms(env)
-  end
-
-  defp do_import_forms({{:., _, [{:__MODULE__, _, _}, :{}]}, _, modules_ast_list}, env) do
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([env.module | leaf])
-
-      do_import_forms(type_module, env)
-    end
-  end
-
-  defp do_import_forms(
-         {{:., _, [{:__aliases__, _, [{:__MODULE__, _, _} | tail]}, :{}]}, _, modules_ast_list},
-         env
-       ) do
-    root_module = Module.concat([env.module | tail])
-
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([root_module | leaf])
-
-      do_import_forms(type_module, env)
-    end
-  end
-
-  defp do_import_forms({{:., _, [{:__aliases__, _, root}, :{}]}, _, modules_ast_list}, env) do
-    root_module = Module.concat(root)
-    root_module_with_alias = Keyword.get(env.aliases, root_module, root_module)
-
-    for {_, _, leaf} <- modules_ast_list do
-      type_module = Module.concat([root_module_with_alias | leaf])
-
-      do_import_forms(type_module, env)
-    end
-  end
-
-  defp do_import_forms(module, env) do
-    Module.put_attribute(env.module, :__brando_imported_form_modules__, [
-      module | Module.get_attribute(env.module, :__brando_imported_form_modules__) || []
-    ])
-
-    []
   end
 
   defmacro __after_compile__(env, _) do

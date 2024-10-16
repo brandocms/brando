@@ -2,7 +2,8 @@ defmodule Brando.Blueprint.Translations do
   @moduledoc """
   When translating subforms, use `t/2` and supply the blueprint for the subform:
 
-      fieldset size: :full do
+      fieldset do
+        size :full
         inputs_for :items,
           label: t("Items"),
           style: :inline,

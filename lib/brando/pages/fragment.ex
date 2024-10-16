@@ -73,11 +73,12 @@ defmodule Brando.Pages.Fragment do
       blocks :blocks, label: t("Blocks")
 
       tab "Content" do
-        fieldset size: :full do
+        fieldset do
           input :status, :status, label: t("Status")
         end
 
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :title, :text, label: t("Title")
 
           input :parent_key, :text,
@@ -91,14 +92,15 @@ defmodule Brando.Pages.Fragment do
             placeholder: t("key")
         end
 
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :language, :select, options: :languages, narrow: true
           input :page_id, :select, options: &__MODULE__.get_pages/2, resetable: true
         end
       end
 
       tab "Advanced" do
-        fieldset size: :full do
+        fieldset do
           input :wrapper, :code,
             label: t("Wrapper"),
             instructions:

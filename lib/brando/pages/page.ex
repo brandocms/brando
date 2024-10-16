@@ -235,20 +235,24 @@ defmodule Brando.Pages.Page do
   end
 
   forms do
-    form default_params: %{status: :draft, template: "default.html", uri: "uri"} do
+    form do
+      default_params %{status: :draft, template: "default.html", uri: "uri"}
       blocks :blocks, label: t("Blocks")
 
       tab t("Content") do
-        fieldset size: :full do
+        fieldset do
           input :status, :status, label: t("Status")
         end
 
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :title, :text, label: t("Title")
           input :uri, :slug, show_url: true, monospace: true, label: t("URI")
         end
 
-        fieldset size: :half do
+        fieldset do
+          size :half
+
           input :language, :select,
             options: :languages,
             narrow: true,
@@ -262,7 +266,9 @@ defmodule Brando.Pages.Page do
       end
 
       tab t("Advanced") do
-        fieldset size: :half do
+        fieldset do
+          size :half
+
           input :is_homepage, :toggle,
             label: t("Homepage"),
             instructions: t("Page is loaded at root address")
@@ -279,9 +285,11 @@ defmodule Brando.Pages.Page do
           input :css_classes, :text, label: t("CSS classes")
         end
 
-        fieldset size: :full do
-          inputs_for :vars, {:component, BrandoAdmin.Components.Form.Input.Vars},
-            label: t("Page variables")
+        fieldset do
+          inputs_for :vars do
+            label t("Page variables")
+            component BrandoAdmin.Components.Form.Input.Vars
+          end
         end
       end
     end

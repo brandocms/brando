@@ -60,12 +60,13 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :entry, :map, required: true
   attr :columns, :integer, required: true
   attr :offset, :integer, default: nil
+  attr :as, :atom, default: nil
   slot :default
   slot :outside
 
   def update_link(assigns) do
     schema = assigns.entry.__struct__
-    update_url = schema.__admin_route__(:update, [assigns.entry.id])
+    update_url = schema.__admin_route__(:update, [assigns.entry.id], assigns.as)
     assigns = assign(assigns, :update_url, update_url)
 
     ~H"""

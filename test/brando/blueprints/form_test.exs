@@ -3,13 +3,14 @@ defmodule Brando.Blueprint.FormsTest do
 
   test "default form" do
     assert Brando.BlueprintTest.Project.__form__() ==
-             %Brando.Blueprint.Forms{
+             %Brando.Blueprint.Forms.Form{
+               __identifier__: :default,
                name: :default,
                blocks: [
                  %Brando.Blueprint.Forms.Input{
                    name: :blocks,
                    type: :blocks,
-                   template: nil,
+                   component: nil,
                    opts: []
                  }
                ],
@@ -21,13 +22,13 @@ defmodule Brando.Blueprint.FormsTest do
                          %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
-                           template: nil,
+                           component: nil,
                            type: :text
                          },
                          %Brando.Blueprint.Forms.Input{
                            name: :slug,
                            opts: [from: :title],
-                           template: nil,
+                           component: nil,
                            type: :slug
                          }
                        ],
@@ -51,13 +52,13 @@ defmodule Brando.Blueprint.FormsTest do
                              %Brando.Blueprint.Forms.Input{
                                name: :key,
                                opts: [placeholder: "Key"],
-                               template: nil,
+                               component: nil,
                                type: :text
                              },
                              %Brando.Blueprint.Forms.Input{
                                name: :value,
                                opts: [placeholder: "Val"],
-                               template: nil,
+                               component: nil,
                                type: :text
                              }
                            ],
@@ -96,13 +97,14 @@ defmodule Brando.Blueprint.FormsTest do
 
   test "forms" do
     assert Brando.BlueprintTest.Project.__forms__() == [
-             %Brando.Blueprint.Forms{
+             %Brando.Blueprint.Forms.Form{
+               __identifier__: :default,
                name: :default,
                blocks: [
                  %Brando.Blueprint.Forms.Input{
                    name: :blocks,
                    type: :blocks,
-                   template: nil,
+                   component: nil,
                    opts: []
                  }
                ],
@@ -114,13 +116,13 @@ defmodule Brando.Blueprint.FormsTest do
                          %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
-                           template: nil,
+                           component: nil,
                            type: :text
                          },
                          %Brando.Blueprint.Forms.Input{
                            name: :slug,
                            opts: [from: :title],
-                           template: nil,
+                           component: nil,
                            type: :slug
                          }
                        ],
@@ -144,13 +146,13 @@ defmodule Brando.Blueprint.FormsTest do
                              %Brando.Blueprint.Forms.Input{
                                name: :key,
                                opts: [placeholder: "Key"],
-                               template: nil,
+                               component: nil,
                                type: :text
                              },
                              %Brando.Blueprint.Forms.Input{
                                name: :value,
                                opts: [placeholder: "Val"],
-                               template: nil,
+                               component: nil,
                                type: :text
                              }
                            ],
@@ -165,7 +167,8 @@ defmodule Brando.Blueprint.FormsTest do
                  }
                ]
              },
-             %Brando.Blueprint.Forms{
+             %Brando.Blueprint.Forms.Form{
+               __identifier__: :extra,
                name: :extra,
                tabs: [
                  %Brando.Blueprint.Forms.Tab{
@@ -175,7 +178,7 @@ defmodule Brando.Blueprint.FormsTest do
                          %Brando.Blueprint.Forms.Input{
                            name: :title,
                            opts: [],
-                           template: nil,
+                           component: nil,
                            type: :text
                          }
                        ],

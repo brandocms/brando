@@ -444,9 +444,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns =
       assigns
       |> prepare_input_component()
-      |> assign(:slug_for, assigns.opts[:for])
+      |> assign(:slug_for, assigns.opts[:source])
       |> assign_new(:url, fn -> nil end)
-      |> assign_new(:data_slug_for, fn -> prepare_slug_for(assigns.field, assigns.opts[:for]) end)
+      |> assign_new(:data_slug_for, fn ->
+        prepare_slug_for(assigns.field, assigns.opts[:source])
+      end)
       |> assign_new(:data_slug_type, fn ->
         (Keyword.get(assigns.opts, :camel_case) && "camel") || "standard"
       end)

@@ -72,7 +72,7 @@ defmodule Brando.Sites.Identity do
 
   forms do
     form do
-      form_query &__MODULE__.query_with_preloads/1
+      query &__MODULE__.query_with_preloads/1
       redirect_on_save &__MODULE__.redirect/3
 
       tab "Content" do
@@ -85,7 +85,8 @@ defmodule Brando.Sites.Identity do
             label: t("Type")
         end
 
-        fieldset style: :inline do
+        fieldset do
+          style :inline
           input :name, :text, label: t("Name")
 
           input :alternate_name, :text,
@@ -93,7 +94,8 @@ defmodule Brando.Sites.Identity do
             instructions: t("A shortform version of the name")
         end
 
-        fieldset style: :inline do
+        fieldset do
+          style :inline
           input :email, :email, label: t("Email")
           input :phone, :phone, label: t("Phone")
         end
@@ -104,13 +106,15 @@ defmodule Brando.Sites.Identity do
           input :address3, :text, label: t("Address line 3")
         end
 
-        fieldset style: :inline do
+        fieldset do
+          style :inline
           input :zipcode, :text, label: t("Zip code")
           input :city, :text, label: t("City")
           input :country, :text, label: t("Country")
         end
 
-        fieldset style: :inline do
+        fieldset do
+          style :inline
           input :title_prefix, :text, label: t("Title (prefix)")
           input :title, :text, label: t("Title")
           input :title_postfix, :text, label: t("Title (postfix)")
@@ -120,25 +124,25 @@ defmodule Brando.Sites.Identity do
           input :logo, :image, label: t("Logo")
         end
 
-        fieldset size: :full do
-          inputs_for :links,
-            label: t("Links"),
-            style: :inline,
-            cardinality: :many,
-            size: :full,
-            default: %Brando.Link{} do
+        fieldset do
+          inputs_for :links do
+            label t("Links")
+            style :inline
+            cardinality :many
+            default %Brando.Link{}
+
             input :name, :text, label: t("Name", Brando.Link)
             input :url, :text, label: t("URL", Brando.Link)
           end
         end
 
-        fieldset size: :full do
-          inputs_for :metas,
-            label: t("Meta properties"),
-            style: :inline,
-            cardinality: :many,
-            size: :full,
-            default: %Brando.Meta{} do
+        fieldset do
+          inputs_for :metas do
+            label t("Meta properties")
+            style :inline
+            cardinality :many
+            default %Brando.Meta{}
+
             input :key, :text, label: t("Key", Brando.Meta)
             input :value, :text, label: t("Value", Brando.Meta)
           end

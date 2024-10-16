@@ -4,6 +4,7 @@
 
 Meta information is built from the blueprint:
 
+```elixir
     use Brando.Blueprint,
     # ...
 
@@ -14,6 +15,7 @@ Meta information is built from the blueprint:
       field "og:image", & &1.meta_image
       field "og:locale", &encode_locale(&1.language)
     end
+```
 
   The first argument is the key name and can also be supplied as a list of keys where
   multiple keys will share the same value.

@@ -124,23 +124,28 @@ defmodule Brando.Users.User do
   end
 
   forms do
-    form :password,
-      after_save: &__MODULE__.update_password_config/2 do
+    form :password do
+      after_save &__MODULE__.update_password_config/2
+
       tab t("Content") do
         alert :info,
               t(
                 "The administrator has set a mandatory password change on first login for this website."
               )
 
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :password, :password, label: t("Password"), confirmation: true
         end
       end
     end
 
-    form :default, after_save: &__MODULE__.maybe_update_current_user/2 do
+    form :default do
+      after_save &__MODULE__.maybe_update_current_user/2
+
       tab t("Content") do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :name, :text, label: t("Name")
           input :email, :email, label: t("Email")
           input :password, :password, label: t("Password")
@@ -155,10 +160,13 @@ defmodule Brando.Users.User do
             ]
         end
 
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :avatar, :image, label: t("Avatar")
 
-          inputs_for :config, label: t("Config") do
+          inputs_for :config do
+            label t("Config")
+
             input :reset_password_on_first_login, :toggle,
               label: t("Reset password on first login", Brando.Users.UserConfig)
 

@@ -46,28 +46,30 @@ defmodule Brando.Navigation.Menu do
 
   forms do
     form do
-      form_query &__MODULE__.form_query/1
+      query &__MODULE__.form_query/1
 
       tab "Content" do
-        fieldset size: :half do
+        fieldset do
+          size :half
           input :status, :status
           input :language, :select, options: :languages, narrow: true, label: t("Language")
           input :title, :text, label: t("Title")
           input :key, :text, monospace: true, label: t("Key")
         end
 
-        fieldset size: :full do
-          inputs_for :items,
-            label: t("Items"),
-            style: :inline,
-            cardinality: :many,
-            size: :full,
-            default: &__MODULE__.default_item/2 do
+        fieldset do
+          inputs_for :items do
+            label t("Items")
+            style :inline
+            cardinality :many
+            default &__MODULE__.default_item/2
+            size :full
+
             input :language, :hidden
             input :status, :status, compact: true
             input :key, :text, monospace: true, compact: true, label: t("Key", Item)
 
-            input :link, {:component, BrandoAdmin.Components.Form.Input.Link},
+            input :link, {:live_component, BrandoAdmin.Components.Form.Input.Link},
               compact: true,
               label: t("Link", Item)
           end
