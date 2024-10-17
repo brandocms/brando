@@ -18,8 +18,8 @@ defmodule Brando.Trait.Creator do
   @changeset_phase :before_validate_required
   def changeset_mutator(_, _cfg, changeset, :system, _), do: changeset
 
-  def changeset_mutator(_, _cfg, %{data: %{id: id}, changes: %{}} = changeset, _, _)
-      when not is_nil(id) do
+  def changeset_mutator(_, _cfg, %{data: %{id: id}, changes: changes} = changeset, _, _)
+      when not is_nil(id) and changes == %{} do
     changeset
   end
 
