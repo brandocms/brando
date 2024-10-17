@@ -806,11 +806,10 @@ defmodule Brando.Blueprint do
         }
       end
 
-      def __admin_route__(type, args \\ [], as \\ nil)
+      def __admin_route__(type, args \\ [])
 
-      def __admin_route__(:create, args, as) do
-        form_path =
-          (as && :"admin_#{as}_#{@singular}_form_path") || :"admin_#{@singular}_form_path"
+      def __admin_route__(:create, args) do
+        form_path = :"admin_#{@singular}_form_path"
 
         base_args = [Brando.endpoint()]
 
@@ -821,9 +820,8 @@ defmodule Brando.Blueprint do
         )
       end
 
-      def __admin_route__(:update, args, as) do
-        form_path =
-          (as && :"admin_#{as}_#{@singular}_form_path") || :"admin_#{@singular}_form_path"
+      def __admin_route__(:update, args) do
+        form_path = :"admin_#{@singular}_form_path"
 
         base_args = [Brando.endpoint()]
         full_args = base_args ++ [:update] ++ args

@@ -80,7 +80,7 @@ defmodule Brando.Router do
         live_session :admin, on_mount: [{Brando.Users, :ensure_authenticated}] do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
-          live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageUpdateLive
+          live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
           live "/assets/files", BrandoAdmin.Files.FileListLive
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
 

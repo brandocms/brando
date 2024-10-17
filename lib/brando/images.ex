@@ -63,6 +63,9 @@ defmodule Brando.Images do
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
 
+      {:config_target_search, target_string}, query when is_binary(target_string) ->
+        from t in query, where: ilike(t.config_target, ^"%#{target_string}%")
+
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
     end
@@ -124,7 +127,7 @@ defmodule Brando.Images do
     {:ok, config}
   end
 
-  def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
+  def get_config_for(%{config_target: config_target} = data) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
         [type, schema, "function", fn_string] when type in ["image", "gallery"] ->
@@ -135,10 +138,23 @@ defmodule Brando.Images do
         [type, schema, field_name] when type in ["image", "gallery"] ->
           schema_module = Module.concat([schema])
 
-          field_name
-          |> String.to_atom()
-          |> schema_module.__asset_opts__()
-          |> Map.get(:cfg)
+          # check if schema_module exists
+          if Code.ensure_loaded?(schema_module) do
+            field_name
+            |> String.to_atom()
+            |> schema_module.__asset_opts__()
+            |> Map.get(:cfg)
+          else
+            IO.warn("""
+
+            Missing schema module #{inspect(schema_module)} for config_target #{inspect(config_target)}
+
+            #{inspect(data, pretty: true)}
+
+            """)
+
+            Brando.Type.ImageConfig.default_config()
+          end
 
         ["default"] ->
           maybe_struct(

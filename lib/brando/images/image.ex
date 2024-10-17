@@ -48,6 +48,7 @@ defmodule Brando.Images.Image do
     listing do
       query %{order: [{:desc, :id}]}
       filter label: t("Path"), filter: "path"
+      filter label: t("Config target"), filter: "config_target_search"
       component &__MODULE__.listing_row/1
     end
   end
@@ -61,6 +62,8 @@ defmodule Brando.Images.Image do
       <small class="monospace"><%= @entry.path %></small>
       <br />
       <small><%= @entry.width %>&times;<%= @entry.height %></small>
+      <br />
+      <small><%= inspect(@entry.config_target) %></small>
       <br />
       <div :if={@entry.title} class="badge mini"><%= gettext("Title") %></div>
       <div :if={@entry.alt} class="badge mini">Alt</div>
