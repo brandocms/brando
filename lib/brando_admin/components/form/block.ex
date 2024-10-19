@@ -2590,7 +2590,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :available_identifiers, :list, default: []
 
   slot :inner_block
-  slot :description, default: nil
+  slot :description
 
   def toolbar(assigns) do
     ~H"""

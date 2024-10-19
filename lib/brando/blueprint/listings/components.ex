@@ -60,7 +60,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :entry, :map, required: true
   attr :columns, :integer, required: true
   attr :offset, :integer, default: nil
-  slot :default
+  slot :inner_block
   slot :outside
 
   def update_link(assigns) do
@@ -85,7 +85,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :class, :any, default: nil
   attr :columns, :integer, required: true
   attr :offset, :integer, default: nil
-  slot :default
+  slot :inner_block
 
   def field(assigns) do
     ~H"""
@@ -104,8 +104,6 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :fields, :list, required: true
   attr :columns, :integer, default: 1
   attr :offset, :integer, default: nil
-  slot :default
-  slot :outside
 
   def children_button(assigns) do
     ~H"""

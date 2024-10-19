@@ -59,7 +59,7 @@ defmodule Brando.HTML do
   attr :item, :map, required: true
   attr :conn, Plug.Conn, required: true
   attr :class, :any, default: nil
-  slot :inner_block, default: nil
+  slot :inner_block
 
   def menu_item(assigns) do
     item = assigns.item
@@ -93,7 +93,7 @@ defmodule Brando.HTML do
   attr :item, :map, required: true
   attr :type, :atom, default: :button
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to button"
-  slot :inner_block, default: nil
+  slot :inner_block
 
   def menu_button(assigns) do
     item = assigns.item
@@ -195,7 +195,7 @@ defmodule Brando.HTML do
   attr :language, :any
   attr :fallback, :string, default: "/"
   attr :rest, :global
-  slot :default
+  slot :inner_block
 
   def alternate_url(assigns) do
     href = get_alternate_url(assigns)
@@ -527,8 +527,8 @@ defmodule Brando.HTML do
   An alert component
   """
   attr :type, :atom, default: :info
-  slot :icon, default: nil
-  slot :close, default: nil
+  slot :icon
+  slot :close
   slot :inner_block, required: true
 
   def alert(assigns) do
@@ -589,7 +589,7 @@ defmodule Brando.HTML do
   attr :charset, :string, default: "utf-8"
   attr :viewport, :string, default: "width=device-width, initial-scale=1"
   attr :fonts, :list, default: []
-  slot :pragma, default: nil
+  slot :pragma
   slot :title
   slot :preconnect
   slot :async_scripts
@@ -789,7 +789,7 @@ defmodule Brando.HTML do
   attr :entry, :map, required: true
   attr :block_field, :atom, default: :blocks
   attr :conn, :map, required: true
-  slot :inner_block, default: nil
+  slot :inner_block
 
   def render_data(assigns) do
     entry_blocks_field = :"entry_#{assigns.block_field}"

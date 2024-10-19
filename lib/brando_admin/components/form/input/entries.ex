@@ -306,7 +306,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :identifier_id, :integer
   attr :available_identifiers, :list, default: []
   attr :select, :any, default: false
-  slot :inner_block, default: nil
+  slot :inner_block
   slot :delete
 
   def block_identifier(%{block_identifier: block_identifier} = assigns) do
@@ -437,7 +437,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :identifier_id, :integer
   attr :available_identifiers, :list, default: []
   attr :select, :any, default: false
-  slot :inner_block, default: nil
+  slot :inner_block
   slot :delete
 
   # shown as selected

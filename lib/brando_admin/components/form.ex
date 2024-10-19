@@ -3358,7 +3358,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   attr :field, Phoenix.HTML.FormField
-  slot :default
+  slot :inner_block
 
   def map_inputs(assigns) do
     subform = Utils.form_for_map(assigns.field)
@@ -3569,7 +3569,6 @@ defmodule BrandoAdmin.Components.Form do
 
   attr :field, Phoenix.HTML.FormField
   slot :inner_block
-  slot :default
 
   def array_inputs(assigns) do
     assigns =
@@ -3592,7 +3591,7 @@ defmodule BrandoAdmin.Components.Form do
 
   attr :field, Phoenix.HTML.FormField
   attr :options, :any
-  slot :default
+  slot :inner_block
 
   def array_inputs_from_data(assigns) do
     checked_values = assigns.field.value || []
@@ -3723,7 +3722,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :class, :any, default: nil
   attr :click, :any, default: nil
   attr :popover, :string, default: nil
-  slot :default, default: nil
+  slot :inner_block
 
   def label(assigns) do
     f_id =
