@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.12.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.0-rc.6", override: true},
+      {:phoenix_live_view, "1.0.0-rc.7", override: true},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -44,8 +44,8 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:igniter, "~> 0.3"},
-      {:spark, "~> 2.2.3"},
+      {:igniter, "~> 0.3.67"},
+      {:spark, "~> 2.2.35"},
 
       # monitoring
       {:sentry, "~> 10.0"},
