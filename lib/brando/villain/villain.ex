@@ -1206,7 +1206,7 @@ defmodule Brando.Villain do
     |> duplicate_children(children, current_user_id)
   end
 
-  def duplicate_vars(changeset, %Ecto.Association.NotLoaded{}, current_user_id) do
+  def duplicate_vars(changeset, %Ecto.Association.NotLoaded{}, _) do
     require Logger
 
     Logger.error("""
