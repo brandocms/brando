@@ -3142,7 +3142,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
     id = socket.assigns.id
-    level = socket.assigns.level
 
     children =
       if has_children? do
