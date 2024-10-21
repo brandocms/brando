@@ -1145,8 +1145,16 @@ defmodule Brando.Villain.Filters do
     get_link_url(var) || nil
   end
 
+  def link_url(nil, _ctx) do
+    nil
+  end
+
   def link_text(%Var{type: :link} = var, _ctx) do
     get_link_text(var) || nil
+  end
+
+  def link_text(nil, _ctx) do
+    nil
   end
 
   def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do

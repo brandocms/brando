@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias Brando.Content.BlockIdentifier
   alias Brando.Content.Var
+  alias Brando.Villain
 
   def mount(socket) do
     {:ok,
@@ -33,30 +34,42 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # duplicate block (that is not an entry block)
   # event is received in the parent block (multi or container)
-  def update(%{event: "duplicate_block", uid: uid, changeset: block_cs}, socket) do
+
+  def update(%{event: "duplicate_block", uid: uid, changeset: block_cs, populated: true}, socket) do
     block_list = socket.assigns.block_list
     changesets = socket.assigns.changesets
     sequence = Enum.find_index(block_list, &(&1 == uid))
+    new_sequence = sequence + 1
     current_user_id = socket.assigns.current_user_id
-
     new_uid = Brando.Utils.generate_uid()
+    children = Ecto.Changeset.get_assoc(block_cs, :children, :struct)
+    vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
+    table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
 
     updated_block_cs =
       block_cs
-      |> Changeset.apply_changes()
-      |> Map.merge(%{id: nil, uid: new_uid, sequence: sequence, creator_id: current_user_id})
-      |> Changeset.change()
-      |> remove_pk_from_vars()
-      |> remove_pk_from_table_rows()
-      |> add_uid_to_refs()
       |> Map.put(:action, :insert)
-      |> filter_replace_refs()
+      |> Changeset.apply_changes()
+      |> Map.merge(%{
+        id: nil,
+        uid: new_uid,
+        sequence: new_sequence,
+        creator_id: current_user_id,
+        children: [],
+        vars: [],
+        table_rows: []
+      })
+      |> Changeset.change()
+      |> Villain.duplicate_vars(vars, current_user_id)
+      |> Villain.duplicate_table_rows(table_rows)
+      |> Villain.add_uid_to_refs()
       |> Changeset.update_change(:refs, fn ref_changesets ->
         Enum.reject(ref_changesets, &(&1.action == :replace))
       end)
+      |> Villain.duplicate_children(children, current_user_id)
 
     # insert the new block uid into the block_list
-    new_block_list = List.insert_at(block_list, sequence, new_uid)
+    new_block_list = List.insert_at(block_list, new_sequence, new_uid)
 
     block_form =
       to_form(updated_block_cs,
@@ -64,11 +77,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         id: "child_block_form-#{new_uid}"
       )
 
-    updated_changesets = insert_child_changeset(changesets, new_uid, sequence)
+    updated_changesets = insert_child_changeset(changesets, new_uid, new_sequence)
     selector = "[data-block-uid=\"#{new_uid}\"]"
 
     socket
-    |> stream_insert(:children_forms, block_form, at: sequence)
+    |> stream_insert(:children_forms, block_form, at: new_sequence)
     |> assign(:has_children?, true)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
@@ -76,7 +89,195 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
+    |> reset_changesets(uid)
     |> then(&{:ok, &1})
+  end
+
+  def update(
+        %{event: "duplicate_block", uid: uid, changeset: block_cs, children: children},
+        socket
+      ) do
+    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
+    sequence = Enum.find_index(block_list, &(&1 == uid))
+    new_sequence = sequence + 1
+    current_user_id = socket.assigns.current_user_id
+    new_uid = Brando.Utils.generate_uid()
+
+    if children do
+      # the block we wish to duplicate has children so we need to message
+      # them to gather their changesets. We will do the duplication once we
+      # have received all changesets.
+      for {id, block_uid} <- children do
+        send_update(__MODULE__,
+          id: id,
+          event: "fetch_changeset_for_duplication",
+          uid: block_uid,
+          parent_uid: uid,
+          root_uid: uid,
+          parent_sequence: sequence
+        )
+      end
+
+      {:ok, socket}
+    else
+      vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
+      table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
+
+      updated_block_cs =
+        block_cs
+        |> Map.put(:action, :insert)
+        |> Changeset.apply_changes()
+        |> Map.merge(%{
+          id: nil,
+          uid: new_uid,
+          sequence: new_sequence,
+          creator_id: current_user_id,
+          children: [],
+          vars: [],
+          table_rows: []
+        })
+        |> Changeset.change()
+        |> Villain.duplicate_vars(vars, current_user_id)
+        |> Villain.duplicate_table_rows(table_rows)
+        |> Villain.add_uid_to_refs()
+        |> Changeset.update_change(:refs, fn ref_changesets ->
+          Enum.reject(ref_changesets, &(&1.action == :replace))
+        end)
+
+      # insert the new block uid into the block_list
+      new_block_list = List.insert_at(block_list, sequence, new_uid)
+
+      block_form =
+        to_form(updated_block_cs,
+          as: "child_block",
+          id: "child_block_form-#{new_uid}"
+        )
+
+      updated_changesets = insert_child_changeset(changesets, new_uid, sequence)
+      selector = "[data-block-uid=\"#{new_uid}\"]"
+
+      socket
+      |> stream_insert(:children_forms, block_form, at: sequence)
+      |> assign(:has_children?, true)
+      |> assign(:block_list, new_block_list)
+      |> assign(:changesets, updated_changesets)
+      |> update(:block_count, &(&1 + 1))
+      |> reset_position_response_tracker()
+      |> send_child_position_update(new_block_list)
+      |> push_event("b:scroll_to", %{selector: selector})
+      |> then(&{:ok, &1})
+    end
+  end
+
+  def update(
+        %{
+          event: "fetch_changeset_for_duplication",
+          uid: uid,
+          parent_uid: parent_uid,
+          root_uid: root_uid,
+          parent_sequence: parent_sequence
+        },
+        socket
+      ) do
+    changeset = socket.assigns.form.source
+    has_children? = socket.assigns.has_children?
+    parent_cid = socket.assigns.parent_cid
+
+    if has_children? do
+      changesets = socket.assigns.changesets
+      id = socket.assigns.id
+
+      for {block_uid, _} <- changesets do
+        id = "#{id}-child-#{block_uid}"
+
+        send_update(__MODULE__,
+          id: id,
+          event: "fetch_changeset_for_duplication",
+          uid: block_uid,
+          parent_uid: uid,
+          root_uid: root_uid,
+          parent_sequence: parent_sequence
+        )
+      end
+
+      {:ok, socket}
+    else
+      send_update(parent_cid, %{
+        event: "provide_changeset_for_duplication",
+        changeset: changeset,
+        uid: uid,
+        parent_uid: parent_uid,
+        root_uid: root_uid,
+        parent_sequence: parent_sequence
+      })
+
+      {:ok, socket}
+    end
+  end
+
+  def update(
+        %{
+          event: "provide_changeset_for_duplication",
+          uid: uid,
+          changeset: child_changeset,
+          root_uid: root_uid,
+          parent_uid: parent_uid,
+          parent_sequence: parent_sequence
+        },
+        socket
+      ) do
+    changeset = socket.assigns.form.source
+    changesets = socket.assigns.changesets
+    updated_changesets = update_child_changeset(changesets, uid, child_changeset)
+    this_uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+
+    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
+      updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
+
+      # if the changeset struct is a block we put it directly,
+      # but if it's an entry block we need to put it under the block association
+      updated_changeset =
+        if changeset.data.__struct__ == Brando.Content.Block do
+          Changeset.put_assoc(
+            changeset,
+            :children,
+            Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
+          )
+        else
+          updated_block_changeset =
+            changeset
+            |> Changeset.get_assoc(:block)
+            |> Changeset.put_assoc(
+              :children,
+              Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
+            )
+
+          Changeset.put_assoc(changeset, :block, updated_block_changeset)
+        end
+
+      if root_uid == this_uid do
+        # we have the changeset with child changesets, now we need to send it to the parent for duplication
+        send_update(parent_cid, %{
+          event: "duplicate_block",
+          uid: root_uid,
+          changeset: updated_changeset,
+          populated: true
+        })
+      else
+        send_update(parent_cid, %{
+          event: "provide_changeset_for_duplication",
+          changeset: updated_changeset,
+          uid: this_uid,
+          parent_uid: parent_uid,
+          root_uid: root_uid,
+          parent_sequence: parent_sequence
+        })
+      end
+    end
+
+    {:ok, socket |> assign(:changesets, updated_changesets)}
   end
 
   # event sent from RenderVar for :file, :image, :link vars
@@ -612,6 +813,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  defp reset_changesets(socket, block_uid) do
+    id = socket.assigns.id
+    block_id = "#{id}-child-#{block_uid}"
+    send_update(__MODULE__, id: block_id, event: "clear_changesets")
+    socket
+  end
+
   def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
     assoc_data = Map.get(data, :type)
 
@@ -1069,8 +1277,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> stream(:children_forms, children_forms)
     |> assign_new(:block_count, fn -> Enum.count(children) end)
-    |> assign_new(:changesets, fn -> Enum.map(children, &{&1.uid, nil}) end)
-    |> assign_new(:block_list, fn -> Enum.map(children, & &1.uid) end)
+    |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
+    |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
   end
 
   def maybe_assign_children(
@@ -1087,8 +1295,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> stream(:children_forms, children_forms)
     |> assign_new(:block_count, fn -> Enum.count(children) end)
-    |> assign_new(:changesets, fn -> Enum.map(children, &{&1.uid, nil}) end)
-    |> assign_new(:block_list, fn -> Enum.map(children, & &1.uid) end)
+    |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
+    |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
   end
 
   def maybe_assign_children(socket) do
@@ -1096,6 +1304,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:block_count, fn -> 0 end)
     |> assign_new(:block_list, fn -> [] end)
     |> assign_new(:changesets, fn -> [] end)
+  end
+
+  defp extract_uid(%{uid: uid}), do: uid
+
+  defp extract_uid(%Ecto.Changeset{} = cs) do
+    Ecto.Changeset.get_field(cs, :uid)
   end
 
   def send_child_position_update(socket, block_list) do
@@ -2923,33 +3137,25 @@ defmodule BrandoAdmin.Components.Form.Block do
   ## Block events
   def handle_event("duplicate_block", _, socket) do
     changeset = socket.assigns.form.source
+    changesets = socket.assigns.changesets
     has_children? = socket.assigns.has_children?
     uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+    id = socket.assigns.id
+    level = socket.assigns.level
 
-    if has_children? do
-      # if the block has children we need to fetch their changesets
-      parent_cid = socket.assigns.parent_cid
+    children =
+      if has_children? do
+        prefix = "#{id}-child"
+        Enum.map(changesets, fn {block_uid, _} -> {"#{prefix}-#{block_uid}", block_uid} end)
+      end
 
-      require Logger
-
-      Logger.error("""
-
-      assigns:
-      #{inspect(Map.keys(socket.assigns), pretty: true, width: 0)}
-
-      changesets:
-      #{inspect(socket.assigns.changesets, pretty: true, width: 0)}
-
-      """)
-
-      #
-
-      send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
-    else
-      # if not, we can just duplicate the block
-      parent_cid = socket.assigns.parent_cid
-      send_update(parent_cid, %{event: "duplicate_block", changeset: changeset, uid: uid})
-    end
+    send_update(parent_cid, %{
+      event: "duplicate_block",
+      changeset: changeset,
+      children: children,
+      uid: uid
+    })
 
     {:noreply, socket}
   end
@@ -3937,13 +4143,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         {type, ^var_key, _prev_var_value}, acc ->
           path = get_in(data, [:image, Access.key(:path)])
           media_path = Brando.Utils.media_url(path)
-
-          require Logger
-
-          Logger.error("""
-          => update_liquex_block_var #{var_key} => #{media_path}
-          """)
-
           [{type, var_key, media_path} | acc]
 
         item, acc ->
@@ -4088,48 +4287,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       nil -> var
       var_cs -> Changeset.get_field(var_cs, :value)
     end
-  end
-
-  defp add_uid_to_refs(changeset) do
-    refs = Changeset.get_embed(changeset, :refs)
-
-    updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
-    Changeset.put_embed(changeset, :refs, updated_refs)
-  end
-
-  defp filter_replace_refs(changeset) do
-    refs = Changeset.get_embed(changeset, :refs)
-    updated_refs = Enum.reject(refs, &(&1.action == :replace))
-    Changeset.put_embed(changeset, :refs, updated_refs)
-  end
-
-  defp remove_pk_from_vars(changeset) do
-    vars = Changeset.get_assoc(changeset, :vars)
-
-    vars_without_pk =
-      Enum.map(
-        vars,
-        fn var ->
-          var
-          |> put_in([Access.key(:data), Access.key(:id)], nil)
-          |> Map.put(:action, :insert)
-        end
-      )
-
-    Changeset.put_change(changeset, :vars, vars_without_pk)
-  end
-
-  defp remove_pk_from_table_rows(changeset) do
-    table_rows = Changeset.get_assoc(changeset, :table_rows)
-
-    table_rows_without_pk =
-      Enum.map(table_rows, fn table_row ->
-        table_row
-        |> put_in([Access.key(:data), Access.key(:id)], nil)
-        |> Map.put(:action, :insert)
-      end)
-
-    Changeset.put_change(changeset, :table_rows, table_rows_without_pk)
   end
 
   defp insert_identifier(block_identifiers, identifier_id) do

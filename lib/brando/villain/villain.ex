@@ -943,6 +943,13 @@ defmodule Brando.Villain do
     refs_with_generated_uids
   end
 
+  def add_uid_to_refs(changeset) do
+    refs = Changeset.get_embed(changeset, :refs)
+
+    updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
+    Changeset.put_embed(changeset, :refs, updated_refs)
+  end
+
   def add_uid_to_ref_changesets(nil), do: nil
 
   def add_uid_to_ref_changesets(refs) when is_list(refs) do
@@ -1158,5 +1165,82 @@ defmodule Brando.Villain do
     else
       []
     end
+  end
+
+  alias Ecto.Changeset
+
+  def duplicate_children(changeset, children, current_user_id) do
+    duplicated_children =
+      Enum.map(children, &duplicate_child(&1, current_user_id))
+
+    Changeset.put_assoc(changeset, :children, duplicated_children)
+  end
+
+  def duplicate_child(child_cs, current_user_id) do
+    new_uid = Brando.Utils.generate_uid()
+    children = child_cs.children
+    vars = child_cs.vars
+    table_rows = child_cs.table_rows
+
+    child_cs
+    |> Map.merge(%{
+      id: nil,
+      uid: new_uid,
+      creator_id: current_user_id,
+      parent_id: nil,
+      vars: [],
+      table_rows: [],
+      children: []
+    })
+    |> Changeset.change()
+    |> Map.put(:action, :insert)
+    |> duplicate_vars(vars, current_user_id)
+    |> duplicate_table_rows(table_rows)
+    |> add_uid_to_refs()
+    |> Changeset.update_change(:refs, fn ref_changesets ->
+      Enum.reject(ref_changesets, &(&1.action == :replace))
+    end)
+    |> Changeset.update_change(:vars, fn var_changesets ->
+      Enum.reject(var_changesets, &(&1.action == :replace))
+    end)
+    |> duplicate_children(children, current_user_id)
+  end
+
+  def duplicate_vars(changeset, %Ecto.Association.NotLoaded{}, current_user_id) do
+    require Logger
+
+    Logger.error("""
+
+    duplicate_vars ——
+
+    vars NOT LOADED. This should not happen.
+
+    #{inspect(changeset, pretty: true, width: 0)}
+
+    """)
+
+    changeset
+  end
+
+  def duplicate_vars(changeset, vars, current_user_id) do
+    duplicated_vars = Enum.map(vars, &duplicate_var(&1, current_user_id))
+    Changeset.put_assoc(changeset, :vars, duplicated_vars)
+  end
+
+  def duplicate_var(var_cs, current_user_id) do
+    var_cs
+    |> Map.merge(%{id: nil, block_id: nil})
+    |> Brando.Content.Var.changeset(%{creator_id: current_user_id})
+    |> Map.put(:action, :insert)
+  end
+
+  def duplicate_table_rows(changeset, table_rows) do
+    duplicated_table_rows = Enum.map(table_rows, &duplicate_table_row/1)
+    Changeset.put_assoc(changeset, :table_rows, duplicated_table_rows)
+  end
+
+  def duplicate_table_row(table_row_cs) do
+    Map.merge(table_row_cs, %{id: nil, block_id: nil})
+    |> Brando.Utils.map_from_struct()
   end
 end

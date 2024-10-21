@@ -1,7 +1,5 @@
 # TODO: REWRITE with new form logic?
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
-  # use Phoenix.HTML
-
   def form_for_map(field, opts \\ []) do
     id = field.id
     name = field.name
