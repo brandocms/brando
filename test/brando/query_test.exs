@@ -143,6 +143,13 @@ defmodule Brando.QueryTest do
       {:ok, p2d} = __MODULE__.Context.get_page(%{matches: %{id: p2a.id}, cache: true})
 
       refute p2d.title == p2c.title
+
+      {:ok, p2e} =
+        __MODULE__.Context.update_page(p2d.id, %{title: "page 2 busting cache"}, :system)
+
+      {:ok, p2f} = __MODULE__.Context.get_page(%{matches: %{id: p2e.id}, cache: true})
+
+      assert p2f.title == "page 2 busting cache"
     end
 
     test "query :list cached" do

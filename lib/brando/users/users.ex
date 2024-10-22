@@ -118,7 +118,7 @@ defmodule Brando.Users do
     do_get_users_map(list_opts)
   end
 
-  def get_users_map(user_ids) when is_list(user_ids) do
+  def get_users_map(user_ids) when is_list(user_ids) and length(user_ids) > 0 do
     list_opts = %{
       filter: %{ids: user_ids},
       select: [:id, :name, :last_login],
@@ -127,6 +127,10 @@ defmodule Brando.Users do
     }
 
     do_get_users_map(list_opts)
+  end
+
+  def get_users_map([]) do
+    []
   end
 
   def do_get_users_map(list_opts) do

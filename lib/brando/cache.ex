@@ -27,7 +27,7 @@ defmodule Brando.Cache do
   end
 
   def put(key, val, ttl) do
-    @cache_module.put(:cache, key, val, ttl: ttl)
+    @cache_module.put(:cache, key, val, expire: ttl)
   end
 
   def del(key) do

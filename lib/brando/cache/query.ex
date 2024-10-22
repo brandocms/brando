@@ -14,10 +14,10 @@ defmodule Brando.Cache.Query do
   end
 
   def put(key, val, ttl \\ :timer.minutes(15))
-  def put(key, val, ttl), do: @cache_module.put(:query, key, val, ttl: ttl)
+  def put(key, val, ttl), do: @cache_module.put(:query, key, val, expire: ttl)
 
   def put({:single, src, hash}, val, ttl, id),
-    do: @cache_module.put(:query, {:single, src, hash, id}, val, ttl: ttl)
+    do: @cache_module.put(:query, {:single, src, hash, id}, val, expire: ttl)
 
   defp get_from_cache({:single, source, key}), do: find_single_entry(source, key)
   defp get_from_cache(key), do: @cache_module.get(:query, key)
@@ -68,7 +68,7 @@ defmodule Brando.Cache.Query do
     |> Cachex.stream!(ms)
     |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
   rescue
-    Cachex.ExecutionError -> :ok
+    Cachex.Error -> :ok
   end
 
   @spec perform_eviction(:single, binary(), integer()) :: [:ok]
@@ -79,7 +79,7 @@ defmodule Brando.Cache.Query do
     |> Cachex.stream!(ms)
     |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
   rescue
-    Cachex.ExecutionError -> :ok
+    Cachex.Error -> :ok
   end
 
   defp find_single_entry(source, key) do
@@ -87,7 +87,7 @@ defmodule Brando.Cache.Query do
 
     :query
     |> Cachex.stream!(ms)
-    |> Enum.map(fn {_, _, _, _, entry} -> entry end)
+    |> Enum.map(fn {:entry, _key_tuple, entry, _ts, _exp} -> entry end)
     |> List.first()
     |> case do
       nil -> {:error, nil}

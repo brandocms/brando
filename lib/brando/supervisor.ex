@@ -5,6 +5,7 @@ defmodule Brando.Supervisor do
   Looks after our cache.
   """
   use Supervisor
+  import Cachex.Spec
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(_) do
@@ -17,7 +18,26 @@ defmodule Brando.Supervisor do
     children = [
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
-      %{id: :four_oh_four_cache, start: {Cachex, :start_link, [:four_oh_four, [limit: 500]]}},
+      %{
+        id: :four_oh_four_cache,
+        start:
+          {Cachex, :start_link,
+           [
+             :four_oh_four,
+             [
+               hooks: [
+                 hook(
+                   module: Cachex.Limit.Scheduled,
+                   args: {
+                     500,
+                     [],
+                     []
+                   }
+                 )
+               ]
+             ]
+           ]}
+      },
       {Oban, oban_config()}
     ]
 

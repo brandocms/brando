@@ -392,7 +392,7 @@ defmodule Brando.LivePreview do
   end
 
   def set_var(cache_key, key, value) do
-    Cachex.put(:cache, "#{cache_key}__VAR__#{key}", value, ttl: :timer.seconds(120))
+    Cachex.put(:cache, "#{cache_key}__VAR__#{key}", value, expire: :timer.seconds(120))
     value
   end
 
