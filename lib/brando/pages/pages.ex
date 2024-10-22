@@ -5,13 +5,13 @@ defmodule Brando.Pages do
   use BrandoAdmin, :context
   use Brando.Query
 
+  import Ecto.Query
+
   alias Brando.Pages.Page
   alias Brando.Pages.Fragment
   alias Brando.Users.User
   alias Brando.Villain
   alias Ecto.Changeset
-
-  import Ecto.Query
 
   @type changeset :: Changeset.t()
   @type fragment :: Fragment.t()
