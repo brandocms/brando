@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def mount(socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules", link: true)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules")
     end
 
     # TODO: maybe check oban queue for :processing_images?
@@ -2212,7 +2212,7 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     # Subscribe parent live view to changes to this image
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     # this is only for fresh uploads.
     if updated_image.status !== :processed do
@@ -2625,7 +2625,7 @@ defmodule BrandoAdmin.Components.Form do
         )
 
       # Subscribe parent live view to changes to this image
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
       Brando.Images.Processing.queue_processing(image, current_user)
 
       changeset = form.source
@@ -2764,7 +2764,7 @@ defmodule BrandoAdmin.Components.Form do
                 assign(socket, :processing, true)
             end
 
-          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}", link: true)
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
           Brando.Images.Processing.queue_processing(
             image,

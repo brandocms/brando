@@ -341,7 +341,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   defp subscribe(schema) do
     topic = "brando:listing:content_listing_#{schema}_default"
-    Phoenix.PubSub.subscribe(Brando.pubsub(), topic, link: true)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
