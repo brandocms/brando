@@ -1067,7 +1067,6 @@ defmodule Brando.Blueprint do
 
     fields_to_cast =
       (all_required_attrs ++ all_optional_attrs ++ castable_relations ++ castable_assets)
-      |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
 
     if module != schema.__struct__ do
@@ -1085,6 +1084,7 @@ defmodule Brando.Blueprint do
       |> Changeset.cast(params, fields_to_cast)
       |> Relations.run_cast_relations(all_relations, user)
       |> Assets.run_cast_assets(all_assets, user)
+      |> Villain.maybe_cast_blocks(module, user, opts)
       |> Trait.run_changeset_mutators(
         module,
         traits_before_validate_required,
@@ -1151,11 +1151,6 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(changeset, _) do
     changeset
-  end
-
-  defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
-    villain_fields = Enum.map(module.__blocks_fields__(), & &1.name)
-    Enum.reject(fields_to_cast, &(&1 in villain_fields))
   end
 
   defp strip_polymorphic_embeds_from_fields_to_cast(fields_to_cast, module) do
