@@ -187,14 +187,6 @@ button.btn-palette {
     @fontsize 10px;
     @space margin-top 5px;
     cursor: help;
-    display: flex;
-    justify-content: space-between;
-
-    div {
-      &:last-of-type {
-        text-align: right;
-      }
-    }
 
     span {
       font-weight: bold;

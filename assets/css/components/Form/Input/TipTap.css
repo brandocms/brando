@@ -1,11 +1,15 @@
 .tiptap-wrapper {
   position: relative;
 
-  .brando-input & {
+  .field-base & {
     /* when inside a fieldwrapper(?) */
     background-color: var(--brando-color-input);
     .ProseMirror {
       padding: 12px 12px 15px;
+    }
+
+    .tiptap-menu {
+      top: 0;
     }
   }
 
