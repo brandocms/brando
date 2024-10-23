@@ -1,12 +1,10 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
 
   alias Ecto.Changeset
   alias Brando.Villain.Blocks.PictureBlock
-
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
@@ -76,6 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       end
 
     image = Changeset.apply_changes(block_data_cs)
+    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
 
     {:ok,
      socket
@@ -84,7 +83,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(:upload_formats, upload_formats)
      |> assign(:extracted_path, extracted_path)
      |> assign(:extracted_filename, extracted_filename)
-     |> assign(:uid, assigns.block[:uid].value)}
+     |> assign(:uid, assigns.block[:uid].value)
+     |> assign(:file_name, file_name)
+     |> assign_new(:compact, fn -> true end)}
   end
 
   def render(assigns) do
@@ -114,16 +115,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <% end %>
             </:description>
             <input class="file-input" type="file" />
-            <div :if={@extracted_path} class="preview" phx-click={show_modal("#block-#{@uid}_config")}>
+            <div
+              :if={@extracted_path}
+              class={["preview", (@compact && "compact") || "classic"]}
+              phx-click={!@compact && show_modal("#block-#{@uid}_config")}
+            >
               <Content.image image={@image} size={:largest} />
-              <figcaption phx-click={show_modal("#block-#{@uid}_config")}>
-                <div id={"block-#{@uid}-figcaption-title"}>
-                  <span><%= gettext("Caption") %></span> <%= @image.title |> raw || "—" %><br />
-                </div>
-                <div id={"block-#{@uid}-figcaption-alt"}>
-                  <span><%= gettext("Alt. text") %></span> <%= @image.alt || "—" %>
-                </div>
-              </figcaption>
+              <div class="image-info">
+                <figcaption phx-click={!@compact && show_modal("#block-#{@uid}_config")}>
+                  <div class="info-wrapper">
+                    <div class="name-and-dims">
+                      <div class="filename"><%= @file_name %></div>
+                      <div class="dims"><%= @image.width %>&times;<%= @image.height %></div>
+                    </div>
+                    <div class="title-and-alt">
+                      <div id={"block-#{@uid}-figcaption-title"}>
+                        <span><%= gettext("Caption") %></span>
+                        <%= if @image.title in [nil, ""] do %>
+                          <%= gettext("<no caption>") %>
+                        <% else %>
+                          <%= raw(@image.title) %>
+                        <% end %>
+                      </div>
+                      <div id={"block-#{@uid}-figcaption-alt"}>
+                        <span><%= gettext("Alt. text") %></span> <%= @image.alt ||
+                          gettext("<no alt.text>") %>
+                      </div>
+                    </div>
+                  </div>
+                  <button class="tiny" type="button" phx-click={show_modal("#block-#{@uid}_config")}>
+                    <%= gettext("Edit image") %>
+                  </button>
+                </figcaption>
+              </div>
             </div>
 
             <div class={["empty", "upload-canvas", @extracted_path && "hidden"]}>
