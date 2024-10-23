@@ -25,7 +25,14 @@ defmodule Brando.Type.ImageConfig do
         }
 
   @derive Jason.Encoder
-  defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+  defstruct allowed_mimetypes: [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "image/avif",
+              "image/gif",
+              "image/svg+xml"
+            ],
             default_size: "medium",
             random_filename: false,
             size_limit: 10_240_000,
@@ -77,9 +84,9 @@ defmodule Brando.Type.ImageConfig do
       allowed_mimetypes: [
         "image/jpeg",
         "image/png",
-        "image/gif",
-        "image/avif",
         "image/webp",
+        "image/avif",
+        "image/gif",
         "image/svg+xml"
       ],
       upload_path: Path.join(["images", "site", "default"]),
