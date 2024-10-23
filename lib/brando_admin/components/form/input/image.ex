@@ -316,6 +316,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     assigns =
       assigns
       |> assign(:type, type_from_path)
+      |> assign_new(:size, fn -> nil end)
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:editable, fn -> true end)
       |> assign_new(:publish, fn -> false end)
@@ -336,7 +337,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       />
       <%= if @image do %>
         <%= if @image.status == :processed do %>
-          <Content.image image={@image} size={(@editable && :thumb) || :smallest} />
+          <Content.image image={@image} size={(@size && @size) || (@editable && :thumb) || :smallest} />
         <% else %>
           <div class="img-placeholder">
             <svg
