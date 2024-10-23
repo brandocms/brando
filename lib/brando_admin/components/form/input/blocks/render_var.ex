@@ -615,10 +615,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <%= if @link_text do %>
             <div class="link-text"><%= @link_text %></div>
           <% end %>
-          <dl>
-            <dt><%= gettext("URL") %>=</dt>
-            <dd><%= raw(@value) || gettext("<No URL>") %></dd>
-          </dl>
+          <%= if @value not in [nil, ""] do %>
+            <dl>
+              <dt><%= gettext("URL") %>=</dt>
+              <dd><%= raw(@value) || gettext("<No URL>") %></dd>
+            </dl>
+          <% else %>
+            <dl>
+              <dt><%= gettext("No link set") %></dt>
+            </dl>
+          <% end %>
         <% else %>
           <.link_identifier identifier={@identifier} link_text={@link_text} />
         <% end %>
