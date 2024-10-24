@@ -2246,11 +2246,13 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # close live_preview
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
     socket
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
     |> disable_live_preview_in_blocks()
+    |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-show"})
     |> then(&{:noreply, &1})
   end
 
@@ -2258,7 +2260,7 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
     fetch_root_blocks(socket, :live_preview, 500)
-    {:noreply, socket}
+    {:noreply, socket |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})}
   end
 
   def handle_event("open_live_preview_standalone", _, socket) do

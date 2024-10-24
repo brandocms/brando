@@ -144,6 +144,12 @@ export default hooks => {
         topbar.delayedShow(200)
       })
 
+      window.addEventListener('phx:js-exec', ({ detail }) => {
+        document.querySelectorAll(detail.to).forEach(el => {
+          liveSocket.execJS(el, el.getAttribute(detail.attr))
+        })
+      })
+
       window.addEventListener('phx:page-loading-stop', ({ detail }) => {
         topbar.hide()
 

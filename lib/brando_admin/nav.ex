@@ -66,7 +66,12 @@ defmodule BrandoAdmin.Nav do
           /><path d="M6 5.5h4.5v1H6zM6 2h4.5v1H6z" />
         </svg>
       </button>
-      <div class="sidebar" id="sidebar">
+      <div
+        class="sidebar"
+        id="sidebar"
+        data-js-hide={JS.add_class("hidden", to: "#sidebar")}
+        data-js-show={JS.remove_class("hidden", to: "#sidebar")}
+      >
         <section id="navigation">
           <div id="navigation-content">
             <header class="navigation-header">
