@@ -14,9 +14,9 @@ msgstr ""
 #: lib/brando/sites/identity.ex:134
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/sites/identity.ex:135
 #, elixir-autogen, elixir-format
 msgid "URL"
-msgstr ""
+msgstr "URL"

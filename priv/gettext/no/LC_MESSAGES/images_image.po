@@ -14,55 +14,55 @@ msgstr ""
 #: lib/brando/images/image.ex:81
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
-msgstr ""
+msgstr "Alternativ tekst"
 
 #: lib/brando/images/image.ex:90
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
-msgstr ""
+msgstr "Ressursen er overført til CDN"
 
 #: lib/brando/images/image.ex:89
 #, elixir-autogen, elixir-format
 msgid "CDN"
-msgstr ""
+msgstr "CDN"
 
 #: lib/brando/images/image.ex:51
 #, elixir-autogen, elixir-format
 msgid "Config target"
-msgstr ""
+msgstr "Konfigurasjonsmål"
 
 #: lib/brando/images/image.ex:95
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
-msgstr ""
+msgstr "Konfigurasjonsmål"
 
 #: lib/brando/images/image.ex:80
 #, elixir-autogen, elixir-format
 msgid "Credits"
-msgstr ""
+msgstr "Krediteringer"
 
 #: lib/brando/images/image.ex:94
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
-msgstr ""
+msgstr "Dominerende farge"
 
 #: lib/brando/images/image.ex:93
 #, elixir-autogen, elixir-format
 msgid "Height"
-msgstr ""
+msgstr "Høyde"
 
 #: lib/brando/images/image.ex:50
 #: lib/brando/images/image.ex:82
 #, elixir-autogen, elixir-format
 msgid "Path"
-msgstr ""
+msgstr "Sti"
 
 #: lib/brando/images/image.ex:79
 #, elixir-autogen, elixir-format
 msgid "Title"
-msgstr ""
+msgstr "Tittel"
 
 #: lib/brando/images/image.ex:92
 #, elixir-autogen, elixir-format
 msgid "Width"
-msgstr ""
+msgstr "Bredde"

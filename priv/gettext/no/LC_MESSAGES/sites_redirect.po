@@ -14,24 +14,24 @@ msgstr ""
 #: lib/brando/sites/seo.ex:84
 #, elixir-autogen, elixir-format
 msgid "Code"
-msgstr ""
+msgstr "Kode"
 
 #: lib/brando/sites/seo.ex:85
 #, elixir-autogen, elixir-format
 msgid "From"
-msgstr ""
+msgstr "Fra"
 
 #: lib/brando/sites/seo.ex:86
 #, elixir-autogen, elixir-format
 msgid "To"
-msgstr ""
+msgstr "Til"
 
 #: lib/brando/sites/redirect.ex:25
 #, elixir-autogen, elixir-format
 msgid "redirect"
-msgstr ""
+msgstr "videresending"
 
 #: lib/brando/sites/redirect.ex:26
 #, elixir-autogen, elixir-format
 msgid "redirects"
-msgstr ""
+msgstr "videresendinger"

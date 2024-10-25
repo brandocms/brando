@@ -14,88 +14,88 @@ msgstr ""
 #: lib/brando/users/user.ex:158
 #, elixir-autogen, elixir-format
 msgid "Admin"
-msgstr ""
+msgstr "Admin"
 
 #: lib/brando/users/user.ex:107
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
-msgstr ""
+msgstr "Er du sikker?"
 
 #: lib/brando/users/user.ex:166
 #, elixir-autogen, elixir-format
 msgid "Avatar"
-msgstr ""
+msgstr "Profilbilde"
 
 #: lib/brando/users/user.ex:169
 #, elixir-autogen, elixir-format
 msgid "Config"
-msgstr ""
+msgstr "Konfigurasjon"
 
 #: lib/brando/users/user.ex:131
 #: lib/brando/users/user.ex:147
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/users/user.ex:107
 #, elixir-autogen, elixir-format
 msgid "Disable user"
-msgstr ""
+msgstr "Deaktiver bruker"
 
 #: lib/brando/users/user.ex:106
 #, elixir-autogen, elixir-format
 msgid "Edit user"
-msgstr ""
+msgstr "Oppdater bruker"
 
 #: lib/brando/users/user.ex:159
 #, elixir-autogen, elixir-format
 msgid "Editor"
-msgstr ""
+msgstr "Redaktør"
 
 #: lib/brando/users/user.ex:105
 #: lib/brando/users/user.ex:151
 #, elixir-autogen, elixir-format
 msgid "Email"
-msgstr ""
+msgstr "Epost"
 
 #: lib/brando/users/user.ex:153
 #, elixir-autogen, elixir-format
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: lib/brando/users/user.ex:104
 #: lib/brando/users/user.ex:150
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/users/user.ex:139
 #: lib/brando/users/user.ex:152
 #, elixir-autogen, elixir-format
 msgid "Password"
-msgstr ""
+msgstr "Passord"
 
 #: lib/brando/users/user.ex:157
 #, elixir-autogen, elixir-format
 msgid "Superuser"
-msgstr ""
+msgstr "Superbruker"
 
 #: lib/brando/users/user.ex:133
 #, elixir-autogen, elixir-format
 msgid "The administrator has set a mandatory password change on first login for this website."
-msgstr ""
+msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
 
 #: lib/brando/users/user.ex:160
 #, elixir-autogen, elixir-format
 msgid "User"
-msgstr ""
+msgstr "Bruker"
 
 #: lib/brando/users/user.ex:95
 #, elixir-autogen, elixir-format
 msgid "user"
-msgstr ""
+msgstr "bruker"
 
 #: lib/brando/users/user.ex:96
 #, elixir-autogen, elixir-format
 msgid "users"
-msgstr ""
+msgstr "brukere"

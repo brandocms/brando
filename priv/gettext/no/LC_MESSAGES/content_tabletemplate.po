@@ -14,19 +14,19 @@ msgstr ""
 #: lib/brando/content/table_template.ex:49
 #, elixir-autogen, elixir-format
 msgid "Columns"
-msgstr ""
+msgstr "Kolonner"
 
 #: lib/brando/content/table_template.ex:41
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/content/table_template.ex:75
 #, elixir-autogen, elixir-format
 msgid "table template"
-msgstr ""
+msgstr "tabellmal"
 
 #: lib/brando/content/table_template.ex:76
 #, elixir-autogen, elixir-format
 msgid "table templates"
-msgstr ""
+msgstr "tabellmaler"

@@ -14,54 +14,54 @@ msgstr ""
 #: lib/brando/content/container.ex:61
 #, elixir-autogen, elixir-format
 msgid "Allow custom palette"
-msgstr ""
+msgstr "Tillat egendefinert palett"
 
 #: lib/brando/content/container.ex:48
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/content/container.ex:59
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/content/container.ex:60
 #, elixir-autogen, elixir-format
 msgid "Namespace"
-msgstr ""
+msgstr "Kategori"
 
 #: lib/brando/content/container.ex:68
 #, elixir-autogen, elixir-format
 msgid "Palette"
-msgstr ""
+msgstr "Palett"
 
 #: lib/brando/content/container.ex:62
 #, elixir-autogen, elixir-format
 msgid "Palette namespace"
-msgstr ""
+msgstr "Palettkategori"
 
 #: lib/brando/content/container.ex:57
 #, elixir-autogen, elixir-format
 msgid "Type"
-msgstr ""
+msgstr "Type"
 
 #: lib/brando/content/container.ex:74
 #, elixir-autogen, elixir-format
 msgid "Use `{{ content }}` to render inner content"
-msgstr ""
+msgstr "Bruk `{{ content }}` for å integrere indre innhold"
 
 #: lib/brando/content/container.ex:73
 #, elixir-autogen, elixir-format
 msgid "Wrapper code"
-msgstr ""
+msgstr "Innpakningskode"
 
 #: lib/brando/content/container.ex:132
 #, elixir-autogen, elixir-format
 msgid "container"
-msgstr ""
+msgstr "seksjon"
 
 #: lib/brando/content/container.ex:133
 #, elixir-autogen, elixir-format
 msgid "containers"
-msgstr ""
+msgstr "seksjoner"

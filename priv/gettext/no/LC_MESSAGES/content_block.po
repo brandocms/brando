@@ -14,9 +14,9 @@ msgstr ""
 #: lib/brando/content/block.ex:134
 #, elixir-autogen, elixir-format
 msgid "block"
-msgstr ""
+msgstr "blokk"
 
 #: lib/brando/content/block.ex:135
 #, elixir-autogen, elixir-format
 msgid "blocks"
-msgstr ""
+msgstr "blokker"

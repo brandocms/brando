@@ -14,4 +14,4 @@ msgstr ""
 #: lib/brando/videos/video.ex:70
 #, elixir-autogen, elixir-format
 msgid "Path"
-msgstr ""
+msgstr "Sti"

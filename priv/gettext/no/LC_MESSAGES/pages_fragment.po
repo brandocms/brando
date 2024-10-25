@@ -14,52 +14,52 @@ msgstr ""
 #: lib/brando/pages/fragment.ex:110
 #, elixir-autogen, elixir-format
 msgid "Advanced"
-msgstr ""
+msgstr "Avansert"
 
 #: lib/brando/pages/fragment.ex:73
 #, elixir-autogen, elixir-format
 msgid "Blocks"
-msgstr ""
+msgstr "Blokker"
 
 #: lib/brando/pages/fragment.ex:75
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/pages/fragment.ex:91
 #, elixir-autogen, elixir-format
 msgid "Key"
-msgstr ""
+msgstr "Nøkkel"
 
 #: lib/brando/pages/fragment.ex:101
 #, elixir-autogen, elixir-format
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: lib/brando/pages/fragment.ex:86
 #, elixir-autogen, elixir-format
 msgid "Parent key"
-msgstr ""
+msgstr "Hovednøkkel"
 
 #: lib/brando/pages/fragment.ex:106
 #, elixir-autogen, elixir-format
 msgid "Parent page"
-msgstr ""
+msgstr "Overordnet side"
 
 #: lib/brando/pages/fragment.ex:77
 #, elixir-autogen, elixir-format
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: lib/brando/pages/fragment.ex:82
 #, elixir-autogen, elixir-format
 msgid "Title"
-msgstr ""
+msgstr "Tittel"
 
 #: lib/brando/pages/fragment.ex:113
 #, elixir-autogen, elixir-format
 msgid "Wrapper"
-msgstr ""
+msgstr "Innpakningskode"
 
 #: lib/brando/pages/fragment.ex:115
 #, elixir-autogen, elixir-format
@@ -69,19 +69,19 @@ msgstr ""
 #: lib/brando/pages/fragment.ex:64
 #, elixir-autogen, elixir-format
 msgid "fragment"
-msgstr ""
+msgstr "fragment"
 
 #: lib/brando/pages/fragment.ex:65
 #, elixir-autogen, elixir-format
 msgid "fragments"
-msgstr ""
+msgstr "fragmenter"
 
 #: lib/brando/pages/fragment.ex:92
 #, elixir-autogen, elixir-format
 msgid "key"
-msgstr ""
+msgstr "key"
 
 #: lib/brando/pages/fragment.ex:87
 #, elixir-autogen, elixir-format
 msgid "parent_key"
-msgstr ""
+msgstr "parent_key"

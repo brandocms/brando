@@ -14,24 +14,24 @@ msgstr ""
 #: lib/brando/content/palette.ex:77
 #, elixir-autogen, elixir-format
 msgid "Color"
-msgstr ""
+msgstr "Farge"
 
 #: lib/brando/content/palette.ex:42
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/content/palette.ex:76
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/content/palette.ex:107
 #, elixir-autogen, elixir-format
 msgid "palette"
-msgstr ""
+msgstr "palett"
 
 #: lib/brando/content/palette.ex:108
 #, elixir-autogen, elixir-format
 msgid "palettes"
-msgstr ""
+msgstr "paletter"

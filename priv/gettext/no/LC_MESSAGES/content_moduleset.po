@@ -14,7 +14,7 @@ msgstr ""
 #: lib/brando/content/module_set.ex:42
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/content/module_set.ex:51
 #, elixir-autogen, elixir-format
@@ -24,7 +24,7 @@ msgstr ""
 #: lib/brando/content/module_set.ex:44
 #, elixir-autogen, elixir-format
 msgid "Title"
-msgstr ""
+msgstr "Tittel"
 
 #: lib/brando/content/module_set.ex:88
 #, elixir-autogen, elixir-format

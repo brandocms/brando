@@ -14,9 +14,9 @@ msgstr ""
 #: lib/brando/content/table_row.ex:38
 #, elixir-autogen, elixir-format
 msgid "table row"
-msgstr ""
+msgstr "tabellrad"
 
 #: lib/brando/content/table_row.ex:39
 #, elixir-autogen, elixir-format
 msgid "table rows"
-msgstr ""
+msgstr "tabellrader"

@@ -14,35 +14,35 @@ msgstr ""
 #: lib/brando/navigation/menu.ex:51
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/navigation/menu.ex:62
 #, elixir-autogen, elixir-format
 msgid "Items"
-msgstr ""
+msgstr "Menypunkter"
 
 #: lib/brando/navigation/menu.ex:57
 #, elixir-autogen, elixir-format
 msgid "Key"
-msgstr ""
+msgstr "Nøkkel"
 
 #: lib/brando/navigation/menu.ex:55
 #, elixir-autogen, elixir-format
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: lib/brando/navigation/menu.ex:56
 #: lib/brando/navigation/menu.ex:107
 #, elixir-autogen, elixir-format
 msgid "Title"
-msgstr ""
+msgstr "Tittel"
 
 #: lib/brando/navigation/menu.ex:42
 #, elixir-autogen, elixir-format
 msgid "menu"
-msgstr ""
+msgstr "meny"
 
 #: lib/brando/navigation/menu.ex:43
 #, elixir-autogen, elixir-format
 msgid "menus"
-msgstr ""
+msgstr "menyer"

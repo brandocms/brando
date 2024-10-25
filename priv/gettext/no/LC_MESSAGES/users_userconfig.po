@@ -14,24 +14,24 @@ msgstr ""
 #: lib/brando/users/user.ex:178
 #, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
-msgstr ""
+msgstr "Foretrekker redusert bevegelse"
 
 #: lib/brando/users/user.ex:172
 #, elixir-autogen, elixir-format
 msgid "Reset password on first login"
-msgstr ""
+msgstr "Tilbakestill passord ved første pålogging"
 
 #: lib/brando/users/user.ex:175
 #, elixir-autogen, elixir-format
 msgid "Show mutation notifications"
-msgstr ""
+msgstr "Vis mutasjonsvarsler"
 
 #: lib/brando/users/user_config.ex:28
 #, elixir-autogen, elixir-format
 msgid "user config"
-msgstr ""
+msgstr "brukerkonfigurasjon"
 
 #: lib/brando/users/user_config.ex:29
 #, elixir-autogen, elixir-format
 msgid "user configs"
-msgstr ""
+msgstr "brukerkonfigurasjoner"

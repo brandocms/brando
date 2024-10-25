@@ -14,4 +14,4 @@ msgstr ""
 #: lib/brando/files/file.ex:35
 #, elixir-autogen, elixir-format
 msgid "Filename"
-msgstr ""
+msgstr "Filnavn"

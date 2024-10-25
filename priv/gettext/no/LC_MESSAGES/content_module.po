@@ -14,29 +14,29 @@ msgstr ""
 #: lib/brando/content/module.ex:107
 #, elixir-autogen, elixir-format
 msgid "Class"
-msgstr ""
+msgstr "Klasse"
 
 #: lib/brando/content/module.ex:109
 #, elixir-autogen, elixir-format
 msgid "Export modules"
-msgstr ""
+msgstr "Eksporter moduler"
 
 #: lib/brando/content/module.ex:105
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 #: lib/brando/content/module.ex:106
 #, elixir-autogen, elixir-format
 msgid "Namespace"
-msgstr ""
+msgstr "Kategori"
 
 #: lib/brando/content/module.ex:193
 #, elixir-autogen, elixir-format
 msgid "module"
-msgstr ""
+msgstr "modul"
 
 #: lib/brando/content/module.ex:194
 #, elixir-autogen, elixir-format
 msgid "modules"
-msgstr ""
+msgstr "moduler"

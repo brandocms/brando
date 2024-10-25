@@ -14,35 +14,35 @@ msgstr ""
 #: lib/brando/sites/global_set.ex:37
 #, elixir-autogen, elixir-format
 msgid "Content"
-msgstr ""
+msgstr "Innhold"
 
 #: lib/brando/sites/global_set.ex:47
 #, elixir-autogen, elixir-format
 msgid "Globals"
-msgstr ""
+msgstr "Globaler"
 
 #: lib/brando/sites/global_set.ex:42
 #, elixir-autogen, elixir-format
 msgid "Key"
-msgstr ""
+msgstr "Nøkkel"
 
 #: lib/brando/sites/global_set.ex:41
 #: lib/brando/sites/global_set.ex:58
 #, elixir-autogen, elixir-format
 msgid "Label"
-msgstr ""
+msgstr "Merkelapp"
 
 #: lib/brando/sites/global_set.ex:40
 #, elixir-autogen, elixir-format
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: lib/brando/sites/global_set.ex:82
 #, elixir-autogen, elixir-format
 msgid "global set"
-msgstr ""
+msgstr "globalsett"
 
 #: lib/brando/sites/global_set.ex:83
 #, elixir-autogen, elixir-format
 msgid "global sets"
-msgstr ""
+msgstr "globalsett"
