@@ -1747,15 +1747,20 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_event("focus", params, socket) do
-    require Logger
+  def handle_event("focus", %{"field" => field}, socket) do
+    current_user = socket.assigns.current_user
+    entry = socket.assigns.entry
 
-    Logger.error("""
-    => focus
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:active_field:#{entry.id}",
+      {:active_field, field, current_user.id}
+    )
 
-    #{inspect(params, pretty: true)}
-    """)
+    {:noreply, assign(socket, :focused_field, field)}
+  end
 
+  def handle_event("focus", _, socket) do
     {:noreply, socket}
   end
 

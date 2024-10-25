@@ -212,6 +212,9 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
+
   def email(assigns) do
     assigns = prepare_input_component(assigns)
 
@@ -229,6 +232,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         placeholder={@placeholder}
         disabled={@disabled}
         phx-debounce={@debounce}
+        phx-target={@target}
+        phx-focus={@focus}
+        phx-value-field={@focus && @field.name}
         class={["text", @monospace && "monospace"]}
       />
     </Form.field_base>
@@ -440,6 +446,9 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
+
   def slug(assigns) do
     assigns =
       assigns
@@ -470,6 +479,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={750}
         data-slug-for={@data_slug_for}
         data-slug-type={@data_slug_type}
+        phx-target={@target}
+        phx-focus={@focus}
+        phx-value-field={@focus && @field.name}
         autocorrect="off"
         spellcheck="false"
       />
@@ -754,12 +766,19 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={@debounce}
         phx-focus={@focus}
         phx-target={@target}
-        phx-value-field={@focus && @field.field}
+        phx-value-field={@focus && @field.name}
         phx-change={@change}
       />
     </Form.field_base>
     """
   end
+
+  attr :field, Phoenix.HTML.FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :placeholder, :string
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
 
   def textarea(assigns) do
     assigns = prepare_input_component(assigns)
@@ -786,6 +805,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         rows={@rows}
         disabled={@disabled}
         phx-debounce={@debounce}
+        phx-target={@target}
+        phx-focus={@focus}
+        phx-value-field={@focus && @field.name}
         id={@generated_uid}
       />
     </Form.field_base>

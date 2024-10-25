@@ -157,6 +157,12 @@ defmodule BrandoAdmin.Presence do
           %{state | dirty_fields: dirty_fields}
         end)
       end
+
+      def update_active_field(url, user_id, active_field) do
+        update(self(), "url:#{url}", user_id, fn state ->
+          %{state | active_field: active_field}
+        end)
+      end
     end
   end
 end

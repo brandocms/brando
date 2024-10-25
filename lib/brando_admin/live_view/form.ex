@@ -24,6 +24,7 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_alert, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_content_language, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_dirty_fields, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_active_field, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_modules, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_focal_point, unquote(schema)}})
 
@@ -45,6 +46,7 @@ defmodule BrandoAdmin.LiveView.Form do
         |> set_admin_locale()
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
 
       {:cont, socket}
     else
@@ -98,6 +100,16 @@ defmodule BrandoAdmin.LiveView.Form do
        :b_form_dirty_fields,
        :handle_info,
        &handle_hooks_dirty_fields_info/2
+     )}
+  end
+
+  def on_mount({:hooks_active_field, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_active_field,
+       :handle_info,
+       &handle_hooks_active_field_info/2
      )}
   end
 
@@ -300,6 +312,26 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_dirty_fields_info(_, socket), do: {:cont, socket}
+
+  defp handle_hooks_active_field_info({:active_field, field, user_id}, socket) do
+    socket =
+      if user_id == socket.assigns.current_user.id do
+        require Logger
+
+        Logger.error("==> active field for me is #{field}")
+
+        Brando.presence().update_active_field(socket.assigns.uri.path, user_id, field)
+        socket
+      else
+        require Logger
+        Logger.error("==> active field for other #{user_id} is #{field}")
+        socket
+      end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_active_field_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_modules_info({_module, [:module, action]}, socket)
        when action in [:created, :updated] do
