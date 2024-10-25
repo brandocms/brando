@@ -337,7 +337,7 @@ defmodule Brando.Villain.Parser do
            ) do
         identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
         {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
-        Context.assign(context, :entries, entries)
+        Context.assign(context, :entries, entries || [])
       end
 
       defp add_datasource_entries_to_context(context, _, _),
