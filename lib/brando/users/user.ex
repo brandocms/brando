@@ -111,10 +111,11 @@ defmodule Brando.Users.User do
 
   def listing_row(assigns) do
     ~H"""
-    <.cover image={@entry.avatar} columns={2} size={:smallest} padded />
-    <.update_link entry={@entry} columns={13}>
+    <.cover image={@entry.avatar} columns={1} size={:smallest} />
+    <.update_link entry={@entry} columns={14}>
       <%= @entry.name %>
       <:outside>
+        <br />
         <small><%= @entry.email %></small>
         <br />
         <small class="badge"><%= @entry.role %></small>
