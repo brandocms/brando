@@ -195,13 +195,13 @@ defmodule Brando.Pages.Page do
       <:outside>
         <br />
         <div class="badge no-border">
-          <Brando.HTML.icon name="hero-key" class="mr-1" /> <%= @entry.key %>
+          <Brando.HTML.icon name="hero-key" class="mr-1" /> <%= @entry.parent_key %>/<%= @entry.key %>
         </div>
       </:outside>
     </.update_link>
     <div class="col-3">
-      <div class="badge uppercase no-border">
-        Fragment
+      <div class="badge uppercase">
+        <%= gettext("Fragment") %>
       </div>
     </div>
     """
@@ -227,8 +227,8 @@ defmodule Brando.Pages.Page do
       </:outside>
     </.update_link>
     <div class="col-2">
-      <div class="badge uppercase no-border">
-        Subpage
+      <div class="badge uppercase">
+        <%= gettext("Sub page") %>
       </div>
     </div>
     """
