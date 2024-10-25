@@ -206,7 +206,7 @@ defmodule Brando.Query.Mutations do
   defp maybe_set_status(%{status: _} = entry), do: Map.put(entry, :status, :draft)
   defp maybe_set_status(entry), do: entry
 
-  defp maybe_duplicate_blocks(entry, module, %{has_blocks: true}) do
+  defp maybe_duplicate_blocks(entry, module, _opts) do
     block_fields = Enum.map(module.__blocks_fields__(), &:"entry_#{&1.name}")
     preloads = Brando.Villain.preloads_for(module)
     entry = Brando.repo().preload(entry, preloads)
@@ -228,8 +228,6 @@ defmodule Brando.Query.Mutations do
 
     updated_entry
   end
-
-  defp maybe_duplicate_blocks(entry, _, _), do: entry
 
   defp duplicate_block(block) do
     new_uid = Brando.Utils.generate_uid()
