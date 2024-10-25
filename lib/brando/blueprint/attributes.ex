@@ -46,6 +46,7 @@ defmodule Brando.Blueprint.Attributes do
     :decimal,
     :file,
     :float,
+    :i18n_string,
     :id,
     :integer,
     :language,
