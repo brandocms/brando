@@ -63,7 +63,16 @@ defmodule BrandoAdmin.Pages.PageListLive do
         send(self(), {:toast, gettext("Fragment duplicated")})
         BrandoAdmin.LiveView.Listing.update_list_entries(Pages.Page)
 
-      {:error, _error} ->
+      {:error, error} ->
+        require Logger
+
+        Logger.error("""
+        ==> error duplicating fragment
+
+        #{inspect(error, pretty: true, limit: :infinity)}
+
+        """)
+
         send(self(), {:toast, gettext("Error duplicating fragment")})
     end
 
