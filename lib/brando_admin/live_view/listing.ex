@@ -70,7 +70,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         msgid = Brando.Utils.humanize(singular, :downcase)
 
         gettext_module = schema.__modules__(:gettext)
-        gettext_domain = String.downcase("#{domain}_#{singular}_naming")
+        gettext_domain = String.downcase("#{domain}_#{singular}")
 
         translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
 
@@ -105,7 +105,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         msgid = Brando.Utils.humanize(singular, :downcase)
 
         gettext_module = schema.__modules__(:gettext)
-        gettext_domain = String.downcase("#{domain}_#{singular}_naming")
+        gettext_domain = String.downcase("#{domain}_#{singular}")
 
         translated_singular = Gettext.dgettext(gettext_module, gettext_domain, msgid)
 

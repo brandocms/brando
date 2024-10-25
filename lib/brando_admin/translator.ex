@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Translator do
-  defmacro __using__(ctx) do
+  defmacro __using__(_) do
     quote do
       def g(schema, nil), do: nil
       def g(schema, :hidden), do: :hidden
@@ -9,9 +9,7 @@ defmodule BrandoAdmin.Translator do
           gettext_module = schema.__modules__().gettext
 
           gettext_domain =
-            String.downcase(
-              "#{schema.__naming__().domain}_#{schema.__naming__().schema}_#{unquote(ctx)}"
-            )
+            String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
 
           Gettext.dgettext(gettext_module, gettext_domain, msgid)
         else
@@ -24,9 +22,7 @@ defmodule BrandoAdmin.Translator do
           gettext_module = schema.__modules__().gettext
 
           gettext_domain =
-            String.downcase(
-              "#{schema.__naming__().domain}_#{schema.__naming__().schema}_#{context}"
-            )
+            String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
 
           Gettext.dgettext(gettext_module, gettext_domain, msgid)
         else

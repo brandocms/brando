@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
   use BrandoAdmin, :live_component
-  use BrandoAdmin.Translator, "forms"
+  use BrandoAdmin.Translator
 
   use Gettext, backend: Brando.Gettext
   import Ecto.Changeset

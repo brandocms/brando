@@ -91,12 +91,14 @@ defmodule Brando.Blueprint.Translations do
   defmacro t(msgid) do
     domain = Module.get_attribute(__CALLER__.module, :domain)
     schema = Module.get_attribute(__CALLER__.module, :schema)
-    ctx = Module.get_attribute(__CALLER__.module, :ctx)
-    gettext_module = Module.get_attribute(__CALLER__.module, :gettext_module)
-    gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
+
+    gettext_domain =
+      [domain, schema]
+      |> Enum.join("_")
+      |> String.downcase()
 
     quote do
-      Gettext.dgettext(unquote(gettext_module), unquote(gettext_domain), unquote(msgid))
+      dgettext(unquote(gettext_domain), unquote(msgid))
     end
   end
 
@@ -104,12 +106,14 @@ defmodule Brando.Blueprint.Translations do
     schema = Macro.expand(schema, __CALLER__)
     domain = schema.__naming__().domain
     schema = schema.__naming__().schema
-    ctx = Module.get_attribute(__CALLER__.module, :ctx)
-    gettext_module = Module.get_attribute(__CALLER__.module, :gettext_module)
-    gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
+
+    gettext_domain =
+      [domain, schema]
+      |> Enum.join("_")
+      |> String.downcase()
 
     quote do
-      Gettext.dgettext(unquote(gettext_module), unquote(gettext_domain), unquote(msgid))
+      dgettext(unquote(gettext_domain), unquote(msgid))
     end
   end
 end

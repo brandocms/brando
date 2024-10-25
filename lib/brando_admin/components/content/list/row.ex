@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
   use BrandoAdmin, :live_component
-  use BrandoAdmin.Translator, "listings"
+  use BrandoAdmin.Translator
   use Gettext, backend: Brando.Gettext
   import Brando.Utils.Datetime
 

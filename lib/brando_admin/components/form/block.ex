@@ -1077,7 +1077,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             schema = module.__naming__().schema
 
             gettext_module = module.__modules__().gettext
-            gettext_domain = String.downcase("#{domain}_#{schema}_naming")
+            gettext_domain = String.downcase("#{domain}_#{schema}")
             msgid = Brando.Utils.humanize(module.__naming__().singular, :downcase)
 
             String.capitalize(Gettext.dgettext(gettext_module, gettext_domain, msgid))

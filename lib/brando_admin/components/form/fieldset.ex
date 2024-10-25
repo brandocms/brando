@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Fieldset do
-  use BrandoAdmin.Translator, "forms"
+  use BrandoAdmin.Translator
   use BrandoAdmin, :component
 
   alias BrandoAdmin.Components.Form.Fieldset

@@ -182,6 +182,7 @@ defmodule Brando.Blueprint do
 
       use Ecto.Schema
       use Brando.Blueprint.Dsl
+      use Gettext, backend: unquote(gettext_module)
 
       require PolymorphicEmbed
       import Ecto.Changeset
@@ -545,7 +546,7 @@ defmodule Brando.Blueprint do
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)
     %{domain: domain, schema: schema} = module.__naming__()
-    gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
+    gettext_domain = String.downcase("#{domain}_#{schema}")
 
     translations
     |> Enum.map(fn

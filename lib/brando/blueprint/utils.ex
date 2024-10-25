@@ -82,7 +82,7 @@ defmodule Brando.Blueprint.Utils do
     gettext_module = schema.__modules__().gettext
 
     gettext_domain =
-      String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}_forms")
+      String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
 
     for error_key <- error_keys do
       case Brando.Blueprint.Forms.get_field(error_key, form) do

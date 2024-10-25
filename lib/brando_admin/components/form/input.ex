@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input do
   use BrandoAdmin, :component
-  use BrandoAdmin.Translator, "forms"
+  use BrandoAdmin.Translator
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext

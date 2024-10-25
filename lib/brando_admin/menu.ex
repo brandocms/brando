@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Menu do
         |> String.replace("%5D", "]")
 
       url = Enum.join([url_base, query_params], "?")
-      gettext_domain = String.downcase("#{domain}_#{schema_name}_naming")
+      gettext_domain = String.downcase("#{domain}_#{schema_name}")
 
       Module.put_attribute(__MODULE__, :menus, %{
         name: {:translate, gettext_domain, msgid},
@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Menu do
         |> String.replace("%5D", "]")
 
       url = Enum.join([url_base, query_params], "?")
-      gettext_domain = String.downcase("#{domain}_#{schema_name}_naming")
+      gettext_domain = String.downcase("#{domain}_#{schema_name}")
 
       var!(b_menu_subitems) = [
         %{name: {:translate, gettext_domain, msgid}, url: url} | var!(b_menu_subitems)

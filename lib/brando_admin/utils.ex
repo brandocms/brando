@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Utils do
-  use BrandoAdmin.Translator, "forms"
+  use BrandoAdmin.Translator
   import Phoenix.Component
   alias Phoenix.LiveView.JS
 
