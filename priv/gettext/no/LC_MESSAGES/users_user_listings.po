@@ -1,0 +1,46 @@
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
+
+#: lib/brando/users/user.ex:119
+#, elixir-autogen, elixir-format
+msgid "Are you sure?"
+msgstr "Er du sikker?"
+
+#: lib/brando/users/user.ex:117
+#, elixir-autogen, elixir-format
+msgid "Disable user"
+msgstr "Deaktiver bruker"
+
+#: lib/brando/users/user.ex:115
+#, elixir-autogen, elixir-format
+msgid "Edit user"
+msgstr "Oppdater bruker"
+
+#: lib/brando/users/user.ex:110
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "Epost"
+
+#: lib/brando/users/user.ex:109
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Navn"

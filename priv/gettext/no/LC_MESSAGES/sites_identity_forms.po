@@ -1,0 +1,121 @@
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: no\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.0.1\n"
+
+#: lib/brando/sites/identity.ex:79
+#, elixir-autogen, elixir-format
+msgid "A shortform version of the name"
+msgstr "En kortformversjon av navnet"
+
+#: lib/brando/sites/identity.ex:88
+#, elixir-autogen, elixir-format
+msgid "Address line 1"
+msgstr "Adresselinje 1"
+
+#: lib/brando/sites/identity.ex:89
+#, elixir-autogen, elixir-format
+msgid "Address line 2"
+msgstr "Adresselinje 2"
+
+#: lib/brando/sites/identity.ex:90
+#, elixir-autogen, elixir-format
+msgid "Address line 3"
+msgstr "Adresselinje 3"
+
+#: lib/brando/sites/identity.ex:78
+#, elixir-autogen, elixir-format
+msgid "Alternate name"
+msgstr "Alternativt navn"
+
+#: lib/brando/sites/identity.ex:95
+#, elixir-autogen, elixir-format
+msgid "City"
+msgstr "Sted"
+
+#: lib/brando/sites/identity.ex:96
+#, elixir-autogen, elixir-format
+msgid "Country"
+msgstr "Land"
+
+#: lib/brando/sites/identity.ex:83
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "Epost"
+
+#: lib/brando/sites/identity.ex:111
+#, elixir-autogen, elixir-format
+msgid "Links"
+msgstr "Lenker"
+
+#: lib/brando/sites/identity.ex:106
+#, elixir-autogen, elixir-format
+msgid "Logo"
+msgstr "Logo"
+
+#: lib/brando/sites/identity.ex:123
+#, elixir-autogen, elixir-format
+msgid "Meta properties"
+msgstr "Meta egenskaper"
+
+#: lib/brando/sites/identity.ex:75
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Navn"
+
+#: lib/brando/sites/identity.ex:84
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefon"
+
+#: lib/brando/sites/identity.ex:101
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/sites/identity.ex:102
+#, elixir-autogen, elixir-format
+msgid "Title (postfix)"
+msgstr "Tittel (postfix)"
+
+#: lib/brando/sites/identity.ex:100
+#, elixir-autogen, elixir-format
+msgid "Title (prefix)"
+msgstr "Tittel (prefiks)"
+
+#: lib/brando/sites/identity.ex:71
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr "Type"
+
+#: lib/brando/sites/identity.ex:94
+#, elixir-autogen, elixir-format
+msgid "Zip code"
+msgstr "Postnummer"
+
+#: lib/brando/sites/identity.ex:69
+#, elixir-autogen, elixir-format
+msgid "Corporation"
+msgstr "Bedrift"
+
+#: lib/brando/sites/identity.ex:68
+#, elixir-autogen, elixir-format
+msgid "Organization"
+msgstr "Organisasjon"

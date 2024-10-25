@@ -1,0 +1,111 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#: lib/brando/sites/identity.ex:79
+#, elixir-autogen, elixir-format
+msgid "A shortform version of the name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:88
+#, elixir-autogen, elixir-format
+msgid "Address line 1"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:89
+#, elixir-autogen, elixir-format
+msgid "Address line 2"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:90
+#, elixir-autogen, elixir-format
+msgid "Address line 3"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:78
+#, elixir-autogen, elixir-format
+msgid "Alternate name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:95
+#, elixir-autogen, elixir-format
+msgid "City"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:96
+#, elixir-autogen, elixir-format
+msgid "Country"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:83
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:111
+#, elixir-autogen, elixir-format
+msgid "Links"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:106
+#, elixir-autogen, elixir-format
+msgid "Logo"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:123
+#, elixir-autogen, elixir-format
+msgid "Meta properties"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:75
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:84
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:101
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:102
+#, elixir-autogen, elixir-format
+msgid "Title (postfix)"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:100
+#, elixir-autogen, elixir-format
+msgid "Title (prefix)"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:71
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:94
+#, elixir-autogen, elixir-format
+msgid "Zip code"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:69
+#, elixir-autogen, elixir-format
+msgid "Corporation"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:68
+#, elixir-autogen, elixir-format
+msgid "Organization"
+msgstr ""

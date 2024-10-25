@@ -1,0 +1,71 @@
+# # "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: no\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.2\n"
+
+#: lib/brando/images/image.ex:88
+#, elixir-autogen, elixir-format
+msgid "Alt. text"
+msgstr "Alternativ tekst"
+
+#: lib/brando/images/image.ex:95
+#, elixir-autogen, elixir-format
+msgid "Asset has been transferred to CDN"
+msgstr "Ressursen er overført til CDN"
+
+#: lib/brando/images/image.ex:94
+#, elixir-autogen, elixir-format
+msgid "CDN"
+msgstr "CDN"
+
+#: lib/brando/images/image.ex:100
+#, elixir-autogen, elixir-format
+msgid "Configuration target"
+msgstr "Konfigurasjonsmål"
+
+#: lib/brando/images/image.ex:87
+#, elixir-autogen, elixir-format
+msgid "Credits"
+msgstr "Krediteringer"
+
+#: lib/brando/images/image.ex:99
+#, elixir-autogen, elixir-format
+msgid "Dominant color"
+msgstr "Dominerende farge"
+
+#: lib/brando/images/image.ex:98
+#, elixir-autogen, elixir-format
+msgid "Height"
+msgstr "Høyde"
+
+#: lib/brando/images/image.ex:89
+#, elixir-autogen, elixir-format
+msgid "Path"
+msgstr "Filbane"
+
+#: lib/brando/images/image.ex:86
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/images/image.ex:97
+#, elixir-autogen, elixir-format
+msgid "Width"
+msgstr "Bredde"
