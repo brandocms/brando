@@ -240,6 +240,7 @@ defmodule Brando.Query.Mutations do
         uid: new_uid,
         vars: Enum.map(block.vars, &duplicate_var/1),
         table_rows: Enum.map(block.table_rows, &%{&1 | id: nil}),
+        block_identifiers: Enum.map(block.block_identifiers, &%{&1 | id: nil, block_id: nil}),
         children: Enum.map(block.children, &duplicate_block/1),
         refs: duplicate_refs(block.refs)
     }
