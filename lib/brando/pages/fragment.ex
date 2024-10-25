@@ -94,8 +94,16 @@ defmodule Brando.Pages.Fragment do
 
         fieldset do
           size :half
-          input :language, :select, options: :languages, narrow: true
-          input :page_id, :select, options: &__MODULE__.get_pages/2, resetable: true
+
+          input :language, :select,
+            options: :languages,
+            narrow: true,
+            label: t("Language")
+
+          input :page_id, :select,
+            options: &__MODULE__.get_pages/2,
+            resetable: true,
+            label: t("Parent page")
         end
       end
 
