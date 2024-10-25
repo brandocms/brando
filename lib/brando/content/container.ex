@@ -45,7 +45,7 @@ defmodule Brando.Content.Container do
     form do
       default_params %{"status" => "draft"}
 
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset do
           size :half
 
@@ -54,7 +54,7 @@ defmodule Brando.Content.Container do
               %{label: "Liquid", value: :liquid},
               %{label: "Heex", value: :heex}
             ],
-            label: gettext("Type")
+            label: t("Type")
 
           input :name, :text, monospace: true, label: t("Name")
           input :namespace, :text, monospace: true, label: t("Namespace")

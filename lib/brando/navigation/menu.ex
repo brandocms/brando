@@ -48,7 +48,7 @@ defmodule Brando.Navigation.Menu do
     form do
       query &__MODULE__.form_query/1
 
-      tab "Content" do
+      tab t("Content") do
         fieldset do
           size :half
           input :status, :status

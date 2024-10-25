@@ -72,7 +72,7 @@ defmodule Brando.Pages.Fragment do
 
       blocks :blocks, label: t("Blocks")
 
-      tab "Content" do
+      tab t("Content") do
         fieldset do
           input :status, :status, label: t("Status")
         end
@@ -107,7 +107,7 @@ defmodule Brando.Pages.Fragment do
         end
       end
 
-      tab "Advanced" do
+      tab t("Advanced") do
         fieldset do
           input :wrapper, :code,
             label: t("Wrapper"),

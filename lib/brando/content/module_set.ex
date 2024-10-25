@@ -39,7 +39,7 @@ defmodule Brando.Content.ModuleSet do
 
   forms do
     form do
-      tab gettext("Content") do
+      tab t("Content") do
         fieldset do
           input :title, :text, label: t("Title")
 

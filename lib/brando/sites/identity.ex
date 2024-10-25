@@ -75,7 +75,7 @@ defmodule Brando.Sites.Identity do
       query &__MODULE__.query_with_preloads/1
       redirect_on_save &__MODULE__.redirect/3
 
-      tab "Content" do
+      tab t("Content") do
         fieldset do
           input :type, :radios,
             options: [

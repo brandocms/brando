@@ -53,7 +53,7 @@ defmodule Brando.Sites.SEO do
     form do
       redirect_on_save &__MODULE__.redirect/3
 
-      tab "Content" do
+      tab t("Content") do
         fieldset do
           input :fallback_meta_title, :text,
             label: t("Fallback META title"),
