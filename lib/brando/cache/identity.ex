@@ -12,16 +12,25 @@ defmodule Brando.Cache.Identity do
   Get Identity from cache
   """
   @spec get(binary()) :: map()
-  def get(language), do: Map.get(Cache.get(:identity), language, %{})
+  def get(language) do
+    identity_map =
+      case Cache.get(:identity) do
+        nil -> set()
+        cache -> cache
+      end
+
+    Map.get(identity_map, language, %{})
+  end
 
   @doc """
   Set initial identity cache. Called on startup
   """
-  @spec set :: {:error, boolean} | {:ok, boolean}
+  @spec set :: map()
   def set do
     {:ok, identities} = Sites.list_identities(%{preload: [:logo]})
     identity_map = process_identities(identities)
     Cachex.put(:cache, :identity, identity_map)
+    identity_map
   end
 
   @doc """
@@ -41,13 +50,7 @@ defmodule Brando.Cache.Identity do
   defp process_identities(identities) do
     Enum.reduce(identities, %{}, fn
       %{language: language} = identity, acc ->
-        put_in(
-          acc,
-          [
-            Brando.Utils.access_map(to_string(language))
-          ],
-          identity
-        )
+        put_in(acc, [Brando.Utils.access_map(to_string(language))], identity)
     end)
   end
 end
