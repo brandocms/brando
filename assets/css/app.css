@@ -274,9 +274,15 @@ code {
   right: 10px;
   bottom: 5px;
   width: auto;
+  column-gap: 3px;
 
   .presences-active, .presences-inactive {
     display: flex;
+    column-gap: 3px;
+  }
+
+  .presences-inactive {
+    display: none;
   }
 }
 
@@ -298,8 +304,6 @@ code {
 
 .user-presence {
   display: block;
-  margin-right: 5px;
-  margin-top: 5px;
   transform: translateY(150%) rotate(180deg);
   transition: transform 850ms ease;
   transition-delay: 250ms;

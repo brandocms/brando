@@ -103,7 +103,7 @@ export default app => ({
     const navTop = nav.getBoundingClientRect().top
     this.showCircle(circle)
     const top = el.getBoundingClientRect().top
-    gsap.to(circle, { ease: 'expo.ease', duration: 0.35, top: top - navTop })
+    gsap.to(circle, { ease: 'power2.inOut', duration: 0.5, top: top - navTop })
   },
 
   animateNav() {

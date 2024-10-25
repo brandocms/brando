@@ -17,7 +17,7 @@
       max-width: 37ch;
       display: flex;
       flex-direction: column;
-      row-gap: 7px;
+      row-gap: 7px;      
     }
 
     .title-and-alt {
@@ -40,6 +40,10 @@
       height: 100%;
       font-size: 13px;
       cursor: auto;
+
+      button.tiny {
+        margin-top: 7px;
+      }
     }
   }
 
