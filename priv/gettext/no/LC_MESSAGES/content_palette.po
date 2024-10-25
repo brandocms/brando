@@ -1,0 +1,37 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/content/palette.ex:77
+#, elixir-autogen, elixir-format
+msgid "Color"
+msgstr ""
+
+#: lib/brando/content/palette.ex:42
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/content/palette.ex:76
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/content/palette.ex:107
+#, elixir-autogen, elixir-format
+msgid "palette"
+msgstr ""
+
+#: lib/brando/content/palette.ex:108
+#, elixir-autogen, elixir-format
+msgid "palettes"
+msgstr ""

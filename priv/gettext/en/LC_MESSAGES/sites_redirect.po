@@ -1,0 +1,37 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/sites/seo.ex:84
+#, elixir-autogen, elixir-format
+msgid "Code"
+msgstr ""
+
+#: lib/brando/sites/seo.ex:85
+#, elixir-autogen, elixir-format
+msgid "From"
+msgstr ""
+
+#: lib/brando/sites/seo.ex:86
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr ""
+
+#: lib/brando/sites/redirect.ex:25
+#, elixir-autogen, elixir-format
+msgid "redirect"
+msgstr ""
+
+#: lib/brando/sites/redirect.ex:26
+#, elixir-autogen, elixir-format
+msgid "redirects"
+msgstr ""

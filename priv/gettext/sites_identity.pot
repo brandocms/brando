@@ -1,0 +1,123 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando/sites/identity.ex:94
+#, elixir-autogen, elixir-format
+msgid "A shortform version of the name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:104
+#, elixir-autogen, elixir-format
+msgid "Address line 1"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:105
+#, elixir-autogen, elixir-format
+msgid "Address line 2"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:106
+#, elixir-autogen, elixir-format
+msgid "Address line 3"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:93
+#, elixir-autogen, elixir-format
+msgid "Alternate name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:112
+#, elixir-autogen, elixir-format
+msgid "City"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:78
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:83
+#, elixir-autogen, elixir-format
+msgid "Corporation"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:113
+#, elixir-autogen, elixir-format
+msgid "Country"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:99
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:129
+#, elixir-autogen, elixir-format
+msgid "Links"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:124
+#, elixir-autogen, elixir-format
+msgid "Logo"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:141
+#, elixir-autogen, elixir-format
+msgid "Meta properties"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:90
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:82
+#, elixir-autogen, elixir-format
+msgid "Organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:100
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:119
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:120
+#, elixir-autogen, elixir-format
+msgid "Title (postfix)"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:118
+#, elixir-autogen, elixir-format
+msgid "Title (prefix)"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:85
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:111
+#, elixir-autogen, elixir-format
+msgid "Zip code"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:156
+#: lib/brando/sites/identity.ex:157
+#, elixir-autogen, elixir-format
+msgid "identity"
+msgstr ""

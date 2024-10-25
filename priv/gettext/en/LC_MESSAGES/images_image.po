@@ -1,0 +1,68 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/images/image.ex:81
+#, elixir-autogen, elixir-format
+msgid "Alt. text"
+msgstr ""
+
+#: lib/brando/images/image.ex:90
+#, elixir-autogen, elixir-format
+msgid "Asset has been transferred to CDN"
+msgstr ""
+
+#: lib/brando/images/image.ex:89
+#, elixir-autogen, elixir-format
+msgid "CDN"
+msgstr ""
+
+#: lib/brando/images/image.ex:51
+#, elixir-autogen, elixir-format
+msgid "Config target"
+msgstr ""
+
+#: lib/brando/images/image.ex:95
+#, elixir-autogen, elixir-format
+msgid "Configuration target"
+msgstr ""
+
+#: lib/brando/images/image.ex:80
+#, elixir-autogen, elixir-format
+msgid "Credits"
+msgstr ""
+
+#: lib/brando/images/image.ex:94
+#, elixir-autogen, elixir-format
+msgid "Dominant color"
+msgstr ""
+
+#: lib/brando/images/image.ex:93
+#, elixir-autogen, elixir-format
+msgid "Height"
+msgstr ""
+
+#: lib/brando/images/image.ex:50
+#: lib/brando/images/image.ex:82
+#, elixir-autogen, elixir-format
+msgid "Path"
+msgstr ""
+
+#: lib/brando/images/image.ex:79
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/images/image.ex:92
+#, elixir-autogen, elixir-format
+msgid "Width"
+msgstr ""

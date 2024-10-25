@@ -1,0 +1,87 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando/pages/fragment.ex:110
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:73
+#, elixir-autogen, elixir-format
+msgid "Blocks"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:75
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:91
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:101
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:86
+#, elixir-autogen, elixir-format
+msgid "Parent key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:106
+#, elixir-autogen, elixir-format
+msgid "Parent page"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:77
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:82
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:113
+#, elixir-autogen, elixir-format
+msgid "Wrapper"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:115
+#, elixir-autogen, elixir-format
+msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:64
+#, elixir-autogen, elixir-format
+msgid "fragment"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:65
+#, elixir-autogen, elixir-format
+msgid "fragments"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:92
+#, elixir-autogen, elixir-format
+msgid "key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:87
+#, elixir-autogen, elixir-format
+msgid "parent_key"
+msgstr ""

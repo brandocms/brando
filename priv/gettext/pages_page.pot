@@ -1,0 +1,145 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando/pages/page.ex:268
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr ""
+
+#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:150
+#, elixir-autogen, elixir-format
+msgid "Are you sure?"
+msgstr ""
+
+#: lib/brando/pages/page.ex:240
+#, elixir-autogen, elixir-format
+msgid "Blocks"
+msgstr ""
+
+#: lib/brando/pages/page.ex:285
+#, elixir-autogen, elixir-format
+msgid "CSS classes"
+msgstr ""
+
+#: lib/brando/pages/page.ex:242
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/pages/page.ex:133
+#, elixir-autogen, elixir-format
+msgid "Create fragment"
+msgstr ""
+
+#: lib/brando/pages/page.ex:132
+#, elixir-autogen, elixir-format
+msgid "Create subpage"
+msgstr ""
+
+#: lib/brando/pages/page.ex:142
+#, elixir-autogen, elixir-format
+msgid "Delete fragment"
+msgstr ""
+
+#: lib/brando/pages/page.ex:150
+#, elixir-autogen, elixir-format
+msgid "Delete sub page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:141
+#, elixir-autogen, elixir-format
+msgid "Duplicate fragment"
+msgstr ""
+
+#: lib/brando/pages/page.ex:149
+#, elixir-autogen, elixir-format
+msgid "Duplicate sub page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:140
+#, elixir-autogen, elixir-format
+msgid "Edit fragment"
+msgstr ""
+
+#: lib/brando/pages/page.ex:148
+#, elixir-autogen, elixir-format
+msgid "Edit sub page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:277
+#, elixir-autogen, elixir-format
+msgid "Has URL"
+msgstr ""
+
+#: lib/brando/pages/page.ex:273
+#, elixir-autogen, elixir-format
+msgid "Homepage"
+msgstr ""
+
+#: lib/brando/pages/page.ex:259
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/brando/pages/page.ex:278
+#, elixir-autogen, elixir-format
+msgid "Page has an URL and should be included in sitemap"
+msgstr ""
+
+#: lib/brando/pages/page.ex:274
+#, elixir-autogen, elixir-format
+msgid "Page is loaded at root address"
+msgstr ""
+
+#: lib/brando/pages/page.ex:290
+#, elixir-autogen, elixir-format
+msgid "Page variables"
+msgstr ""
+
+#: lib/brando/pages/page.ex:264
+#, elixir-autogen, elixir-format
+msgid "Parent page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:244
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/brando/pages/page.ex:283
+#, elixir-autogen, elixir-format
+msgid "Template"
+msgstr ""
+
+#: lib/brando/pages/page.ex:131
+#: lib/brando/pages/page.ex:249
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/pages/page.ex:130
+#: lib/brando/pages/page.ex:250
+#, elixir-autogen, elixir-format
+msgid "URI"
+msgstr ""
+
+#: lib/brando/pages/page.ex:104
+#, elixir-autogen, elixir-format
+msgid "page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:105
+#, elixir-autogen, elixir-format
+msgid "pages"
+msgstr ""

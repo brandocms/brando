@@ -1,0 +1,87 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:110
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:73
+#, elixir-autogen, elixir-format
+msgid "Blocks"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:75
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:91
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:101
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:86
+#, elixir-autogen, elixir-format
+msgid "Parent key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:106
+#, elixir-autogen, elixir-format
+msgid "Parent page"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:77
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:82
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:113
+#, elixir-autogen, elixir-format
+msgid "Wrapper"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:115
+#, elixir-autogen, elixir-format
+msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:64
+#, elixir-autogen, elixir-format
+msgid "fragment"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:65
+#, elixir-autogen, elixir-format
+msgid "fragments"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:92
+#, elixir-autogen, elixir-format
+msgid "key"
+msgstr ""
+
+#: lib/brando/pages/fragment.ex:87
+#, elixir-autogen, elixir-format
+msgid "parent_key"
+msgstr ""
