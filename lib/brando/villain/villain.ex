@@ -152,9 +152,11 @@ defmodule Brando.Villain do
   end
 
   def get_base_context(%{language: entry_language} = entry) do
-    do_get_base_context(to_string(entry_language))
-    |> add_to_context("language", to_string(entry_language))
-    |> add_to_context("locale", to_string(entry_language))
+    language = (entry_language in [nil, ""] && Brando.config(:default_language)) || entry_language
+
+    do_get_base_context(to_string(language))
+    |> add_to_context("language", to_string(language))
+    |> add_to_context("locale", to_string(language))
     |> add_to_context("entry", entry)
   end
 
