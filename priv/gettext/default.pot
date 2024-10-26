@@ -128,6 +128,7 @@ msgstr ""
 msgid "Navigation"
 msgstr ""
 
+#: lib/brando_admin/live/pages/page_list_live.ex:10
 #: lib/brando_admin/menu.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pages & Sections"
@@ -305,11 +306,6 @@ msgstr ""
 #: lib/brando_admin/controllers/error_html/404.html.heex:5
 #, elixir-autogen, elixir-format
 msgid "Page not found"
-msgstr ""
-
-#: lib/brando_admin/live/pages/page_list_live.ex:10
-#, elixir-autogen, elixir-format
-msgid "Pages & sections"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex:783

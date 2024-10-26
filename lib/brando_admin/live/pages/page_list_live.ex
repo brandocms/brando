@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Pages & sections")} subtitle={gettext("Overview")}>
+    <Content.header title={gettext("Pages & Sections")} subtitle={gettext("Overview")}>
       <.link navigate="/admin/pages/create" class="primary">
         <%= gettext("Create page") %>
       </.link>

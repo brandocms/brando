@@ -129,6 +129,7 @@ msgstr "Navn"
 msgid "Navigation"
 msgstr "Navigasjon"
 
+#: lib/brando_admin/live/pages/page_list_live.ex:10
 #: lib/brando_admin/menu.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pages & Sections"
@@ -307,11 +308,6 @@ msgstr "Oversikt"
 #, elixir-autogen, elixir-format
 msgid "Page not found"
 msgstr "Fant ikke siden"
-
-#: lib/brando_admin/live/pages/page_list_live.ex:10
-#, elixir-autogen, elixir-format
-msgid "Pages & sections"
-msgstr "Sider & seksjoner"
 
 #: lib/brando_admin/components/content/list.ex:783
 #: lib/brando_admin/components/content/list/row.ex:623
