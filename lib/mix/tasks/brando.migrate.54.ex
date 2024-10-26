@@ -35,8 +35,40 @@ defmodule Mix.Tasks.Brando.Migrate54 do
       end)
 
     igniter
+    |> copy_gettext_script()
+    |> copy_updated_migration_script()
     |> add_notices()
     |> add_warnings()
+  end
+
+  defp copy_gettext_script(igniter) do
+    src_file =
+      :brando
+      |> Application.app_dir(["priv", "templates", "brando.migrate"])
+      |> Path.join("sync_gettext.sh")
+
+    Igniter.copy_template(
+      igniter,
+      src_file,
+      "scripts/sync_gettext.sh",
+      %{},
+      on_exists: :overwrite
+    )
+  end
+
+  defp copy_updated_migration_script(igniter) do
+    src_file =
+      :brando
+      |> Application.app_dir(["priv", "templates", "brando.install", "lib", "mix"])
+      |> Path.join("brando.upgrade.ex")
+
+    Igniter.copy_template(
+      igniter,
+      src_file,
+      "lib/mix/brando.upgrade.ex",
+      %{},
+      on_exists: :overwrite
+    )
   end
 
   def rewrite_listings(igniter, rewriting_module) do
