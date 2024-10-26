@@ -44,8 +44,10 @@ for file in "$DIRECTORY"/*.po; do
 
             # If a non-empty msgstr is found, replace it in the original file
             if [ -n "$found_msgstr" ]; then
-                echo "Found translation for \"$msgid\" in $other_file: \"$found_msgstr\""
-                gsed -i "${empty_msgstr_line}s/msgstr \"\"/msgstr \"$found_msgstr\"/" "$file"
+                # Escape any & characters in found_msgstr
+                safe_msgstr=$(echo "$found_msgstr" | sed 's/&/\\&/g')
+                echo "Found translation for \"$msgid\" in $other_file: \"$safe_msgstr\""
+                gsed -i "${empty_msgstr_line}s/msgstr \"\"/msgstr \"$safe_msgstr\"/" "$file"
                 break
             fi
         done
