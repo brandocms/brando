@@ -614,7 +614,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
   end
 
   defp add_warnings(igniter) do
-    Igniter.add_warning(igniter, """
+    igniter
+    |> Igniter.add_warning("""
     Go through your blueprints and ensure that you set
 
         persist_identifier false
@@ -628,6 +629,17 @@ defmodule Mix.Tasks.Brando.Migrate54 do
 
         mix brando.identifiers.sync
 
+    You must also update your gettext files. There is a new script in your scripts/ folder
+    called sync_gettext.sh that you can run to try to update your gettext files from the old format.
+
+    First extract your translations:
+
+      mix gettext.extract --merge priv/gettext/backend --locale no --plural-forms-header nplurals=2; plural=(n != 1);
+      mix gettext.extract --merge priv/gettext/frontend --locale no --plural-forms-header nplurals=2; plural=(n != 1);
+
+    Then run the script
+
+      ./scripts/sync_gettext.sh priv/gettext/no/LC_MESSAGES
 
     """)
   end
