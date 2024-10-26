@@ -132,7 +132,7 @@ msgstr "Navigasjon"
 #: lib/brando_admin/menu.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pages & Sections"
-msgstr "Sider msgstr "" seksjoner"
+msgstr "Sider & seksjoner"
 
 #: lib/brando_admin/controllers/user_session_html/new.html.heex:91
 #, elixir-autogen, elixir-format
@@ -154,6 +154,11 @@ msgstr "System"
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Brukere"
+
+#: lib/brando_admin/components/form/input/globals.ex:96
+#: lib/brando_admin/components/form/input/vars.ex:84
+#: lib/brando_admin/components/form/subform.ex:299
+#: lib/brando_admin/components/pages/page_vars.ex:104
 #, elixir-autogen, elixir-format
 msgid "Add entry"
 msgstr "Ny rad"
@@ -167,6 +172,11 @@ msgstr "Ressurser"
 #, elixir-autogen, elixir-format
 msgid "Block modules"
 msgstr "Blokkmoduler"
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:194
+#: lib/brando_admin/components/form/input/blocks/svg_block.ex:54
+#: lib/brando_admin/components/form/module_props.ex:73
+#: lib/brando_admin/components/form/module_props.ex:352
 #: lib/brando_admin/components/form/module_props.ex:486
 #: lib/brando_admin/components/form/module_props.ex:730
 #: lib/brando_admin/components/form/module_props.ex:795
@@ -301,7 +311,7 @@ msgstr "Fant ikke siden"
 #: lib/brando_admin/live/pages/page_list_live.ex:10
 #, elixir-autogen, elixir-format
 msgid "Pages & sections"
-msgstr "Sider msgstr "" seksjoner"
+msgstr "Sider & seksjoner"
 
 #: lib/brando_admin/components/content/list.ex:783
 #: lib/brando_admin/components/content/list/row.ex:623
@@ -397,7 +407,7 @@ msgstr "Tøm"
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:809
 #, elixir-autogen, elixir-format
 msgid "Click or drag an image &uarr; to upload"
-msgstr "Klikk eller dra et bilde msgstr ""uarr; for å laste opp"
+msgstr "Klikk eller dra et bilde &uarr; for å laste opp"
 
 #: lib/brando_admin/components/form/block.ex:1821
 #: lib/brando_admin/components/form/block.ex:1985
@@ -566,6 +576,10 @@ msgstr "Administrér og tøm publiseringskøen"
 #, elixir-autogen, elixir-format
 msgid "Module updated"
 msgstr "Modulen ble oppdatert"
+
+#: lib/brando_admin/components/form/input/globals.ex:41
+#: lib/brando_admin/components/form/subform.ex:396
+#: lib/brando_admin/components/pages/page_vars.ex:51
 #, elixir-autogen, elixir-format
 msgid "No associated entries"
 msgstr "Ingen tilknyttede innlegg"
@@ -1257,6 +1271,10 @@ msgstr "Ingen bildetekst"
 #, elixir-autogen, elixir-format
 msgid "Select images"
 msgstr "Velg bilder"
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:97
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:151
+#: lib/brando_admin/components/form/input/gallery.ex:114
 #, elixir-autogen, elixir-format
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -1987,7 +2005,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:875
 #, elixir-autogen, elixir-format
 msgid "Click or drag a file &uarr; to upload"
-msgstr "Klikk eller dra en fil msgstr ""uarr; for å laste opp"
+msgstr "Klikk eller dra en fil &uarr; for å laste opp"
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex:59
 #, elixir-autogen, elixir-format
@@ -2352,7 +2370,7 @@ msgstr "For mange valgt"
 #: lib/brando/cdn/cdn.ex:275
 #, elixir-autogen, elixir-format
 msgid "Uploading image to CDN &rarr; %{s3_bucket}"
-msgstr "Laster opp bilde til CDN msgstr ""rarr; %{s3_bucket}"
+msgstr "Laster opp bilde til CDN &rarr; %{s3_bucket}"
 
 #: lib/brando_admin/components/form/block.ex:2767
 #, elixir-autogen, elixir-format
