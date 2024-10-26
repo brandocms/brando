@@ -1800,8 +1800,12 @@ defmodule BrandoAdmin.Components.Form do
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
     singular = schema.__naming__().singular
-    context = schema.__modules__().context
 
+    translated_singular =
+      Brando.Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
+        schema.__naming__().singular
+
+    context = schema.__modules__().context
     mutation_type = (get_field(changeset, :id) && :update) || :create
 
     # if redirect_on_save is set in form, use this
@@ -1837,7 +1841,13 @@ defmodule BrandoAdmin.Components.Form do
         )
 
         maybe_run_form_after_save(form_blueprint, entry, current_user)
-        send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
+
+        mutation_message =
+          Brando.Gettext
+          |> Gettext.dgettext("mutations", "#{mutation_type}", singular: translated_singular)
+          |> String.capitalize()
+
+        send(self(), {:toast, mutation_message})
 
         maybe_redirected_socket =
           case save_redirect_target do

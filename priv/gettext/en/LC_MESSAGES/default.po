@@ -259,7 +259,7 @@ msgid "Edit page"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:1770
-#: lib/brando_admin/components/form.ex:2488
+#: lib/brando_admin/components/form.ex:2493
 #: lib/brando_admin/components/form/revisions_drawer.ex:419
 #, elixir-autogen, elixir-format
 msgid "Error"
@@ -1295,7 +1295,7 @@ msgstr ""
 msgid "Entry revisions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2304
+#: lib/brando_admin/components/form.ex:2309
 #, elixir-autogen, elixir-format
 msgid "Notice"
 msgstr ""
@@ -1305,7 +1305,7 @@ msgstr ""
 msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2307
+#: lib/brando_admin/components/form.ex:2312
 #, elixir-autogen, elixir-format
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr ""
@@ -1392,7 +1392,7 @@ msgstr ""
 msgid "None selected"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3138
+#: lib/brando_admin/components/form.ex:3143
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
 msgstr ""
@@ -1429,9 +1429,9 @@ msgstr ""
 msgid "Edit file"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2577
-#: lib/brando_admin/components/form.ex:2750
-#: lib/brando_admin/components/form.ex:2868
+#: lib/brando_admin/components/form.ex:2582
+#: lib/brando_admin/components/form.ex:2755
+#: lib/brando_admin/components/form.ex:2873
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Error uploading"
 msgstr ""
@@ -1479,13 +1479,13 @@ msgstr ""
 msgid "Select similarly typed file from library"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2871
+#: lib/brando_admin/components/form.ex:2876
 #, elixir-autogen, elixir-format
 msgid "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2580
-#: lib/brando_admin/components/form.ex:2753
+#: lib/brando_admin/components/form.ex:2585
+#: lib/brando_admin/components/form.ex:2758
 #, elixir-autogen, elixir-format
 msgid "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr ""
@@ -1541,7 +1541,7 @@ msgstr ""
 msgid "Uploading"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2492
+#: lib/brando_admin/components/form.ex:2497
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr ""
@@ -1551,7 +1551,7 @@ msgstr ""
 msgid "Configure video block"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:1996
+#: lib/brando_admin/components/form.ex:2001
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Image duplicated"
 msgstr ""
@@ -1993,7 +1993,7 @@ msgstr ""
 msgid "Block variables"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2496
+#: lib/brando_admin/components/form.ex:2501
 #, elixir-autogen, elixir-format
 msgid "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
 msgstr ""
@@ -2167,7 +2167,7 @@ msgstr ""
 msgid "GMaps"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2249
+#: lib/brando_admin/components/form.ex:2254
 #, elixir-autogen, elixir-format
 msgid "Gathering blocks for sharing..."
 msgstr ""
@@ -2264,7 +2264,7 @@ msgstr ""
 msgid "Open link in new window/tab"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2272
+#: lib/brando_admin/components/form.ex:2277
 #, elixir-autogen, elixir-format
 msgid "Opening stand alone live preview window..."
 msgstr ""
@@ -2279,7 +2279,7 @@ msgstr ""
 msgid "Overrides identifier title"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:3648
+#: lib/brando_admin/components/form.ex:3653
 #, elixir-autogen, elixir-format
 msgid "Processing. Please wait..."
 msgstr ""
@@ -2309,7 +2309,7 @@ msgstr ""
 msgid "Show instructions"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex:2266
+#: lib/brando_admin/components/form.ex:2271
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview — fetching initial render..."
 msgstr ""
