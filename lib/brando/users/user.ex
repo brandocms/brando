@@ -44,6 +44,7 @@ defmodule Brando.Users.User do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.ProtectRole
   trait Brando.Trait.ProtectPassword
+  trait Brando.Trait.WatchLanguage
 
   identifier false
   persist_identifier false
