@@ -37,6 +37,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
     igniter
     |> copy_gettext_script()
     |> copy_updated_migration_script()
+    |> Igniter.add_task("igniter.update_gettext")
     |> add_notices()
     |> add_warnings()
   end
