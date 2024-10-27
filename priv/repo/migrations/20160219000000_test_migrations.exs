@@ -196,9 +196,9 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:content_modules) do
-      add :name, :string
-      add :namespace, :string
-      add :help_text, :text
+      add :name, :jsonb
+      add :namespace, :jsonb
+      add :help_text, :jsonb
       add :class, :string
       add :code, :text
       add :refs, :jsonb

@@ -927,11 +927,11 @@ defmodule Brando.VillainTest do
 
     [r1, r2] = Villain.search_modules_for_regex(search_terms)
 
-    assert r1["name"] == "Old style"
+    assert r1["name"] == %{"en" => "Old style"}
     assert r1["old_for_loops"] == ["{% for test <- old_style %}"]
     assert r1["old_vars"] == ["${globals:old.varstyle}"]
 
-    assert r2["name"] == "Old style"
+    assert r2["name"] == %{"en" => "Old style"}
     assert r2["old_for_loops"] == nil
     assert r2["old_vars"] == ["${testoldvar}"]
   end
