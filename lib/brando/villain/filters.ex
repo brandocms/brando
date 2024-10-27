@@ -1157,6 +1157,21 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
+  def i18n(value, _) when is_binary(value), do: value
+
+  def i18n(string_map, _) when is_map(string_map) do
+    current_locale = Gettext.get_locale()
+    fallback_locale = Brando.config(:default_language)
+
+    translated_string = string_map[current_locale] || string_map[fallback_locale] || ""
+
+    if translated_string == "" do
+      string_map["en"] || ""
+    else
+      translated_string
+    end
+  end
+
   def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
     preloads = Brando.Blueprint.preloads_for(identifier.schema)
 
