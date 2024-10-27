@@ -44,7 +44,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:igniter, github: "ash-project/igniter", override: true},
+      {:igniter, "~> 0.3.75"},
       {:spark, "~> 2.2.35"},
 
       # monitoring
