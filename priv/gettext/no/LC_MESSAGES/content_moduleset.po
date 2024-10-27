@@ -19,7 +19,7 @@ msgstr "Innhold"
 #: lib/brando/content/module_set.ex:51
 #, elixir-autogen, elixir-format
 msgid "Modules"
-msgstr ""
+msgstr "Moduler"
 
 #: lib/brando/content/module_set.ex:44
 #, elixir-autogen, elixir-format
@@ -29,9 +29,9 @@ msgstr "Tittel"
 #: lib/brando/content/module_set.ex:88
 #, elixir-autogen, elixir-format
 msgid "module set"
-msgstr ""
+msgstr "blokkmodulsett"
 
 #: lib/brando/content/module_set.ex:89
 #, elixir-autogen, elixir-format
 msgid "module sets"
-msgstr ""
+msgstr "blokkmodulsett"

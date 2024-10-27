@@ -95,7 +95,7 @@ msgstr "Språk"
 #: lib/brando/pages/page.ex:278
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
-msgstr ""
+msgstr "Siden har en URL og skal inkluderes i nettstedkartet"
 
 #: lib/brando/pages/page.ex:274
 #, elixir-autogen, elixir-format

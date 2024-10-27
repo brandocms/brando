@@ -64,4 +64,4 @@ msgstr "Bruk `$` på slutten av testkoden for å forhindre match etter."
 #: lib/brando/sites/seo.ex:70
 #, elixir-autogen, elixir-format
 msgid "https://yoursite.com"
-msgstr ""
+msgstr "https://din-side.no"

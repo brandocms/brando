@@ -14,9 +14,9 @@ msgstr ""
 #: lib/brando/content/module_set_module.ex:35
 #, elixir-autogen, elixir-format
 msgid "module set"
-msgstr ""
+msgstr "blokkmodulsett"
 
 #: lib/brando/content/module_set_module.ex:36
 #, elixir-autogen, elixir-format
 msgid "module sets"
-msgstr ""
+msgstr "blokkmodulsett"
