@@ -11,7 +11,7 @@ defmodule Brando.Type.I18nString do
 
   @impl true
   def cast(string) when is_binary(string) do
-    {:ok, %{Gettext.get_locale() => string}}
+    {:ok, %{"en" => string}}
   end
 
   def cast(map) when is_map(map) do
@@ -21,21 +21,32 @@ defmodule Brando.Type.I18nString do
   def cast(_), do: :error
 
   @impl true
-  def load(data) when is_map(data) do
-    current_locale = Gettext.get_locale()
-    fallback_locale = Brando.config(:default_language)
-
-    translated_string = data[current_locale] || data[fallback_locale] || ""
-    {:ok, translated_string}
+  def load(map) when is_map(map) do
+    {:ok, map}
   end
+
+  def load(nil), do: {:ok, nil}
 
   @impl true
   def dump(string) when is_binary(string) do
-    {:ok, %{Gettext.get_locale() => string}}
+    {:ok, %{"en" => string}}
   end
 
+  def dump(nil), do: {:ok, nil}
+
   def dump(map) when is_map(map) do
-    {:ok, map}
+    # Go through map values and set to nil if empty string
+    map =
+      map
+      |> Enum.map(fn {key, value} -> {key, if(value == "", do: nil, else: value)} end)
+      |> Enum.into(%{})
+
+    # Check if all map values are empty strings
+    if Enum.all?(map, fn {_key, value} -> is_nil(value) end) do
+      {:ok, nil}
+    else
+      {:ok, map}
+    end
   end
 
   def dump(_), do: :error
