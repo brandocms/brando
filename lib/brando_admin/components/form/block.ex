@@ -1914,7 +1914,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 has_children?={@has_children?}
               >
                 <:description>
-                  <%= @module_name %>
+                  <.i18n map={@module_name} />
                 </:description>
               </.toolbar>
 
@@ -1953,7 +1953,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               has_children?={@has_children?}
             >
               <:description>
-                <%= @module_name %>
+                <.i18n map={@module_name} />
               </:description>
             </.toolbar>
 
@@ -3046,6 +3046,20 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :block_identifiers, :any, default: []
 
   def datasource(assigns) do
+    translated_module_datasource_type =
+      Gettext.dgettext(
+        Brando.Gettext,
+        "datasource",
+        to_string(assigns.module_datasource_type)
+      )
+
+    assigns =
+      assign(
+        assigns,
+        :translated_module_datasource_type,
+        translated_module_datasource_type
+      )
+
     ~H"""
     <div class="block-datasource">
       <div class="datasource-info" phx-click="show_datasource_instructions" phx-target={@target}>
@@ -3054,7 +3068,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         </div>
         <div class="info">
           <span class="datasource-label">
-            <%= gettext("Datasource") %> [<%= @module_datasource_type %>]<br />
+            <%= gettext("Datasource") %> [<%= @translated_module_datasource_type %>]<br />
             <%= @module_datasource_module_label %> &rarr; <%= @module_datasource_query %>
           </span>
         </div>
@@ -3702,7 +3716,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # message block picker —— special case for empty container.
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     block_count = socket.assigns.block_count
-    module_namespace = socket.assigns.module_namespace
+    module_set = socket.assigns.module_set
 
     {parent_cid, sequence} =
       (Map.get(value, "container") && {socket.assigns.myself, block_count}) ||
@@ -3711,8 +3725,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
-      filter: %{parent_id: nil, namespace: module_namespace},
-      module_namespace: module_namespace,
+      filter: %{parent_id: nil, namespace: module_set},
+      module_set: module_set,
       type: :module,
       sequence: sequence,
       parent_cid: parent_cid
@@ -3738,7 +3752,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       id: block_picker_id,
       event: :show_module_picker,
       filter: %{parent_id: module_id, namespace: "all"},
-      module_namespace: "all",
+      module_set: "all",
       type: :module_entry,
       sequence: sequence,
       parent_cid: parent_cid

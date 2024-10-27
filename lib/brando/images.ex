@@ -105,17 +105,17 @@ defmodule Brando.Images do
     Brando.repo().soft_delete_all(q)
   end
 
-  @spec get_image_orientation(integer, integer) :: binary
   def get_image_orientation(width, height) do
     (width > height && "landscape") || (width == height && "square") ||
       "portrait"
   end
 
-  @spec get_image_orientation(map) :: binary
   def get_image_orientation(%{width: width, height: height}) do
     (width > height && "landscape") || (width == height && "square") ||
       "portrait"
   end
+
+  def get_image_orientation(_), do: "unknown"
 
   def get_config_for(%{config_target: nil}) do
     config =

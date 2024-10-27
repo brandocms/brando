@@ -579,6 +579,26 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  def input(%{type: :i18n} = assigns) do
+    assigns =
+      assign_new(
+        assigns,
+        :value,
+        fn -> maybe_html_escape(assigns.field.value) end
+      )
+
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
+      |> process_input_id()
+
+    ~H"""
+    <input type={@type} name={@name} id={@id} value={@value} phx-hook={@hook} {@rest} />
+    """
+  end
+
   def input(assigns) do
     assigns =
       assign_new(
@@ -746,6 +766,64 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :focus, :any, default: nil
   attr :target, :any, default: nil
 
+  def i18n_text(assigns) do
+    assigns = prepare_input_component(assigns)
+
+    admin_languages =
+      :admin_languages
+      |> Brando.config()
+      |> Enum.map(fn [{:value, val}, _] -> val end)
+
+    existing_languages = Map.keys(assigns.field.value || %{})
+    missing_languages = admin_languages -- existing_languages
+
+    updated_field =
+      Enum.reduce(missing_languages, assigns.field, fn lang, acc ->
+        %{acc | value: Map.put(acc.value || %{}, lang, "")}
+      end)
+
+    assigns = assign(assigns, :field, updated_field)
+
+    ~H"""
+    <Form.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+    >
+      <Form.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
+        <div class="field-base i18n-text">
+          <div class="language"><%= language %></div>
+          <input
+            type="text"
+            name={"#{name}"}
+            value={"#{value}"}
+            class="text"
+            phx-debounce={@debounce}
+            phx-target={@target}
+            phx-focus={@focus}
+            phx-value-field={@focus && @field.name}
+          />
+        </div>
+      </Form.map_inputs>
+    </Form.field_base>
+    """
+  end
+
+  attr :field, Phoenix.HTML.FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
+  attr :placeholder, :string
+  attr :disabled, :boolean
+  attr :debounce, :integer
+  attr :monospace, :boolean
+  attr :change, :any, default: nil
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
+
   def text(assigns) do
     assigns = prepare_input_component(assigns)
 
@@ -810,6 +888,69 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-value-field={@focus && @field.name}
         id={@generated_uid}
       />
+    </Form.field_base>
+    """
+  end
+
+  attr :field, Phoenix.HTML.FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
+  attr :placeholder, :string
+  attr :disabled, :boolean
+  attr :debounce, :integer
+  attr :monospace, :boolean
+  attr :change, :any, default: nil
+  attr :focus, :any, default: nil
+  attr :target, :any, default: nil
+
+  def i18n_textarea(assigns) do
+    assigns = prepare_input_component(assigns)
+
+    admin_languages =
+      :admin_languages
+      |> Brando.config()
+      |> Enum.map(fn [{:value, val}, _] -> val end)
+
+    existing_languages = Map.keys(assigns.field.value || %{})
+    missing_languages = admin_languages -- existing_languages
+
+    updated_field =
+      Enum.reduce(missing_languages, assigns.field, fn lang, acc ->
+        %{acc | value: Map.put(acc.value || %{}, lang, "")}
+      end)
+
+    assigns =
+      assigns
+      |> assign(:rows, assigns.opts[:rows] || 3)
+      |> assign(:generated_uid, make_uid(assigns.field, assigns.uid))
+      |> assign(:monospace, assigns.opts[:monospace])
+      |> assign(:field, updated_field)
+
+    ~H"""
+    <Form.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+    >
+      <Form.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
+        <div class="field-base i18n-textarea">
+          <div class="language"><%= language %></div>
+          <textarea
+            name={"#{name}"}
+            class="text"
+            rows={@rows}
+            disabled={@disabled}
+            phx-debounce={@debounce}
+            phx-target={@target}
+            phx-focus={@focus}
+            phx-value-field={@focus && @field.name}
+          ><%= value %></textarea>
+        </div>
+      </Form.map_inputs>
     </Form.field_base>
     """
   end

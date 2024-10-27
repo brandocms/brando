@@ -4,7 +4,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   alias BrandoAdmin.Components.Content
 
   def mount(socket) do
-    {:ok, assign(socket, active_namespace: nil, module_namespace: "all", show: false)}
+    {:ok,
+     assign(socket,
+       active_namespace: nil,
+       module_set: "all",
+       show: false,
+       modules_by_namespace: []
+     )}
   end
 
   def update(%{event: :refresh_modules}, socket) do
@@ -16,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           event: :show_module_picker,
           sequence: sequence,
           parent_cid: parent_cid,
-          module_namespace: module_namespace,
+          module_set: module_set,
           type: type
         } = assigns,
         socket
@@ -27,48 +33,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       sequence: sequence,
       parent_cid: parent_cid,
       type: type,
-      module_namespace: module_namespace
+      module_set: module_set
     )
     |> maybe_update_modules_by_filter(assigns)
     |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
-    module_namespace = socket.assigns.module_namespace
-
-    {:ok, modules} = list_modules_by_namespace(module_namespace)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:filter, %{parent_id: nil, namespace: module_namespace})
-     |> assign_new(:modules_by_namespace, fn ->
-       modules
-       |> Brando.Utils.split_by(:namespace)
-       |> Enum.map(&__MODULE__.sort_namespace/1)
-     end)}
-  end
-
-  defp list_modules_by_namespace({:set, set_title}) do
-    {:ok, set} =
-      Brando.Content.get_module_set(%{
-        matches: %{title: set_title},
-        cache: {:ttl, :infinite}
-      })
-
-    {:ok, Enum.map(set.module_set_modules, & &1.module)}
-  end
-
-  defp list_modules_by_namespace(module_namespace) do
-    Brando.Content.list_modules(%{
-      filter: %{parent_id: nil, namespace: module_namespace},
-      cache: {:ttl, :infinite}
-    })
+    {:ok, socket |> assign(assigns)}
   end
 
   def maybe_update_modules_by_filter(socket, %{
-        filter: %{parent_id: nil, namespace: {:set, set_title}} = filter
-      }) do
+        filter: %{parent_id: nil, namespace: set_title} = filter
+      })
+      when set_title != "all" do
     {:ok, set} =
       Brando.Content.get_module_set(%{
         matches: %{title: set_title, filter_modules: filter},
@@ -153,28 +131,28 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           </div>
         </div>
         <div class="modules" id={"#{@id}-modules"}>
-          <%= for {namespace, modules} <- @modules_by_namespace do %>
-            <%= unless namespace == "general" do %>
+          <%= for {translated_namespace, namespace_map, modules} <- @modules_by_namespace do %>
+            <%= if namespace_map != nil && translated_namespace not in ["", nil] do %>
               <button
                 type="button"
                 class={[
                   "namespace-button",
-                  @active_namespace == namespace && "active"
+                  @active_namespace == translated_namespace && "active"
                 ]}
                 phx-click="toggle_namespace"
                 phx-target={@myself}
-                phx-value-id={namespace}
+                phx-value-id={translated_namespace}
               >
                 <figure>
                   &rarr;
                 </figure>
                 <div class="info">
-                  <div class="name"><%= namespace %></div>
+                  <div class="name"><%= translated_namespace %></div>
                 </div>
               </button>
               <div class={[
                 "namespace-modules",
-                @active_namespace == namespace && "active"
+                @active_namespace == translated_namespace && "active"
               ]}>
                 <%= for module <- modules do %>
                   <button
@@ -190,16 +168,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                       <% end %>
                     </figure>
                     <div class="info">
-                      <div class="name"><%= module.name %></div>
-                      <div class="instructions"><%= module.help_text %></div>
+                      <div class="name"><.i18n map={module.name} /></div>
+                      <div class="instructions"><.i18n map={module.help_text} /></div>
                     </div>
                   </button>
                 <% end %>
               </div>
             <% end %>
           <% end %>
-          <%= for {namespace, modules} <- @modules_by_namespace do %>
-            <%= if namespace == "general" do %>
+          <%= for {_, namespace_map, modules} <- @modules_by_namespace do %>
+            <%= if namespace_map == nil do %>
               <button
                 :for={module <- modules}
                 type="button"
@@ -212,8 +190,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                   <%= module.svg |> raw %>
                 </figure>
                 <div class="info">
-                  <div class="name"><%= module.name %></div>
-                  <div class="instructions"><%= module.help_text %></div>
+                  <div class="name"><.i18n map={module.name} /></div>
+                  <div class="instructions"><.i18n map={module.help_text} /></div>
                 </div>
               </button>
             <% end %>
@@ -225,17 +203,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def handle_event("close_modal", _, socket) do
-    module_namespace = socket.assigns.module_namespace
+    module_set = socket.assigns.module_set
 
-    {:noreply,
-     socket
-     |> assign(:show, false)
-     |> assign(:filter, %{parent_id: nil, namespace: module_namespace})}
+    socket
+    |> assign(:show, false)
+    |> assign(:active_namespace, nil)
+    |> assign(:filter, %{parent_id: nil, namespace: module_set})
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("toggle_namespace", %{"id" => namespace}, socket) do
     active_namespace = socket.assigns.active_namespace
-    {:noreply, assign(socket, active_namespace: active_namespace != namespace && namespace)}
+
+    socket
+    |> assign(active_namespace: active_namespace != namespace && namespace)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("insert_module", %{"module-id" => module_id}, socket) do
@@ -250,7 +232,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       type: type
     })
 
-    {:noreply, assign(socket, :show, false)}
+    socket
+    |> assign(:show, false)
+    |> assign(:active_namespace, nil)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("insert_container", _, socket) do
@@ -271,6 +256,22 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   def sort_namespace({namespace, modules}) do
     sorted_modules = Enum.sort(modules, &(&1.sequence <= &2.sequence))
-    {namespace, sorted_modules}
+    current_locale = Gettext.get_locale()
+    fallback_locale = Brando.config(:default_language)
+
+    translated_namespace =
+      if is_map(namespace) do
+        translated_namespace = namespace[current_locale] || namespace[fallback_locale] || ""
+
+        if translated_namespace == "" do
+          namespace["en"] || ""
+        else
+          translated_namespace
+        end
+      else
+        namespace
+      end
+
+    {translated_namespace, namespace, sorted_modules}
   end
 end

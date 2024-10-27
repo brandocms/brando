@@ -67,9 +67,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             ]
           ]}
         />
-        <Input.text field={@form[:name]} label={gettext("Name")} />
-        <Input.text field={@form[:namespace]} label={gettext("Namespace")} />
-        <Input.textarea field={@form[:help_text]} label={gettext("Help text")} />
+        <Input.i18n_text field={@form[:name]} label={gettext("Name")} />
+        <Input.i18n_text field={@form[:namespace]} label={gettext("Namespace")} />
+        <Input.i18n_textarea field={@form[:help_text]} label={gettext("Help text")} />
         <Input.text field={@form[:class]} label={gettext("Class")} />
         <Input.toggle field={@form[:multi]} label={gettext("Multi")} />
 

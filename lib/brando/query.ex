@@ -1000,4 +1000,17 @@ defmodule Brando.Query do
     opts = Map.put(opts, :preload, Brando.Blueprint.preloads_for(schema))
     apply(ctx, :"get_#{singular}", [opts])
   end
+
+  @doc """
+  Check if a JSONB field contains any key that matches the given value
+  """
+  defmacro jsonb_contains_any_value_ilike(field, value) do
+    quote do
+      fragment(
+        "EXISTS (SELECT 1 FROM jsonb_each_text(?) AS t(key, value) WHERE LOWER(t.value) LIKE LOWER(?))",
+        unquote(field),
+        ^("%" <> unquote(value) <> "%")
+      )
+    end
+  end
 end

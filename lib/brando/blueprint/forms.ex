@@ -153,7 +153,7 @@ defmodule Brando.Blueprint.Forms do
       - `palette_namespace`: Show palettes from this namespace in containers
       - `template_namespace`: Show templates from this namespace as starting
         points when presented with a blank editor
-      - `module_namespace`: Show modules from this namespace as starting
+      - `module_set`: Show modules from this set as starting
         points when presented with a blank editor
 
   ### `color`: Color picker

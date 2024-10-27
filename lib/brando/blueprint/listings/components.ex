@@ -121,4 +121,6 @@ defmodule Brando.Blueprint.Listings.Components do
     </div>
     """
   end
+
+  defdelegate i18n(assigns), to: Brando.HTML
 end

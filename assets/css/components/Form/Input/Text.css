@@ -1,3 +1,46 @@
+.i18n-text, .i18n-textarea {
+  position: relative;
+  border-bottom: 1px dashed #eee;
+  display: flex;
+
+  &:first-of-type {
+    input.text, textarea.text {
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+  }
+
+  &:last-of-type {
+    border-bottom: 0;
+    input.text, textarea.text {
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
+    }
+  }
+
+  .language {
+    position: absolute;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-family: 'Mono';
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.6;
+  }
+
+  input.text, textarea.text {
+    padding-left: 40px;
+  }
+}
+
+.i18n-textarea {
+  .language {
+    top: 12px;
+    transform: translateY(0);
+  }
+}
+
 input.text {
   @fontsize input;
   @space height 51px;

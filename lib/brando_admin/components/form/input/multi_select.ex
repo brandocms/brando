@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def update(assigns, socket) do
     show_filter = Keyword.get(assigns.opts, :filter, true)
-    wrapped_labels = Keyword.get(assigns.opts, :wrapped_labels, true)
+    wrapped_labels = Keyword.get(assigns.opts, :wrapped_labels, false)
     narrow = Keyword.get(assigns.opts, :narrow)
     resetable = Keyword.get(assigns.opts, :resetable)
     relation_key = Keyword.get(assigns.opts, :relation_key, :id)

@@ -37,7 +37,7 @@ defmodule Brando.Content.Module do
   use Gettext, backend: Brando.Gettext
   alias Phoenix.LiveView.JS
 
-  identifier "[{{ entry.namespace }}] {{ entry.name}}"
+  identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"
   persist_identifier false
 
   @derived_fields ~w(id type name sequence namespace help_text multi class code refs vars svg deleted_at)a
@@ -50,9 +50,9 @@ defmodule Brando.Content.Module do
 
   attributes do
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid
-    attribute :name, :string, required: true
-    attribute :namespace, :string, required: true
-    attribute :help_text, :text, required: true
+    attribute :name, :i18n_string, required: true
+    attribute :namespace, :i18n_string, required: true
+    attribute :help_text, :i18n_string, required: true
     attribute :class, :string, required: true
     attribute :code, :text, required: true
     attribute :svg, :text
@@ -127,7 +127,7 @@ defmodule Brando.Content.Module do
       <div class="svg"><img :if={@entry.svg} src={"data:image/svg+xml;base64,#{@entry.svg}"} /></div>
     </.field>
     <.field columns={3}>
-      <div class="badge"><%= @entry.namespace %></div>
+      <div class="badge"><.i18n map={@entry.namespace} /></div>
     </.field>
     <.update_link entry={@entry} columns={8}>
       <svg
@@ -145,10 +145,10 @@ defmodule Brando.Content.Module do
           d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
         />
       </svg>
-      <%= @entry.name %>
+      <.i18n map={@entry.name} />
       <:outside>
         <br />
-        <small><%= @entry.help_text %></small>
+        <small><.i18n map={@entry.help_text} /></small>
       </:outside>
     </.update_link>
     <.children_button entry={@entry} fields={[:children]} />
@@ -161,7 +161,7 @@ defmodule Brando.Content.Module do
       <div class="svg"><img :if={@entry.svg} src={"data:image/svg+xml;base64,#{@entry.svg}"} /></div>
     </.field>
     <.field columns={3}>
-      <div class="badge"><%= @entry.namespace %></div>
+      <div class="badge"><.i18n map={@entry.namespace} /></div>
     </.field>
     <.update_link entry={@entry} columns={9}>
       <svg
@@ -179,10 +179,10 @@ defmodule Brando.Content.Module do
           d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
         />
       </svg>
-      <%= @entry.name %>
+      <.i18n map={@entry.name} />
       <:outside>
         <br />
-        <small><%= @entry.help_text %></small>
+        <small><.i18n map={@entry.help_text} /></small>
       </:outside>
     </.update_link>
     """

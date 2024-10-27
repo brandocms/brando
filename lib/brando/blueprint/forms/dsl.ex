@@ -27,7 +27,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
 
   @blocks %Spark.Dsl.Entity{
     name: :blocks,
-    args: [:name],
+    args: [:name, {:optional, :opts}],
     target: Forms.Input,
     auto_set_fields: [type: :blocks],
     schema: [
@@ -36,26 +36,20 @@ defmodule Brando.Blueprint.Forms.Dsl do
         required: true,
         doc: "Input field name"
       ],
-      label: [
-        type: :string,
+      opts: [
+        type:
+          {:or,
+           [
+             keyword_list: [
+               label: [type: :string],
+               module_set: [type: :string],
+               template_namespace: [type: :string],
+               palette_namespace: [type: :string]
+             ]
+           ]},
         required: false,
-        default: "Blocks",
-        doc: "Block label"
-      ],
-      module_namespace: [
-        type: {:or, [:string, {:tuple, [{:in, [:set]}, :string]}]},
-        required: false,
-        doc: "Module namespace"
-      ],
-      template_namespace: [
-        type: :string,
-        required: false,
-        doc: "Template namespace"
-      ],
-      palette_namespace: [
-        type: :string,
-        required: false,
-        doc: "Palette namespace"
+        default: [],
+        doc: "Block options"
       ]
     ]
   }

@@ -62,7 +62,9 @@ defmodule Brando.Content do
   filters Module do
     fn
       {:name, name}, query ->
-        from(q in query, where: ilike(q.name, ^"%#{name}%"))
+        from(q in query,
+          where: jsonb_contains_any_value_ilike(q.name, "%#{name}%")
+        )
 
       {:class, class}, query ->
         from(q in query, where: ilike(q.class, ^"%#{class}%"))
@@ -76,25 +78,25 @@ defmodule Brando.Content do
       {:parent_id, parent_id}, query ->
         from(q in query, where: q.parent_id == ^parent_id)
 
-      {:namespace, namespace}, query ->
-        query =
-          from(t in query,
-            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-          )
+      # {:namespace, namespace}, query ->
+      #   query =
+      #     from(t in query,
+      #       order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+      #     )
 
-        namespace =
-          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+      #   namespace =
+      #     (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
 
-        case namespace do
-          "all" ->
-            query
+      #   case namespace do
+      #     "all" ->
+      #       query
 
-          namespace_list when is_list(namespace_list) ->
-            from(t in query, where: t.namespace in ^namespace_list)
+      #     namespace_list when is_list(namespace_list) ->
+      #       from(t in query, where: t.namespace in ^namespace_list)
 
-          _ ->
-            from(t in query, where: t.namespace == ^namespace)
-        end
+      #     _ ->
+      #       from(t in query, where: t.namespace == ^namespace)
+      #   end
 
       {:datasource, datasource}, query ->
         from(q in query, where: q.datasource == ^datasource)
@@ -190,6 +192,49 @@ defmodule Brando.Content do
       mod -> {:ok, mod}
     end
   end
+
+  ## Module Sets
+  ##
+
+  query(:list, ModuleSet, do: fn query -> from(q in query) end)
+
+  filters ModuleSet do
+    fn
+      {:title, title}, query ->
+        from(q in query, where: ilike(q.title, ^"%#{title}%"))
+    end
+  end
+
+  query(:single, ModuleSet, do: fn query -> from(q in query) end)
+
+  matches ModuleSet do
+    fn
+      {:id, id}, query ->
+        from(t in query, where: t.id == ^id)
+
+      {:title, title}, query ->
+        from(t in query,
+          where: t.title == ^title
+        )
+
+      {:filter_modules, %{parent_id: nil}}, query ->
+        from t in query,
+          join: msm in assoc(t, :module_set_modules),
+          join: m in assoc(msm, :module),
+          where: is_nil(m.parent_id)
+
+      {:filter_modules, %{parent_id: parent_id}}, query ->
+        from t in query,
+          join: msm in assoc(t, :module_set_modules),
+          join: m in assoc(msm, :module),
+          where: m.parent_id == ^parent_id
+    end
+  end
+
+  mutation :create, ModuleSet
+  mutation :update, ModuleSet
+  mutation :delete, ModuleSet
+  mutation :duplicate, {ModuleSet, change_fields: [:title]}
 
   ## Palettes
   ##
@@ -403,49 +448,6 @@ defmodule Brando.Content do
   mutation :update, Container
   mutation :delete, Container
   mutation :duplicate, {Container, change_fields: [:name]}
-
-  ## Module Sets
-  ##
-
-  query(:list, ModuleSet, do: fn query -> from(q in query) end)
-
-  filters ModuleSet do
-    fn
-      {:title, title}, query ->
-        from(q in query, where: ilike(q.title, ^"%#{title}%"))
-    end
-  end
-
-  query(:single, ModuleSet, do: fn query -> from(q in query) end)
-
-  matches ModuleSet do
-    fn
-      {:id, id}, query ->
-        from(t in query, where: t.id == ^id)
-
-      {:title, title}, query ->
-        from(t in query,
-          where: t.title == ^title
-        )
-
-      {:filter_modules, %{parent_id: nil}}, query ->
-        from t in query,
-          join: msm in assoc(t, :module_set_modules),
-          join: m in assoc(msm, :module),
-          where: is_nil(m.parent_id)
-
-      {:filter_modules, %{parent_id: parent_id}}, query ->
-        from t in query,
-          join: msm in assoc(t, :module_set_modules),
-          join: m in assoc(msm, :module),
-          where: m.parent_id == ^parent_id
-    end
-  end
-
-  mutation :create, ModuleSet
-  mutation :update, ModuleSet
-  mutation :delete, ModuleSet
-  mutation :duplicate, {ModuleSet, change_fields: [:title]}
 
   def list_identifiers do
     query =
