@@ -1862,6 +1862,9 @@ defmodule BrandoAdmin.Components.Form do
                 |> assign_refreshed_entry()
                 |> assign_refreshed_form()
                 |> clear_blocks_root_changesets()
+                |> assign_block_map()
+                |> assign_entry_for_blocks()
+                |> reload_all_blocks()
                 |> push_patch(to: update_url)
               else
                 if schema.has_trait(Brando.Trait.Revisioned) do
