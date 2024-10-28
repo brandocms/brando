@@ -374,6 +374,7 @@
       display: flex;
       flex-direction: column;
       row-gap: 0.1em;
+      margin-top: 0.2em;
 
       .checklist-item {
         @font mono 13px;        
@@ -381,17 +382,35 @@
         display: flex;
         align-items: center;
         gap: 0.5em;
+
+        &.true {
+          background-color: #90ee9033;
+          border-radius: 12px;
+          padding: 2px 15px 2px 2px;
+          color: #475b4f;
+        }
+
+        &.false {
+          background-color: #ff9d9d30;
+          border-radius: 12px;
+          padding: 2px 15px 2px 2px;
+          color: #863f3f;
+        }
         
         &.true [data-icon] {
           border-radius: 50%;
-          padding: 3px;
-          background-color: #159f52;
+          padding: 5px;
+          background-color: #475b4f;
+          width: 1rem;
+          height: 1rem;
         }
         
         &.false [data-icon] {
           border-radius: 50%;
-          padding: 3px;
-          background-color: #ff0000;
+          padding: 5px;
+          background-color: #863f3f;
+          width: 1rem;
+          height: 1rem;
         }
       }
     }
