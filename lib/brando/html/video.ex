@@ -105,7 +105,9 @@ defmodule Brando.HTML.Video do
     play_button = Keyword.get(opts, :play_button, false)
     autoplay = Keyword.get(opts, :autoplay, false)
     controls = Keyword.get(opts, :controls, false)
-    aspect_ratio = build_aspect_ratio_style_string(width, height)
+    aspect_ratio = Keyword.get(opts, :aspect_ratio, nil)
+    aspect_ratio = build_aspect_ratio_style_string(aspect_ratio, width, height)
+    loop = Keyword.get(opts, :loop, true)
 
     assigns =
       assigns
@@ -119,6 +121,7 @@ defmodule Brando.HTML.Video do
       |> assign(:preload, preload)
       |> assign(:progress, progress)
       |> assign(:src, src)
+      |> assign(:loop, loop)
       |> assign(:play_button, play_button)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
       |> assign_new(:cover, fn ->
@@ -141,12 +144,12 @@ defmodule Brando.HTML.Video do
         preload="auto"
         autoplay={@autoplay}
         muted={@autoplay}
-        loop
+        loop={@loop}
         playsinline
         controls={@controls}
         data-video
         poster={@poster}
-        style={@width && "--aspect-ratio-division: #{@width}/#{@height}"}
+        style={@aspect_ratio}
         data-src={@preload && @src}
         src={!@preload && @src}
       >
@@ -159,7 +162,7 @@ defmodule Brando.HTML.Video do
           tabindex="0"
           preload="metadata"
           muted={@autoplay}
-          loop
+          loop={@loop}
           playsinline
           src={@src}
         >
@@ -235,9 +238,12 @@ defmodule Brando.HTML.Video do
       """
       |> Phoenix.HTML.raw()
 
-  defp build_aspect_ratio_style_string(nil, _), do: nil
-  defp build_aspect_ratio_style_string(_, nil), do: nil
+  defp build_aspect_ratio_style_string(nil, nil, _), do: nil
+  defp build_aspect_ratio_style_string(nil, _, nil), do: nil
 
-  defp build_aspect_ratio_style_string(width, height),
+  defp build_aspect_ratio_style_string(nil, width, height),
     do: ~s(--aspect-ratio: #{height / width}; --aspect-ratio-division: #{width}/#{height};)
+
+  defp build_aspect_ratio_style_string(aspect_ratio, _, _),
+    do: ~s(--aspect-ratio: #{aspect_ratio}; --aspect-ratio-division: #{aspect_ratio};)
 end
