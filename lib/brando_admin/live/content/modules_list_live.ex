@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         </p>
         <div class="imported-modules mt-2">
           <div :for={m <- @imported_modules} class="imported-module">
-            <%= m.name %> — <%= m.namespace %>
+            <.i18n map={m.name} /> — <.i18n map={m.namespace} />
           </div>
         </div>
 
@@ -77,6 +77,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("validate_module_import", %{"encoded_modules" => encoded_modules}, socket) do
     imported_modules = Brando.Content.deserialize_modules(encoded_modules)
+
     {:noreply, assign(socket, :imported_modules, imported_modules)}
   end
 
@@ -128,12 +129,35 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("export_modules", %{"ids" => ids_string}, socket) do
     module_ids = Jason.decode!(ids_string)
+    preloads = [:vars]
+    current_user = socket.assigns.current_user
 
     base64_modules =
-      %{filter: %{ids: module_ids}}
+      %{filter: %{ids: module_ids}, preload: [:vars]}
       |> Brando.Content.list_modules!()
+      |> prepare_modules_for_export(current_user.id)
       |> Brando.Content.serialize_modules()
 
     {:noreply, assign(socket, :base64_modules, base64_modules)}
+  end
+
+  defp prepare_modules_for_export(modules, current_user_id) do
+    Enum.map(modules, fn module ->
+      module = Map.put(module, :id, nil)
+
+      refs_with_new_uids =
+        Enum.map(module.refs, &Map.put(&1, :uid, Brando.Utils.generate_uid()))
+
+      vars_without_ids =
+        Enum.map(module.vars, fn var ->
+          var
+          |> Map.put(:id, nil)
+          |> Map.put(:creator_id, current_user_id)
+        end)
+
+      module
+      |> Map.put(:refs, refs_with_new_uids)
+      |> Map.put(:vars, vars_without_ids)
+    end)
   end
 end
