@@ -16,6 +16,7 @@ defmodule Brando.HTML.Video do
     - `poster` -> url to poster, i.e. on vimeo.
     - `autoplay`
     - `controls`
+    - `progress`
     - `width`
     - `height`
   """
@@ -100,6 +101,7 @@ defmodule Brando.HTML.Video do
     preload = if preload == true, do: "auto", else: preload
     cover = Keyword.get(opts, :cover, false)
     poster = Keyword.get(opts, :poster, false)
+    progress = Keyword.get(opts, :progress, false)
     play_button = Keyword.get(opts, :play_button, false)
     autoplay = Keyword.get(opts, :autoplay, false)
     controls = Keyword.get(opts, :controls, false)
@@ -115,6 +117,7 @@ defmodule Brando.HTML.Video do
       |> assign(:width, width)
       |> assign(:height, height)
       |> assign(:preload, preload)
+      |> assign(:progress, progress)
       |> assign(:src, src)
       |> assign(:play_button, play_button)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
@@ -127,6 +130,7 @@ defmodule Brando.HTML.Video do
       class="video-wrapper video-file"
       data-smart-video
       data-orientation={@orientation}
+      data-progress={@progress}
       style={@aspect_ratio}
     >
       <video
