@@ -1416,6 +1416,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_path={@path}
               parent_uploads={@parent_uploads}
               parent_module_id={@module_id}
+              module_set={@module_set}
               form={child_block_form}
               form_cid={@form_cid}
               entry={@entry}
@@ -1539,6 +1540,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_uid={@uid}
               parent_path={@path}
               parent_uploads={@parent_uploads}
+              module_set={@module_set}
               entry={@entry}
               form={child_block_form}
               form_cid={@form_cid}
