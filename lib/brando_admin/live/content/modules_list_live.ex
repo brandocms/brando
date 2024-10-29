@@ -129,7 +129,6 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("export_modules", %{"ids" => ids_string}, socket) do
     module_ids = Jason.decode!(ids_string)
-    preloads = [:vars]
     current_user = socket.assigns.current_user
 
     base64_modules =
