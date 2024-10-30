@@ -14,15 +14,18 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :columns, :integer, required: true
   attr :size, :atom, default: :thumb
   attr :offset, :integer, default: nil
+  attr :top, :boolean, default: false
 
   def cover(assigns) do
     ~H"""
     <div class={[
+      "cover",
       @class,
       @padded && "padded",
       @circular && "circular",
       @columns && "col-#{@columns}",
-      @offset && "offset-#{@offset}"
+      @offset && "offset-#{@offset}",
+      @top && "top"
     ]}>
       <Content.image image={@image} size={@size} />
     </div>
