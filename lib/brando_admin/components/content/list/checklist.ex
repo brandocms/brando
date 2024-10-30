@@ -2,10 +2,11 @@ defmodule BrandoAdmin.Components.Content.List.Checklist do
   use BrandoAdmin, :component
 
   slot :inner_block, required: true
+  attr :tiny, :boolean, default: false
 
   def checklist(assigns) do
     ~H"""
-    <div class="checklist">
+    <div class={["checklist", @tiny && "tiny"]}>
       <%= render_slot(@inner_block) %>
     </div>
     """
