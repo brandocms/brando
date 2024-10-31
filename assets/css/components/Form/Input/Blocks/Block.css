@@ -168,7 +168,7 @@ button.btn-palette {
 }
 
 .block {
-  background-color: #fefffa;
+  background-color: #fff;
   padding: 0 15px 15px;
   position: relative;
   transition: border 500ms ease, background-color 1500ms ease;
@@ -315,43 +315,42 @@ button.btn-palette {
   .block-vars-wrapper {
     border-top: 1px solid #eee;
     padding-top: 15px;
-    padding-bottom: 15px;    
-    padding-right: 15px;
+    padding-bottom: 15px;
   }
 
   .block-vars {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     gap: 10px;
+    grid-auto-flow: dense;
+    grid-template-columns: repeat(12, 1fr);
 
     .variable {
-      padding: 0 15px 0 0;
+      color: #6A0035;
+      background-color: #fffafa;
+      border-radius: 8px;
+      padding-left: 10px;
+      padding-top: 8px;
+      padding-bottom: 8px;
 
-      &:nth-of-type(2), 
-      &:nth-of-type(3) {
-        border-left: 1px solid #eee;
-        padding-left: 15px;
-      }
-    }
-
-    .variable[data-size="full"] {
-      width: 100%;
-
-      + .variable[data-size="full"] {
+      &.start-row {
         border-left: none;
         padding-left: 0;
       }
     }
 
+    .variable[data-size="full"] {
+      grid-column: span 12;
+    }
+
     .variable[data-size="half"] {
-      width: 50%;
-      flex: calc((100% - 10px) / 2);
-      max-width: calc((100% - 10px) / 2);
+      grid-column: span 6;
     }
 
     .variable[data-size="third"] {
-      flex: calc((100% - 20px) / 3);
-      max-width: calc((100% - 20px) / 3);
+      grid-column: span 4;
+    }
+    .variable[data-size="fourth"] {
+      grid-column: span 3;
     }
 
     .variable .field-wrapper {

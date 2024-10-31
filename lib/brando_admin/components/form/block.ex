@@ -2771,7 +2771,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         </div>
       </div>
       <div class="block-vars">
-        <.inputs_for :let={var} field={@vars}>
+        <.inputs_for :let={var} field={@vars} skip_hidden>
           <.live_component
             module={RenderVar}
             id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
@@ -2779,7 +2779,10 @@ defmodule BrandoAdmin.Components.Form.Block do
             render={(@important && :only_important) || :only_regular}
             on_change={fn params -> send_update(@target, params) end}
             publish
-          />
+          >
+            <input type="hidden" name={var[:id].name} value={var[:id].value} />
+            <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
+          </.live_component>
         </.inputs_for>
       </div>
     </div>

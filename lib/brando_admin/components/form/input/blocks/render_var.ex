@@ -213,6 +213,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       data-size={@var[:width].value}
       data-id={@var[:id].value}
     >
+      <%= render_slot(@inner_block) %>
       <%= if @should_render? do %>
         <%= if @edit do %>
           <div id={"#{@var.id}-edit"}>
