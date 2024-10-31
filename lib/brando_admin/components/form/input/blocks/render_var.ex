@@ -159,6 +159,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign_new(:on_change, fn -> nil end)
       |> assign_new(:images, fn -> nil end)
       |> assign_new(:files, fn -> nil end)
+      |> assign_new(:inner_block, fn -> nil end)
       |> assign_new(:identifiers, fn -> nil end)
       |> assign_new(:value_id, fn -> value end)
       |> assign_new(:image_id, fn -> if type == :image, do: value end)
@@ -213,7 +214,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       data-size={@var[:width].value}
       data-id={@var[:id].value}
     >
-      <%= render_slot(@inner_block) %>
+      <%= if @inner_block do %>
+        <%= render_slot(@inner_block) %>
+      <% end %>
       <%= if @should_render? do %>
         <%= if @edit do %>
           <div id={"#{@var.id}-edit"}>
