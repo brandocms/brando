@@ -38,16 +38,16 @@ defmodule Brando.MetaSchemaTest do
   test "extract dummy meta" do
     extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.MetaSchemaTest.Page, @mock_data)
 
-    assert extracted_meta["description"] == "@ Our description"
-    assert extracted_meta["title"] == "Our title"
-    assert extracted_meta["mutated_title"] == ">> Our title"
-    assert extracted_meta["generated_title"] == "Generated."
+    assert List.keyfind(extracted_meta, "description", 0) == {"description", "@ Our description"}
+    assert List.keyfind(extracted_meta, "title", 0) == {"title", "Our title"}
+    assert List.keyfind(extracted_meta, "mutated_title", 0) == {"mutated_title", ">> Our title"}
+    assert List.keyfind(extracted_meta, "generated_title", 0) == {"generated_title", "Generated."}
   end
 
   test "extract real meta" do
     extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.Pages.Page, @data)
-    assert extracted_meta["description"] == "Our description"
-    assert extracted_meta["title"] == "Our title"
+    assert List.keyfind(extracted_meta, "description", 0) == {"description", "Our description"}
+    assert List.keyfind(extracted_meta, "title", 0) == {"title", "Our title"}
   end
 
   test "fallback" do

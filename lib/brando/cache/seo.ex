@@ -15,17 +15,27 @@ defmodule Brando.Cache.SEO do
   @doc """
   Get SEO from cache
   """
+
   @spec get(binary()) :: map()
-  def get(language), do: Map.get(Cache.get(:seo), language, @empty_seo)
+  def get(language) do
+    seo_map =
+      case Cache.get(:seo) do
+        nil -> set()
+        cache -> cache
+      end
+
+    Map.get(seo_map || %{}, language, @empty_seo)
+  end
 
   @doc """
   Set initial SEO cache. Called on startup
   """
-  @spec set :: {:error, boolean} | {:ok, boolean}
+  @spec set :: map()
   def set do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
     Cachex.put(:cache, :seo, seo_map)
+    seo_map
   end
 
   @doc """

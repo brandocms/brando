@@ -1,0 +1,112 @@
+#cookies {
+  @space padding-top lg;
+}
+
+.no-js {
+  .cookie-container {
+    display: block !important;
+  }
+}
+
+.cookie-container {
+  color: var(--brando-color-dark);
+  @color bg light;
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 9997;
+  margin-bottom: 0 !important;
+  max-width: 100% !important;
+  border-top: 1px solid theme(colors.dark);
+
+  @space padding-y 2xs;
+
+  @responsive >=desktop_md {
+    @space! width 285px;
+    @space right 25px;
+    @space bottom 25px;
+    @space padding-x 0.4;
+    @space padding-y 0.4;
+
+    left: auto;
+    border-radius: 12px;
+    border: 1px solid var(--brando-color-dark);
+  }
+
+  .cookie-law {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    @responsive <=mobile {
+      flex-direction: column;
+    }
+
+    @responsive >=desktop_md {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  .cookie-law-text {
+    width: 100%;
+    p {
+      @space margin-bottom 12px >=desktop_md;
+      @space margin-bottom 3px <desktop_md;
+      font-size: 15px;
+    }
+  }
+
+  .cookie-law-buttons {
+    flex-shrink: 0;
+    text-align: right;
+
+    @responsive <=mobile {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-top: 15px;
+      justify-content: space-between;
+    }
+
+    @responsive >=desktop_md {
+      text-align: left;
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    @responsive ipad_portrait/ipad_landscape {
+      padding-left: 15px;
+    }
+
+    a {
+      @extend .plain;
+      @fontsize 14px;
+      color: var(--brando-color-dark);
+    }
+
+    button {
+      color: var(--brando-color-dark);
+      @color bg transparent;
+      @fontsize 16px;
+      padding: 3px 25px 4px;
+      border-radius: 10px;
+      border: 1px solid var(--brando-color-dark);
+
+      &:hover {
+        @color fg light;
+        color: var(--brando-color-dark);
+      }
+
+      @responsive >=ipad_portrait {
+        padding-top: 5px;
+        margin-right: 15px;
+      }
+    }
+  }
+}

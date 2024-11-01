@@ -84,7 +84,7 @@ defmodule Brando.MetaRenderTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<meta name=\"description\" content=\"@ Our description\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"key1\" content=\"value1\"><meta name=\"key2\" content=\"value2\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:see_also\" content=\"https://facebook.com/test\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"http://localhost\"><meta name=\"title\" content=\"Our title\">"
+             "<meta name=\"title\" content=\"Our title\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"description\" content=\"@ Our description\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:url\" content=\"http://localhost\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:see_also\" content=\"https://instagram.com/test\"><meta property=\"og:see_also\" content=\"https://facebook.com/test\"><meta name=\"key1\" content=\"value1\"><meta name=\"key2\" content=\"value2\">"
 
     mock_conn_with_image =
       Brando.Plug.HTML.put_meta(mock_conn, "og:image", "https://test.com/my_image.jpg")
@@ -96,7 +96,7 @@ defmodule Brando.MetaRenderTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<meta name=\"description\" content=\"@ Our description\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"image\" content=\"https://test.com/my_image.jpg\"><meta name=\"key1\" content=\"value1\"><meta name=\"key2\" content=\"value2\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:image\" content=\"https://test.com/my_image.jpg\"><meta property=\"og:image:type\" content=\"image/jpeg\"><meta property=\"og:see_also\" content=\"https://facebook.com/test\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"http://localhost\"><meta name=\"title\" content=\"Our title\">"
+             "<meta name=\"title\" content=\"Our title\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"description\" content=\"@ Our description\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:url\" content=\"http://localhost\"><meta property=\"og:image\" content=\"https://test.com/my_image.jpg\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:type\" content=\"website\"><meta name=\"image\" content=\"https://test.com/my_image.jpg\"><meta property=\"og:image\" content=\"https://test.com/my_image.jpg\"><meta property=\"og:image:type\" content=\"image/jpeg\"><meta property=\"og:see_also\" content=\"https://instagram.com/test\"><meta property=\"og:see_also\" content=\"https://facebook.com/test\"><meta name=\"key1\" content=\"value1\"><meta name=\"key2\" content=\"value2\">"
 
     # change identity values
     u0 = Factory.insert(:random_user)
@@ -114,7 +114,7 @@ defmodule Brando.MetaRenderTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<meta name=\"description\" content=\"@ Our description\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"image\" content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:image\" content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\"><meta property=\"og:image:height\" content=\"933\"><meta property=\"og:image:type\" content=\"image/jpeg\"><meta property=\"og:image:width\" content=\"1900\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"http://localhost\"><meta name=\"title\" content=\"Our title\">"
+             "<meta name=\"title\" content=\"Our title\"><meta name=\"mutated_title\" content=\"@ Our title\"><meta name=\"generated_title\" content=\"Generated.\"><meta name=\"description\" content=\"@ Our description\"><meta property=\"og:description\" content=\"@ Our description\"><meta property=\"og:url\" content=\"http://localhost\"><meta property=\"og:title\" content=\"Fallback meta title\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:type\" content=\"website\"><meta name=\"image\" content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\"><meta property=\"og:image\" content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\"><meta property=\"og:image:type\" content=\"image/jpeg\"><meta property=\"og:image:width\" content=\"1900\"><meta property=\"og:image:height\" content=\"933\">"
 
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
@@ -142,16 +142,19 @@ defmodule Brando.MetaRenderTest do
     assert Brando.Meta.HTML.put_record_meta(conn, record, opts) == %Plug.Conn{
              assigns: %{page_title: "My title"},
              private: %{
-               brando_meta: %{
-                 "description" => "My description",
-                 "generated_title" => "Generated.",
-                 "mutated_title" => "@ Our title",
-                 "og:description" => "My description",
-                 "og:image" =>
-                   "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
-                 "og:url" => "http://localhost",
-                 "title" => "My title"
-               }
+               brando_meta: [
+                 {"title", "Our title"},
+                 {"mutated_title", "@ Our title"},
+                 {"generated_title", "Generated."},
+                 {"description", "@ Our description"},
+                 {"og:description", "@ Our description"},
+                 {"og:url", "http://localhost"},
+                 {"description", "My description"},
+                 {"og:description", "My description"},
+                 {"og:image",
+                  "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg"},
+                 {"title", "My title"}
+               ]
              }
            }
   end

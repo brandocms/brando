@@ -1,0 +1,226 @@
+header[data-nav] {  
+  @unpack theme.header.padding.large;
+
+  position: fixed;
+  background-color: transparent;
+  width: 100%;
+  backface-visibility: hidden;
+  transition: padding-top 500ms ease, padding-bottom 500ms ease;
+  z-index: 4;
+
+  &[data-header-small] {
+    @unpack theme.header.padding.small;
+    transition: padding-top 500ms ease, padding-bottom 500ms ease;
+  }
+
+  nav {
+    @space container;
+    height: auto;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    @responsive <=ipad_portrait {
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .mobile-bg {
+      color: var(--brando-color-dark);
+      z-index: 3;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      transform: translateX(100%);
+      display: none;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    figure {
+      &.brand {
+        z-index: 5;
+        justify-self: flex-start;
+        align-self: end;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        @responsive <=ipad_landscape {
+          align-items: flex-start;
+        }
+
+        a {
+          @responsive <=ipad_landscape {
+            opacity: 1 !important;
+          }
+        }
+
+        svg {
+          @unpack theme.header.sections.brand;
+
+          path {
+            transition: fill 1s ease;
+            transition-delay: 0.5s;
+          }
+        }
+      }
+
+      &.menu-button {
+        z-index: 150;
+        display: flex;
+        @space margin-top 3px $mobile;
+        @space height 24px >=ipad_portrait;
+        @space height 17px <=mobile;
+        @space right 0;
+        position: absolute;
+        align-self: flex-start;
+
+        @responsive $lg {
+          display: none;
+        }
+
+        .hamburger {
+          color: var(--brando-color-dark);
+          @space width 22px $mobile;
+          @space height 17px $mobile;
+          font-size: 17px;
+          text-align: center;
+          position: relative;
+
+          i {
+            transition: background-color 0.5s ease;
+            transition-delay: 0.5s;
+            display: block;
+            width: 22px;
+            height: 2px;
+            margin-bottom: 5px;
+            background: currentColor;
+
+            &:last-of-type {
+              margin-bottom: 0;
+            }
+          }
+
+          &:focus, &:active {
+            outline: none !important;
+          }
+        }
+      }
+    }
+
+    section {
+      @responsive >=ipad_landscape {
+        display: block !important;
+      }
+
+      @responsive <=ipad_landscape {
+        display: none;
+        z-index: 5;
+      }
+
+      ul {
+        list-style: none;
+        display: flex;
+        margin: 0;
+        padding: 0;
+        flex-direction: column;
+
+        @responsive >=ipad_landscape {
+          width: 100%;
+          flex-direction: row;
+        }
+
+        @responsive <=ipad_landscape {
+          align-items: flex-start;
+          justify-content: flex-start;
+        }
+
+        > li {
+          @font main;
+          @unpack theme.typography.sections.navigation;
+          @responsive >=ipad_landscape {
+            @color fg light;
+            display: inline-block;
+            white-space: nowrap;
+
+            &:not(:last-of-type) {
+              margin-right: 2vw;
+            }
+          }
+
+          a {
+            font-weight: 400;
+            color: #000;
+
+            @responsive <=ipad_portrait {
+              color: theme(colors.light) !important;
+              display: inline-block;
+              text-transform: none;
+
+              &:hover, &:active, &.active {
+                color: theme(colors.light) !important;
+              }
+            }
+
+            @responsive >=ipad_landscape {
+              position: relative;
+              &:first-of-type {
+                margin: 0;
+              }
+            }
+
+            &.active, &:hover {
+              @responsive >=desktop_md {
+                transition: border-color 250ms ease, transform 250ms ease;
+              }
+
+              @responsive <=ipad_landscape {
+                position: relative;
+                border-bottom: 1px solid transparent;
+              }
+
+              @responsive <=mobile {
+                &:before {
+                  margin-left: -29px;
+                  margin-top: 20px;
+                }
+              }
+            }
+
+            @responsive <=ipad_landscape {
+              color: var(--brando-color-dark);
+              display: inline-block;
+              border-bottom: 1px solid transparent;
+              font-weight: normal;
+            }
+
+            &:hover {
+              text-decoration: none;
+            }
+          }
+        }
+      }
+
+      &.main {
+        @space padding-top 40px <=ipad_portrait;
+      }
+    }
+  }
+}
+
+.open-menu {
+  .hamburger.is-active i {
+    background-color: #fff !important;
+  }
+
+  .brand {
+    svg path {
+      fill: #fff !important;
+    }
+  }
+}

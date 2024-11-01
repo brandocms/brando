@@ -149,31 +149,4 @@ defmodule Brando.Users do
       end
     )
   end
-
-  def on_mount(:ensure_authenticated, _params, session, socket) do
-    socket = mount_current_user(session, socket)
-
-    if socket.assigns.current_user do
-      {:cont, socket}
-    else
-      socket =
-        socket
-        |> Phoenix.LiveView.put_flash(:error, gettext("You must log in to access this page."))
-        |> Phoenix.LiveView.redirect(to: "/admin/login")
-
-      {:halt, socket}
-    end
-  end
-
-  defp mount_current_user(session, socket) do
-    case session do
-      %{"user_token" => user_token} ->
-        Phoenix.Component.assign_new(socket, :current_user, fn ->
-          get_user_by_session_token(user_token)
-        end)
-
-      %{} ->
-        Phoenix.Component.assign_new(socket, :current_user, fn -> nil end)
-    end
-  end
 end

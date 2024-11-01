@@ -60,7 +60,11 @@ defmodule Brando.Router do
         scope "/", BrandoAdmin do
           pipe_through [:admin, :redirect_if_user_is_authenticated]
 
-          get "/login", UserSessionController, :new
+          live_session :redirect_if_user_is_authenticated,
+            on_mount: [{BrandoAdmin.UserAuth, :redirect_if_user_is_authenticated}] do
+            live "/login", UserLoginLive, :new
+          end
+
           post "/login", UserSessionController, :create
         end
 
@@ -77,7 +81,8 @@ defmodule Brando.Router do
         post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
         post "/api/content/upload/file", BrandoAdmin.API.Content.Upload.FileController, :create
 
-        live_session :admin, on_mount: [{Brando.Users, :ensure_authenticated}] do
+        live_session :require_authenticated_user,
+          on_mount: [{BrandoAdmin.UserAuth, :ensure_authenticated}] do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update

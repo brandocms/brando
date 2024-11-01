@@ -150,14 +150,17 @@ defmodule Brando.Meta.HTML do
   Get all `:brando_meta` keys from `conn.private`
   """
   def get_meta(conn) do
-    conn.private[:brando_meta] || %{}
+    conn.private[:brando_meta] || []
   end
 
   @doc """
   Get `key` from `:brando_meta` map in `conn.private`.
   """
   def get_meta(conn, key) do
-    Map.get(conn.private[:brando_meta], key)
+    case List.keyfind(conn.private[:brando_meta], key, 0) do
+      {_, value} -> value
+      nil -> nil
+    end
   end
 
   @doc """

@@ -791,10 +791,16 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:containers, fn ->
-      Brando.Content.list_containers!(%{order: "desc namespace, asc sequence"})
+      Brando.Content.list_containers!(%{
+        order: "desc namespace, asc sequence",
+        cache: {:ttl, :infinite}
+      })
     end)
     |> assign_new(:fragments, fn ->
-      Brando.Pages.list_fragments!(%{order: "asc language, asc title"})
+      Brando.Pages.list_fragments!(%{
+        order: "asc language, asc title",
+        cache: {:ttl, :infinite}
+      })
     end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
@@ -1006,7 +1012,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign_new(:container, fn -> nil end)
     |> assign_new(:palette_options, fn ->
-      Brando.Content.list_palettes!()
+      Brando.Content.list_palettes!(%{cache: {:ttl, :infinite}})
     end)
   end
 
@@ -1022,9 +1028,12 @@ defmodule BrandoAdmin.Components.Form.Block do
           if container.allow_custom_palette do
             opts =
               if container.palette_namespace do
-                %{filter: %{namespace: container.palette_namespace}}
+                %{
+                  filter: %{namespace: container.palette_namespace},
+                  cache: {:ttl, :timer.minutes(5)}
+                }
               else
-                %{}
+                %{cache: {:ttl, :infinite}}
               end
 
             Brando.Content.list_palettes!(opts)

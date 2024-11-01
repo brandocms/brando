@@ -1,0 +1,20 @@
+[Unit]
+Description=e2e_project production
+After=network.target
+[Service]
+Type=simple
+User=e2e_project
+Group=e2e_project
+Restart=on-failure
+Environment=MIX_ENV=prod
+Environment=LANG=en_US.UTF-8
+Environment=LC_ALL=en_US.UTF-8
+Environment=PLUG_TMPDIR=/tmp/e2e_project
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/e2e_project
+WorkingDirectory=/sites/prod/e2e_project
+ExecStart=/sites/prod/e2e_project/bin/e2e_project start
+ExecStop=/sites/prod/e2e_project/bin/e2e_project stop
+StandardOutput=append:/sites/prod/e2e_project/log/e2e_project.log
+[Install]
+WantedBy=multi-user.target

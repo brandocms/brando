@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.UserAuth do
   import Plug.Conn
   import Phoenix.Controller
-
+  use Gettext, backend: Brando.Gettext
   alias Brando.Users
 
   # Make the remember me cookie valid for 60 days.
@@ -29,11 +29,10 @@ defmodule BrandoAdmin.UserAuth do
 
     conn
     |> renew_session()
-    |> put_session(:user_token, token)
-    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> put_token_in_session(token)
+    |> maybe_write_remember_me_cookie(token, params)
     |> write_last_login(user)
     |> check_content_language(user)
-    |> maybe_write_remember_me_cookie(token, params)
     |> redirect(to: set_initial_password(conn, user) || user_return_to || signed_in_path(conn))
   end
 
@@ -109,13 +108,13 @@ defmodule BrandoAdmin.UserAuth do
   end
 
   defp ensure_user_token(conn) do
-    if user_token = get_session(conn, :user_token) do
-      {user_token, conn}
+    if token = get_session(conn, :user_token) do
+      {token, conn}
     else
       conn = fetch_cookies(conn, signed: [@remember_me_cookie])
 
-      if user_token = conn.cookies[@remember_me_cookie] do
-        {user_token, put_session(conn, :user_token, user_token)}
+      if token = conn.cookies[@remember_me_cookie] do
+        {token, put_token_in_session(conn, token)}
       else
         {nil, conn}
       end
@@ -146,9 +145,9 @@ defmodule BrandoAdmin.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
+      |> put_flash(:error, gettext("You must log in to access this page."))
       |> maybe_store_return_to()
-      |> redirect(to: Brando.helpers().admin_user_session_path(conn, :new))
+      |> redirect(to: "/admin/login")
       |> halt()
     end
   end
@@ -178,6 +177,12 @@ defmodule BrandoAdmin.UserAuth do
     end
   end
 
+  defp put_token_in_session(conn, token) do
+    conn
+    |> put_session(:user_token, token)
+    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+  end
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
     put_session(conn, :user_return_to, current_path(conn))
   end
@@ -185,4 +190,76 @@ defmodule BrandoAdmin.UserAuth do
   defp maybe_store_return_to(conn), do: conn
 
   defp signed_in_path(_conn), do: "/admin"
+
+  @doc """
+  Handles mounting and authenticating the current_user in LiveViews.
+
+  ## `on_mount` arguments
+
+    * `:mount_current_user` - Assigns current_user
+      to socket assigns based on user_token, or nil if
+      there's no user_token or no matching user.
+
+    * `:ensure_authenticated` - Authenticates the user from the session,
+      and assigns the current_user to socket assigns based
+      on user_token.
+      Redirects to login page if there's no logged user.
+
+    * `:redirect_if_user_is_authenticated` - Authenticates the user from the session.
+      Redirects to signed_in_path if there's a logged user.
+
+  ## Examples
+
+  Use the `on_mount` lifecycle macro in LiveViews to mount or authenticate
+  the current_user:
+
+      defmodule PhxAuthWeb.PageLive do
+        use PhxAuthWeb, :live_view
+
+        on_mount {PhxAuthWeb.UserAuth, :mount_current_user}
+        ...
+      end
+
+  Or use the `live_session` of your router to invoke the on_mount callback:
+
+      live_session :authenticated, on_mount: [{PhxAuthWeb.UserAuth, :ensure_authenticated}] do
+        live "/profile", ProfileLive, :index
+      end
+  """
+  def on_mount(:mount_current_user, _params, session, socket) do
+    {:cont, mount_current_user(socket, session)}
+  end
+
+  def on_mount(:ensure_authenticated, _params, session, socket) do
+    socket = mount_current_user(socket, session)
+
+    if socket.assigns.current_user do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, gettext("You must log in to access this page."))
+        |> Phoenix.LiveView.redirect(to: "/admin/login")
+
+      {:halt, socket}
+    end
+  end
+
+  def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
+    socket = mount_current_user(socket, session)
+
+    if socket.assigns.current_user do
+      {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
+    else
+      {:cont, socket}
+    end
+  end
+
+  defp mount_current_user(socket, session) do
+    Phoenix.Component.assign_new(socket, :current_user, fn ->
+      if user_token = session["user_token"] do
+        Users.get_user_by_session_token(user_token)
+      end
+    end)
+  end
 end

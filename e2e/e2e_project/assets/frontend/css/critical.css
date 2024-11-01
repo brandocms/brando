@@ -1,0 +1,38 @@
+/** Critical CSS **/
+html.js body.unloaded {
+  opacity: 0;
+}
+
+html.moonwalk {
+  [data-moonwalk-children] > * {
+    opacity: 0;
+  }
+}
+
+html.moonwalk {
+  [data-moonwalk],
+  [data-moonwalk-section],
+  [data-moonwalk-run] {
+    opacity: 0;
+  }
+}
+
+[b-section] {
+  opacity: 0;
+}
+
+[data-app-ready="true"] [b-section] {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.fader {
+  background-color: white;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  display: none;
+}

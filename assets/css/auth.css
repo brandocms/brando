@@ -1,3 +1,6 @@
+#application-login {
+  opacity: 0;
+}
 .login {
   @space container;
   height: 100vh;

@@ -1,0 +1,242 @@
+/**
+ * Application-specific CSS.
+ * (c) 2024
+ */
+
+/**
+* Imports
+*/
+
+@import './includes/fonts.css';
+@import "./includes/cookies.css";
+@import "./includes/modules.css";
+@import "./includes/navigation.css";
+
+@europa arrows;
+@europa base;
+
+/* lazyload fix for chrome. sometimes IntersectionObserver doesn't pick up the image */
+img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
+
+.no-js body.unloaded {
+  opacity: 1;
+}
+
+.no-js body.unloaded header {
+  opacity: 1;
+}
+
+.no-js body.unloaded .navbar {
+  transform: none;
+}
+
+html, body {
+  min-height: 100%;
+}
+
+svg:not(:root) {
+  overflow: hidden;
+}
+
+@responsive <=mobile {
+  ul li {
+    list-style-position: inside;
+  }
+}
+
+a.plain {
+  color: inherit;
+  border: none;
+  text-decoration: none;
+
+  &:hover {
+    border: none;
+    text-decoration: none;
+  }
+}
+
+.no-js body.unloaded {
+  [data-moonwalk],
+  [data-moonwalk-section],
+  [data-moonwalk-run] {
+    opacity: 1;
+  }
+}
+
+/** css moonwalk **/
+html.moonwalk {
+  [data-moonwalk=""] {
+    transform: translateY(0);
+    opacity: 0;
+
+    &.moonwalked {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+      transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+                   opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
+      transition-delay: 0.02s;
+    }
+  }
+
+  [data-moonwalk="panner"] {
+    transform: translateX(0);
+    transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+                 opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
+    opacity: 0;
+
+    &.moonwalked {
+      transform: translateX(0);
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+}
+
+body {
+  @fontsize base;
+  @color fg body.foreground;
+  @color bg body.background;
+
+  text-rendering: optimizeLegibility;
+}
+
+p {
+  @space margin-bottom vertical-rhythm(theme.typography.sizes.base);
+
+  &:last-of-type {
+    margin-bottom: 0 !important;
+  }
+
+  > a {
+    @color fg link.regular.text;
+    border-bottom: 1px solid theme(colors.link.regular.border);
+    transition: border-color 250ms ease-out, color 250ms ease-out;
+    padding-bottom: 3px;
+
+    &:hover {
+      @color fg link.hover.text;
+      border-bottom: 1px solid theme(colors.link.hover.border);
+      text-decoration: none;
+    }
+  }
+
+  > ul > li {
+    font-size: inherit;
+  }
+}
+
+.video-wrapper {
+  &.video-embed {
+    padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
+
+    video {
+      top: 0;
+      width: 100%;
+      position: absolute;
+      z-index: 1;
+    }
+
+    iframe {
+      top: 0;
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      z-index: 3;
+    }
+  }
+
+  video {
+    width: 100%;
+  }
+}
+
+/** Smart video **/
+[data-smart-video] {
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+
+  [data-cover] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    height: 100%;
+    width: 100%;
+
+    figure {
+      height: 100%;
+      width: 100%;
+
+      picture {
+        height: 100%;
+        width: 100%;
+
+        img {
+          height: 100%;
+          width: 100%;
+          object-fit: cover;
+        }
+      }
+    }
+  }
+
+  video {
+    width: 100%;
+    z-index: 3;
+  }
+}
+
+.no-js [data-smart-video] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/** Lazyload **/
+[data-ll-srcset] {
+  opacity: 0;
+  transition: opacity 350ms ease-in;
+  
+  &[data-ll-srcset-initialized] {
+    opacity: 1;
+  }
+
+  img {
+    opacity: 0;
+    will-change: opacity;
+
+    &[data-ll-loaded] {
+      transition: opacity 350ms ease-in 50ms;
+      opacity: 1;
+      background-color: rgba(0,0,0,0);
+    }
+  }
+}
+
+.blink {
+  animation: blink-animation 2.7s steps(200, start) infinite;
+}
+
+@keyframes blink-animation {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: .8;
+  }
+}
+
+.ft {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.c {
+  align-self: center;
+}

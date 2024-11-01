@@ -25,10 +25,13 @@ defmodule BrandoAdmin do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: {BrandoAdmin.Layouts, :live}
+      use Phoenix.LiveView, layout: {BrandoAdmin.Layouts, :live}
 
       on_mount {BrandoAdmin.Hooks, :urls}
+
+      if Application.compile_env(Brando.config(:otp_app), :sql_sandbox) do
+        on_mount {BrandoAdmin.Mounts.LiveAcceptance, {:default, __MODULE__}}
+      end
 
       def handle_params(_, _, socket) do
         {:noreply, socket}
@@ -42,8 +45,7 @@ defmodule BrandoAdmin do
 
   def child_live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: {BrandoAdmin.Layouts, :live_child}
+      use Phoenix.LiveView, layout: {BrandoAdmin.Layouts, :live_child}
 
       unquote(html_helpers())
     end

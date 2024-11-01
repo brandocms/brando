@@ -207,25 +207,25 @@ defmodule Brando.Plug.HTML do
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
-    merged_meta = Map.merge(conn.private[:brando_meta] || %{}, extracted_meta)
+    merged_meta = (conn.private[:brando_meta] || []) ++ extracted_meta
     put_private(conn, :brando_meta, merged_meta)
   end
 
   def put_meta(conn, key, data) when is_binary(key) do
-    meta = conn.private[:brando_meta] || %{}
-    put_private(conn, :brando_meta, Map.put(meta, key, data))
+    meta = conn.private[:brando_meta] || []
+    put_private(conn, :brando_meta, meta ++ [{key, data}])
   end
 
   @doc """
   Add meta key if not found in conn
   """
   def put_meta_if_missing(conn, key, data) when is_binary(key) do
-    meta = conn.private[:brando_meta] || %{}
+    meta = conn.private[:brando_meta] || []
 
-    if Map.get(meta, key) do
+    if Enum.any?(meta, fn {k, _} -> k == key end) do
       conn
     else
-      put_private(conn, :brando_meta, Map.put(meta, key, data))
+      put_private(conn, :brando_meta, meta ++ [{key, data}])
     end
   end
 end

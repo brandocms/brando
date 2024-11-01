@@ -6,11 +6,16 @@
       <%= assigns[:page_title] || "Admin" %>
     </.live_title>
     <meta
+      :if={@current_user}
       name="prefers_reduced_motion"
       content={(@current_user.config.prefers_reduced_motion && "true") || nil}
     />
-    <meta name="user_id" content={@current_user.id} />
-    <meta name="user_token" content={Brando.Users.build_token(@current_user.id)} />
+    <meta :if={@current_user} name="user_id" content={@current_user.id} />
+    <meta
+      :if={@current_user}
+      name="user_token"
+      content={Brando.Users.build_token(@current_user.id)}
+    />
     <script>
       (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)
     </script>

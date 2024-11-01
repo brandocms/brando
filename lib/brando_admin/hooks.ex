@@ -12,15 +12,20 @@ defmodule BrandoAdmin.Hooks do
     {:cont, socket}
   end
 
+  def on_mount(:urls, _params, _session, socket) do
+    {:cont, socket}
+  end
+
   def assign_current_user(socket, token) do
     assign_new(socket, :current_user, fn ->
       Brando.Users.get_user_by_session_token(token)
     end)
   end
 
-  def handle_params(params, url, socket) do
+  def handle_params(params, url, %{assigns: %{current_user: user}} = socket)
+      when not is_nil(user) do
     uri = URI.parse(url)
-    user_id = socket.assigns.current_user.id
+    user_id = user.id
 
     socket =
       socket
@@ -40,6 +45,17 @@ defmodule BrandoAdmin.Hooks do
     else
       {:cont, socket}
     end
+  end
+
+  def handle_params(params, url, socket) do
+    uri = URI.parse(url)
+
+    socket =
+      socket
+      |> assign(:params, params)
+      |> assign(:uri, uri)
+
+    {:cont, socket}
   end
 
   def handle_info({_, {:uri_presence, %{user_joined: presence}}}, socket) do

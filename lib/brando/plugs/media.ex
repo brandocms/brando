@@ -14,16 +14,16 @@ defmodule Brando.Plug.Media do
   end
 
   def call(conn, opts) do
-    case Plug.Static.call(conn, opts) do
-      %Plug.Conn{status: 200} = conn ->
+    case subset(opts.at, conn.path_info) do
+      [] ->
         conn
 
-      %Plug.Conn{} = conn ->
-        case subset(opts.at, conn.path_info) do
-          [] ->
+      _path_match ->
+        case Plug.Static.call(conn, opts) do
+          %Plug.Conn{status: 200} = conn ->
             conn
 
-          _ ->
+          %Plug.Conn{} = conn ->
             conn |> send_resp(404, "not found") |> halt()
         end
     end

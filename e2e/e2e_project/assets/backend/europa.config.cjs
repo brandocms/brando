@@ -1,0 +1,1 @@
+module.exports = require('@brandocms/brandojs/europa.config.js')

@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Content.List.Checklist do
   use BrandoAdmin, :component
 
-  slot :inner_block, required: true
   attr :tiny, :boolean, default: false
+  slot :inner_block, required: true
 
   def checklist(assigns) do
     ~H"""
@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Content.List.Checklist do
   end
 
   attr :cond, :any, required: true
+
   slot :inner_block, required: true
 
   def checklist_item(assigns) do

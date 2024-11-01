@@ -1,14 +1,9 @@
 defmodule BrandoAdmin.UserSessionController do
   use BrandoAdmin, :controller
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Users
   alias BrandoAdmin.UserAuth
-
-  def new(conn, _params) do
-    conn
-    |> put_root_layout(:auth)
-    |> render(:new, error_message: nil)
-  end
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
     case Users.get_user(%{matches: %{email: email, active: true}}) do
@@ -19,20 +14,22 @@ defmodule BrandoAdmin.UserSessionController do
           Bcrypt.no_user_verify()
 
           conn
-          |> put_root_layout(:auth)
-          |> render(:new, error_message: "Invalid email or password")
+          |> put_flash(:error, gettext("Invalid email or password"))
+          |> put_flash(:email, String.slice(email, 0, 160))
+          |> redirect(to: "/admin/login")
         end
 
       _ ->
         conn
-        |> put_root_layout(:auth)
-        |> render(:new, error_message: "Invalid email or password")
+        |> put_flash(:error, gettext("Invalid email or password"))
+        |> put_flash(:email, String.slice(email, 0, 160))
+        |> redirect(to: "/admin/login")
     end
   end
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "Logged out successfully.")
+    |> put_flash(:info, gettext("Logged out successfully."))
     |> UserAuth.log_out_user()
   end
 end

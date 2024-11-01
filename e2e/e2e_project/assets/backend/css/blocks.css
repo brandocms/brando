@@ -1,0 +1,12 @@
+/*
+*/
+
+[b-editor-tpl="image | image"] {
+  .images {
+    @row 2;
+  }
+
+  [b-ref] {
+    @column 6/12;
+  }
+}

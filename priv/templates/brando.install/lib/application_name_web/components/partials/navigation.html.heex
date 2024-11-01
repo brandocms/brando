@@ -10,7 +10,7 @@
 
     <section :if={assigns[:navigation]} class="main">
       <ul>
-        <.menu :let={item} menu={@nav_main}>
+        <.menu :let={item} menu={@navigation}>
           <li>
             <.menu_item :let={text} conn={@conn} item={item}>
               <%%= text %>

@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@brandocms/brandojs": {
+      "signature": "50e41cdc4412acc57040fe9c695aef9d",
+      "file": true
+    }
+  }
+}

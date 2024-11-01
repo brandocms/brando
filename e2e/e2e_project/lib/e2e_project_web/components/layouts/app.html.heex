@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html class="no-js" lang={@language}>
+  <.head
+    conn={@conn}
+  >
+    <:prefetch>
+      <link href="//player.vimeo.com" rel="dns-prefetch" />
+    </:prefetch>
+
+    <link rel="shortcut icon" href="/ico/favicon.ico">
+    <meta name="format-detection" content="telephone=no" />
+  </.head>
+  <.body_tag conn={@conn} id="top">
+    
+    <div class="backdrop"></div>
+<!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <.navigation {assigns} />
+<!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+<!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <%= @inner_content %>
+<!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+<!-- :footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <.footer {assigns} />
+<!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+
+    <.include_legacy_assets />
+    <!-- // vsn <%= Application.spec(:e2e_project, :vsn) %> -->
+  </.body_tag>
+</html>

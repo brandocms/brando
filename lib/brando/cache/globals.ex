@@ -13,16 +13,25 @@ defmodule Brando.Cache.Globals do
   Get globals from cache
   """
   @spec get(binary()) :: map()
-  def get(language), do: Map.get(Cache.get(:globals), language, %{})
+  def get(language) do
+    globals_map =
+      case Cache.get(:globals) do
+        nil -> set()
+        cache -> cache
+      end
+
+    Map.get(globals_map || %{}, language, %{})
+  end
 
   @doc """
   Set initial globals cache. Called on startup
   """
-  @spec set :: {:error, boolean} | {:ok, boolean}
+  @spec set :: map()
   def set do
     {:ok, global_sets} = Sites.list_global_sets()
     global_map = process_globals(global_sets)
     Cachex.put(:cache, :globals, global_map)
+    global_map
   end
 
   @doc """
