@@ -41,4 +41,15 @@ defmodule Brando.Content.Identifier do
     |> Enum.filter(&(&1.type == :entries))
     |> Enum.map(&{&1.name, [:identifier]})
   end
+
+  def __modules__ do
+    %{
+      context: Brando.Content,
+      application: Brando,
+      gettext: Brando.Gettext,
+      schema: Brando.Content.Identifier,
+      admin_form_view: nil,
+      admin_list_view: nil
+    }
+  end
 end

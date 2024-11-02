@@ -198,55 +198,21 @@ defmodule Brando.Query do
 
       def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
-        cache_args = Map.get(args, :cache)
 
-        case try_cache({:list, unquote(source), args}, cache_args) do
-          {:miss, cache_key, ttl} ->
-            query =
-              run_list_query_reducer(
-                __MODULE__,
-                Map.delete(args, :cache),
-                initial_query,
-                unquote(module)
-              )
-
-            result = Brando.repo().all(query)
-            Brando.Cache.Query.put(cache_key, result, ttl)
-            {:ok, result}
-
-          {:hit, result} ->
-            {:ok, result}
-
-          :no_cache ->
-            query =
-              run_list_query_reducer(
-                __MODULE__,
-                args,
-                initial_query,
-                unquote(module)
-              )
-
-            pagination_meta = maybe_build_pagination_meta(query, args)
-
-            if stream do
-              Brando.repo().stream(query)
-            else
-              entries = Brando.repo().all(query)
-
-              if pagination_meta do
-                {:ok, %{entries: entries, pagination_meta: pagination_meta}}
-              else
-                {:ok, entries}
-              end
-            end
-        end
+        Brando.Query.handle_list_query(
+          __MODULE__,
+          {:list, unquote(source), args},
+          args,
+          initial_query,
+          unquote(module),
+          stream
+        )
       end
     end
   end
 
   defp query_single(module, block) do
     source = module.__schema__(:source)
-
     singular_schema = module.__naming__().singular
     singular_schema_atom = String.to_atom(singular_schema)
 
@@ -266,73 +232,14 @@ defmodule Brando.Query do
       end
 
       def unquote(:"get_#{singular_schema}")(args) when is_map(args) do
-        cache_args = Map.get(args, :cache)
-
-        case try_cache({:single, unquote(source), args}, cache_args) do
-          {:miss, cache_key, ttl} ->
-            args_without_cache = Map.delete(args, :cache)
-
-            reduced_query =
-              run_single_query_reducer(
-                __MODULE__,
-                args_without_cache,
-                unquote(module)
-              )
-
-            case reduced_query do
-              {:ok, entry} ->
-                Brando.Cache.Query.put(cache_key, entry, ttl, entry.id)
-                {:ok, entry}
-
-              {:error, {:revision, :not_found}} ->
-                {:error, {unquote(singular_schema_atom), :not_found}}
-
-              query ->
-                query
-                |> unquote(block).()
-                |> limit(1)
-                |> Brando.repo().one()
-                |> case do
-                  nil ->
-                    {:error, {unquote(singular_schema_atom), :not_found}}
-
-                  result ->
-                    Brando.Cache.Query.put(cache_key, result, ttl, result.id)
-                    {:ok, result}
-                end
-            end
-
-          {:hit, result} ->
-            {:ok, result}
-
-          :no_cache ->
-            args_without_cache = Map.delete(args, :cache)
-
-            reduced_query =
-              run_single_query_reducer(
-                __MODULE__,
-                args_without_cache,
-                unquote(module)
-              )
-
-            case reduced_query do
-              {:ok, entry} ->
-                {:ok, entry}
-
-              {:error, {:revision, :not_found}} ->
-                {:error, {unquote(singular_schema_atom), :not_found}}
-
-              query ->
-                query
-                |> unquote(block).()
-                |> limit(1)
-                |> Brando.repo().one()
-                |> case do
-                  nil -> {:error, {unquote(singular_schema_atom), :not_found}}
-                  result -> {:ok, result}
-                end
-            end
-        end
+        Brando.Query.handle_single_query(
+          __MODULE__,
+          {:single, unquote(source), args},
+          args,
+          unquote(module),
+          unquote(block),
+          unquote(singular_schema_atom)
+        )
       end
 
       @spec unquote(:"get_#{singular_schema}!")(integer | binary | map()) :: any | no_return
@@ -398,6 +305,9 @@ defmodule Brando.Query do
 
   def with_order(query, order) when is_list(order) do
     Enum.reduce(order, query, fn
+      {:array_position, ids}, query ->
+        order_by(query, [q], fragment("array_position(?, ?)", ^ids, q.id))
+
       {_, {:array_position, ids}}, query ->
         order_by(query, [q], fragment("array_position(?, ?)", ^ids, q.id))
 
@@ -1011,6 +921,134 @@ defmodule Brando.Query do
         unquote(field),
         ^("%" <> unquote(value) <> "%")
       )
+    end
+  end
+
+  @doc """
+  Handle list queries
+  """
+  def handle_list_query(
+        context,
+        query_key,
+        args,
+        initial_query,
+        module,
+        stream \\ false
+      ) do
+    cache_args = Map.get(args, :cache)
+
+    case try_cache(query_key, cache_args) do
+      {:miss, cache_key, ttl} ->
+        query =
+          run_list_query_reducer(
+            context,
+            Map.delete(args, :cache),
+            initial_query,
+            module
+          )
+
+        result = Brando.repo().all(query)
+        Brando.Cache.Query.put(cache_key, result, ttl)
+        {:ok, result}
+
+      {:hit, result} ->
+        {:ok, result}
+
+      :no_cache ->
+        query =
+          run_list_query_reducer(
+            context,
+            args,
+            initial_query,
+            module
+          )
+
+        pagination_meta = maybe_build_pagination_meta(query, args)
+
+        if stream do
+          Brando.repo().stream(query)
+        else
+          entries = Brando.repo().all(query)
+
+          if pagination_meta do
+            {:ok, %{entries: entries, pagination_meta: pagination_meta}}
+          else
+            {:ok, entries}
+          end
+        end
+    end
+  end
+
+  @doc """
+  Handle single queries
+  """
+  def handle_single_query(context, query_key, args, module, block, schema_atom) do
+    cache_args = Map.get(args, :cache)
+
+    case try_cache(query_key, cache_args) do
+      {:miss, cache_key, ttl} ->
+        args_without_cache = Map.delete(args, :cache)
+
+        reduced_query =
+          run_single_query_reducer(
+            context,
+            args_without_cache,
+            module
+          )
+
+        case reduced_query do
+          {:ok, entry} ->
+            Brando.Cache.Query.put(cache_key, entry, ttl, entry.id)
+            {:ok, entry}
+
+          {:error, {:revision, :not_found}} ->
+            {:error, {schema_atom, :not_found}}
+
+          query ->
+            query
+            |> block.()
+            |> limit(1)
+            |> Brando.repo().one()
+            |> case do
+              nil ->
+                {:error, {schema_atom, :not_found}}
+
+              result ->
+                Brando.Cache.Query.put(cache_key, result, ttl, result.id)
+                {:ok, result}
+            end
+        end
+
+      {:hit, result} ->
+        {:ok, result}
+
+      :no_cache ->
+        args_without_cache = Map.delete(args, :cache)
+
+        reduced_query =
+          run_single_query_reducer(
+            context,
+            args_without_cache,
+            module
+          )
+
+        case reduced_query do
+          {:ok, entry} ->
+            {:ok, entry}
+
+          {:error, {:revision, :not_found}} ->
+            {:error, {schema_atom, :not_found}}
+
+          query ->
+            query
+            |> block.()
+            |> limit(1)
+            |> Brando.repo().one()
+            |> case do
+              nil -> {:error, {schema_atom, :not_found}}
+              result -> {:ok, result}
+            end
+        end
     end
   end
 end

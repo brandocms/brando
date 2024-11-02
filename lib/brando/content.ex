@@ -32,6 +32,7 @@ defmodule Brando.Content do
 
   alias Brando.Content.Block
   alias Brando.Content.Container
+  alias Brando.Content.Identifier
   alias Brando.Content.Module
   alias Brando.Content.ModuleSet
   alias Brando.Content.Palette
@@ -449,6 +450,13 @@ defmodule Brando.Content do
   mutation :delete, Container
   mutation :duplicate, {Container, change_fields: [:name]}
 
+  filters Identifier do
+    fn
+      {:ids, ids}, query ->
+        from(q in query, where: q.id in ^ids)
+    end
+  end
+
   def list_identifiers do
     query =
       from(t in Brando.Content.Identifier,
@@ -504,6 +512,20 @@ defmodule Brando.Content do
       )
 
     {:ok, Brando.repo().all(query)}
+  end
+
+  def list_identifiers(args) when is_map(args) do
+    module = Brando.Content.Identifier
+    initial_query = from(t in module)
+    source = module.__schema__(:source)
+
+    Brando.Query.handle_list_query(
+      __MODULE__,
+      {:list, source, args},
+      args,
+      initial_query,
+      module
+    )
   end
 
   def list_identifiers(ids) when is_list(ids) do

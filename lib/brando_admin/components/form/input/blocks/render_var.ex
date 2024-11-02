@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       if image_ids == [] do
         {:ok, []}
       else
-        Brando.Images.list_images(%{filter: %{ids: image_ids}, cache: {:ttl, :timer.minutes(2)}})
+        Brando.Images.list_images(%{filter: %{ids: image_ids}, cache: {:ttl, :timer.minutes(5)}})
       end
 
     mapped_imgs = images |> Enum.map(&{&1.id, &1}) |> Map.new()
@@ -77,7 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       if file_ids == [] do
         {:ok, []}
       else
-        Brando.Files.list_files(%{filter: %{ids: file_ids}, cache: {:ttl, :timer.minutes(2)}})
+        Brando.Files.list_files(%{filter: %{ids: file_ids}, cache: {:ttl, :timer.minutes(5)}})
       end
 
     mapped_files = files |> Enum.map(&{&1.id, &1}) |> Map.new()
@@ -87,8 +87,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       if identifier_ids == [] do
         {:ok, []}
       else
-        # TODO: , cache: {:ttl, :timer.minutes(2)}}
-        Brando.Content.list_identifiers(identifier_ids)
+        Brando.Content.list_identifiers(%{
+          filter: %{ids: identifier_ids},
+          cache: {:ttl, :timer.minutes(5)},
+          order: {:array_position, identifier_ids}
+        })
       end
 
     mapped_identifiers = identifiers |> Enum.map(&{&1.id, &1}) |> Map.new()
