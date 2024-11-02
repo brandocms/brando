@@ -615,15 +615,18 @@ defmodule Brando.Content do
     with {:ok, :has_identifier} <- has_identifier(module),
          {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
-      Brando.repo().delete(identifier)
+      identifier
+      |> Brando.repo().delete()
+      |> Brando.Cache.Query.evict()
     else
-      _ ->
-        {:ok, false}
+      _ -> {:ok, false}
     end
   end
 
   def delete_identifier(identifier) do
-    Brando.repo().delete(identifier)
+    identifier
+    |> Brando.repo().delete()
+    |> Brando.Cache.Query.evict()
   end
 
   def create_identifier(Brando.Images.Image, _entry), do: {:ok, false}
@@ -634,11 +637,15 @@ defmodule Brando.Content do
       new_identifier = module.__identifier__(entry)
       changeset = Ecto.Changeset.change(new_identifier)
 
-      Brando.repo().insert(changeset,
+      insert_opts = [
         on_conflict: {:replace_all_except, [:id]},
         conflict_target: [:entry_id, :schema],
         returning: true
-      )
+      ]
+
+      changeset
+      |> Brando.repo().insert(insert_opts)
+      |> Brando.Cache.Query.evict()
     else
       _ ->
         {:ok, false}
@@ -667,7 +674,7 @@ defmodule Brando.Content do
         {:ok, entry} ->
           # check if there are any blocks/vars that need to be updated
           Villain.render_entries_with_identifier(entry.id)
-          {:ok, entry}
+          Brando.Cache.Query.evict({:ok, entry})
 
         {:error, changeset} ->
           {:error, changeset}
