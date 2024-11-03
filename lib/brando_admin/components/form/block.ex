@@ -962,7 +962,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def maybe_render_module(%{assigns: %{belongs_to: :root, initial_render: false}} = socket) do
+  def maybe_render_module(%{assigns: %{belongs_to: :root, live_preview_active?: true}} = socket) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     uid = socket.assigns.uid
@@ -981,7 +981,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def maybe_render_module(%{assigns: %{initial_render: false}} = socket) do
+  def maybe_render_module(
+        %{assigns: %{initial_render: false, live_preview_active?: true}} = socket
+      ) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     uid = socket.assigns.uid
