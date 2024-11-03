@@ -360,7 +360,10 @@ defmodule Brando.Blueprint.Relations do
 
   def preloads_for(schema) do
     schema.__relations__()
-    |> Enum.filter(&(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator))
+    |> Enum.filter(
+      &(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator and
+          &1.opts.module != :blocks)
+    )
     |> Enum.map(fn
       %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
         sub_assets = Enum.map(mod.__assets__(), & &1.name)

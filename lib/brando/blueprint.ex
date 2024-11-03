@@ -368,11 +368,6 @@ defmodule Brando.Blueprint do
               preload_order: [asc: :sequence],
               on_replace: :delete,
               foreign_key: :entry_id
-            ),
-            Ecto.Schema.has_many(
-              rel_name,
-              through: [:"entry_#{rel_name}", :block],
-              preload_order: [asc: :sequence]
             )
           ]
 
@@ -1162,10 +1157,11 @@ defmodule Brando.Blueprint do
   @doc """
   Return a list of preloads for a given schema
   """
-  def preloads_for(schema) do
+  def preloads_for(schema, opts \\ []) do
+    skip_blocks? = Keyword.get(opts, :skip_blocks, false)
+    blocks_preloads = (skip_blocks? && []) || Brando.Villain.preloads_for(schema)
     asset_preloads = Brando.Blueprint.Assets.preloads_for(schema)
     rel_preloads = Brando.Blueprint.Relations.preloads_for(schema)
-    blocks_preloads = Brando.Villain.preloads_for(schema)
     alternates_preload = Brando.Content.AlternateEntries.preloads_for(schema)
     identifiers_preloads = Brando.Content.Identifier.preloads_for(schema)
 
