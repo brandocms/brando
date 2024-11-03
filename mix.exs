@@ -86,6 +86,9 @@ defmodule Brando.Mixfile do
       {:tzdata, "~> 1.1"},
       {:polymorphic_embed, "~> 5.0"},
 
+      # tracing
+      {:opentelemetry_api, "~> 1.4"},
+
       # Dev dependencies
       {:credo, "~> 1.5", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
