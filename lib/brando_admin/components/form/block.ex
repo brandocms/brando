@@ -3904,7 +3904,12 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     updated_changeset =
       updated_changeset
-      |> render_and_update_entry_block_changeset(entry, has_vars?, has_table_rows?, force_render?)
+      |> render_and_update_entry_block_changeset(
+        entry,
+        has_vars?,
+        has_table_rows?,
+        force_render?
+      )
       |> maybe_put_empty_children(has_children?)
 
     updated_form =
