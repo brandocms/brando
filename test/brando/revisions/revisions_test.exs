@@ -18,7 +18,6 @@ defmodule Brando.Revisions.RevisionsTest do
       title: "My title!",
       alternate_entries: [],
       alternates: [],
-      blocks: [],
       children: [],
       entry_blocks: [],
       fragments: [],
