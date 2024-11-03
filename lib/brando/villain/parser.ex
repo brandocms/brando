@@ -176,14 +176,7 @@ defmodule Brando.Villain.Parser do
         maybe_annotate("", block.uid, opts)
       end
 
-      def module(
-            %{
-              multi: true,
-              module_id: id,
-              children: children
-            } = block,
-            opts
-          ) do
+      def module(%{multi: true, module_id: id, children: children} = block, opts) do
         base_context = opts.context
         modules = opts.modules
         skip_children? = Map.get(opts, :skip_children, false)
