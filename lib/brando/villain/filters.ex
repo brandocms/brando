@@ -1173,7 +1173,7 @@ defmodule Brando.Villain.Filters do
   end
 
   def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
-    preloads = Brando.Blueprint.preloads_for(identifier.schema)
+    preloads = Brando.Blueprint.preloads_for(identifier.schema, skip_blocks: true)
 
     {:ok, [entry]} =
       Brando.Content.get_entries_from_identifiers(
