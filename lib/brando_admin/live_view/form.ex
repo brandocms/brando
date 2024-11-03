@@ -358,9 +358,7 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
-    translated_singular =
-      schema.__translations__()
-      |> Utils.try_path([:naming, :singular])
+    translated_singular = Utils.try_path(schema.__translations__(), [:naming, :singular])
 
     assign(
       socket,
