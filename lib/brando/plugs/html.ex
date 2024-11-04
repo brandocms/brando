@@ -202,8 +202,10 @@ defmodule Brando.Plug.HTML do
   @doc """
   Put META data in conn
   """
+  def put_meta(conn, module, data, opts \\ [])
+
   @spec put_meta(conn, module :: atom, data :: any) :: conn
-  def put_meta(conn, module, data) when is_atom(module) do
+  def put_meta(conn, module, data, _opts) when is_atom(module) do
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
@@ -211,8 +213,16 @@ defmodule Brando.Plug.HTML do
     put_private(conn, :brando_meta, merged_meta)
   end
 
-  def put_meta(conn, key, data) when is_binary(key) do
+  def put_meta(conn, key, data, opts) when is_binary(key) do
     meta = conn.private[:brando_meta] || []
+
+    meta =
+      if Keyword.get(opts, :replace) do
+        Enum.reject(meta, fn {k, _} -> k == key end)
+      else
+        meta
+      end
+
     put_private(conn, :brando_meta, meta ++ [{key, data}])
   end
 

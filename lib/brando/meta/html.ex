@@ -121,9 +121,9 @@ defmodule Brando.Meta.HTML do
       |> MIME.type()
 
     conn
-    |> put_meta("image", img)
-    |> put_meta("og:image", img)
-    |> put_meta("og:image:type", type)
+    |> put_meta("image", img, replace: true)
+    |> put_meta("og:image", img, replace: true)
+    |> put_meta("og:image:type", type, replace: true)
   end
 
   defp put_meta_image(conn, meta_image) when is_map(meta_image) do
@@ -139,11 +139,11 @@ defmodule Brando.Meta.HTML do
       |> MIME.type()
 
     conn
-    |> put_meta("image", img)
-    |> put_meta("og:image", img)
-    |> put_meta("og:image:type", type)
-    |> put_meta("og:image:width", meta_image.width)
-    |> put_meta("og:image:height", meta_image.height)
+    |> put_meta("image", img, replace: true)
+    |> put_meta("og:image", img, replace: true)
+    |> put_meta("og:image:type", type, replace: true)
+    |> put_meta("og:image:width", meta_image.width, replace: true)
+    |> put_meta("og:image:height", meta_image.height, replace: true)
   end
 
   @doc """
