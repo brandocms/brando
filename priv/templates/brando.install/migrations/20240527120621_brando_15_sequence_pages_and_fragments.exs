@@ -4,11 +4,11 @@ defmodule Brando.Repo.Migrations.SequencePagesAndFragments do
 
   def change do
     alter table(:pages_pages) do
-      sequenced()
+      add :sequence, :integer
     end
 
     alter table(:pages_fragments) do
-      sequenced()
+      add :sequence, :integer
     end
   end
 end

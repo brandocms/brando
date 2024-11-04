@@ -1,6 +1,5 @@
 defmodule Brando.Migrations.AddNavigation do
   use Ecto.Migration
-  use Brando.Sequence.Migration
 
   def change do
     create table(:navigation_menus) do
@@ -10,7 +9,7 @@ defmodule Brando.Migrations.AddNavigation do
       add :language, :text
       add :template, :text
       add :creator_id, references(:users_users)
-      sequenced()
+      add :sequence, :integer
       timestamps()
     end
 
@@ -26,7 +25,7 @@ defmodule Brando.Migrations.AddNavigation do
       add :menu_id, references(:navigation_menus, on_delete: :delete_all)
       add :parent_id, references(:navigation_items, on_delete: :delete_all)
       add :creator_id, references(:users_users)
-      sequenced()
+      add :sequence, :integer
       timestamps()
     end
 

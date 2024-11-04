@@ -1,6 +1,5 @@
 defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
   use Ecto.Migration
-  use Brando.Sequence.Migration
 
   def up do
     create table(:imageseries) do
@@ -10,7 +9,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
       add :credits,           :text
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
-      sequenced()
+      add :sequence, :integer
       timestamps()
     end
     create unique_index(:imageseries, [:slug])

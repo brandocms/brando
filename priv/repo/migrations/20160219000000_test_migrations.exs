@@ -1,6 +1,5 @@
 defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   use Ecto.Migration
-  use Brando.Sequence.Migration
   use Brando.Tag, :migration
 
   import Brando.SoftDelete.Migration
@@ -22,7 +21,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :config_target, :text, default: "default"
       add :fetchpriority, :string, default: "auto"
       soft_delete()
-      sequenced()
+      add :sequence, :integer
       timestamps()
     end
 
@@ -56,7 +55,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
     end
-
 
     alter table(:images) do
       add :creator_id, references(:users)
@@ -147,7 +145,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :meta_image_id, references(:images)
       add :rendered_blocks, :text
       add :rendered_blocks_at, :utc_datetime
-      sequenced()
+      add :sequence, :integer
       soft_delete()
       timestamps()
     end
@@ -211,13 +209,12 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :datasource_query, :string
       add :parent_id, references(:content_modules, on_delete: :delete_all)
       add :table_template_id, references(:content_table_templates, on_delete: :nilify_all)
-      sequenced()
+      add :sequence, :integer
       timestamps()
       soft_delete()
     end
 
     create index(:content_modules, [:namespace])
-
 
     create table(:content_palettes) do
       add :name, :text
@@ -234,7 +231,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-
     create table(:content_templates) do
       add :name, :text
       add :namespace, :text
@@ -246,7 +242,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :rendered_blocks_at, :utc_datetime
       timestamps()
     end
-
 
     create table(:content_containers) do
       add :name, :string
@@ -261,7 +256,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :sequence, :integer
       timestamps()
     end
-
 
     create table(:content_blocks) do
       add :uid, :text
@@ -339,7 +333,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :rendered_blocks, :text
       add :rendered_blocks_at, :utc_datetime
 
-      sequenced()
+      add :sequence, :integer
       soft_delete()
       timestamps()
     end
@@ -429,7 +423,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :template, :text
       add :creator_id, references(:users)
       add :items, :map
-      sequenced()
+      add :sequence, :integer
       timestamps()
     end
 
@@ -468,8 +462,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create unique_index(:revisions, [:entry_type, :entry_id, :revision])
-
-
 
     create table(:content_vars) do
       add :type, :text

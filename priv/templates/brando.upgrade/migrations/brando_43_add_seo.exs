@@ -1,6 +1,5 @@
 defmodule Brando.Migrations.AddSEO do
   use Ecto.Migration
-  use Brando.Sequence.Migration
   import Ecto.Query
 
   def change do
