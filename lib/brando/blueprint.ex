@@ -501,7 +501,6 @@ defmodule Brando.Blueprint do
   def get_optional_attrs(attrs) do
     attrs
     |> Enum.reject(&Map.get(&1.opts, :required))
-    |> Villain.maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
     |> Enum.uniq()
   end
