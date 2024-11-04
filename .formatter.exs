@@ -127,6 +127,6 @@ locals_without_parens = [
   export: [locals_without_parens: locals_without_parens],
   import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html],
   plugins: [Phoenix.LiveView.HTMLFormatter],
-  inputs: ["*.{ex,exs,heex}", "priv/*/seeds.exs", "{config,lib,test}/**/*.{ex,exs,heex}"],
+  inputs: ["*.{ex,exs,heex}", "priv/*/seeds.exs", "{config,lib,test,e2e}/**/*.{ex,exs,heex}"],
   subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
 ]
