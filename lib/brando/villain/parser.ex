@@ -1214,7 +1214,21 @@ defmodule Brando.Villain.Parser do
       end
 
       def maybe_format(html, %{format_html: true}) do
-        Phoenix.LiveView.HTMLFormatter.format(html, [])
+        try do
+          Phoenix.LiveView.HTMLFormatter.format(html, [])
+        rescue e ->
+          require Logger
+          Logger.error("""
+
+          ==> Error formatting HTML.
+          Pre-formatted HTML below:
+
+          #{html}")
+
+          """)
+
+          reraise e, __STACKTRACE__
+        end
       end
 
       def maybe_format(html, _), do: html
