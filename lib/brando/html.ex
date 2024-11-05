@@ -589,6 +589,7 @@ defmodule Brando.HTML do
   attr :charset, :string, default: "utf-8"
   attr :viewport, :string, default: "width=device-width, initial-scale=1"
   attr :fonts, :list, default: []
+  attr :ignored_chunks, :list, default: []
   slot :pragma
   slot :title
   slot :preconnect
@@ -618,7 +619,7 @@ defmodule Brando.HTML do
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
       <.preload_fonts fonts={@fonts} />
       <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
-      <.include_assets only_js />
+      <.include_assets ignored_chunks={@ignored_chunks} only_js />
       <%= if @deferred_scripts != [] do %><%= render_slot(@deferred_scripts) %><% end %>
       <%= if @prefetch != [] do %><%= render_slot(@prefetch) %><% end %>
 
@@ -637,6 +638,11 @@ defmodule Brando.HTML do
   @doc """
   If you use Vite assets pipeline
   """
+  attr :only_js, :boolean, default: false
+  attr :only_css, :boolean, default: false
+  attr :admin, :boolean, default: false
+  attr :ignored_chunks, :list, default: []
+
   def include_assets(%{admin: true} = assigns) do
     if Brando.env() in [:prod, :e2e] do
       ~H"""
@@ -684,12 +690,12 @@ defmodule Brando.HTML do
   def include_assets(%{only_js: true} = assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+      <%= Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw() %>
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+        <%= Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw() %>
         """
       else
         ~H"""
@@ -702,8 +708,8 @@ defmodule Brando.HTML do
   def include_assets(assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
-      <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+      <%= Brando.Assets.Vite.Render.main_css(:app) |> raw() %>
+      <%= Brando.Assets.Vite.Render.main_js(:app) |> raw() %>
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do

@@ -224,9 +224,16 @@ defmodule Brando.Assets.Vite do
       end
     end
 
-    def main_js(scope \\ :app) do
+    def main_js(scope \\ :app, ignored_chunks \\ []) do
       js_file = Vite.Manifest.main_js(scope)
       vendor_file = Vite.Manifest.vendor_js(scope)
+
+      vendor_file =
+        if String.starts_with?(vendor_file, ignored_chunks) do
+          nil
+        else
+          vendor_file
+        end
 
       digested_script =
         if js_file do
