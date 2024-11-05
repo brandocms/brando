@@ -229,7 +229,7 @@ defmodule Brando.Assets.Vite do
       vendor_file = Vite.Manifest.vendor_js(scope)
 
       vendor_file =
-        if String.starts_with?(vendor_file, ignored_chunks) do
+        if vendor_file && String.starts_with?(vendor_file, ignored_chunks) do
           nil
         else
           vendor_file
