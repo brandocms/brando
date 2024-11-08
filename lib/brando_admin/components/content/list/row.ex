@@ -508,11 +508,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
               <%= @entry.creator.name %>
             </div>
 
-            <div
-              class="time"
-              id={"entry_creator_time_icon_#{@entry_id}"}
-              data-popover={"The time the entry was #{@soft_delete? and @entry.deleted_at && "deleted" || "created"}"}
-            >
+            <div class="time" id={"entry_creator_time_icon_#{@entry_id}"}>
               <%= if @soft_delete? and @entry.deleted_at do %>
                 <%= format_datetime(@entry.deleted_at, "%d/%m/%y") %>
                 <span>•</span> <%= format_datetime(@entry.deleted_at, "%H:%M") %>

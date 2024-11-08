@@ -24,7 +24,9 @@ defmodule Brando.Plug.Media do
             conn
 
           %Plug.Conn{} = conn ->
-            conn |> send_resp(404, "not found") |> halt()
+            conn
+            |> send_resp(404, "not found")
+            |> halt()
         end
     end
   end
