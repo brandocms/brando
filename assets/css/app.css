@@ -1,71 +1,71 @@
-@import 'tippy.js/dist/tippy.css';
-@import 'flatpickr/dist/flatpickr.css';
-@import 'izitoast/dist/css/iziToast.css';
-@import 'vanilla-picker/dist/vanilla-picker.csp.css';
+@import "tippy.js/dist/tippy.css";
+@import "flatpickr/dist/flatpickr.css";
+@import "izitoast/dist/css/iziToast.css";
+@import "vanilla-picker/dist/vanilla-picker.csp.css";
 
-@import './base.css';
-@import './fonts.css';
-@import './transitions.css';
-@import './auth.css';
-@import './heroicons.css';
-@import './components/Alert.css';
-@import './components/Button.css';
-@import './components/ChildrenButton.css';
-@import './components/CircleDropdown.css';
-@import './components/SplitDropdown.css';
-@import './components/CircleFlag.css';
-@import './components/Content.css';
-@import './components/Content/Header.css';
-@import './components/Content/ItemMeta.css';
-@import './components/Content/List.css';
-@import './components/Content/SelectedRows.css';
-@import './components/Dialog.css';
-@import './components/Drawer.css';
-@import './components/Form.css';
-@import './components/Form/BlockEditor.css';
-@import './components/Form/FieldBase.css';
-@import './components/Form/Subform.css';
-@import './components/Form/Input/CodeEditor.css';
-@import './components/Form/Input/ColorPicker.css';
-@import './components/Form/Input/CustomCheckbox.css';
-@import './components/Form/Input/Datetime.css';
-@import './components/Form/Input/File.css';
-@import './components/Form/Input/Gallery.css';
-@import './components/Form/Input/Image.css';
-@import './components/Form/Input/Radios.css';
-@import './components/Form/Input/Select.css';
-@import './components/Form/Input/Text.css';
-@import './components/Form/Input/TipTap.css';
-@import './components/Form/Input/Blocks/Block.css';
-@import './components/Form/Input/Blocks/Blocks.css';
-@import './components/Form/Input/Blocks/FragmentBlock.css';
-@import './components/Form/Input/Blocks/GalleryBlock.css';
-@import './components/Form/Input/Blocks/HeaderBlock.css';
-@import './components/Form/Input/Blocks/MapBlock.css';
-@import './components/Form/Input/Blocks/MediaBlock.css';
-@import './components/Form/Input/Blocks/ModuleBlock.css';
-@import './components/Form/Input/Blocks/PictureBlock.css';
-@import './components/Form/Input/Blocks/SVGBlock.css';
-@import './components/Form/Input/Blocks/TableBlock.css';
-@import './components/Form/Input/Blocks/TextBlock.css';
-@import './components/Form/Input/Blocks/VideoBlock.css';
-@import './components/Modal.css';
-@import './components/Progress.css';
-@import './components/Image/ImagePicker.css';
-@import './components/SideBar/SideBar.css';
-@import './components/SideBar/ContentLanguageSelector.css';
-@import './components/SideBar/CurrentUser.css';
-@import './components/SideBar/NavigationHeader.css';
-@import './components/SideBar/NavigationMenu.css';
-@import './components/SideBar/NavigationMenuSection.css';
-@import './components/SideBar/NavigationMenuSectionItem.css';
-@import './components/Toast.css';
-@import './components/Var.css';
+@import "./base.css";
+@import "./fonts.css";
+@import "./transitions.css";
+@import "./auth.css";
+@import "./heroicons.css";
+@import "./components/Alert.css";
+@import "./components/Button.css";
+@import "./components/ChildrenButton.css";
+@import "./components/CircleDropdown.css";
+@import "./components/SplitDropdown.css";
+@import "./components/CircleFlag.css";
+@import "./components/Content.css";
+@import "./components/Content/Header.css";
+@import "./components/Content/ItemMeta.css";
+@import "./components/Content/List.css";
+@import "./components/Content/SelectedRows.css";
+@import "./components/Dialog.css";
+@import "./components/Drawer.css";
+@import "./components/Form.css";
+@import "./components/Form/BlockEditor.css";
+@import "./components/Form/FieldBase.css";
+@import "./components/Form/Subform.css";
+@import "./components/Form/Input/CodeEditor.css";
+@import "./components/Form/Input/ColorPicker.css";
+@import "./components/Form/Input/CustomCheckbox.css";
+@import "./components/Form/Input/Datetime.css";
+@import "./components/Form/Input/File.css";
+@import "./components/Form/Input/Gallery.css";
+@import "./components/Form/Input/Image.css";
+@import "./components/Form/Input/Radios.css";
+@import "./components/Form/Input/Select.css";
+@import "./components/Form/Input/Text.css";
+@import "./components/Form/Input/TipTap.css";
+@import "./components/Form/Input/Blocks/Block.css";
+@import "./components/Form/Input/Blocks/Blocks.css";
+@import "./components/Form/Input/Blocks/FragmentBlock.css";
+@import "./components/Form/Input/Blocks/GalleryBlock.css";
+@import "./components/Form/Input/Blocks/HeaderBlock.css";
+@import "./components/Form/Input/Blocks/MapBlock.css";
+@import "./components/Form/Input/Blocks/MediaBlock.css";
+@import "./components/Form/Input/Blocks/ModuleBlock.css";
+@import "./components/Form/Input/Blocks/PictureBlock.css";
+@import "./components/Form/Input/Blocks/SVGBlock.css";
+@import "./components/Form/Input/Blocks/TableBlock.css";
+@import "./components/Form/Input/Blocks/TextBlock.css";
+@import "./components/Form/Input/Blocks/VideoBlock.css";
+@import "./components/Modal.css";
+@import "./components/Progress.css";
+@import "./components/Image/ImagePicker.css";
+@import "./components/SideBar/SideBar.css";
+@import "./components/SideBar/ContentLanguageSelector.css";
+@import "./components/SideBar/CurrentUser.css";
+@import "./components/SideBar/NavigationHeader.css";
+@import "./components/SideBar/NavigationMenu.css";
+@import "./components/SideBar/NavigationMenuSection.css";
+@import "./components/SideBar/NavigationMenuSectionItem.css";
+@import "./components/Toast.css";
+@import "./components/Var.css";
 
-@import './views/assets/Images.css';
-@import './views/config/Cache.css';
-@import './views/config/Globals.css';
-@import './views/config/ScheduledPublishing.css';
+@import "./views/assets/Images.css";
+@import "./views/config/Cache.css";
+@import "./views/config/Globals.css";
+@import "./views/config/ScheduledPublishing.css";
 
 html.moonwalk [data-moonwalk-run].moonwalked {
   opacity: 1 !important;
@@ -103,7 +103,10 @@ html.moonwalk [data-moonwalk-run].moonwalked {
     transition-duration: 1ms !important;
   }
 
-  [data-moonwalk], [data-moonwalk-run], [data-moonwalk-section], [b-section] {
+  [data-moonwalk],
+  [data-moonwalk-run],
+  [data-moonwalk-section],
+  [b-section] {
     visibility: visible !important;
     opacity: 1 !important;
   }
@@ -162,7 +165,7 @@ code {
     border-style: solid;
     position: absolute;
     margin: 5px;
-    border-color: var(--brando-color-dark); 
+    border-color: var(--brando-color-dark);
     z-index: 1;
   }
 
@@ -232,7 +235,7 @@ code {
       color: black;
       padding: 24px;
       border-radius: 5px;
-      box-shadow: 0 5px 30px rgba(black, .1);
+      box-shadow: 0 5px 30px rgba(black, 0.1);
     }
 
     .popover-arrow {
@@ -240,16 +243,18 @@ code {
     }
   }
 
-  &[aria-hidden='true'] {
+  &[aria-hidden="true"] {
     visibility: hidden;
     opacity: 0;
-    transition: opacity .15s, visibility .15s;
+    transition:
+      opacity 0.15s,
+      visibility 0.15s;
   }
 
-  &[aria-hidden='false'] {
+  &[aria-hidden="false"] {
     visibility: visible;
     opacity: 1;
-    transition: opacity .15s;
+    transition: opacity 0.15s;
   }
 }
 
@@ -265,6 +270,56 @@ code {
   }
 }
 
+.user-presence-item {
+  @display flex;
+  @font mono;
+  column-gap: 20px;
+  flex-wrap: wrap;
+  line-height: 1;
+  align-items: baseline;
+
+  .status {
+    width: 10px;
+    color: theme(colors.status.draft);
+    &.online {
+      color: theme(colors.status.published);
+    }
+    &.idle {
+      color: theme(colors.status.pending);
+    }
+  }
+
+  .info {
+    display: flex;
+    justify-content: space-between;
+    flex-grow: 1;
+  }
+
+  .name {
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+
+  .last-active {
+    font-size: 11px;
+    text-align: right;
+  }
+
+  .urls {
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    width: 100%;
+    padding: 5px 0 5px 30px;
+
+    [data-icon] {
+      width: 12px;
+      height: 12px;
+    }
+  }
+}
+
 .presences {
   display: flex;
   z-index: 1;
@@ -276,13 +331,30 @@ code {
   width: auto;
   column-gap: 3px;
 
-  .presences-active, .presences-inactive {
+  .presences-active,
+  .presences-inactive {
     display: flex;
     column-gap: 3px;
   }
 
+  .presences-active {
+    margin-right: 25px;
+
+    .user-presence {
+      > .avatar:after {
+        opacity: 1;
+      }
+    }
+  }
+
   .presences-inactive {
-    display: none;
+    opacity: 0.35;
+    position: relative;
+    flex-direction: row-reverse;
+
+    .user-presence {
+      margin-left: -25px;
+    }
   }
 }
 
@@ -304,14 +376,8 @@ code {
 
 .user-presence {
   display: block;
-  transform: translateY(150%) rotate(180deg);
-  transition: transform 850ms ease;
-  transition-delay: 250ms;
+  transition: 0.3s all ease-out;
 
-  &.visible {
-    transform: translateY(0) rotate(0);
-  }
-  
   &:last-of-type {
     margin-right: 0;
   }
@@ -336,7 +402,9 @@ code {
       position: absolute;
       opacity: 0;
       background-color: theme(colors.status.published);
-      transition: opacity 1s ease, background-color 2s ease;
+      transition:
+        opacity 1s ease,
+        background-color 2s ease;
     }
 
     img {
@@ -358,11 +426,6 @@ code {
         filter: grayscale(100%);
         cursor: pointer;
         transition: all 1.5s ease;
-        opacity: .35;
-      }
-
-      svg {
-        opacity: .35;
       }
     }
   }
@@ -373,13 +436,13 @@ code {
         filter: grayscale(0%);
         cursor: pointer;
         transition: all 1.5s ease;
-        opacity: 1;
       }
 
       &:after {
         background-color: theme(colors.status.published);
-        opacity: 1;
-        transition: opacity 1s ease, background-color 2s ease;
+        transition:
+          opacity 1s ease,
+          background-color 2s ease;
       }
     }
   }
@@ -390,37 +453,15 @@ code {
         filter: grayscale(0%);
         cursor: pointer;
         transition: all 1.5s ease;
-        opacity: 1;
       }
 
       &:after {
         background-color: theme(colors.status.pending);
-        opacity: 1;
-        transition: opacity 1s ease, background-color 2s ease;
+        transition:
+          opacity 1s ease,
+          background-color 2s ease;
       }
     }
-  }
-}
-
-.user-presence-modal {
-  .name {
-    font-size: 20px;
-    font-weight: bold;
-  }
-
-  .last-active {
-    font-size: 16px;
-    margin-top: 0.55em;
-  }
-
-  .urls {
-    @color bg peach;
-    margin-top: 0.75em;
-    padding: 0.35em 0.5em;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5em;
   }
 }
 
@@ -442,15 +483,18 @@ code {
   @space column-gap 5px;
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.35s;
 }
 
-.fadefast-enter-active, .fadefast-leave-active {
+.fadefast-enter-active,
+.fadefast-leave-active {
   transition: opacity 0.15s;
 }
 
-.fadefast-enter, .fadefast-leave-to {
+.fadefast-enter,
+.fadefast-leave-to {
   opacity: 0;
 }
 
@@ -480,7 +524,9 @@ strong {
 html {
   line-height: 1.35;
   height: 100%;
-  font-feature-settings: "kern" 1, "liga" 1;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
   font-kerning: normal;
 }
 
@@ -552,8 +598,8 @@ body {
   transform-origin: center;
 
   &:hover {
-    background-color: var(--brando-color-dark); 
-    color: var(--brando-color-peach); 
+    background-color: var(--brando-color-dark);
+    color: var(--brando-color-peach);
   }
 }
 
@@ -565,17 +611,32 @@ body {
   display: flex;
   min-height: 100%;
 
-  [data-phx-main="true"], [data-phx-main] {
+  [data-phx-main="true"],
+  [data-phx-main] {
     width: 100%;
     display: flex;
 
-    @responsive desktop_xl { --navigation-width: 370px }
-    @responsive desktop_lg { --navigation-width: 370px }
-    @responsive desktop_md { --navigation-width: 330px }
-    @responsive ipad_landscape { --navigation-width: 330px }
-    @responsive ipad_portrait { --navigation-width: 0 }
-    @responsive mobile { --navigation-width: 0 }
-    @responsive iphone { --navigation-width: 0 }
+    @responsive desktop_xl {
+      --navigation-width: 370px;
+    }
+    @responsive desktop_lg {
+      --navigation-width: 370px;
+    }
+    @responsive desktop_md {
+      --navigation-width: 330px;
+    }
+    @responsive ipad_landscape {
+      --navigation-width: 330px;
+    }
+    @responsive ipad_portrait {
+      --navigation-width: 0;
+    }
+    @responsive mobile {
+      --navigation-width: 0;
+    }
+    @responsive iphone {
+      --navigation-width: 0;
+    }
   }
 
   &.noFocus {
@@ -599,7 +660,8 @@ body {
   }
 }
 
-.table td.fit, .table th.fit {
+.table td.fit,
+.table th.fit {
   white-space: nowrap;
   width: 1%;
 }
@@ -629,7 +691,7 @@ p:last-of-type {
   text-decoration: underline;
   text-decoration-color: var(--brando-color-blue);
   transition: text-decoration-color 250ms ease;
-  
+
   &:hover {
     text-decoration-color: transparent;
   }
@@ -639,7 +701,7 @@ h1 {
   @fontsize h1;
   @space margin-bottom 0;
   line-height: 1.25 !important;
-  font-feature-settings: 'kern', 'liga', 'dlig', 'hlig', 'cswh';
+  font-feature-settings: "kern", "liga", "dlig", "hlig", "cswh";
 }
 
 h2 {
@@ -653,7 +715,7 @@ h3 {
 
 .subform-entry.flex-row {
   flex-direction: row !important;
-  
+
   .variable {
     width: 100%;
   }
@@ -704,14 +766,16 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 60px;
   padding-bottom: 8px;
   min-width: 205px;
   text-align: center;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 
   &:hover {
     background-color: var(--brando-color-peach);
@@ -723,13 +787,15 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 40px;
   padding-bottom: 5px;
   text-align: center;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 
   &:hover {
     background-color: var(--brando-color-peach);
@@ -741,13 +807,15 @@ h3 {
   width: 100%;
   display: block;
   padding-top: 5px;
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark);
   background-color: transparent;
   height: 60px;
   padding-bottom: 5px;
   text-align: center;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 
   + .btn-secondary {
     margin-top: -1px;
@@ -760,7 +828,7 @@ h3 {
 
 .btn-outline-primary {
   padding-top: 5px;
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark);
   background-color: #ffffff;
   height: 60px;
@@ -768,11 +836,13 @@ h3 {
   padding-bottom: 5px;
   min-width: 205px;
   text-align: center;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 
   &:hover {
-    background-color: var(--brando-color-dark); 
-    border-color: var(--brando-color-dark); 
+    background-color: var(--brando-color-dark);
+    border-color: var(--brando-color-dark);
     color: theme(colors.peach);
   }
 
@@ -929,7 +999,7 @@ h3 {
   justify-content: space-between;
   flex-wrap: wrap;
   &.jc-none {
-   justify-content: unset;
+    justify-content: unset;
   }
 }
 
@@ -1069,11 +1139,12 @@ h3 {
   }
 
   span {
-    color: var(--brando-color-dark); 
+    color: var(--brando-color-dark);
   }
 }
 
-.text-center, .ta-center {
+.text-center,
+.ta-center {
   text-align: center !important;
 }
 
@@ -1240,11 +1311,11 @@ span[data-icon] {
       }
 
       span:nth-child(2) {
-        animation-delay: .2s;
+        animation-delay: 0.2s;
       }
 
       span:nth-child(3) {
-        animation-delay: .4s;
+        animation-delay: 0.4s;
       }
     }
   }

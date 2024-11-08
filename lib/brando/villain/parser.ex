@@ -336,9 +336,10 @@ defmodule Brando.Villain.Parser do
       defp add_datasource_entries_to_context(context, _, _),
         do: Context.assign(context, :entries, [])
 
-      defp add_block_to_context(context, _module, block) do
+      defp add_block_to_context(context, module, block) do
         simple_block =
-          Map.take(block, [
+          block
+          |> Map.take([
             :uid,
             :type,
             :module_id,
@@ -349,6 +350,7 @@ defmodule Brando.Villain.Parser do
             :anchor,
             :description
           ])
+          |> Map.merge(%{class: module.class})
 
         Context.assign(context, :block, simple_block)
       end
@@ -1216,18 +1218,20 @@ defmodule Brando.Villain.Parser do
       def maybe_format(html, %{format_html: true}) do
         try do
           Phoenix.LiveView.HTMLFormatter.format(html, [])
-        rescue e ->
-          require Logger
-          Logger.error("""
+        rescue
+          e ->
+            require Logger
 
-          ==> Error formatting HTML.
-          Pre-formatted HTML below:
+            Logger.error("""
 
-          #{html}")
+            ==> Error formatting HTML.
+            Pre-formatted HTML below:
 
-          """)
+            #{html}")
 
-          reraise e, __STACKTRACE__
+            """)
+
+            reraise e, __STACKTRACE__
         end
       end
 

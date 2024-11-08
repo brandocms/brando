@@ -109,7 +109,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       namespace: "general",
       help_text: "Help text",
       code:
-        "<article b-tpl=\"module\">\n  <div class=\"inner\">\n" <>
+        "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n" <>
           "    <!-- \n    (!) reference refs by using {% ref refs.ref_name %} \n" <>
           "    (!) reference vars by using {{ var_name }}\n    -->\n" <>
           "  </div>\n</article>"

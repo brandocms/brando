@@ -17,7 +17,7 @@
       max-width: 37ch;
       display: flex;
       flex-direction: column;
-      row-gap: 7px;      
+      row-gap: 7px;
     }
 
     .title-and-alt {
@@ -97,7 +97,9 @@
         user-select: none;
         pointer-events: none;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           user-select: none;
           pointer-events: none;
           fill: var(--brando-color-dark);
@@ -156,7 +158,9 @@
         pointer-events: none;
         width: 200px;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           user-select: none;
           pointer-events: none;
           fill: var(--brando-color-dark);
@@ -176,14 +180,16 @@
 
   img {
     position: relative;
-    z-index: 1;
 
-    background-image:
-      linear-gradient(45deg, #ccc 25%, transparent 25%), 
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
       linear-gradient(135deg, #ccc 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #ccc 75%),
       linear-gradient(135deg, transparent 75%, #ccc 75%);
-    background-size:24px 24px; /* Must be a square */
-    background-position:0 0, 12px 0, 12px -12px, 0px 12px; /* Must be half of one side of the square */
+    background-size: 24px 24px; /* Must be a square */
+    background-position:
+      0 0,
+      12px 0,
+      12px -12px,
+      0px 12px; /* Must be half of one side of the square */
   }
 }

@@ -2453,6 +2453,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       class={[
         "base-block",
         "ref-block",
+        @block_type,
         @collapsed && "collapsed",
         !@active && "disabled"
       ]}
@@ -2564,7 +2565,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= gettext("Not shown...") %>
+            <%= gettext("Comment — not shown on frontend.") %>
           </:description>
           <:config>
             <div id={"block-#{@uid}-conf-textarea"}>

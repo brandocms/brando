@@ -7,7 +7,6 @@
   }
 }
 
-
 [b-tpl="image | image"] {
   .inner {
     @row 2;
@@ -39,7 +38,7 @@
     > .header .header-block textarea {
       text-align: center;
     }
-    
+
     > article {
       @row 2;
 
@@ -67,7 +66,9 @@
 }
 
 [b-tpl="quote"] {
-  .inner { display: none }
+  .inner {
+    display: none;
+  }
 }
 
 [b-tpl="lede"] {
@@ -101,7 +102,10 @@
   }
 }
 
-[b-tpl="image | text"], [b-tpl="text | image"], [b-tpl="image | text / image"], [b-tpl="text / image | image / text"] {
+[b-tpl="image | text"],
+[b-tpl="text | image"],
+[b-tpl="image | text / image"],
+[b-tpl="text / image | image / text"] {
   .inner {
     @row 2;
 

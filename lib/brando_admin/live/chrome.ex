@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Chrome do
   alias BrandoAdmin.Components.Content
   use Gettext, backend: Brando.Gettext
 
-  import BrandoAdmin.Utils, only: [show_modal: 2]
+  import BrandoAdmin.Utils, only: [show_modal: 1]
 
   def mount(_params, _session, socket) do
     if connected?(socket) do
@@ -38,22 +38,65 @@ defmodule BrandoAdmin.Chrome do
 
   def render(assigns) do
     ~H"""
-    <div :if={@socket_connected && @active_presences} class="presences">
+    <div
+      :if={@socket_connected && @active_presences}
+      class="presences"
+      phx-click={show_modal("#presence-modal")}
+    >
+      <Content.modal title={gettext("Presence details")} id="presence-modal" narrow>
+        <div class="user-presence-modal">
+          <div class="online">
+            <%= for {id, presence} <- @active_presences do %>
+              <.presence_modal_item presence={presence} id={id} />
+            <% end %>
+            <%= for {id, presence} <- @inactive_presences do %>
+              <.presence_modal_item presence={presence} id={id} />
+            <% end %>
+          </div>
+        </div>
+      </Content.modal>
       <div class="presences-active">
-        <.presence
-          :for={{id, presence} <- @active_presences}
-          presence={presence}
-          id={id}
-          selected_presence={@selected_presence}
-        />
+        <.presence :for={{id, presence} <- @active_presences} presence={presence} id={id} />
       </div>
       <div class="presences-inactive">
-        <.presence
-          :for={{id, presence} <- @inactive_presences}
-          presence={presence}
-          id={id}
-          selected_presence={@selected_presence}
-        />
+        <.presence :for={{id, presence} <- @inactive_presences} presence={presence} id={id} />
+      </div>
+    </div>
+    """
+  end
+
+  def presence_modal_item(assigns) do
+    last_active =
+      if assigns.presence.last_active do
+        assigns.presence.last_active
+        |> String.to_integer()
+        |> DateTime.from_unix!()
+        |> DateTime.shift_zone!(Brando.timezone())
+        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+      else
+        if assigns.presence.last_login do
+          assigns.presence.last_login
+          |> DateTime.from_naive!("Etc/UTC")
+          |> DateTime.shift_zone!(Brando.timezone())
+          |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+        end
+      end
+
+    assigns = assign(assigns, :last_active, last_active)
+
+    ~H"""
+    <div class="user-presence-item">
+      <div class={["status", @presence.status]}>●</div>
+      <div class="info">
+        <div class="name"><%= @presence.name %></div>
+        <div class="last-active">
+          <%= @last_active %>
+        </div>
+      </div>
+      <div class="urls">
+        <div :for={url <- @presence.urls} class="url">
+          <%= url %>
+        </div>
       </div>
     </div>
     """
@@ -200,52 +243,33 @@ defmodule BrandoAdmin.Chrome do
   attr :selected_presence, :map
 
   def presence(assigns) do
-    last_active =
-      if assigns.presence.last_active do
-        assigns.presence.last_active
-        |> String.to_integer()
-        |> DateTime.from_unix!()
-        |> DateTime.shift_zone!(Brando.timezone())
-        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
-      else
-        nil
-      end
-
-    assigns = assign(assigns, :last_active, last_active)
+    assigns =
+      assigns
+      |> assign(:status, (assigns.presence.status in ["online", "idle"] && "online") || "offline")
 
     ~H"""
     <div
-      class="user-presence visible"
+      id={"user-presence-#{@status}-#{@id}"}
+      class="user-presence"
       data-user-id={@id}
       data-user-status={@presence.status}
-      phx-mounted={JS.add_class("visible")}
-      phx-click={
-        "select_presence"
-        |> JS.push(value: %{id: @id})
-        |> show_modal("#presence-modal-#{@id}")
+      phx-mounted={
+        JS.transition(
+          {"transition ease-in duration-300", "opacity-0 y-100", "opacity-100 y-0"},
+          time: 300
+        )
+      }
+      phx-remove={
+        JS.transition(
+          {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
+          time: 300
+        )
       }
     >
       <div class="avatar">
         <Content.image image={@presence.avatar} size={:thumb} />
       </div>
     </div>
-    <Content.modal title={gettext("Presence details")} id={"presence-modal-#{@id}"} narrow>
-      <div :if={@selected_presence && @selected_presence.id == @id} class="user-presence-modal">
-        <div class="name"><%= @selected_presence.name %></div>
-        <div class="status badge"><%= @presence.status %></div>
-        <div class="urls">
-          <div :for={url <- @presence.urls} class="text-mono">
-            <Brando.HTML.icon name="hero-globe-alt" /> <%= url %>
-          </div>
-        </div>
-        <div :if={@presence.status in ["online", "idle"]} class="last-active">
-          <%= gettext("Last activity") %>: <%= @last_active %>
-        </div>
-        <div :if={@presence.status == "offline"} class="last-active">
-          <%= gettext("Last logged in") %>: <%= @presence.last_login %>
-        </div>
-      </div>
-    </Content.modal>
     """
   end
 end
