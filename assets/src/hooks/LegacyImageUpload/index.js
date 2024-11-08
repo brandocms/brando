@@ -5,7 +5,7 @@ const IDLE = 0
 const UPLOADING = 1
 const UPLOAD_URL = '/admin/api/content/upload/image'
 
-export default app => ({
+export default (app) => ({
   updated() {
     if (this.attachListenersOnUpdate) {
       this.attachListenersOnUpdate = false
@@ -50,7 +50,7 @@ export default app => ({
         duration: 3,
         rotate: 360,
         ease: 'none',
-        transformOrigin: '50% 50%'
+        transformOrigin: '50% 50%',
       })
       this.plusTimeline.timeScale(0)
     }
@@ -59,12 +59,12 @@ export default app => ({
 
     this.$uploadButton = Dom.find(this.el, 'button.file-upload')
     if (this.$uploadButton) {
-      this.$uploadButton.addEventListener('click', e => {
+      this.$uploadButton.addEventListener('click', (e) => {
         this.$fileInput.click()
       })
     }
 
-    this.$fileInput.addEventListener('change', async e => {
+    this.$fileInput.addEventListener('change', async (e) => {
       e.preventDefault()
       e.stopPropagation()
 
@@ -83,8 +83,8 @@ export default app => ({
   attachListeners() {
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
-    this.$uploadCanvases.forEach(uploadCanvas => {
-      uploadCanvas.addEventListener('click', e => {
+    this.$uploadCanvases.forEach((uploadCanvas) => {
+      uploadCanvas.addEventListener('click', (e) => {
         if (e.target.tagName === 'BUTTON') {
           return
         }
@@ -106,18 +106,22 @@ export default app => ({
         uploadCanvas.classList.remove('dragging')
       })
 
-      uploadCanvas.addEventListener('drop', event => {
+      uploadCanvas.addEventListener('drop', async (event) => {
         event.preventDefault()
         const files = event.dataTransfer.files
 
-        if (!this.multi) {
-          if (files.length > 1) {
-            alertError('Too many files dropped')
-            return false
-          }
+        if (!this.multi && files.length > 1) {
+          alertError('Too many files dropped')
+          return false
+        }
 
+        if (!this.multi) {
           const f = files.item(0)
           this.upload(f)
+        } else {
+          for (let i = 0; i < files.length; i++) {
+            await this.upload(files[i])
+          }
         }
       })
     })
@@ -125,11 +129,11 @@ export default app => ({
 
   setStatusText() {
     if (this.status === IDLE) {
-      Dom.all(this.el, '.instructions span').forEach(sp => {
+      Dom.all(this.el, '.instructions span').forEach((sp) => {
         sp.innerHTML = this.strings.idle
       })
     } else {
-      Dom.all(this.el, '.instructions span').forEach(sp => {
+      Dom.all(this.el, '.instructions span').forEach((sp) => {
         sp.innerHTML = this.strings.uploading
       })
     }
@@ -164,7 +168,11 @@ export default app => ({
         this.status = UPLOADING
         this.setStatusText()
         this.spinPlus()
-        const response = await fetch(UPLOAD_URL, { headers, method: 'post', body: formData })
+        const response = await fetch(UPLOAD_URL, {
+          headers,
+          method: 'post',
+          body: formData,
+        })
         const data = await response.json()
 
         if (data.status === 200) {
@@ -194,5 +202,5 @@ export default app => ({
         reject()
       }
     })
-  }
+  },
 })
