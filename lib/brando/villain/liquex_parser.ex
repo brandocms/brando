@@ -4,6 +4,7 @@ defmodule Brando.Villain.LiquexParser do
       Brando.Villain.Tags.HeadlessRef,
       Brando.Villain.Tags.Inspect,
       Brando.Villain.Tags.Ref,
+      Brando.Villain.Tags.Link,
       Brando.Villain.Tags.Picture,
       Brando.Villain.Tags.Video,
       Brando.Villain.Tags.Route,
