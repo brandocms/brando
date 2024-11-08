@@ -161,13 +161,22 @@ defmodule Brando.Content do
   mutation :delete, Module
 
   mutation :duplicate,
-           {Module, change_fields: [:name, :class, vars: &__MODULE__.duplicate_vars/2]}
+           {Module,
+            change_fields: [
+              :class,
+              name: &__MODULE__.duplicate_module_name/2,
+              vars: &__MODULE__.duplicate_vars/2
+            ]}
 
   def duplicate_vars(entry, _) do
     entry
     |> Brando.repo().preload(:vars)
     |> Map.get(:vars)
     |> Enum.map(&Map.put(&1, :id, nil))
+  end
+
+  def duplicate_module_name(entry, _) do
+    Enum.reduce(entry.name, %{}, fn {k, v}, acc -> Map.put(acc, k, "#{v}_dupl") end)
   end
 
   @doc """
