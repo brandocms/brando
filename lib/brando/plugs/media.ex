@@ -19,14 +19,14 @@ defmodule Brando.Plug.Media do
         conn
 
       _path_match ->
-        case Plug.Static.call(conn, opts) do
-          %Plug.Conn{status: 200} = conn ->
-            conn
+        conn = Plug.Static.call(conn, opts)
 
-          %Plug.Conn{} = conn ->
-            conn
-            |> send_resp(404, "not found")
-            |> halt()
+        if conn.state == :sent do
+          conn
+        else
+          conn
+          |> send_resp(404, "not found")
+          |> halt()
         end
     end
   end
