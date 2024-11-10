@@ -34,8 +34,7 @@ defmodule Brando.Navigation do
       {% endfor %}
 
   """
-  use BrandoAdmin, :context
-  use Brando.Query
+  import Brando.Query
 
   alias Brando.Cache
   alias Brando.Navigation.Item
