@@ -135,8 +135,6 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
-    Module.register_attribute(__CALLER__.module, :brando_macro_context, accumulate: false)
-    Module.put_attribute(__CALLER__.module, :brando_macro_context, nil)
 
     gettext_module =
       case Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__) do
@@ -150,7 +148,6 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
     Module.put_attribute(__CALLER__.module, :gettext_module, gettext_module)
 
-    Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
     Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
     Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
