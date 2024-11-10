@@ -21,8 +21,10 @@ defmodule Brando.Utils.Schema do
   """
 
   def update_field(schema, coll) do
-    changeset = Changeset.change(schema, coll)
-    {:ok, Brando.repo().update!(changeset)}
+    schema
+    |> Changeset.change(coll)
+    |> Brando.repo().update
+    |> Brando.Cache.Query.evict()
   end
 
   @doc """
