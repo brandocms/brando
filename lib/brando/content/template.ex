@@ -39,23 +39,22 @@ defmodule Brando.Content.Template do
       query %{order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]}
       filter label: t("Name"), filter: "name"
       filter label: t("Namespace"), filter: "namespace"
+      component &__MODULE__.listing_row/1
     end
   end
 
   def listing_row(assigns) do
     ~H"""
-    <.cover image={@entry.cover} columns={2} size={:smallest} padded />
     <.field columns={3}>
-      <div class="badge">{{ entry.namespace }}</div>
+      <div class="badge"><%= @entry.namespace %></div>
     </.field>
-    <.update_link entry={@entry} columns={6}>
+    <.update_link entry={@entry} columns={7}>
       <%= @entry.name %>
       <:outside>
         <br />
-        <small>{{ entry.instructions }}</small>
+        <small><%= @entry.instructions %></small>
       </:outside>
     </.update_link>
-    <.url entry={@entry} />
     """
   end
 
