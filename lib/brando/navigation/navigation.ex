@@ -35,13 +35,12 @@ defmodule Brando.Navigation do
 
   """
   import Brando.Query
+  import Ecto.Query
 
   alias Brando.Cache
   alias Brando.Navigation.Item
   alias Brando.Navigation.Menu
   alias Brando.Villain
-
-  import Ecto.Query
 
   @type id :: binary | integer
   @type params :: map
