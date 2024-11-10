@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Chrome do
       <Content.modal title={gettext("Presence details")} id="presence-modal" narrow>
         <div class="user-presence-modal">
           <p>
-            <%= gettext("Current user activity:") %>
+            <%= gettext("Current user activity") %> &darr;
           </p>
           <div class="online" phx-update="stream" id="presence-modal-online">
             <%= for {dom_id, presence} <- @streams.active_presences do %>
