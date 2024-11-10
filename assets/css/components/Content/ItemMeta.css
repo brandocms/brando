@@ -1,19 +1,24 @@
-.item-meta, .identifier {
+.item-meta,
+.identifier {
   display: flex;
   align-items: center;
 
-  .avatar-wrapper, .cover-wrapper {
+  .avatar-wrapper,
+  .cover-wrapper {
     align-items: center;
     display: flex;
     margin-right: 10px;
 
-    .avatar, .cover {
+    .avatar,
+    .cover {
       width: 40px;
       height: 40px;
 
       img {
         user-select: none;
         border-radius: 38px;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
       }
 
       .img-placeholder svg {
@@ -42,7 +47,8 @@
       margin-top: 2px;
     }
 
-    .time, .meta-info {
+    .time,
+    .meta-info {
       font-size: 10px;
       opacity: 1;
       user-select: none;
@@ -138,9 +144,10 @@
     }
   }
 
-  .remove  {
+  .remove {
     margin-left: 10px;
-    button, label {
+    button,
+    label {
       width: 30px;
       height: 30px;
       background-color: white;

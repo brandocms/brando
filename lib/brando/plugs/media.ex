@@ -21,7 +21,7 @@ defmodule Brando.Plug.Media do
       _path_match ->
         conn = Plug.Static.call(conn, opts)
 
-        if conn.state == :sent do
+        if conn.state in [:sent, :file] do
           conn
         else
           conn

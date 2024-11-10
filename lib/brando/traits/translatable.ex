@@ -9,6 +9,10 @@ defmodule Brando.Trait.Translatable do
 
       def has_alternates?, do: @translatable_alternates
 
+      attributes do
+        attribute :language, :language, required: true
+      end
+
       if @translatable_alternates do
         relations do
           relation :alternates, :has_many, module: :alternates
@@ -66,9 +70,5 @@ defmodule Brando.Trait.Translatable do
         end
       end
     end
-  end
-
-  attributes do
-    attribute :language, :language, required: true
   end
 end

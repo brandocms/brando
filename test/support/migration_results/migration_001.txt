@@ -3,20 +3,20 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
 
   def up do
     create table(:projects) do
+      add :language, :text
       add :title, :text
       add :status, :integer
       add :slug, :text
       add :deleted_at, :utc_datetime
       add :sequence, :integer
       timestamps()
-      add :language, :text
       add :cover_id, references(:images, on_delete: :nilify_all)
-      add :properties, :jsonb
       add :creator_id, references(:users, on_delete: :nothing)
+      add :properties, :jsonb
     end
 
-    create unique_index(:projects, [:slug, :language])
     create index(:projects, [:language])
+    create unique_index(:projects, [:slug, :language])
 
     create table(:projects_alternates) do
       add :entry_id, references(:projects, on_delete: :delete_all)
@@ -30,8 +30,8 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
   def down do
     drop table(:projects)
 
-    drop unique_index(:projects, [:slug, :language])
     drop index(:projects, [:language])
+    drop unique_index(:projects, [:slug, :language])
 
     drop table(:projects_alternates)
   end

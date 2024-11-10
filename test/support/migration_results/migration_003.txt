@@ -6,14 +6,14 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       remove :title
       remove :status
       remove :slug
-      remove :meta_description
       remove :meta_title
+      remove :meta_description
+      remove :meta_image_id
       remove :cover_id
       remove :photos_id
-      remove :meta_image_id
+      remove :creator_id
       remove :properties
       remove :more_properties
-      remove :creator_id
     end
 
     drop unique_index(:projects, [:slug, :language])
@@ -24,14 +24,14 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       add :title, :text
       add :status, :integer
       add :slug, :text
-      add :meta_description, :text
       add :meta_title, :text
+      add :meta_description, :text
+      add :meta_image_id, references(:images, on_delete: :nilify_all)
       add :cover_id, references(:images, on_delete: :nilify_all)
       add :photos_id, references(:images_galleries, on_delete: :nilify_all)
-      add :meta_image_id, references(:images, on_delete: :nilify_all)
+      add :creator_id, references(:users)
       add :properties, :jsonb
       add :more_properties, :jsonb
-      add :creator_id, references(:users)
     end
 
     create unique_index(:projects, [:slug, :language])

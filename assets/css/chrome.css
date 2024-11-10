@@ -2,6 +2,13 @@
   z-index: 999;
 }
 
+.user-presence-modal {
+  p {
+    @fontsize 12px;
+    padding-bottom: 1.5em;
+  }
+}
+
 .user-presence-item {
   @display flex;
   @font mono;
@@ -9,6 +16,12 @@
   flex-wrap: wrap;
   line-height: 1;
   align-items: baseline;
+  border-bottom: 1px solid #eee;
+  padding: 5px 0;
+
+  &:first-of-type {
+    border-top: 1px solid #eee;
+  }
 
   .status {
     width: 10px;
@@ -25,6 +38,7 @@
     display: flex;
     justify-content: space-between;
     flex-grow: 1;
+    align-items: baseline;
   }
 
   .name {
@@ -43,7 +57,7 @@
     flex-direction: column;
     gap: 0.5em;
     width: 100%;
-    padding: 5px 0 5px 30px;
+    padding: 5px 0 0 30px;
 
     [data-icon] {
       width: 12px;
@@ -92,7 +106,6 @@
 
 .user-presence {
   display: block;
-  transition: 0.3s all ease-out;
 
   &:last-of-type {
     margin-right: 0;

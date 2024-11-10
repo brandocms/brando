@@ -61,10 +61,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
         parent_schema = assigns.field.form.data.__struct__
 
         case parent_schema.__relation__(assigns.subform.name) do
-          %Brando.Blueprint.Relation{type: :has_many, opts: %{module: rel_module}} ->
+          %Brando.Blueprint.Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
             rel_module.has_trait(Brando.Trait.Sequenced)
 
-          %Brando.Blueprint.Relation{type: :embeds_many} ->
+          %Brando.Blueprint.Relations.Relation{type: :embeds_many} ->
             true
 
           _ ->
@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         parent_schema = assigns.field.form.data.__struct__
 
         case parent_schema.__relation__(assigns.subform.name) do
-          %Brando.Blueprint.Relation{type: :embeds_many} -> true
+          %Brando.Blueprint.Relations.Relation{type: :embeds_many} -> true
           _ -> false
         end
       end)

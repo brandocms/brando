@@ -124,43 +124,44 @@ defmodule Brando.VillainTest do
 
   test "list_blocks" do
     assert Enum.sort(Brando.Villain.list_blocks()) == [
-             {Brando.Content.Template,
-              [
-                %Brando.Blueprint.Relation{
-                  name: :blocks,
-                  opts: %{module: :blocks},
-                  type: :has_many
-                }
-              ]},
-             {Brando.Pages.Fragment,
-              [
-                %Brando.Blueprint.Relation{
-                  name: :blocks,
-                  opts: %{module: :blocks},
-                  type: :has_many
-                }
-              ]},
-             {Brando.Pages.Page,
-              [
-                %Brando.Blueprint.Relation{
-                  name: :blocks,
-                  opts: %{module: :blocks},
-                  type: :has_many
-                }
-              ]},
-             {Brando.TraitTest.Project,
-              [
-                %Brando.Blueprint.Relation{
-                  name: :blocks,
-                  opts: %{module: :blocks},
-                  type: :has_many
-                },
-                %Brando.Blueprint.Relation{
-                  name: :bio_blocks,
-                  opts: %{module: :blocks},
-                  type: :has_many
-                }
-              ]}
+             "Elixir.Brando.Content.Template": [
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :blocks,
+                 name: :blocks,
+                 opts: %{module: :blocks},
+                 type: :has_many
+               }
+             ],
+             "Elixir.Brando.Pages.Fragment": [
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :blocks,
+                 name: :blocks,
+                 opts: %{module: :blocks},
+                 type: :has_many
+               }
+             ],
+             "Elixir.Brando.Pages.Page": [
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :blocks,
+                 name: :blocks,
+                 opts: %{module: :blocks},
+                 type: :has_many
+               }
+             ],
+             "Elixir.Brando.TraitTest.Project": [
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :blocks,
+                 name: :blocks,
+                 opts: %{module: :blocks},
+                 type: :has_many
+               },
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :bio_blocks,
+                 name: :bio_blocks,
+                 opts: %{module: :blocks},
+                 type: :has_many
+               }
+             ]
            ]
   end
 

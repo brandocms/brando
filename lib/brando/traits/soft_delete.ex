@@ -12,7 +12,11 @@ defmodule Brando.Trait.SoftDelete do
   """
   use Brando.Trait
 
-  attributes do
-    attribute :deleted_at, :datetime
+  def generate_code(_, _) do
+    quote do
+      attributes do
+        attribute :deleted_at, :datetime
+      end
+    end
   end
 end

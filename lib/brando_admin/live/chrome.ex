@@ -25,14 +25,12 @@ defmodule BrandoAdmin.Chrome do
        |> assign(:socket_connected, true)
        |> assign(:active_presences, %{})
        |> assign(:inactive_presences, %{})
-       |> assign(:selected_presence, nil)
        |> assign_presences()}
     else
       {:ok,
        socket
        |> assign(:socket_connected, false)
-       |> assign(:presences, %{})
-       |> assign(:selected_presence, nil)}
+       |> assign(:presences, %{})}
     end
   end
 
@@ -45,6 +43,11 @@ defmodule BrandoAdmin.Chrome do
     >
       <Content.modal title={gettext("Presence details")} id="presence-modal" narrow>
         <div class="user-presence-modal">
+          <p>
+            <%= gettext("Currently %{active_users} user(s) online",
+              active_users: Enum.count(@active_presences)
+            ) %>
+          </p>
           <div class="online">
             <%= for {id, presence} <- @active_presences do %>
               <.presence_modal_item presence={presence} id={id} />
@@ -93,7 +96,7 @@ defmodule BrandoAdmin.Chrome do
           <%= @last_active %>
         </div>
       </div>
-      <div class="urls">
+      <div :if={@presence.urls != []} class="urls">
         <div :for={url <- @presence.urls} class="url">
           <%= url %>
         </div>
@@ -102,22 +105,16 @@ defmodule BrandoAdmin.Chrome do
     """
   end
 
-  def handle_event("select_presence", %{"id" => id}, socket) do
-    presence =
-      Map.fetch!(
-        Map.merge(socket.assigns.inactive_presences, socket.assigns.active_presences),
-        id
-      )
-
-    {:noreply, assign(socket, :selected_presence, presence)}
-  end
-
   def handle_info(
         {_, {:presence, %{user_joined: %{user: user, metas: metas}}}},
         socket
       ) do
-    last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-    urls = metas |> Enum.map(& &1.url)
+    last_active =
+      metas
+      |> Enum.map(& &1.online_at)
+      |> Enum.max()
+
+    urls = Enum.map(metas, & &1.url)
     status = (Enum.any?(metas, & &1.active) && "online") || "idle"
 
     presence = %{
@@ -147,8 +144,12 @@ defmodule BrandoAdmin.Chrome do
 
       {:noreply, assign_presence(socket, "offline", presence)}
     else
-      last_active = metas |> Enum.map(& &1.online_at) |> Enum.max()
-      urls = metas |> Enum.map(& &1.url)
+      last_active =
+        metas
+        |> Enum.map(& &1.online_at)
+        |> Enum.max()
+
+      urls = Enum.map(metas, & &1.url)
       status = (Enum.any?(metas, & &1.active) && "online") || "idle"
 
       presence = %{
@@ -240,12 +241,14 @@ defmodule BrandoAdmin.Chrome do
 
   attr :presence, :map, required: true
   attr :id, :integer, required: true
-  attr :selected_presence, :map
 
   def presence(assigns) do
     assigns =
-      assigns
-      |> assign(:status, (assigns.presence.status in ["online", "idle"] && "online") || "offline")
+      assign(
+        assigns,
+        :status,
+        (assigns.presence.status in ["online", "idle"] && "online") || "offline"
+      )
 
     ~H"""
     <div

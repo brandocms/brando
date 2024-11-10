@@ -5,8 +5,12 @@ defmodule Brando.Trait.ScheduledPublishing do
   use Brando.Trait
   import Ecto.Changeset
 
-  attributes do
-    attribute :publish_at, :datetime
+  def generate_code(_, _) do
+    quote do
+      attributes do
+        attribute :publish_at, :datetime
+      end
+    end
   end
 
   # Status changed to :published, but no publish_at set = Set to utc_now

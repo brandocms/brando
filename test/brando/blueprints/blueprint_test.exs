@@ -1,7 +1,5 @@
 defmodule Brando.Blueprint.BlueprintTest do
   use ExUnit.Case
-  alias Brando.Blueprint.Attribute
-  alias Brando.Blueprint.Relation
 
   test "naming" do
     assert Brando.BlueprintTest.Project.__naming__().application == "Brando"
@@ -45,27 +43,49 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "__optional_attrs__" do
     optional_attrs = Brando.BlueprintTest.Project.__optional_attrs__()
-    assert optional_attrs == [:title, :deleted_at, :sequence, :updated_at, :inserted_at]
+    assert optional_attrs == [:deleted_at, :inserted_at, :sequence, :title, :updated_at]
   end
 
   test "attributes" do
     attrs = Brando.BlueprintTest.Project.__attributes__()
 
     assert attrs == [
-             %Attribute{name: :title, opts: %{}, type: :string},
-             %Attribute{
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :title,
+               name: :title,
+               opts: %{},
+               type: :string
+             },
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :slug,
                name: :slug,
                opts: %{required: true},
                type: :slug
              },
-             %Attribute{name: :deleted_at, opts: %{}, type: :datetime},
-             %Attribute{
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :deleted_at,
+               name: :deleted_at,
+               opts: %{},
+               type: :datetime
+             },
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :sequence,
                name: :sequence,
                opts: %{default: 0},
                type: :integer
              },
-             %Brando.Blueprint.Attribute{name: :updated_at, opts: %{}, type: :datetime},
-             %Brando.Blueprint.Attribute{name: :inserted_at, opts: %{}, type: :datetime}
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :inserted_at,
+               name: :inserted_at,
+               opts: %{},
+               type: :datetime
+             },
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :updated_at,
+               name: :updated_at,
+               opts: %{},
+               type: :datetime
+             }
            ]
   end
 
@@ -78,7 +98,8 @@ defmodule Brando.Blueprint.BlueprintTest do
     assets = Brando.BlueprintTest.Project.__assets__()
 
     assert assets == [
-             %Brando.Blueprint.Asset{
+             %Brando.Blueprint.Assets.Asset{
+               __identifier__: :cover,
                name: :cover,
                opts: %{
                  cfg: %Brando.Type.ImageConfig{
@@ -114,7 +135,8 @@ defmodule Brando.Blueprint.BlueprintTest do
                },
                type: :image
              },
-             %Brando.Blueprint.Asset{
+             %Brando.Blueprint.Assets.Asset{
+               __identifier__: :cover_cdn,
                name: :cover_cdn,
                opts: %{
                  cfg: %Brando.Type.ImageConfig{
@@ -141,7 +163,8 @@ defmodule Brando.Blueprint.BlueprintTest do
                },
                type: :image
              },
-             %Brando.Blueprint.Asset{
+             %Brando.Blueprint.Assets.Asset{
+               __identifier__: :pdf,
                name: :pdf,
                opts: %{
                  cfg: %Brando.Type.FileConfig{
@@ -200,15 +223,17 @@ defmodule Brando.Blueprint.BlueprintTest do
     relations = Brando.BlueprintTest.Project.__relations__()
 
     assert relations == [
-             %Brando.Blueprint.Relation{
-               name: :properties,
-               opts: %{module: Brando.BlueprintTest.Property},
-               type: :embeds_many
-             },
-             %Relation{
+             %Brando.Blueprint.Relations.Relation{
+               __identifier__: :creator,
                name: :creator,
                opts: %{module: Brando.Users.User, required: true},
                type: :belongs_to
+             },
+             %Brando.Blueprint.Relations.Relation{
+               __identifier__: :properties,
+               name: :properties,
+               opts: %{module: Brando.BlueprintTest.Property},
+               type: :embeds_many
              }
            ]
   end
@@ -227,8 +252,8 @@ defmodule Brando.Blueprint.BlueprintTest do
              :cover_id,
              :cover_cdn_id,
              :pdf_id,
-             :properties,
-             :creator_id
+             :creator_id,
+             :properties
            ]
   end
 end

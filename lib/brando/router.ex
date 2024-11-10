@@ -89,61 +89,86 @@ defmodule Brando.Router do
           live "/assets/files", BrandoAdmin.Files.FileListLive
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
 
-          scope "/config", BrandoAdmin.Sites do
-            live "/cache", CacheLive
-            live "/global_sets", GlobalSetListLive
-            live "/global_sets/create", GlobalSetFormLive, :create
-            live "/global_sets/update/:entry_id", GlobalSetFormLive, :update
-            live "/identity", IdentityLive
-            live "/scheduled_publishing", ScheduledPublishingLive
-            live "/seo", SEOLive
+          scope "/config" do
+            live "/cache", BrandoAdmin.Sites.CacheLive
+            live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
+            live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create
+            live "/global_sets/update/:entry_id", BrandoAdmin.Sites.GlobalSetFormLive, :update
+            live "/identity", BrandoAdmin.Sites.IdentityLive
+            live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
+            live "/seo", BrandoAdmin.Sites.SEOLive
+
+            live "/navigation/menus", BrandoAdmin.Navigation.MenuListLive
+            live "/navigation/menus/create", BrandoAdmin.Navigation.MenuFormLive, :create
+
+            live "/navigation/menus/update/:entry_id",
+                 BrandoAdmin.Navigation.MenuFormLive,
+                 :update
+
+            live "/navigation/menus/item/create", BrandoAdmin.Navigation.ItemFormLive, :create
+
+            live "/navigation/menus/item/update/:entry_id",
+                 BrandoAdmin.Navigation.ItemFormLive,
+                 :update
+
+            live "/content/containers", BrandoAdmin.Content.ContainerListLive
+            live "/content/containers/create", BrandoAdmin.Content.ContainerFormLive, :create
+
+            live "/content/containers/update/:entry_id",
+                 BrandoAdmin.Content.ContainerFormLive,
+                 :update
+
+            live "/content/modules", BrandoAdmin.Content.ModuleListLive
+            live "/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleFormLive, :update
+            live "/content/module_sets", BrandoAdmin.Content.ModuleSetListLive
+            live "/content/module_sets/create", BrandoAdmin.Content.ModuleSetFormLive, :create
+
+            live "/content/module_sets/update/:entry_id",
+                 BrandoAdmin.Content.ModuleSetFormLive,
+                 :update
+
+            live "/content/palettes", BrandoAdmin.Content.PaletteListLive
+            live "/content/palettes/create", BrandoAdmin.Content.PaletteFormLive, :create
+
+            live "/content/palettes/update/:entry_id",
+                 BrandoAdmin.Content.PaletteFormLive,
+                 :update
+
+            live "/content/table_templates", BrandoAdmin.Content.TableTemplateListLive
+
+            live "/content/table_templates/create",
+                 BrandoAdmin.Content.TableTemplateFormLive,
+                 :create
+
+            live "/content/table_templates/update/:entry_id",
+                 BrandoAdmin.Content.TableTemplateFormLive,
+                 :update
+
+            live "/content/templates", BrandoAdmin.Content.TemplateListLive
+            live "/content/templates/create", BrandoAdmin.Content.TemplateFormLive, :create
+
+            live "/content/templates/update/:entry_id",
+                 BrandoAdmin.Content.TemplateFormLive,
+                 :update
           end
 
-          scope "/config", BrandoAdmin.Navigation do
-            live "/navigation/menus", MenuListLive
-            live "/navigation/menus/create", MenuFormLive, :create
-            live "/navigation/menus/update/:entry_id", MenuFormLive, :update
-            live "/navigation/menus/item/create", ItemFormLive, :create
-            live "/navigation/menus/item/update/:entry_id", ItemFormLive, :update
+          scope "/globals" do
+            live "/", BrandoAdmin.Globals.GlobalsLive
           end
 
-          scope "/config", BrandoAdmin.Content do
-            live "/content/containers", ContainerListLive
-            live "/content/containers/create", ContainerFormLive, :create
-            live "/content/containers/update/:entry_id", ContainerFormLive, :update
-            live "/content/modules", ModuleListLive
-            live "/content/modules/update/:entry_id", ModuleFormLive, :update
-            live "/content/module_sets", ModuleSetListLive
-            live "/content/module_sets/create", ModuleSetFormLive, :create
-            live "/content/module_sets/update/:entry_id", ModuleSetFormLive, :update
-            live "/content/palettes", PaletteListLive
-            live "/content/palettes/create", PaletteFormLive, :create
-            live "/content/palettes/update/:entry_id", PaletteFormLive, :update
-            live "/content/table_templates", TableTemplateListLive
-            live "/content/table_templates/create", TableTemplateFormLive, :create
-            live "/content/table_templates/update/:entry_id", TableTemplateFormLive, :update
-            live "/content/templates", TemplateListLive
-            live "/content/templates/create", TemplateFormLive, :create
-            live "/content/templates/update/:entry_id", TemplateFormLive, :update
+          scope "/pages" do
+            live "/", BrandoAdmin.Pages.PageListLive
+            live "/create", BrandoAdmin.Pages.PageFormLive, :create
+            live "/update/:entry_id", BrandoAdmin.Pages.PageFormLive, :update
+            live "/fragments/create", BrandoAdmin.Pages.FragmentFormLive, :create
+            live "/fragments/update/:entry_id", BrandoAdmin.Pages.FragmentFormLive, :update
           end
 
-          scope "/globals", BrandoAdmin.Globals do
-            live "/", GlobalsLive
-          end
-
-          scope "/pages", BrandoAdmin.Pages do
-            live "/", PageListLive
-            live "/create", PageFormLive, :create
-            live "/update/:entry_id", PageFormLive, :update
-            live "/fragments/create", FragmentFormLive, :create
-            live "/fragments/update/:entry_id", FragmentFormLive, :update
-          end
-
-          scope "/users", BrandoAdmin.Users do
-            live "/", UserListLive
-            live "/create", UserFormLive
-            live "/update/:entry_id", UserFormLive, :update
-            live "/password/:entry_id", UserUpdatePasswordLive
+          scope "/users" do
+            live "/", BrandoAdmin.Users.UserListLive
+            live "/create", BrandoAdmin.Users.UserFormLive
+            live "/update/:entry_id", BrandoAdmin.Users.UserFormLive, :update
+            live "/password/:entry_id", BrandoAdmin.Users.UserUpdatePasswordLive
           end
 
           # app routes

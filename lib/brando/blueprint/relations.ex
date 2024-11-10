@@ -90,89 +90,6 @@ defmodule Brando.Blueprint.Relations do
   import Ecto.Query
   import Brando.M2M
   import Brando.Blueprint.Utils
-  alias Brando.Exception
-  alias Brando.Blueprint.Relation
-
-  def build_relation(caller, name, type, opts \\ [])
-
-  def build_relation(caller, name, :entries, opts) do
-    join_module =
-      Module.concat([
-        caller,
-        "#{Phoenix.Naming.camelize(to_string(name))}Identifier"
-      ])
-
-    opts = Keyword.put(opts, :module, join_module)
-    %Relation{name: name, type: :entries, opts: Enum.into(opts, %{})}
-  end
-
-  def build_relation(_caller, name, type, opts) do
-    %Relation{name: name, type: type, opts: Enum.into(opts, %{})}
-  end
-
-  defmacro relations(do: block) do
-    relations(__CALLER__, block)
-  end
-
-  defp relations(_caller, block) do
-    quote location: :keep do
-      Module.put_attribute(__MODULE__, :brando_macro_context, :relations)
-      Module.register_attribute(__MODULE__, :relations, accumulate: true)
-      unquote(block)
-    end
-  end
-
-  defmacro relation(name, type, opts \\ []) do
-    opts = expand_literals(opts, __CALLER__)
-
-    if type == :many_to_many do
-      raise Exception.BlueprintError,
-        message: """
-        Many to many relations are deprecated.
-
-            relation #{inspect(name)}, :many_to_many, ...
-
-        Use two `:has_many` relations instead, with one being a `:through` assoc:
-
-            relation :article_contributors, :has_many,
-              module: Articles.ArticleContributor,
-              preload_order: [asc: :sequence],
-              on_replace: :delete,
-              cast: true
-
-              relation :contributors, :has_many,
-              module: Articles.Contributor,
-              through: [:article_contributors, :contributor],
-              preload_order: [asc: :sequence]
-
-        We can then set up a multi select for this relation:
-
-            # in a form:
-            input :article_contributors, :multi_select,
-              options: &__MODULE__.get_contributors/2,
-              relation_key: :contributor_id,
-              resetable: true,
-              label: t("Contributors")
-
-        """
-    end
-
-    relation(__CALLER__.module, name, type, opts)
-  end
-
-  defp relation(caller, name, type, opts) do
-    quote location: :keep do
-      rel =
-        build_relation(
-          unquote(caller),
-          unquote(name),
-          unquote(type),
-          unquote(opts)
-        )
-
-      Module.put_attribute(__MODULE__, :relations, rel)
-    end
-  end
 
   def run_cast_relations(changeset, relations, user) do
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
@@ -389,25 +306,4 @@ defmodule Brando.Blueprint.Relations do
         name
     end)
   end
-
-  defp expand_literals(ast, env) do
-    if Macro.quoted_literal?(ast) do
-      Macro.prewalk(ast, &expand_alias(&1, env))
-    else
-      ast
-    end
-  end
-
-  defp expand_alias({:__aliases__, _, _} = alias, env),
-    do: Macro.expand(alias, %{env | function: {:relation, 3}})
-
-  defp expand_alias(other, _env), do: other
-
-  # defp expand_nested_module_alias({:__aliases__, _, [Elixir, _ | _] = alias}, _env),
-  #   do: Module.concat(alias)
-
-  # defp expand_nested_module_alias({:__aliases__, _, [h | t]}, env) when is_atom(h),
-  #   do: Module.concat([env.module, h | t])
-
-  # defp expand_nested_module_alias(other, _env), do: other
 end

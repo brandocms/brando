@@ -8,8 +8,12 @@ defmodule Brando.Trait.Creator do
   @type changeset :: Changeset.t()
   @type config :: list()
 
-  relations do
-    relation :creator, :belongs_to, module: Brando.Users.User, required: true
+  def generate_code(_, _) do
+    quote do
+      relations do
+        relation :creator, :belongs_to, module: Brando.Users.User, required: true
+      end
+    end
   end
 
   @doc """

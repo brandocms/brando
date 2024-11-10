@@ -129,10 +129,13 @@ defmodule Brando.Pages.Page do
 
       filter label: t("URI"), filter: "uri"
       filter label: t("Title"), filter: "title"
+
       action label: t("Create subpage"), event: "create_subpage"
       action label: t("Create fragment"), event: "create_fragment"
+
       child_listing name: :fragment_children, schema: Brando.Pages.Fragment
       child_listing name: :page_children, schema: Brando.Pages.Page
+
       component &__MODULE__.listing_row/1
     end
 

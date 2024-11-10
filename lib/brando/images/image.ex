@@ -22,7 +22,7 @@ defmodule Brando.Images.Image do
   persist_identifier false
 
   attributes do
-    attribute :status, Ecto.Enum, values: [:processed, :unprocessed]
+    attribute :status, :enum, values: [:processed, :unprocessed]
     attribute :title, :text
     attribute :credits, :text
     attribute :alt, :text
@@ -37,7 +37,7 @@ defmodule Brando.Images.Image do
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
     attribute :config_target, :text
-    attribute :fetchpriority, Ecto.Enum, values: [:high, :low, :auto], default: :auto
+    attribute :fetchpriority, :enum, values: [:high, :low, :auto], default: :auto
   end
 
   relations do

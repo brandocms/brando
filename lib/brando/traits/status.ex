@@ -5,8 +5,12 @@ defmodule Brando.Trait.Status do
   use Brando.Trait
   import Ecto.Query
 
-  attributes do
-    attribute :status, :status, required: true
+  def generate_code(_, _) do
+    quote do
+      attributes do
+        attribute :status, :status, required: true
+      end
+    end
   end
 
   def update_status(schema, id, status) do

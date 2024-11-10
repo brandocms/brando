@@ -4,8 +4,12 @@ defmodule Brando.Trait.Timestamped do
   """
   use Brando.Trait
 
-  attributes do
-    attribute :inserted_at, :datetime
-    attribute :updated_at, :datetime
+  def generate_code(_, _) do
+    quote generated: true do
+      attributes do
+        attribute :inserted_at, :datetime
+        attribute :updated_at, :datetime
+      end
+    end
   end
 end

@@ -2,9 +2,9 @@ defmodule Brando.Blueprint.Migrations do
   alias Brando.Blueprint.Snapshot
 
   alias Brando.Blueprint.Migrations.Operations
-  alias Brando.Blueprint.Asset
-  alias Brando.Blueprint.Attribute
-  alias Brando.Blueprint.Relation
+  alias Brando.Blueprint.Assets.Asset
+  alias Brando.Blueprint.Attributes.Attribute
+  alias Brando.Blueprint.Relations.Relation
 
   @default_opts [
     migration_path: "priv/repo/migrations",

@@ -8,7 +8,7 @@ defmodule Brando.Villain.Block do
   defmacro __using__(opts) do
     type = Keyword.fetch!(opts, :type)
 
-    quote do
+    quote generated: true do
       use Ecto.Schema
       import Ecto.Changeset
       @behaviour Brando.Villain.Block

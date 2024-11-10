@@ -22,8 +22,12 @@ defmodule Brando.Trait.Sequenced do
 
   @type changeset :: Changeset.t()
 
-  attributes do
-    attribute :sequence, :integer, default: 0
+  def generate_code(_, _) do
+    quote do
+      attributes do
+        attribute :sequence, :integer, default: 0
+      end
+    end
   end
 
   @doc """
