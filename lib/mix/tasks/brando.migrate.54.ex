@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
         |> rewrite_fieldsets(module)
         |> rewrite_inputs_for(module)
         |> rewrite_forms(module)
-        |> rewrite_listings(module)
+        # |> rewrite_listings(module)
         |> rewrite_listing_filters(module)
         |> rewrite_listing_query(module)
         |> rewrite_form_query(module)
@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
       igniter,
       src_file,
       "scripts/sync_gettext.sh",
-      %{},
+      [],
       on_exists: :overwrite
     )
   end
@@ -67,7 +67,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
       igniter,
       src_file,
       "lib/mix/brando.upgrade.ex",
-      %{},
+      [],
       on_exists: :overwrite
     )
   end

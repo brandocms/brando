@@ -1,3 +1,4 @@
+# TODO: Remove before 1.0
 defmodule Brando.Trait.Villain do
   @moduledoc """
   Villain parsing
@@ -7,22 +8,23 @@ defmodule Brando.Trait.Villain do
 
   @impl true
   def validate(_module, _config) do
-    raise Brando.Exception.BlueprintError,
-      message: """
-      trait Brando.Trait.Villain is deprecated
+    IO.warn("""
+    trait Brando.Trait.Villain is deprecated
 
-      Use `trait Brando.Trait.Blocks` instead, and also remove your
-      :villain fields from the attributes block:
+    Use `trait Brando.Trait.Blocks` instead, and also remove your
+    :villain fields from the attributes block:
 
-          attributes do
-            attribute :data, :villain
-          end
+        attributes do
+          attribute :data, :villain
+        end
 
-      And instead add as a relation:
+    And instead add as a relation:
 
-          relations do
-            relation :blocks, :has_many, module: :blocks
-          end
-      """
+        relations do
+          relation :blocks, :has_many, module: :blocks
+        end
+    """)
+
+    false
   end
 end

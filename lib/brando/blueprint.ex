@@ -731,6 +731,45 @@ defmodule Brando.Blueprint do
     String.capitalize(plural || module.__naming__().plural)
   end
 
+  # TODO: some deprecated functions — remove before 1.0
+  defmacro inputs_for(_, _, _) do
+    IO.warn("inputs_for/3 is deprecated. Migrate with mix brando.migrate.54")
+  end
+
+  defmacro form_query(_) do
+    IO.warn("form_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate.54")
+  end
+
+  defmacro listing_query(_) do
+    IO.warn(
+      "listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate.54"
+    )
+  end
+
+  defmacro filters(_) do
+    IO.warn("filters/1 is deprecated. use filter/1 instead. Migrate with mix brando.migrate.54")
+  end
+
+  defmacro actions(_) do
+    IO.warn("actions/1 is deprecated. use action/1 instead. Migrate with mix brando.migrate.54")
+  end
+
+  defmacro actions(_, _) do
+    IO.warn(
+      "actions/2 is deprecated. use action/1 instead with default_actions <bool>. Migrate with mix brando.migrate.54"
+    )
+  end
+
+  defmacro field(_name, _type, _opts \\ []) do
+    IO.warn("field/3 is deprecated. use component/1 instead. Migrate with mix brando.migrate.54")
+  end
+
+  defmacro template(_template, _opts \\ []) do
+    IO.warn(
+      "template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate.54"
+    )
+  end
+
   defmacro __after_compile__(env, _) do
     # validate traits
     Enum.each(env.module.__traits__(), &elem(&1, 0).validate(env.module, elem(&1, 1)))

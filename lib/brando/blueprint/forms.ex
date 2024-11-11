@@ -205,11 +205,6 @@ defmodule Brando.Blueprint.Forms do
   """
   alias Brando.Blueprint.Forms
 
-  defmacro form_query(_) do
-    raise Brando.Exception.BlueprintError,
-      message: "form_query/1 is deprecated. use query/1 instead"
-  end
-
   def list_fields(%Forms.Form{tabs: tabs}) do
     for tab <- tabs,
         %Forms.Fieldset{fields: inputs} <- tab.fields,

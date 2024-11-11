@@ -43,16 +43,4 @@ defmodule Brando.Blueprint.Listings do
   This will merge in your listing_query as the starting point for your queries
 
   """
-
-  defmacro field(_name, _type, _opts \\ []) do
-    raise "Deprecated. use component/1 instead"
-  end
-
-  defmacro template(_template, _opts \\ []) do
-    raise "Deprecated. use component/1 instead"
-  end
-
-  defmacro listing_query(_query) do
-    raise "Deprecated. use query/1 instead"
-  end
 end

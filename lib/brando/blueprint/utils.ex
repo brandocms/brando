@@ -14,6 +14,12 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:i18n_string), do: Brando.Type.I18nString
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
+
+  def to_ecto_type(:villain) do
+    IO.puts(":villain type is deprecated. Please move to :blocks")
+    :map
+  end
+
   def to_ecto_type(type), do: type
 
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
