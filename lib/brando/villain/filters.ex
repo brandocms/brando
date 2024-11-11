@@ -1159,8 +1159,8 @@ defmodule Brando.Villain.Filters do
 
   def i18n(value, _) when is_binary(value), do: value
 
-  def i18n(string_map, _) when is_map(string_map) do
-    current_locale = Gettext.get_locale()
+  def i18n(string_map, ctx) when is_map(string_map) do
+    current_locale = Access.get(ctx, "language")
     fallback_locale = Brando.config(:default_language)
 
     translated_string = string_map[current_locale] || string_map[fallback_locale] || ""
