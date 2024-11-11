@@ -25,7 +25,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
 
       image_fields =
         image_field_query
-        |> Brando.repo().all()
+        |> Brando.Repo.all()
         |> Enum.reject(&(&1.image == nil))
 
       field_id_atom = String.to_atom("#{field_name}_id")
@@ -46,7 +46,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
           config_target: config_target
         }
 
-        {_, [%{id: new_image_id}]} = Brando.repo().insert_all("images", [new_image], returning: [:id])
+        {_, [%{id: new_image_id}]} = Brando.Repo.insert_all("images", [new_image], returning: [:id])
 
         update_query = from t in blueprint.__schema__(:source),
           where: t.id == ^image_field.id,

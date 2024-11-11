@@ -10,7 +10,7 @@ defmodule Brando.Repo.Migrations.MigrateGlobalsToVars do
       globals: g.globals
     }
 
-    global_sets = Brando.repo().all(query)
+    global_sets = Brando.Repo.all(query)
 
     for global_set <- global_sets do
       process_vars(global_set.id, global_set.creator_id, global_set.globals)
@@ -73,7 +73,7 @@ defmodule Brando.Repo.Migrations.MigrateGlobalsToVars do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.repo().insert_all("content_vars", [new_var])
+      Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
 

@@ -171,7 +171,7 @@ defmodule Brando.Navigation do
     items =
       Item
       |> order_by([p], asc: p.menu_id, asc: p.sequence)
-      |> Brando.repo().all()
+      |> Brando.Repo.all()
 
     {:ok, items}
   end

@@ -39,7 +39,7 @@ defmodule Brando.SoftDelete.Query do
 
     counts =
       union_query
-      |> Brando.repo().all()
+      |> Brando.Repo.all()
       |> Enum.reverse()
 
     Enum.zip(schemas, counts)
@@ -58,7 +58,7 @@ defmodule Brando.SoftDelete.Query do
   """
   def list_soft_deleted_entries(schema) do
     query = from t in schema, where: not is_nil(t.deleted_at), order_by: [desc: t.deleted_at]
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   @doc """
@@ -71,6 +71,6 @@ defmodule Brando.SoftDelete.Query do
       from t in schema,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
-    Brando.repo().delete_all(query)
+    Brando.Repo.delete_all(query)
   end
 end

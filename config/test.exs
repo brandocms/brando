@@ -57,6 +57,7 @@ config :brando, Brando.Images,
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
 config :brando, :app_module, BrandoIntegration
+config :brando, :repo_module, BrandoIntegration.Repo
 config :brando, :admin_module, BrandoIntegrationAdmin
 config :brando, :default_language, "en"
 config :brando, :default_admin_language, "en"

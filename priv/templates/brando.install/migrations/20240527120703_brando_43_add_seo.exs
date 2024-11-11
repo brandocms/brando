@@ -25,7 +25,7 @@ defmodule Brando.Migrations.AddSEO do
           url: identity.url
         }, limit: 1
 
-    identity = Brando.repo().one(identity_query)
+    identity = Brando.Repo.one(identity_query)
 
     if identity do
       robots = """
@@ -42,7 +42,7 @@ defmodule Brando.Migrations.AddSEO do
         updated_at: DateTime.utc_now()
       }
 
-      Brando.repo().insert_all("sites_seo", [seo])
+      Brando.Repo.insert_all("sites_seo", [seo])
     end
 
     flush()

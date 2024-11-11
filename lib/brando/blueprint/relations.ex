@@ -169,7 +169,7 @@ defmodule Brando.Blueprint.Relations do
           changeset,
           name,
           fn ids ->
-            Brando.repo().all(from m in module, where: m.id in ^ids)
+            Brando.Repo.all(from m in module, where: m.id in ^ids)
           end,
           Map.get(opts, :required, false)
         )

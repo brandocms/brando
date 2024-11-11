@@ -39,7 +39,7 @@ defmodule Brando.Repo.Migrations.ConvertGlobalsDataValueToValue do
           where: c.id == ^category.id,
           update: [set: [globals: ^new_category.globals]]
 
-      Brando.repo().update_all(update_query, [])
+      Brando.Repo.update_all(update_query, [])
     end
 
     drop table(:sites_globals)

@@ -20,7 +20,7 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
     flush()
 
     query = from t in "images", select: %{id: t.id, image: t.image, config_target: t.config_target}
-    images = Brando.repo().all(query)
+    images = Brando.Repo.all(query)
 
     for image <- images do
       {:ok, cfg} = Brando.Images.get_config_for(image)
@@ -48,7 +48,7 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
         focal: ^image.image["focal"]
       ]]
 
-      Brando.repo().update_all(update_query, [])
+      Brando.Repo.update_all(update_query, [])
     end
 
     alter table(:images) do

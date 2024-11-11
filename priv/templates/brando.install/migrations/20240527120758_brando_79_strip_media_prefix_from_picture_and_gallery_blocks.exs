@@ -30,7 +30,7 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
             select: %{id: t.id, data_field: field(t, ^f)}
           )
 
-        results = Brando.repo().all(query)
+        results = Brando.Repo.all(query)
 
         for result <- results do
           processed_result = process_block(result)
@@ -42,7 +42,7 @@ defmodule Brando.Repo.Migrations.StripMediaPrefixFromPictureAndGalleryBlocks do
               update: [set: ^[{f, processed_data_field}]]
             )
 
-          Brando.repo().update_all(up_query, [])
+          Brando.Repo.update_all(up_query, [])
         end
       end)
     end

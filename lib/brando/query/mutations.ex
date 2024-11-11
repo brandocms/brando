@@ -72,7 +72,7 @@ defmodule Brando.Query.Mutations do
   end
 
   defp maybe_preload(entry, nil), do: {:ok, entry}
-  defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.repo().preload(preloads)}
+  defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.Repo.preload(preloads)}
 
   def update(
         context,
@@ -209,7 +209,7 @@ defmodule Brando.Query.Mutations do
   defp maybe_duplicate_blocks(entry, module, _opts) do
     block_fields = Enum.map(module.__blocks_fields__(), &:"entry_#{&1.name}")
     preloads = Brando.Villain.preloads_for(module)
-    entry = Brando.repo().preload(entry, preloads)
+    entry = Brando.Repo.preload(entry, preloads)
 
     updated_entry =
       Enum.reduce(block_fields, entry, fn field, acc ->
@@ -304,7 +304,7 @@ defmodule Brando.Query.Mutations do
 
     {:ok, entry} =
       if soft_deletable? do
-        Brando.repo().soft_delete(entry)
+        Brando.Repo.soft_delete(entry)
       else
         Query.delete(entry)
       end

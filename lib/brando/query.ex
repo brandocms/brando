@@ -225,7 +225,7 @@ defmodule Brando.Query do
       def unquote(:"get_#{singular_schema}")(id) when is_binary(id) or is_integer(id) do
         query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
 
-        case Brando.repo().one(query) do
+        case Brando.Repo.one(query) do
           nil -> {:error, {unquote(singular_schema_atom), :not_found}}
           result -> {:ok, result}
         end
@@ -246,7 +246,7 @@ defmodule Brando.Query do
       def unquote(:"get_#{singular_schema}!")(id) when is_binary(id) or is_integer(id) do
         unquote(block).(unquote(module))
         |> where([t], t.id == ^id)
-        |> Brando.repo().one!()
+        |> Brando.Repo.one!()
       end
 
       def unquote(:"get_#{singular_schema}!")(args) when is_map(args) do
@@ -254,7 +254,7 @@ defmodule Brando.Query do
         |> run_single_query_reducer(args, unquote(module))
         |> unquote(block).()
         |> limit(1)
-        |> Brando.repo().one!()
+        |> Brando.Repo.one!()
       end
     end
   end
@@ -826,7 +826,7 @@ defmodule Brando.Query do
       |> exclude(:limit)
       |> exclude(:offset)
       |> aggregate()
-      |> Brando.repo().one()
+      |> Brando.Repo.one()
 
     total_entries || 0
   end
@@ -876,20 +876,20 @@ defmodule Brando.Query do
   def insert(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :insert)
-    |> Brando.repo().insert(opts)
+    |> Brando.Repo.insert(opts)
     |> Cache.Query.evict()
   end
 
   def update(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :update)
-    |> Brando.repo().update(opts)
+    |> Brando.Repo.update(opts)
     |> Cache.Query.evict()
   end
 
   def delete(entry) do
     entry
-    |> Brando.repo().delete()
+    |> Brando.Repo.delete()
     |> Cache.Query.evict()
   end
 
@@ -947,7 +947,7 @@ defmodule Brando.Query do
             module
           )
 
-        result = Brando.repo().all(query)
+        result = Brando.Repo.all(query)
         Brando.Cache.Query.put(cache_key, result, ttl)
         {:ok, result}
 
@@ -966,9 +966,9 @@ defmodule Brando.Query do
         pagination_meta = maybe_build_pagination_meta(query, args)
 
         if stream do
-          Brando.repo().stream(query)
+          Brando.Repo.stream(query)
         else
-          entries = Brando.repo().all(query)
+          entries = Brando.Repo.all(query)
 
           if pagination_meta do
             {:ok, %{entries: entries, pagination_meta: pagination_meta}}
@@ -1008,7 +1008,7 @@ defmodule Brando.Query do
             query
             |> block.()
             |> limit(1)
-            |> Brando.repo().one()
+            |> Brando.Repo.one()
             |> case do
               nil ->
                 {:error, {schema_atom, :not_found}}
@@ -1043,7 +1043,7 @@ defmodule Brando.Query do
             query
             |> block.()
             |> limit(1)
-            |> Brando.repo().one()
+            |> Brando.Repo.one()
             |> case do
               nil -> {:error, {schema_atom, :not_found}}
               result -> {:ok, result}

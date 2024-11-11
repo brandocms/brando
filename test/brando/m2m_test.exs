@@ -24,7 +24,7 @@ defmodule Brando.M2MTest do
     def changeset(struct, params \\ %{}) do
       struct
       |> cast(params, ~w())
-      |> Brando.M2M.cast_collection(:tags, Brando.repo(), Tag, false)
+      |> Brando.M2M.cast_collection(:tags, Brando.Repo.repo(), Tag, false)
     end
 
     def custom_function_changeset(struct, params \\ %{}) do
@@ -36,7 +36,7 @@ defmodule Brando.M2MTest do
           # Convert Strings back to Integers for demonstration
           ids = Enum.map(ids, &String.to_integer/1)
 
-          Brando.repo().all(from t in Tag, where: t.id in ^ids)
+          Brando.Repo.all(from t in Tag, where: t.id in ^ids)
         end,
         false
       )
@@ -45,10 +45,10 @@ defmodule Brando.M2MTest do
 
   setup do
     # Explicitly get a connection before each test
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Repo.repo())
 
-    tag_1 = Brando.repo().insert!(%Tag{})
-    tag_2 = Brando.repo().insert!(%Tag{})
+    tag_1 = Brando.Repo.insert!(%Tag{})
+    tag_2 = Brando.Repo.insert!(%Tag{})
 
     {:ok, [tag_1: tag_1, tag_2: tag_2]}
   end
@@ -56,19 +56,19 @@ defmodule Brando.M2MTest do
   test "association for new model", %{tag_1: tag_1} do
     changeset = Photo.changeset(%Photo{}, %{tags: [tag_1.id]})
 
-    photo = Brando.repo().insert!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    photo = Brando.Repo.insert!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_1]
   end
 
   test "association for existing model", %{tag_1: tag_1, tag_2: tag_2} do
     changeset = Photo.changeset(%Photo{}, %{tags: [tag_1.id]})
-    photo = Brando.repo().insert!(changeset)
+    photo = Brando.Repo.insert!(changeset)
 
     changeset = Photo.changeset(photo, %{tags: [tag_2.id]})
-    Brando.repo().update!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    Brando.Repo.update!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_2]
   end
@@ -78,22 +78,22 @@ defmodule Brando.M2MTest do
     tag_id = to_string(tag_1.id)
     changeset = Photo.custom_function_changeset(%Photo{}, %{tags: [tag_id]})
 
-    photo = Brando.repo().insert!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    photo = Brando.Repo.insert!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_1]
   end
 
   test "leave association untouched if param not provided", %{tag_1: tag_1} do
     changeset = Photo.changeset(%Photo{}, %{tags: [tag_1.id]})
-    photo = Brando.repo().insert!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    photo = Brando.Repo.insert!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_1]
 
     changeset = Photo.changeset(photo, %{})
-    Brando.repo().update!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    Brando.Repo.update!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_1]
   end
@@ -101,8 +101,8 @@ defmodule Brando.M2MTest do
   test "handles empty string amongst model id's", %{tag_1: tag_1} do
     changeset = Photo.changeset(%Photo{}, %{tags: [tag_1.id, ""]})
 
-    photo = Brando.repo().insert!(changeset)
-    photo = Brando.repo().get(Photo, photo.id) |> Brando.repo().preload(:tags)
+    photo = Brando.Repo.insert!(changeset)
+    photo = Brando.Repo.get(Photo, photo.id) |> Brando.Repo.preload(:tags)
 
     assert photo.tags == [tag_1]
   end

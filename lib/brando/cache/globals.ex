@@ -80,7 +80,7 @@ defmodule Brando.Cache.Globals do
   end
 
   defp preload_images(%Brando.Content.Var{type: :image} = image_var),
-    do: Brando.repo().preload(image_var, :image)
+    do: Brando.Repo.preload(image_var, :image)
 
   defp preload_images(var), do: var
 end

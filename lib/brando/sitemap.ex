@@ -102,7 +102,7 @@ defmodule Brando.Sitemap do
 
     opts = Keyword.merge(default_opts, opts)
 
-    Brando.repo().transaction(fn ->
+    Brando.Repo.transaction(fn ->
       entries
       |> Sitemapper.generate(opts)
       |> Sitemapper.persist(opts)

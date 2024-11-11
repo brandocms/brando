@@ -10,7 +10,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
       # Lookup if we have the old format `field_name` in the fields
       %{columns: existing_columns} =
         Ecto.Adapters.SQL.query!(
-          Brando.repo(),
+          Brando.Repo.repo(),
           "select * from #{blueprint.__schema__(:source)} where false;"
         )
 
@@ -34,7 +34,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
 
         file_fields =
           file_field_query
-          |> Brando.repo().all()
+          |> Brando.Repo.all()
           |> Enum.reject(&(&1.file == nil))
 
         field_id_atom = String.to_atom("#{field_name}_id")
@@ -62,7 +62,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
           }
 
           {_, [%{id: new_file_id}]} =
-            Brando.repo().insert_all("files", [new_file], returning: [:id])
+            Brando.Repo.insert_all("files", [new_file], returning: [:id])
 
           update_query =
             from(t in blueprint.__schema__(:source),
@@ -70,7 +70,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
               update: [set: [{^field_id_atom, ^new_file_id}]]
             )
 
-          Brando.repo().update_all(update_query, [])
+          Brando.Repo.update_all(update_query, [])
         end
 
         alter table(blueprint.__schema__(:source)) do

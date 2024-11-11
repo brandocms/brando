@@ -9,13 +9,13 @@ defmodule Brando.Migrations.MigrateNavigationToEmbeds do
 
     flush()
 
-    Brando.repo().transaction(fn ->
+    Brando.Repo.transaction(fn ->
       q =
         from(t in "navigation_menus",
           select: t.id
         )
 
-      menu_ids = Brando.repo().all(q)
+      menu_ids = Brando.Repo.all(q)
 
       for menu_id <- menu_ids do
         item_q =
@@ -34,7 +34,7 @@ defmodule Brando.Migrations.MigrateNavigationToEmbeds do
             where: t.menu_id == ^menu_id
           )
 
-        items = Brando.repo().all(item_q)
+        items = Brando.Repo.all(item_q)
 
         items =
           Enum.map(items, fn item ->
@@ -46,7 +46,7 @@ defmodule Brando.Migrations.MigrateNavigationToEmbeds do
         query =
           from(t in "navigation_menus", where: t.id == ^menu_id, update: [set: [items: ^items]])
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end)
 

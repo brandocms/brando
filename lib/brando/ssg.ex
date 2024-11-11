@@ -86,7 +86,7 @@ defmodule Brando.SSG do
 
         entries = Stream.flat_map(ssg_functions, &apply(ssg_module, elem(&1, 0), []))
 
-        Brando.repo().transaction(fn -> Enum.to_list(entries) end)
+        Brando.Repo.transaction(fn -> Enum.to_list(entries) end)
 
       {:error, _} ->
         raise "Missing SSG module `#{ssg_module}`"

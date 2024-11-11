@@ -47,7 +47,7 @@ defmodule Mix.Tasks.Brando.Gen.Admin do
       language: :en
     }
 
-    Brando.repo().insert!(user)
+    Brando.Repo.insert!(user)
 
     Mix.shell().info([:green, "\n==> Done.\n"])
   end

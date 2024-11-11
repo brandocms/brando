@@ -12,7 +12,7 @@ defmodule Brando.Repo.Migrations.I18nModules do
     flush()
 
     # lets migrate them to english, since that will be our fallback for these strings
-    modules = from(m in "content_modules", select: %{id: m.id, name: m.name, namespace: m.namespace, help_text: m.help_text}) |> Brando.repo().all()
+    modules = from(m in "content_modules", select: %{id: m.id, name: m.name, namespace: m.namespace, help_text: m.help_text}) |> Brando.Repo.all()
     admin_languages =
       :admin_languages
       |> Brando.config()
@@ -37,7 +37,7 @@ defmodule Brando.Repo.Migrations.I18nModules do
         end
 
       from(m in "content_modules", where: m.id == ^module.id)
-      |> Brando.repo().update_all(set: [
+      |> Brando.Repo.update_all(set: [
         i18n_name: i18n_name,
         i18n_namespace: module.namespace == "general" && nil || i18n_namespace,
         i18n_help_text: i18n_help_text
@@ -66,7 +66,7 @@ defmodule Brando.Repo.Migrations.I18nModules do
     flush()
 
     # Migrate data back from jsonb to text columns
-    modules = from(m in "content_modules", select: %{id: m.id, name: m.name, namespace: m.namespace, help_text: m.help_text}) |> Brando.repo().all()
+    modules = from(m in "content_modules", select: %{id: m.id, name: m.name, namespace: m.namespace, help_text: m.help_text}) |> Brando.Repo.all()
 
     for module <- modules do
       temp_name = get_in(module.name, ["en"]) || ""
@@ -74,7 +74,7 @@ defmodule Brando.Repo.Migrations.I18nModules do
       temp_help_text = get_in(module.help_text, ["en"]) || ""
 
       from(m in "content_modules", where: m.id == ^module.id)
-      |> Brando.repo().update_all(set: [
+      |> Brando.Repo.update_all(set: [
         temp_name: temp_name,
         temp_namespace: temp_namespace,
         temp_help_text: temp_help_text

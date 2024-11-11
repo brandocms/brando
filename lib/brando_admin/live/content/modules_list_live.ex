@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("import_modules", _, socket) do
     for mod <- socket.assigns.imported_modules do
-      Brando.repo().insert!(mod)
+      Brando.Repo.insert!(mod)
     end
 
     send(self(), {:toast, gettext("Modules imported")})

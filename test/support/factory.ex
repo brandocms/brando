@@ -1,5 +1,5 @@
 defmodule Brando.Factory do
-  use ExMachina.Ecto, repo: Brando.repo()
+  use ExMachina.Ecto, repo: Brando.Repo.repo()
 
   alias Brando.Sites.GlobalSet
   alias Brando.Pages.Page

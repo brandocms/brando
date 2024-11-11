@@ -102,7 +102,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
         |> Ecto.Changeset.change()
         |> Brando.Villain.render_all_block_fields_and_add_to_changeset(blueprint, entry)
 
-      case Brando.repo().update(changeset, force: true) do
+      case Brando.Repo.update(changeset, force: true) do
         {:ok, _} ->
           IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
 

@@ -5,12 +5,12 @@ defmodule Brando.Plug.E2ETest do
   plug :dispatch
 
   defp checkout_shared_db_conn do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo(), ownership_timeout: :infinity)
-    :ok = Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), {:shared, self()})
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Repo.repo(), ownership_timeout: :infinity)
+    :ok = Ecto.Adapters.SQL.Sandbox.mode(Brando.Repo.repo(), {:shared, self()})
   end
 
   defp checkin_shared_db_conn(_) do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkin(Brando.repo())
+    :ok = Ecto.Adapters.SQL.Sandbox.checkin(Brando.Repo.repo())
   end
 
   post "/db/checkout" do

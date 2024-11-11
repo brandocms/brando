@@ -81,7 +81,7 @@ defmodule Brando.Images do
   def create_image(params, user) do
     %Image{}
     |> Image.changeset(params, user)
-    |> Brando.repo().insert
+    |> Brando.Repo.insert
   end
 
   @doc """
@@ -93,7 +93,7 @@ defmodule Brando.Images do
       from t in Image,
         where: t.id == ^id and is_nil(t.deleted_at)
 
-    Brando.repo().one!(query)
+    Brando.Repo.one!(query)
   end
 
   @doc """
@@ -102,7 +102,7 @@ defmodule Brando.Images do
   """
   def delete_images(ids) when is_list(ids) do
     q = from m in Image, where: m.id in ^ids
-    Brando.repo().soft_delete_all(q)
+    Brando.Repo.soft_delete_all(q)
   end
 
   def get_image_orientation(width, height) do

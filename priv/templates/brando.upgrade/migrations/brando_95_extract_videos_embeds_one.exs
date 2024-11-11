@@ -32,7 +32,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
       # Lookup if we have the old format `field_name` in the fields
       %{columns: existing_columns} =
         Ecto.Adapters.SQL.query!(
-          Brando.repo(),
+          Brando.Repo.repo(),
           "select * from #{blueprint.__schema__(:source)} where false;"
         )
 
@@ -56,7 +56,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
 
         video_fields =
           video_field_query
-          |> Brando.repo().all()
+          |> Brando.Repo.all()
           |> Enum.reject(&(&1.video == nil))
 
         field_id_atom = String.to_atom("#{field_name}_id")
@@ -95,7 +95,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
           }
 
           {_, [%{id: new_video_id}]} =
-            Brando.repo().insert_all("videos", [new_video], returning: [:id])
+            Brando.Repo.insert_all("videos", [new_video], returning: [:id])
 
           update_query =
             from(t in blueprint.__schema__(:source),
@@ -103,7 +103,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
               update: [set: [{^field_id_atom, ^new_video_id}]]
             )
 
-          Brando.repo().update_all(update_query, [])
+          Brando.Repo.update_all(update_query, [])
         end
 
         alter table(blueprint.__schema__(:source)) do

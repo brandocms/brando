@@ -37,7 +37,7 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
         }
       )
 
-    menus = Brando.repo().all(menus_query)
+    menus = Brando.Repo.all(menus_query)
 
     # insert new items
     for menu <- menus do
@@ -57,7 +57,7 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
 
         # get the menu_item id and create a content var
         {_, [%{id: menu_item_id}]} =
-          Brando.repo().insert_all("navigation_items", [menu_item], returning: [:id])
+          Brando.Repo.insert_all("navigation_items", [menu_item], returning: [:id])
 
         var = %{
           type: "link",
@@ -77,7 +77,7 @@ defmodule Brando.Repo.Migrations.MenuItemsLinkVars do
           updated_at: menu.updated_at
         }
 
-        Brando.repo().insert_all("content_vars", [var])
+        Brando.Repo.insert_all("content_vars", [var])
       end
     end
 

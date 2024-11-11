@@ -60,7 +60,7 @@ defmodule Brando.Videos do
   def create_video(params, user) do
     %Video{}
     |> Video.changeset(params, user)
-    |> Brando.repo().insert
+    |> Brando.Repo.insert
   end
 
   @doc """
@@ -72,7 +72,7 @@ defmodule Brando.Videos do
       from t in Video,
         where: t.id == ^id and is_nil(t.deleted_at)
 
-    Brando.repo().one!(query)
+    Brando.Repo.one!(query)
   end
 
   @doc """
@@ -80,7 +80,7 @@ defmodule Brando.Videos do
   """
   def delete_videos(ids) when is_list(ids) do
     q = from m in Video, where: m.id in ^ids
-    Brando.repo().soft_delete_all(q)
+    Brando.Repo.soft_delete_all(q)
   end
 
   def get_config_for(%{config_target: nil}) do

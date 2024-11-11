@@ -56,7 +56,7 @@ defmodule Brando.Worker.ImageUploader do
           ^"image_upload_#{image_id}" in j.tags and
             j.state != ^"completed"
 
-    result = Brando.repo().all(query)
+    result = Brando.Repo.all(query)
     result != [[job_id]]
   end
 

@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Chrome do
   use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Utils, only: [show_modal: 1]
+  ##
 
   def mount(_params, _session, socket) do
     if connected?(socket) do

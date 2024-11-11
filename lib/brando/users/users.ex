@@ -73,7 +73,7 @@ defmodule Brando.Users do
   """
   def generate_user_session_token(user) do
     {token, user_token} = UserToken.build_session_token(user)
-    Brando.repo().insert!(user_token)
+    Brando.Repo.insert!(user_token)
     token
   end
 
@@ -84,15 +84,15 @@ defmodule Brando.Users do
     {:ok, query} = UserToken.verify_session_token_query(token)
 
     query
-    |> Brando.repo().one()
-    |> Brando.repo().preload(:avatar)
+    |> Brando.Repo.one()
+    |> Brando.Repo.preload(:avatar)
   end
 
   @doc """
   Deletes the signed token with the given context.
   """
   def delete_session_token(token) do
-    Brando.repo().delete_all(UserToken.token_and_context_query(token, "session"))
+    Brando.Repo.delete_all(UserToken.token_and_context_query(token, "session"))
     :ok
   end
 

@@ -222,7 +222,7 @@ defmodule Brando.VillainTest do
       vars: []
     }
 
-    {:ok, module} = Brando.repo().insert(module_params)
+    {:ok, module} = Brando.Repo.insert(module_params)
 
     simple_blocks = [
       %Brando.Pages.Fragment.Blocks{
@@ -354,7 +354,7 @@ defmodule Brando.VillainTest do
       vars: []
     }
 
-    {:ok, tp1} = Brando.repo().insert(module_params)
+    {:ok, tp1} = Brando.Repo.insert(module_params)
 
     simple_blocks = [
       %Brando.Pages.Page.Blocks{
@@ -737,7 +737,7 @@ defmodule Brando.VillainTest do
     Brando.Cache.Navigation.set()
     {:ok, _menu} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
 
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
+    pf2 = Brando.Repo.get(Brando.Pages.Fragment, pf1.id)
     assert pf2.rendered_blocks == "<div class=\"paragraph\">**Some** New title here.</div>"
   end
 
@@ -795,7 +795,7 @@ defmodule Brando.VillainTest do
       :system
     )
 
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
+    pf2 = Brando.Repo.get(Brando.Pages.Fragment, pf1.id)
 
     assert pf2.rendered_blocks ==
              "<div class=\"paragraph\">So the global says: 'My replaced text'.</div>"
@@ -815,7 +815,7 @@ defmodule Brando.VillainTest do
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
     Brando.Sites.update_identity(identity, %{name: "Eddie Hazel Inc"}, user)
 
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
+    pf2 = Brando.Repo.get(Brando.Pages.Fragment, pf1.id)
 
     assert pf2.rendered_blocks ==
              "<div class=\"paragraph\">So identity.name says: 'Eddie Hazel Inc'.</div>"
@@ -843,7 +843,7 @@ defmodule Brando.VillainTest do
       user
     )
 
-    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
+    pf2 = Brando.Repo.get(Brando.Pages.Fragment, pf1.id)
 
     assert pf2.rendered_blocks ==
              "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com'.</div>"

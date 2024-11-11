@@ -39,7 +39,7 @@ defmodule Brando.Repo.Migrations.MigrateVillainModuleIds do
       |> List.flatten()
 
     for action <- actions do
-      Brando.repo().update_all(action, [])
+      Brando.Repo.update_all(action, [])
     end
   end
 end

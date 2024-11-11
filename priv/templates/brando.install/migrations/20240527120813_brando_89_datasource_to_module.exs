@@ -41,7 +41,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
           order_by: [desc: m.id]
         )
 
-      entries = Brando.repo().all(query)
+      entries = Brando.Repo.all(query)
 
       for entry <- entries do
         new_data = replace_datasources(entry.data)
@@ -53,7 +53,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
             update: [set: ^update_args]
           )
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end
   end
@@ -99,7 +99,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               where: m.id == ^ds_data["module_id"]
             )
 
-          ds_module = Brando.repo().one(ds_module_query)
+          ds_module = Brando.Repo.one(ds_module_query)
 
           mod_module_query =
             from(m in "content_modules",
@@ -107,7 +107,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               where: m.id == ^module_block["data"]["module_id"]
             )
 
-          mod_module = Brando.repo().one(mod_module_query)
+          mod_module = Brando.Repo.one(mod_module_query)
 
           updated_vars =
             mod_module.vars
@@ -138,7 +138,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               ]
             )
 
-          Brando.repo().update_all(module_update_query, [])
+          Brando.Repo.update_all(module_update_query, [])
 
           updated_mod =
             updated_mod
@@ -177,7 +177,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         where: m.id == ^module_id
       )
 
-    module = Brando.repo().one(module_query)
+    module = Brando.Repo.one(module_query)
 
     updated_vars =
       (module.vars || [])
@@ -199,9 +199,9 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         ]
       )
 
-    Brando.repo().update_all(module_update_query, [])
+    Brando.Repo.update_all(module_update_query, [])
 
-    module = Brando.repo().one(module_query)
+    module = Brando.Repo.one(module_query)
 
     # build a module block from the updated module -^
     generated_uid = Brando.Utils.generate_uid()

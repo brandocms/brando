@@ -34,7 +34,7 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
           select_merge: ^entries_field
         )
 
-      entries = Brando.repo().all(query)
+      entries = Brando.Repo.all(query)
 
       join_entries =
         Enum.map(entries, fn entry ->
@@ -53,7 +53,7 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
                   limit: 1
                 )
 
-              case Brando.repo().all(q) do
+              case Brando.Repo.all(q) do
                 [] ->
                   nil
 
@@ -72,7 +72,7 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
         |> Enum.reject(&(&1 == nil))
         |> List.flatten()
 
-      Brando.repo().insert_all(join_source, join_entries)
+      Brando.Repo.insert_all(join_source, join_entries)
     end
   end
 end

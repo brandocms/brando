@@ -4,7 +4,7 @@ defmodule Brando.Migrations.MigrateUserLanguage do
 
   def change do
     query = from(t in "users_users", where: t.language == "nb", update: [set: [language: "no"]])
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
     flush()
   end
 end

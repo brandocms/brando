@@ -10,7 +10,7 @@ defmodule Brando.Migrations.Brando.MigrateVillainRefsToTags do
           code: m.code,
         }
 
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       updated_code = Regex.replace ~r/%{(\w+)}/, module.code, "{% ref refs.\\1 %}"
@@ -23,7 +23,7 @@ defmodule Brando.Migrations.Brando.MigrateVillainRefsToTags do
           ]]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
   end
 

@@ -46,7 +46,7 @@ defmodule Brando.Trait.Translatable do
               changeset(%__MODULE__{}, %{"entry_id" => parent_id, "linked_entry_id" => id})
             ]
 
-            Enum.each(changesets, &Brando.repo().insert!(&1, []))
+            Enum.each(changesets, &Brando.Repo.insert!(&1, []))
 
             Brando.Cache.Query.evict_entry(unquote(parent_module), id)
             Brando.Cache.Query.evict_entry(unquote(parent_module), parent_id)
@@ -56,7 +56,7 @@ defmodule Brando.Trait.Translatable do
 
           def delete(id, parent_id) do
             res =
-              Brando.repo().delete_all(
+              Brando.Repo.delete_all(
                 from q in __MODULE__,
                   where: q.entry_id == ^id and q.linked_entry_id == ^parent_id,
                   or_where: q.entry_id == ^parent_id and q.linked_entry_id == ^id

@@ -170,7 +170,7 @@ defmodule Brando.Content do
 
   def duplicate_vars(entry, _) do
     entry
-    |> Brando.repo().preload(:vars)
+    |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
     |> Enum.map(&Map.put(&1, :id, nil))
   end
@@ -472,7 +472,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.entry_id]
       )
 
-    {:ok, Brando.repo().all(query)}
+    {:ok, Brando.Repo.all(query)}
   end
 
   def list_identifiers(schema, list_opts) when is_atom(schema) do
@@ -496,7 +496,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.language, asc: t.title]
       )
 
-    {:ok, Brando.repo().all(query)}
+    {:ok, Brando.Repo.all(query)}
   end
 
   def list_identifiers(schemas, list_opts) when is_list(schemas) do
@@ -520,7 +520,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.language, asc: t.title]
       )
 
-    {:ok, Brando.repo().all(query)}
+    {:ok, Brando.Repo.all(query)}
   end
 
   def list_identifiers(args) when is_map(args) do
@@ -544,7 +544,7 @@ defmodule Brando.Content do
         order_by: fragment("array_position(?, ?)", ^ids, t.id)
       )
 
-    {:ok, Brando.repo().all(query)}
+    {:ok, Brando.Repo.all(query)}
   end
 
   def list_identifiers_for(entries) when is_list(entries) do
@@ -564,7 +564,7 @@ defmodule Brando.Content do
         order_by: [asc: j.sequence]
       )
 
-    identifiers = Brando.repo().all(query)
+    identifiers = Brando.Repo.all(query)
     {:ok, identifiers}
   end
 
@@ -587,7 +587,7 @@ defmodule Brando.Content do
             order_by: fragment("array_position(?, ?)", ^schema_ids, t.id),
             preload: ^preloads
 
-        Brando.repo().all(query)
+        Brando.Repo.all(query)
       end
 
     flattened_unsorted_entries = List.flatten(unsorted_entries)
@@ -625,7 +625,7 @@ defmodule Brando.Content do
          {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
       identifier
-      |> Brando.repo().delete()
+      |> Brando.Repo.delete()
       |> Brando.Cache.Query.evict()
     else
       _ -> {:ok, false}
@@ -634,7 +634,7 @@ defmodule Brando.Content do
 
   def delete_identifier(identifier) do
     identifier
-    |> Brando.repo().delete()
+    |> Brando.Repo.delete()
     |> Brando.Cache.Query.evict()
   end
 
@@ -653,7 +653,7 @@ defmodule Brando.Content do
       ]
 
       changeset
-      |> Brando.repo().insert(insert_opts)
+      |> Brando.Repo.insert(insert_opts)
       |> Brando.Cache.Query.evict()
     else
       _ ->
@@ -679,7 +679,7 @@ defmodule Brando.Content do
 
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
 
-      case Brando.repo().update(changeset) do
+      case Brando.Repo.update(changeset) do
         {:ok, entry} ->
           # check if there are any blocks/vars that need to be updated
           Villain.render_entries_with_identifier(entry.id)
@@ -704,7 +704,7 @@ defmodule Brando.Content do
         limit: 1
       )
 
-    case Brando.repo().one(query) do
+    case Brando.Repo.one(query) do
       nil ->
         {:error, {:identifier, :not_found}}
 
@@ -720,7 +720,7 @@ defmodule Brando.Content do
         limit: 1
       )
 
-    Brando.repo().one(query)
+    Brando.Repo.one(query)
   end
 
   def get_identifier(module, entry) do
@@ -730,7 +730,7 @@ defmodule Brando.Content do
         limit: 1
       )
 
-    case Brando.repo().one(query) do
+    case Brando.Repo.one(query) do
       nil ->
         {:error, {:identifier, :not_found}}
 

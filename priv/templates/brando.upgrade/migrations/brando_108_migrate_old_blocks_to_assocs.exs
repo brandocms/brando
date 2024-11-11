@@ -9,7 +9,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       table = schema.__schema__(:source)
 
       data_fields =
-        Brando.repo().all(
+        Brando.Repo.all(
           from("columns",
             prefix: "information_schema",
             select: [:column_name, :data_type],
@@ -35,7 +35,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             order_by: [desc: m.id]
           )
 
-        entries = Brando.repo().all(query)
+        entries = Brando.Repo.all(query)
 
         for entry <- entries do
           parse_block_data(schema, entry, Map.get(entry, data_field), new_block_rel)
@@ -50,7 +50,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         order_by: [desc: m.id]
       )
 
-    entries = Brando.repo().all(query)
+    entries = Brando.Repo.all(query)
 
     for entry <- entries do
       # strip table refs and add them as table_rows in the block
@@ -69,7 +69,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
                 }
 
                 {_, [%{id: table_row_id}]} =
-                  Brando.repo().insert_all("content_table_rows", [table_row], returning: [:id])
+                  Brando.Repo.insert_all("content_table_rows", [table_row], returning: [:id])
 
                 old_cols = get_in(row, ["cols"])
                 process_vars(:table_row_id, table_row_id, entry.creator_id, old_cols)
@@ -92,7 +92,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           update: [set: ^update_args]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
   end
 
@@ -132,11 +132,11 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         # repo insert block
         {_, [%{id: container_id}]} =
-          Brando.repo().insert_all("content_blocks", [new_container], returning: [:id])
+          Brando.Repo.insert_all("content_blocks", [new_container], returning: [:id])
 
         # only insert to join table if we have no parent
         unless new_container.parent_id do
-          Brando.repo().insert_all(join_source, [
+          Brando.Repo.insert_all(join_source, [
             %{
               entry_id: entry_id,
               block_id: container_id,
@@ -171,10 +171,10 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
 
         unless new_block.parent_id do
-          Brando.repo().insert_all(join_source, [
+          Brando.Repo.insert_all(join_source, [
             %{
               entry_id: entry_id,
               block_id: block_id,
@@ -204,10 +204,10 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
 
         unless new_block.parent_id do
-          Brando.repo().insert_all(join_source, [
+          Brando.Repo.insert_all(join_source, [
             %{
               entry_id: entry_id,
               block_id: block_id,
@@ -232,12 +232,12 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             # module_entry has no module_id -- we must grab it the module who has parent_id as parent_id
             # first we get the parent block
             query = from(m in "content_blocks", where: m.id == ^parent_id, select: m.module_id)
-            parent_module_id = Brando.repo().one(query)
+            parent_module_id = Brando.Repo.one(query)
 
             query =
               from(m in "content_modules", where: m.parent_id == ^parent_module_id, select: m.id)
 
-            Brando.repo().one(query)
+            Brando.Repo.one(query)
           end
 
         new_block = %{
@@ -259,11 +259,11 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
 
         # only insert to join table if we have no parent
         unless new_block.parent_id do
-          Brando.repo().insert_all(join_source, [
+          Brando.Repo.insert_all(join_source, [
             %{
               entry_id: entry_id,
               block_id: block_id,
@@ -322,7 +322,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           sequence: idx
         }
 
-      Brando.repo().insert_all("content_block_identifiers", [block_identifier])
+      Brando.Repo.insert_all("content_block_identifiers", [block_identifier])
     end
   end
 
@@ -383,7 +383,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.repo().insert_all("content_vars", [new_var])
+      Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
 
@@ -449,7 +449,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.repo().insert_all("content_vars", [new_var])
+      Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
 

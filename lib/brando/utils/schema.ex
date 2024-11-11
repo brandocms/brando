@@ -23,7 +23,7 @@ defmodule Brando.Utils.Schema do
   def update_field(schema, coll) do
     schema
     |> Changeset.change(coll)
-    |> Brando.repo().update
+    |> Brando.Repo.update
     |> Brando.Cache.Query.evict()
   end
 
@@ -150,7 +150,7 @@ defmodule Brando.Utils.Schema do
         test_query
       end
 
-    case Brando.repo().one(test_query) do
+    case Brando.Repo.one(test_query) do
       nil ->
         {:ok, field_val_to_test}
 

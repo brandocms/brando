@@ -47,7 +47,7 @@ defmodule Brando.Supervisor do
   defp oban_config do
     Application.get_env(:brando, Oban) ||
       [
-        repo: Brando.repo(),
+        repo: Brando.Repo.repo(),
         queues: [default: [limit: 1]],
         plugins: [
           {Oban.Plugins.Cron,
@@ -68,6 +68,7 @@ defmodule Brando.Supervisor do
   end
 
   defp extra_oban_cron_jobs do
-    Application.get_env(Brando.config(:otp_app), :cron_jobs) || []
+    otp_app = Application.get_env(:brando, :otp_app)
+    Application.get_env(otp_app, :cron_jobs) || []
   end
 end

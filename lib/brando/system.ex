@@ -141,7 +141,7 @@ defmodule Brando.System do
   end
 
   defp check_identity_exists do
-    with [] <- Brando.repo().all(Brando.Sites.Identity) do
+    with [] <- Brando.Repo.all(Brando.Sites.Identity) do
       Logger.error("==> No identities found.")
       {:ok, {:identity, :exists}}
     else
@@ -155,7 +155,7 @@ defmodule Brando.System do
   end
 
   defp check_seo_exists do
-    with [] <- Brando.repo().all(Brando.Sites.SEO) do
+    with [] <- Brando.Repo.all(Brando.Sites.SEO) do
       Logger.error("==> No seo entries found.")
       {:ok, {:seo, :exists}}
     else
@@ -209,6 +209,17 @@ defmodule Brando.System do
   end
 
   defp check_module_config_exists do
+    if Application.get_env(:brando, :repo_module) == nil do
+      raise ConfigError,
+        message: """
+
+
+        Repo module not set in `config/brando.exs`. Add:
+
+        config :brando, repo_module: MyApp.Repo
+        """
+    end
+
     if Application.get_env(:brando, :app_module) == nil do
       raise ConfigError,
         message: """

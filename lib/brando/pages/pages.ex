@@ -96,7 +96,7 @@ defmodule Brando.Pages do
 
   def duplicate_vars(entry, _) do
     entry
-    |> Brando.repo().preload(:vars)
+    |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
     |> Enum.map(&Map.put(&1, :id, nil))
   end
@@ -116,7 +116,7 @@ defmodule Brando.Pages do
       Page
       |> only_parents()
       |> exclude_deleted()
-      |> Brando.repo().all
+      |> Brando.Repo.all()
 
     val =
       if parents do
@@ -247,7 +247,7 @@ defmodule Brando.Pages do
   Get fragment from page
   """
   def get_fragment(%Page{fragments: %Ecto.Association.NotLoaded{}} = page, key) do
-    page = Brando.repo().preload(page, [:fragments])
+    page = Brando.Repo.preload(page, [:fragments])
     Enum.find(page.fragments, &(&1.key == key))
   end
 
@@ -283,7 +283,7 @@ defmodule Brando.Pages do
         query
       end
 
-    fragments = Brando.repo().all(query)
+    fragments = Brando.Repo.all(query)
 
     # group keys as "key -> [fragment, fragment2]
     split_fragments = Brando.Utils.split_by(fragments, :key)
@@ -299,7 +299,7 @@ defmodule Brando.Pages do
       |> where([p], p.parent_key == ^parent_key)
       |> where([p], p.language == ^language)
       |> exclude_deleted()
-      |> Brando.repo().all
+      |> Brando.Repo.all()
 
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
   end
@@ -350,7 +350,7 @@ defmodule Brando.Pages do
     language = language || Brando.config(:default_language)
 
     fragment =
-      Brando.repo().one(
+      Brando.Repo.one(
         from p in Fragment,
           where: p.key == ^key and p.language == ^language and is_nil(p.deleted_at)
       )

@@ -186,7 +186,7 @@ defmodule Brando.LivePreview do
   end
 
   defp maybe_preload(entry, []), do: entry
-  defp maybe_preload(entry, preloads), do: Brando.repo().preload(entry, preloads)
+  defp maybe_preload(entry, preloads), do: Brando.Repo.preload(entry, preloads)
 
   defp maybe_mutate(entry, nil), do: entry
   defp maybe_mutate(entry, mutate_fn), do: mutate_fn.(entry)

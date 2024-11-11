@@ -4,7 +4,7 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
 
   def up do
     query = from(m in "pages_modules", select: %{id: m.id, vars: m.vars})
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       # convert from string map to list of objects
@@ -23,7 +23,7 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
           update: [set: [vars: ^vars]]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
 
     # Add your own schemas to the reject list, if they were created AFTER this migration
@@ -55,7 +55,7 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
           order_by: [desc: m.id]
         )
 
-      entries = Brando.repo().all(query)
+      entries = Brando.Repo.all(query)
 
       for entry <- entries do
         new_data = find_and_replace_vars(entry.data)
@@ -67,7 +67,7 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
             update: [set: ^update_args]
           )
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end
   end

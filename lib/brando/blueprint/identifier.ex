@@ -163,7 +163,7 @@ defmodule Brando.Blueprint.Identifier do
         nil
 
       %Ecto.Association.NotLoaded{} ->
-        entry = Brando.repo().preload(entry, field_name)
+        entry = Brando.Repo.preload(entry, field_name)
         extract_cover(field, entry)
 
       cover ->
@@ -206,7 +206,7 @@ defmodule Brando.Blueprint.Identifier do
 
     # select all identifiers with schema not in `relevant_modules`
     delete_query = from i in Brando.Content.Identifier, where: i.schema not in ^relevant_modules
-    Brando.repo().delete_all(delete_query, [])
+    Brando.Repo.delete_all(delete_query, [])
 
     {:ok, identifiers} = Brando.Content.list_identifiers()
 
@@ -258,7 +258,7 @@ defmodule Brando.Blueprint.Identifier do
       identifiers_query =
         from i in Brando.Content.Identifier, select: i.entry_id, where: i.schema == ^module
 
-      current_identifiers = Brando.repo().all(identifiers_query)
+      current_identifiers = Brando.Repo.all(identifiers_query)
 
       # get all entry ids without identifiers
       preloads = Brando.Blueprint.preloads_for(module)
@@ -266,7 +266,7 @@ defmodule Brando.Blueprint.Identifier do
       entries_query =
         from e in module, where: e.id not in ^current_identifiers, preload: ^preloads
 
-      entries = Brando.repo().all(entries_query)
+      entries = Brando.Repo.all(entries_query)
 
       for entry <- entries do
         {:ok, identifier} = Brando.Content.create_identifier(module, entry)

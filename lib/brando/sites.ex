@@ -85,7 +85,7 @@ defmodule Brando.Sites do
       language: language
     }
 
-    Brando.repo().insert!(default_identity)
+    Brando.Repo.insert!(default_identity)
   end
 
   @doc """
@@ -181,7 +181,7 @@ defmodule Brando.Sites do
   def create_default_seo(language \\ nil) do
     language_cfg = language || Brando.config(:default_language)
     language = (is_binary(language_cfg) && String.to_atom(language_cfg)) || language_cfg
-    Brando.repo().insert!(%SEO{language: language})
+    Brando.Repo.insert!(%SEO{language: language})
   end
 
   #

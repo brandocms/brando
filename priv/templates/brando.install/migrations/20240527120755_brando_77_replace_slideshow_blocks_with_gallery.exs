@@ -11,7 +11,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
         }
       )
 
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       new_refs = replace_block(module.refs)
@@ -26,7 +26,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
           ]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
 
     # Add your own schemas to the reject list, if they were created AFTER this migration
@@ -56,7 +56,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
             select: %{id: t.id, data_field: field(t, ^f)}
           )
 
-        results = Brando.repo().all(query)
+        results = Brando.Repo.all(query)
 
         for result <- results do
           processed_result = process_block(result)
@@ -68,7 +68,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
               update: [set: ^[{f, processed_data_field}]]
             )
 
-          Brando.repo().update_all(up_query, [])
+          Brando.Repo.update_all(up_query, [])
         end
       end)
     end

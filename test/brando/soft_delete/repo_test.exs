@@ -8,10 +8,10 @@ defmodule Brando.SoftDelete.RepoTest do
     p1 = Factory.insert(:page, uri: "title")
     assert p1.uri == "title"
 
-    {:ok, p2} = Brando.repo().soft_delete(p1)
+    {:ok, p2} = Brando.Repo.soft_delete(p1)
     refute p2.uri == "title"
 
-    {:ok, p3} = Brando.repo().restore(p2)
+    {:ok, p3} = Brando.Repo.restore(p2)
     assert p3.uri == "title"
   end
 
@@ -24,13 +24,13 @@ defmodule Brando.SoftDelete.RepoTest do
     assert p1.uri == "title"
     refute p1.uri == p2.uri
 
-    {:ok, p3} = Brando.repo().soft_delete(p1)
+    {:ok, p3} = Brando.Repo.soft_delete(p1)
     refute p3.uri == "title"
 
     {:ok, p4} = Brando.Pages.create_page(Factory.params_for(:page, uri: "title"), user)
     assert p4.uri == "title"
 
-    {:ok, p5} = Brando.repo().restore(p1)
+    {:ok, p5} = Brando.Repo.restore(p1)
     refute p5.uri == "title"
   end
 end

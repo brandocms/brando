@@ -29,7 +29,7 @@ defmodule Brando.Publisher do
       args = %{schema: schema, id: id, user_id: user.id, status: :published}
       entry_identifier = Brando.Blueprint.Identifier.identifier_for(entry)
 
-      Brando.repo().delete_all(
+      Brando.Repo.delete_all(
         from j in Oban.Job,
           where: fragment("? @> ?", j.args, ^args)
       )
@@ -117,10 +117,10 @@ defmodule Brando.Publisher do
         where: "publisher" in j.tags,
         order_by: j.scheduled_at
 
-    {:ok, Brando.repo().all(query)}
+    {:ok, Brando.Repo.all(query)}
   end
 
   def delete_job(id) do
-    Brando.repo().delete_all(from j in Oban.Job, where: j.id == ^id)
+    Brando.Repo.delete_all(from j in Oban.Job, where: j.id == ^id)
   end
 end

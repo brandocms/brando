@@ -136,7 +136,7 @@ defmodule Brando.CDN do
       field_full_path: field_full_path
     }
 
-    Brando.repo().delete_all(
+    Brando.Repo.delete_all(
       from j in Oban.Job,
         where: fragment("? @> ?", j.args, ^args)
     )
@@ -180,7 +180,7 @@ defmodule Brando.CDN do
   end
 
   defp create_image_upload_job(args) do
-    Brando.repo().delete_all(
+    Brando.Repo.delete_all(
       from j in Oban.Job,
         where: fragment("? @> ?", j.args, ^args)
     )

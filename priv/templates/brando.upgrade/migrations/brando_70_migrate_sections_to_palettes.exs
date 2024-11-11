@@ -30,7 +30,7 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
           creator_id: m.creator_id
         }
 
-    sections = Brando.repo().all(query)
+    sections = Brando.Repo.all(query)
 
     for section <- sections do
       new_palette = %Brando.Content.Palette{
@@ -47,7 +47,7 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
         ]
       }
 
-      Brando.repo().insert!(new_palette)
+      Brando.Repo.insert!(new_palette)
     end
 
     drop table(:content_sections)

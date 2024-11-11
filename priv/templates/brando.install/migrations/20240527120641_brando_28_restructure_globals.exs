@@ -24,7 +24,7 @@ defmodule Brando.Migrations.ExtractGlobals do
         select: t.global_categories,
         limit: 1
       )
-      |> Brando.repo().all()
+      |> Brando.Repo.all()
 
     categories = (Enum.count(categories) && List.first(categories)) || []
 
@@ -36,13 +36,13 @@ defmodule Brando.Migrations.ExtractGlobals do
         ]
       end)
 
-    Brando.repo().insert_all("sites_global_categories", new_categories_data)
+    Brando.Repo.insert_all("sites_global_categories", new_categories_data)
 
     flush()
 
     new_categories =
       from(t in "sites_global_categories", select: %{id: t.id, key: t.key})
-      |> Brando.repo().all()
+      |> Brando.Repo.all()
 
     entries =
       Enum.flat_map(categories, fn c ->
@@ -57,7 +57,7 @@ defmodule Brando.Migrations.ExtractGlobals do
         end) || []
       end)
 
-    Brando.repo().insert_all("sites_globals", entries)
+    Brando.Repo.insert_all("sites_globals", entries)
 
     flush()
 

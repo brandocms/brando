@@ -28,7 +28,7 @@ defmodule Brando.Images.Processing do
       field_full_path: field_full_path
     }
 
-    Brando.repo().delete_all(
+    Brando.Repo.delete_all(
       from j in Oban.Job,
         where: fragment("? @> ?", j.args, ^args)
     )
@@ -117,7 +117,7 @@ defmodule Brando.Images.Processing do
         images
         |> Enum.find(&(&1.id == image_id))
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
-        |> Brando.repo().update!
+        |> Brando.Repo.update!
       end
 
     {:ok, Enum.map(updated_images, & &1.id)}
@@ -148,7 +148,7 @@ defmodule Brando.Images.Processing do
         images
         |> Enum.find(&(&1.id == image_id))
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
-        |> Brando.repo().update!
+        |> Brando.Repo.update!
       end
 
     {:ok, Enum.map(updated_images, & &1.id)}

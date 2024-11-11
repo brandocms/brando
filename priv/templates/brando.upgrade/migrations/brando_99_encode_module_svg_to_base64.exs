@@ -12,7 +12,7 @@ defmodule Brando.Repo.Migrations.EncodeModuleSvgToBase64 do
         where: not is_nil(m.svg)
       )
 
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       if String.starts_with?(module.svg, "<svg") do
@@ -28,7 +28,7 @@ defmodule Brando.Repo.Migrations.EncodeModuleSvgToBase64 do
             ]
           )
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end
   end

@@ -32,7 +32,7 @@ defmodule Brando.Repo.Migrations.ConvertVillainVarsToList do
           order_by: [desc: m.id]
         )
 
-      entries = Brando.repo().all(query)
+      entries = Brando.Repo.all(query)
 
       for entry <- entries do
         new_data = find_and_replace_vars(entry.data)
@@ -44,7 +44,7 @@ defmodule Brando.Repo.Migrations.ConvertVillainVarsToList do
             update: [set: ^update_args]
           )
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end
   end

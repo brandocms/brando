@@ -4,7 +4,7 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
 
   def up do
     query = from m in "pages_modules", select: %{id: m.id, vars: m.vars}
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
     for module <- modules do
       # convert from string map to list of objects
       vars =
@@ -22,7 +22,7 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
           update: [set: [vars: ^vars]]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
   end
 

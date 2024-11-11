@@ -23,7 +23,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
         order_by: [desc: m.id]
       )
 
-    entries = Brando.repo().all(query)
+    entries = Brando.Repo.all(query)
     Enum.map(entries, &extract_entry_template/1)
 
     alter table("content_modules") do
@@ -38,7 +38,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
         order_by: [desc: m.id]
       )
 
-    entries = Brando.repo().all(query)
+    entries = Brando.Repo.all(query)
 
     for entry <- entries do
       process_vars(:module_id, entry.id, 1, entry.vars)
@@ -55,7 +55,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
         order_by: [desc: m.id]
       )
 
-    entries = Brando.repo().all(query)
+    entries = Brando.Repo.all(query)
 
     for entry <- entries do
       {table_template_id, new_refs} =
@@ -70,7 +70,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
             }
 
             {_, [%{id: table_template_id}]} =
-              Brando.repo().insert_all("content_table_templates", [table_template],
+              Brando.Repo.insert_all("content_table_templates", [table_template],
                 returning: [:id]
               )
 
@@ -104,7 +104,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
           update: [set: ^update_args]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
   end
 
@@ -142,7 +142,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
         code: Map.get(entry_template, "code")
       }
 
-    Brando.repo().insert_all("content_modules", [new_module])
+    Brando.Repo.insert_all("content_modules", [new_module])
   end
 
   defp extract_entry_template(entry), do: entry
@@ -197,7 +197,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.repo().insert_all("content_vars", [new_var])
+      Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
 

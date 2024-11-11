@@ -26,7 +26,7 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
           refs: m.refs
       }, where: m.multi == true
 
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       entry_template =
@@ -48,7 +48,7 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
           ]]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
 
     flush()

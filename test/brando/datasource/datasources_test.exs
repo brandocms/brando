@@ -77,7 +77,7 @@ defmodule Brando.DatasourcesTest do
               where: t.id in ^entry_ids,
               order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
 
-          {:ok, Brando.repo().all(results)}
+          {:ok, Brando.Repo.all(results)}
         end
       )
     end

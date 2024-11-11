@@ -76,7 +76,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         case apply(context, :"get_#{singular}", [entry_id]) do
           {:ok, entry} ->
-            Brando.repo().restore(entry)
+            Brando.Repo.restore(entry)
 
             send(
               self(),

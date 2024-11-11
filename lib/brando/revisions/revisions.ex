@@ -62,7 +62,7 @@ defmodule Brando.Revisions do
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
     preloads = Brando.Blueprint.preloads_for(entry_type)
-    entry_with_preloads = Brando.repo().preload(entry, preloads)
+    entry_with_preloads = Brando.Repo.preload(entry, preloads)
     encoded_entry = Utils.term_to_binary(entry_with_preloads)
 
     revision = %{
@@ -78,7 +78,7 @@ defmodule Brando.Revisions do
 
     %Revision{}
     |> Revision.changeset(revision)
-    |> Brando.repo().insert()
+    |> Brando.Repo.insert()
     |> case do
       {:ok, revision} ->
         if set_active do
@@ -111,7 +111,7 @@ defmodule Brando.Revisions do
             r.revision == ^revision_number,
         update: [set: [description: ^description]]
 
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 
   @doc """
@@ -133,7 +133,7 @@ defmodule Brando.Revisions do
             r.revision == ^revision_number,
         update: [set: [protected: ^protect]]
 
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 
   @doc """
@@ -160,7 +160,7 @@ defmodule Brando.Revisions do
             r.protected == false and
             r.active == false
 
-    Brando.repo().delete_all(query)
+    Brando.Repo.delete_all(query)
   end
 
   @doc """
@@ -182,7 +182,7 @@ defmodule Brando.Revisions do
             r.protected == false and
             r.active == false
 
-    Brando.repo().delete_all(query)
+    Brando.Repo.delete_all(query)
   end
 
   @doc """
@@ -204,7 +204,7 @@ defmodule Brando.Revisions do
             r.revision == ^revision and
             r.active == false
 
-    Brando.repo().delete_all(query)
+    Brando.Repo.delete_all(query)
   end
 
   @doc """
@@ -224,7 +224,7 @@ defmodule Brando.Revisions do
         limit: 1,
         order_by: [desc: :revision]
 
-    case Brando.repo().all(query) do
+    case Brando.Repo.all(query) do
       [] ->
         :error
 
@@ -253,7 +253,7 @@ defmodule Brando.Revisions do
             r.active == true,
         limit: 1
 
-    case Brando.repo().all(query) do
+    case Brando.Repo.all(query) do
       [] ->
         :error
 
@@ -312,7 +312,7 @@ defmodule Brando.Revisions do
         limit: 1,
         order_by: [desc: :revision]
 
-    case Brando.repo().all(query) do
+    case Brando.Repo.all(query) do
       [] ->
         :error
 
@@ -331,7 +331,7 @@ defmodule Brando.Revisions do
         order_by: [desc: :revision],
         limit: 1
 
-    case Brando.repo().all(query) do
+    case Brando.Repo.all(query) do
       [] -> 0
       [revision] -> revision + 1
     end
@@ -346,7 +346,7 @@ defmodule Brando.Revisions do
             r.revision == ^revision.revision,
         update: [set: [active: true]]
 
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 
   defp deactivate_all_revisions_except(revision) do
@@ -359,6 +359,6 @@ defmodule Brando.Revisions do
             r.revision != ^revision.revision,
         update: [set: [active: false]]
 
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 end

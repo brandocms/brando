@@ -12,7 +12,7 @@ defmodule Brando.Migrations.Brando.UpdateModuleEntryTemplateBinaryId do
         where: not is_nil(m.entry_template)
       )
 
-    modules = Brando.repo().all(query)
+    modules = Brando.Repo.all(query)
 
     for module <- modules do
       updated_code =
@@ -31,7 +31,7 @@ defmodule Brando.Migrations.Brando.UpdateModuleEntryTemplateBinaryId do
           ]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
   end
 

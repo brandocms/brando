@@ -45,7 +45,7 @@ defmodule Brando.Trait.Sequenced do
   def sequence(module, %{"composite_keys" => composite_keys}) do
     table = module.__schema__(:source)
 
-    Brando.repo().transaction(fn ->
+    Brando.Repo.transaction(fn ->
       for {o, idx} <- Enum.with_index(composite_keys) do
         q = from t in table, update: [set: [sequence: ^idx]]
 
@@ -54,7 +54,7 @@ defmodule Brando.Trait.Sequenced do
             from t in nq, where: field(t, ^String.to_existing_atom(k)) == ^v
           end)
 
-        Brando.repo().update_all(q, [])
+        Brando.Repo.update_all(q, [])
       end
     end)
 
@@ -86,7 +86,7 @@ defmodule Brando.Trait.Sequenced do
         on: a.id == numbers.key,
         update: [set: [sequence: numbers.value]]
 
-    Brando.repo().update_all(q, [])
+    Brando.Repo.update_all(q, [])
 
     # throw out cached listings
     Cache.Query.evict_schema(module)
@@ -126,12 +126,12 @@ defmodule Brando.Trait.Sequenced do
 
   def increase_sequence(module, nil) do
     query = from t in module, update: [inc: [sequence: 1]]
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 
   def increase_sequence(module, language) do
     query = from t in module, where: t.language == ^language, update: [inc: [sequence: 1]]
-    Brando.repo().update_all(query, [])
+    Brando.Repo.update_all(query, [])
   end
 
   def get_highest_sequence(module, language) do
@@ -143,7 +143,7 @@ defmodule Brando.Trait.Sequenced do
 
     query = (language && from(t in query, where: t.language == ^language)) || query
 
-    case Brando.repo().all(query) do
+    case Brando.Repo.all(query) do
       [] -> 0
       [nil] -> 0
       [seq] -> seq + 1

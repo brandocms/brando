@@ -292,7 +292,7 @@ defmodule Brando.Villain do
   def render_all_entries(schema) do
     # get all ids
     entry_ids =
-      Brando.repo().all(
+      Brando.Repo.all(
         from(s in schema,
           select: s.id
         )
@@ -333,7 +333,7 @@ defmodule Brando.Villain do
           |> Changeset.change()
           |> render_all_block_fields_and_add_to_changeset(schema, entry)
 
-        case Brando.repo().update(changeset) do
+        case Brando.Repo.update(changeset) do
           {:ok, %Pages.Fragment{} = fragment} ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
@@ -471,7 +471,7 @@ defmodule Brando.Villain do
         select: m
 
     query
-    |> Brando.repo().all()
+    |> Brando.Repo.all()
     |> Enum.map(&%{name: &1.name, namespace: &1.namespace, id: &1.id})
   end
 
@@ -492,7 +492,7 @@ defmodule Brando.Villain do
           )
       )
 
-    Brando.repo().all(blocks_query)
+    Brando.Repo.all(blocks_query)
   end
 
   @doc """
@@ -571,7 +571,7 @@ defmodule Brando.Villain do
 
     Enum.reduce(blocks, [], fn block, acc ->
       updated_changeset = sync_module(block, module)
-      Brando.repo().update(updated_changeset)
+      Brando.Repo.update(updated_changeset)
       [block.id | acc]
     end)
     |> render_blocks()
@@ -586,7 +586,7 @@ defmodule Brando.Villain do
         select: b.id,
         where: b.palette_id == ^palette_id
 
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   @doc """
@@ -599,7 +599,7 @@ defmodule Brando.Villain do
         left_join: v in assoc(b, :vars),
         where: v.identifier_id == ^identifier_id
 
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   @doc """
@@ -676,7 +676,7 @@ defmodule Brando.Villain do
         select: b.id,
         where: b.module_id == ^module_id
 
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   defp list_block_ids_using_fragment(fragment_id) do
@@ -685,7 +685,7 @@ defmodule Brando.Villain do
         select: b.id,
         where: b.fragment_id == ^fragment_id
 
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   @doc """
@@ -741,14 +741,14 @@ defmodule Brando.Villain do
             select: js.entry_id,
             distinct: true
 
-        entry_ids = Brando.repo().all(query)
+        entry_ids = Brando.Repo.all(query)
         Map.put(acc, schema, entry_ids)
     end)
   end
 
   def list_block_ids_using_modules(module_ids) when is_list(module_ids) do
     query = from b in Content.Block, where: b.module_id in ^module_ids, select: b.id
-    Brando.repo().all(query)
+    Brando.Repo.all(query)
   end
 
   def list_root_block_ids_by_source(block_ids) when is_list(block_ids) do
@@ -773,7 +773,7 @@ defmodule Brando.Villain do
     |> where([b], is_nil(b.parent_id))
     |> select([b], %{id: b.id, source: b.source})
     |> distinct(true)
-    |> Brando.repo().all()
+    |> Brando.Repo.all()
     |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
       {:ok, casted_module} = Brando.Type.Module.cast(source)
       Map.update(acc, casted_module, [id], &(&1 ++ [id]))
@@ -815,7 +815,7 @@ defmodule Brando.Villain do
       end)
 
     built_query
-    |> Brando.repo().all()
+    |> Brando.Repo.all()
     |> Enum.map(& &1["id"])
     |> Enum.uniq()
   end
@@ -858,7 +858,7 @@ defmodule Brando.Villain do
         )
       end)
 
-    Brando.repo().all(built_query)
+    Brando.Repo.all(built_query)
   end
 
   def sync_and_render_blocks(block_ids, module_id) do
@@ -878,7 +878,7 @@ defmodule Brando.Villain do
     |> Enum.reduce([], fn block, acc ->
       block
       |> sync_module(module)
-      |> Brando.repo().update()
+      |> Brando.Repo.update()
 
       [block.id | acc]
     end)
@@ -898,7 +898,7 @@ defmodule Brando.Villain do
           select: [js.entry_id, fragment("array_agg(?)", js.block_id)],
           group_by: js.entry_id
 
-      grouped_block_ids = Brando.repo().all(query)
+      grouped_block_ids = Brando.Repo.all(query)
 
       for {entry_id, block_ids} <- grouped_block_ids do
         {:ok, entry} = Brando.Query.get_entry(schema, entry_id)
@@ -920,7 +920,7 @@ defmodule Brando.Villain do
 
           block
           |> Changeset.change(changes)
-          |> Brando.repo().update()
+          |> Brando.Repo.update()
         end
       end
     end

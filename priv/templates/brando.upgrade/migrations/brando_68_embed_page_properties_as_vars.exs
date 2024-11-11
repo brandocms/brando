@@ -20,7 +20,7 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
           page_id: m.page_id
         }
 
-    props = Brando.repo().all(query)
+    props = Brando.Repo.all(query)
 
     for prop <- props do
       query =
@@ -32,7 +32,7 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
           }
         )
 
-      page = Brando.repo().one(query)
+      page = Brando.Repo.one(query)
 
 
       new_var =
@@ -55,7 +55,7 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
           ]]
         )
 
-      Brando.repo().update_all(query, [])
+      Brando.Repo.update_all(query, [])
     end
 
     flush()

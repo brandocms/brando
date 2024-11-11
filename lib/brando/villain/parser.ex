@@ -1089,7 +1089,7 @@ defmodule Brando.Villain.Parser do
              } = var
            )
            when not is_nil(identifier_id) do
-        preloaded_var = Brando.repo().preload(var, [:identifier])
+        preloaded_var = Brando.Repo.preload(var, [:identifier])
         {key, preloaded_var}
       end
 
@@ -1101,7 +1101,7 @@ defmodule Brando.Villain.Parser do
                image: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        %{image: image} = Brando.repo().preload(var, [:image])
+        %{image: image} = Brando.Repo.preload(var, [:image])
         {key, image}
       end
 
@@ -1124,7 +1124,7 @@ defmodule Brando.Villain.Parser do
                file: %Ecto.Association.NotLoaded{}
              } = var
            ) do
-        %{file: file} = Brando.repo().preload(var, [:file])
+        %{file: file} = Brando.Repo.preload(var, [:file])
         {key, file}
       end
 

@@ -32,7 +32,7 @@ defmodule Brando.Repo.Migrations.MoveMultiRefsAndVarsUnderData do
           order_by: [desc: m.id]
         )
 
-      entries = Brando.repo().all(query)
+      entries = Brando.Repo.all(query)
 
       for entry <- entries do
         new_data = replace_block(Map.get(entry, data_field))
@@ -44,7 +44,7 @@ defmodule Brando.Repo.Migrations.MoveMultiRefsAndVarsUnderData do
             update: [set: ^update_args]
           )
 
-        Brando.repo().update_all(query, [])
+        Brando.Repo.update_all(query, [])
       end
     end
   end

@@ -772,7 +772,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def nil_relations(entry, schema) do
     preloads = Brando.Blueprint.preloads_for(schema)
-    Brando.repo().preload(entry, preloads)
+    Brando.Repo.preload(entry, preloads)
   end
 
   def maybe_put_language(%{language: _} = entry, current_user) do

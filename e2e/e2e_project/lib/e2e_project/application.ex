@@ -30,13 +30,11 @@ defmodule E2eProject.Application do
     sql_sandbox = Application.get_env(Brando.config(:otp_app), :sql_sandbox)
 
     if sql_sandbox do
-      Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), {:shared, self()})
+      Ecto.Adapters.SQL.Sandbox.mode(Brando.Repo.repo(), {:shared, self()})
     end
 
     result
   end
-
-
 
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.

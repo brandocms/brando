@@ -136,7 +136,7 @@ defmodule Brando.QueryTest do
       {:ok, p2c} =
         p2b
         |> Page.changeset(%{title: "page 2 updated"}, :system)
-        |> Brando.repo().update
+        |> Brando.Repo.update
 
       assert p2c.title == "page 2 updated"
 
@@ -164,7 +164,7 @@ defmodule Brando.QueryTest do
       {:ok, p2b} =
         p2
         |> Page.changeset(%{title: "page 2 updated"}, :system)
-        |> Brando.repo().update
+        |> Brando.Repo.update
 
       assert p2b.title == "page 2 updated"
 

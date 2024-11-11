@@ -13,7 +13,7 @@ defmodule Brando.Repo.Migrations.MigratePageVarsToVars do
         }
       )
 
-    pages = Brando.repo().all(query)
+    pages = Brando.Repo.all(query)
 
     for page <- pages do
       process_vars(page.id, page.creator_id, page.vars || [])
@@ -77,7 +77,7 @@ defmodule Brando.Repo.Migrations.MigratePageVarsToVars do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.repo().insert_all("content_vars", [new_var])
+      Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
 

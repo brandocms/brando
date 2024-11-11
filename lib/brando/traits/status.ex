@@ -14,12 +14,12 @@ defmodule Brando.Trait.Status do
   end
 
   def update_status(schema, id, status) do
-    entry = Brando.repo().one(from q in schema, where: q.id == ^id)
+    entry = Brando.Repo.one(from q in schema, where: q.id == ^id)
 
     {:ok, updated_entry} =
       entry
       |> Ecto.Changeset.cast(%{status: status}, [:status])
-      |> Brando.repo().update()
+      |> Brando.Repo.update()
 
     Brando.Datasource.update_datasource(schema)
     Brando.Content.update_identifier(schema, updated_entry)
