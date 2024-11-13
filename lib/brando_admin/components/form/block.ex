@@ -475,6 +475,10 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     if socket.assigns.deleted do
       # if the block is deleted, we don't message the children.
+      if tag == :save do
+        send(self(), {:progress_popup, "Providing block #{uid}..."})
+      end
+
       send_update(parent_cid, %{
         event: "provide_root_block",
         changeset: nil,
@@ -496,6 +500,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
       else
         # if the block has no children we send the current changeset back to the parent
+        if tag == :save do
+          send(self(), {:progress_popup, "Providing root block #{uid}..."})
+        end
+
         send_update(parent_cid, %{
           event: "provide_root_block",
           changeset: changeset,
@@ -531,6 +539,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
     else
       # if the block has no children we send the current changeset back to the parent
+      if tag == :save do
+        send(self(), {:progress_popup, "Providing block #{uid}..."})
+      end
+
       send_update(parent_cid, %{
         event: "provide_child_block",
         changeset: changeset,
@@ -584,6 +596,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
 
       if level == 0 do
+        if tag == :save do
+          send(self(), {:progress_popup, "Providing root block #{uid}..."})
+        end
+
         send_update(parent_cid, %{
           event: "provide_root_block",
           changeset: updated_changeset,
@@ -591,6 +607,10 @@ defmodule BrandoAdmin.Components.Form.Block do
           tag: tag
         })
       else
+        if tag == :save do
+          send(self(), {:progress_popup, "Providing block #{uid}..."})
+        end
+
         send_update(parent_cid, %{
           event: "provide_child_block",
           changeset: updated_changeset,

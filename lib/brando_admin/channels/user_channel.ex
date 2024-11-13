@@ -7,6 +7,7 @@ defmodule Brando.UserChannel do
 
   intercept([
     "alert",
+    "progress_popup",
     "set_progress",
     "increase_progress"
   ])
@@ -27,6 +28,11 @@ defmodule Brando.UserChannel do
     else
       :error
     end
+  end
+
+  def handle_out("progress_popup", payload, socket) do
+    push(socket, "progress_popup", payload)
+    {:noreply, socket}
   end
 
   def handle_out("alert", payload, socket) do

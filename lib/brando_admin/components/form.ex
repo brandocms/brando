@@ -1821,8 +1821,12 @@ defmodule BrandoAdmin.Components.Form do
       schema.__admin_route__(:create, [])
     end
 
+    send(self(), {:progress_popup, "Associating block fields..."})
+
     new_changeset = assoc_all_block_fields(block_changesets, changeset)
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
+
+    send(self(), {:progress_popup, "Rendering blocks for entry..."})
 
     rendered_changeset =
       render_blocks_for_entry(
@@ -1831,8 +1835,12 @@ defmodule BrandoAdmin.Components.Form do
         entry_for_blocks
       )
 
+    send(self(), {:progress_popup, "Saving entry..."})
+
     case apply(context, :"#{mutation_type}_#{singular}", [rendered_changeset, current_user]) do
       {:ok, entry} ->
+        send(self(), {:progress_popup, "Entry saved."})
+
         Brando.Trait.run_trait_after_save_callbacks(
           schema,
           entry,
@@ -1897,6 +1905,7 @@ defmodule BrandoAdmin.Components.Form do
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
+        send(self(), {:progress_popup, "Saving entry failed..."})
 
         {:noreply,
          socket
@@ -1908,7 +1917,8 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
     # has blocks, but not all blocks have been received
-    fetch_root_blocks(socket, :save, 500)
+    fetch_root_blocks(socket, :save, 150)
+    send(self(), {:progress_popup, "Saving..."})
     {:noreply, assign(socket, :processing, true)}
   end
 

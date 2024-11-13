@@ -27,7 +27,7 @@ const IS_LOGIN = Dom.find('#application-login')
 topbar.config({
   barThickness: 1,
   barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' },
-  shadowColor: 'rgba(0, 0, 0, .2)'
+  shadowColor: 'rgba(0, 0, 0, .2)',
 })
 
 export default (hooks, enableDebug = false) => {
@@ -42,10 +42,10 @@ export default (hooks, enableDebug = false) => {
         'ipad_landscape',
         'desktop_md',
         'desktop_lg',
-        'desktop_xl'
-      ]
+        'desktop_xl',
+      ],
     },
-    faderOpts: configureFader()
+    faderOpts: configureFader(),
   })
 
   app.components = []
@@ -92,7 +92,10 @@ export default (hooks, enableDebug = false) => {
         gsap.set(loginBox, { opacity: 0 })
         gsap.set(figureWrapper, { opacity: 0 })
 
-        gsap.set(['.field-wrapper', '.brando-versioning', '.primary', '.title'], { opacity: 0 })
+        gsap.set(
+          ['.field-wrapper', '.brando-versioning', '.primary', '.title'],
+          { opacity: 0 }
+        )
         gsap.set('.login-box', { y: 35 })
         gsap.set(['.field-wrapper', '.primary', '.title'], { x: -15 })
         gsap.set('.figure-wrapper', { x: -10 })
@@ -112,8 +115,16 @@ export default (hooks, enableDebug = false) => {
             { opacity: 1, duration: 0.35, ease: 'none', stagger: 0.1 },
             '<'
           )
-          .to('.figure-wrapper', { x: 0, duration: 0.35, ease: 'circ.out' }, '<')
-          .to('.figure-wrapper', { opacity: 1, duration: 0.35, ease: 'none' }, '<')
+          .to(
+            '.figure-wrapper',
+            { x: 0, duration: 0.35, ease: 'circ.out' },
+            '<'
+          )
+          .to(
+            '.figure-wrapper',
+            { opacity: 1, duration: 0.35, ease: 'none' },
+            '<'
+          )
           .to('.brando-versioning', { opacity: 1, ease: 'none' })
           .to('.brando-versioning', { xPercent: 0, ease: 'circ.out' })
       }, 500)
@@ -121,7 +132,7 @@ export default (hooks, enableDebug = false) => {
   })
 
   window.addEventListener('phx:b:component:remount', () => {
-    app.components.forEach(cmp => cmp.remount())
+    app.components.forEach((cmp) => cmp.remount())
   })
 
   window.addEventListener('phx:page-loading-start', () => {
@@ -129,7 +140,7 @@ export default (hooks, enableDebug = false) => {
   })
 
   window.addEventListener('phx:js-exec', ({ detail }) => {
-    document.querySelectorAll(detail.to).forEach(el => {
+    document.querySelectorAll(detail.to).forEach((el) => {
       liveSocket.execJS(el, el.getAttribute(detail.attr))
     })
   })
@@ -170,7 +181,7 @@ export default (hooks, enableDebug = false) => {
 
     let height = 0
 
-    progressItems.forEach(item => {
+    progressItems.forEach((item) => {
       height += item.clientHeight
     })
 
@@ -186,52 +197,71 @@ export default (hooks, enableDebug = false) => {
   }
 
   if (app.userToken) {
-    app.userSocket = new Socket('/admin/socket', { params: { token: app.userToken } })
+    app.userSocket = new Socket('/admin/socket', {
+      params: { token: app.userToken },
+    })
     app.userSocket.connect()
 
     app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
-    app.lobbyChannel = app.userSocket.channel('lobby', { url: window.location.pathname })
+    app.lobbyChannel = app.userSocket.channel('lobby', {
+      url: window.location.pathname,
+    })
 
-    app.lobbyChannel.on('toast', data => {
+    app.lobbyChannel.on('toast', (data) => {
       app.toast.mutation(data.level, data.payload)
     })
 
     app.userChannel.on('progress:show', () => {
-      gsap.to($progressWrapper, { yPercent: 0, ease: 'circ.out', duration: 0.35 })
+      gsap.to($progressWrapper, {
+        yPercent: 0,
+        ease: 'circ.out',
+        duration: 0.35,
+      })
     })
 
     app.userChannel.on('progress:hide', () => {
-      gsap.to($progressWrapper, { yPercent: -100, ease: 'circ.in', duration: 0.35 })
+      gsap.to($progressWrapper, {
+        yPercent: -100,
+        ease: 'circ.in',
+        duration: 0.35,
+      })
     })
 
-    app.userChannel.on('toast', data => {
+    app.userChannel.on('toast', (data) => {
       app.toast.notification(data.level, data.payload)
     })
 
-    app.userChannel.on('progress:update', ({ status, content: { key, filename, percent } }) => {
-      const keyEl = Dom.find(`[data-progress-key="${key}"]`)
+    app.userChannel.on('progress_popup', (data) => {
+      app.toast.progressPopup(data.payload)
+    })
 
-      if (keyEl) {
-        const filenameEl = Dom.find(keyEl, '.filename')
-        const descriptionEl = Dom.find(keyEl, '.description')
-        const percentEl = Dom.find(keyEl, '.percent')
+    app.userChannel.on(
+      'progress:update',
+      ({ status, content: { key, filename, percent } }) => {
+        const keyEl = Dom.find(`[data-progress-key="${key}"]`)
 
-        filenameEl.innerHTML = filename
-        descriptionEl.innerHTML = status
-        percentEl.innerHTML = `${percent}%`
+        if (keyEl) {
+          const filenameEl = Dom.find(keyEl, '.filename')
+          const descriptionEl = Dom.find(keyEl, '.description')
+          const percentEl = Dom.find(keyEl, '.percent')
 
-        if (parseInt(percent) === 100) {
-          const tl = gsap.timeline()
+          filenameEl.innerHTML = filename
+          descriptionEl.innerHTML = status
+          percentEl.innerHTML = `${percent}%`
 
-          tl.to(keyEl, { opacity: 0 })
-            .to(keyEl, { height: 0 })
-            .call(() => {
-              keyEl.remove()
-              gsap.to($progressWrapper, { height: getHeights() })
-            })
-        }
-      } else {
-        const updateProgress = document.createRange().createContextualFragment(`
+          if (parseInt(percent) === 100) {
+            const tl = gsap.timeline()
+
+            tl.to(keyEl, { opacity: 0 })
+              .to(keyEl, { height: 0 })
+              .call(() => {
+                keyEl.remove()
+                gsap.to($progressWrapper, { height: getHeights() })
+              })
+          }
+        } else {
+          const updateProgress = document.createRange()
+            .createContextualFragment(`
             <div class="progress-item" data-progress-key="${key}">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.364 5.636L16.95 7.05A7 7 0 1 0 19 12h2a9 9 0 1 1-2.636-6.364z"/></svg>
               <div class="filename">
@@ -243,18 +273,19 @@ export default (hooks, enableDebug = false) => {
               <div class="percent">
                 ${percent}%
               </div>
-            </div>          
+            </div>
             `)
-        $progress.append(updateProgress)
-        const keyEl = Dom.find(`[data-progress-key="${key}"]`)
-        gsap.set(keyEl, { opacity: 0 })
-        gsap.to(keyEl, { opacity: 1, duration: 0.45 })
+          $progress.append(updateProgress)
+          const keyEl = Dom.find(`[data-progress-key="${key}"]`)
+          gsap.set(keyEl, { opacity: 0 })
+          gsap.to(keyEl, { opacity: 1, duration: 0.45 })
+        }
+
+        gsap.to($progressWrapper, { height: getHeights() })
       }
+    )
 
-      gsap.to($progressWrapper, { height: getHeights() })
-    })
-
-    app.userChannel.join().receive('ok', params => {
+    app.userChannel.join().receive('ok', (params) => {
       if (app.vsn) {
         // we've connected before. see if versions match!
         if (app.vsn !== params.vsn) {

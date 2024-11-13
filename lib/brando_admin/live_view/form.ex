@@ -21,6 +21,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
       on_mount({BrandoAdmin.LiveView.Form, {:setup, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_progress_popup, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_alert, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_content_language, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_dirty_fields, unquote(schema)}})
@@ -77,6 +78,16 @@ defmodule BrandoAdmin.LiveView.Form do
 
   def on_mount({:hooks_toast, _schema}, _params, _session, socket) do
     {:cont, attach_hook(socket, :b_form_toast, :handle_info, &handle_hooks_toast_info/2)}
+  end
+
+  def on_mount({:hooks_progress_popup, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_progress_popup,
+       :handle_info,
+       &handle_hooks_progress_popup_info/2
+     )}
   end
 
   def on_mount({:hooks_alert, _schema}, _params, _session, socket) do
@@ -259,6 +270,16 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_toast_info(_, socket), do: {:cont, socket}
+
+  defp handle_hooks_progress_popup_info(
+         {:progress_popup, message},
+         %{assigns: %{current_user: current_user}} = socket
+       ) do
+    BrandoAdmin.ProgressPopup.send_to(current_user, message)
+    {:halt, socket}
+  end
+
+  defp handle_hooks_progress_popup_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_content_language_info(
          {:set_content_language, language},

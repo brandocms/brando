@@ -362,6 +362,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     form_cid = socket.assigns.form_cid
 
     if block_list == [] do
+      if tag == :save do
+        send(self(), {:progress_popup, "Providing root blocks..."})
+      end
+
       send_update(form_cid, %{
         event: "provide_root_blocks",
         root_changesets: [],

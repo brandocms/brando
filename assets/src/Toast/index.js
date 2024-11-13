@@ -1,4 +1,5 @@
 import iziToast from 'izitoast'
+import { gsap } from '@brandocms/jupiter'
 
 export default class Toast {
   constructor(app) {
@@ -10,8 +11,11 @@ export default class Toast {
       animateInside: false,
       timeout: 5000,
       iconColor: '#ffffff',
-      theme: 'brando'
+      theme: 'brando',
     })
+
+    this.popupTimer = null
+    this.popup = null
   }
 
   notification(level, message) {
@@ -33,6 +37,45 @@ export default class Toast {
     }
   }
 
+  progressPopup(message) {
+    // kill the close timer (if it exists)
+    this.popupTimer && clearTimeout(this.popupTimer)
+
+    this.popupTimer = setTimeout(() => {
+      this.closePopup()
+    }, 800)
+    this.updatePopup(message)
+  }
+
+  updatePopup(message) {
+    if (!this.popup) {
+      this.msgNo = 1
+      this.popup = document.createElement('div')
+      this.popup.className = 'progress-popup'
+      this.popup.innerHTML = `<div class="message">[${this.msgNo}] &rarr; ${message}</div>`
+      document.body.appendChild(this.popup)
+      gsap.set(this.popup, { opacity: 0 })
+      gsap.to(this.popup, { opacity: 1, duration: 0.15 })
+    } else {
+      this.msgNo++
+      this.popup.querySelector('.message').innerHTML =
+        `[${this.msgNo}] &rarr; ${message}`
+    }
+  }
+
+  closePopup() {
+    if (this.popup) {
+      gsap.to(this.popup, {
+        opacity: 0,
+        duration: 0.5,
+        onComplete: () => {
+          this.popup.remove()
+          this.popup = null
+        },
+      })
+    }
+  }
+
   show(opts) {
     this.izitoast.show(opts)
   }
@@ -45,7 +88,7 @@ export default class Toast {
       displayMode: 2,
       position: 'bottomRight',
       close: false,
-      progressBar: false
+      progressBar: false,
     })
   }
 }
