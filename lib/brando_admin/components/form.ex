@@ -542,7 +542,6 @@ defmodule BrandoAdmin.Components.Form do
   defp assign_entry(%{assigns: %{entry_id: nil}} = socket) do
     schema = socket.assigns.schema
     current_user = socket.assigns.current_user
-
     assign(socket, :entry, prepare_empty_entry(schema, current_user))
   end
 
