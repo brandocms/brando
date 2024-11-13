@@ -24,6 +24,19 @@ defmodule Brando.Villain.Tags.Video do
 
   @impl true
   def render([source: source, args: args], context) do
+    _ = [
+      :aspect_ratio,
+      :autoplay,
+      :controls,
+      :loop,
+      :muted,
+      :playsinline,
+      :preload,
+      :poster,
+      :width,
+      :height
+    ]
+
     evaled_source = Liquex.Argument.eval(source, context)
 
     evaled_args =

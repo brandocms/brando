@@ -29,6 +29,7 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       attribute :cover, :string, default: "false"
       attribute :thumbnail_url, :string
       attribute :title, :string
+      attribute :aspect_ratio, :string
     end
 
     relations do
