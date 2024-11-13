@@ -973,8 +973,15 @@ defmodule Brando.Villain.Parser do
 
         case Content.find_palette(palettes, palette_id) do
           {:ok, palette} ->
+            colors =
+              palette.colors
+              |> Enum.map(&"--#{&1.key}: #{&1.hex_value}")
+              |> Enum.join(";")
+
+            palette_vars = " style=\"#{colors}\""
+
             """
-            <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}>
+            <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}#{palette_vars}>
               #{children_html}
             </section>
             """
