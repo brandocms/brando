@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     >
       <div class="main-content">
         <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
-        <.handle :if={@sortable?} />
+        <.handle :if={@sortable?} active_sort={@active_sort} />
         <%= if @listing.component do %>
           <%= Phoenix.LiveView.TagEngine.component(
             @listing.component,
@@ -295,10 +295,16 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def handle(assigns) do
+    show_sort =
+      is_nil(assigns.active_sort) ||
+        (is_map(assigns.active_sort) && Map.get(assigns.active_sort, :key) == :default)
+
+    assigns = assign(assigns, :show_sort, show_sort)
+
     ~H"""
     <div class="col-1 seq">
       <div class="center sequence-handle">
-        <.icon name="brando-move" />
+        <.icon :if={@show_sort} name="brando-move" />
       </div>
     </div>
     """

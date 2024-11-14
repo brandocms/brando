@@ -98,7 +98,7 @@ defmodule Brando.Blueprint.Listings.Dsl do
       label: [
         type: :string,
         required: false,
-        doc: "Action label"
+        doc: "Sort label"
       ],
       event: [
         type: {:or, [:string, :any]},
@@ -114,12 +114,36 @@ defmodule Brando.Blueprint.Listings.Dsl do
     ]
   }
 
+  @sort %Spark.Dsl.Entity{
+    name: :sort,
+    target: Listings.Sort,
+    args: [:key],
+    schema: [
+      key: [
+        type: :atom,
+        required: true,
+        doc: "Sort key"
+      ],
+      label: [
+        type: :string,
+        required: true,
+        doc: "Sort label"
+      ],
+      order: [
+        type: :any,
+        required: true,
+        doc: "Order instructions"
+      ]
+    ]
+  }
+
   @listing %Spark.Dsl.Entity{
     name: :listing,
     identifier: :name,
     args: [{:optional, :name, :default}],
     entities: [
       actions: [@action],
+      sorts: [@sort],
       selection_actions: [@selection_action],
       filters: [@filter],
       child_listings: [@child_listing],
@@ -155,6 +179,11 @@ defmodule Brando.Blueprint.Listings.Dsl do
         required: false,
         default: true,
         doc: "Listing is sortable"
+      ],
+      limit: [
+        type: :integer,
+        required: false,
+        doc: "How many entries to show per page"
       ]
     ]
   }

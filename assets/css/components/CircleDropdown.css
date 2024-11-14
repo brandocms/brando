@@ -78,7 +78,7 @@
 
   .dropdown-content {
     background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark); 
+    color: var(--brando-color-dark);
     position: absolute;
     width: 250px;
     border: 1px solid var(--brando-color-dark);
@@ -92,7 +92,8 @@
     }
 
     li {
-      a, button {
+      a,
+      button {
         @font mono;
         display: block;
         padding: 15px;
@@ -103,7 +104,7 @@
         font-size: 15px;
 
         &:hover {
-          background-color: var(--brando-color-dark); 
+          background-color: var(--brando-color-dark);
           color: theme(colors.peach);
 
           .shortcut {
@@ -118,5 +119,66 @@
     position: relative;
     display: flex;
     justify-content: center;
+  }
+}
+
+.simple-dropdown {
+  .simple-dropdown-button {
+    @font mono;
+    background-color: #ffef45;
+    border: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 4px 8px 4px 10px;
+    border-radius: 20px;
+    margin-left: 5px;
+    display: flex;
+    gap: 5px;
+  }
+
+  &.wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+
+  .simple-dropdown-content {
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-dark);
+    position: absolute;
+    min-width: 125px;
+    border: 1px solid var(--brando-color-dark);
+    z-index: 2;
+    top: 50px;
+    right: 0;
+
+    &.over {
+      top: auto;
+      bottom: 50px;
+    }
+
+    li {
+      a,
+      button {
+        @font mono;
+        display: block;
+        padding: 8px 15px;
+        text-align: right;
+        line-height: 1.5;
+        float: right;
+        width: 100%;
+        font-size: 12px;
+        border: none;
+
+        &:hover {
+          background-color: var(--brando-color-dark);
+          color: theme(colors.peach);
+
+          .shortcut {
+            color: var(--brando-color-dark);
+          }
+        }
+      }
+    }
   }
 }

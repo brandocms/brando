@@ -28,14 +28,16 @@ defmodule BrandoAdmin.Components.Content.List do
      socket
      |> assign_defaults(assigns)
      |> assign_filter(assigns)
+     |> assign_sort()
      |> assign_entries(assigns)}
   end
 
-  def push_query_params(%{assigns: %{uri: uri}} = socket, extra_params) do
+  def push_query_params(%{assigns: %{uri: uri}} = socket, extra_params, drop_fields \\ []) do
     current_params = URI.decode_query(uri.query || "")
 
     new_params =
       current_params
+      |> Map.drop(drop_fields)
       |> Map.merge(extra_params)
       |> Enum.filter(fn {_k, v} -> v != "" end)
       |> Plug.Conn.Query.encode()
@@ -138,6 +140,17 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def handle_event("update_filter", %{"filter" => filter_key, "q" => query}, socket) do
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => query})}
+  end
+
+  def handle_event("update_sort", %{"sort_key" => sort_key}, socket) do
+    sorts = socket.assigns.listing.sorts
+    sort = Enum.find(sorts, &(&1.key == String.to_existing_atom(sort_key)))
+    sort_string = Brando.Query.order_string_to_list(sort.order)
+
+    {:noreply,
+     socket
+     |> assign_sort(sort)
+     |> push_query_params(%{"order" => sort_string}, ["order[asc]", "order[desc]", "order"])}
   end
 
   def handle_event(
@@ -253,6 +266,14 @@ defmodule BrandoAdmin.Components.Content.List do
     assign_new(socket, :active_filter, fn -> List.first(filters) end)
   end
 
+  defp assign_sort(%{assigns: %{listing: %{sorts: sorts}}} = socket) do
+    assign_new(socket, :active_sort, fn -> List.first(sorts) end)
+  end
+
+  defp assign_sort(socket, sort) do
+    assign(socket, :active_sort, sort)
+  end
+
   defp assign_entries(
          %{
            assigns: %{
@@ -284,13 +305,13 @@ defmodule BrandoAdmin.Components.Content.List do
   # TODO: Read paginate true/false from listing
   # TODO: Read limit from listing
   defp build_list_opts(listing, schema, content_language) do
-    %{paginate: true, limit: 25}
+    %{paginate: true, limit: listing.limit}
     |> maybe_merge_listing_query(listing)
     |> maybe_merge_content_language(schema, content_language)
     |> maybe_preload_creator(schema)
     |> maybe_preload_alternates(schema)
     |> preload_assets(schema)
-    |> maybe_order_by_sequence(schema)
+    |> maybe_order_by(schema, listing)
   end
 
   defp maybe_merge_listing_query(query_params, listing) do
@@ -367,18 +388,18 @@ defmodule BrandoAdmin.Components.Content.List do
     end)
   end
 
-  defp maybe_order_by_sequence(list_opts, schema) do
-    if schema.has_trait(Sequenced) && !Map.get(list_opts, :order) do
-      add_order_by(list_opts, [{:asc, :sequence}, {:desc, :inserted_at}])
+  defp maybe_order_by(list_opts, schema, listing) do
+    if listing.sorts != [] do
+      # set the first sort as default
+      first_sort = List.first(listing.sorts)
+      Map.put(list_opts, :order, first_sort.order)
     else
-      list_opts
+      if schema.has_trait(Sequenced) && !Map.get(list_opts, :order) do
+        Map.put(list_opts, :order, [{:asc, :sequence}, {:desc, :inserted_at}])
+      else
+        list_opts
+      end
     end
-  end
-
-  defp add_order_by(list_opts, order_bys) when is_list(order_bys) do
-    Map.update(list_opts, :order, order_bys, fn existing_ordering ->
-      Enum.uniq(existing_ordering ++ order_bys)
-    end)
   end
 
   defp maybe_preload_creator(list_opts, schema) do
@@ -444,12 +465,15 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class="active-filters">
       <%= gettext("Active filters") %> &rarr;
-      <%= for {name, value} <- @active_filters do %>
-        <button class="filter" phx-click={@delete} phx-value-filter={name}>
-          <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
-          <%= name %>: <%= inspect(value) %>
-        </button>
-      <% end %>
+      <button
+        :for={{name, value} <- @active_filters}
+        class="filter"
+        phx-click={@delete}
+        phx-value-filter={name}
+      >
+        <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
+        <%= name %>: <%= inspect(value) %>
+      </button>
     </div>
     """
   end
@@ -539,40 +563,31 @@ defmodule BrandoAdmin.Components.Content.List do
     assigns =
       assigns
       |> assign(:active_filter, assigns.active_filter)
+      |> assign(:active_sort, assigns.active_sort)
       |> assign(:list_opts, assigns.list_opts)
       |> assign_new(:has_status?, fn -> assigns.schema.has_trait(Brando.Trait.Status) end)
       |> assign_new(:schema, fn -> assigns.schema end)
       |> assign_new(:listing, fn -> assigns.listing end)
+      |> assign_new(:update_sort, fn -> assigns.update_sort end)
       |> assign_new(:update_filter, fn -> assigns.update_filter end)
       |> assign_new(:delete_filter, fn -> assigns.delete_filter end)
       |> assign_new(:update_status, fn -> assigns.update_status end)
       |> assign_new(:next_filter_key, fn -> assigns.next_filter_key end)
       |> assign_new(:statuses, fn -> get_statuses(assigns.schema) end)
       |> assign_new(:filters, fn -> assigns.listing.filters end)
+      |> assign_new(:sorts, fn -> assigns.listing.sorts end)
 
     ~H"""
     <div class="list-tools-wrapper">
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
-            <%= for status <- @statuses do %>
-              <button
-                phx-click={@update_status}
-                phx-value-status={status}
-                class={[
-                  "status",
-                  active_status_class(@list_opts, status)
-                ]}
-                type="button"
-                phx-page-loading
-              >
-                <%!-- TODO: remove active_status_class --%>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
-                  <circle class={status} r="6" cy="6" cx="6" />
-                </svg>
-                <span class="label"><%= render_status_label(status) %></span>
-              </button>
-            <% end %>
+            <.status
+              :for={status <- @statuses}
+              status={status}
+              list_opts={@list_opts}
+              on_update_status={@update_status}
+            />
           </div>
         <% end %>
 
@@ -621,15 +636,102 @@ defmodule BrandoAdmin.Components.Content.List do
           </CircleDropdown.render>
         </div>
       </div>
-
-      <%= if @list_opts[:filter] do %>
-        <.active_filters
-          active_filters={@list_opts[:filter]}
-          filters={@filters}
-          delete={@delete_filter}
-        />
-      <% end %>
+      <div class="list-filters-and-sorts">
+        <%= if @list_opts[:filter] do %>
+          <.active_filters
+            active_filters={@list_opts[:filter]}
+            filters={@filters}
+            delete={@delete_filter}
+          />
+        <% end %>
+        <%= if @sorts != [] do %>
+          <.sorts active_sort={@active_sort} sorts={@sorts} on_update={@update_sort} />
+        <% end %>
+      </div>
     </div>
+    """
+  end
+
+  attr :active_sort, :map, required: true
+  attr :sorts, :list, required: true
+  attr :on_update, :any, required: true
+
+  def sorts(assigns) do
+    ~H"""
+    <div class="sorts">
+      <%= gettext("Sort by") %> &rarr;
+      <.simple_dropdown id="sorts-dropdown" label={@active_sort.label}>
+        <:options>
+          <li>
+            <button
+              :for={sort <- @sorts}
+              type="button"
+              phx-click={@on_update}
+              phx-value-sort_key={sort.key}
+            >
+              <%= raw(sort.label) %>
+            </button>
+          </li>
+        </:options>
+      </.simple_dropdown>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, default: gettext("Select")
+  slot :options, required: true
+
+  def simple_dropdown(assigns) do
+    assigns = assign(assigns, :label, raw(assigns.label))
+
+    ~H"""
+    <div class="simple-dropdown wrapper">
+      <button
+        class="simple-dropdown-button"
+        data-testid="simple-dropdown-button"
+        type="button"
+        phx-click={toggle_dropdown("##{@id}")}
+        phx-click-away={hide_dropdown("##{@id}")}
+      >
+        <%= @label %> <span class="icon">▾</span>
+      </button>
+      <ul data-testid="simple-dropdown-content" class="simple-dropdown-content hidden" id={@id}>
+        <%= render_slot(@options, @id) %>
+      </ul>
+    </div>
+    """
+  end
+
+  attr :status, :atom, required: true
+  attr :on_update_status, :any, required: true
+  attr :list_opts, :list, required: true
+
+  def status(assigns) do
+    rendered_status_label = render_status_label(assigns.status)
+    active_class = active_status_class(assigns.list_opts, assigns.status)
+
+    assigns =
+      assigns
+      |> assign(:active_class, active_class)
+      |> assign(:rendered_status_label, rendered_status_label)
+
+    ~H"""
+    <button
+      phx-click={@on_update_status}
+      phx-value-status={@status}
+      class={[
+        "status",
+        @active_class
+      ]}
+      type="button"
+      phx-page-loading
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
+        <circle class={@status} r="6" cy="6" cx="6" />
+      </svg>
+      <span class="label"><%= @rendered_status_label %></span>
+    </button>
     """
   end
 

@@ -4,11 +4,13 @@ defmodule Brando.Blueprint.Listings.Listing do
             query: %{},
             fields: [],
             filters: [],
+            sorts: [],
             sortable: true,
             default_actions: true,
             actions: [],
             selection_actions: [],
             exports: [],
             child_listings: [],
-            component: nil
+            component: nil,
+            limit: 25
 end

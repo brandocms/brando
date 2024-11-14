@@ -360,7 +360,7 @@ defmodule Brando.Query do
 
   def with_order(query, order), do: with_order(query, [order])
 
-  def order_string_to_list(order_string) do
+  def order_string_to_list(order_string) when is_binary(order_string) do
     order_string
     |> String.split(",")
     |> Enum.map(fn e ->
@@ -375,6 +375,10 @@ defmodule Brando.Query do
       end)
       |> List.to_tuple()
     end)
+  end
+
+  def order_string_to_list(order_list) when is_list(order_list) do
+    order_list
   end
 
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))

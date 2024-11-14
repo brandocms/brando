@@ -4,11 +4,13 @@
       schema={@schema}
       listing={@listing}
       active_filter={@active_filter}
+      active_sort={@active_sort}
       list_opts={@list_opts}
       exports={@listing.exports}
       select_export={JS.push("export", target: @myself)}
       update_status={JS.push("update_status", target: @myself)}
       update_filter={JS.push("update_filter", target: @myself)}
+      update_sort={JS.push("update_sort", target: @myself)}
       next_filter_key={JS.push("next_filter_key", target: @myself)}
       delete_filter={JS.push("delete_filter", target: @myself)}
     />
@@ -34,6 +36,7 @@
       <.live_component
         module={Row}
         id={"list-row-#{@singular}-#{entry.id}"}
+        active_sort={@active_sort}
         entry={entry}
         sortable?={@sortable?}
         status?={@status?}

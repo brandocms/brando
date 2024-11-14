@@ -127,6 +127,10 @@ defmodule Brando.Pages.Page do
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
 
+      sort :default, label: t("Default"), order: [{:asc, :sequence}, {:desc, :inserted_at}]
+      sort :title_asc, label: t("Title &darr;"), order: "asc title"
+      sort :title_desc, label: t("Title &uarr;"), order: "desc title"
+
       filter label: t("URI"), filter: "uri"
       filter label: t("Title"), filter: "title"
 
