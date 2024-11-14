@@ -11,12 +11,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/template.ex:66
+#: lib/brando/content/template.ex:65
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/content/template.ex:68
+#: lib/brando/content/template.ex:67
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
