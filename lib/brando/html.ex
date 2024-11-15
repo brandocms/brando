@@ -59,6 +59,7 @@ defmodule Brando.HTML do
   attr :item, :map, required: true
   attr :conn, Plug.Conn, required: true
   attr :class, :any, default: nil
+  attr :splat, :boolean, default: true
   slot :inner_block
 
   def menu_item(assigns) do
@@ -69,12 +70,15 @@ defmodule Brando.HTML do
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
 
+    splat_url? = (assigns.splat && String.starts_with?(url, "/")) || false
+    match_url = (splat_url? && Path.join([url, "*"])) || url
+
     assigns =
       assigns
       |> assign(:url, url)
       |> assign(:text, text)
       |> assign(:key, key)
-      |> assign(:active, Utils.active_path?(assigns.conn, url))
+      |> assign(:active, Utils.active_path?(assigns.conn, match_url))
       |> assign(:target_blank?, target_blank?)
 
     ~H"""
