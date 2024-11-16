@@ -22,8 +22,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
         |> rewrite_fieldsets(module)
         |> rewrite_inputs_for(module)
         |> rewrite_forms(module)
-        # |> rewrite_listings(module)
         |> rewrite_listing_filters(module)
+        |> rewrite_listing_actions(module)
         |> rewrite_listing_query(module)
         |> rewrite_form_query(module)
         |> rewrite_entries_sources(module)
@@ -72,74 +72,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
     )
   end
 
-  def rewrite_listings(igniter, rewriting_module) do
-    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &listing?(&1),
-        fn zipper ->
-          {:listing, listing_meta, [args]} = Sourceror.Zipper.node(zipper)
-          [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, block_body}}] = args
-
-          new_block_body = process_block_body(block_body)
-
-          # Reconstruct the block with the new block_body
-          new_block = {{:__block__, do_meta, [:do]}, {:__block__, block_meta, new_block_body}}
-
-          # Reconstruct the :listing node
-          new_node = {:listing, listing_meta, [new_block]}
-
-          # Replace the node in the zipper
-          Sourceror.Zipper.replace(zipper, new_node)
-          {:ok, zipper}
-        end
-      )
-    end)
-  end
-
-  defp process_block_body(block_body) do
-    Enum.flat_map(block_body, fn expr ->
-      case expr do
-        {:filters, filters_meta, [filters_args]} ->
-          # Transform the filters_args into multiple filter calls
-          create_filter_calls(filters_args, filters_meta)
-
-        _ ->
-          # Keep the expression unchanged
-          [expr]
-      end
-    end)
-  end
-
-  defp create_filter_calls(filters_args, filters_meta) do
-    # filters_args is a {:__block__, _, filters_list}
-    case filters_args do
-      {:__block__, _, filters_list} when is_list(filters_list) ->
-        # filters_list is a list of filter blocks
-        Enum.map(filters_list, fn filter_block ->
-          # Each filter_block is a {:__block__, _, [[filter_keywords]]}
-          {:__block__, _, [filter_keywords_list]} = filter_block
-
-          # filter_keywords_list is a list containing filter_keywords
-          [filter_keywords] = filter_keywords_list
-
-          # Now filter_keywords is a list of keyword tuples
-          # Create the :filter call
-          {:filter, filters_meta, [filter_keywords]}
-        end)
-
-      _ ->
-        # Unexpected structure; return the original filters call
-        [{:filters, filters_meta, [filters_args]}]
-    end
-  end
-
   def rewrite_listing_filters(igniter, rewriting_module) do
-    # filters([
-    #   [label: gettext("Title"), filter: "title"],
-    #   [label: gettext("Category"), filter: "category"]
-    # ])
-
     Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
       Igniter.Code.Common.update_all_matches(
         zipper,
@@ -168,7 +101,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
                           end)
 
                         # Create a new `:filter` function call
-                        {:filter, meta_filters, [keywords]} |> Sourceror.to_string()
+                        {:filter, meta_filters, [keywords]}
+                        |> Sourceror.to_string()
                       end)
                       |> Enum.join("\n")
 
@@ -182,6 +116,59 @@ defmodule Mix.Tasks.Brando.Migrate54 do
 
               _ ->
                 # Not a `:filters` function call; continue traversal
+                zipper
+            end
+
+          {:ok, zipper}
+        end
+      )
+    end)
+  end
+
+  def rewrite_listing_actions(igniter, rewriting_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      Igniter.Code.Common.update_all_matches(
+        zipper,
+        &actions?(&1),
+        fn zipper ->
+          node = Sourceror.Zipper.node(zipper)
+
+          zipper =
+            case node do
+              {:actions, meta_actions, [args]} ->
+                case args do
+                  {:__block__, _meta_args_block, [keyword_list_blocks]}
+                  when is_list(keyword_list_blocks) ->
+                    # Transform each keyword list into a `:action` call
+                    new_action_calls =
+                      Enum.map(keyword_list_blocks, fn keyword_list_block ->
+                        {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
+
+                        # Reconstruct the keyword list
+                        keywords =
+                          Enum.map(keyword_tuples, fn
+                            {{:__block__, meta_key, [key]}, value_ast} ->
+                              # Reconstruct the key with its metadata
+                              key_ast = {:__block__, meta_key, [key]}
+                              {key_ast, value_ast}
+                          end)
+
+                        # Create a new `:action` function call
+                        {:action, meta_actions, [keywords]}
+                        |> Sourceror.to_string()
+                      end)
+                      |> Enum.join("\n")
+
+                    Igniter.Code.Common.replace_code(zipper, new_action_calls)
+
+                  _ ->
+                    # Unexpected structure; continue traversal
+                    IO.inspect("——————— :actions with unexpected structure")
+                    zipper
+                end
+
+              _ ->
+                # Not a `:actions` function call; continue traversal
                 zipper
             end
 
@@ -239,31 +226,32 @@ defmodule Mix.Tasks.Brando.Migrate54 do
 
   defp rewrite_villain(igniter, rewriting_module) do
     Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &villain_attribute?(&1),
-        fn zipper ->
-          node = Sourceror.Zipper.node(zipper)
-          {:attribute, _, [{:__block__, _, [key]}, _]} = node
-          string_key = to_string(key)
+      {:ok, zipper} =
+        Igniter.Code.Common.update_all_matches(
+          zipper,
+          &villain_attribute?(&1),
+          fn zipper ->
+            node = Sourceror.Zipper.node(zipper)
+            {:attribute, _, [{:__block__, _, [key]}, _]} = node
+            string_key = to_string(key)
 
-          fixed_key =
-            string_key
-            |> String.replace("_data", "_blocks")
-            |> String.replace("data", "blocks")
-            |> String.to_atom()
+            fixed_key =
+              string_key
+              |> String.replace("_data", "_blocks")
+              |> String.replace("data", "blocks")
+              |> String.to_atom()
 
-          Agent.update(:villains, fn state ->
-            Map.update(state, rewriting_module, [fixed_key], fn villains ->
-              [fixed_key | villains]
+            Agent.update(:villains, fn state ->
+              Map.update(state, rewriting_module, [fixed_key], fn villains ->
+                [fixed_key | villains]
+              end)
             end)
-          end)
 
-          zipper = Sourceror.Zipper.remove(zipper)
+            {:ok, zipper}
+          end
+        )
 
-          {:ok, zipper}
-        end
-      )
+      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &villain_attribute?(&1))}
     end)
   end
 
@@ -574,9 +562,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
     Igniter.Code.Function.function_call?(zipper, :filters, 1)
   end
 
-  defp listing?(zipper) do
-    Igniter.Code.Function.function_call?(zipper, :listing, 1) ||
-      Igniter.Code.Function.function_call?(zipper, :listing, 2)
+  defp actions?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :actions, 1)
   end
 
   defp json_ld_field?(zipper) do
