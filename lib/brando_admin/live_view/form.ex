@@ -10,7 +10,6 @@ defmodule BrandoAdmin.LiveView.Form do
   import Phoenix.LiveView
   import Phoenix.Component
   use Gettext, backend: Brando.Gettext
-  alias Brando.Utils
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
@@ -379,7 +378,7 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
-    translated_singular = Utils.try_path(schema.__translations__(), [:naming, :singular])
+    translated_singular = Brando.Blueprint.get_singular(schema)
 
     assign(
       socket,

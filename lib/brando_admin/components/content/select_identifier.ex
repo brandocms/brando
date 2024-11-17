@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  alias Brando.Utils
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Form.Input
 
@@ -94,9 +93,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     identifier = assigns.identifier
     schema = identifier.schema
 
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
+    translated_type = Brando.Blueprint.get_singular(schema)
 
     assigns =
       assigns

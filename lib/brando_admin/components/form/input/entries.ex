@@ -4,7 +4,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   use Gettext, backend: Brando.Gettext
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
-  alias Brando.Utils
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -563,11 +562,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def identifier_content(assigns) do
     identifier = assigns.identifier
     schema = identifier.schema
-
-    translated_type =
-      Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
+    translated_type = Brando.Blueprint.get_singular(schema)
     assigns = assign(assigns, :type, String.upcase(translated_type))
 
     ~H"""

@@ -726,6 +726,11 @@ defmodule Brando.Blueprint do
     list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
   end
 
+  def get_singular(module) do
+    singular = Brando.Utils.try_path(module.__translations__(), [:naming, :singular])
+    String.capitalize(singular || module.__naming__().singular)
+  end
+
   def get_plural(module) do
     plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
     String.capitalize(plural || module.__naming__().plural)

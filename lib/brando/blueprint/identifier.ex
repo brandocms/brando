@@ -44,10 +44,6 @@ defmodule Brando.Blueprint.Identifier do
         context = Villain.get_base_context(entry)
         {result, _} = Liquex.Render.render!([], @parsed_identifier, context)
         title = Enum.join(result)
-
-        translated_type =
-          Utils.try_path(__MODULE__.__translations__(), [:naming, :singular]) || @singular
-
         status = Map.get(entry, :status, nil)
         language = Map.get(entry, :language, nil)
 

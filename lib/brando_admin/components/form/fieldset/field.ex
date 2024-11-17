@@ -9,7 +9,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   # prop form, :form
   # prop parent_uploads, :any
   # prop current_user, :any
-  # prop translations, :any
 
   # data label, :string
   # data instructions, :string

@@ -1237,7 +1237,6 @@ defmodule BrandoAdmin.Components.Form do
     assigns =
       assigns
       |> assign(:indexed_fields, Enum.with_index(assigns.tab.fields))
-      |> assign(:translations, assigns.schema.__translations__())
       |> assign(:relations, assigns.schema.__relations__())
 
     ~H"""
@@ -1252,7 +1251,6 @@ defmodule BrandoAdmin.Components.Form do
       <% else %>
         <Fieldset.render
           id={"#{@form.id}-fieldset-#{@tab.name}-#{idx}"}
-          translations={@translations}
           relations={@relations}
           form={@form}
           fieldset={fieldset}
@@ -1799,11 +1797,7 @@ defmodule BrandoAdmin.Components.Form do
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
     singular = schema.__naming__().singular
-
-    translated_singular =
-      Brando.Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
-
+    translated_singular = Brando.Blueprint.get_singular(schema)
     context = schema.__modules__().context
     mutation_type = (get_field(changeset, :id) && :update) || :create
 

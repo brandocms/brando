@@ -655,15 +655,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def link_identifier(assigns) do
     identifier = assigns.identifier
-
-    translated_type =
-      if identifier do
-        schema = identifier.schema
-
-        Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-          schema.__naming__().singular
-      end
-
+    translated_type = identifier && Brando.Blueprint.get_singular(identifier.schema)
     assigns = assign(assigns, :translated_type, translated_type)
 
     ~H"""

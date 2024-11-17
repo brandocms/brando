@@ -189,7 +189,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ctx = assigns.schema.__modules__().context
     singular = assigns.schema.__naming__().singular
-    translated_singular = assigns.schema.__translations__()[:naming][:singular]
+    translated_singular = Brando.Blueprint.get_singular(assigns.schema)
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
 

@@ -22,7 +22,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
       <Fieldset.Field.render
         :for={input <- @fieldset.fields}
         form={@form}
-        translations={@translations}
         relations={@relations}
         input={input}
         parent_uploads={@parent_uploads}

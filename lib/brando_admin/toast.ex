@@ -11,9 +11,7 @@ defmodule BrandoAdmin.Toast do
   def send(payload, %{type: :mutation} = opts \\ %{type: :notification, level: :success}) do
     schema = payload.identifier.schema
 
-    translated_type =
-      Brando.Utils.try_path(schema.__translations__(), [:naming, :singular]) ||
-        schema.__naming__().singular
+    translated_type = Brando.Blueprint.get_singular(schema)
 
     identifier_with_type =
       payload.identifier

@@ -10,7 +10,6 @@ defmodule BrandoAdmin.LiveView.Listing do
   import Phoenix.LiveView
   import Phoenix.Component
   use Gettext, backend: Brando.Gettext
-  alias Brando.Utils
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
@@ -361,7 +360,7 @@ defmodule BrandoAdmin.LiveView.Listing do
   end
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
-    translated_plural = Utils.try_path(schema.__translations__(), [:naming, :plural])
+    translated_plural = Brando.Blueprint.get_plural(schema)
     page_title = (translated_plural && String.capitalize(translated_plural)) || nil
     assign(socket, :page_title, page_title)
   end

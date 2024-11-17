@@ -38,7 +38,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # data narrow, :boolean
   # data creating, :boolean
   # data resetable, :boolean
-  # data form_translations, :any
 
   # slot default
 
@@ -175,7 +174,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                       <div class="row">
                         <Fieldset.render
                           :for={fieldset <- tab.fields}
-                          translations={@form_translations}
                           form={entry_form}
                           parent_uploads={[]}
                           fieldset={fieldset}
@@ -465,11 +463,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
     select_form = target_module.__form__(form_name)
-    form_translations = target_module.__translations__()
-
-    socket
-    |> assign(:select_form, select_form)
-    |> assign(:form_translations, form_translations)
+    assign(socket, :select_form, select_form)
   end
 
   def maybe_assign_select_form(socket) do
