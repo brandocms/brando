@@ -39,11 +39,11 @@ defmodule BrandoAdmin.LiveView.Form do
       socket =
         socket
         |> assign(:socket_connected, true)
+        |> set_admin_locale()
         |> assign_action(:update)
         |> assign_schema(schema)
-        |> assign_title()
         |> assign_entry_id(entry_id)
-        |> set_admin_locale()
+        |> assign_title()
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
@@ -59,11 +59,11 @@ defmodule BrandoAdmin.LiveView.Form do
       socket =
         socket
         |> assign(:socket_connected, true)
+        |> set_admin_locale()
         |> assign_action(:create)
         |> assign_schema(schema)
-        |> assign_title()
         |> assign_entry_id(nil)
-        |> set_admin_locale()
+        |> assign_title()
 
       {:cont, socket}
     else
@@ -379,11 +379,12 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
     translated_singular = Brando.Blueprint.get_singular(schema)
+    entry_id = socket.assigns.entry_id || gettext("New")
 
     assign(
       socket,
       :page_title,
-      (translated_singular && String.capitalize(translated_singular)) || nil
+      "#{translated_singular} [\##{entry_id}]"
     )
   end
 

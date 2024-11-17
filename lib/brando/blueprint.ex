@@ -116,7 +116,6 @@ defmodule Brando.Blueprint do
 
   defstruct naming: %{},
             modules: %{},
-            translations: [],
             attributes: [],
             relations: [],
             assets: [],
@@ -149,7 +148,6 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :gettext_module, gettext_module)
 
     Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
-    Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
     Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
     Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false)
@@ -160,7 +158,6 @@ defmodule Brando.Blueprint do
       @data_layer :database
       @allow_mark_as_deleted false
       @primary_key {:id, :id, autogenerate: true}
-      @translations %{}
       @factory %{}
 
       if String.downcase(@domain) == String.downcase(@plural) do

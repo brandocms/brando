@@ -9,7 +9,8 @@ defmodule Brando.Blueprint.Dsl do
         Brando.Blueprint.Meta.Dsl,
         Brando.Blueprint.Forms.Dsl,
         Brando.Blueprint.Listings.Dsl,
-        Brando.Blueprint.Datasources.Dsl
+        Brando.Blueprint.Datasources.Dsl,
+        Brando.Blueprint.Translations.Dsl
       ]
     ],
     opts_to_document: []
@@ -79,6 +80,7 @@ defmodule Brando.Blueprint.Dsl do
       @assets Spark.Dsl.Extension.get_entities(__MODULE__, [:assets])
 
       @datasources Spark.Dsl.Extension.get_entities(__MODULE__, [:datasources])
+      @translations Spark.Dsl.Extension.get_persisted(__MODULE__, :translations)
 
       if @datasources != [] do
         def __datasource__ do
@@ -432,7 +434,6 @@ defmodule Brando.Blueprint.Dsl do
         %Brando.Blueprint{
           naming: __naming__(),
           modules: __modules__(),
-          translations: __translations__(),
           attributes: __attributes__(),
           relations: __relations__(),
           assets: __assets__(),
