@@ -2,17 +2,48 @@ defmodule Brando.Datasource do
   @moduledoc """
   Helpers to register datasources for interfacing with the block editor
 
+      datasources do
+        datasource :all_posts_from_year do
+          type :list
+          list fn module, _language, %{"year" => year} ->
+            {:ok, Repo.all(from t in module, where: t.year == ^year)}
+          end
+        end
+
+        datasource :featured_entries do
+          type :selection
+          list fn _module, language, _vars ->
+            Brando.Content.list_identifiers(
+              [MyApp.Projects.Project, MyApp.Articles.Article],
+              %{language: language, order: "asc schema, asc language, asc entry_id"})
+          end
+
+          get fn identifiers ->
+            Brando.Content.get_entries_from_identifiers(
+              identifiers,
+              [:categories, :cover, :palette]
+            )
+          end
+        end
+      end
+
   ### List
 
   A set of entries is returned automatically
 
   #### Example
 
-        list :all_posts_from_year, fn module, _language, %{"year" => year} ->
-          {:ok, Repo.all(from t in module, where: t.year == ^year)}
+        datasource :all_posts_from_year do
+          type :list
+          list fn module, _language, %{"year" => year} ->
+            {:ok, Repo.all(from t in module, where: t.year == ^year)}
+          end
         end
 
-        list :all_posts, fn _module, _language, _vars -> Posts.list_posts() end
+        datasource :all_posts do
+          type :list
+          list fn _module, _language, _vars -> Posts.list_posts() end
+        end
 
   The callback receives 3 arguments:
 
@@ -55,7 +86,7 @@ defmodule Brando.Datasource do
     ```
     fn module, language, _vars ->
       Brando.Content.list_identifiers(module, %{language: language, order: "asc language, asc entry_id"})
-    end,
+    end
     ```
 
     You can also supply multiple modules:
@@ -65,7 +96,7 @@ defmodule Brando.Datasource do
       Brando.Content.list_identifiers(
         [MyApp.Projects.Project, MyApp.Articles.Article],
         %{language: language, order: "asc schema, asc language, asc entry_id"})
-    end,
+    end
     ```
 
 
@@ -86,29 +117,29 @@ defmodule Brando.Datasource do
 
   In your schema:
 
-      use Brando.Datasource
-
       datasources do
-        list :all_posts_from_year, fn module, _language, %{"year" => year} ->
-          {:ok, Repo.all(from t in module, where: t.year == ^year)}
+        datasource :all_posts_from_year do
+          type :list
+          list fn module, _language, %{"year" => year} ->
+            {:ok, Repo.all(from t in module, where: t.year == ^year)}
+          end
         end
 
-        list :all_posts, fn _, _, _ -> Posts.list_posts() end
+        datasource :featured_entries do
+          type :selection
+          list fn _module, language, _vars ->
+            Brando.Content.list_identifiers(
+              [MyApp.Projects.Project, MyApp.Articles.Article],
+              %{language: language, order: "asc schema, asc language, asc entry_id"})
+          end
 
-        selection
-          :featured,
-            fn schema, language, _vars ->
-              Brando.Content.list_identifiers(schema, %{language: language})
-            end,
-            fn identifiers ->
-              entry_ids = Enum.map(identifiers, &(&1.entry_id))
-              results =
-                from t in Post,
-                  where: t.id in ^entry_ids,
-                  order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
-
-              {:ok, Repo.all(results)}
-            end
+          get fn identifiers ->
+            Brando.Content.get_entries_from_identifiers(
+              identifiers,
+              [:categories, :cover, :palette]
+            )
+          end
+        end
       end
 
   These data source points are now available through the block editor when you create a Datasource block.
@@ -124,10 +155,13 @@ defmodule Brando.Datasource do
 
   The `Area` has this datasource:
 
-      list :all_areas_with_grants, fn _module, _language, _vars ->
-        grantee_query = from(t in Areas.Grantee, where: t.status == :published, order_by: t.name)
-        opts = %{order: [{:asc, :name}], status: :published, preload: [{:grantees, grantee_query}]}
-        Areas.list_areas(opts)
+      datasource :all_areas_with_grants do
+        type :list
+        list fn _module, _language, _vars ->
+          grantee_query = from(t in Areas.Grantee, where: t.status == :published, order_by: t.name)
+          opts = %{order: [{:asc, :name}], status: :published, preload: [{:grantees, grantee_query}]}
+          Areas.list_areas(opts)
+        end
       end
 
   On a page we have a `ModuleBlock` with a datasource that grabs `:all_areas_with_grants`.
@@ -165,117 +199,34 @@ defmodule Brando.Datasource do
   @doc """
   List all registered data sources
   """
+  @deprecated "Datasources are imported through the blueprint now. Remove `use Brando.Datasource`"
   defmacro __using__(_) do
     quote do
-      import Ecto.Query
-      import unquote(__MODULE__)
-      Module.register_attribute(__MODULE__, :datasources_list, accumulate: true)
-      Module.register_attribute(__MODULE__, :datasources_single, accumulate: true)
-      Module.register_attribute(__MODULE__, :datasources_selection, accumulate: true)
-      @before_compile unquote(__MODULE__)
+      import Brando.Datasource, only: [list: 2, get: 1, selection: 3]
     end
   end
 
-  @doc false
-  defmacro __before_compile__(env) do
-    datasources_list = Module.get_attribute(env.module, :datasources_list)
-    datasources_single = Module.get_attribute(env.module, :datasources_single)
-    datasources_selection = Module.get_attribute(env.module, :datasources_selection)
-
-    [
-      compile(:list, datasources_list),
-      compile(:single, datasources_single),
-      compile(:selection, datasources_selection)
-    ]
+  def datasources(module) do
+    Spark.Dsl.Extension.get_entities(module, [:datasources])
   end
 
-  @doc false
-  def compile(:list, datasources_list) do
-    quote do
-      def __datasources__(:list) do
-        unquote(datasources_list)
-      end
-    end
+  def datasources(module, type) do
+    module
+    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Enum.filter(&(&1.type == type))
+    |> Enum.map(& &1.key)
   end
 
-  @doc false
-  def compile(:single, datasources_single) do
-    quote do
-      def __datasources__(:single) do
-        unquote(datasources_single)
-      end
-    end
+  def get_datasource(module, :*, key) do
+    module
+    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Enum.find(&(&1.key == key))
   end
 
-  @doc false
-  def compile(:selection, datasources_selection) do
-    quote do
-      def __datasources__(:selection) do
-        unquote(datasources_selection)
-      end
-    end
-  end
-
-  defmacro datasources(do: block) do
-    quote do
-      unquote(block)
-    end
-  end
-
-  defmacro list(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
-    raise "datasource :list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
-  end
-
-  defmacro list(key, fun) do
-    quote do
-      Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
-
-      def __datasource__(:list, unquote(key)) do
-        case unquote(fun) do
-          {:ok, []} -> {:error, :no_entries}
-          result -> result
-        end
-      end
-    end
-  end
-
-  defmacro single(key, fun) do
-    quote do
-      Module.put_attribute(__MODULE__, :datasources_single, unquote(key))
-
-      def __datasource__(:single, unquote(key)) do
-        case unquote(fun) do
-          {:ok, nil} -> {:error, :no_entries}
-          result -> result
-        end
-      end
-    end
-  end
-
-  defmacro selection(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
-    raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
-  end
-
-  defmacro selection(_, _, {_, _, [{_, _, [[_, _], _]}]}) do
-    raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
-  end
-
-  defmacro selection(key, list_fun, get_fun) do
-    quote do
-      Module.put_attribute(__MODULE__, :datasources_selection, unquote(key))
-
-      def __datasource__(:list_selection, unquote(key)) do
-        unquote(list_fun)
-      end
-
-      def __datasource__(:get_selection, unquote(key)) do
-        case unquote(get_fun) do
-          {:ok, []} -> {:error, :no_entries}
-          {:ok, nil} -> {:error, :no_entries}
-          result -> result
-        end
-      end
-    end
+  def get_datasource(module, type, key) do
+    module
+    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Enum.find(&(&1.type == type && &1.key == key))
   end
 
   @doc """
@@ -296,52 +247,48 @@ defmodule Brando.Datasource do
   def list_datasource_keys(module_binary) do
     module = Module.concat([module_binary])
 
-    list_keys = module.__datasources__(:list)
-    selection_keys = module.__datasources__(:selection)
-    single_keys = []
+    all_datasources = datasources(module)
 
-    {:ok, %{list: list_keys, single: single_keys, selection: selection_keys}}
+    splits =
+      Enum.reduce(all_datasources, %{}, fn ds, acc ->
+        Map.update(acc, ds.type, [ds.key], &[ds.key | &1])
+      end)
+
+    {:ok, splits}
   end
 
   @doc """
   Grab list of entries from database
   """
-  def get_list(module_binary, query, vars, language) do
+  def list_results(module_binary, key, vars, language) do
+    atom_key = (is_binary(key) && String.to_atom(key)) || key
     module = Module.concat([module_binary])
-    module.__datasource__(:list, String.to_atom(query)).(module_binary, language, vars)
-  end
-
-  @doc """
-  List available entries in selection from database
-  """
-  def list_selection(module_binary, query, language, vars) do
-    module = Module.concat([module_binary])
-
-    module.__datasource__(:list_selection, String.to_atom(query)).(
-      module_binary,
-      language,
-      vars
-    )
+    ds = get_datasource(module, :*, atom_key)
+    ds.list.(module_binary, language, vars)
   end
 
   @doc """
   Get selection by [ids] from database
   """
-  def get_selection(_module_binary, _query, []), do: {:ok, []}
-  def get_selection(_module_binary, _query, nil), do: {:ok, []}
+  def get_selection(_module_binary, _key, []), do: {:ok, []}
+  def get_selection(_module_binary, _key, nil), do: {:ok, []}
 
-  def get_selection(module_binary, query, ids) do
+  def get_selection(module_binary, key, ids) do
+    atom_key = (is_binary(key) && String.to_atom(key)) || key
     module = Module.concat([module_binary])
+    ds = get_datasource(module, :selection, atom_key)
     {:ok, identifiers} = Brando.Content.list_identifiers(ids)
-    module.__datasource__(:get_selection, String.to_atom(query)).(identifiers)
+    ds.get.(identifiers)
   end
 
   @doc """
   Grab single entry from database
   """
-  def get_single(module_binary, query, arg) do
+  def get_single(module_binary, key, identifier) do
+    atom_key = (is_binary(key) && String.to_atom(key)) || key
     module = Module.concat([module_binary])
-    module.__datasource__(:single, String.to_atom(query)).(module_binary, arg)
+    ds = get_datasource(module, :single, atom_key)
+    ds.get.(identifier)
   end
 
   @doc """
@@ -361,6 +308,36 @@ defmodule Brando.Datasource do
   @doc """
   Check if `schema` is a datasource
   """
-  def is_datasource({schema, _, _}), do: {:__datasource__, 2} in schema.__info__(:functions)
-  def is_datasource(schema), do: {:__datasource__, 2} in schema.__info__(:functions)
+  def is_datasource({schema, _, _}), do: {:__datasource__, 0} in schema.__info__(:functions)
+  def is_datasource(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
+
+  ## DEPRECATED——REMOVE in 0.55
+
+  @deprecated "list/2 outside of datasource/1 is deprecated. Wrap inside datasource/1"
+  defmacro list(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
+    raise "datasource :list callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+  end
+
+  @deprecated "list/2 outside of datasource/1 is deprecated. Wrap inside datasource/1"
+  defmacro list(_key, _fun) do
+    nil
+  end
+
+  @deprecated "single/2 outside of datasource/1 is deprecated. Wrap inside datasource/1"
+  defmacro single(_key, _fun) do
+    nil
+  end
+
+  defmacro selection(_, {_, _, [{_, _, [[_, _], _]}]}, _) do
+    raise "datasource :selection LIST callbacks with 2 arity is deprecated. use `fn module, language, vars -> ... end` instead"
+  end
+
+  defmacro selection(_, _, {_, _, [{_, _, [[_, _], _]}]}) do
+    raise "datasource :selection GET callbacks with 2 arity (module, ids) is deprecated. use `fn identifiers -> ... end` instead"
+  end
+
+  @deprecated "selection/3 outside of datasource/1 is deprecated. Wrap inside datasource/1"
+  defmacro selection(_key, _list_fun, _get_fun) do
+    nil
+  end
 end

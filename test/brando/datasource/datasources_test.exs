@@ -42,34 +42,62 @@ defmodule Brando.DatasourcesTest do
   }
 
   defmodule TestDatasource do
-    use Brando.Datasource
+    use Brando.Blueprint,
+      application: "BrandoIntegration",
+      domain: "Tests",
+      schema: "TestDatasource",
+      singular: "test_datasource",
+      plural: "test_datasources",
+      gettext_module: Brando.Gettext
 
     datasources do
-      list(:all, fn module, _, _ ->
-        {:ok, module}
-      end)
+      datasource :all do
+        type :list
 
-      list(:all_of_them, fn _, _, _ ->
-        {:ok, [%{id: 1, name: "1"}, %{id: 2, name: "2"}, %{id: 3, name: "3"}]}
-      end)
+        list(fn module, _, _ ->
+          {:ok, module}
+        end)
+      end
 
-      list(:all_more, fn _, lang, vars ->
-        {:ok, vars, lang}
-      end)
+      datasource :all_of_them do
+        type :list
 
-      single(:single, fn module, _ ->
-        {:ok, module}
-      end)
+        list(fn _, _, _ ->
+          {:ok, [%{id: 1, name: "1"}, %{id: 2, name: "2"}, %{id: 3, name: "3"}]}
+        end)
+      end
 
-      selection(
-        :featured,
-        fn _, _, _ ->
+      datasource :all_more do
+        type :list
+
+        list(fn _, lang, vars ->
+          {:ok, vars, lang}
+        end)
+      end
+
+      datasource :single do
+        type :single
+
+        list(fn module, _, _ ->
+          {:ok, module}
+        end)
+
+        get(fn id ->
+          {:ok, id}
+        end)
+      end
+
+      datasource :featured do
+        type :selection
+
+        list(fn _, _, _ ->
           Brando.Content.list_identifiers(Brando.Pages.Page, %{
             language: "en",
             order: "asc language, asc entry_id"
           })
-        end,
-        fn identifiers ->
+        end)
+
+        get(fn identifiers ->
           entry_ids = Enum.map(identifiers, & &1.entry_id)
 
           results =
@@ -78,15 +106,15 @@ defmodule Brando.DatasourcesTest do
               order_by: fragment("array_position(?, ?)", ^entry_ids, t.id)
 
           {:ok, Brando.Repo.all(results)}
-        end
-      )
+        end)
+      end
     end
   end
 
   alias Brando.DatasourcesTest.TestDatasource
 
   test "__datasources__" do
-    assert TestDatasource.__datasources__(:list) == [:all_more, :all_of_them, :all]
+    assert Brando.Datasource.datasources(TestDatasource, :list) == [:all, :all_of_them, :all_more]
   end
 
   test "list datasources" do
@@ -95,18 +123,21 @@ defmodule Brando.DatasourcesTest do
 
   test "list datasource keys" do
     assert Brando.Datasource.list_datasource_keys(TestDatasource) ==
-             {:ok, %{list: [:all_more, :all_of_them, :all], single: [], selection: [:featured]}}
+             {:ok,
+              %{list: [:all_more, :all_of_them, :all], selection: [:featured], single: [:single]}}
   end
 
   test "get_list" do
-    assert Brando.Datasource.get_list(TestDatasource, "all", nil, "en") == {:ok, TestDatasource}
+    assert Brando.Datasource.list_results(TestDatasource, "all", nil, "en") ==
+             {:ok, TestDatasource}
 
-    assert Brando.Datasource.get_list(TestDatasource, "all_more", "argument", "en") ==
+    assert Brando.Datasource.list_results(TestDatasource, "all_more", "argument", "en") ==
              {:ok, "argument", "en"}
   end
 
   test "get_single" do
-    assert Brando.Datasource.get_single(TestDatasource, "single", nil) == {:ok, TestDatasource}
+    assert Brando.Datasource.get_single(TestDatasource, "single", %Brando.Content.Identifier{}) ==
+             {:ok, %Brando.Content.Identifier{}}
   end
 
   test "list_selection" do
@@ -117,7 +148,7 @@ defmodule Brando.DatasourcesTest do
     {:ok, p3} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 3"), usr)
 
     {:ok, identifiers} =
-      Brando.Datasource.list_selection(TestDatasource, "featured", nil, nil)
+      Brando.Datasource.list_results(TestDatasource, "featured", nil, nil)
 
     assert Enum.map(identifiers, & &1.entry_id) == [p1.id, p2.id, p3.id]
   end

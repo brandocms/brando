@@ -1275,7 +1275,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     {:ok, available_identifiers} =
-      Brando.Datasource.list_selection(
+      Brando.Datasource.list_results(
         module,
         query,
         Map.get(entry, :language),

@@ -313,7 +313,7 @@ defmodule Brando.Villain.Parser do
           |> map_vars()
           |> Map.merge(%{"request" => request})
 
-        {:ok, entries} = Datasource.get_list(module, query, mapped_vars, language)
+        {:ok, entries} = Datasource.list_results(module, query, mapped_vars, language)
 
         Context.assign(context, :entries, entries || [])
       end

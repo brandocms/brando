@@ -194,24 +194,35 @@ defmodule BrandoIntegration.TestCase do
 end
 
 defmodule BrandoIntegration.ModuleWithDatasource do
-  use Brando.Datasource
-  use Ecto.Schema
+  use Brando.Blueprint,
+    application: "BrandoIntegration",
+    domain: "Tests",
+    schema: "ModuleWithDatasource",
+    singular: "module_with_datasource",
+    plural: "modules_with_datasource",
+    gettext_module: Brando.Gettext
 
-  schema "zapp" do
-    field :title, :string
+  attributes do
+    attribute :title, :string
   end
 
   datasources do
-    list :all, fn _, _, _ -> {:ok, [1, 2, 3]} end
+    datasource :all do
+      type :list
+      list(fn _, _, _ -> {:ok, [1, 2, 3]} end)
+    end
 
-    selection :featured,
-              fn _schema, _language, _vars ->
-                {:ok, [%{id: 1, label: "label 1"}, %{id: 2, label: "label 2"}]}
-              end,
-              fn _identifiers ->
-                {:ok,
-                 [%{id: 1, label: "label 1", more: true}, %{id: 2, label: "label 2", more: true}]}
-              end
+    datasource :featured do
+      type :selection
+
+      list(fn _schema, _language, _vars ->
+        {:ok, [%{id: 1, label: "label 1"}, %{id: 2, label: "label 2"}]}
+      end)
+
+      get(fn _identifiers ->
+        {:ok, [%{id: 1, label: "label 1", more: true}, %{id: 2, label: "label 2", more: true}]}
+      end)
+    end
   end
 end
 

@@ -8,7 +8,8 @@ defmodule Brando.Blueprint.Dsl do
         Brando.Blueprint.JSONLD.Dsl,
         Brando.Blueprint.Meta.Dsl,
         Brando.Blueprint.Forms.Dsl,
-        Brando.Blueprint.Listings.Dsl
+        Brando.Blueprint.Listings.Dsl,
+        Brando.Blueprint.Datasources.Dsl
       ]
     ],
     opts_to_document: []
@@ -76,6 +77,14 @@ defmodule Brando.Blueprint.Dsl do
       @required_assets Spark.Dsl.Extension.get_persisted(__MODULE__, :required_assets, [])
       @optional_assets Spark.Dsl.Extension.get_persisted(__MODULE__, :optional_assets, [])
       @assets Spark.Dsl.Extension.get_entities(__MODULE__, [:assets])
+
+      @datasources Spark.Dsl.Extension.get_entities(__MODULE__, [:datasources])
+
+      if @datasources != [] do
+        def __datasource__ do
+          true
+        end
+      end
 
       @absolute_url_preloads Brando.Blueprint.Dsl.extract_absolute_url_preloads(__MODULE__)
       def __absolute_url_preloads__ do

@@ -19,6 +19,9 @@ defmodule Mix.Tasks.Brando.Migrate54 do
       modules
       |> Enum.reduce(igniter, fn module, igniter ->
         igniter
+        |> rewrite_list_datasources(module)
+        |> rewrite_selection_datasources(module)
+        |> remove_use_datasource(module)
         |> rewrite_fieldsets(module)
         |> rewrite_inputs_for(module)
         |> rewrite_forms(module)
@@ -32,6 +35,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
         |> rewrite_meta_field(module)
         |> rewrite_villain(module)
         |> add_villain_relations(module)
+        |> remove_redundant_gettext(module)
       end)
 
     igniter
@@ -40,6 +44,80 @@ defmodule Mix.Tasks.Brando.Migrate54 do
     |> Igniter.add_task("igniter.update_gettext")
     |> add_notices()
     |> add_warnings()
+  end
+
+  defp remove_use_datasource(igniter, rewriting_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &use_datasource?(&1))}
+    end)
+  end
+
+  defp remove_redundant_gettext(igniter, rewriting_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &use_gettext?(&1))}
+    end)
+  end
+
+  defp rewrite_list_datasources(igniter, rewriting_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      Igniter.Code.Common.update_all_matches(
+        zipper,
+        &list_datasource?(&1),
+        fn zipper ->
+          {:ok, key_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 0)
+          key_zipper_node = Sourceror.Zipper.node(key_zipper)
+          [key] = Sourceror.get_args(key_zipper_node)
+
+          {:ok, list_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 1)
+          list_fn_zipper_node = Sourceror.Zipper.node(list_fn_zipper)
+
+          new_datasource =
+            quote do
+              datasource unquote(key) do
+                type :list
+                list unquote(list_fn_zipper_node)
+              end
+            end
+
+          updated_zipper = Igniter.Code.Common.replace_code(zipper, new_datasource)
+
+          {:ok, updated_zipper}
+        end
+      )
+    end)
+  end
+
+  defp rewrite_selection_datasources(igniter, rewriting_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      Igniter.Code.Common.update_all_matches(
+        zipper,
+        &selection_datasource?(&1),
+        fn zipper ->
+          {:ok, key_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 0)
+          key_zipper_node = Sourceror.Zipper.node(key_zipper)
+          [key] = Sourceror.get_args(key_zipper_node)
+
+          {:ok, list_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 1)
+          list_fn_zipper_node = Sourceror.Zipper.node(list_fn_zipper)
+
+          {:ok, get_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 2)
+          get_fn_zipper_node = Sourceror.Zipper.node(get_fn_zipper)
+
+          new_datasource =
+            quote do
+              datasource unquote(key) do
+                type :selection
+                list unquote(list_fn_zipper_node)
+                get unquote(get_fn_zipper_node)
+              end
+            end
+
+          updated_zipper = Igniter.Code.Common.replace_code(zipper, new_datasource)
+
+          {:ok, updated_zipper}
+        end
+      )
+    end)
   end
 
   defp copy_gettext_script(igniter) do
@@ -88,7 +166,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
                   when is_list(keyword_list_blocks) ->
                     # Transform each keyword list into a `:filter` call
                     new_filter_calls =
-                      Enum.map(keyword_list_blocks, fn keyword_list_block ->
+                      keyword_list_blocks
+                      |> Enum.map(fn keyword_list_block ->
                         {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
 
                         # Reconstruct the keyword list
@@ -100,9 +179,8 @@ defmodule Mix.Tasks.Brando.Migrate54 do
                               {key_ast, value_ast}
                           end)
 
-                        # Create a new `:filter` function call
-                        {:filter, meta_filters, [keywords]}
-                        |> Sourceror.to_string()
+                        # Create a new `:filter` function call1
+                        Sourceror.to_string({:filter, meta_filters, [keywords]})
                       end)
                       |> Enum.join("\n")
 
@@ -595,6 +673,24 @@ defmodule Mix.Tasks.Brando.Migrate54 do
   defp villain_attribute?(zipper) do
     Igniter.Code.Function.function_call?(zipper, :attribute, 2) &&
       Igniter.Code.Function.argument_equals?(zipper, 1, :villain)
+  end
+
+  defp use_datasource?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :use) &&
+      Igniter.Code.Function.argument_equals?(zipper, 0, Brando.Datasource)
+  end
+
+  defp use_gettext?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :use) &&
+      Igniter.Code.Function.argument_equals?(zipper, 0, Gettext)
+  end
+
+  defp list_datasource?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :list, 2)
+  end
+
+  defp selection_datasource?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :selection, 3)
   end
 
   defp add_notices(igniter) do

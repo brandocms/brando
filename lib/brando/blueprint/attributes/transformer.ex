@@ -79,5 +79,5 @@ defmodule Brando.Blueprint.Attributes.Transformer do
     Transformer.add_entity(dsl_state, [:attributes], new_attr)
   end
 
-  defp maybe_add_marked_as_deleted_attribute(dsl_state, false), do: dsl_state
+  defp maybe_add_marked_as_deleted_attribute(dsl_state, _), do: dsl_state
 end
