@@ -14,10 +14,16 @@ defmodule Brando.Blueprint.Assets.Transformer do
 
   @impl true
   def transform(dsl_state) do
+    entities = Transformer.get_entities(dsl_state, [:assets])
+
+    # persist each asset
+    dsl_state =
+      Enum.reduce(entities, dsl_state, fn entity, updated_dsl_state ->
+        Transformer.persist(updated_dsl_state, entity.name, entity)
+      end)
+
     {required_assets, optional_assets} =
-      dsl_state
-      |> Transformer.get_entities([:assets])
-      |> Enum.reduce({[], []}, fn
+      Enum.reduce(entities, {[], []}, fn
         %{name: name, opts: opts}, {required_assets, optional_assets} ->
           if Map.get(opts, :required) do
             {[name | required_assets], optional_assets}

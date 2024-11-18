@@ -51,7 +51,8 @@ defmodule Brando.Blueprint.Identifier do
           (is_nil(language) && nil) || (is_binary(language) && String.to_existing_atom(language)) ||
             language
 
-        first_image_asset = Enum.find(__MODULE__.__assets__(), &(&1.type == :image))
+        first_image_asset =
+          Enum.find(Brando.Blueprint.Assets.__assets__(__MODULE__), &(&1.type == :image))
 
         cover =
           if skip_cover,

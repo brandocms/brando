@@ -94,7 +94,7 @@ defmodule Brando.Images.Processing do
     {:ok, images} =
       Brando.Images.list_images(%{filter: %{config_target: {"image", schema, field_name}}})
 
-    %{cfg: cfg} = schema.__asset_opts__(field_name)
+    %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field_name)
 
     operations =
       Enum.flat_map(images, fn image ->
@@ -117,7 +117,7 @@ defmodule Brando.Images.Processing do
         images
         |> Enum.find(&(&1.id == image_id))
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
-        |> Brando.Repo.update!
+        |> Brando.Repo.update!()
       end
 
     {:ok, Enum.map(updated_images, & &1.id)}
@@ -148,7 +148,7 @@ defmodule Brando.Images.Processing do
         images
         |> Enum.find(&(&1.id == image_id))
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
-        |> Brando.Repo.update!
+        |> Brando.Repo.update!()
       end
 
     {:ok, Enum.map(updated_images, & &1.id)}

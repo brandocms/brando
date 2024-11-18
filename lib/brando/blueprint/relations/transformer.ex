@@ -14,7 +14,14 @@ defmodule Brando.Blueprint.Relations.Transformer do
 
   @impl true
   def transform(dsl_state) do
+    dsl_state = set_entries_join_module(dsl_state)
     relations = Transformer.get_entities(dsl_state, [:relations])
+
+    # persist each relation
+    dsl_state =
+      Enum.reduce(relations, dsl_state, fn relation, updated_dsl_state ->
+        Transformer.persist(updated_dsl_state, relation.name, relation)
+      end)
 
     {required_relations, optional_relations} =
       Enum.reduce(relations, {[], []}, fn
@@ -27,7 +34,6 @@ defmodule Brando.Blueprint.Relations.Transformer do
       end)
 
     dsl_state
-    |> set_entries_join_module()
     |> Transformer.persist(:required_relations, required_relations)
     |> Transformer.persist(:optional_relations, optional_relations)
     |> then(&{:ok, &1})

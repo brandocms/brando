@@ -17,7 +17,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
     blueprints = Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page, Brando.Users.User, Brando.Sites.Identity, Brando.Sites.SEO]
 
     for blueprint <- blueprints,
-        %{type: :image, name: field_name} <- blueprint.__assets__() do
+        %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
 
       image_field_query =
         from t in blueprint.__schema__(:source),

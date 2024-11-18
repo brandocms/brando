@@ -669,7 +669,7 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
+    {:ok, %{cfg: cfg}} = {:ok, Brando.Blueprint.Assets.__asset_opts__(mod, field)}
 
     if !Map.get(cfg, :srcset) do
       raise ArgumentError,
@@ -723,7 +723,7 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
+    {:ok, %{cfg: cfg}} = {:ok, Brando.Blueprint.Assets.__asset_opts__(mod, field)}
 
     if !cfg.srcset do
       raise ArgumentError,

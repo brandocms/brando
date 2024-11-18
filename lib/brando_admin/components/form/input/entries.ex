@@ -29,7 +29,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def update(assigns, socket) do
     field = assigns.field
     schema = field.form.source.data.__struct__
-    %{opts: %{module: join_schema} = field_opts} = schema.__relation__(field.field)
+
+    %{opts: %{module: join_schema} = field_opts} =
+      Brando.Blueprint.Relations.__relation__(schema, field.field)
 
     wanted_schemas = Keyword.get(assigns.opts, :sources)
 

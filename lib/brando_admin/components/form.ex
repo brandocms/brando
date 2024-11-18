@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
     changeset = socket.assigns.form.source
     entries = get_field(changeset, relation_key)
-    assoc_type = schema.__relation__(relation_key).type
+    assoc_type = Brando.Blueprint.Relations.__relation__(schema, relation_key).type
 
     case Enum.find_index(entries, &(Map.get(&1, :"#{asset_key}_id") == image_id)) do
       nil ->
@@ -486,7 +486,6 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(assigns)
      |> assign_new(:entry_id, fn -> nil end)
-     |> assign_new(:blueprint, fn -> assigns.schema.__blueprint__() end)
      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
      |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
      |> assign_new(:form_blueprint, fn ->
@@ -1237,7 +1236,7 @@ defmodule BrandoAdmin.Components.Form do
     assigns =
       assigns
       |> assign(:indexed_fields, Enum.with_index(assigns.tab.fields))
-      |> assign(:relations, assigns.schema.__relations__())
+      |> assign(:relations, Brando.Blueprint.Relations.__relations__(assigns.schema))
 
     ~H"""
     <%= for {fieldset, idx} <- @indexed_fields do %>
@@ -1635,9 +1634,9 @@ defmodule BrandoAdmin.Components.Form do
     socket_with_transformers =
       Enum.reduce(transformers, socket_with_file_uploads, fn
         {relation_key, field, default}, updated_socket ->
-          relation = schema.__relation__(relation_key)
+          relation = Brando.Blueprint.Relations.__relation__(schema, relation_key)
           relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
-          img_field = relation_module.__asset__(field)
+          img_field = Brando.Blueprint.Assets.__asset__(relation_module, field)
           max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
           key = :"#{relation_key}|#{field}"
           transformer_key = :"#{relation_key}|#{field}|transformer"
@@ -2573,7 +2572,7 @@ defmodule BrandoAdmin.Components.Form do
 
       relation_key = String.to_existing_atom("#{key}_id")
 
-      %{cfg: cfg} = edit_image.schema.__asset_opts__(key)
+      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(edit_image.schema, key)
       config_target = "image:#{inspect(edit_image.schema)}:#{key}"
 
       case consume_uploaded_entry(
@@ -2630,7 +2629,7 @@ defmodule BrandoAdmin.Components.Form do
     socket = assign(socket, :processing, upload_entry.progress)
 
     if upload_entry.done? do
-      %{cfg: cfg} = schema.__asset_opts__(key)
+      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "gallery:#{inspect(schema)}:#{key}"
 
       image =
@@ -2745,9 +2744,18 @@ defmodule BrandoAdmin.Components.Form do
       [relation_key, asset_key, _] = String.split(to_string(key), "|")
       original_key = key
       key = Enum.join([relation_key, asset_key], "|") |> String.to_existing_atom()
-      relation = schema.__relation__(String.to_existing_atom(relation_key))
+
+      relation =
+        Brando.Blueprint.Relations.__relation__(schema, String.to_existing_atom(relation_key))
+
       relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
-      %{cfg: cfg} = relation_module.__asset_opts__(String.to_existing_atom(asset_key))
+
+      %{cfg: cfg} =
+        Brando.Blueprint.Assets.__asset_opts__(
+          relation_module,
+          String.to_existing_atom(asset_key)
+        )
+
       config_target = "image:#{inspect(relation_module)}:#{asset_key}"
 
       case consume_uploaded_entry(
@@ -2865,7 +2873,7 @@ defmodule BrandoAdmin.Components.Form do
     if upload_entry.done? do
       socket = assign(socket, :processing, false)
       relation_key = String.to_existing_atom("#{key}_id")
-      %{cfg: cfg} = schema.__asset_opts__(key)
+      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "file:#{inspect(schema)}:#{key}"
 
       case consume_uploaded_entry(

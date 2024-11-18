@@ -1197,9 +1197,10 @@ defmodule Brando.Utils do
         module
 
       [parent_singular | _] ->
-        parent_singular
-        |> String.to_existing_atom()
-        |> module.__relation__()
+        parent_singular_atom = String.to_existing_atom(parent_singular)
+
+        module
+        |> Brando.Blueprint.Relations.__relation__(parent_singular_atom)
         |> get_in([Access.key(:opts), :module])
     end
   end

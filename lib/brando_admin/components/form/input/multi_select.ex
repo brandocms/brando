@@ -285,9 +285,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       module = field.form.data.__struct__
       relation_type = socket.assigns.relation_type
 
-      if relation_type in [:has_many, {:subform, :has_many}] and
-           {:__relations__, 0} in module.__info__(:functions) do
-        %{opts: %{module: rel_module}} = module.__relation__(field.field)
+      if relation_type in [:has_many, {:subform, :has_many}] do
+        %{opts: %{module: rel_module}} =
+          Brando.Blueprint.Relations.__relation__(module, field.field)
 
         # the rel module must have `@allow_mark_as_deleted true`
         if not rel_module.__allow_mark_as_deleted__() do
@@ -301,9 +301,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         end
 
         fields =
-          Enum.map(rel_module.__relations__(), &:"#{&1.name}_id") ++
-            Enum.map(rel_module.__assets__(), &:"#{&1.name}_id") ++
-            Enum.map(rel_module.__attributes__(), & &1.name)
+          Enum.map(Brando.Blueprint.Relations.__relations__(rel_module), &:"#{&1.name}_id") ++
+            Enum.map(Brando.Blueprint.Assets.__assets__(rel_module), &:"#{&1.name}_id") ++
+            Enum.map(Brando.Blueprint.Attributes.__attributes__(rel_module), & &1.name)
 
         Enum.reject(fields, &(&1 == :sequence))
       else
@@ -319,7 +319,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     sequenced? =
       if relation_type in [:has_many, {:subform, :has_many}] and
            {:__relations__, 0} in module.__info__(:functions) do
-        %{opts: %{module: rel_module} = opts} = module.__relation__(field.field)
+        %{opts: %{module: rel_module} = opts} =
+          Brando.Blueprint.Relations.__relation__(module, field.field)
 
         sort_param = Map.get(opts, :sort_param)
         drop_param = Map.get(opts, :drop_param)
@@ -913,7 +914,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     sequenced? = socket.assigns.sequenced?
     selected_options_structs = socket.assigns.selected_options_structs
 
-    %{opts: %{module: rel_module}} = module.__relation__(field.field)
+    %{opts: %{module: rel_module}} = Brando.Blueprint.Relations.__relation__(module, field.field)
 
     relation_type = socket.assigns.relation_type
     relation_fk = socket.assigns.relation_key

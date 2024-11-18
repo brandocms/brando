@@ -126,9 +126,9 @@ defmodule Mix.Brando do
   @doc """
   Parses the attrs as received by generators.
   """
-  def attrs(blueprint) do
+  def attrs(attributes, relations) do
     attrs =
-      Enum.map(blueprint.attributes, fn
+      Enum.map(attributes, fn
         %{name: name, type: :slug, opts: %{from: target}} ->
           validate_attr!({name, {:slug, target}})
 
@@ -137,7 +137,7 @@ defmodule Mix.Brando do
       end)
 
     rels =
-      blueprint.relations
+      relations
       |> Enum.filter(&(&1.type == :belongs_to))
       |> Enum.map(fn %{name: name, opts: opts} ->
         target_module = opts.module

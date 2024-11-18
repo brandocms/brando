@@ -6,7 +6,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
     blueprints = Brando.Blueprint.list_blueprints()
 
     for blueprint <- blueprints,
-        %{type: :file, name: field_name} <- blueprint.__assets__() do
+        %{type: :file, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
       # Lookup if we have the old format `field_name` in the fields
       %{columns: existing_columns} =
         Ecto.Adapters.SQL.query!(

@@ -60,7 +60,7 @@ defmodule Brando.Videos do
   def create_video(params, user) do
     %Video{}
     |> Video.changeset(params, user)
-    |> Brando.Repo.insert
+    |> Brando.Repo.insert()
   end
 
   @doc """
@@ -93,9 +93,10 @@ defmodule Brando.Videos do
         [type, schema, field_name] when type in ["video"] ->
           schema_module = Module.concat([schema])
 
-          field_name
-          |> String.to_atom()
-          |> schema_module.__asset_opts__()
+          field_name_atom = String.to_atom(field_name)
+
+          schema_module
+          |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
           |> Map.get(:cfg)
 
         ["default"] ->

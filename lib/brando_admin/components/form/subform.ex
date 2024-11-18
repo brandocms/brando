@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         #   - has a :sequenced trait
         parent_schema = assigns.field.form.data.__struct__
 
-        case parent_schema.__relation__(assigns.subform.name) do
+        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
           %Brando.Blueprint.Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
             rel_module.has_trait(Brando.Trait.Sequenced)
 
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign_new(:embeds?, fn ->
         parent_schema = assigns.field.form.data.__struct__
 
-        case parent_schema.__relation__(assigns.subform.name) do
+        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
           %Brando.Blueprint.Relations.Relation{type: :embeds_many} -> true
           _ -> false
         end
@@ -519,7 +519,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     field_name = socket.assigns.subform.name
     changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
-    %{type: rel_type} = module.__relation__(field_name)
+    %{type: rel_type} = Brando.Blueprint.Relations.__relation__(module, field_name)
     form_id = "#{module.__naming__().singular}_form"
 
     # TODO: change to Ecto.Changeset.get_assoc(changeset, field_name)

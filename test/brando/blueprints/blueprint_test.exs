@@ -47,7 +47,7 @@ defmodule Brando.Blueprint.BlueprintTest do
   end
 
   test "attributes" do
-    attrs = Brando.BlueprintTest.Project.__attributes__()
+    attrs = Brando.Blueprint.Attributes.__attributes__(Brando.BlueprintTest.Project)
 
     assert attrs == [
              %Brando.Blueprint.Attributes.Attribute{
@@ -90,12 +90,14 @@ defmodule Brando.Blueprint.BlueprintTest do
   end
 
   test "attribute_opts" do
-    attr_opts = Brando.BlueprintTest.Project.__attribute_opts__(:slug)
+    attr_opts =
+      Brando.Blueprint.Attributes.__attribute_opts__(Brando.BlueprintTest.Project, :slug)
+
     assert attr_opts == %{required: true}
   end
 
   test "assets" do
-    assets = Brando.BlueprintTest.Project.__assets__()
+    assets = Brando.Blueprint.Assets.__assets__(Brando.BlueprintTest.Project)
 
     assert assets == [
              %Brando.Blueprint.Assets.Asset{
@@ -184,7 +186,7 @@ defmodule Brando.Blueprint.BlueprintTest do
   end
 
   test "asset_opts" do
-    %{cfg: cfg} = Brando.BlueprintTest.Project.__asset_opts__(:cover)
+    %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(Brando.BlueprintTest.Project, :cover)
 
     assert cfg == %Brando.Type.ImageConfig{
              allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
@@ -220,7 +222,7 @@ defmodule Brando.Blueprint.BlueprintTest do
   end
 
   test "relations" do
-    relations = Brando.BlueprintTest.Project.__relations__()
+    relations = Brando.Blueprint.Relations.__relations__(Brando.BlueprintTest.Project)
 
     assert relations == [
              %Brando.Blueprint.Relations.Relation{

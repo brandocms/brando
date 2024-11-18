@@ -35,7 +35,6 @@ defmodule Mix.Tasks.Brando.Migrate54 do
         |> rewrite_meta_field(module)
         |> rewrite_villain(module)
         |> add_villain_relations(module)
-        |> remove_redundant_gettext(module)
       end)
 
     igniter
@@ -49,12 +48,6 @@ defmodule Mix.Tasks.Brando.Migrate54 do
   defp remove_use_datasource(igniter, rewriting_module) do
     Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
       {:ok, Igniter.Code.Common.remove_all_matches(zipper, &use_datasource?(&1))}
-    end)
-  end
-
-  defp remove_redundant_gettext(igniter, rewriting_module) do
-    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
-      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &use_gettext?(&1))}
     end)
   end
 
@@ -678,11 +671,6 @@ defmodule Mix.Tasks.Brando.Migrate54 do
   defp use_datasource?(zipper) do
     Igniter.Code.Function.function_call?(zipper, :use) &&
       Igniter.Code.Function.argument_equals?(zipper, 0, Brando.Datasource)
-  end
-
-  defp use_gettext?(zipper) do
-    Igniter.Code.Function.function_call?(zipper, :use) &&
-      Igniter.Code.Function.argument_equals?(zipper, 0, Gettext)
   end
 
   defp list_datasource?(zipper) do

@@ -5,7 +5,7 @@ defmodule Brando.Repo.Migrations.RemoveLegacyEntriesFields do
     blueprints = Brando.Blueprint.list_blueprints()
 
     for blueprint <- blueprints,
-        %{type: :entries, name: field_name} <- blueprint.__relations__() do
+        %{type: :entries, name: field_name} <- Brando.Blueprint.Relations.__relations__(blueprint) do
 
       table_name = blueprint.__schema__(:source)
       alter table(table_name) do

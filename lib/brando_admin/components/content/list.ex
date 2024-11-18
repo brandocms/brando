@@ -200,7 +200,9 @@ defmodule BrandoAdmin.Components.Content.List do
       ) do
     case String.split(sortable_id, "|") do
       ["child_listing", _parent_entry_id, child_field] ->
-        relation = schema.__relation__(String.to_existing_atom(child_field))
+        relation =
+          Brando.Blueprint.Relations.__relation__(schema, String.to_existing_atom(child_field))
+
         Sequenced.sequence(relation.opts.module, params)
         send(self(), {:toast, gettext("Sequence updated")})
         {:noreply, assign_entries(socket, socket.assigns)}
@@ -429,7 +431,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp preload_assets(list_opts, schema) do
     preloads =
-      schema.__assets__()
+      Brando.Blueprint.Assets.__assets__(schema)
       |> Enum.filter(&(&1.type == :image))
       |> Enum.map(& &1.name)
 

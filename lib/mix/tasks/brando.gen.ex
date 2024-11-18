@@ -34,8 +34,9 @@ defmodule Mix.Tasks.Brando.Gen do
 
   @spec build_from_blueprint(module) :: no_return
   defp build_from_blueprint(blueprint_module) do
-    blueprint = blueprint_module.__blueprint__()
-    domain = blueprint.naming.domain
+    naming = blueprint_module.__naming__()
+    modules = blueprint_module.__modules__()
+    domain = naming.domain
 
     snake_domain =
       domain
@@ -46,11 +47,16 @@ defmodule Mix.Tasks.Brando.Gen do
     domain_filename = "lib/#{otp_app()}/#{snake_domain}.ex"
     domain_exists? = File.exists?(domain_filename)
 
-    singular = blueprint.naming.singular |> String.capitalize()
-    plural = blueprint.naming.plural
+    singular = naming.singular |> String.capitalize()
+    plural = naming.plural
 
     # build attrs
-    attrs = Mix.Brando.attrs(blueprint)
+    attrs =
+      Mix.Brando.attrs(
+        Brando.Blueprint.Attributes.__attributes__(blueprint_module),
+        Brando.Blueprint.Relations.__relations__(blueprint_module)
+      )
+
     main_field = attrs |> List.first() |> elem(0)
 
     sequenced? = blueprint_module.has_trait(Brando.Trait.Sequenced)
@@ -151,7 +157,7 @@ defmodule Mix.Tasks.Brando.Gen do
           module: module,
           params: params,
           snake_domain: snake_domain,
-          schema_module: blueprint.modules.schema,
+          schema_module: modules.schema,
           domain: domain,
           main_field: main_field,
           types: types,

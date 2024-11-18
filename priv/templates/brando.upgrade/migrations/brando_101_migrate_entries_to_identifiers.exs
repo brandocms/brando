@@ -6,7 +6,7 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
     blueprints = Brando.Blueprint.list_blueprints()
 
     for blueprint <- blueprints,
-        %{type: :entries, name: field_name} <- blueprint.__relations__() do
+        %{type: :entries, name: field_name} <- Brando.Blueprint.Relations.__relations__(blueprint) do
       # create a join table
       table_name = blueprint.__schema__(:source)
       join_source = "#{table_name}_#{field_name}_identifiers"

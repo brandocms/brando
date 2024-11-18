@@ -60,7 +60,7 @@ defmodule Brando.Files do
   def create_file(params, user) do
     %File{}
     |> File.changeset(params, user)
-    |> Brando.Repo.insert
+    |> Brando.Repo.insert()
   end
 
   @doc """
@@ -105,10 +105,10 @@ defmodule Brando.Files do
 
         [type, schema, field_name] when type in ["file"] ->
           schema_module = Module.concat([schema])
+          field_name_atom = String.to_atom(field_name)
 
-          field_name
-          |> String.to_atom()
-          |> schema_module.__asset_opts__()
+          schema_module
+          |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
           |> Map.get(:cfg)
 
         ["default"] ->

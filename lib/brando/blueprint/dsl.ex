@@ -62,9 +62,9 @@ defmodule Brando.Blueprint.Dsl do
     end
   end
 
+  @impl Spark.Dsl
   def handle_before_compile(_opts) do
-    quote location: :keep,
-          unquote: false do
+    quote location: :keep, unquote: false do
       alias Brando.Exception.BlueprintError
 
       @required_attrs Spark.Dsl.Extension.get_persisted(__MODULE__, :required_attrs, [])
@@ -115,71 +115,13 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       @all_attributes @attrs
-      def __attributes__ do
-        @all_attributes
-      end
-
-      for attr <- @attrs do
-        def __attribute__(unquote(attr.name)) do
-          unquote(Macro.escape(attr))
-        end
-      end
-
-      unless Enum.empty?(@attrs) do
-        def __attribute_opts__(name) do
-          Map.get(__attribute__(name), :opts, [])
-        end
-      end
-
       @all_relations @relations
-      def __relations__ do
-        @all_relations
-      end
-
-      for rel <- @all_relations do
-        def __relation__(unquote(rel.name)) do
-          unquote(Macro.escape(rel))
-        end
-      end
-
-      def __relation__(unknown_relation) do
-        raise BlueprintError,
-          message: """
-          Unknown relation: #{inspect(unknown_relation)} in schema #{inspect(__MODULE__)}
-
-          Check that you are not referencing a relation that does not exists,
-          usually this is due to a typo when declaring your forms.
-
-          """
-      end
-
-      unless Enum.empty?(@all_relations) do
-        def __relation_opts__(name) do
-          Map.get(__relation__(name), :opts, [])
-        end
-      end
-
       @all_assets @assets
-      def __assets__ do
-        @all_assets
-      end
-
-      for asset <- @all_assets do
-        def __asset__(unquote(asset.name)) do
-          unquote(Macro.escape(asset))
-        end
-      end
-
-      unless Enum.empty?(@all_assets) do
-        def __asset_opts__(name) do
-          Map.get(__asset__(name), :opts, [])
-        end
-      end
 
       @all_traits Enum.reverse(@traits)
       def __traits__, do: @all_traits
 
-      for {trait, trait_opts} <- @all_traits do
+      for {trait, _trait_opts} <- @all_traits do
         def has_trait(unquote(trait)), do: true
       end
 
@@ -428,19 +370,6 @@ defmodule Brando.Blueprint.Dsl do
           @optional_attrs,
           opts
         )
-      end
-
-      def __blueprint__ do
-        %Brando.Blueprint{
-          naming: __naming__(),
-          modules: __modules__(),
-          attributes: __attributes__(),
-          relations: __relations__(),
-          assets: __assets__(),
-          listings: __listings__(),
-          form: __form__(),
-          traits: __traits__()
-        }
       end
 
       for {trait, trait_opts} <- @all_traits do

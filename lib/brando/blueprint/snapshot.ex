@@ -50,13 +50,16 @@ defmodule Brando.Blueprint.Snapshot do
 
   @spec build_snapshot(module) :: snapshot
   def build_snapshot(module) do
-    blueprint = module.__blueprint__()
+    traits = module.__traits__()
+    assets = Brando.Blueprint.Assets.__assets__(module)
+    attributes = Brando.Blueprint.Attributes.__attributes__(module)
+    relations = Brando.Blueprint.Relations.__relations__(module)
 
     %Snapshot{
-      traits: blueprint.traits,
-      assets: blueprint.assets,
-      attributes: blueprint.attributes,
-      relations: blueprint.relations,
+      traits: traits,
+      assets: assets,
+      attributes: attributes,
+      relations: relations,
       updated_at: DateTime.utc_now(),
       version: get_next_snapshot_version(module)
     }

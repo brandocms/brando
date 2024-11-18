@@ -91,6 +91,20 @@ defmodule Brando.Blueprint.Relations do
   import Brando.M2M
   import Brando.Blueprint.Utils
 
+  def __relations__(module) do
+    Spark.Dsl.Extension.get_entities(module, [:relations])
+  end
+
+  def __relation__(module, name) do
+    Spark.Dsl.Extension.get_persisted(module, name)
+  end
+
+  def __relation_opts__(module, name) do
+    module
+    |> __relation__(name)
+    |> Map.get(:opts, [])
+  end
+
   def run_cast_relations(changeset, relations, user) do
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
   end
@@ -276,18 +290,19 @@ defmodule Brando.Blueprint.Relations do
   def run_cast_relation(_, changeset, _user), do: changeset
 
   def preloads_for(schema) do
-    schema.__relations__()
+    schema
+    |> Brando.Blueprint.Relations.__relations__()
     |> Enum.filter(
       &(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator and
           &1.opts.module != :blocks)
     )
     |> Enum.map(fn
       %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
-        sub_assets = Enum.map(mod.__assets__(), & &1.name)
+        sub_assets = Enum.map(Brando.Blueprint.Assets.__assets__(mod), & &1.name)
 
         # filter out sub_rels where the relation's module matches `schema`
         sub_rels =
-          for rel <- mod.__relations__(),
+          for rel <- Brando.Blueprint.Relations.__relations__(mod),
               rel.opts.module != schema,
               rel.type not in [:embeds_many, :embeds_one] do
             rel.name

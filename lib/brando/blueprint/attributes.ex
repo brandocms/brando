@@ -29,4 +29,20 @@ defmodule Brando.Blueprint.Attributes do
   `%{slug: "test", language: "dk"}` without erroring.
 
   """
+
+  def __attributes__(module) do
+    module
+    |> Spark.Dsl.Extension.get_entities([:attributes])
+    |> Enum.reverse()
+  end
+
+  def __attribute__(module, name) do
+    Spark.Dsl.Extension.get_persisted(module, name)
+  end
+
+  def __attribute_opts__(module, name) do
+    module
+    |> __attribute__(name)
+    |> Map.get(:opts, [])
+  end
 end

@@ -81,7 +81,7 @@ defmodule Brando.Images do
   def create_image(params, user) do
     %Image{}
     |> Image.changeset(params, user)
-    |> Brando.Repo.insert
+    |> Brando.Repo.insert()
   end
 
   @doc """
@@ -140,9 +140,10 @@ defmodule Brando.Images do
 
           # check if schema_module exists
           if Code.ensure_loaded?(schema_module) do
-            field_name
-            |> String.to_atom()
-            |> schema_module.__asset_opts__()
+            field_name_atom = String.to_atom(field_name)
+
+            schema_module
+            |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
             |> Map.get(:cfg)
           else
             IO.warn("""

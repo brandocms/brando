@@ -76,6 +76,20 @@ defmodule Brando.Blueprint.Assets do
   alias Brando.Blueprint
   import Ecto.Query
 
+  def __assets__(module) do
+    Spark.Dsl.Extension.get_entities(module, [:assets])
+  end
+
+  def __asset__(module, name) do
+    Spark.Dsl.Extension.get_persisted(module, name)
+  end
+
+  def __asset_opts__(module, name) do
+    module
+    |> __asset__(name)
+    |> Map.get(:opts, [])
+  end
+
   def run_cast_assets(changeset, assets, user) do
     Enum.reduce(assets, changeset, fn rel, cs -> run_cast_asset(rel, cs, user) end)
   end
@@ -158,7 +172,7 @@ defmodule Brando.Blueprint.Assets do
       from g in Brando.Images.Gallery,
         preload: [gallery_images: ^gallery_images_query]
 
-    Enum.reduce(schema.__assets__(), [], fn asset, acc ->
+    Enum.reduce(Brando.Blueprint.Assets.__assets__(schema), [], fn asset, acc ->
       case asset.type do
         :file -> [asset.name | acc]
         :image -> [asset.name | acc]

@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   # prop target, :any, required: true
 
   def mount(socket) do
-    {:ok, assign(socket, show_children: false, child_fields: [])}
+    {:ok, assign(socket, show_children: false, child_fields: [], active_sort: nil)}
   end
 
   def update(%{show_children: show_children, child_fields: child_fields}, socket) do
@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def field(assigns) do
-    attr = assigns.schema.__attribute__(assigns.field.name)
+    attr = Brando.Blueprint.Attributes.__attribute__(assigns.schema, assigns.field.name)
     entry_field = Map.get(assigns.entry, assigns.field.name)
     class = Keyword.get(assigns.field.opts, :class)
     columns = Keyword.get(assigns.field.opts, :columns)
@@ -293,6 +293,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     </CircleDropdown.render>
     """
   end
+
+  attr :active_sort, :any, default: nil
 
   def handle(assigns) do
     show_sort =

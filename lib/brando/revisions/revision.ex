@@ -11,7 +11,7 @@ defmodule Brando.Revisions.Revision do
   trait Brando.Trait.Timestamped
 
   table "revisions"
-  primary_key false
+  @primary_key false
 
   identifier false
   persist_identifier false

@@ -37,7 +37,8 @@ defmodule Brando.Content.Identifier do
   def has_trait(Brando.Trait.SoftDelete), do: false
 
   def preloads_for(schema) do
-    schema.__relations__()
+    schema
+    |> Brando.Blueprint.Relations.__relations__()
     |> Enum.filter(&(&1.type == :entries))
     |> Enum.map(&{&1.name, [:identifier]})
   end

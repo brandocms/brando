@@ -23,10 +23,16 @@ defmodule Brando.Blueprint.Attributes.Transformer do
       |> maybe_add_marked_as_deleted_attribute(allow_mark_as_deleted?)
       |> sort_attributes()
 
+    entities = Transformer.get_entities(dsl_state, [:attributes])
+
+    # persist each attribute
+    dsl_state =
+      Enum.reduce(entities, dsl_state, fn entity, updated_dsl_state ->
+        Transformer.persist(updated_dsl_state, entity.name, entity)
+      end)
+
     {required_attrs, optional_attrs} =
-      dsl_state
-      |> Transformer.get_entities([:attributes])
-      |> Enum.reduce({[], []}, fn
+      Enum.reduce(entities, {[], []}, fn
         %{name: name, opts: opts}, {required_attrs, optional_attrs} ->
           if Map.get(opts, :required) do
             {[name | required_attrs], optional_attrs}

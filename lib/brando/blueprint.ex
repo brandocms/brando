@@ -113,6 +113,7 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
   alias Brando.Trait
+  import Brando.Blueprint.Utils
 
   defstruct naming: %{},
             modules: %{},
@@ -150,14 +151,14 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
     Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
-    Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false, persist: true)
     Module.register_attribute(__CALLER__.module, :allow_mark_as_deleted, accumulate: false)
     Module.register_attribute(__CALLER__.module, :factory, accumulate: false)
 
     quote location: :keep do
+      use Ecto.Schema
       @data_layer :database
       @allow_mark_as_deleted false
-      @primary_key {:id, :id, autogenerate: true}
       @factory %{}
 
       if String.downcase(@domain) == String.downcase(@plural) do
@@ -166,32 +167,27 @@ defmodule Brando.Blueprint do
         @table_name "#{String.downcase(@domain)}_#{@plural}"
       end
 
-      @after_compile Brando.Blueprint
-
-      use Ecto.Schema
-      use Brando.Blueprint.Dsl
       use Gettext, backend: unquote(gettext_module)
 
       require PolymorphicEmbed
-      import Ecto.Changeset
-
-      import unquote(__MODULE__)
-      import unquote(__MODULE__).AbsoluteURL
-      import unquote(__MODULE__).Assets
-      import unquote(__MODULE__).Attributes
-      import unquote(__MODULE__).Forms
-      import unquote(__MODULE__).Identifier
-      import unquote(__MODULE__).Listings
-      import unquote(__MODULE__).Listings.Components
-      import unquote(__MODULE__).Naming
-      import unquote(__MODULE__).Relations
-      import unquote(__MODULE__).Trait
-      import unquote(__MODULE__).Translations
-      import unquote(__MODULE__).Utils
-
+      import Brando.Blueprint
+      import Brando.Blueprint.AbsoluteURL
+      import Brando.Blueprint.Assets
+      import Brando.Blueprint.Attributes
+      import Brando.Blueprint.Forms
+      import Brando.Blueprint.Identifier
+      import Brando.Blueprint.Listings
+      import Brando.Blueprint.Listings.Components
+      import Brando.Blueprint.Naming
+      import Brando.Blueprint.Relations
+      import Brando.Blueprint.Trait
+      import Brando.Blueprint.Translations
+      import Brando.Blueprint.Utils
       import Brando.Utils.Schema
       import Phoenix.Component, except: [form: 1]
+      import Ecto.Changeset
 
+      def __blueprint__(), do: true
       def __absolute_url__(_), do: nil
       defoverridable __absolute_url__: 1
 
@@ -203,6 +199,8 @@ defmodule Brando.Blueprint do
 
       def __persist_identifier__, do: true
       defoverridable __persist_identifier__: 0
+
+      use Brando.Blueprint.Dsl
     end
   end
 
@@ -458,24 +456,32 @@ defmodule Brando.Blueprint do
 
   defmacro build_schema(module, name, attrs, relations, assets) do
     quote location: :keep do
-      maybe_build_related_identifiers_modules(unquote(module), unquote(name), unquote(relations))
+      Brando.Blueprint.maybe_build_related_identifiers_modules(
+        unquote(module),
+        unquote(name),
+        unquote(relations)
+      )
 
       schema unquote(name) do
-        build_attrs(unquote(attrs))
-        build_assets(unquote(assets))
-        build_relations(unquote(module), unquote(relations))
+        Brando.Blueprint.build_attrs(unquote(attrs))
+        Brando.Blueprint.build_assets(unquote(assets))
+        Brando.Blueprint.build_relations(unquote(module), unquote(relations))
       end
 
-      maybe_build_blocks_modules(unquote(module), unquote(name), unquote(relations))
+      Brando.Blueprint.maybe_build_blocks_modules(
+        unquote(module),
+        unquote(name),
+        unquote(relations)
+      )
     end
   end
 
   defmacro build_embedded_schema(module, _name, attrs, relations, assets) do
     quote location: :keep do
       embedded_schema do
-        build_attrs(unquote(attrs))
-        build_assets(unquote(assets))
-        build_relations(unquote(module), unquote(relations))
+        Brando.Blueprint.build_attrs(unquote(attrs))
+        Brando.Blueprint.build_assets(unquote(assets))
+        Brando.Blueprint.build_relations(unquote(module), unquote(relations))
       end
     end
   end
@@ -534,6 +540,12 @@ defmodule Brando.Blueprint do
     |> Enum.join("-")
   end
 
+  defmacro factory(map) do
+    quote do
+      @factory unquote(map)
+    end
+  end
+
   defmacro table(table_name) do
     quote do
       @table_name unquote(table_name)
@@ -544,12 +556,6 @@ defmodule Brando.Blueprint do
     quote do
       @data_layer unquote(type)
       @allow_mark_as_deleted unquote(type) == :embedded
-    end
-  end
-
-  defmacro factory(map) do
-    quote do
-      @factory unquote(map)
     end
   end
 
