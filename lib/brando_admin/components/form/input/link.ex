@@ -1,7 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Link do
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
-
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   # prop form, :form
