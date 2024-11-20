@@ -27,8 +27,7 @@ defmodule Brando.Villain.Tags.Picture do
     evaled_source = Liquex.Argument.eval(source, context)
 
     evaled_args =
-      args
-      |> Enum.map(fn arg ->
+      Enum.map(args, fn arg ->
         {key, val} = Liquex.Argument.eval(arg, context)
         {String.to_existing_atom(key), val}
       end)
@@ -46,11 +45,13 @@ defmodule Brando.Villain.Tags.Picture do
 
   defp braced_args(combinator \\ empty()) do
     combinator
-    |> ignore(string("{ "))
+    |> ignore(string("{"))
+    |> ignore(Literal.whitespace())
     |> repeat(
-      lookahead_not(string(" }"))
+      lookahead_not(string("}"))
       |> Object.arguments()
     )
-    |> ignore(string(" }"))
+    |> ignore(Literal.whitespace())
+    |> ignore(string("}"))
   end
 end
