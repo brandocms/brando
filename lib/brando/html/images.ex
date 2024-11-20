@@ -6,6 +6,15 @@ defmodule Brando.HTML.Images do
   use Phoenix.Component
   alias Brando.Utils
 
+  @placeholders [
+    :svg,
+    :dominant_color,
+    :dominant_color_faded,
+    "svg",
+    "dominant_color",
+    "dominant_color_faded"
+  ]
+
   @doc """
   Outputs a `picture` tag with source, img and a noscript fallback
 
@@ -690,15 +699,7 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [
-               :svg,
-               :dominant_color,
-               :dominant_color_faded,
-               "svg",
-               "dominant_color",
-               "dominant_color_faded"
-             ] && placeholder) ||
-              k,
+            (placeholder not in @placeholders && placeholder) || k,
             opts
           )
 
@@ -744,8 +745,7 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
-              k,
+            (placeholder not in @placeholders && placeholder) || k,
             opts
           )
 
@@ -767,8 +767,7 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
-              k,
+            (placeholder not in @placeholders && placeholder) || k,
             opts
           )
 
@@ -785,15 +784,7 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [
-               :svg,
-               :dominant_color,
-               :dominant_color_faded,
-               "svg",
-               "dominant_color",
-               "dominant_color_faded"
-             ] && placeholder) ||
-              k,
+            (placeholder not in @placeholders && placeholder) || k,
             opts
           )
 
@@ -822,8 +813,7 @@ defmodule Brando.HTML.Images do
         path =
           Utils.img_url(
             image_field,
-            (placeholder not in [:svg, :dominant_color, "svg", "dominant_color"] && placeholder) ||
-              k,
+            (placeholder not in @placeholders && placeholder) || k,
             opts
           )
 
