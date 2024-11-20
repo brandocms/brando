@@ -226,6 +226,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       ]
                     ]}
                   />
+                  <Input.text field={block_data[:dominant_color]} label={gettext("Dominant color")} />
 
                   <div class="button-group-vertical">
                     <button
@@ -254,7 +255,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.input type={:hidden} field={block_data[:moonwalk]} />
               <Input.input type={:hidden} field={block_data[:lazyload]} />
               <Input.input type={:hidden} field={block_data[:credits]} />
-              <Input.input type={:hidden} field={block_data[:dominant_color]} />
               <Input.input type={:hidden} field={block_data[:height]} />
               <Input.input type={:hidden} field={block_data[:width]} />
 
