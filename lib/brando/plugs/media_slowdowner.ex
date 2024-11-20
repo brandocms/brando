@@ -3,28 +3,41 @@ defmodule Brando.Plug.MediaSlowdowner do
   Plug for slowing down media image queries.
 
   Should only be used for testing frontend lazyload stuff
+
+  ## Usage
+
+  Add the plug to your endpoint.ex:
+
+      plug Brando.Plug.MediaSlowdowner, path: ["media", "images"], duration: 5000
+
   """
 
   # import Plug.Conn
   @behaviour Plug
 
-  def init(opts), do: opts
-
-  def call(%Plug.Conn{path_info: ["media", "images" | _suffix] = path_info} = conn, opts) do
+  def init(opts) do
+    path = Keyword.get(opts, :path, ["media", "images"])
     duration = Keyword.get(opts, :duration, 5000)
-    require Logger
+    %{path: path, duration: duration}
+  end
 
-    Logger.error("""
+  def call(%Plug.Conn{path_info: path_info} = conn, %{path: path, duration: duration}) do
+    if match_path?(path_info, path) do
+      require Logger
 
-    == slowing down request for image by #{duration} ms
-    >> path: #{Path.join(path_info)}
+      Logger.error("""
+      == Slowing down request by #{duration} ms
+      >> Path: #{Path.join(path_info)}
+      """)
 
-    """)
-
-    :timer.sleep(duration)
+      :timer.sleep(duration)
+    end
 
     conn
   end
 
-  def call(conn, _), do: conn
+  # Helper function to match paths
+  defp match_path?(conn_path, path_to_match) do
+    Enum.take(conn_path, length(path_to_match)) == path_to_match
+  end
 end
