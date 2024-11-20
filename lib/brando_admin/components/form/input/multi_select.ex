@@ -317,8 +317,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     relation_type = socket.assigns.relation_type
 
     sequenced? =
-      if relation_type in [:has_many, {:subform, :has_many}] and
-           {:__relations__, 0} in module.__info__(:functions) do
+      if relation_type in [:has_many, {:subform, :has_many}] do
         %{opts: %{module: rel_module} = opts} =
           Brando.Blueprint.Relations.__relation__(module, field.field)
 
