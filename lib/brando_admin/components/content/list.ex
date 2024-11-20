@@ -611,9 +611,12 @@ defmodule BrandoAdmin.Components.Content.List do
                 for={%{}}
                 as={:filter_form}
                 phx-change={@update_filter}
+                phx-window-keydown={JS.focus(to: "#listing-filter")}
+                phx-key="f"
                 onkeydown="return event.key != 'Enter';"
               >
                 <input
+                  id="listing-filter"
                   type="text"
                   name="q"
                   value=""
