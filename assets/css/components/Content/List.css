@@ -213,7 +213,7 @@
       }
 
       input {
-        @fontsize 1.2vw;
+        @fontsize input;
         background-color: transparent;
         padding-top: 11px;
         padding-bottom: 11px;
@@ -222,7 +222,7 @@
         border: 0;
 
         &::placeholder {
-          @fontsize 1.2vw;
+          @fontsize input;
         }
       }
 
