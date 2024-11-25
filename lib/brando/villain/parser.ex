@@ -191,7 +191,7 @@ defmodule Brando.Villain.Parser do
             children
             |> Enum.with_index()
             |> Enum.map(fn
-              {%{hidden: true}, _} ->
+              {%{active: false}, _} ->
                 ""
 
               {%{marked_as_deleted: true}, _} ->
@@ -931,7 +931,7 @@ defmodule Brando.Villain.Parser do
             :force_render ->
               (children || [])
               |> Enum.reduce([], fn
-                %{hidden: true}, acc -> acc
+                %{active: false}, acc -> acc
                 %{marked_as_deleted: true}, acc -> acc
                 d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
               end)
@@ -959,7 +959,7 @@ defmodule Brando.Villain.Parser do
           else
             (children || [])
             |> Enum.reduce([], fn
-              %{hidden: true}, acc -> acc
+              %{active: false}, acc -> acc
               %{marked_as_deleted: true}, acc -> acc
               d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
             end)
@@ -1021,7 +1021,7 @@ defmodule Brando.Villain.Parser do
           else
             (children || [])
             |> Enum.reduce([], fn
-              %{hidden: true}, acc -> acc
+              %{active: false}, acc -> acc
               %{marked_as_deleted: true}, acc -> acc
               d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
             end)

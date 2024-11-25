@@ -11,7 +11,7 @@
     @row 3/wrap/1em desktop_md;
     @row 4/wrap/1em desktop_lg;
     @row 5/wrap/1em desktop_xl;
-    
+
     .preview {
       @column 4/12 desktop_md;
       @column 3/12 desktop_lg;
@@ -37,6 +37,9 @@
         height: 30px;
         border-radius: 50%;
         border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
         span {
           background-color: white;
@@ -111,7 +114,9 @@
         display: inline-block;
         text-transform: uppercase;
         padding: 4px 7px;
-        transition: background-color .35s ease, color .35s ease;
+        transition:
+          background-color 0.35s ease,
+          color 0.35s ease;
         display: flex;
         align-items: center;
         gap: 0.5em;
@@ -148,7 +153,9 @@
         user-select: none;
         pointer-events: none;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           user-select: none;
           pointer-events: none;
           fill: var(--brando-color-dark);
@@ -200,7 +207,6 @@
       @space margin-bottom 15px;
     }
 
-
     .image-info {
       @space margin-top 15px;
       @fontsize 13px;
@@ -224,7 +230,9 @@
         pointer-events: none;
         width: 200px;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           user-select: none;
           pointer-events: none;
           fill: var(--brando-color-dark);
