@@ -275,6 +275,10 @@ defmodule BrandoAdmin.Menu do
                 url: "/admin/config/cache"
               },
               %{
+                name: gettext("Utilities"),
+                url: "/admin/config/utils"
+              },
+              %{
                 name: gettext("Block modules"),
                 url: "/admin/config/content/modules"
               },

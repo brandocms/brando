@@ -6,6 +6,8 @@ defmodule BrandoAdmin.Sites.CacheLive do
   import Phoenix.Component
   alias BrandoAdmin.Components.Content
 
+  on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
+
   def mount(_, %{"user_token" => token}, socket) do
     if connected?(socket) do
       {:ok,

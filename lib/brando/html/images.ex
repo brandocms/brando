@@ -37,6 +37,7 @@ defmodule Brando.HTML.Images do
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
     * `fetchpriority` - set to "high" for high fetch priority
+    * `overlay` - adds a `div class="overlay"` element to the picture.
     * `moonwalk` - set moonwalk attr
     * `media_queries` - list of media queries to add to source.
        I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
@@ -146,14 +147,19 @@ defmodule Brando.HTML.Images do
         caption -> caption
       end
 
+    noscript_alt = Keyword.get(attrs.opts, :alt, Map.get(src, :alt, ""))
+    overlay = Keyword.get(opts, :overlay, false)
+
     assigns =
       assigns
       |> assign(:caption, caption)
-      |> assign(:noscript_alt, Keyword.get(attrs.opts, :alt, Map.get(src, :alt, "")))
+      |> assign(:overlay, overlay)
+      |> assign(:noscript_alt, noscript_alt)
 
     ~H"""
     <figure {@attrs.figure}>
       <picture {@attrs.picture}>
+        <div :if={@overlay} class="overlay" />
         <.mq_sources mqs={@attrs.mq_sources} />
         <.source_tags src={@src} attrs={@attrs} />
         <img {@attrs.img} />

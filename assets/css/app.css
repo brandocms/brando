@@ -67,6 +67,7 @@
 @import "./views/config/Cache.css";
 @import "./views/config/Globals.css";
 @import "./views/config/ScheduledPublishing.css";
+@import "./views/config/Utils.css";
 
 html.moonwalk [data-moonwalk-run].moonwalked {
   opacity: 1 !important;

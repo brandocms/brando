@@ -51,8 +51,20 @@ defmodule Brando.Blueprint.Identifier do
           (is_nil(language) && nil) || (is_binary(language) && String.to_existing_atom(language)) ||
             language
 
-        first_image_asset =
-          Enum.find(Brando.Blueprint.Assets.__assets__(__MODULE__), &(&1.type == :image))
+        image_assets =
+          Enum.filter(Brando.Blueprint.Assets.__assets__(__MODULE__), &(&1.type == :image))
+
+        # if image_assets has :meta_image first, move it last
+        image_assets =
+          if image_assets != [] and List.first(image_assets).name == :meta_image do
+            image_assets
+            |> List.delete_at(0)
+            |> List.insert_at(-1, List.first(image_assets))
+          else
+            image_assets
+          end
+
+        first_image_asset = List.first(image_assets)
 
         cover =
           if skip_cover,

@@ -97,6 +97,7 @@ defmodule Brando.Router do
             live "/identity", BrandoAdmin.Sites.IdentityLive
             live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
             live "/seo", BrandoAdmin.Sites.SEOLive
+            live "/utils", BrandoAdmin.Sites.UtilsLive
 
             live "/navigation/menus", BrandoAdmin.Navigation.MenuListLive
             live "/navigation/menus/create", BrandoAdmin.Navigation.MenuFormLive, :create
