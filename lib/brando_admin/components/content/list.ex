@@ -682,7 +682,7 @@ defmodule BrandoAdmin.Components.Content.List do
           />
         <% end %>
         <%= if @sorts != [] do %>
-          <.sorts active_sort={@active_sort} sorts={@sorts} on_update={@update_sort} />
+          <.sorts active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
         <% end %>
       </div>
     </div>
@@ -691,13 +691,14 @@ defmodule BrandoAdmin.Components.Content.List do
 
   attr :active_sort, :map, required: true
   attr :sorts, :list, required: true
+  attr :schema, :atom, required: true
   attr :on_update, :any, required: true
 
   def sorts(assigns) do
     ~H"""
     <div class="sorts">
       <%= gettext("Sort by") %> &rarr;
-      <.simple_dropdown id="sorts-dropdown" label={@active_sort.label}>
+      <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li>
             <button
@@ -706,7 +707,7 @@ defmodule BrandoAdmin.Components.Content.List do
               phx-click={@on_update}
               phx-value-sort_key={sort.key}
             >
-              <%= raw(sort.label) %>
+              <%= raw(g(@schema, sort.label)) %>
             </button>
           </li>
         </:options>
