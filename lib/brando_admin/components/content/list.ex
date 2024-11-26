@@ -268,8 +268,42 @@ defmodule BrandoAdmin.Components.Content.List do
     assign_new(socket, :active_filter, fn -> List.first(filters) end)
   end
 
-  defp assign_sort(%{assigns: %{listing: %{sorts: sorts}}} = socket) do
-    assign_new(socket, :active_sort, fn -> List.first(sorts) end)
+  defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
+    assign_new(socket, :active_sort, fn ->
+      default_sort = List.first(sorts)
+      param_order = get_in(params, ["order"])
+
+      cond do
+        # no param order, use default
+        is_nil(param_order) ->
+          default_sort
+
+        # param order is a string
+        is_binary(param_order) ->
+          # find matching sort
+
+          Enum.find(sorts, default_sort, fn sort ->
+            Brando.Query.order_string_to_list(sort.order) ==
+              Brando.Query.order_string_to_list(param_order)
+          end)
+
+        # param order is a keyword list
+        is_list(param_order) ->
+          # find matching sort
+          Enum.find(sorts, default_sort, fn sort ->
+            Brando.Query.order_string_to_list(sort.order) == param_order
+          end)
+
+        is_map(param_order) ->
+          # find matching sort
+          Enum.find(sorts, default_sort, fn sort ->
+            Brando.Query.order_string_to_list(sort.order) ==
+              Enum.map(Map.to_list(param_order), fn {k, v} ->
+                {String.to_existing_atom(k), String.to_existing_atom(v)}
+              end)
+          end)
+      end
+    end)
   end
 
   defp assign_sort(socket, sort) do
@@ -304,8 +338,6 @@ defmodule BrandoAdmin.Components.Content.List do
     |> assign(:content_language, content_language)
   end
 
-  # TODO: Read paginate true/false from listing
-  # TODO: Read limit from listing
   defp build_list_opts(listing, schema, content_language) do
     %{paginate: true, limit: listing.limit}
     |> maybe_merge_listing_query(listing)
