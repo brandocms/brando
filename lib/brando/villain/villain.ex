@@ -239,9 +239,18 @@ defmodule Brando.Villain do
     else
       {:error, "expected end of string", err} ->
         require Logger
-        Logger.error("==> Error parsing liquex template")
-        Logger.error(inspect(err, pretty: true))
-        ">>> Error parsing liquex template <<<"
+
+        Logger.error("""
+
+        >>> Error parsing liquex template <<<
+
+        #{inspect(html, pretty: true)}
+
+        --> Expected end of string on line #{inspect(err)}
+
+        """)
+
+        "!!! Error parsing liquex template !!!"
     end
   end
 
