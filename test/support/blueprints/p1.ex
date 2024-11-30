@@ -44,7 +44,7 @@ defmodule Brando.BlueprintTest.P1 do
     @allow_mark_as_deleted true
 
     relations do
-      relation :project, :belongs_to, module: Brando.BlueprintTest.P1
+      relation :p1, :belongs_to, module: Brando.BlueprintTest.P1
       relation :contributor, :belongs_to, module: Brando.BlueprintTest.P1.Contributor
     end
   end
