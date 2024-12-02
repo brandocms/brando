@@ -233,7 +233,7 @@ defmodule Brando.Villain do
   def parse_and_render(html, context) do
     liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
-    with {:ok, parsed_doc} <- liquex_parse(html, liquex_parser),
+    with {:ok, parsed_doc} <- liquex_parse(ensure_string(html), liquex_parser),
          {result, _} <- liquex_render([], parsed_doc, context) do
       Enum.join(result)
     else
@@ -253,6 +253,9 @@ defmodule Brando.Villain do
         "!!! Error parsing liquex template !!!"
     end
   end
+
+  defp ensure_string(html) when is_binary(html), do: html
+  defp ensure_string(html) when is_list(html), do: IO.iodata_to_binary(html)
 
   defp liquex_parse(html, liquex_parser) do
     Liquex.parse(html, liquex_parser)

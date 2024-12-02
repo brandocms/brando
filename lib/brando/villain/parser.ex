@@ -185,7 +185,7 @@ defmodule Brando.Villain.Parser do
 
         content =
           if skip_children? do
-            "{$ content $}"
+            "[$ content $]"
             |> annotate_children(block.uid)
           else
             children
@@ -926,7 +926,7 @@ defmodule Brando.Villain.Parser do
         children_html =
           case skip_children? do
             true ->
-              "{$ content $}"
+              "[$ content $]"
               |> annotate_children(block.uid)
 
             false ->
@@ -958,7 +958,7 @@ defmodule Brando.Villain.Parser do
 
         children_html =
           if skip_children? === true do
-            "{$ content $}"
+            "[$ content $]"
             |> annotate_children(block.uid)
           else
             (children || [])
@@ -1020,7 +1020,7 @@ defmodule Brando.Villain.Parser do
 
         children_html =
           if skip_children? === true do
-            "{$ content $}"
+            "[$ content $]"
             |> annotate_children(block.uid)
           else
             (children || [])
@@ -1210,9 +1210,9 @@ defmodule Brando.Villain.Parser do
 
       def maybe_annotate(code, uid, %{annotate_blocks: true}) do
         """
-        <!-- {+:B<#{uid}>} -->
+        <!-- [+:B<#{uid}>] -->
           #{code}
-        <!-- {-:B<#{uid}>} -->
+        <!-- [-:B<#{uid}>] -->
         """
       end
 
@@ -1220,9 +1220,9 @@ defmodule Brando.Villain.Parser do
 
       def annotate_children(code, uid) do
         """
-        <!-- {+:C<#{uid}>} -->
+        <!-- [+:C<#{uid}>] -->
           #{code}
-        <!-- {-:C<#{uid}>} -->
+        <!-- [-:C<#{uid}>] -->
         """
       end
 

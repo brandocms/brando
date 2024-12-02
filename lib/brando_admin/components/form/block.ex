@@ -3241,7 +3241,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         # Create default meta map with empty values for all fields
         default_meta =
           datasource_meta
-          |> Enum.map(fn field -> {field.key, nil} end)
+          |> Enum.map(fn field -> {to_string(field.key), nil} end)
           |> Map.new()
 
         Map.put(current_metas, key, default_meta)
