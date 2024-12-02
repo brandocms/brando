@@ -1,6 +1,6 @@
 import Sortable from 'sortablejs'
 
-export default app => ({
+export default (app) => ({
   mounted() {
     this.target = this.el.dataset.target
     this.sortableSelector = this.el.dataset.sortableSelector
@@ -9,9 +9,11 @@ export default app => ({
     this.sortableParams = this.el.dataset.sortableParams
     this.sortableBinaryKeys = this.el.dataset.sortableBinaryKeys
     this.sortableDispatchEvent = this.el.dataset.sortableDispatchEvent
-    this.sortableDispatchEventTargetId = this.el.dataset.sortableDispatchEventTargetId
+    this.sortableDispatchEventTargetId =
+      this.el.dataset.sortableDispatchEventTargetId
     this.sortablePushEvent = this.el.dataset.sortablePushEvent
-    this.sortableFilter = this.el.dataset.sortableFilter
+    this.sortableFilter =
+      this.el.dataset.sortableFilter || '[data-sortable-filter]'
 
     let sorter = new Sortable(this.el, {
       group: this.sortableId,
@@ -21,9 +23,10 @@ export default app => ({
       ghostClass: 'is-sorting',
       handle: this.handle,
       filter: this.sortableFilter,
+      preventOnFilter: false,
       swapThreshold: 0.5,
       forceFallback: true,
-      onEnd: e => {
+      onEnd: (e) => {
         if (this.sortableDispatchEvent) {
           let target
           if (this.sortableDispatchEventTargetId) {
@@ -36,10 +39,19 @@ export default app => ({
         }
 
         if (this.sortablePushEvent) {
-          let params = { old: e.oldIndex, new: e.newIndex, to: e.to.dataset, ...e.item.dataset }
-          this.pushEventTo(this.el, this.el.dataset['drop'] || 'reposition', params)
+          let params = {
+            old: e.oldIndex,
+            new: e.newIndex,
+            to: e.to.dataset,
+            ...e.item.dataset,
+          }
+          this.pushEventTo(
+            this.el,
+            this.el.dataset['drop'] || 'reposition',
+            params
+          )
         }
-      }
+      },
     })
-  }
+  },
 })

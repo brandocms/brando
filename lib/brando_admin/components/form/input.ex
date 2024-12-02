@@ -823,6 +823,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :change, :any, default: nil
   attr :focus, :any, default: nil
   attr :target, :any, default: nil
+  attr :opts, :list
 
   def text(assigns) do
     assigns = prepare_input_component(assigns)
@@ -857,6 +858,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :placeholder, :string
   attr :focus, :any, default: nil
   attr :target, :any, default: nil
+  attr :opts, :list
 
   def textarea(assigns) do
     assigns = prepare_input_component(assigns)

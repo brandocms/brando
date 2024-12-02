@@ -21,7 +21,8 @@ defmodule Brando.Content.Block do
     :multi,
     :palette_id,
     :type,
-    :source
+    :source,
+    :identifier_metas
   ]
 
   @var_attrs [
@@ -83,6 +84,7 @@ defmodule Brando.Content.Block do
     attribute :rendered_html, :string
     attribute :rendered_at, :datetime
     attribute :source, Brando.Type.Module
+    attribute :identifier_metas, Brando.Type.Json
   end
 
   relations do

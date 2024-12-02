@@ -1,9 +1,39 @@
 defmodule Brando.Blueprint.Datasources.Dsl do
   alias Brando.Blueprint.Datasources
 
+  @meta %Spark.Dsl.Entity{
+    name: :meta,
+    args: [:key, :type],
+    target: Datasources.Meta,
+    schema: [
+      key: [
+        type: :atom,
+        required: true,
+        doc: "Meta key"
+      ],
+      type: [
+        type: {:in, [:text, :textarea, :rich_text, :toggle, :date, :datetime]},
+        required: true,
+        doc: "Meta type"
+      ],
+      label: [
+        type: :string,
+        required: true,
+        doc: "Meta label"
+      ],
+      opts: [
+        type: :keyword_list,
+        doc: "Field options"
+      ]
+    ]
+  }
+
   @datasource %Spark.Dsl.Entity{
     name: :datasource,
     args: [:key],
+    entities: [
+      meta: [@meta]
+    ],
     target: Datasources.Datasource,
     schema: [
       key: [

@@ -309,6 +309,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :select, :any, default: false
   slot :inner_block
   slot :delete
+  slot :meta
 
   def block_identifier(%{block_identifier: block_identifier} = assigns) do
     changeset = block_identifier.source
@@ -347,6 +348,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         </:delete>
         <%= render_slot(@inner_block) %>
       </.identifier_content>
+      <div class="meta" data-sortable-filter>
+        <%= render_slot(@meta, @identifier) %>
+      </div>
     </article>
     """
   end

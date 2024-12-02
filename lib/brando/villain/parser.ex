@@ -330,7 +330,11 @@ defmodule Brando.Villain.Parser do
            ) do
         identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
         {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
-        Context.assign(context, :entries, entries || [])
+        entries_with_meta = Brando.Villain.Parser.add_meta_to_entries(entries, block)
+
+        context
+        |> Context.assign(:entries, entries || [])
+        |> Context.assign(:entries_with_meta, entries_with_meta || [])
       end
 
       defp add_datasource_entries_to_context(context, _, _),
@@ -1296,5 +1300,28 @@ defmodule Brando.Villain.Parser do
       <.picture src={@src} opts={@opts} />
     </figure>
     """
+  end
+
+  def add_meta_to_entries(entries, block) do
+    # do we have any meta?
+    if block.identifier_metas do
+      Enum.map(entries, fn entry ->
+        entry_schema = entry.__struct__
+        entry_id = entry.id
+        meta = get_meta(block.identifier_metas, entry_schema, entry_id)
+        %{entry: entry, meta: meta}
+      end)
+    else
+      entries
+    end
+  end
+
+  defp get_meta(identifier_metas, schema, id) do
+    identifier_metas
+    |> Enum.find(fn {existing_id, _meta} -> "#{inspect(schema)}_#{id}" == existing_id end)
+    |> case do
+      nil -> nil
+      {_, meta} -> meta
+    end
   end
 end

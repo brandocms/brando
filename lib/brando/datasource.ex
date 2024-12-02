@@ -311,6 +311,18 @@ defmodule Brando.Datasource do
   def is_datasource({schema, _, _}), do: {:__datasource__, 0} in schema.__info__(:functions)
   def is_datasource(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
 
+  def get_meta(module, type, query) do
+    module
+    |> List.wrap()
+    |> Module.concat()
+    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Enum.find(&(&1.type == type && &1.key == String.to_existing_atom(query)))
+    |> case do
+      nil -> nil
+      datasource -> datasource.meta
+    end
+  end
+
   ## DEPRECATED——REMOVE in 0.55
 
   @deprecated "list/2 outside of datasource/1 is deprecated. Wrap inside datasource/1"

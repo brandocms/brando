@@ -54,6 +54,8 @@ spark_locals_without_parens = [
   listing: 0,
   listing: 1,
   listing: 2,
+  meta: 2,
+  meta: 3,
   meta_schema: 0,
   meta_schema: 1,
   mutate_data: 1,

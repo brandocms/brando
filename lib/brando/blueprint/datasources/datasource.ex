@@ -3,5 +3,6 @@ defmodule Brando.Blueprint.Datasources.Datasource do
             key: nil,
             type: nil,
             list: nil,
-            get: nil
+            get: nil,
+            meta: []
 end

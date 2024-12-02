@@ -108,6 +108,7 @@
   padding: 5px;
   border: 1px dashed #3b3b3b;
   border-radius: 8px;
+  flex-wrap: wrap;
 
   &.draggable {
     cursor: move;
@@ -141,6 +142,38 @@
     .name {
       font-size: 13px;
       font-weight: 500;
+      max-width: 40ch;
+    }
+  }
+
+  .meta {
+    flex-grow: 1;
+    width: 100%;
+    cursor: auto;
+
+    .identifier-meta {
+      margin-top: 5px;
+      .label-wrapper {
+        label {
+          font-size: 9px;
+        }
+      }
+
+      .field-wrapper {
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+
+        .field-base {
+          display: flex;
+        }
+
+        textarea {
+          font-size: 10px;
+          border: 1px dashed;
+          padding: 3px;
+        }
+      }
     }
   }
 

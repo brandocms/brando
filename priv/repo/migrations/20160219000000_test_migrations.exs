@@ -278,6 +278,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :palette_id, references(:content_palettes, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
       add :refs, :jsonb
+      add :identifier_metas, :jsonb
     end
 
     create table(:content_identifiers) do

@@ -832,6 +832,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_assign_module()
     |> maybe_assign_container()
     |> maybe_assign_fragment()
+    |> maybe_assign_datasource_meta()
     |> maybe_parse_module()
     |> maybe_render_module()
     |> maybe_get_live_preview_status()
@@ -1076,6 +1077,24 @@ defmodule BrandoAdmin.Components.Form.Block do
       nil -> assign(socket, :fragment_not_found, true)
       fragment -> assign_new(socket, :fragment, fn -> fragment end)
     end
+  end
+
+  def maybe_assign_datasource_meta(%{assigns: %{is_datasource?: true}} = socket) do
+    module_datasource_module = socket.assigns.module_datasource_module
+    module_datasource_type = socket.assigns.module_datasource_type
+    module_datasource_query = socket.assigns.module_datasource_query
+
+    assign_new(socket, :datasource_meta, fn ->
+      Brando.Datasource.get_meta(
+        module_datasource_module,
+        module_datasource_type,
+        module_datasource_query
+      )
+    end)
+  end
+
+  def maybe_assign_datasource_meta(socket) do
+    assign_new(socket, :datasource_meta, fn -> nil end)
   end
 
   def maybe_assign_module(%{assigns: %{module_id: nil}} = socket) do
@@ -1487,6 +1506,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         module_datasource_module_label={@module_datasource_module_label}
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
+        datasource_meta={@datasource_meta}
         available_identifiers={@available_identifiers}
       />
     </div>
@@ -1884,6 +1904,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :module_datasource_module_label, :string, default: ""
   attr :module_datasource_type, :string, default: ""
   attr :module_datasource_query, :string, default: ""
+  attr :datasource_meta, :any, default: nil
   attr :available_identifiers, :any, default: []
   slot :inner_block
 
@@ -1962,6 +1983,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 table_template_name={@table_template_name}
                 target={@target}
                 is_datasource?={@is_datasource?}
+                datasource_meta={@datasource_meta}
                 module_datasource_module_label={@module_datasource_module_label}
                 module_datasource_type={@module_datasource_type}
                 module_datasource_query={@module_datasource_query}
@@ -2001,6 +2023,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_uploads={@parent_uploads}
               target={@target}
               is_datasource?={@is_datasource?}
+              datasource_meta={@datasource_meta}
               module_datasource_module_label={@module_datasource_module_label}
               module_datasource_type={@module_datasource_type}
               module_datasource_query={@module_datasource_query}
@@ -2034,6 +2057,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           :if={@is_datasource?}
           block_data={@block_form}
           uid={@uid}
+          datasource_meta={@datasource_meta}
           module_datasource_module_label={@module_datasource_module_label}
           module_datasource_type={@module_datasource_type}
           module_datasource_query={@module_datasource_query}
@@ -3077,6 +3101,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :module_datasource_module_label, :string, required: true
   attr :module_datasource_type, :string, required: true
   attr :module_datasource_query, :string, required: true
+  attr :datasource_meta, :any, default: nil
   attr :uid, :string, required: true
   attr :target, :any, required: true
   attr :available_identifiers, :any, default: []
@@ -3159,6 +3184,14 @@ defmodule BrandoAdmin.Components.Form.Block do
                     <.icon name="hero-x-circle" />
                   </button>
                 </:delete>
+                <:meta :let={identifier}>
+                  <.identifier_meta
+                    :if={@datasource_meta != []}
+                    datasource_meta={@datasource_meta}
+                    identifier={identifier}
+                    block_data={@block_data}
+                  />
+                </:meta>
               </Entries.block_identifier>
             </.inputs_for>
             <input
@@ -3180,6 +3213,75 @@ defmodule BrandoAdmin.Components.Form.Block do
           </button>
         </div>
       <% end %>
+    </div>
+    """
+  end
+
+  attr :datasource_meta, :any, required: true
+  attr :identifier, :any, required: true
+  attr :block_data, :any, required: true
+
+  def identifier_meta(%{datasource_meta: nil} = assigns) do
+    ~H""
+  end
+
+  def identifier_meta(assigns) do
+    datasource_meta = assigns.datasource_meta
+    block_data = assigns.block_data
+    identifier = assigns.identifier
+
+    key = "#{inspect(identifier.schema)}_#{identifier.entry_id}"
+
+    # Get current identifier_metas or initialize empty map
+    current_metas = block_data[:identifier_metas].value || %{}
+
+    # Initialize empty meta structure for this identifier if missing
+    identifier_metas =
+      if !Map.has_key?(current_metas, key) do
+        # Create default meta map with empty values for all fields
+        default_meta =
+          datasource_meta
+          |> Enum.map(fn field -> {field.key, nil} end)
+          |> Map.new()
+
+        Map.put(current_metas, key, default_meta)
+      else
+        current_metas
+      end
+
+    this_meta = Map.get(identifier_metas, key)
+
+    meta_form =
+      to_form(
+        this_meta,
+        as: "#{block_data.name}[identifier_metas][#{key}]"
+      )
+
+    assigns =
+      assigns
+      |> assign(:key, key)
+      |> assign(:meta_form, meta_form)
+
+    ~H"""
+    <div :if={@datasource_meta != []} class="identifier-meta">
+      <div class="meta-fields">
+        <div :for={field <- @datasource_meta} class="meta-field">
+          <%= case field.type do %>
+            <% :text -> %>
+              <Input.text field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+            <% :rich_text -> %>
+              <Input.rich_text field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+            <% :textarea -> %>
+              <Input.textarea field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+            <% :toggle -> %>
+              <Input.checkbox field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+            <% :date -> %>
+              <Input.date field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+            <% :datetime -> %>
+              <Input.date field={@meta_form[field.key]} opts={field.opts} label={field.label} />
+          <% end %>
+        </div>
+      </div>
     </div>
     """
   end
