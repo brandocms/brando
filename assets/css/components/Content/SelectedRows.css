@@ -14,8 +14,13 @@
   left: 0;
   width: 100%;
   z-index: 5;
-  
-  transition: transform 250ms ease, opacity 250ms ease;
+
+  [data-app-ready="true"] & {
+    transition:
+      transform 250ms ease,
+      opacity 250ms ease;
+  }
+
   transform: translateY(0);
   opacity: 1;
 
