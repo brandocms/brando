@@ -213,39 +213,56 @@ defmodule Brando.Blueprint.Identifier do
       |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
       |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
 
+    IO.puts("=> Syncing identifiers. Relevant modules: #{inspect(relevant_modules)}")
+
     # select all identifiers with schema not in `relevant_modules`
     delete_query = from i in Brando.Content.Identifier, where: i.schema not in ^relevant_modules
     Brando.Repo.delete_all(delete_query, [])
+
+    IO.puts(
+      IO.ANSI.red() <>
+        "[-] Removing irrelevant identifiers" <>
+        IO.ANSI.reset()
+    )
 
     {:ok, identifiers} = Brando.Content.list_identifiers()
 
     for identifier <- identifiers do
       case get_entry_for_identifier(identifier) do
         {:error, :module_does_not_exist} ->
-          require Logger
-
-          Logger.info("
-          => Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier
-          ")
+          IO.puts(
+            IO.ANSI.red() <>
+              "[-] Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier" <>
+              IO.ANSI.reset()
+          )
 
           Brando.Content.delete_identifier(identifier)
 
         {:error, _} ->
-          require Logger
+          IO.puts(
+            IO.ANSI.red() <>
+              "[-] Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier" <>
+              IO.ANSI.reset()
+          )
 
-          Logger.info("
-          => Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier
-          ")
+          Brando.Content.delete_identifier(identifier)
+
+        {:ok, %{deleted_at: deleted_at}} when not is_nil(deleted_at) ->
+          IO.puts(
+            IO.ANSI.red() <>
+              "[-] Entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)} is marked as deleted. Deleting identifier" <>
+              IO.ANSI.reset()
+          )
 
           Brando.Content.delete_identifier(identifier)
 
         {:ok, entry} ->
           # update the identifier
-          require Logger
-
-          Logger.info("
-          => Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}
-          ")
+          IO.puts(
+            IO.ANSI.green() <>
+              "[+] Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}" <>
+              IO.ANSI.reset()
+          )
 
           Brando.Content.update_identifier(entry.__struct__, entry)
       end
@@ -255,8 +272,6 @@ defmodule Brando.Blueprint.Identifier do
   end
 
   def create_missing_identifiers do
-    require Logger
-
     relevant_modules =
       :include_brando
       |> Brando.Blueprint.list_blueprints()
@@ -280,9 +295,13 @@ defmodule Brando.Blueprint.Identifier do
       for entry <- entries do
         {:ok, identifier} = Brando.Content.create_identifier(module, entry)
 
-        Logger.info(
-          "=> Creating identifier ##{inspect(identifier.id)} in schema #{inspect(identifier.schema)} for entry_id ##{identifier.entry_id}"
-        )
+        if identifier do
+          IO.puts(
+            IO.ANSI.green() <>
+              "[+] Creating identifier ##{inspect(identifier.id)} in schema #{inspect(identifier.schema)} for entry_id ##{identifier.entry_id}" <>
+              IO.ANSI.reset()
+          )
+        end
       end
     end
   end

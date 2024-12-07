@@ -642,7 +642,8 @@ defmodule Brando.Content do
 
   def create_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
-         {:ok, :persist_identifier} <- persist_identifier(module) do
+         {:ok, :persist_identifier} <- persist_identifier(module),
+         false <- soft_deleted(entry) do
       new_identifier = module.__identifier__(entry)
       changeset = Ecto.Changeset.change(new_identifier)
 
@@ -660,6 +661,9 @@ defmodule Brando.Content do
         {:ok, false}
     end
   end
+
+  defp soft_deleted(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: true
+  defp soft_deleted(_), do: false
 
   def update_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
