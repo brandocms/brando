@@ -107,6 +107,7 @@ defmodule Brando.SoftDelete.Repo do
         end)
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -129,6 +130,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Brando.Utils.Schema.avoid_field_collision(obfuscated_fields)
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -136,6 +138,7 @@ defmodule Brando.SoftDelete.Repo do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -144,6 +147,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_field(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -152,6 +156,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_field(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -159,6 +164,7 @@ defmodule Brando.SoftDelete.Repo do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> maybe_delete_identifier()
         |> Brando.Cache.Query.evict()
       end
 
@@ -189,6 +195,17 @@ defmodule Brando.SoftDelete.Repo do
       def maybe_create_identifier(other), do: other
 
       defp utc_now, do: DateTime.truncate(DateTime.utc_now(), :second)
+
+      defp maybe_delete_identifier({:ok, entry}),
+        do: Brando.Content.delete_identifier(entry.__struct__, entry)
+
+      defp maybe_delete_identifier({:error, entry}),
+        do: {:error, entry}
+
+      defp maybe_delete_identifier(entry) when is_map(entry),
+        do: Brando.Content.delete_identifier(entry.__struct__, entry)
+
+      defp maybe_delete_identifier(other), do: other
     end
   end
 end
