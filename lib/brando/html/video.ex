@@ -1,4 +1,5 @@
 defmodule Brando.HTML.Video do
+  use Gettext, backend: Brando.Gettext
   use Phoenix.Component
   alias Brando.Type.Video
 
@@ -169,15 +170,15 @@ defmodule Brando.HTML.Video do
         </video>
       </noscript>
 
-      <%= get_play_button(@play_button) %>
+      {get_play_button(@play_button)}
 
       <%= if @cover do %>
         <div data-cover>
-          <%= render_slot(@cover) %>
+          {render_slot(@cover)}
         </div>
       <% else %>
         <%= if @video_cover do %>
-          <%= @video_cover %>
+          {@video_cover}
         <% end %>
       <% end %>
     </div>
@@ -202,6 +203,7 @@ defmodule Brando.HTML.Video do
            <img
              width="#{width}"
              height="#{height}"
+             alt="#{gettext("Video cover image")}"
              src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
          </div>
        ) |> Phoenix.HTML.raw()
