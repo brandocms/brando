@@ -23,7 +23,7 @@ defmodule Brando.Cache.Query do
   defp get_from_cache(key), do: @cache_module.get(:query, key)
 
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
-  def evict({:ok, entry}) do
+  def evict({:ok, entry}) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
 
     perform_eviction(:list, source)
@@ -41,7 +41,7 @@ defmodule Brando.Cache.Query do
   def evict({:error, changeset}), do: {:error, changeset}
 
   # from insert!, update!, etc.
-  def evict(entry) do
+  def evict(entry) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
     perform_eviction(:list, source)
     perform_eviction(:single, source, entry.id)

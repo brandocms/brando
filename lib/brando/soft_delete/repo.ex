@@ -196,14 +196,18 @@ defmodule Brando.SoftDelete.Repo do
 
       defp utc_now, do: DateTime.truncate(DateTime.utc_now(), :second)
 
-      defp maybe_delete_identifier({:ok, entry}),
-        do: Brando.Content.delete_identifier(entry.__struct__, entry)
+      defp maybe_delete_identifier({:ok, entry}) when is_map(entry) do
+        Brando.Content.delete_identifier(entry.__struct__, entry)
+        {:ok, entry}
+      end
 
       defp maybe_delete_identifier({:error, entry}),
         do: {:error, entry}
 
-      defp maybe_delete_identifier(entry) when is_map(entry),
-        do: Brando.Content.delete_identifier(entry.__struct__, entry)
+      defp maybe_delete_identifier(entry) when is_map(entry) do
+        Brando.Content.delete_identifier(entry.__struct__, entry)
+        entry
+      end
 
       defp maybe_delete_identifier(other), do: other
     end
