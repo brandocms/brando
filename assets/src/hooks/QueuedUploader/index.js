@@ -1,20 +1,16 @@
-export default app => ({
+export default (app) => ({
   async mounted() {
     const chunkSize = 5
     let filesRemaining = []
-    console.log('mounted queue hook')
-    this.el.addEventListener('input', async event => {
-      console.log('got input!', event.target, event.currentTarget)
+    this.el.addEventListener('input', async (event) => {
       event.preventDefault()
 
       if (event.target instanceof HTMLInputElement) {
         const files_html = event.target.files
-        console.log('in instanceof', files_html)
         if (files_html) {
           const files = Array.from(files_html)
           filesRemaining = files
           const firstFiles = files.slice(0, chunkSize)
-          console.log('uploading', firstFiles)
           this.upload('transformer', firstFiles)
 
           filesRemaining.splice(0, chunkSize)
@@ -32,5 +28,5 @@ export default app => ({
         console.log('Done uploading, noop!')
       }
     })
-  }
+  },
 })
