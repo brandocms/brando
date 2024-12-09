@@ -13,6 +13,7 @@ defmodule Brando.Query.Mutations do
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
     {custom_changeset, opts} = Keyword.pop(opts, :changeset)
+    notify? = Keyword.get(opts, :notify?, true)
     changeset_fun = custom_changeset || (&module.changeset/5)
 
     changeset =
@@ -34,9 +35,11 @@ defmodule Brando.Query.Mutations do
           Revisions.create_revision(entry, user)
         end
 
-        case Brando.Blueprint.Identifier.identifier_for(entry) do
-          nil -> nil
-          identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+        if notify? do
+          case Brando.Blueprint.Identifier.identifier_for(entry) do
+            nil -> nil
+            identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+          end
         end
 
         callback_block.(entry)
@@ -48,6 +51,7 @@ defmodule Brando.Query.Mutations do
 
   def create_with_changeset(module, changeset, user, callback_block, opts) do
     {preloads, _opts} = Keyword.pop(opts, :preloads)
+    notify? = Keyword.get(opts, :notify?, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :insert),
@@ -62,9 +66,11 @@ defmodule Brando.Query.Mutations do
         Revisions.create_revision(entry, user)
       end
 
-      case Brando.Blueprint.Identifier.identifier_for(entry) do
-        nil -> nil
-        identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+      if notify? do
+        case Brando.Blueprint.Identifier.identifier_for(entry) do
+          nil -> nil
+          identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+        end
       end
 
       callback_block.(entry)
