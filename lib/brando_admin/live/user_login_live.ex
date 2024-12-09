@@ -29,14 +29,14 @@ defmodule BrandoAdmin.UserLoginLive do
             fill="#012992"
           />
         </svg>
-        <div>Brando &copy;<%= NaiveDateTime.utc_now().year %></div>
+        <div>Brando &copy;{NaiveDateTime.utc_now().year}</div>
       </div>
       <div class="login-container">
         <div class="login-box">
           <div class="figure-wrapper">
             <figure>
               <%= if Brando.config(:client_brand) do %>
-                <%= Brando.config(:client_brand) |> raw %>
+                {Brando.config(:client_brand) |> raw}
               <% else %>
                 <svg
                   version="1.1"
@@ -67,12 +67,12 @@ defmodule BrandoAdmin.UserLoginLive do
           <div class="login-form">
             <.form for={@form} id="login_form" action={@create_action} phx-update="ignore" as={:user}>
               <div class="title">
-                <%= Brando.config(:app_name) %>
+                {Brando.config(:app_name)}
               </div>
 
               <%= if @error_message do %>
                 <div class="alert alert-danger">
-                  <p><%= @error_message %></p>
+                  <p>{@error_message}</p>
                 </div>
               <% end %>
 
@@ -83,6 +83,7 @@ defmodule BrandoAdmin.UserLoginLive do
                   label={gettext("Email")}
                   class="text"
                   data-testid="email"
+                  autofocus
                 />
               </div>
 
@@ -111,7 +112,7 @@ defmodule BrandoAdmin.UserLoginLive do
                   phx-disable-with={gettext("Logging in...")}
                   data-testid="login-button"
                 >
-                  <%= gettext("Log in") %>
+                  {gettext("Log in")}
                 </button>
               </div>
             </.form>
@@ -180,9 +181,9 @@ defmodule BrandoAdmin.UserLoginLive do
       <input type="hidden" name={@name} value="false" />
       <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
       <label class="control-label small" for={@id}>
-        <%= @label %>
+        {@label}
       </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -191,7 +192,7 @@ defmodule BrandoAdmin.UserLoginLive do
   def input(assigns) do
     ~H"""
     <div>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>{@label}</.label>
       <input
         type={@type}
         name={@name}
@@ -200,7 +201,7 @@ defmodule BrandoAdmin.UserLoginLive do
         class={@class}
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -215,7 +216,7 @@ defmodule BrandoAdmin.UserLoginLive do
     ~H"""
     <div class="label-wrapper">
       <label class="control-label" for={@for}>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </label>
     </div>
     """
@@ -251,7 +252,7 @@ defmodule BrandoAdmin.UserLoginLive do
     ~H"""
     <p>
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </p>
     """
   end
