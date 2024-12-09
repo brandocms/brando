@@ -151,6 +151,12 @@
     width: 100%;
     cursor: auto;
 
+    .meta-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .identifier-meta {
       margin-top: 5px;
       .label-wrapper {
@@ -168,10 +174,15 @@
           display: flex;
         }
 
-        textarea {
+        textarea,
+        input {
           font-size: 10px;
           border: 1px dashed;
           padding: 3px;
+        }
+
+        input {
+          height: auto;
         }
       }
     }
