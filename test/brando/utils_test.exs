@@ -29,7 +29,7 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify strips symbols" do
-    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-♬-♫-♪-♩-a-melody-or-just-noise"
+    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-a-melody-or-just-noise"
   end
 
   test "slugify strips accents" do
@@ -38,11 +38,11 @@ defmodule Brando.UtilsTest do
 
   test "slugify special characters" do
     assert slugify("special characters (#?@$%^*) are also ASCII") ==
-             "special-characters-atdollar-are-also-ascii"
+             "special-characters-are-also-ascii"
   end
 
   test "slugify & -> and" do
-    assert slugify("tom & jerry") == "tom-and-jerry"
+    assert slugify("tom & jerry") == "tom-jerry"
   end
 
   test "slugify strip extraneous dashes" do
@@ -51,7 +51,7 @@ defmodule Brando.UtilsTest do
 
   test "slugify_filename/1" do
     assert slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg"
-    assert slugify_filename("-start æøå-.jpeg") == "start-aeoeaa.jpeg"
+    assert slugify_filename("-start æøå-.jpeg") == "start-aeoa.jpeg"
     assert slugify_filename("testing.JPG") == "testing.jpg"
   end
 

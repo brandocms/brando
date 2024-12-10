@@ -80,7 +80,7 @@ defmodule Brando.Mixfile do
       {:gettext, "~> 0.26.1"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
-      {:slugger, "~> 0.2"},
+      {:slugify, "~> 1.3.1"},
       {:ecto_nested_changeset, "~> 0.2"},
       {:nimble_csv, "~> 1.2"},
       {:tzdata, "~> 1.1"},

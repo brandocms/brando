@@ -27,7 +27,7 @@ defmodule Brando.Utils do
   extraneous dashes and punctuation and downcases the slug
   """
   @spec slugify(binary) :: binary
-  def slugify(string), do: Slugger.slugify_downcase(string)
+  def slugify(string), do: Slug.slugify(string)
 
   @doc """
   Converts `filename` to an ascii slug, as per slugify/1.
