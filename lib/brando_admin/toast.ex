@@ -8,7 +8,9 @@ defmodule BrandoAdmin.Toast do
     end
   end
 
-  def send(payload, %{type: :mutation} = opts \\ %{type: :notification, level: :success}) do
+  def send(payload, opts \\ %{type: :mutation, level: :success})
+
+  def send(payload, %{type: :mutation} = opts) do
     schema = payload.identifier.schema
 
     translated_type = Brando.Blueprint.get_singular(schema)

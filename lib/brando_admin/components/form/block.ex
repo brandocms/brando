@@ -1396,7 +1396,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="alert danger text-mono">
       <div>
-        Missing module — #<%= inspect(assigns.module_id) %>.<br /><br />
+        Missing module — #{inspect(assigns.module_id)}.<br /><br />
         If this is a mistake, you can hopefully undelete the module.<br /><br />
         If you're sure the module is gone, you can
         <button type="button" phx-click="delete_block" phx-target={@myself}>
@@ -1724,7 +1724,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               >
                 <:description>
                   <%= if @fragment do %>
-                    [<%= @fragment.parent_key %>/<strong><%= @fragment.key %></strong>] <%= @fragment.title %> — <%= @fragment.language %>
+                    [{@fragment.parent_key}/<strong><%= @fragment.key %></strong>] {@fragment.title} — {@fragment.language}
                   <% end %>
                 </:description>
               </.toolbar>
@@ -1747,16 +1747,16 @@ defmodule BrandoAdmin.Components.Form.Block do
                     </div>
                     <div class="info">
                       <span class="fragment-label">
-                        <%= gettext("Embedded") %><br /> <%= gettext("fragment") %>
+                        {gettext("Embedded")}<br /> {gettext("fragment")}
                       </span>
                     </div>
                   </div>
 
                   <div :if={!@fragment_id} class="block-instructions">
                     <p>
-                      <%= gettext(
+                      {gettext(
                         "This block embeds a fragment as a block, but no fragment is currently selected."
-                      ) %>
+                      )}
                     </p>
                     <button
                       type="button"
@@ -1764,7 +1764,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                       phx-click={show_modal("#block-#{@uid}_config")}
                       phx-target={@target}
                     >
-                      <%= gettext("Add fragment") %>
+                      {gettext("Add fragment")}
                     </button>
                   </div>
                   <div :if={@fragment} class="fragment-info"></div>
@@ -1773,7 +1773,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.inputs_for>
           <% else %>
             <section class="alert danger">
-              <%= gettext("This block is currently not allowed to be a child block :(") %>
+              {gettext("This block is currently not allowed to be a child block :(")}
             </section>
           <% end %>
         </.form>
@@ -1862,16 +1862,16 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.inputs_for>
           <% else %>
             <section class="alert danger">
-              <%= gettext("This block is currently not allowed to be a child block :(") %>
+              {gettext("This block is currently not allowed to be a child block :(")}
             </section>
           <% end %>
         </.form>
         <%= if @has_children? do %>
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
           <.plus click={@insert_child_block} />
         <% else %>
           <div class="blocks-empty-instructions">
-            <%= gettext("Click the plus to start adding content blocks") %>
+            {gettext("Click the plus to start adding content blocks")}
           </div>
           <.plus click={@insert_child_block} />
         <% end %>
@@ -2033,12 +2033,12 @@ defmodule BrandoAdmin.Components.Form.Block do
           <% end %>
         </.form>
         <%= if @has_children? do %>
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
           <.plus click={@insert_multi_block} />
         <% else %>
           <%= if @multi do %>
             <div class="blocks-empty-instructions">
-              <%= gettext("Click the plus to start adding content blocks") %>
+              {gettext("Click the plus to start adding content blocks")}
             </div>
             <.plus click={@insert_multi_block} />
           <% end %>
@@ -2114,7 +2114,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   <img src={img_src} />
                 </figure>
               <% _ -> %>
-                <%= raw(split) %>
+                {raw(split)}
             <% end %>
           <% end %>
         </div>
@@ -2159,14 +2159,14 @@ defmodule BrandoAdmin.Components.Form.Block do
           />
           <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} />
           <div>
-            UID: <span class="text-mono"><%= @uid %></span>
+            UID: <span class="text-mono">{@uid}</span>
           </div>
         </div>
         <div class="panel">
           <h2 class="titlecase">Vars</h2>
           <.inputs_for :let={var} field={@block_form[:vars]}>
             <div class="var">
-              <div class="key"><%= var[:key].value %></div>
+              <div class="key">{var[:key].value}</div>
               <div class="buttons">
                 <button
                   type="button"
@@ -2174,7 +2174,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   phx-click={JS.push("reset_var", target: @target)}
                   phx-value-id={var[:key].value}
                 >
-                  <%= gettext("Reset") %>
+                  {gettext("Reset")}
                 </button>
                 <button
                   type="button"
@@ -2182,7 +2182,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   phx-click={JS.push("delete_var", target: @target)}
                   phx-value-id={var[:key].value}
                 >
-                  <%= gettext("Delete") %>
+                  {gettext("Delete")}
                 </button>
               </div>
             </div>
@@ -2191,45 +2191,45 @@ defmodule BrandoAdmin.Components.Form.Block do
           <h2 class="titlecase">Refs</h2>
           <.inputs_for :let={ref} field={@block_form[:refs]}>
             <div class="ref">
-              <div class="key"><%= ref[:name].value %></div>
+              <div class="key">{ref[:name].value}</div>
               <button
                 type="button"
                 class="tiny"
                 phx-click={JS.push("reset_ref", target: @target)}
                 phx-value-id={ref[:name].value}
               >
-                <%= gettext("Reset") %>
+                {gettext("Reset")}
               </button>
             </div>
           </.inputs_for>
-          <h2 class="titlecase"><%= gettext("Advanced") %></h2>
+          <h2 class="titlecase">{gettext("Advanced")}</h2>
           <div class="button-group-vertical">
             <button
               type="button"
               class="secondary"
               phx-click={JS.push("fetch_missing_refs", target: @target)}
             >
-              <%= gettext("Fetch missing refs") %>
+              {gettext("Fetch missing refs")}
             </button>
             <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @target)}>
-              <%= gettext("Reset all block refs") %>
+              {gettext("Reset all block refs")}
             </button>
             <button
               type="button"
               class="secondary"
               phx-click={JS.push("fetch_missing_vars", target: @target)}
             >
-              <%= gettext("Fetch missing vars") %>
+              {gettext("Fetch missing vars")}
             </button>
             <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @target)}>
-              <%= gettext("Reset all variables") %>
+              {gettext("Reset all variables")}
             </button>
           </div>
         </div>
       </div>
       <:footer>
         <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
-          <%= gettext("Close") %>
+          {gettext("Close")}
         </button>
       </:footer>
     </Content.modal>
@@ -2265,7 +2265,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
       <:footer>
         <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
-          <%= gettext("Close") %>
+          {gettext("Close")}
         </button>
       </:footer>
     </Content.modal>
@@ -2315,7 +2315,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
       <:footer>
         <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
-          <%= gettext("Close") %>
+          {gettext("Close")}
         </button>
       </:footer>
     </Content.modal>
@@ -2362,12 +2362,12 @@ defmodule BrandoAdmin.Components.Form.Block do
       </.inputs_for>
     <% else %>
       <section class="alert danger">
-        Ref <code><%= @ref_name %></code>
+        Ref <code>{@ref_name}</code>
         is missing!<br /><br />
         If the module has been changed, this block might be out of sync!<br /><br />
         Available refs are:<br /><br />
         <div :for={ref_name <- @ref_names}>
-          &rarr; <%= ref_name %><br />
+          &rarr; {ref_name}<br />
         </div>
       </section>
     <% end %>
@@ -2433,11 +2433,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     ~H"""
     <%= if is_function(@component_target) do %>
-      <%= component(
+      {component(
         @component_target,
         assigns,
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      ) %>
+      )}
     <% else %>
       <.live_component
         module={@component_target}
@@ -2504,14 +2504,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     >
       <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={@wide_config}>
         <%= if @config do %>
-          <%= render_slot(@config) %>
+          {render_slot(@config)}
         <% end %>
         <:footer>
           <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
-            <%= gettext("Close") %>
+            {gettext("Close")}
           </button>
           <%= if @config_footer do %>
-            <%= render_slot(@config_footer) %>
+            {render_slot(@config_footer)}
           <% end %>
         </:footer>
       </Content.modal>
@@ -2539,12 +2539,12 @@ defmodule BrandoAdmin.Components.Form.Block do
           is_datasource?={false}
         >
           <:description>
-            <%= render_slot(@description) %>
+            {render_slot(@description)}
           </:description>
         </.toolbar>
 
         <div class="block-content" id={"block-#{@uid}-block-content"}>
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </div>
       </div>
     </div>
@@ -2563,7 +2563,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% end %>
           </:description>
           <div class="html-block">
@@ -2584,7 +2584,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% end %>
           </:description>
           <div class="markdown-block">
@@ -2609,7 +2609,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= gettext("Comment — not shown on frontend.") %>
+            {gettext("Comment — not shown on frontend.")}
           </:description>
           <:config>
             <div id={"block-#{@uid}-conf-textarea"}>
@@ -2618,7 +2618,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           </:config>
           <div id={"block-#{@uid}-comment"}>
             <%= if @text do %>
-              <%= @text |> raw() %>
+              {@text |> raw()}
             <% end %>
           </div>
         </.block>
@@ -2636,7 +2636,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% end %>
           </:description>
           <div class="alert">
@@ -2665,8 +2665,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            (H<%= block_data[:level].value %>)<%= if @ref_description do %>
-              <%= @ref_description %>
+            (H{block_data[:level].value})<%= if @ref_description do %>
+              {@ref_description}
             <% end %>
           </:description>
           <:config>
@@ -2731,9 +2731,9 @@ defmodule BrandoAdmin.Components.Form.Block do
         <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% else %>
-              <%= @text_type %>
+              {@text_type}
             <% end %>
           </:description>
           <:config>
@@ -2822,7 +2822,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         </div>
         <div class="info">
           <span class="vars-label">
-            <%= gettext("Block") %><br /> <%= gettext("Variables") %>
+            {gettext("Block")}<br /> {gettext("Variables")}
           </span>
         </div>
       </div>
@@ -2877,34 +2877,34 @@ defmodule BrandoAdmin.Components.Form.Block do
         </Form.label>
         <span class="block-type">
           <span :if={@is_datasource?} class="datasource">
-            <%= gettext("Datamodule") %> |
+            {gettext("Datamodule")} |
           </span>
           <span :if={@type == :module and not @is_datasource?} phx-no-format>
             <%= if @multi do %>Multi <% end %><%= gettext("Module") %> |
           </span>
           <span :if={@type == :module_entry}>
-            <%= gettext("Entry") %> |
+            {gettext("Entry")} |
           </span>
           <span :if={@type == :container}>
-            <%= gettext("Container") %> |
+            {gettext("Container")} |
           </span>
           <span :if={@type == :fragment}>
-            <%= gettext("Fragment") %> |
+            {gettext("Fragment")} |
           </span>
         </span>
         <span :if={@description} class="block-name">
-          <%= render_slot(@description) %>
+          {render_slot(@description)}
         </span>
         <%= if @type == :container do %>
           <%= if @container do %>
-            <%= @container.name %>
+            {@container.name}
           <% else %>
             Standard
           <% end %>
           <%= if @palette do %>
             <div class="arrow">&rarr;</div>
             <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
-              <%= @palette.name %>
+              {@palette.name}
             </button>
             <div class="circle-stack">
               <span
@@ -2916,25 +2916,25 @@ defmodule BrandoAdmin.Components.Form.Block do
               </span>
             </div>
             <div :if={@block[:anchor].value} class="container-target">
-              &nbsp;|&nbsp;#<%= @block[:anchor].value %>
+              &nbsp;|&nbsp;#{@block[:anchor].value}
             </div>
           <% else %>
             <div class="arrow">&rarr;</div>
             <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
-              <%= gettext("<No palette>") %>
+              {gettext("<No palette>")}
             </button>
           <% end %>
           <span :if={@block[:description].value not in ["", nil]} class="description">
-            <%= @block[:description].value %>
+            {@block[:description].value}
           </span>
         <% else %>
           <span :if={@block[:description].value not in ["", nil]} class="description">
-            <%= @block[:description].value %>
+            {@block[:description].value}
           </span>
         <% end %>
       </div>
       <div class="block-content" id={"block-#{@uid}-block-content"}>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
       <div class="block-actions" id={"block-#{@uid}-block-actions"}>
         <.handle :if={!@is_ref?} />
@@ -3021,7 +3021,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         </div>
         <div class="info">
           <span class="table-label">
-            <%= gettext("Tabular data") %><br /> [<%= @table_template_name %>]
+            {gettext("Tabular data")}<br /> [{@table_template_name}]
           </span>
         </div>
       </div>
@@ -3029,11 +3029,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         <%= if !@valid? do %>
           <div class="block-instructions">
             <p>
-              <%= gettext("This block implements tabular data, but the table is empty.") %><br />
-              <%= gettext("Click the 'add row' button below to get started.") %>
+              {gettext("This block implements tabular data, but the table is empty.")}<br />
+              {gettext("Click the 'add row' button below to get started.")}
             </p>
             <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
-              <%= gettext("Add row") %>
+              {gettext("Add row")}
             </button>
             <input type="hidden" name={@block_data[:table_rows].name} value={[]} />
           </div>
@@ -3085,7 +3085,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               </div>
               <div class="insert-row">
                 <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
-                  <%= gettext("Add row") %>
+                  {gettext("Add row")}
                 </button>
               </div>
             </.inputs_for>
@@ -3130,8 +3130,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         </div>
         <div class="info">
           <span class="datasource-label">
-            <%= gettext("Datasource") %> [<%= @translated_module_datasource_type %>]<br />
-            <%= @module_datasource_module_label %> &rarr; <%= @module_datasource_query %>
+            {gettext("Datasource")} [{@translated_module_datasource_type}]<br />
+            {@module_datasource_module_label} &rarr; {@module_datasource_query}
           </span>
         </div>
       </div>
@@ -3143,7 +3143,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           remember_scroll_position
           narrow
         >
-          <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+          <h2 class="titlecase">{gettext("Available entries")}</h2>
           <Entries.block_identifier
             :for={identifier <- @available_identifiers}
             identifier={identifier}
@@ -3209,7 +3209,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> show_modal("#select-entries-#{@uid}")
             }
           >
-            <%= gettext("Select entries") %>
+            {gettext("Select entries")}
           </button>
         </div>
       <% end %>
@@ -4404,7 +4404,8 @@ defmodule BrandoAdmin.Components.Form.Block do
               media_path
           end
 
-        %Brando.Images.Image{path: path} = image ->
+        is_struct(image, Brando.Images.Image) ->
+          path = image.path
           media_path = Brando.Utils.media_url(path)
           Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
           media_path

@@ -279,8 +279,10 @@ defmodule Brando.LivePreview do
         """)
 
         if err.term[:__struct__] && err.term[:__struct__] == Ecto.Association.NotLoaded do
+          field = Map.get(err.term, :__field__)
+
           {:error,
-           "LivePreview is missing preload for #{inspect(err.term.__field__)}<br><br>Add `schema_preloads [#{inspect(err.term.__field__)}]` to your `preview_target`"}
+           "LivePreview is missing preload for #{inspect(field)}<br><br>Add `schema_preloads [#{inspect(field)}]` to your `preview_target`"}
         else
           {:error, "#{inspect(err, pretty: true)}"}
         end

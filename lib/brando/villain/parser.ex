@@ -554,8 +554,8 @@ defmodule Brando.Villain.Parser do
 
         alt =
           cond do
-            alt -> alt
-            caption -> caption
+            alt != "" -> alt
+            caption != "" -> caption
             true -> ""
           end
 

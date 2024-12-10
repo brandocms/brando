@@ -385,8 +385,14 @@ defmodule Brando.Pages do
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    opts = %{matches: %{parent_key: parent, key: key}}
-    opts = (language && put_in(opts.matches, :language, language)) || opts
+    default_opts = %{matches: %{parent_key: parent, key: key}}
+
+    opts =
+      if language do
+        put_in(default_opts, [:matches, :language], language)
+      else
+        default_opts
+      end
 
     case get_fragment(opts) do
       {:error, {:fragment, :not_found}} ->
