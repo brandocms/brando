@@ -81,9 +81,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           target={@target}
         >
           <:description>
-            <%= block_data[:type].value %>
+            {block_data[:type].value}
             <%= if @ref_description not in ["", nil] do %>
-              — <%= @ref_description %>
+              — {@ref_description}
             <% end %>
           </:description>
 
@@ -91,76 +91,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <input name={"block-#{@uid}-f-in"} class="file-input" type="file" multiple />
           </div>
 
-          <%= if @has_images? do %>
-            <span id={"block-#{@uid}-base-file-upload-btn"} phx-update="ignore">
-              <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>
-                <%= gettext("Upload images") %>
-              </button>
-            </span>
-            <button
-              type="button"
-              class="tiny"
-              phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-            >
-              <%= gettext("Select images") %>
+          <span id={"block-#{@uid}-base-file-upload-btn-with-images"} phx-update="ignore">
+            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn-with-images"}>
+              {gettext("Upload images")}
             </button>
-            <button
-              type="button"
-              class="tiny"
-              phx-click={
-                JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
-              }
-            >
-              <%= gettext("Edit captions") %>
-            </button>
-            <div
-              id={"sortable-#{block_data.id}-images"}
-              class={[
-                "images",
-                (@display == :grid && "images-grid") || "images-list"
-              ]}
-              phx-hook="Brando.SortableEmbeds"
-              data-target={@myself}
-              data-sortable-id={"sortable-#{block_data.id}-images"}
-              data-sortable-handle=".sort-handle"
-              data-sortable-selector=".preview"
-            >
-              <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
-                <.gallery_image
-                  image={image}
-                  uid={@uid}
-                  parent_form_name={block_data.name}
-                  target={@myself}
-                />
-              </.inputs_for>
-            </div>
-          <% else %>
-            <div class={[
-              "upload-canvas",
-              "empty",
-              @has_images? && "hidden"
-            ]}>
-              <figure>
-                <svg class="icon-add-gallery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M8 1v4H4v14h16V3h1.008c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3H6V1h2zm4 7l4 4h-3v4h-2v-4H8l4-4zm6-7v4h-8V3h6V1h2z" />
-                </svg>
-              </figure>
-              <div class="instructions">
-                <span id={"block-#{@uid}-base-file-upload-btn"} phx-update="ignore">
-                  <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn"}>
-                    <%= gettext("Upload images") %>
-                  </button>
-                </span>
-                <button
-                  type="button"
-                  class="tiny"
-                  phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                >
-                  <%= gettext("Pick existing images") %>
-                </button>
-              </div>
-            </div>
-          <% end %>
+          </span>
+          <button
+            type="button"
+            class="tiny"
+            phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+          >
+            {gettext("Select images")}
+          </button>
+          <button
+            type="button"
+            class="tiny"
+            phx-click={
+              JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
+            }
+          >
+            {gettext("Edit captions")}
+          </button>
+          <div
+            id={"sortable-#{block_data.id}-images"}
+            class={[
+              "images",
+              (@display == :grid && "images-grid") || "images-list"
+            ]}
+            phx-hook="Brando.SortableEmbeds"
+            data-target={@myself}
+            data-sortable-id={"sortable-#{block_data.id}-images"}
+            data-sortable-handle=".sort-handle"
+            data-sortable-selector=".preview"
+          >
+            <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
+              <.gallery_image
+                image={image}
+                uid={@uid}
+                parent_form_name={block_data.name}
+                target={@myself}
+              />
+            </.inputs_for>
+          </div>
+
+          <div :if={!@has_images?} class="alert">
+            {gettext("No images currently in block. Click one of the buttons above to get started.")}
+          </div>
 
           <Content.modal title={gettext("Edit captions")} id={"block-#{@uid}_captions"}>
             <div class="caption-editor">
@@ -259,22 +235,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         phx-value-path={@img.path}
       >
         <.icon name="hero-x-mark" />
-        <div class="text"><%= gettext("Delete") %></div>
+        <div class="text">{gettext("Delete")}</div>
       </button>
       <figcaption phx-click={
         JS.push("show_captions", target: @target) |> show_modal("#block-#{@uid}_captions")
       }>
         <div>
-          <span><%= gettext("Caption") %></span>
-          <%= raw(@img.title || "{ #{gettext("No caption")} }") %>
+          <span>{gettext("Caption")}</span>
+          {raw(@img.title || "{ #{gettext("No caption")} }")}
         </div>
         <div>
-          <span><%= gettext("Alt. text") %></span>
-          <%= @img.alt || "{ #{gettext("No alt text")} }" %>
+          <span>{gettext("Alt. text")}</span>
+          {@img.alt || "{ #{gettext("No alt text")} }"}
         </div>
         <div>
-          <span><%= gettext("Credits") %></span>
-          <%= @img.credits || "{ #{gettext("No credits")} }" %>
+          <span>{gettext("Credits")}</span>
+          {@img.credits || "{ #{gettext("No credits")} }"}
         </div>
       </figcaption>
     </div>
