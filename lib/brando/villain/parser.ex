@@ -1304,16 +1304,12 @@ defmodule Brando.Villain.Parser do
 
   def add_meta_to_entries(entries, block) do
     # do we have any meta?
-    if block.identifier_metas do
-      Enum.map(entries, fn entry ->
-        entry_schema = entry.__struct__
-        entry_id = entry.id
-        meta = get_meta(block.identifier_metas, entry_schema, entry_id)
-        %{entry: entry, meta: meta}
-      end)
-    else
-      entries
-    end
+    Enum.map(entries, fn entry ->
+      entry_schema = entry.__struct__
+      entry_id = entry.id
+      meta = get_meta(block.identifier_metas, entry_schema, entry_id)
+      %{entry: entry, meta: meta}
+    end)
   end
 
   defp get_meta(identifier_metas, schema, id) do
