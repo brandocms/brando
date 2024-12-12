@@ -1307,7 +1307,7 @@ defmodule Brando.Villain.Parser do
     Enum.map(entries, fn entry ->
       entry_schema = entry.__struct__
       entry_id = entry.id
-      meta = get_meta(block.identifier_metas, entry_schema, entry_id)
+      meta = get_meta(block.identifier_metas || [], entry_schema, entry_id)
       %{entry: entry, meta: meta}
     end)
   end
