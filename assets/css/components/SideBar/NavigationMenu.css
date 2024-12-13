@@ -49,13 +49,13 @@
     position: relative;
 
     .nav-circle {
-      content: '';
+      content: "";
       position: absolute;
       width: 15px;
       height: 15px;
       background-color: #bbb;
       opacity: 0;
-      margin-top: 14px;
+      margin-top: 12px;
       margin-left: -20px;
       transition: opacity 300ms ease;
       border-radius: 50%;
