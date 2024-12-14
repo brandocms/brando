@@ -364,9 +364,9 @@
   integrity sha512-5rwvmdQQpXev4LlBX1P+7h2dguu6iwW/9Npjde4+DEq+HgpVJI/7QY8DI1NVVFdvLtXZNP+vO2L/5BQED6FUhA==
 
 "@jridgewell/gen-mapping@^0.3.5":
-  version "0.3.5"
-  resolved "https://registry.yarnpkg.com/@jridgewell/gen-mapping/-/gen-mapping-0.3.5.tgz#dcce6aff74bdf6dad1a95802b69b04a2fcb1fb36"
-  integrity sha512-IzL8ZoEDIBRWEzlCcRhOaCupYyN5gdIK+Q6fbFdPDg6HqX6jpkItn7DFIpW9LQzXG6Df9sA7+OKnq0qlz/GaQg==
+  version "0.3.8"
+  resolved "https://registry.yarnpkg.com/@jridgewell/gen-mapping/-/gen-mapping-0.3.8.tgz#4f0e06362e01362f823d348f1872b08f666d8142"
+  integrity sha512-imAbBGkb+ebQyxKgzv5Hu2nmROxoDOXHh80evxdoXNOrvAnVx7zimzc1Oo5h9RlfV4vPXaE2iM5pOFbvOCClWA==
   dependencies:
     "@jridgewell/set-array" "^1.2.1"
     "@jridgewell/sourcemap-codec" "^1.4.10"
@@ -959,9 +959,9 @@ domify@1.4.0:
   integrity sha512-CBzequt8IJiKV8fav4tn0qA9KSiZ76w3C2EkyfC8+df6UGNcZJRfvfBcRzLW39eGeETcunkOvvRBj/gKXIdULw==
 
 dompurify@^3.2.0:
-  version "3.2.2"
-  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.2.2.tgz#6c0518745e81686c74a684f5af1e5613e7cc0246"
-  integrity sha512-YMM+erhdZ2nkZ4fTNRTSI94mb7VG7uVF5vj5Zde7tImgnhZE3R6YW/IACGIHb2ux+QkEXMhe591N+5jWOmL4Zw==
+  version "3.2.3"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.2.3.tgz#05dd2175225324daabfca6603055a09b2382a4cd"
+  integrity sha512-U1U5Hzc2MO0oW3DF+G9qYN0aT7atAou4AgI0XjWz061nyBPbdxkfdhfy5uMgGn6+oLFCfn44ZGbdDqCzVmlOWA==
   optionalDependencies:
     "@types/trusted-types" "^2.0.7"
 
@@ -1176,9 +1176,9 @@ log-symbols@^2.2.0:
     chalk "^2.0.1"
 
 magic-string@^0.30.11:
-  version "0.30.14"
-  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.30.14.tgz#e9bb29870b81cfc1ec3cc656552f5a7fcbf19077"
-  integrity sha512-5c99P1WKTed11ZC0HMJOj6CDIue6F8ySu+bJL+85q1zBEIY8IklrJ1eiKC2NDRh3Ct3FcvmJPyQHb9erXMTJNw==
+  version "0.30.15"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.30.15.tgz#d5474a2c4c5f35f041349edaba8a5cb02733ed3c"
+  integrity sha512-zXeaYRgZ6ldS1RJJUrMrYgNJ4fdwnyI6tVqoiIhyCyv5IVTK9BU8Ic2l253GGETQHxI4HNUwhJ3fjDhKqEoaAw==
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.5.0"
 
@@ -1276,9 +1276,9 @@ phoenix_html@^4.1.1:
   integrity sha512-RpvlxDkP13MTQkfbZGFD7XrLgE28mqlwU+rSQxhNyj9U0KzPgeeh4ctn+Mz7jlpsKFAhLe47PXQsff3EXJ4mbg==
 
 phoenix_live_view@^1.0.0-rc.7:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.0.tgz#e3982b5ef96e8a236a5f11e0485bb8edbc3b2916"
-  integrity sha512-YRHoW58/yB+AW1byHf/1leskHwc87ynx/pOhJmPSdehojGogV80MtTzl3EA0EmdHVwbYkUvXSDfBB8UfXWGdYw==
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.1.tgz#cf388de6d38f072d8cca3970ea19d482d0aa22dd"
+  integrity sha512-EwQrVOKerC2rlULDgb9MrL27MfPeOrikkPd9QykbNFKoez3zfskudDL9ajE4BNGilaiQBacx14lCAJXP54Yz1w==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1726,9 +1726,9 @@ svelte-preprocess@^6.0.3:
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
 svelte@^5.2.4:
-  version "5.5.3"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.5.3.tgz#09e911a1da7d5c15fe46894b472c8144d0b38747"
-  integrity sha512-0j7XTSg5iXcLNCFcEsIZPtHO7SQeE0KgMcyF1K4K7HkjdKVPumz7dnxeXq5lGJRHfVAMZKqpEJ46rPKPKRJ57Q==
+  version "5.12.0"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.12.0.tgz#1758d66794076ec540da54ab9fe5d643d4b9e17f"
+  integrity sha512-nOd7uj0D/4A3IrHnltaFYndVPGViYSs0s+Zi3N4uQg3owJt9RoiUdwxYx8qjorj5CtaGsx8dNYsFVbH6czrGNg==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
@@ -1745,9 +1745,9 @@ svelte@^5.2.4:
     zimmerframe "^1.1.2"
 
 sweetalert2@^11.14.5:
-  version "11.14.5"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.14.5.tgz#a3adf9d8c6c8eb8eacfd57e2261503f2181abb8d"
-  integrity sha512-8MWk5uc/r6bWhiJWkUXyEuApfXAhSCZT8FFX7pZXL7YwaPxq+9Ynhi2dUzWkOFn9jvLjKj22CXuccZ+IHcnjvQ==
+  version "11.15.0"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.0.tgz#d591d2cba05c14b696ff7343e1644de0c82d176a"
+  integrity sha512-34Xs0CFBac6I1cGG9d+XaBqJrp0F/0prr8rMYOcU0shU/XmkGkRtlCxWNi7PdKYGw9Qf6aoEHNYicX3au37nkw==
 
 tippy.js@^6.3.7:
   version "6.3.7"
