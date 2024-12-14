@@ -21,11 +21,18 @@ defmodule BrandoAdmin.Chrome do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
       presences = build_presences()
 
+      active_presences = Enum.filter(presences, &(&1.status in ["online", "idle"]))
+
+      inactive_presences =
+        presences
+        |> Enum.filter(&(&1.status == "offline"))
+        |> Enum.reverse()
+
       {:ok,
        socket
        |> assign(:socket_connected, true)
-       |> stream(:active_presences, Enum.filter(presences, &(&1.status in ["online", "idle"])))
-       |> stream(:inactive_presences, Enum.filter(presences, &(&1.status == "offline")))}
+       |> stream(:active_presences, active_presences)
+       |> stream(:inactive_presences, inactive_presences)}
     else
       {:ok,
        socket
@@ -61,7 +68,7 @@ defmodule BrandoAdmin.Chrome do
           id={dom_id}
         />
       </div>
-      <div class="presences-inactive" id="presences-active" phx-update="stream">
+      <div class="presences-inactive" id="presences-inactive" phx-update="stream">
         <.presence
           :for={{dom_id, presence} <- @streams.inactive_presences}
           presence={presence}

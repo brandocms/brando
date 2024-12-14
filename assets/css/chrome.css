@@ -7,6 +7,11 @@
     @fontsize 12px;
     padding-bottom: 1.5em;
   }
+
+  .offline {
+    @display flex;
+    flex-direction: column-reverse;
+  }
 }
 
 .user-presence-item {

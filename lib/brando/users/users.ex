@@ -112,7 +112,8 @@ defmodule Brando.Users do
     list_opts = %{
       select: [:id, :name, :last_login],
       cache: {:ttl, :infinite},
-      preload: [{:avatar, :join}]
+      preload: [{:avatar, :join}],
+      order: [{:desc_nulls_last, :last_login}]
     }
 
     do_get_users_map(list_opts)
@@ -123,7 +124,8 @@ defmodule Brando.Users do
       filter: %{ids: user_ids},
       select: [:id, :name, :last_login],
       cache: {:ttl, :infinite},
-      preload: [{:avatar, :join}]
+      preload: [{:avatar, :join}],
+      order: [{:desc_nulls_last, :last_login}]
     }
 
     do_get_users_map(list_opts)
