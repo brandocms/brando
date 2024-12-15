@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Nav do
   use BrandoAdmin, :child_live_view
   use Gettext, backend: Brando.Gettext
   alias BrandoAdmin.Components.Content
+  on_mount {BrandoAdmin.UserAuth, :mount_current_user}
 
   def mount(_, %{"user_token" => _token, "current_url" => url}, socket) do
     if connected?(socket) do
@@ -77,7 +78,7 @@ defmodule BrandoAdmin.Nav do
             <header class="navigation-header">
               <div class="logo">
                 <%= if Brando.config(:client_brand) do %>
-                  <%= Phoenix.HTML.raw(Brando.config(:client_brand)) %>
+                  {Phoenix.HTML.raw(Brando.config(:client_brand))}
                 <% else %>
                   <svg
                     version="1.1"
@@ -120,10 +121,10 @@ defmodule BrandoAdmin.Nav do
                 <section class="content">
                   <div class="info">
                     <div class="name">
-                      <%= @current_user.name %>
+                      {@current_user.name}
                     </div>
                     <div class="role">
-                      <%= @current_user.role %>
+                      {@current_user.role}
                     </div>
                   </div>
                   <div class="dropdown-icon">
@@ -143,7 +144,7 @@ defmodule BrandoAdmin.Nav do
                 <ul>
                   <li>
                     <a data-testid="logout" tabindex="0" href="/admin/logout">
-                      <%= gettext("Log out") %>
+                      {gettext("Log out")}
                     </a>
                   </li>
                 </ul>
@@ -155,7 +156,7 @@ defmodule BrandoAdmin.Nav do
               <div class="nav-sections" id="nav-sections">
                 <section :for={section <- @menu_sections} class="navigation-section">
                   <header>
-                    <h3><%= section.name %></h3>
+                    <h3>{section.name}</h3>
                     <div class="line"></div>
                   </header>
                   <dl :for={item <- section.items}>
@@ -167,17 +168,17 @@ defmodule BrandoAdmin.Nav do
                         data-phx-link="redirect"
                         data-phx-link-state="push"
                       >
-                        <%= item.name %>
+                        {item.name}
                       </a>
                       <span :if={item[:items]} data-nav-expand>
-                        <%= item.name %> <.icon name="hero-plus-circle" />
+                        {item.name} <.icon name="hero-plus-circle" />
                       </span>
                     </dt>
                     <dd :if={item[:items]}>
                       <ul>
                         <li :for={sub_item <- item.items}>
                           <a href={sub_item.url} data-phx-link="redirect" data-phx-link-state="push">
-                            <%= sub_item.name %>
+                            {sub_item.name}
                           </a>
                         </li>
                       </ul>
