@@ -64,6 +64,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :columns, :integer, required: true
   attr :offset, :integer, default: nil
   slot :inner_block
+  slot :before
   slot :outside
 
   def update_link(assigns) do
@@ -77,10 +78,11 @@ defmodule Brando.Blueprint.Listings.Components do
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>
+      {render_slot(@before)}
       <.link navigate={@update_url} class="entry-link">
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.link>
-      <%= render_slot(@outside) %>
+      {render_slot(@outside)}
     </div>
     """
   end
@@ -97,7 +99,7 @@ defmodule Brando.Blueprint.Listings.Components do
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
