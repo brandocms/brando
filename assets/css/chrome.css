@@ -33,6 +33,7 @@
   .status {
     width: 10px;
     color: theme(colors.status.draft);
+    transition: color 0.5s ease;
     &.online {
       color: theme(colors.status.published);
     }
