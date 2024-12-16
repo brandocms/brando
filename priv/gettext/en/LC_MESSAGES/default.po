@@ -31,20 +31,20 @@ msgstr ""
 msgid "Unknown error while creating image sizes."
 msgstr ""
 
-#: lib/brando/query/mutations.ex:39
-#: lib/brando/query/mutations.ex:67
+#: lib/brando/query/mutations.ex:41
+#: lib/brando/query/mutations.ex:72
 #, elixir-autogen, elixir-format
 msgid "created"
 msgstr ""
 
-#: lib/brando/query/mutations.ex:317
+#: lib/brando/query/mutations.ex:323
 #: lib/brando_admin/live_view/listing.ex:115
 #, elixir-autogen, elixir-format
 msgid "deleted"
 msgstr ""
 
-#: lib/brando/query/mutations.ex:116
-#: lib/brando/query/mutations.ex:150
+#: lib/brando/query/mutations.ex:122
+#: lib/brando/query/mutations.ex:156
 #, elixir-autogen, elixir-format
 msgid "updated"
 msgstr ""
@@ -106,12 +106,12 @@ msgstr ""
 msgid "Identity"
 msgstr ""
 
-#: lib/brando_admin/live/user_login_live.ex:104
+#: lib/brando_admin/live/user_login_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in for 60 days"
 msgstr ""
 
-#: lib/brando_admin/nav.ex:146
+#: lib/brando_admin/live/nav.ex:147
 #, elixir-autogen, elixir-format
 msgid "Log out"
 msgstr ""
@@ -135,7 +135,7 @@ msgstr ""
 msgid "Pages & Sections"
 msgstr ""
 
-#: lib/brando_admin/live/user_login_live.ex:92
+#: lib/brando_admin/live/user_login_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -174,7 +174,7 @@ msgstr ""
 msgid "Block modules"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:194
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:170
 #: lib/brando_admin/components/form/input/blocks/svg_block.ex:54
 #: lib/brando_admin/components/form/module_props.ex:73
 #: lib/brando_admin/components/form/module_props.ex:352
@@ -333,7 +333,7 @@ msgstr ""
 #: lib/brando/images/image.ex:68
 #: lib/brando/videos/video.ex:101
 #: lib/brando_admin/components/form.ex:1366
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:173
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:149
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:215
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:146
 #, elixir-autogen, elixir-format
@@ -368,8 +368,8 @@ msgid "Advanced"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:1507
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:175
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:272
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:151
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:248
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:141
 #: lib/brando_admin/components/form/module_props.ex:395
 #, elixir-autogen, elixir-format
@@ -387,7 +387,7 @@ msgid "Caches cleared!"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:1499
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:268
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:244
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:133
 #, elixir-autogen, elixir-format
 msgid "Caption"
@@ -468,7 +468,7 @@ msgstr ""
 msgid "Delete job"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:186
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:162
 #: lib/brando_admin/components/form/module_props.ex:478
 #: lib/brando_admin/components/form/module_props.ex:722
 #, elixir-autogen, elixir-format
@@ -848,8 +848,8 @@ msgid "Create menu"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:1503
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:174
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:276
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:150
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:252
 #: lib/brando_admin/components/form/module_props.ex:396
 #, elixir-autogen, elixir-format
 msgid "Credits"
@@ -912,7 +912,7 @@ msgstr ""
 msgid "Level"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:196
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:172
 #: lib/brando_admin/components/form/module_props.ex:491
 #: lib/brando_admin/components/form/module_props.ex:737
 #, elixir-autogen, elixir-format
@@ -991,7 +991,7 @@ msgstr ""
 msgid "Picture class(es)"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:200
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:176
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:242
 #: lib/brando_admin/components/form/module_props.ex:494
 #: lib/brando_admin/components/form/module_props.ex:630
@@ -1049,7 +1049,7 @@ msgstr ""
 msgid "Sequence updated"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:195
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:171
 #: lib/brando_admin/components/form/module_props.ex:489
 #: lib/brando_admin/components/form/module_props.ex:733
 #, elixir-autogen, elixir-format
@@ -1227,8 +1227,8 @@ msgstr ""
 msgid "Create var"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:114
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:165
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:113
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:141
 #, elixir-autogen, elixir-format
 msgid "Edit captions"
 msgstr ""
@@ -1250,24 +1250,23 @@ msgstr ""
 msgid "Moonwalk"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:273
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:249
 #, elixir-autogen, elixir-format
 msgid "No alt text"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:269
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:245
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No caption"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:105
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:104
 #: lib/brando_admin/components/form/input/gallery.ex:122
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Select images"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:97
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:151
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:96
 #: lib/brando_admin/components/form/input/gallery.ex:114
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Upload images"
@@ -1639,14 +1638,9 @@ msgstr ""
 msgid "External file"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:159
-#, elixir-autogen, elixir-format, fuzzy
-msgid "Pick existing images"
-msgstr ""
-
 #: lib/brando_admin/components/content/list/row.ex:236
 #: lib/brando_admin/components/form/block.ex:2185
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:262
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:238
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete"
 msgstr ""
@@ -1834,7 +1828,7 @@ msgstr ""
 msgid "Please try again shortly, or go back <a href=\"/\">to the main page</a>"
 msgstr ""
 
-#: lib/brando_admin/live/chrome.ex:40
+#: lib/brando_admin/live/chrome.ex:47
 #, elixir-autogen, elixir-format
 msgid "Presence details"
 msgstr ""
@@ -2221,7 +2215,7 @@ msgstr ""
 msgid "Liquid"
 msgstr ""
 
-#: lib/brando_admin/live/user_login_live.ex:114
+#: lib/brando_admin/live/user_login_live.ex:115
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr ""
@@ -2468,7 +2462,7 @@ msgstr ""
 msgid "Multi"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:277
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:253
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No credits"
 msgstr ""
@@ -2504,7 +2498,7 @@ msgstr ""
 msgid "Logged out successfully."
 msgstr ""
 
-#: lib/brando_admin/live/user_login_live.ex:111
+#: lib/brando_admin/live/user_login_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Logging in..."
 msgstr ""
@@ -2520,7 +2514,7 @@ msgstr ""
 msgid "Comment — not shown on frontend."
 msgstr ""
 
-#: lib/brando_admin/live/chrome.ex:43
+#: lib/brando_admin/live/chrome.ex:50
 #, elixir-autogen, elixir-format
 msgid "Current user activity"
 msgstr ""
@@ -2590,4 +2584,9 @@ msgstr ""
 #: lib/brando/html/video.ex:206
 #, elixir-autogen, elixir-format
 msgid "Video cover image"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex:138
+#, elixir-autogen, elixir-format
+msgid "No images currently in block. Click one of the buttons above to get started."
 msgstr ""
