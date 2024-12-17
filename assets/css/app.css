@@ -278,9 +278,10 @@ code {
   flex-direction: row;
   width: auto;
   justify-content: flex-end;
-  margin-right: 15px;
+  margin-right: 6px;
   flex-grow: 1;
   flex-shrink: 1;
+  column-gap: 3px;
 
   .user-presence {
     margin-top: 0;
