@@ -61,8 +61,13 @@ defmodule Brando.Images.Utils do
   def delete_media(""), do: nil
 
   def delete_media(file) do
-    file = Path.join([Brando.config(:media_path), file])
-    File.rm(file)
+    # Don't delete SVGs
+    if String.ends_with?(file, ".svg") do
+      nil
+    else
+      file = Path.join([Brando.config(:media_path), file])
+      File.rm(file)
+    end
   end
 
   @doc """
