@@ -33,7 +33,7 @@
     line-height: 1.3;
     justify-content: space-between;
     text-align: left;
-    width: min-content;
+    width: fit-content;
 
     .name {
       font-size: 15px;
@@ -110,6 +110,7 @@
   border: 1px dashed #3b3b3b;
   border-radius: 8px;
   flex-wrap: wrap;
+  min-width: 275px;
 
   &.draggable {
     cursor: move;
@@ -140,10 +141,11 @@
   .content {
     flex-grow: 1;
     align-items: center;
+
     .name {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
-      max-width: 40ch;
+      max-width: 30ch;
     }
   }
 
