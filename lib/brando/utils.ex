@@ -590,8 +590,12 @@ defmodule Brando.Utils do
   def render_title(nil, title, nil),
     do: "#{title}"
 
+  def render_title(title_prefix, title, nil) when title_prefix == title, do: title
+
   def render_title(title_prefix, title, nil),
     do: "#{title_prefix}#{title}"
+
+  def render_title(nil, title, title_postfix) when title_postfix == title, do: title
 
   def render_title(nil, title, title_postfix),
     do: "#{title}#{title_postfix}"

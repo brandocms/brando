@@ -118,6 +118,9 @@ defmodule Brando.UtilsTest do
     assert render_title("// ", "hello", nil) == "// hello"
     assert render_title("// ", "hello", " //") == "// hello //"
     assert render_title(nil, "hello", " //") == "hello //"
+    assert render_title("MyCompany", "MyCompany", nil) == "MyCompany"
+    assert render_title(nil, "MyCompany", "MyCompany") == "MyCompany"
+    assert render_title("MyCompany", "MyCompany", "MyCompany") == "MyCompanyMyCompanyMyCompany"
   end
 
   test "file_url" do
