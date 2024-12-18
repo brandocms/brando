@@ -1,3 +1,60 @@
+.checklist {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.1em;
+  margin-top: 0.2em;
+
+  &.tiny {
+    .checklist-item {
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 2px 12px 2px 2px;
+      gap: 0.3em;
+
+      [data-icon] {
+        padding: 0;
+        width: 0.75rem;
+        height: 0.75rem;
+      }
+    }
+  }
+
+  .checklist-item {
+    @font mono 13px;
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    border-radius: 12px;
+    padding: 2px 15px 2px 2px;
+
+    &.true {
+      background-color: #90ee9033;
+      color: #475b4f;
+    }
+
+    &.false {
+      background-color: #ff9d9d30;
+      color: #863f3f;
+    }
+
+    [data-icon] {
+      border-radius: 50%;
+      padding: 5px;
+      width: 1rem;
+      height: 1rem;
+    }
+
+    &.true [data-icon] {
+      background-color: #475b4f;
+    }
+
+    &.false [data-icon] {
+      background-color: #863f3f;
+    }
+  }
+}
+
 #brando-main > .content {
   display: flex;
   flex-direction: column;
@@ -379,63 +436,6 @@
       &.top {
         align-self: flex-start;
         margin-top: 5px;
-      }
-    }
-
-    .checklist {
-      display: flex;
-      flex-direction: column;
-      row-gap: 0.1em;
-      margin-top: 0.2em;
-
-      &.tiny {
-        .checklist-item {
-          font-size: 10px;
-          text-transform: uppercase;
-          padding: 2px 12px 2px 2px;
-          gap: 0.3em;
-
-          [data-icon] {
-            padding: 0;
-            width: 0.75rem;
-            height: 0.75rem;
-          }
-        }
-      }
-
-      .checklist-item {
-        @font mono 13px;
-        width: fit-content;
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
-        border-radius: 12px;
-        padding: 2px 15px 2px 2px;
-
-        &.true {
-          background-color: #90ee9033;
-          color: #475b4f;
-        }
-
-        &.false {
-          background-color: #ff9d9d30;
-          color: #863f3f;
-        }
-
-        [data-icon] {
-          border-radius: 50%;
-          padding: 5px;
-          width: 1rem;
-          height: 1rem;
-        }
-
-        &.true [data-icon] {
-          background-color: #475b4f;
-        }
-
-        &.false [data-icon] {
-          background-color: #863f3f;
-        }
       }
     }
 
