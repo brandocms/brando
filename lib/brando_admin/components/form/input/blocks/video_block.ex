@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
+  import BrandoAdmin.Components.Content.List.Checklist
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -19,15 +20,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   # data block_data, :any
   # data uid, :string
+  @picture_fields_to_take [
+    :picture_class,
+    :img_class,
+    :link,
+    :srcset,
+    :media_queries,
+    :formats,
+    :path,
+    :width,
+    :height,
+    :sizes,
+    :cdn,
+    :lazyload,
+    :moonwalk,
+    :dominant_color,
+    :placeholder,
+    :focal,
+    :fetchpriority
+    # :config_target
+  ]
 
   def update(assigns, socket) do
     block_cs = assigns.block.source
-    block_data_cs = Changeset.get_field(block_cs, :data) |> Changeset.change()
+    block_data = Changeset.get_field(block_cs, :data)
+    block_data_cs = Changeset.change(block_data)
 
     socket
     |> assign(assigns)
     |> assign(:uid, Changeset.get_field(block_cs, :uid))
     |> assign(:type, Changeset.get_field(block_data_cs, :source))
+    |> assign_new(:cover_image, fn -> block_data.cover_image end)
     |> then(&{:ok, &1})
   end
 
@@ -44,9 +67,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         >
           <:description>
             <%= if @type == :file do %>
-              <%= gettext("External file") %>
+              {gettext("External file")}
             <% else %>
-              <%= @type %>: <%= block_data[:remote_id].value %>
+              {@type}: {block_data[:remote_id].value}
             <% end %>
           </:description>
           <:config>
@@ -72,41 +95,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                 data-target={@myself}
               >
                 <div class="video-loading hidden">
-                  <%= gettext("Fetching video information. Please wait...") %>
+                  {gettext("Fetching video information. Please wait...")}
                 </div>
                 <small>
-                  <%= gettext(
+                  {gettext(
                     "To embed a video in your content, please input the full URL of the video you want to use. You have a couple of options:"
-                  ) %>
+                  )}
                   <br /><br />
 
-                  <strong>YouTube</strong>: <%= gettext(
+                  <strong>YouTube</strong>: {gettext(
                     "Enter the URL of any YouTube video to use the YouTube embedded player. This allows you to easily integrate YouTube videos with all their features."
-                  ) %><br />
-                  <strong>Vimeo</strong>: <%= gettext(
+                  )}<br />
+                  <strong>Vimeo</strong>: {gettext(
                     "Enter the URL of any Vimeo video to use the Vimeo embedded player, ensuring a smooth and high-quality video playback experience."
-                  ) %><br />
-                  <strong><%= gettext("Direct Video File") %></strong>: <%= gettext(
+                  )}<br />
+                  <strong><%= gettext("Direct Video File") %></strong>: {gettext(
                     "You can also provide a direct link to a video file (e.g., .mp4, .webm). This will utilize our customized player to embed the video directly into your content."
-                  ) %><br /><br />
-                  <%= gettext(
+                  )}<br /><br />
+                  {gettext(
                     "Make sure the URL is complete and correct. For YouTube and Vimeo, copy the URL directly from your browser's address bar. For direct video files, ensure the link is publicly accessible and points directly to the video file. Enter the URL in the input below and click 'Get video info'"
-                  ) %><br /><br />
+                  )}<br /><br />
                 </small>
                 <input id={"block-#{@uid}-url"} type="text" class="text" />
                 <button id={"block-#{@uid}-button"} type="button" class="secondary small">
-                  <%= gettext("Get video info") %>
+                  {gettext("Get video info")}
                 </button>
               </div>
             <% else %>
               <div class="panels">
                 <div class="panel">
-                  <div :if={block_data[:cover_image].value} class="cover">
+                  <div :if={@cover_image} class="cover">
                     <small><strong>Cover:</strong></small> <br />
-                    <Content.image image={block_data[:cover_image].value} size={:smallest} />
+                    <Content.image image={@cover_image} size={:smallest} />
                   </div>
 
-                  <div :if={!block_data[:cover_image].value} class="cover">
+                  <div :if={!@cover_image} class="cover">
                     <div class="img-placeholder">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
@@ -114,29 +137,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     </div>
                   </div>
 
-                  <div :if={block_data[:cover_image].value} class="button-group-vertical">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={
-                        JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
-                      }
-                    >
-                      <%= gettext("Select cover image") %>
-                    </button>
-
-                    <button
-                      type="button"
-                      class="danger"
-                      phx-click={JS.push("reset_image", target: @myself)}
-                    >
-                      <%= gettext("Reset cover image") %>
-                    </button>
-                  </div>
-
                   <div class="information mb-1 mt-1">
                     <strong>Dimensions:</strong>
-                    <%= block_data[:width].value %>&times;<%= block_data[:height].value %>
+                    {block_data[:width].value}&times;{block_data[:height].value}
                   </div>
                 </div>
                 <div class="panel">
@@ -145,7 +148,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <Input.text field={block_data[:remote_id]} monospace label={gettext("Remote ID")} />
                   <Input.text field={block_data[:title]} label={gettext("Title")} />
 
-                  <div :if={!block_data[:cover_image].value} class="button-group-vertical">
+                  <div class="button-group-vertical">
                     <button
                       type="button"
                       class="secondary"
@@ -153,7 +156,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                         JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
                       }
                     >
-                      <%= gettext("Select cover image") %>
+                      {gettext("Select cover image")}
                     </button>
 
                     <button
@@ -161,14 +164,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       class="danger"
                       phx-click={JS.push("reset_image", target: @myself)}
                     >
-                      <%= gettext("Reset cover image") %>
+                      {gettext("Reset cover image")}
                     </button>
                     <button
                       type="button"
                       class="danger"
                       phx-click={JS.push("reset_video", target: @myself)}
                     >
-                      <%= gettext("Reset video") %>
+                      {gettext("Reset video")}
                     </button>
                   </div>
 
@@ -258,7 +261,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </figure>
               <div class="instructions">
                 <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                  <%= gettext("Configure video block") %>
+                  {gettext("Configure video block")}
                 </button>
               </div>
             </div>
@@ -285,17 +288,61 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   </iframe>
                 </div>
               <% :file -> %>
-                <div id={"block-#{@uid}-videoSize"}>
-                  <video
-                    class="villain-video-file"
-                    muted="muted"
-                    tabindex="-1"
-                    loop
-                    autoplay
-                    src={block_data[:remote_id].value}
-                  >
-                    <source src={block_data[:remote_id].value} type="video/mp4" />
-                  </video>
+                <div class="preview compact" id={"block-#{@uid}-videoSize"}>
+                  <div class={[
+                    "video-content",
+                    (block_data[:width].value > block_data[:height].value && "landscape") ||
+                      "portrait"
+                  ]}>
+                    <video
+                      class="villain-video-file"
+                      muted="muted"
+                      tabindex="-1"
+                      loop
+                      autoplay
+                      src={block_data[:remote_id].value}
+                    >
+                      <source src={block_data[:remote_id].value} type="video/mp4" />
+                    </video>
+                  </div>
+                  <div class="video-info">
+                    <figcaption>
+                      <div class="info-wrapper">
+                        <div class="video-type">
+                          <span>{gettext("Video type")}</span>
+                          {gettext("Direct video file")}
+                        </div>
+                        <div class="video-dimensions">
+                          <span>{gettext("Dimensions")}</span>
+                          {block_data[:width].value} &times; {block_data[:height].value}
+                        </div>
+                        <div class="video-configuration">
+                          <span>{gettext("Configuration")}</span>
+                          <.checklist tiny>
+                            <.checklist_item cond={block_data[:autoplay].value in ["true", true]}>
+                              {gettext("Autoplay")}
+                            </.checklist_item>
+                            <.checklist_item cond={block_data[:play_button].value in ["true", true]}>
+                              {gettext("Play button")}
+                            </.checklist_item>
+                            <.checklist_item cond={block_data[:preload].value in ["true", true]}>
+                              {gettext("Preload")}
+                            </.checklist_item>
+                            <.checklist_item cond={block_data[:controls].value in ["true", true]}>
+                              {gettext("Show native player controls")}
+                            </.checklist_item>
+                          </.checklist>
+                        </div>
+                      </div>
+                      <button
+                        class="tiny"
+                        type="button"
+                        phx-click={show_modal("#block-#{@uid}_config")}
+                      >
+                        {gettext("Edit video")}
+                      </button>
+                    </figcaption>
+                  </div>
                 </div>
             <% end %>
           <% end %>
@@ -371,28 +418,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :cover_image, nil)}
   end
 
   def handle_event("reset_video", _, socket) do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
-    new_data = %{}
+
+    new_data =
+      update_block_data(socket, %{cover_image: nil, width: nil, height: nil, remote_id: nil})
 
     send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :cover_image, nil)}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
-    new_data = update_block_data(socket, %{cover_image: image})
 
+    picture_data =
+      image
+      |> Map.from_struct()
+      |> Map.take(@picture_fields_to_take)
+
+    new_data = update_block_data(socket, %{cover_image: picture_data})
     send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :cover_image, picture_data)}
   end
 
   defp update_block_data(socket, new_data) do
@@ -400,6 +454,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     block_data_cs = Block.get_block_data_changeset(block)
     block_data = Changeset.apply_changes(block_data_cs)
     data_map = Map.from_struct(block_data)
-    Map.merge(data_map, new_data) |> dbg()
+    Map.merge(data_map, new_data)
   end
 end
