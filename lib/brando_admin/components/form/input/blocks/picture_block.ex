@@ -109,9 +109,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           >
             <:description>
               <%= if @ref_description not in ["", nil] do %>
-                <%= @ref_description %>
+                {@ref_description}
               <% else %>
-                <%= @extracted_filename %>
+                {@extracted_filename}
               <% end %>
             </:description>
             <input class="file-input" type="file" />
@@ -125,26 +125,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 <figcaption phx-click={!@compact && show_modal("#block-#{@uid}_config")}>
                   <div class="info-wrapper">
                     <div class="name-and-dims">
-                      <div class="filename"><%= @file_name %></div>
-                      <div class="dims"><%= @image.width %>&times;<%= @image.height %></div>
+                      <div class="filename">{@file_name}</div>
+                      <div class="dims">{@image.width}&times;{@image.height}</div>
                     </div>
                     <div class="title-and-alt">
                       <div id={"block-#{@uid}-figcaption-title"}>
-                        <span><%= gettext("Caption") %></span>
+                        <span>{gettext("Caption")}</span>
                         <%= if @image.title in [nil, ""] do %>
-                          <%= gettext("<no caption>") %>
+                          {gettext("<no caption>")}
                         <% else %>
-                          <%= raw(@image.title) %>
+                          {raw(@image.title)}
                         <% end %>
                       </div>
                       <div id={"block-#{@uid}-figcaption-alt"}>
-                        <span><%= gettext("Alt. text") %></span> <%= @image.alt ||
-                          gettext("<no alt.text>") %>
+                        <span>{gettext("Alt. text")}</span> {@image.alt ||
+                          gettext("<no alt.text>")}
                       </div>
                     </div>
                   </div>
                   <button class="tiny" type="button" phx-click={show_modal("#block-#{@uid}_config")}>
-                    <%= gettext("Edit image") %>
+                    {gettext("Edit image")}
                   </button>
                 </figcaption>
               </div>
@@ -166,10 +166,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 </svg>
               </figure>
               <div class="instructions">
-                <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+                <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
                 <br />
                 <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                  <%= gettext("Pick an existing image") %>
+                  {gettext("Pick an existing image")}
                 </button>
               </div>
             </div>
@@ -180,8 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   <%= if @extracted_path do %>
                     <Content.image image={@image} size={:largest} />
                     <div class="image-info">
-                      Path: <%= @image.path %><br />
-                      Dimensions: <%= @image.width %>&times;<%= @image.height %><br />
+                      Path: {@image.path}<br /> Dimensions: {@image.width}&times;{@image.height}<br />
                     </div>
                   <% end %>
                   <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
@@ -206,11 +205,30 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       </div>
                     </div>
                     <div class="instructions">
-                      <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+                      <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
                     </div>
                   </div>
                 </div>
                 <div class="panel">
+                  <div class="button-group-vertical">
+                    <button
+                      type="button"
+                      class="secondary"
+                      phx-click={
+                        JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
+                      }
+                    >
+                      {gettext("Select image")}
+                    </button>
+
+                    <button
+                      type="button"
+                      class="danger"
+                      phx-click={JS.push("reset_image", target: @myself)}
+                    >
+                      {gettext("Reset image")}
+                    </button>
+                  </div>
                   <Input.input type={:hidden} field={block_data[:config_target]} />
                   <Input.rich_text field={block_data[:title]} label={gettext("Title")} />
                   <Input.text field={block_data[:alt]} label={gettext("Alt")} />
@@ -227,26 +245,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     ]}
                   />
                   <Input.text field={block_data[:dominant_color]} label={gettext("Dominant color")} />
-
-                  <div class="button-group-vertical">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={
-                        JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
-                      }
-                    >
-                      <%= gettext("Select image") %>
-                    </button>
-
-                    <button
-                      type="button"
-                      class="danger"
-                      phx-click={JS.push("reset_image", target: @myself)}
-                    >
-                      <%= gettext("Reset image") %>
-                    </button>
-                  </div>
                 </div>
               </div>
 
