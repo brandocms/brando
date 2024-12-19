@@ -7,7 +7,7 @@ import { EditorView, basicSetup } from 'codemirror'
 import { html } from '@codemirror/lang-html'
 import { liquid } from '@codemirror/lang-liquid'
 
-export default app => ({
+export default (app) => ({
   mounted() {
     this.initialize()
   },
@@ -17,7 +17,7 @@ export default app => ({
   },
 
   syncInput() {
-    return transaction => {
+    return (transaction) => {
       this.view.update([transaction])
       if (!transaction.changes.empty) {
         this.$input.value = this.view.state.sliceDoc()
@@ -41,25 +41,25 @@ export default app => ({
           EditorView.theme({
             '&': {
               fontSize: '13px',
-              border: '1px solid #c0c0c0'
+              border: '1px solid #c0c0c0',
             },
             '.cm-content': {
               fontFamily: 'Mono',
-              minHeight: '200px'
+              minHeight: '200px',
             },
             '.cm-gutters': {
-              minHeight: '200px'
+              minHeight: '200px',
             },
             '.cm-scroller': {
               overflow: 'auto',
-              maxHeight: '600px'
-            }
+              maxHeight: '600px',
+            },
           }),
           keymap.of([indentWithTab]),
           EditorState.tabSize.of(4),
-          liquid()
-        ]
-      })
+          html(),
+        ],
+      }),
     })
-  }
+  },
 })
