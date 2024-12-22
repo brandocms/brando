@@ -498,7 +498,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp active_filters(assigns) do
     ~H"""
     <div class="active-filters">
-      <%= gettext("Active filters") %> &rarr;
+      {gettext("Active filters")} &rarr;
       <button
         :for={{name, value} <- @active_filters}
         class="filter"
@@ -506,7 +506,7 @@ defmodule BrandoAdmin.Components.Content.List do
         phx-value-filter={name}
       >
         <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
-        <%= name %>: <%= inspect(value) %>
+        {name}: {inspect(value)}
       </button>
     </div>
     """
@@ -536,12 +536,12 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class="pagination">
       <div class="pagination-entries">
-        &rarr; <%= @total_entries %> <%= gettext("entries") %>
+        &rarr; {@total_entries} {gettext("entries")}
         <%= if @total_entries > 0 do %>
-          | <%= gettext("showing") %> <%= @showing_start %>-<%= (@showing_end == 0 && @total_entries) ||
-            @showing_end %>
+          | {gettext("showing")} {@showing_start}-{(@showing_end == 0 && @total_entries) ||
+            @showing_end}
         <% end %>
-        — <%= gettext("Per page:") %>
+        — {gettext("Per page:")}
         <button
           type="button"
           class={[
@@ -575,7 +575,7 @@ defmodule BrandoAdmin.Components.Content.List do
           phx-click={@change_limit}
           phx-value-limit={0}
         >
-          <%= gettext("All") %>
+          {gettext("All")}
         </button>
       </div>
       <div class="pagination-buttons">
@@ -586,7 +586,7 @@ defmodule BrandoAdmin.Components.Content.List do
           phx-click={@change_page}
           phx-value-page={p}
         >
-          <%= p + 1 %>
+          {p + 1}
         </button>
       </div>
     </div>
@@ -633,7 +633,7 @@ defmodule BrandoAdmin.Components.Content.List do
             ]}>
               <button class="filter-key" phx-click={@next_filter_key}>
                 <span>
-                  <%= g(@schema, filter.label) %>
+                  {g(@schema, filter.label)}
                   <%= if Enum.count(@filters) > 1 do %>
                     &darr;
                   <% end %>
@@ -663,13 +663,16 @@ defmodule BrandoAdmin.Components.Content.List do
         </div>
 
         <div :if={@exports != []} class="exports">
-          <%= gettext("Export") %>
+          {gettext("Export")}
           <CircleDropdown.render id="listing-exports-dropdown">
-            <li :for={export <- @exports}>
-              <button type="button" phx-value-name={export.name} phx-click={@select_export}>
-                <%= g(@schema, export.label) %> <span class="shortcut"><%= export.type %></span>
-              </button>
-            </li>
+            <button
+              :for={export <- @exports}
+              type="button"
+              phx-value-name={export.name}
+              phx-click={@select_export}
+            >
+              {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
+            </button>
           </CircleDropdown.render>
         </div>
       </div>
@@ -697,7 +700,7 @@ defmodule BrandoAdmin.Components.Content.List do
   def sorts(assigns) do
     ~H"""
     <div class="sorts">
-      <%= gettext("Sort by") %> &rarr;
+      {gettext("Sort by")} &rarr;
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li>
@@ -707,7 +710,7 @@ defmodule BrandoAdmin.Components.Content.List do
               phx-click={@on_update}
               phx-value-sort_key={sort.key}
             >
-              <%= raw(g(@schema, sort.label)) %>
+              {raw(g(@schema, sort.label))}
             </button>
           </li>
         </:options>
@@ -732,10 +735,10 @@ defmodule BrandoAdmin.Components.Content.List do
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >
-        <%= @label %> <span class="icon">▾</span>
+        {@label} <span class="icon">▾</span>
       </button>
       <ul data-testid="simple-dropdown-content" class="simple-dropdown-content hidden" id={@id}>
-        <%= render_slot(@options, @id) %>
+        {render_slot(@options, @id)}
       </ul>
     </div>
     """
@@ -768,7 +771,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
         <circle class={@status} r="6" cy="6" cx="6" />
       </svg>
-      <span class="label"><%= @rendered_status_label %></span>
+      <span class="label">{@rendered_status_label}</span>
     </button>
     """
   end
@@ -788,10 +791,10 @@ defmodule BrandoAdmin.Components.Content.List do
       data-sortable-selector=".list-row"
     >
       <%= if Enum.empty?(@entries) do %>
-        <%= render_slot(@empty) %>
+        {render_slot(@empty)}
       <% end %>
       <%= for entry <- @entries do %>
-        <%= render_slot(@inner_block, entry) %>
+        {render_slot(@inner_block, entry)}
       <% end %>
     </div>
     """
@@ -833,13 +836,13 @@ defmodule BrandoAdmin.Components.Content.List do
           type="button"
           class="btn-outline-primary inverted"
         >
-          <%= gettext("Clear selection") %>
+          {gettext("Clear selection")}
         </button>
       </div>
       <div class="selection-actions">
-        <%= gettext("With") %>
-        <div class="circle"><span><%= @selected_rows_count %></span></div>
-        <%= gettext("selected, perform action") %>: →
+        {gettext("With")}
+        <div class="circle"><span>{@selected_rows_count}</span></div>
+        {gettext("selected, perform action")}: →
         <div id="selected_rows_dropdown" class="circle-dropdown wrapper">
           <button
             class="circle-dropdown-button"
@@ -868,27 +871,21 @@ defmodule BrandoAdmin.Components.Content.List do
             id="selected-actions-dropdown-content"
           >
             <%= for lang <- @duplicate_langs do %>
-              <li>
-                <button
-                  phx-click="duplicate_selected_to_language"
-                  phx-value-language={lang}
-                  phx-value-ids={@encoded_selected_rows}
-                >
-                  <%= gettext("Duplicate selected to") %> [<%= String.upcase(lang) %>]
-                </button>
-              </li>
-            <% end %>
-            <li>
-              <button phx-click="delete_selected" phx-value-ids={@encoded_selected_rows}>
-                <%= gettext("Delete selected") %>
+              <button
+                phx-click="duplicate_selected_to_language"
+                phx-value-language={lang}
+                phx-value-ids={@encoded_selected_rows}
+              >
+                {gettext("Duplicate selected to")} [{String.upcase(lang)}]
               </button>
-            </li>
+            <% end %>
+            <button phx-click="delete_selected" phx-value-ids={@encoded_selected_rows}>
+              {gettext("Delete selected")}
+            </button>
             <%= for %{event: event, label: label} <- @selection_actions do %>
-              <li>
-                <button phx-click={event} phx-value-ids={@encoded_selected_rows}>
-                  <%= g(@schema, label) %>
-                </button>
-              </li>
+              <button phx-click={event} phx-value-ids={@encoded_selected_rows}>
+                {g(@schema, label)}
+              </button>
             <% end %>
           </ul>
         </div>

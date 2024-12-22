@@ -218,7 +218,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       data-id={@var[:id].value}
     >
       <%= if @inner_block do %>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       <% end %>
       <%= if @should_render? do %>
         <%= if @edit do %>
@@ -228,8 +228,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 <path fill="none" d="M0 0h24v24H0z" /><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-2.29-2.333A17.9 17.9 0 0 1 8.027 13H4.062a8.008 8.008 0 0 0 5.648 6.667zM10.03 13c.151 2.439.848 4.73 1.97 6.752A15.905 15.905 0 0 0 13.97 13h-3.94zm9.908 0h-3.965a17.9 17.9 0 0 1-1.683 6.667A8.008 8.008 0 0 0 19.938 13zM4.062 11h3.965A17.9 17.9 0 0 1 9.71 4.333 8.008 8.008 0 0 0 4.062 11zm5.969 0h3.938A15.905 15.905 0 0 0 12 4.248 15.905 15.905 0 0 0 10.03 11zm4.259-6.667A17.9 17.9 0 0 1 15.973 11h3.965a8.008 8.008 0 0 0-5.648-6.667z" />
               </svg>
               <div class="variable-key">
-                <%= @var[:key].value %>
-                <span><%= @var[:type].value %></span>
+                {@var[:key].value}
+                <span>{@var[:type].value}</span>
               </div>
             </div>
 
@@ -343,7 +343,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)
                       }
                     >
-                      <%= gettext("Add option") %>
+                      {gettext("Add option")}
                     </button>
                   </Form.field_base>
                 <% _ -> %>
@@ -507,6 +507,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         id={"#{@var.id}-select"}
         label={@label}
         field={@var[:value]}
+        inline={true}
         opts={[options: @var[:options].value || []]}
         publish={@publish}
       />
@@ -620,16 +621,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <div class="info">
         <%= if @link_type == :url do %>
           <%= if @link_text do %>
-            <div class="link-text"><%= @link_text %></div>
+            <div class="link-text">{@link_text}</div>
           <% end %>
           <%= if @value not in [nil, ""] do %>
             <dl>
-              <dt><%= gettext("URL") %>=</dt>
-              <dd><%= raw(@value) || gettext("<No URL>") %></dd>
+              <dt>{gettext("URL")}=</dt>
+              <dd>{raw(@value) || gettext("<No URL>")}</dd>
             </dl>
           <% else %>
             <dl>
-              <dt><%= gettext("No link set") %></dt>
+              <dt>{gettext("No link set")}</dt>
             </dl>
           <% end %>
         <% else %>
@@ -677,9 +678,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <% end %>
     </div>
     <dl>
-      <dt><%= gettext("URL") %>=</dt>
-      <dd :if={@identifier}><%= @identifier.url %></dd>
-      <dd :if={!@identifier}><%= gettext("<No URL>") %></dd>
+      <dt>{gettext("URL")}=</dt>
+      <dd :if={@identifier}>{@identifier.url}</dd>
+      <dd :if={!@identifier}>{gettext("<No URL>")}</dd>
     </dl>
     """
   end
@@ -772,8 +773,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             />
 
             <div class="image-info">
-              Path: <%= @image.path %><br />
-              Dimensions: <%= @image.width %>&times;<%= @image.height %><br />
+              Path: {@image.path}<br /> Dimensions: {@image.width}&times;{@image.height}<br />
             </div>
           <% end %>
           <%= if !@image do %>
@@ -805,7 +805,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   </div>
                 </div>
                 <div class="instructions">
-                  <span><%= gettext("Click or drag an image &uarr; to upload") |> raw() %></span>
+                  <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
                 </div>
               </div>
             </div>
@@ -818,11 +818,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               class="secondary"
               phx-click={JS.push("set_target", target: @target) |> toggle_drawer("#image-picker")}
             >
-              <%= gettext("Select image") %>
+              {gettext("Select image")}
             </button>
 
             <button type="button" class="danger" phx-click={JS.push("reset_image", target: @target)}>
-              <%= gettext("Reset image") %>
+              {gettext("Reset image")}
             </button>
           </div>
         </div>
@@ -838,8 +838,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <div class="panel">
           <%= if @file && @file.filename do %>
             <div class="file-info">
-              URL: <%= Utils.file_url(@file, prefix: Utils.media_url()) %><br />
-              Path: <%= @file.filename %><br /> Size: <%= @file.filesize %> bytes
+              URL: {Utils.file_url(@file, prefix: Utils.media_url())}<br />
+              Path: {@file.filename}<br /> Size: {@file.filesize} bytes
             </div>
           <% end %>
           <%= if !@file do %>
@@ -871,7 +871,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   </div>
                 </div>
                 <div class="instructions">
-                  <span><%= gettext("Click or drag a file &uarr; to upload") |> raw() %></span>
+                  <span>{gettext("Click or drag a file &uarr; to upload") |> raw()}</span>
                 </div>
               </div>
             </div>
@@ -884,11 +884,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               class="secondary"
               phx-click={JS.push("set_file_target", target: @target) |> toggle_drawer("#file-picker")}
             >
-              <%= gettext("Select file") %>
+              {gettext("Select file")}
             </button>
 
             <button type="button" class="danger" phx-click={JS.push("reset_file", target: @target)}>
-              <%= gettext("Reset file") %>
+              {gettext("Reset file")}
             </button>
           </div>
         </div>

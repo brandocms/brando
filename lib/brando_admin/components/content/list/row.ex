@@ -58,11 +58,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
         <.handle :if={@sortable?} active_sort={@active_sort} />
         <%= if @listing.component do %>
-          <%= Phoenix.LiveView.TagEngine.component(
+          {Phoenix.LiveView.TagEngine.component(
             @listing.component,
             [entry: @entry],
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-          ) %>
+          )}
         <% else %>
           <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
         <% end %>
@@ -214,50 +214,45 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <CircleDropdown.render id={@id}>
       <%= if @default_actions? do %>
-        <li>
-          <button
-            id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
-            phx-value-id={@entry.id}
-            phx-value-language={@language}
-            phx-click="edit_entry"
-          >
-            <%= gettext("Edit") %> <%= @translated_singular %>
-          </button>
-        </li>
-        <li>
-          <button
-            id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
-            phx-hook="Brando.ConfirmClick"
-            phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
-            phx-confirm-click={JS.push("delete_entry")}
-            phx-value-language={@language}
-            phx-value-id={@entry.id}
-          >
-            <%= gettext("Delete") %> <%= @translated_singular %>
-          </button>
-        </li>
-        <li :if={@has_duplicate_fn?}>
-          <button
-            id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
-            phx-value-id={@entry.id}
-            phx-value-language={@language}
-            phx-click="duplicate_entry"
-          >
-            <%= gettext("Duplicate") %> <%= @translated_singular %>
-          </button>
-        </li>
-        <li :for={lang <- @duplicate_langs} :if={@duplicate_langs?}>
-          <button
-            id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
-            phx-value-id={@entry.id}
-            phx-value-language={lang}
-            phx-click="duplicate_entry_to_language"
-          >
-            <%= gettext("Duplicate to") %> [<%= String.upcase(lang) %>]
-          </button>
-        </li>
+        <button
+          id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
+          phx-value-id={@entry.id}
+          phx-value-language={@language}
+          phx-click="edit_entry"
+        >
+          {gettext("Edit")} {@translated_singular}
+        </button>
+        <button
+          id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
+          phx-hook="Brando.ConfirmClick"
+          phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
+          phx-confirm-click={JS.push("delete_entry")}
+          phx-value-language={@language}
+          phx-value-id={@entry.id}
+        >
+          {gettext("Delete")} {@translated_singular}
+        </button>
+        <button
+          :if={@has_duplicate_fn?}
+          id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
+          phx-value-id={@entry.id}
+          phx-value-language={@language}
+          phx-click="duplicate_entry"
+        >
+          {gettext("Duplicate")} {@translated_singular}
+        </button>
+        <button
+          :for={lang <- @duplicate_langs}
+          :if={@duplicate_langs?}
+          id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
+          phx-value-id={@entry.id}
+          phx-value-language={lang}
+          phx-click="duplicate_entry_to_language"
+        >
+          {gettext("Duplicate to")} [{String.upcase(lang)}]
+        </button>
       <% end %>
-      <li :for={%{event: event, label: label} = action <- @processed_actions}>
+      <%= for %{event: event, label: label} = action <- @processed_actions do %>
         <%= if action.confirm do %>
           <button
             id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
@@ -267,7 +262,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             phx-value-language={@language}
             phx-value-id={@entry.id}
           >
-            <%= g(@schema, label) %>
+            {g(@schema, label)}
           </button>
         <% else %>
           <button
@@ -276,20 +271,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             phx-value-language={@language}
             phx-click={event}
           >
-            <%= g(@schema, label) %>
+            {g(@schema, label)}
           </button>
         <% end %>
-      </li>
-      <li :if={Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at)}>
-        <button
-          id={"action_#{@listing.name}_undelete_#{@entry.id}"}
-          phx-value-id={@entry.id}
-          phx-value-language={@language}
-          phx-click="undelete_entry"
-        >
-          <%= gettext("Undelete") %> <%= @translated_singular %>
-        </button>
-      </li>
+      <% end %>
+      <button
+        :if={Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at)}
+        id={"action_#{@listing.name}_undelete_#{@entry.id}"}
+        phx-value-id={@entry.id}
+        phx-value-language={@language}
+        phx-click="undelete_entry"
+      >
+        {gettext("Undelete")} {@translated_singular}
+      </button>
     </CircleDropdown.render>
     """
   end
@@ -364,7 +358,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           |> toggle_dropdown("##{@id}")
         }
       >
-        <.status_circle status={status} /> <%= render_status_label(status) %>
+        <.status_circle status={status} /> {render_status_label(status)}
       </button>
     </div>
     """
@@ -478,16 +472,16 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <section class="content">
           <div class="info">
             <div class="name">
-              <%= @entry.creator.name %>
+              {@entry.creator.name}
             </div>
 
             <div class="time" id={"entry_creator_time_icon_#{@entry_id}"}>
               <%= if @soft_delete? and @entry.deleted_at do %>
-                <%= format_datetime(@entry.deleted_at, "%d/%m/%y") %>
-                <span>•</span> <%= format_datetime(@entry.deleted_at, "%H:%M") %>
+                {format_datetime(@entry.deleted_at, "%d/%m/%y")}
+                <span>•</span> {format_datetime(@entry.deleted_at, "%H:%M")}
               <% else %>
-                <%= format_datetime(@entry.updated_at, "%d/%m/%y") %>
-                <span>•</span> <%= format_datetime(@entry.updated_at, "%H:%M") %>
+                {format_datetime(@entry.updated_at, "%d/%m/%y")}
+                <span>•</span> {format_datetime(@entry.updated_at, "%H:%M")}
               <% end %>
             </div>
           </div>
@@ -539,11 +533,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
       <.handle :if={@sortable?} />
       <%= if @listing.component do %>
-        <%= Phoenix.LiveView.TagEngine.component(
+        {Phoenix.LiveView.TagEngine.component(
           @listing.component,
           [entry: @entry],
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        ) %>
+        )}
       <% else %>
         <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
       <% end %>

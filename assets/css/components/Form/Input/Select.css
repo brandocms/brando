@@ -18,7 +18,8 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     color: red;
   }
 
-  .selected-labels, .select-modal {
+  .selected-labels,
+  .select-modal {
     @column 6/12;
   }
 
@@ -46,7 +47,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
   .selected-label {
     display: flex;
-    align-items: baseline;    
+    align-items: baseline;
     user-select: none;
     width: fit-content;
     margin-left: -5px;
@@ -61,7 +62,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       display: flex;
       align-items: center;
       font-size: 14px;
-      font-family: 'Mono';
+      font-family: "Mono";
 
       svg {
         margin-right: 9px;
@@ -105,6 +106,11 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   width: 100%;
   background-color: var(--brando-color-input);
   border: 0;
+  position: relative;
+
+  .inline-options {
+    @extend %dropdown_options;
+  }
 
   .button-edit {
     @fontsize sm/1;
@@ -113,7 +119,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     transition: all 0.25s ease;
 
     &:hover {
-      background-color: var(--brando-color-dark); 
+      background-color: var(--brando-color-dark);
       color: var(--brando-color-input);
     }
   }
@@ -121,33 +127,32 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   .options {
     svg {
       margin-right: 9px;
-  
+
       circle {
         fill: theme(colors.status.published);
-  
+
         &.draft {
           fill: theme(colors.status.draft);
         }
-  
+
         &.pending {
           fill: theme(colors.status.pending);
         }
-  
+
         &.published {
           fill: theme(colors.status.published);
         }
-  
+
         &.disabled {
           fill: theme(colors.status.disabled);
         }
-  
+
         &.deleted {
           fill: #111;
         }
       }
     }
   }
-
 
   .select-label {
     display: flex;
@@ -165,7 +170,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
   .select-filter {
     margin-bottom: 15px;
-  }  
+  }
 
   .options {
     max-height: 350px;
@@ -175,7 +180,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       display: flex;
       align-items: center;
       cursor: pointer;
-      color: var(--brando-color-dark); 
+      color: var(--brando-color-dark);
       background-color: var(--brando-color-peach);
       user-select: none;
       padding: 15px 15px 13px;
@@ -183,10 +188,10 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       border: none;
       text-align: left;
       font-size: 14px;
-      font-family: 'Mono';
+      font-family: "Mono";
 
       &.option-selected {
-        background-color: var(--brando-color-blue);;
+        background-color: var(--brando-color-blue);
         color: var(--brando-color-peach);
       }
 
@@ -197,7 +202,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
       &:hover {
         color: var(--brando-color-peach);
-        background-color: var(--brando-color-dark); 
+        background-color: var(--brando-color-dark);
       }
     }
   }
@@ -248,6 +253,41 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       .arrow {
         margin-right: 15px;
       }
+    }
+  }
+}
+
+%dropdown_options {
+  position: absolute;
+  top: 40px;
+  display: flex;
+  flex-direction: column;
+  right: 0;
+  border-radius: 6px;
+  overflow: clip;
+  border: 1px dashed #aaa;
+
+  &.hidden {
+    display: none;
+  }
+
+  button,
+  a {
+    border: none;
+    background-color: #fbfbfb;
+    width: max-content;
+    min-width: 250px;
+    padding: 8px 5px;
+    text-align: left;
+    text-transform: uppercase;
+    border-bottom: 1px dashed #aaa;
+
+    &:hover {
+      background-color: #f0f0f0;
+    }
+
+    &:last-of-type {
+      border-bottom: none;
     }
   }
 }

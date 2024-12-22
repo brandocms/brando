@@ -77,39 +77,22 @@
   }
 
   .dropdown-content {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
-    position: absolute;
-    width: 250px;
-    border: 1px solid var(--brando-color-dark);
-    z-index: 2;
-    top: 50px;
-    right: 0;
+    @extend %dropdown_options;
+    @font mono;
+    top: 30px;
+    font-size: 12px !important;
+    text-transform: uppercase;
 
     &.over {
       top: auto;
       bottom: 50px;
     }
 
-    li {
-      a,
-      button {
-        @font mono;
-        display: block;
-        padding: 15px;
-        text-align: right;
-        line-height: 1.5;
-        float: right;
-        width: 100%;
-        font-size: 15px;
-
-        &:hover {
-          background-color: var(--brando-color-dark);
-          color: theme(colors.peach);
-
-          .shortcut {
-            color: var(--brando-color-dark);
-          }
+    a,
+    button {
+      &:hover {
+        .shortcut {
+          color: var(--brando-color-dark);
         }
       }
     }

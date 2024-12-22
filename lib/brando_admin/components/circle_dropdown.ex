@@ -20,9 +20,9 @@ defmodule BrandoAdmin.Components.CircleDropdown do
       >
         <.icon name="brando-dropdown" />
       </button>
-      <ul data-testid="circle-dropdown-content" class="dropdown-content hidden" id={@id}>
-        <%= render_slot(@inner_block, @id) %>
-      </ul>
+      <div data-testid="circle-dropdown-content" class="dropdown-content hidden" id={@id}>
+        {render_slot(@inner_block, @id)}
+      </div>
     </div>
     """
   end

@@ -66,6 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             </span>
           </div>
           <button
+            :if={!@inline}
             type="button"
             class="button-edit"
             phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}
@@ -76,7 +77,38 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               {gettext("Select")}
             <% end %>
           </button>
+          <button
+            :if={@inline}
+            type="button"
+            class="button-edit"
+            phx-click={JS.push("toggle_inline_options", target: @myself)}
+          >
+            <%= if @open do %>
+              {gettext("Close")}
+            <% else %>
+              {gettext("Select")}
+            <% end %>
+          </button>
+          <div :if={@open} class="inline-options">
+            <%= for opt <- @input_options do %>
+              <button
+                type="button"
+                class={[
+                  "options-option"
+                ]}
+                data-label={extract_label(opt)}
+                value={extract_value(opt)}
+                phx-click={
+                  JS.push("select_option", target: @myself)
+                  |> JS.push("toggle_inline_options", target: @myself)
+                }
+              >
+                <.get_label opt={opt} />
+              </button>
+            <% end %>
+          </div>
           <Content.modal
+            :if={!@inline}
             id={@modal_id}
             title={gettext("Select option")}
             narrow={@narrow}
@@ -219,6 +251,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
+    inline = Keyword.get(assigns.opts, :inline)
     resetable = Keyword.get(assigns.opts, :resetable)
 
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
@@ -233,6 +266,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign_input_options()
      |> assign(:selected_option, selected_option)
      |> assign_label()
+     |> assign_new(:inline, fn -> inline end)
      |> assign_new(:narrow, fn -> narrow end)
      |> assign_new(:resetable, fn -> resetable end)
      |> assign_new(:show_filter, fn -> show_filter end)
@@ -376,7 +410,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     assigns = assign_new(assigns, :deletable, fn -> false end)
 
     ~H"""
-    — {@opt.label |> raw}
+    {@opt.label |> raw}
     """
   end
 
@@ -425,6 +459,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def handle_event("toggle_modal", _, socket) do
+    socket = (!socket.assigns.open && update_input_options(socket)) || socket
+    {:noreply, assign(socket, :open, !socket.assigns.open)}
+  end
+
+  def handle_event("toggle_inline_options", _, socket) do
     socket = (!socket.assigns.open && update_input_options(socket)) || socket
     {:noreply, assign(socket, :open, !socket.assigns.open)}
   end
