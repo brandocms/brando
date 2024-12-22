@@ -316,15 +316,16 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
     myself = socket.assigns.myself
     send_update_after(myself, %{event: "set_block_map"}, 1000)
+    send(self(), {:progress_popup, "Setting new block map..."})
 
     socket
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
-    |> clear_blocks_root_changesets()
     |> assign(:block_map, [])
-    |> assign_block_map()
     |> assign_entry_for_blocks()
+    |> clear_blocks_root_changesets()
     |> reload_all_blocks()
+    |> force_svelte_remounts()
     |> then(&{:ok, &1})
   end
 
@@ -732,7 +733,7 @@ defmodule BrandoAdmin.Components.Form do
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
       has_alternates?:
-        schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() && entry.id,
+        (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
       has_live_preview?: check_live_preview(schema)
     )
   end
