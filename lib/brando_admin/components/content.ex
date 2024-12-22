@@ -13,17 +13,17 @@ defmodule BrandoAdmin.Components.Content do
       <div class="content">
         <section class="main">
           <h1>
-            <%= @title %>
+            {@title}
           </h1>
           <%= if @subtitle do %>
             <h3>
-              <%= @subtitle %>
+              {@subtitle}
             </h3>
           <% end %>
         </section>
         <section class="actions">
           <%= if @inner_block do %>
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           <% end %>
         </section>
       </div>
@@ -49,19 +49,19 @@ defmodule BrandoAdmin.Components.Content do
       <div class="inner">
         <div class="drawer-header">
           <h2>
-            <%= @title %>
+            {@title}
           </h2>
           <button phx-click={@close} type="button" class="drawer-close-button">
-            <%= gettext("Close") %>
+            {gettext("Close")}
           </button>
         </div>
         <%= if @info do %>
           <div class="drawer-info">
-            <%= render_slot(@info) %>
+            {render_slot(@info)}
           </div>
         <% end %>
         <div class="drawer-form">
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </div>
       </div>
     </div>
@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:medium, fn -> false end)
       |> assign_new(:wide, fn -> false end)
       |> assign_new(:remember_scroll_position, fn -> false end)
-      |> assign_new(:close, fn -> nil end)
+      |> assign_new(:close, fn -> hide_modal("##{assigns.id}") end)
       |> assign_new(:ok, fn -> nil end)
 
     ~H"""
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Content do
         @wide && "wide",
         @show && "visible"
       ]}
-      phx-window-keydown={hide_modal("##{@id}")}
+      phx-window-keydown={@close}
       phx-key="escape"
     >
       <div class="modal-backdrop" phx-click={hide_modal("##{@id}")} />
@@ -146,10 +146,10 @@ defmodule BrandoAdmin.Components.Content do
             "modal-header",
             @center_header && "centered"
           ]}>
-            <h2><%= @title %></h2>
+            <h2>{@title}</h2>
             <div class="header-wrap">
               <%= if @header do %>
-                <%= render_slot(@header) %>
+                {render_slot(@header)}
               <% end %>
               <button type="button" class="modal-close" phx-click={@close || hide_modal("##{@id}")}>
                 <.icon name="hero-x-mark" />
@@ -161,11 +161,11 @@ defmodule BrandoAdmin.Components.Content do
             class="modal-body"
             phx-hook={@remember_scroll_position && "Brando.RememberScrollPosition"}
           >
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           </section>
           <%= if @footer do %>
             <footer class="modal-footer">
-              <%= render_slot(@footer) %>
+              {render_slot(@footer)}
               <%= if @ok do %>
                 <button class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
               <% end %>

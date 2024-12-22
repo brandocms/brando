@@ -55,12 +55,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           <div>
             <span class="select-label">
               <%= if @inner_block do %>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               <% else %>
                 <%= if @selected_option do %>
-                  <%= @select_label |> raw %>
+                  {@select_label |> raw}
                 <% else %>
-                  <%= gettext("No selection") %>
+                  {gettext("No selection")}
                 <% end %>
               <% end %>
             </span>
@@ -71,9 +71,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}
           >
             <%= if @open do %>
-              <%= gettext("Close") %>
+              {gettext("Close")}
             <% else %>
-              <%= gettext("Select") %>
+              {gettext("Select")}
             <% end %>
           </button>
           <Content.modal
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     <div class="field-wrapper">
                       <div class="label-wrapper">
                         <label for="select-modal-search" class="control-label">
-                          <span><%= gettext("Filter options") %></span>
+                          <span>{gettext("Filter options")}</span>
                         </label>
                       </div>
                       <div class="field-base">
@@ -109,9 +109,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <% end %>
 
                 <div class="options">
-                  <h2 class="titlecase"><%= gettext("Available options") %></h2>
+                  <h2 class="titlecase">{gettext("Available options")}</h2>
                   <%= if Enum.empty?(@input_options) do %>
-                    <%= gettext("No options found") %>
+                    {gettext("No options found")}
                   <% end %>
                   <%= for opt <- @input_options do %>
                     <button
@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     for={@select_changeset}
                     phx-change={JS.push("validate_new_entry", target: @myself)}
                   >
-                    <%= gettext("Create entry") %>
+                    {gettext("Create entry")}
                     <code style="font-family: monospace; font-size: 11px">
                       <pre>
                     <%= inspect @select_changeset, pretty: true %>
@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       type="button"
                       class="primary"
                     >
-                      <%= gettext("Save") %>
+                      {gettext("Save")}
                     </button>
                   </.form>
                 <% end %>
@@ -189,7 +189,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       value={nil}
                       phx-click={JS.push("select_option", target: @myself)}
                     >
-                      <%= gettext("Reset value") %>
+                      {gettext("Reset value")}
                     </button>
                   </div>
                 <% end %>
@@ -376,13 +376,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     assigns = assign_new(assigns, :deletable, fn -> false end)
 
     ~H"""
-    — <%= @opt.label |> raw %>
+    — {@opt.label |> raw}
     """
   end
 
   defp get_label(%{opt: nil} = assigns) do
     ~H"""
-    <%= gettext("Missing option") %>
+    {gettext("Missing option")}
     """
   end
 
@@ -397,7 +397,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <.status_circle status={@identifier.status} /> {@identifier.title}
     <%= if @deletable do %>
       <button
         class="delete tiny"

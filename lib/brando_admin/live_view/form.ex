@@ -336,16 +336,10 @@ defmodule BrandoAdmin.LiveView.Form do
   defp handle_hooks_active_field_info({:active_field, field, user_id}, socket) do
     socket =
       if user_id == socket.assigns.current_user.id do
-        require Logger
-
-        Logger.error("==> active field for me is #{field}")
-
         Brando.presence().update_active_field(socket.assigns.uri.path, user_id, field)
         socket
       else
-        require Logger
-        Logger.error("==> active field for other #{user_id} is #{field}")
-        socket
+        push_event(socket, "b:set_active_field", %{user_id: user_id, field: field})
       end
 
     {:halt, socket}

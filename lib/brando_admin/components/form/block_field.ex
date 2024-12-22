@@ -480,6 +480,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
     |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
     |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
+    |> assign_new(:module_picker_id, fn ->
+      "#block-field-#{assigns.block_field}-module-picker"
+    end)
     |> maybe_stream(entry_blocks_forms)
     |> assign_templates()
     |> assign_module_set()
@@ -609,75 +612,88 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def render(assigns) do
     ~H"""
-    <div class="blocks-wrapper">
-      <.live_component
-        module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
-        id={"block-field-#{assigns.block_field}-module-picker"}
-        templates={[]}
-        hide_fragments={false}
-        hide_sections={false}
-      />
-      <%= if @block_count == 0 do %>
-        <div class="blocks-empty-instructions">
-          <%= gettext("Click the plus to start adding content blocks") %>
-          <%= if @templates && @templates != [] do %>
-            <br /><%= gettext("or get started with a prefab'ed template") %>:<br />
-            <div class="blocks-templates">
-              <%= for template <- @templates do %>
-                <button
-                  type="button"
-                  phx-click={JS.push("use_template", target: @myself)}
-                  phx-value-id={template.id}
-                >
-                  <%= template.name %><br />
-                  <small><%= template.instructions %></small>
-                </button>
-              <% end %>
-            </div>
+    <div class="blocks-wrapper" data-block-field={"#{@form_name}[#{@block_field}]"}>
+      <div class="label-wrapper ">
+        <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
+          <span>{gettext("Blocks")}</span>
+          <div
+            class="field-presence"
+            phx-update="ignore"
+            id={"#{@form_name}[#{@block_field}]-field-presence"}
+          >
+          </div>
+        </label>
+      </div>
+      <div class="blocks-content">
+        <.live_component
+          module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
+          id={"block-field-#{@block_field}-module-picker"}
+          templates={[]}
+          hide_fragments={false}
+          hide_sections={false}
+        />
+        <%= if @block_count == 0 do %>
+          <div class="blocks-empty-instructions">
+            {gettext("Click the plus to start adding content blocks")}
+            <%= if @templates && @templates != [] do %>
+              <br />{gettext("or get started with a prefab'ed template")}:<br />
+              <div class="blocks-templates">
+                <%= for template <- @templates do %>
+                  <button
+                    type="button"
+                    phx-click={JS.push("use_template", target: @myself)}
+                    phx-value-id={template.id}
+                  >
+                    {template.name}<br />
+                    <small>{template.instructions}</small>
+                  </button>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div
+          id={"block-field-#{@block_field}"}
+          phx-update="stream"
+          phx-hook="Brando.SortableBlocks"
+          data-sortable-id="sortable-blocks"
+          data-sortable-handle=".sort-handle"
+          data-sortable-selector=".block"
+        >
+          <%= for {id, entry_block_form} <- @streams.entry_blocks_forms do %>
+            <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
+              <div
+                id={id}
+                data-id={entry_block_form[:id].value}
+                data-uid={block[:uid].value}
+                class="entry-block draggable"
+              >
+                <.live_component
+                  module={Block}
+                  id={"block-#{block[:uid].value}"}
+                  block_module={@block_module}
+                  block_field={@block_field}
+                  children={block[:children].value}
+                  parent_uploads={@parent_uploads}
+                  parent_cid={@myself}
+                  parent_uid={}
+                  parent_path={[]}
+                  module_set={@module_set}
+                  entry={@entry}
+                  form={entry_block_form}
+                  form_cid={@form_cid}
+                  current_user_id={@current_user.id}
+                  belongs_to={:root}
+                  level={0}
+                />
+              </div>
+            </.inputs_for>
           <% end %>
         </div>
-      <% end %>
 
-      <div
-        id={"block-field-#{@block_field}"}
-        phx-update="stream"
-        phx-hook="Brando.SortableBlocks"
-        data-sortable-id="sortable-blocks"
-        data-sortable-handle=".sort-handle"
-        data-sortable-selector=".block"
-      >
-        <%= for {id, entry_block_form} <- @streams.entry_blocks_forms do %>
-          <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
-            <div
-              id={id}
-              data-id={entry_block_form[:id].value}
-              data-uid={block[:uid].value}
-              class="entry-block draggable"
-            >
-              <.live_component
-                module={Block}
-                id={"block-#{block[:uid].value}"}
-                block_module={@block_module}
-                block_field={@block_field}
-                children={block[:children].value}
-                parent_uploads={@parent_uploads}
-                parent_cid={@myself}
-                parent_uid={}
-                parent_path={[]}
-                module_set={@module_set}
-                entry={@entry}
-                form={entry_block_form}
-                form_cid={@form_cid}
-                current_user_id={@current_user.id}
-                belongs_to={:root}
-                level={0}
-              />
-            </div>
-          </.inputs_for>
-        <% end %>
+        <Block.plus click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)} />
       </div>
-
-      <Block.plus click={JS.push("show_block_picker", target: @myself)} />
     </div>
     """
   end

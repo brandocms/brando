@@ -13,6 +13,112 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
      )}
   end
 
+  def render(assigns) do
+    ~H"""
+    <div>
+      <Content.modal
+        title={gettext("Add content block")}
+        id={@id}
+        medium
+        close={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
+      >
+        <div :if={@show} class="module-picker-inner">
+          <div class="modules-header">
+            <div class="module-info">
+              {gettext("Select a module")}
+            </div>
+            <div class="other-buttons">
+              <%= if !@hide_fragments do %>
+                <button
+                  type="button"
+                  phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
+                >
+                  <.icon name="hero-puzzle-piece" />
+                  {gettext("Insert fragment")}
+                </button>
+              <% end %>
+              <%= if !@hide_sections do %>
+                <button
+                  type="button"
+                  phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
+                >
+                  <.icon name="hero-window" />
+                  {gettext("Insert container")}
+                </button>
+              <% end %>
+            </div>
+          </div>
+          <div class="modules" id={"#{@id}-modules"}>
+            <%= for {translated_namespace, namespace_map, modules} <- @modules_by_namespace do %>
+              <%= if namespace_map != nil && translated_namespace not in ["", nil] do %>
+                <button
+                  type="button"
+                  class={[
+                    "namespace-button",
+                    @active_namespace == translated_namespace && "active"
+                  ]}
+                  phx-click="toggle_namespace"
+                  phx-target={@myself}
+                  phx-value-id={translated_namespace}
+                >
+                  <figure>
+                    &rarr;
+                  </figure>
+                  <div class="info">
+                    <div class="name">{translated_namespace}</div>
+                  </div>
+                </button>
+                <div class={[
+                  "namespace-modules",
+                  @active_namespace == translated_namespace && "active"
+                ]}>
+                  <%= for module <- modules do %>
+                    <button
+                      type="button"
+                      class="module-button"
+                      phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
+                      phx-value-module-id={module.id}
+                    >
+                      <figure class={!module.svg && "empty-preview"}>
+                        <%= if module.svg do %>
+                          <img src={"data:image/svg+xml;base64,#{module.svg}"} />
+                        <% end %>
+                      </figure>
+                      <div class="info">
+                        <div class="name"><.i18n map={module.name} /></div>
+                        <div class="instructions"><.i18n map={module.help_text} /></div>
+                      </div>
+                    </button>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+            <%= for {_, namespace_map, modules} <- @modules_by_namespace do %>
+              <%= if namespace_map == nil do %>
+                <button
+                  :for={module <- modules}
+                  type="button"
+                  class="module-button"
+                  phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
+                  phx-value-module-id={module.id}
+                >
+                  <figure class={!module.svg && "empty-preview"}>
+                    {module.svg |> raw}
+                  </figure>
+                  <div class="info">
+                    <div class="name"><.i18n map={module.name} /></div>
+                    <div class="instructions"><.i18n map={module.help_text} /></div>
+                  </div>
+                </button>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </Content.modal>
+    </div>
+    """
+  end
+
   def update(%{event: :refresh_modules}, socket) do
     {:ok, assign_modules(socket)}
   end
@@ -40,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(assigns, socket) do
-    {:ok, socket |> assign(assigns)}
+    {:ok, assign(socket, assigns)}
   end
 
   def maybe_update_modules_by_filter(socket, %{
@@ -99,107 +205,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       |> Enum.map(&__MODULE__.sort_namespace/1)
 
     assign(socket, :modules_by_namespace, modules_by_namespace)
-  end
-
-  def render(assigns) do
-    ~H"""
-    <div>
-      <Content.modal
-        title={gettext("Add content block")}
-        id={@id}
-        show={@show}
-        medium
-        close={JS.push("close_modal", target: @myself)}
-      >
-        <div class="modules-header">
-          <div class="module-info">
-            <%= gettext("Select a module") %>
-          </div>
-          <div class="other-buttons">
-            <%= if !@hide_fragments do %>
-              <button type="button" phx-click="insert_fragment" phx-target={@myself}>
-                <.icon name="hero-puzzle-piece" />
-                <%= gettext("Insert fragment") %>
-              </button>
-            <% end %>
-            <%= if !@hide_sections do %>
-              <button type="button" phx-click="insert_container" phx-target={@myself}>
-                <.icon name="hero-window" />
-                <%= gettext("Insert container") %>
-              </button>
-            <% end %>
-          </div>
-        </div>
-        <div class="modules" id={"#{@id}-modules"}>
-          <%= for {translated_namespace, namespace_map, modules} <- @modules_by_namespace do %>
-            <%= if namespace_map != nil && translated_namespace not in ["", nil] do %>
-              <button
-                type="button"
-                class={[
-                  "namespace-button",
-                  @active_namespace == translated_namespace && "active"
-                ]}
-                phx-click="toggle_namespace"
-                phx-target={@myself}
-                phx-value-id={translated_namespace}
-              >
-                <figure>
-                  &rarr;
-                </figure>
-                <div class="info">
-                  <div class="name"><%= translated_namespace %></div>
-                </div>
-              </button>
-              <div class={[
-                "namespace-modules",
-                @active_namespace == translated_namespace && "active"
-              ]}>
-                <%= for module <- modules do %>
-                  <button
-                    type="button"
-                    class="module-button"
-                    phx-click="insert_module"
-                    phx-target={@myself}
-                    phx-value-module-id={module.id}
-                  >
-                    <figure class={!module.svg && "empty-preview"}>
-                      <%= if module.svg do %>
-                        <img src={"data:image/svg+xml;base64,#{module.svg}"} />
-                      <% end %>
-                    </figure>
-                    <div class="info">
-                      <div class="name"><.i18n map={module.name} /></div>
-                      <div class="instructions"><.i18n map={module.help_text} /></div>
-                    </div>
-                  </button>
-                <% end %>
-              </div>
-            <% end %>
-          <% end %>
-          <%= for {_, namespace_map, modules} <- @modules_by_namespace do %>
-            <%= if namespace_map == nil do %>
-              <button
-                :for={module <- modules}
-                type="button"
-                class="module-button"
-                phx-click="insert_module"
-                phx-target={@myself}
-                phx-value-module-id={module.id}
-              >
-                <figure class={!module.svg && "empty-preview"}>
-                  <%= module.svg |> raw %>
-                </figure>
-                <div class="info">
-                  <div class="name"><.i18n map={module.name} /></div>
-                  <div class="instructions"><.i18n map={module.help_text} /></div>
-                </div>
-              </button>
-            <% end %>
-          <% end %>
-        </div>
-      </Content.modal>
-    </div>
-    """
   end
 
   def handle_event("close_modal", _, socket) do

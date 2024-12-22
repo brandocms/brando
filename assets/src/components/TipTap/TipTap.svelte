@@ -19,6 +19,7 @@
 
   export let content;
   export let extensions;
+  export let onFocus;
 
   let element;
   let editor;
@@ -237,6 +238,9 @@
         Color,
       ],
       content,
+      onFocus({ editor, event }) {
+        onFocus({ editor, event });
+      },
       onUpdate({ editor }) {
         updateInput();
       },

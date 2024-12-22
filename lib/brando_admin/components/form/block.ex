@@ -828,6 +828,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
+    |> assign_new(:module_picker_id, fn ->
+      "#block-field-#{assigns.block_field}-module-picker"
+    end)
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_assign_container()
@@ -1427,9 +1430,18 @@ defmodule BrandoAdmin.Components.Form.Block do
         liquid_splits={@liquid_splits}
         parent_uploads={@parent_uploads}
         target={@myself}
-        insert_block={JS.push("insert_block", target: @myself)}
-        insert_multi_block={JS.push("insert_block_entry", value: %{multi: true}, target: @myself)}
-        insert_child_block={JS.push("insert_block", value: %{multi: true}, target: @myself)}
+        insert_block={
+          JS.push("insert_block", target: @myself)
+          |> show_modal(@module_picker_id)
+        }
+        insert_multi_block={
+          JS.push("insert_block_entry", value: %{multi: true}, target: @myself)
+          |> show_modal(@module_picker_id)
+        }
+        insert_child_block={
+          JS.push("insert_block", value: %{multi: true}, target: @myself)
+          |> show_modal(@module_picker_id)
+        }
         has_children?={@has_children?}
         module_name={@module_name}
       >
@@ -1500,7 +1512,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
-        insert_block={JS.push("insert_block", target: @myself)}
+        insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
         module_datasource_module_label={@module_datasource_module_label}
@@ -1532,7 +1544,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
-        insert_block={JS.push("insert_block_entry", target: @myself)}
+        insert_block={JS.push("insert_block_entry", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
       />
@@ -1555,8 +1567,14 @@ defmodule BrandoAdmin.Components.Form.Block do
         palette_options={@palette_options}
         container={@container}
         containers={@containers}
-        insert_block={JS.push("insert_block", target: @myself)}
-        insert_child_block={JS.push("insert_block", value: %{container: true}, target: @myself)}
+        insert_block={
+          JS.push("insert_block", target: @myself)
+          |> show_modal(@module_picker_id)
+        }
+        insert_child_block={
+          JS.push("insert_block", value: %{container: true}, target: @myself)
+          |> show_modal(@module_picker_id)
+        }
         has_children?={@has_children?}
       >
         <div
@@ -1602,7 +1620,6 @@ defmodule BrandoAdmin.Components.Form.Block do
             </.live_component>
           </div>
         </div>
-        <%!-- <.plus click={@insert_child_block} /> --%>
       </.container>
     </div>
     """
@@ -1619,7 +1636,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         fragment={@fragment}
         fragments={@fragments}
         belongs_to={@belongs_to}
-        insert_block={JS.push("insert_block", target: @myself)}
+        insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
         deleted={@deleted}
         target={@myself}
         block_module={@block_module}
@@ -2695,7 +2712,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               type={:textarea}
               field={block_data[:text]}
               class={"h#{block_data[:level].value}"}
-              phx-debounce={750}
+              phx-debounce={300}
               data-autosize={true}
               phx-update="ignore"
               rows={1}
@@ -2765,6 +2782,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 data-block-uid={@uid}
                 data-tiptap-extensions={@extensions}
                 phx-hook="Brando.TipTap"
+                data-tiptap-type="block"
                 data-name="TipTap"
               >
                 <div
@@ -2778,7 +2796,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   type={:hidden}
                   field={text_block_data[:text]}
                   class="tiptap-text"
-                  phx-debounce={750}
+                  phx-debounce={400}
                 />
               </div>
             </div>
@@ -2893,7 +2911,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
         </span>
         <span :if={@description} class="block-name">
-          {render_slot(@description)}
+          {render_slot(@description)}<span :if={@block[:active].value in [false, "false"]}> &lt;{gettext("Deactivated")}&gt;</span>
         </span>
         <%= if @type == :container do %>
           <%= if @container do %>
@@ -4050,6 +4068,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_update_live_preview_block()
     |> send_form_to_parent_stream()
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("focus", %{"field" => field_name}, socket) do
+    current_user_id = socket.assigns.current_user_id
+    entry = socket.assigns.entry
+
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:active_field:#{entry.id}",
+      {:active_field, field_name, current_user_id}
+    )
+
+    {:noreply, socket}
   end
 
   defp should_force_live_preview_update?(changeset, updated_changeset, :root) do

@@ -226,10 +226,18 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     field = socket.assigns.field
     field_name = field.field
     form = field.form
+    entry_id = form.data.id
     relation_field = socket.assigns.relation_field
     image_id = socket.assigns.image_id
     image = socket.assigns.image
     myself = socket.assigns.myself
+    current_user = socket.assigns.current_user
+
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:active_field:#{entry_id}",
+      {:active_field, field.name, current_user.id}
+    )
 
     path = Brando.Utils.get_path_from_field_name(form.name)
     module_from_form = form.source.data.__struct__
@@ -353,12 +361,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         <% end %>
         <div :if={@editable} class="image-info">
           <div class="info-wrapper">
-            <div class="filename"><%= @file_name %></div>
-            <div class="dims"><%= @image.width %>&times;<%= @image.height %></div>
-            <div :if={@image.title} class="title">● <%= @image.title %></div>
+            <div class="filename">{@file_name}</div>
+            <div class="dims">{@image.width}&times;{@image.height}</div>
+            <div :if={@image.title} class="title">● {@image.title}</div>
           </div>
           <button class="tiny" type="button" phx-click={@click}>
-            <%= gettext("Edit image") %>
+            {gettext("Edit image")}
           </button>
         </div>
       <% else %>
@@ -369,14 +377,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         </div>
 
         <div :if={@editable} class="image-info">
-          <%= gettext("No image associated with field") %>
+          {gettext("No image associated with field")}
           <button
             class="tiny"
             type="button"
             phx-click={@click}
             phx-value-id={"edit-image-#{@field.id}"}
           >
-            <%= gettext("Add image") %>
+            {gettext("Add image")}
           </button>
         </div>
       <% end %>

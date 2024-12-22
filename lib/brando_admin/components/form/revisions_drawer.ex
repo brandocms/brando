@@ -104,12 +104,12 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       <Content.drawer id={@id} title={gettext("Entry revisions")} close={@close}>
         <:info>
           <p>
-            <%= gettext("This is a list of this entry's revisions. Click a row to preview.") %>
+            {gettext("This is a list of this entry's revisions. Click a row to preview.")}
           </p>
           <p>
-            <%= gettext(
+            {gettext(
               "You may also store a new version of the entry without activating it. This might be useful for scheduling content publishing, or sharing previews of unpublished entries."
-            ) %>
+            )}
           </p>
           <div class="button-group">
             <button
@@ -117,7 +117,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               class="secondary"
               phx-click={JS.push("store_revision", target: @myself)}
             >
-              <%= gettext("Save version without activating") %>
+              {gettext("Save version without activating")}
             </button>
 
             <button
@@ -132,7 +132,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               }
               phx-confirm-click={JS.push("purge_inactive_revisions", target: @myself)}
             >
-              <%= gettext("Purge inactive versions") %>
+              {gettext("Purge inactive versions")}
             </button>
           </div>
         </:info>
@@ -149,7 +149,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                 phx-page-loading
               >
                 <td class="fit">
-                  #<%= revision.revision %>
+                  #{revision.revision}
                 </td>
                 <td class="fit">
                   <%= if revision.active do %>
@@ -166,9 +166,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   <% end %>
                 </td>
                 <td class="date fit">
-                  <%= Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M") %>
+                  {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M")}
                 </td>
-                <td class="user"><%= revision.creator.name %></td>
+                <td class="user">{revision.creator.name}</td>
                 <td class="activate fit">
                   <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
                     <Button.dropdown
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         )
                       }
                     >
-                      <%= gettext("Activate revision") %>
+                      {gettext("Activate revision")}
                     </Button.dropdown>
                     <%= if revision.protected do %>
                       <Button.dropdown
@@ -194,7 +194,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         value={revision.revision}
                         loading
                       >
-                        <%= gettext("Unprotect version") %>
+                        {gettext("Unprotect version")}
                       </Button.dropdown>
                     <% else %>
                       <Button.dropdown
@@ -207,7 +207,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         value={revision.revision}
                         loading
                       >
-                        <%= gettext("Protect version") %>
+                        {gettext("Protect version")}
                       </Button.dropdown>
                     <% end %>
                     <%= unless revision.active do %>
@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         value={revision.revision}
                         loading
                       >
-                        <%= gettext("Schedule version") %>
+                        {gettext("Schedule version")}
                       </Button.dropdown>
                     <% end %>
                     <%= if !revision.protected && !revision.active do %>
@@ -236,7 +236,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         value={revision.revision}
                         loading
                       >
-                        <%= gettext("Delete version") %>
+                        {gettext("Delete version")}
                       </Button.dropdown>
                     <% end %>
                   </CircleDropdown.render>
@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   <td colspan="3" class="revision-publish_at">
                     <div class="field-wrapper">
                       <label>
-                        <%= gettext("Publish at") %>
+                        {gettext("Publish at")}
                       </label>
                       <div class="datepicker-and-button">
                         <div
@@ -302,7 +302,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                           </div>
                         </div>
                         <button type="button">
-                          <%= gettext("Schedule") %>
+                          {gettext("Schedule")}
                         </button>
                       </div>
                     </div>
@@ -315,7 +315,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   @active_revision == revision.revision && "active"
                 ]}>
                   <td colspan="3"></td>
-                  <td colspan="3" class="revision-description">&uarr; <%= revision.description %></td>
+                  <td colspan="3" class="revision-description">&uarr; {revision.description}</td>
                 </tr>
               <% end %>
             <% end %>
@@ -442,7 +442,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       Brando.Revisions.get_revision(entry_type, entry_id, selected_revision_id)
 
     send_update(form_cid, %{
-      action: :update_entry,
+      action: :update_entry_hard_reset,
       updated_entry: decoded_entry
     })
 
@@ -463,7 +463,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       Brando.Revisions.set_entry_to_revision(module, entry_id, selected_revision_id, current_user)
 
     send_update(form_cid, %{
-      action: :update_entry,
+      action: :update_entry_hard_reset,
       updated_entry: new_entry
     })
 
