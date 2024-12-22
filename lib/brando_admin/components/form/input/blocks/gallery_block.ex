@@ -134,8 +134,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             </.inputs_for>
           </div>
 
-          <div :if={!@has_images?} class="alert">
-            {gettext("No images currently in block. Click one of the buttons above to get started.")}
+          <div :if={!@has_images?} class="upload-canvas empty">
+            <div class="alert">
+              {gettext(
+                "No images currently in block. Click one of the buttons above to get started, or drag and drop images here."
+              )}
+            </div>
           </div>
 
           <Content.modal title={gettext("Edit captions")} id={"block-#{@uid}_captions"}>
@@ -240,15 +244,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       <figcaption phx-click={
         JS.push("show_captions", target: @target) |> show_modal("#block-#{@uid}_captions")
       }>
-        <div>
+        <div :if={@img.title}>
           <span>{gettext("Caption")}</span>
           {raw(@img.title || "{ #{gettext("No caption")} }")}
         </div>
-        <div>
+        <div :if={@img.alt}>
           <span>{gettext("Alt. text")}</span>
           {@img.alt || "{ #{gettext("No alt text")} }"}
         </div>
-        <div>
+        <div :if={@img.credits}>
           <span>{gettext("Credits")}</span>
           {@img.credits || "{ #{gettext("No credits")} }"}
         </div>
