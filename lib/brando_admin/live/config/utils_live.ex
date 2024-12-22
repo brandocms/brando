@@ -14,7 +14,8 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> assign(:socket_connected, true)
        |> assign_current_user(token)
        |> assign_sitemap()
-       |> set_admin_locale()}
+       |> set_admin_locale()
+       |> assign_info()}
     else
       {:ok,
        socket
@@ -39,6 +40,18 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     assign(socket, :sitemap_last_updated, sitemap_last_updated)
   end
 
+  defp assign_info(socket) do
+    info = %{
+      version: Brando.version(),
+      timezone: Brando.timezone(),
+      locale: Gettext.get_locale(),
+      concurrency: System.schedulers_online(),
+      concurrent_image_jobs: Brando.config(:concurrent_image_jobs)
+    }
+
+    assign(socket, :info, info)
+  end
+
   def render(%{socket_connected: false} = assigns) do
     ~H"""
     """
@@ -50,34 +63,57 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
     <div class="utils-live">
       <p class="help">
-        <%= gettext(
+        {gettext(
           "These utilities are for administrative purposes and are potentially expensive procedures. Use with care."
-        ) %>
+        )}
       </p>
-      <h1><%= gettext("Utilities") %></h1>
+      <h1>{gettext("Utilities")}</h1>
       <table>
         <tr>
           <td>
-            <%= gettext("Sync all identifiers") %><br />
+            {gettext("Sync all identifiers")}<br />
           </td>
           <td>
             <button type="button" class="tiny" phx-click={JS.push("sync_identifiers")}>
-              <%= gettext("Execute") %>
+              {gettext("Execute")}
             </button>
           </td>
         </tr>
         <tr>
           <td>
-            <%= gettext("Generate sitemap") %><br />
+            {gettext("Generate sitemap")}<br />
             <small>
-              <%= gettext("Last updated: %{last_updated}", %{last_updated: @sitemap_last_updated}) %>
+              {gettext("Last updated: %{last_updated}", %{last_updated: @sitemap_last_updated})}
             </small>
           </td>
           <td>
             <button type="button" class="tiny" phx-click={JS.push("generate_sitemap")}>
-              <%= gettext("Execute") %>
+              {gettext("Execute")}
             </button>
           </td>
+        </tr>
+      </table>
+      <h2>{gettext("Info")}</h2>
+      <table>
+        <tr>
+          <td>{gettext("Version")}</td>
+          <td>{@info.version}</td>
+        </tr>
+        <tr>
+          <td>{gettext("Timezone")}</td>
+          <td>{@info.timezone}</td>
+        </tr>
+        <tr>
+          <td>{gettext("Locale")}</td>
+          <td>{@info.locale}</td>
+        </tr>
+        <tr>
+          <td>{gettext("Concurrency")}</td>
+          <td>{@info.concurrency}</td>
+        </tr>
+        <tr>
+          <td>{gettext("Concurrent image jobs")}</td>
+          <td>{@info.concurrent_image_jobs}</td>
         </tr>
       </table>
     </div>
