@@ -1,5 +1,5 @@
 defmodule Brando.Worker.ImageProcessor do
-  use Oban.Worker, queue: :default, max_attempts: 5
+  use Oban.Worker, queue: :image_processing, max_attempts: 5
   alias Brando.Images
   alias Brando.Users
   require Logger
@@ -49,7 +49,7 @@ defmodule Brando.Worker.ImageProcessor do
   end
 
   @impl Oban.Worker
-  def timeout(_job), do: :timer.seconds(180)
+  def timeout(_job), do: :timer.seconds(400)
 
   defp broadcast_status(image, path, status) do
     Phoenix.PubSub.broadcast(

@@ -97,7 +97,7 @@ defmodule Brando.Images.Operations.Sizing do
         sized_image_dir: image_dest_dir,
         size_key: size_key,
         size_cfg: size_cfg,
-        user: user
+        user_id: user_id
       }) do
     format = maybe_change_format(type)
     image_src_path = Images.Utils.media_path(image_src)
@@ -121,7 +121,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     case image_src_exists(conversion_parameters) do
       {:ok, {:image, :exists}} ->
-        if operation_index == 1, do: set_progress(conversion_parameters, 0, filename, user)
+        if operation_index == 1, do: set_progress(conversion_parameters, 0, filename, user_id)
 
         result =
           conversion_parameters
@@ -138,7 +138,7 @@ defmodule Brando.Images.Operations.Sizing do
         progress_percent =
           floor(operation_index / (total_operations / Enum.count(processed_formats)) * 100)
 
-        set_progress(conversion_parameters, progress_percent, filename, user)
+        set_progress(conversion_parameters, progress_percent, filename, user_id)
 
         result
 
@@ -485,7 +485,7 @@ defmodule Brando.Images.Operations.Sizing do
         %{size_key: size_key, image_id: image_id, format: format} = conversion_parameters,
         progress,
         filename,
-        user
+        user_id
       ) do
     progress_string =
       gettext(
@@ -494,7 +494,7 @@ defmodule Brando.Images.Operations.Sizing do
         format: format
       )
 
-    Progress.update(user, progress_string, %{
+    Progress.update(user_id, progress_string, %{
       key: "#{image_id}_#{format}",
       percent: progress,
       filename: filename

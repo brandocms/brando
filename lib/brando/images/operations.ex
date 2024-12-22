@@ -50,7 +50,7 @@ defmodule Brando.Images.Operations do
             operation = %Images.Operation{
               image_id: id,
               type: image_type,
-              user: user,
+              user_id: user.id,
               filename: filename,
               processed_formats: processed_formats,
               image_struct: image_struct,
@@ -80,23 +80,33 @@ defmodule Brando.Images.Operations do
   end
 
   def perform(operations, user) do
-    Progress.show(user)
+    max_concurrency = Application.get_env(:brando, :concurrent_image_jobs) || 1
 
-    Logger.debug("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
-
+    Progress.show(user.id)
     start_msec = :os.system_time(:millisecond)
 
     operation_results =
-      operations
-      |> Enum.map(&resize_image/1)
-      |> compile_transform_results(operations)
+      if max_concurrency > 1 do
+        operations
+        |> Task.async_stream(&__MODULE__.resize_image/1,
+          max_concurrency: max_concurrency,
+          timeout: 60_000
+        )
+        |> Enum.to_list()
+        |> Enum.map(&elem(&1, 1))
+        |> compile_transform_results(operations)
+      else
+        operations
+        |> Enum.map(&__MODULE__.resize_image/1)
+        |> compile_transform_results(operations)
+      end
 
     end_msec = :os.system_time(:millisecond)
     seconds_lapsed = (end_msec - start_msec) * 0.001
 
     Logger.debug("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
-    Progress.hide(user)
+    Progress.hide(user.id)
 
     {:ok, operation_results}
   end
@@ -116,8 +126,6 @@ defmodule Brando.Images.Operations do
         formats: operation.processed_formats
       }
 
-      # TODO: Might as well update DB here directly?
-
       Map.put(map, result.image_id, result)
     end)
   end
@@ -132,7 +140,7 @@ defmodule Brando.Images.Operations do
     |> Enum.into(%{})
   end
 
-  defp resize_image(%Images.Operation{} = operation) do
+  def resize_image(%Images.Operation{} = operation) do
     case Images.Operations.Sizing.create_image_size(operation) do
       {:ok, transform_result} ->
         transform_result

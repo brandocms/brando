@@ -13,6 +13,7 @@ config :<%= application_name %>, <%= application_module %>.Repo,
   url: System.get_env("BRANDO_DB_URL"),
   pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")
 
+config :brando, concurrent_image_jobs: System.get_env("BRANDO_CONCURRENT_IMAGE_JOBS", "1") |> String.to_integer()
 config :brando, default_language: System.get_env("BRANDO_DEFAULT_LANGUAGE", "no")
 config :brando, default_admin_language: "no"
 

@@ -28,11 +28,7 @@ defmodule Brando.Supervisor do
                hooks: [
                  hook(
                    module: Cachex.Limit.Scheduled,
-                   args: {
-                     500,
-                     [],
-                     []
-                   }
+                   args: {500, [], []}
                  )
                ]
              ]
@@ -48,7 +44,10 @@ defmodule Brando.Supervisor do
     Application.get_env(:brando, Oban) ||
       [
         repo: Brando.Repo.repo(),
-        queues: [default: [limit: 1]],
+        queues: [
+          default: [limit: 1],
+          image_processing: [limit: 1]
+        ],
         plugins: [
           {Oban.Plugins.Cron,
            crontab:

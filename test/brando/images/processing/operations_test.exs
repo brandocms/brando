@@ -156,7 +156,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/large/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -196,7 +196,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/medium/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -236,7 +236,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/micro/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -276,7 +276,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/small/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -316,7 +316,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/thumb/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -356,7 +356,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/xlarge/image.jpg",
                total_operations: 6,
                type: :jpg,
-               user: :system
+               user_id: :system
              }
            ]
   end

@@ -3,7 +3,7 @@ defmodule Brando.Images.Operation do
   Struct for carrying info about an image transform
   """
   defstruct image_id: nil,
-            user: nil,
+            user_id: nil,
             total_operations: nil,
             operation_index: nil,
             processed_formats: nil,

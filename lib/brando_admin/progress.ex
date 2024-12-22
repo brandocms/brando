@@ -6,20 +6,20 @@ defmodule BrandoAdmin.Progress do
   @spec show(atom | %{:id => any, optional(any) => any}) :: :ok | {:error, any}
   def show(:system), do: nil
 
-  def show(%Brando.Users.User{id: id}) do
-    Brando.endpoint().broadcast!("user:#{id}", "progress:show", %{})
+  def show(user_id) do
+    Brando.endpoint().broadcast!("user:#{user_id}", "progress:show", %{})
   end
 
   def hide(:system), do: nil
 
-  def hide(%Brando.Users.User{id: id}) do
-    Brando.endpoint().broadcast!("user:#{id}", "progress:hide", %{})
+  def hide(user_id) do
+    Brando.endpoint().broadcast!("user:#{user_id}", "progress:hide", %{})
   end
 
   def update(:system, _, _), do: nil
 
-  def update(%Brando.Users.User{id: id}, status, content) do
-    Brando.endpoint().broadcast!("user:#{id}", "progress:update", %{
+  def update(user_id, status, content) do
+    Brando.endpoint().broadcast!("user:#{user_id}", "progress:update", %{
       status: status,
       content: content
     })
@@ -27,11 +27,11 @@ defmodule BrandoAdmin.Progress do
 
   def update_delayed(:system, _, _), do: nil
 
-  def update_delayed(%Brando.Users.User{id: id}, status, content) do
+  def update_delayed(user_id, status, content) do
     Task.start(fn ->
       :timer.sleep(500)
 
-      Brando.endpoint().broadcast!("user:#{id}", "progress:update", %{
+      Brando.endpoint().broadcast!("user:#{user_id}", "progress:update", %{
         status: status,
         content: content
       })
