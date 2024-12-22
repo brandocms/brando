@@ -242,9 +242,13 @@ defmodule Brando.HTML.Video do
 
   defp build_aspect_ratio_style_string(nil, nil, _), do: nil
   defp build_aspect_ratio_style_string(nil, _, nil), do: nil
+  defp build_aspect_ratio_style_string(nil, 0, _), do: nil
+  defp build_aspect_ratio_style_string(nil, _, 0), do: nil
+  defp build_aspect_ratio_style_string(nil, 0, 0), do: nil
 
-  defp build_aspect_ratio_style_string(nil, width, height),
-    do: ~s(--aspect-ratio: #{height / width}; --aspect-ratio-division: #{width}/#{height};)
+  defp build_aspect_ratio_style_string(nil, width, height) do
+    ~s(--aspect-ratio: #{height / width}; --aspect-ratio-division: #{width}/#{height};)
+  end
 
   defp build_aspect_ratio_style_string(aspect_ratio, _, _),
     do: ~s(--aspect-ratio: #{aspect_ratio}; --aspect-ratio-division: #{aspect_ratio};)

@@ -10,27 +10,27 @@ const PROVIDERS = {
     regex: VIMEO_REGEX,
     html: [
       '<iframe src="{{protocol}}//player.vimeo.com/video/{{remote_id}}?title=0&byline=0" ',
-      'frameborder="0"></iframe>'
-    ].join('\n')
+      'frameborder="0"></iframe>',
+    ].join('\n'),
   },
   youtube: {
     regex: YOUTUBE_REGEX,
     html: [
       '<iframe src="{{protocol}}//www.youtube.com/embed/{{remote_id}}" ',
-      'width="580" height="320" frameborder="0" allowfullscreen></iframe>'
-    ].join('\n')
+      'width="580" height="320" frameborder="0" allowfullscreen></iframe>',
+    ].join('\n'),
   },
   file: {
     regex: FILE_REGEX,
     html: [
       '<video class="villain-video-file" muted="muted" tabindex="-1" loop autoplay src="{{remote_id}}">',
       '<source src="{{remote_id}}" type="video/mp4">',
-      '</video>'
-    ].join('\n')
-  }
+      '</video>',
+    ].join('\n'),
+  },
 }
 
-export default app => ({
+export default (app) => ({
   mounted() {
     this.target = this.el.dataset.target
     this.$loader = Dom.find(this.el, '.video-loading')
@@ -45,6 +45,9 @@ export default app => ({
     this.$button = Dom.find(this.el, 'button')
     this.$input = Dom.find(this.el, 'input')
     this.$button.addEventListener('click', async () => {
+      if (!this.$input.value) {
+        return
+      }
       this.loading()
       await this.handleInput(this.$input.value)
       this.pushEventTo(this.target, 'url', {
@@ -52,7 +55,7 @@ export default app => ({
         height: this.height || 0,
         source: this.source,
         remoteId: this.remoteId,
-        url: this.$input.value
+        url: this.$input.value,
       })
     })
   },
@@ -61,7 +64,7 @@ export default app => ({
     let match
     this.url = url
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this.resolve = resolve
       if (
         url.startsWith('https://player.vimeo.com/external/') ||
@@ -105,7 +108,10 @@ export default app => ({
 
   findVideoSize() {
     if (this.videoElement.videoWidth > 0 && this.videoElement.videoHeight > 0) {
-      this.videoElement.removeEventListener('loadeddata', this._boundReadyListener)
+      this.videoElement.removeEventListener(
+        'loadeddata',
+        this._boundReadyListener
+      )
       this.width = this.videoElement.videoWidth
       this.height = this.videoElement.videoHeight
 
@@ -120,5 +126,5 @@ export default app => ({
         console.error('VideoURLParser: Could not find video dimensions')
       }
     }
-  }
+  },
 })
