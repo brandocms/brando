@@ -52,8 +52,9 @@ defmodule Brando.Mixfile do
       # cache
       {:cachex, "~> 4.0"},
 
-      # cron
+      # cron & processing
       {:oban, "~> 2.18.0"},
+      {:flow, "~> 1.2"},
 
       # sitemaps
       {:sitemapper, "~> 0.9.0"},
