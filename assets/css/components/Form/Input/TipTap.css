@@ -8,6 +8,10 @@
       padding: 12px 12px 15px;
     }
 
+    .tiptap-target {
+      padding: 5px;
+    }
+
     .tiptap-menu {
       top: 0;
     }
@@ -16,16 +20,16 @@
   .tiptap-menu {
     display: flex;
     flex-wrap: wrap;
-    background-color: rgb(252 250 250 / 90%);
+    background-color: #fff;
     z-index: 1;
     margin-bottom: 0px;
     position: sticky;
     top: 75px;
-    border-radius: 10px;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    border-radius: 8px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
 
     .menu-item {
       width: 32px;
@@ -33,7 +37,7 @@
       color: #0d0d0d;
       border: none;
       background-color: white;
-      padding: .25rem;
+      padding: 0.25rem;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -47,11 +51,12 @@
       }
 
       &:hover {
-        background-color: palegoldenrod;        
+        background-color: #eaeaea;
       }
 
       &.active {
-        background-color: gold;
+        background-color: var(--brando-color-dark);
+        color: #fff;
       }
 
       &.disabled {
@@ -95,6 +100,7 @@
 
 .ProseMirror {
   line-height: 1.5;
+  max-width: 70ch;
 
   &:focus {
     outline: none;
@@ -152,9 +158,9 @@
   }
 
   h2 {
-    @fontsize lg;
+    font-size: 24px;
     line-height: 1.05 !important;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.02em;
     font-weight: 600;
     margin-top: 15px;
     margin-bottom: 15px;
@@ -167,7 +173,9 @@
     }
   }
 
-  ul + h2, p + h2, li + h2 {
+  ul + h2,
+  p + h2,
+  li + h2 {
     margin-top: 45px;
   }
 
@@ -235,7 +243,7 @@
 span[data-type="jump-anchor"] {
   border: 1px dotted blue;
   &:after {
-    content: '';
+    content: "";
     width: 14px;
     height: 14px;
     display: inline-block;

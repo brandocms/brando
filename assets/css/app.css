@@ -370,6 +370,7 @@ body {
   --brando-color-peach-darker: theme(colors.peachDarker);
   --brando-color-input: theme(colors.input);
   --brando-color-blue: theme(colors.blue);
+  --brando-color-block-ref-background: #fcfcfc;
 
   background-color: var(--brando-color-background);
   color: var(--brando-color-foreground);

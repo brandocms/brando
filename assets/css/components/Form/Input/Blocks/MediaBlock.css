@@ -1,7 +1,8 @@
 .media-block {
   .empty {
-    background-color: var(--brando-color-peach);
+    background-color: transparent;
     color: var(--brando-color-dark);
+    border: 1px dashed var(--brando-color-dark);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -27,7 +28,9 @@
       svg {
         width: 200px;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           fill: var(--brando-color-dark);
         }
       }

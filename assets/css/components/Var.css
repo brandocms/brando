@@ -1,5 +1,4 @@
 .variable {
-
   &.text {
     textarea.text {
       background-color: #fafafa;
@@ -15,22 +14,26 @@
   &.select {
     .multiselect {
       gap: 2em;
-      height: 40px;
+      height: 32px;
       padding-left: 9px;
       padding-right: 9px;
-      font-family: 'Mono';
-      font-size: 15px !important;
+      border-radius: 6px;
+      @font mono;
+      font-size: 12px !important;
+      text-transform: uppercase;
 
       .button-edit {
-        font-size: 13px;
+        font-size: 12px;
         text-transform: uppercase;
         padding: 4px 6px 4px;
         border-radius: 11px;
+        border-color: inherit;
       }
     }
   }
 
-  .image-info, .file-info {
+  .image-info,
+  .file-info {
     @fontsize 13px;
     @space margin-top 15px;
   }
@@ -66,7 +69,9 @@
         user-select: none;
         pointer-events: none;
 
-        path:nth-of-type(2), .plus, circle {
+        path:nth-of-type(2),
+        .plus,
+        circle {
           user-select: none;
           pointer-events: none;
           fill: var(--brando-color-dark);
@@ -116,7 +121,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: gold;
+    color: white;
+    background-color: var(--brando-color-dark);
     border-radius: 50%;
 
     span {
@@ -165,8 +171,6 @@
         }
       }
     }
-
-    
 
     dl {
       display: flex;

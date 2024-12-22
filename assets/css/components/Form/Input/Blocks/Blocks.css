@@ -1,7 +1,9 @@
 .blocks-wrapper {
-  padding: 0.7rem;
-  background-color: #fbfbfb;
-  border-radius: 12px;
+  .blocks-content {
+    padding: 0.7rem;
+    background-color: #fbfbfb;
+    border-radius: 12px;
+  }
 
   .modules-header {
     display: flex;
@@ -152,7 +154,7 @@ section.alert.danger {
   border-top: 3px solid white !important;
   border-bottom: 3px solid white !important;
   transition: background-color 350ms ease;
-  
+
   &.active {
     background-color: var(--brando-color-peach-darker);
     figure {
@@ -197,7 +199,7 @@ section.alert.danger {
     margin-top: -4px;
   }
 }
-  
+
 .namespace-modules + .namespace-button {
   margin-top: -1px;
 }
@@ -206,8 +208,9 @@ section.alert.danger {
   margin-top: -1px;
 }
 
-.module-button, .namespace-button {
-  @fontsize button;  
+.module-button,
+.namespace-button {
+  @fontsize button;
   padding: 15px;
   display: flex;
   align-items: center;

@@ -74,8 +74,9 @@
   }
 
   .empty {
-    background-color: var(--brando-color-peach);
+    background-color: transparent;
     color: var(--brando-color-dark);
+    border: 1px dashed var(--brando-color-dark);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;

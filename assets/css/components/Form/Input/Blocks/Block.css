@@ -51,10 +51,13 @@
   width: 30px;
   height: 30px;
   background-color: #dbd7c359;
-  transition: background-color 250ms ease;
+  transition:
+    background-color 250ms ease,
+    color 250ms ease;
 
   &:hover {
-    background-color: gold;
+    background-color: var(--brando-color-dark);
+    color: white;
   }
 
   span {
@@ -190,7 +193,9 @@ button.btn-palette {
 
   &.ref_block {
     border-radius: 12px;
-    background-color: white;
+    background-color: var(--brando-color-block-ref-background);
+    box-shadow: 0px 0px 1px #ccc;
+    border: none !important;
   }
 
   figcaption {
@@ -229,7 +234,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: gold;
+      background-color: var(--brando-color-dark);
+      color: white;
       border-radius: 50%;
 
       span {
@@ -262,7 +268,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: gold;
+      background-color: var(--brando-color-dark);
+      color: white;
       border-radius: 50%;
 
       span {
@@ -302,7 +309,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: gold;
+      background-color: var(--brando-color-dark);
+      color: white;
       border-radius: 50%;
 
       span {
@@ -334,12 +342,14 @@ button.btn-palette {
     grid-template-columns: repeat(12, 1fr);
 
     .variable {
-      color: #6a0035;
-      background-color: #fffafa;
+      color: var(--brando-color-foreground);
+      background-color: var(--brando-color-block-ref-background);
+      box-shadow: 0px 0px 1px #ccc;
       border-radius: 8px;
-      padding-left: 10px;
-      padding-top: 8px;
-      padding-bottom: 8px;
+      padding-left: 15px;
+      padding-top: 13px;
+      padding-bottom: 12px;
+      padding-right: 15px;
 
       &.start-row {
         border-left: none;
@@ -365,22 +375,17 @@ button.btn-palette {
     .variable .field-wrapper {
       .label-wrapper {
         margin-bottom: 10px;
-
-        span {
-          text-decoration: underline;
-        }
       }
 
       .multiselect {
-        background-color: #fafafa;
+        background-color: #ffffff;
       }
     }
 
     label.control-label {
-      font-size: 12px;
+      @font mono;
+      font-size: 10px;
       text-transform: uppercase;
-      /* border-bottom: 1px solid; */
-      font-family: "Mono";
     }
 
     input[type="text"] {
@@ -614,7 +619,8 @@ button.btn-palette {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: gold;
+        background-color: var(--brando-color-dark);
+        color: white;
         border-radius: 50%;
 
         span {
@@ -744,8 +750,8 @@ button.btn-palette {
       }
 
       &:hover {
-        background-color: gold;
-        color: var(--brando-color-dark);
+        background-color: var(--brando-color-dark);
+        color: white;
         border-radius: 7px;
       }
 

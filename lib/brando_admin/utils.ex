@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Utils do
       class: assign_opts[:class],
       monospace: assign_opts[:monospace] || false,
       disabled: assign_opts[:disabled] || false,
-      debounce: assign_opts[:debounce] || 750,
+      debounce: assign_opts[:debounce] || 350,
       compact: assign_opts[:compact],
       instructions: g(schema, Map.get(socket.assigns.subform, :instructions)),
       label: g(schema, Map.get(socket.assigns.subform, :label))
@@ -46,7 +46,7 @@ defmodule BrandoAdmin.Utils do
       class: assign_opts[:class],
       monospace: assign_opts[:monospace] || false,
       disabled: assign_opts[:disabled] || false,
-      debounce: assign_opts[:debounce] || 750,
+      debounce: assign_opts[:debounce] || 350,
       compact: assign_opts[:compact],
       placeholder: g(schema, assign_opts[:placeholder]) || socket.assigns.placeholder,
       instructions: g(schema, assign_opts[:instructions]) || socket.assigns.instructions,
@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Utils do
       class: assigns.opts[:class],
       monospace: assigns.opts[:monospace] || false,
       disabled: assigns.opts[:disabled] || false,
-      debounce: assigns.opts[:debounce] || 750,
+      debounce: assigns.opts[:debounce] || 350,
       compact: assigns.opts[:compact],
       placeholder: g(schema, assigns.opts[:placeholder]) || assigns.placeholder,
       instructions: g(schema, assigns.opts[:instructions]) || assigns.instructions,
@@ -119,15 +119,18 @@ defmodule BrandoAdmin.Utils do
     |> JS.show(
       to: "#{modal_id}",
       display: "flex",
+      blocking: false,
       time: 0
     )
     |> JS.show(
       to: "#{modal_id} .modal-backdrop",
-      transition: {"transition ease-out duration-500", "opacity-0", "opacity-100"},
-      time: 500
+      transition: {"transition ease-out duration-300", "opacity-0", "opacity-100"},
+      blocking: false,
+      time: 300
     )
     |> JS.show(
       to: "#{modal_id} .modal-dialog",
+      blocking: false,
       transition:
         {"transition ease-out delay-300 duration-300", "opacity-0 y-100", "opacity-100 y-0"},
       time: 600
@@ -138,18 +141,21 @@ defmodule BrandoAdmin.Utils do
     js
     |> JS.hide(
       to: "#{modal_id} .modal-dialog",
-      transition: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
-      time: 300
+      transition: {"transition ease-in duration-100", "opacity-100 y-0", "opacity-0 y-100"},
+      blocking: true,
+      time: 100
     )
     |> JS.hide(
       to: "#{modal_id} .modal-backdrop",
-      transition: {"transition ease-in delay-300 duration-500", "opacity-100", "opacity-0"},
-      time: 800
+      transition: {"transition ease-in delay-100 duration-300", "opacity-100", "opacity-0"},
+      blocking: false,
+      time: 400
     )
     |> JS.hide(
       to: "#{modal_id}",
       transition: {"transition", "opacity-100", "opacity-100"},
-      time: 800
+      blocking: false,
+      time: 400
     )
   end
 
