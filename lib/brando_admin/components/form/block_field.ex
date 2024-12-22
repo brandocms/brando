@@ -503,7 +503,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
     |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
     |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
-    |> stream(:entry_blocks_forms, entry_blocks_forms)
+    |> stream(:entry_blocks_forms, entry_blocks_forms, reset: true)
   end
 
   defp maybe_sequence_blocks(%{assigns: %{first_run: true}} = socket) do
@@ -692,7 +692,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <% end %>
         </div>
 
-        <Block.plus click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)} />
+        <Block.plus click={
+          JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)
+        } />
       </div>
     </div>
     """
