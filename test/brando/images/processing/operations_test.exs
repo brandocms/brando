@@ -408,7 +408,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/large/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.png",
@@ -448,7 +448,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/medium/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.png",
@@ -488,7 +488,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/micro/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.png",
@@ -528,7 +528,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/small/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.png",
@@ -568,7 +568,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/thumb/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.png",
@@ -608,7 +608,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/xlarge/image.png",
                total_operations: 6,
                type: :png,
-               user: :system
+               user_id: :system
              }
            ]
   end
@@ -660,7 +660,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/large/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
@@ -700,7 +700,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/medium/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
@@ -740,7 +740,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/micro/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
@@ -780,7 +780,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/small/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
@@ -820,7 +820,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/thumb/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              },
              %Brando.Images.Operation{
                filename: "image.gif",
@@ -860,7 +860,7 @@ defmodule Brando.OperationsTest do
                sized_image_path: "images/exhibitions/cover/xlarge/image.gif",
                total_operations: 6,
                type: :gif,
-               user: :system
+               user_id: :system
              }
            ]
   end
@@ -883,7 +883,7 @@ defmodule Brando.OperationsTest do
       size_cfg: %{"quality" => 1, "size" => "10"},
       size_key: "micro",
       type: :gif,
-      user: :system,
+      user_id: :system,
       sized_image_dir: "images/exhibitions/cover/micro",
       sized_image_path: "images/exhibitions/cover/micro/image.gif",
       operation_index: 6,
@@ -913,7 +913,7 @@ defmodule Brando.OperationsTest do
       size_cfg: %{"quality" => 1, "size" => "10x10", "crop" => true},
       size_key: "micro",
       type: :gif,
-      user: :system,
+      user_id: :system,
       sized_image_dir: "images/exhibitions/cover/micro",
       sized_image_path: "images/exhibitions/cover/micro/image.gif",
       operation_index: 6,

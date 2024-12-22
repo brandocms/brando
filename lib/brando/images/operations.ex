@@ -29,6 +29,7 @@ defmodule Brando.Images.Operations do
           user :: user
         ) :: {:ok, [operation]}
   def create(%{path: path, id: id} = image_struct, cfg, user) do
+    user_id = (is_map(user) && user.id) || user
     {_, filename} = Utils.split_path(path)
 
     sizes = Map.get(cfg, :sizes)
@@ -50,7 +51,7 @@ defmodule Brando.Images.Operations do
             operation = %Images.Operation{
               image_id: id,
               type: image_type,
-              user_id: user.id,
+              user_id: user_id,
               filename: filename,
               processed_formats: processed_formats,
               image_struct: image_struct,
