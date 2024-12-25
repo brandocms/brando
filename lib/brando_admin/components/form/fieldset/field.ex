@@ -64,7 +64,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
         type={@input.type}
         current_user={@current_user}
         form_cid={@form_cid}
-        focus="focus"
         target={@form_cid}
       />
     <% end %>

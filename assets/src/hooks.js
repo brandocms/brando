@@ -7,6 +7,7 @@ import ConfirmClickHook from './hooks/ConfirmClick'
 import DatePickerHook from './hooks/DatePicker'
 import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
+import FieldBaseHook from './hooks/FieldBase'
 import FocalPointHook from './hooks/FocalPoint'
 import FormHook from './hooks/Form'
 import LegacyFileUploadHook from './hooks/LegacyFileUpload'
@@ -36,7 +37,7 @@ import TipTapHook from './hooks/TipTap'
 import VideoURLParserHook from './hooks/VideoURLParser'
 
 // Brando hooks
-export default app => {
+export default (app) => {
   return {
     'Brando.Admin': AdminHook(app),
     'Brando.Block': BlockHook(app),
@@ -46,6 +47,7 @@ export default app => {
     'Brando.DatePicker': DatePickerHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
     'Brando.DragDrop': DragDropHook(app),
+    'Brando.FieldBase': FieldBaseHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
     'Brando.LegacyFileUpload': LegacyFileUploadHook(app),
@@ -72,6 +74,6 @@ export default app => {
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),
     'Brando.TipTap': TipTapHook(app),
-    'Brando.VideoURLParser': VideoURLParserHook(app)
+    'Brando.VideoURLParser': VideoURLParserHook(app),
   }
 }

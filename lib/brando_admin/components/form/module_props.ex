@@ -265,8 +265,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               <li class="padded">
                 <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
                   <div>
-                    <span class="text-mono"><%= ref_data[:type].value %></span>
-                    <span class="text-mono">- %&lcub;<%= ref[:name].value %>&rcub;</span>
+                    <span class="text-mono">{ref_data[:type].value}</span>
+                    <span class="text-mono">- %&lcub;{ref[:name].value}&rcub;</span>
                   </div>
 
                   <div class="actions">
@@ -384,7 +384,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               />
                               <br />
 
-                              <%= block_data[:extensions].value %>
+                              {block_data[:extensions].value}
                             </Form.inputs_for_block>
                           <% "picture" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
@@ -446,7 +446,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       checked={checked}
                                     />
                                     <label class="control-label small" for={array_id}>
-                                      <%= array_label %>
+                                      {array_label}
                                     </label>
                                   </div>
                                 </div>
@@ -535,7 +535,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       checked={checked}
                                     />
                                     <label class="control-label small" for={array_id}>
-                                      <%= array_label %>
+                                      {array_label}
                                     </label>
                                   </div>
                                 </div>
@@ -598,7 +598,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                       checked={checked}
                                     />
                                     <label class="control-label small" for={array_id}>
-                                      <%= array_label %>
+                                      {array_label}
                                     </label>
                                   </div>
                                 </div>
@@ -671,7 +671,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                           checked={checked}
                                         />
                                         <label class="control-label small" for={array_id}>
-                                          <%= array_label %>
+                                          {array_label}
                                         </label>
                                       </div>
                                     </div>
@@ -781,7 +781,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                           checked={checked}
                                         />
                                         <label class="control-label small" for={array_id}>
-                                          <%= array_label %>
+                                          {array_label}
                                         </label>
                                       </div>
                                     </div>
@@ -806,12 +806,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:limit]} label={gettext("Limit")} />
                             </Form.inputs_for_block>
                           <% type -> %>
-                            No matching block <%= type %> found
+                            No matching block {type} found
                         <% end %>
                       </div>
 
                       <div class="panel">
-                        <h2 class="titlecase">Ref config — <%= ref_data[:type].value %></h2>
+                        <h2 class="titlecase">Ref config — {ref_data[:type].value}</h2>
                         <Input.text field={ref[:name]} label={gettext("Name")} />
                         <Input.text field={ref[:description]} label={gettext("Description")} />
                         <Input.input
@@ -953,7 +953,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 <input type="hidden" name={"#{@form.name}[sort_var_ids][]"} value={var.index} />
 
                 <span class="text-mono">
-                  <%= var[:type].value %> - &lcub;&lcub; <%= var[:key].value %> &rcub;&rcub;
+                  {var[:type].value} - &lcub;&lcub; {var[:key].value} &rcub;&rcub;
                 </span>
                 <div class="actions">
                   <button
@@ -1069,6 +1069,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     else
       assign(socket, :available_queries, [])
     end
+  end
+
+  def handle_event("focus", %{"field" => _field_name}, socket) do
+    {:noreply, socket}
   end
 
   def handle_event(

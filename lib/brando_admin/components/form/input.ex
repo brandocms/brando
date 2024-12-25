@@ -212,7 +212,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
 
   def email(assigns) do
@@ -233,8 +232,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         disabled={@disabled}
         phx-debounce={@debounce}
         phx-target={@target}
-        phx-focus={@focus}
-        phx-value-field={@focus && @field.name}
+        data-watch-focus
         class={["text", @monospace && "monospace"]}
       />
     </Form.field_base>
@@ -451,7 +449,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
 
   def slug(assigns) do
@@ -485,8 +482,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-slug-for={@data_slug_for}
         data-slug-type={@data_slug_type}
         phx-target={@target}
-        phx-focus={@focus}
-        phx-value-field={@focus && @field.name}
+        data-watch-focus
         autocorrect="off"
         spellcheck="false"
       />
@@ -768,7 +764,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :debounce, :integer
   attr :monospace, :boolean
   attr :change, :any, default: nil
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
 
   def i18n_text(assigns) do
@@ -807,8 +802,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             class="text"
             phx-debounce={@debounce}
             phx-target={@target}
-            phx-focus={@focus}
-            phx-value-field={@focus && @field.name}
+            data-watch-focus
           />
         </div>
       </Form.map_inputs>
@@ -826,7 +820,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :debounce, :integer
   attr :monospace, :boolean
   attr :change, :any, default: nil
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
   attr :opts, :list
 
@@ -848,9 +841,8 @@ defmodule BrandoAdmin.Components.Form.Input do
         disabled={@disabled}
         class={["text", @monospace && "monospace"]}
         phx-debounce={@debounce}
-        phx-focus={@focus}
+        data-watch-focus
         phx-target={@target}
-        phx-value-field={@focus && @field.name}
         phx-change={@change}
       />
     </Form.field_base>
@@ -861,7 +853,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :label, :string
   attr :instructions, :string
   attr :placeholder, :string
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
   attr :opts, :list
 
@@ -891,8 +882,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         disabled={@disabled}
         phx-debounce={@debounce}
         phx-target={@target}
-        phx-focus={@focus}
-        phx-value-field={@focus && @field.name}
+        data-watch-focus
         id={@generated_uid}
       />
     </Form.field_base>
@@ -909,7 +899,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :debounce, :integer
   attr :monospace, :boolean
   attr :change, :any, default: nil
-  attr :focus, :any, default: nil
   attr :target, :any, default: nil
 
   def i18n_textarea(assigns) do
@@ -953,8 +942,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             disabled={@disabled}
             phx-debounce={@debounce}
             phx-target={@target}
-            phx-focus={@focus}
-            phx-value-field={@focus && @field.name}
+            data-watch-focus
           ><%= value %></textarea>
         </div>
       </Form.map_inputs>

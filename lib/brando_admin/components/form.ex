@@ -3266,6 +3266,7 @@ defmodule BrandoAdmin.Components.Form do
     <div
       class={["field-wrapper", @class, @fit_content && "fit-content"]}
       id={"#{@f_id}-field-wrapper"}
+      phx-hook="Brando.FieldBase"
     >
       <div class={["label-wrapper", @hidden && "hidden"]}>
         <label

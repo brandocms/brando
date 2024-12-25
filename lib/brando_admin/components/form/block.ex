@@ -806,8 +806,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:path, fn %{uid: uid} -> assigns.parent_path ++ List.wrap(uid) end)
     |> assign_new(:type, fn -> Changeset.get_field(block_cs, :type) end)
     |> assign_new(:multi, fn -> Changeset.get_field(block_cs, :multi) end)
-    |> assign_new(:has_vars?, fn -> Changeset.get_assoc(block_cs, :vars) !== [] end)
-    |> assign_new(:has_table_rows?, fn -> Changeset.get_assoc(block_cs, :table_rows) !== [] end)
+    |> assign_new(:has_vars?, fn ->
+      try do
+        Changeset.get_assoc(block_cs, :vars) != []
+      rescue
+        _ -> false
+      end
+    end)
+    |> assign_new(:has_table_rows?, fn ->
+      try do
+        Changeset.get_assoc(block_cs, :table_rows) != []
+      rescue
+        _ -> false
+      end
+    end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:containers, fn ->
@@ -1219,6 +1231,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       belongs_to = socket.assigns.belongs_to
       changeset = socket.assigns.form.source
       entry = socket.assigns.entry
+      changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
 
       vars =
         if belongs_to == :root do
@@ -1273,6 +1286,30 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_parse_module(socket) do
     assign(socket, liquid_splits: [], vars: [])
   end
+
+  # if the assoc is not preloaded, meaning it is an %Ecto.Association.NotLoaded{} struct,
+  # we preload it and stick it in the data field. My least favorite part of dealing with
+  # changesets + revisions
+  defp maybe_preload_changeset_data(changeset, assoc, :root) do
+    if assoc_is_loaded(
+         get_in(changeset, [Access.key(:data), Access.key(:block), Access.key(:vars)])
+       ) do
+      changeset
+    else
+      update_in(changeset.data.block, &Brando.Repo.repo().preload(&1, assoc))
+    end
+  end
+
+  defp maybe_preload_changeset_data(changeset, assoc, _) do
+    if assoc_is_loaded(get_in(changeset, [Access.key(:data), Access.key(:vars)])) do
+      changeset
+    else
+      update_in(changeset.data, &Brando.Repo.repo().preload(&1, assoc))
+    end
+  end
+
+  defp assoc_is_loaded(%Ecto.Association.NotLoaded{}), do: false
+  defp assoc_is_loaded(_), do: true
 
   defp reset_position_response_tracker(socket) do
     block_list = socket.assigns.block_list
