@@ -316,7 +316,7 @@ defmodule BrandoAdmin.LiveView.Form do
         # TODO: there are updated dirty fields from other users.
         require Logger
 
-        Logger.error("""
+        Logger.debug("""
 
         ==> dirty_fields
 

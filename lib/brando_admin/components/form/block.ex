@@ -3998,7 +3998,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def handle_event("show_dirty", _params, socket) do
     require Logger
 
-    Logger.error("""
+    Logger.debug("""
 
     changeset.changes
     #{inspect(socket.assigns.form.source.changes)}
