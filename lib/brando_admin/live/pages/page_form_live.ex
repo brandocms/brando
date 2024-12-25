@@ -36,9 +36,9 @@ defmodule BrandoAdmin.Pages.PageFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create page") %>
+          {gettext("Create page")}
         <% else %>
-          <%= gettext("Edit page") %>
+          {gettext("Edit page")}
         <% end %>
       </:header>
     </.live_component>

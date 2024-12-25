@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Sites.GlobalSetFormLive do
       schema={@schema}
     >
       <:header>
-        <%= gettext("Edit global set") %>
+        {gettext("Edit global set")}
       </:header>
     </.live_component>
     """

@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       <Input.input type={:hidden} field={@relation_field} value="" />
 
       <div>
-        <%= gettext("No file associated with field") %>
+        {gettext("No file associated with field")}
       </div>
 
       <button
@@ -178,7 +178,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         phx-click={@click}
         phx-value-id={"edit-file-#{@field.id}"}
       >
-        <%= gettext("Add file") %>
+        {gettext("Add file")}
       </button>
     </div>
     """
@@ -214,15 +214,15 @@ defmodule BrandoAdmin.Components.Form.Input.File do
           </svg>
         </div>
         <div class="file-info">
-          <%= @file_name %> (<%= Brando.Utils.human_size(@file.filesize) %>)
+          {@file_name} ({Brando.Utils.human_size(@file.filesize)})
           <button class="btn-small" type="button" phx-click={@click}>
-            <%= gettext("Edit file") %>
+            {gettext("Edit file")}
           </button>
         </div>
       <% else %>
         <div class="file-preview-empty">
           <div>
-            <%= gettext("No file associated with field") %>
+            {gettext("No file associated with field")}
           </div>
 
           <button
@@ -231,7 +231,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             phx-click={@click}
             phx-value-id={"edit-file-#{@field.id}"}
           >
-            <%= gettext("Add file") %>
+            {gettext("Add file")}
           </button>
         </div>
       <% end %>

@@ -281,7 +281,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
-      <%= gettext("Pick files") %>
+      {gettext("Pick files")}
       <.live_file_input upload={@upload_field} />
     </label>
     """
@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           fill="rgba(252,245,243,1)"
         />
       </svg>
-      <%= gettext("Add entry") %>
+      {gettext("Add entry")}
     </button>
     """
   end
@@ -319,7 +319,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"
         />
       </svg>
-      <%= gettext("Sort by filename") %>
+      {gettext("Sort by filename")}
     </button>
     """
   end
@@ -393,7 +393,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def empty_subform(assigns) do
     ~H"""
     <input type="hidden" name={@field.name} value="" />
-    <div class="subform-empty">&rarr; <%= gettext("No associated entries") %></div>
+    <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
     """
   end
 
@@ -418,11 +418,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
         square
       />
       <div class="subform-listing-row">
-        <%= Phoenix.LiveView.TagEngine.component(
+        {Phoenix.LiveView.TagEngine.component(
           @subform_config.listing,
           [entry: @entry],
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        ) %>
+        )}
       </div>
     </div>
     """

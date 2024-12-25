@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       >
         <%= if Enum.empty?(@selected_identifiers) do %>
           <div class="empty-list">
-            <%= gettext("No selected entries") %>
+            {gettext("No selected entries")}
             <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
           </div>
         <% else %>
@@ -145,11 +145,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         <% end %>
 
         <button type="button" class="tiny" phx-click={show_modal("##{@field.id}-select-entries")}>
-          <%= gettext("Select entries") %>
+          {gettext("Select entries")}
         </button>
 
         <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
-          <h2 class="titlecase"><%= gettext("Select content type") %></h2>
+          <h2 class="titlecase">{gettext("Select content type")}</h2>
           <div class="button-group-vertical">
             <button
               :for={{label, schema, _} <- @available_schemas}
@@ -158,11 +158,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
               phx-click={JS.push("select_schema", target: @myself)}
               phx-value-schema={schema}
             >
-              <%= label %>
+              {label}
             </button>
           </div>
           <%= if @selected_schema do %>
-            <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+            <h2 class="titlecase">{gettext("Available entries")}</h2>
             <.assoc_identifier
               :for={identifier <- @available_identifiers}
               identifier={identifier}
@@ -344,12 +344,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
       <div class="meta" data-sortable-filter>
-        <%= render_slot(@meta, @identifier) %>
+        {render_slot(@meta, @identifier)}
       </div>
     </article>
     """
@@ -385,9 +385,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
     </article>
     """
@@ -428,9 +428,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
     </article>
     """
@@ -479,9 +479,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
     </article>
     """
@@ -517,9 +517,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
     </article>
     """
@@ -552,9 +552,9 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
-          <%= render_slot(@delete) %>
+          {render_slot(@delete)}
         </:delete>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.identifier_content>
     </article>
     """
@@ -578,24 +578,24 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       </div>
     </section>
     <section class="content">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
       <div class="info">
         <div class="name">
           <%= if @identifier.language do %>
-            [<%= @identifier.language %>]
+            [{@identifier.language}]
           <% end %>
-          <%= @identifier.title %>
+          {@identifier.title}
         </div>
         <div class="meta-info">
-          <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+          <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(
             @identifier.entry_id
-          ) %>
-          <span>|</span> <%= format_datetime(@identifier.updated_at) %>
+          )}
+          <span>|</span> {format_datetime(@identifier.updated_at)}
         </div>
       </div>
     </section>
     <div class="remove">
-      <%= render_slot(@delete) %>
+      {render_slot(@delete)}
     </div>
     """
   end

@@ -14,9 +14,9 @@ defmodule BrandoAdmin.Videos.VideoFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create video") %>
+          {gettext("Create video")}
         <% else %>
-          <%= gettext("Edit video") %>
+          {gettext("Edit video")}
         <% end %>
       </:header>
     </.live_component>

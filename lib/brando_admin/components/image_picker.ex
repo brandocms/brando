@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">
-              <%= gettext("Select similarly typed image from library") %>
+              {gettext("Select similarly typed image from library")}
             </div>
           <% end %>
           <div class="button-group-horizontal mb-1">
@@ -94,15 +94,15 @@ defmodule BrandoAdmin.Components.ImagePicker do
             >
               <Content.image image={image} size={:smallest} />
               <div class="image-picker__info">
-                <div class="image-picker__filename"><%= image.path %></div>
+                <div class="image-picker__filename">{image.path}</div>
                 <div class="image-picker__dims">
-                  Dimensions....: <%= image.width %>&times;<%= image.height %>
+                  Dimensions....: {image.width}&times;{image.height}
                 </div>
                 <div class="image-picker__formats">
-                  Formats.......: <%= inspect(image.formats) %>
+                  Formats.......: {inspect(image.formats)}
                 </div>
                 <div class="image-picker__processed">
-                  Status........: <%= inspect(image.status) %>
+                  Status........: {inspect(image.status)}
                 </div>
               </div>
             </div>

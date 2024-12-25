@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <.csrf_meta_tag />
-    <.live_title><%= assigns[:page_title] || "Brando" %></.live_title>
+    <.live_title>{assigns[:page_title] || "Brando"}</.live_title>
     <script>
       (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)
     </script>
@@ -18,6 +18,6 @@
       </script>
       <div class="loading-container"></div>
     </div>
-    <%= @inner_content %>
+    {@inner_content}
   </body>
 </html>

@@ -23,7 +23,7 @@ defmodule Brando.Utils.Schema do
   def update_field(schema, coll) do
     schema
     |> Changeset.change(coll)
-    |> Brando.Repo.update
+    |> Brando.Repo.update()
     |> Brando.Cache.Query.evict()
   end
 

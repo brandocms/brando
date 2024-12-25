@@ -29,12 +29,12 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
       <Content.drawer id={@id} title={gettext("Alternates")} close={@on_close}>
         <:info>
           <p>
-            <%= gettext(
+            {gettext(
               "A list of entries connected to this entry. Usually this is used to link translations together for search engines."
-            ) %>
+            )}
           </p>
         </:info>
-        <h3 class="mb-1"><%= gettext("Currently linked entries") %></h3>
+        <h3 class="mb-1">{gettext("Currently linked entries")}</h3>
         <Entries.identifier
           :for={identifier <- @identifiers}
           identifier_id={identifier.id}
@@ -61,26 +61,26 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           type="button"
           phx-click={JS.push("get_entries_identifiers", target: @myself)}
         >
-          <%= gettext("Select entries to link") %>
+          {gettext("Select entries to link")}
         </button>
 
         <div :if={Enum.count(@new_identifiers) > 1} class="mt-3">
           <p>
-            <%= gettext(
+            {gettext(
               "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
-            ) %>
+            )}
           </p>
           <button
             type="button"
             class="primary mt-1"
             phx-click={JS.push("store_alternates", target: @myself)}
           >
-            <%= gettext("Link children") %>
+            {gettext("Link children")}
           </button>
         </div>
 
         <div :if={@entries_identifiers != []} class="entries-identifiers mt-3">
-          <h3 class="mb-1"><%= gettext("Available entries") %></h3>
+          <h3 class="mb-1">{gettext("Available entries")}</h3>
           <Entries.identifier
             :for={identifier <- @entries_identifiers}
             identifier_id={identifier.id}

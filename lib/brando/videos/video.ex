@@ -86,27 +86,27 @@ defmodule Brando.Videos.Video do
       </div>
     </.field>
     <.field columns={9}>
-      <small class="monospace">#<%= @entry.id %></small>
+      <small class="monospace">#{@entry.id}</small>
       <br />
       <small class="monospace">
         <%= if @entry.filename do %>
-          <%= @entry.filename %>
+          {@entry.filename}
         <% else %>
-          <%= @entry.url %>
+          {@entry.url}
         <% end %>
       </small>
       <br />
-      <small><%= @entry.width %>&times;<%= @entry.height %></small>
+      <small>{@entry.width}&times;{@entry.height}</small>
       <br />
       <div :if={@entry.title} class="badge mini">#{gettext("Title")}</div>
       <div :if={@entry.alt} class="badge mini">Alt</div>
     </.field>
     <.update_link entry={@entry} columns={6}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <%= if @entry.category do %>
           <br />
-          <small class="badge"><%= @entry.category.name %></small>
+          <small class="badge">{@entry.category.name}</small>
         <% end %>
       </:outside>
     </.update_link>

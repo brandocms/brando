@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Sites.IdentityLive do
       schema={@schema}
     >
       <:header>
-        <%= gettext("Update identity") %> (<code><%= @current_user.config.content_language %></code>)
+        {gettext("Update identity")} (<code><%= @current_user.config.content_language %></code>)
       </:header>
     </.live_component>
     """

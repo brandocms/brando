@@ -179,13 +179,13 @@ defmodule Brando.Pages.Page do
       </div>
     </div>
     <.update_link entry={@entry} columns={7}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <br />
         <div :if={@entry.has_url} class="badge lowercase no-border">
           <a class="flex-h" href={@url} target="_blank">
             <Brando.HTML.icon name="hero-globe-alt" class="s mr-1" />
-            <%= @url %>
+            {@url}
           </a>
         </div>
       </:outside>
@@ -198,17 +198,17 @@ defmodule Brando.Pages.Page do
     ~H"""
     <div class="center col-1">⤷</div>
     <.update_link entry={@entry} columns={6}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <br />
         <div class="badge no-border">
-          <Brando.HTML.icon name="hero-key" class="mr-1" /> <%= @entry.parent_key %>/<%= @entry.key %>
+          <Brando.HTML.icon name="hero-key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
         </div>
       </:outside>
     </.update_link>
     <div class="col-3">
       <div class="badge uppercase">
-        <%= gettext("Fragment") %>
+        {gettext("Fragment")}
       </div>
     </div>
     """
@@ -221,21 +221,21 @@ defmodule Brando.Pages.Page do
     ~H"""
     <div class="center col-1">⤷</div>
     <.update_link entry={@entry} columns={6}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <br />
 
         <div class="badge no-border lowercase">
           <a class="flex-h" href={@url} target="_blank">
             <Brando.HTML.icon name="hero-globe-alt" class="s mr-1" />
-            <%= @url %>
+            {@url}
           </a>
         </div>
       </:outside>
     </.update_link>
     <div class="col-2">
       <div class="badge uppercase">
-        <%= gettext("Sub page") %>
+        {gettext("Sub page")}
       </div>
     </div>
     """

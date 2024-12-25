@@ -28,9 +28,9 @@ defmodule BrandoAdmin.Navigation.ItemUpdateLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create menu item") %>
+          {gettext("Create menu item")}
         <% else %>
-          <%= gettext("Edit menu item") %>
+          {gettext("Edit menu item")}
         <% end %>
       </:header>
     </.live_component>

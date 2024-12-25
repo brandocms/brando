@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
     ~H"""
     <Content.header title={gettext("Global sets")} subtitle={gettext("Overview")}>
       <.link navigate="/admin/config/global_sets/create" class="primary">
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </.link>
     </Content.header>
 

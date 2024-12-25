@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.TemplateListLive do
     ~H"""
     <Content.header title={gettext("Content Templates")} subtitle={gettext("Overview")}>
       <.link navigate="/admin/config/content/templates/create" class="primary">
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </.link>
     </Content.header>
 

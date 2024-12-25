@@ -36,7 +36,7 @@ BrandoIntegration.Repo.start_link()
     }
   ]
 }
-|> Brando.Repo.insert!
+|> Brando.Repo.insert!()
 
 %Brando.Sites.SEO{
   fallback_meta_description: "Fallback meta description",
@@ -49,4 +49,4 @@ BrandoIntegration.Repo.start_link()
   Disallow: /admin/
   """
 }
-|> Brando.Repo.insert!
+|> Brando.Repo.insert!()

@@ -27,9 +27,9 @@ defmodule BrandoAdmin.Pages.FragmentFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create fragment") %>
+          {gettext("Create fragment")}
         <% else %>
-          <%= gettext("Edit fragment") %>
+          {gettext("Edit fragment")}
         <% end %>
       </:header>
     </.live_component>

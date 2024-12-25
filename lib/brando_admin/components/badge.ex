@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Badge do
   def language(assigns) do
     ~H"""
     <div class="circle circle-flag">
-      <%= @language %>
+      {@language}
     </div>
     """
   end

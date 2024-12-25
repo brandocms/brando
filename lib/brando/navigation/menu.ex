@@ -112,10 +112,10 @@ defmodule Brando.Navigation.Menu do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={9}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <br />
-        <small class="monospace"><%= Enum.count(@entry.items) %> <%= gettext("menu items") %></small>
+        <small class="monospace">{Enum.count(@entry.items)} {gettext("menu items")}</small>
       </:outside>
     </.update_link>
     """

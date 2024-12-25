@@ -15,9 +15,9 @@ defmodule BrandoAdmin.Content.ContainerFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create container") %>
+          {gettext("Create container")}
         <% else %>
-          <%= gettext("Edit container") %>
+          {gettext("Edit container")}
         <% end %>
       </:header>
     </.live_component>

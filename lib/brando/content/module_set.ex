@@ -73,10 +73,10 @@ defmodule Brando.Content.ModuleSet do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={10}>
-      <%= @entry.title %>
+      {@entry.title}
       <:outside>
         <br />
-        <%= Enum.count(@entry.module_set_modules) %> <%= gettext("modules in this set") %>
+        {Enum.count(@entry.module_set_modules)} {gettext("modules in this set")}
       </:outside>
     </.update_link>
     <.url entry={@entry} />

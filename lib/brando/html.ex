@@ -50,7 +50,7 @@ defmodule Brando.HTML do
     ~H"""
     <%= for item <- @menu.items do %>
       <%= if Enum.member?(@statuses, item.status) do %>
-        <%= render_slot(@inner_block, item) %>
+        {render_slot(@inner_block, item)}
       <% end %>
     <% end %>
     """
@@ -89,7 +89,7 @@ defmodule Brando.HTML do
       href={@url}
       target={@target_blank? && "_blank"}
     >
-      <%= render_slot(@inner_block, @text) %>
+      {render_slot(@inner_block, @text)}
     </a>
     """
   end
@@ -111,7 +111,7 @@ defmodule Brando.HTML do
 
     ~H"""
     <button data-menu-item-key={@key} type={@type} {@rest}>
-      <%= render_slot(@inner_block, @text) %>
+      {render_slot(@inner_block, @text)}
     </button>
     """
   end
@@ -122,7 +122,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :url, url)
 
     ~H"""
-    <%= @url %>
+    {@url}
     """
   end
 
@@ -132,7 +132,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :text, text)
 
     ~H"""
-    <%= @text %>
+    {@text}
     """
   end
 
@@ -207,7 +207,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :href, href)
 
     ~H"""
-    <a href={@href} class={@class} {@rest}><%= render_slot(@inner_block) %></a>
+    <a href={@href} class={@class} {@rest}>{render_slot(@inner_block)}</a>
     """
   end
 
@@ -253,7 +253,7 @@ defmodule Brando.HTML do
 
   def fragment(%{fragment: fragment} = assigns) when not is_nil(fragment) do
     ~H"""
-    <%= raw(@fragment.rendered_blocks) %>
+    {raw(@fragment.rendered_blocks)}
     """
   end
 
@@ -266,7 +266,7 @@ defmodule Brando.HTML do
       )
 
     ~H"""
-    <%= raw(@fragment.rendered_blocks) %>
+    {raw(@fragment.rendered_blocks)}
     """
   end
 
@@ -384,15 +384,15 @@ defmodule Brando.HTML do
       <div class="cookie-container-inner">
         <div class="cookie-law">
           <div class="cookie-law-text">
-            <p><%= render_slot(@inner_block) %></p>
+            <p>{render_slot(@inner_block)}</p>
           </div>
           <div class="cookie-law-buttons">
             <button class="dismiss-cookielaw">
-              <%= @button_text %>
+              {@button_text}
             </button>
             <%= if @info_text do %>
               <a href={@info_link} class="info-cookielaw">
-                <%= @info_text %>
+                {@info_text}
               </a>
             <% end %>
           </div>
@@ -498,7 +498,7 @@ defmodule Brando.HTML do
         <.breakpoint_debug_tag />
         <.grid_debug_tag />
       <% end %>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </body>
     """
   end
@@ -509,7 +509,7 @@ defmodule Brando.HTML do
     ~H"""
     <i class="dbg-breakpoints">
       <%= if @agency_brand do %>
-        <div class="brand"><%= raw(@agency_brand) %></div>
+        <div class="brand">{raw(@agency_brand)}</div>
       <% end %>
       <div class="breakpoint"></div>
       <div class="user-agent"></div>
@@ -539,13 +539,13 @@ defmodule Brando.HTML do
     ~H"""
     <div class={["alert", @type]}>
       <div class="icon">
-        <%= render_slot(@icon) %>
+        {render_slot(@icon)}
       </div>
       <div class="content">
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
       <div class="close">
-        <%= render_slot(@close) %>
+        {render_slot(@close)}
       </div>
     </div>
     """
@@ -651,8 +651,9 @@ defmodule Brando.HTML do
     if Brando.env() in [:prod, :e2e] do
       ~H"""
       <!-- admin prod assets -->
-      <%= Brando.Assets.Vite.Render.main_css(:admin) |> raw() %>
-      <%= Brando.Assets.Vite.Render.main_js(:admin) |> raw() %>
+      {Brando.Assets.Vite.Render.main_css(:admin) |> raw()}
+
+      {Brando.Assets.Vite.Render.main_js(:admin) |> raw()}
       """
     else
       ~H"""
@@ -669,12 +670,12 @@ defmodule Brando.HTML do
   def include_assets(%{only_css: true} = assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+      {Brando.Assets.Vite.Render.main_css() |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
+        {Brando.Assets.Vite.Render.main_css() |> raw()}
         """
       else
         ~H"""
@@ -694,12 +695,12 @@ defmodule Brando.HTML do
   def include_assets(%{only_js: true} = assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw() %>
+      {Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        <%= Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw() %>
+        {Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
         """
       else
         ~H"""
@@ -712,14 +713,14 @@ defmodule Brando.HTML do
   def include_assets(assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      <%= Brando.Assets.Vite.Render.main_css(:app) |> raw() %>
-      <%= Brando.Assets.Vite.Render.main_js(:app) |> raw() %>
+      {Brando.Assets.Vite.Render.main_css(:app) |> raw()}
+      {Brando.Assets.Vite.Render.main_js(:app) |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        <%= Brando.Assets.Vite.Render.main_css() |> raw() %>
-        <%= Brando.Assets.Vite.Render.main_js() |> raw() %>
+        {Brando.Assets.Vite.Render.main_css() |> raw()}
+        {Brando.Assets.Vite.Render.main_js() |> raw()}
         """
       else
         ~H"""
@@ -743,7 +744,7 @@ defmodule Brando.HTML do
   """
   def include_legacy_assets(assigns) do
     if Application.get_env(Brando.otp_app(), :hmr) === false do
-      ~H{<%= Brando.Assets.Vite.Render.legacy_js() |> raw() %>}
+      ~H"{Brando.Assets.Vite.Render.legacy_js() |> raw()}"
     else
       ~H||
     end
@@ -753,8 +754,8 @@ defmodule Brando.HTML do
   Run JS init code
   """
   def init_js(assigns) do
-    ~H[<%= "<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
-|> raw() %>]
+    ~H[{"<script>(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)</script>"
+|> raw()}]
   end
 
   @doc """
@@ -824,11 +825,11 @@ defmodule Brando.HTML do
 
     ~H"""
     <%= if @post do %>
-      <%= @pre |> raw %>
-      <%= render_slot(@inner_block) %>
-      <%= @post |> raw %>
+      {@pre |> raw}
+      {render_slot(@inner_block)}
+      {@post |> raw}
     <% else %>
-      <%= @pre |> raw %>
+      {@pre |> raw}
     <% end %>
     """
   end
@@ -848,7 +849,7 @@ defmodule Brando.HTML do
       |> assign(:at, Map.get(assigns.entry, rendered_field_at) |> inspect())
 
     ~H"""
-    <%= @html |> raw %>
+    {@html |> raw}
     """
   end
 
@@ -909,7 +910,7 @@ defmodule Brando.HTML do
     assigns = assign(assigns, :translated_string, translated_string)
 
     ~H"""
-    <%= @translated_string %>
+    {@translated_string}
     """
   end
 

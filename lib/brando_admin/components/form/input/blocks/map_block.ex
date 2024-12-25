@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
           multi={false}
           target={@target}
         >
-          <:description><%= block_data[:source].value %></:description>
+          <:description>{block_data[:source].value}</:description>
           <:config>
             <Input.input type={:hidden} field={block_data[:embed_url]} />
             <Input.input type={:hidden} field={block_data[:source]} />
@@ -52,20 +52,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
               data-target={@myself}
             >
               <small>
-                <%= gettext("To embed a map in your content, please follow these steps:") %><br /><br />
-                <strong><%= gettext "Enter the Embed URL" %></strong>: <%= gettext(
+                {gettext("To embed a map in your content, please follow these steps:")}<br /><br />
+                <strong><%= gettext "Enter the Embed URL" %></strong>: {gettext(
                   "Input the full URL of the map you want to embed. This could be from services like Google Maps or any other map provider that supports embedding."
-                ) %><br />
-                <strong><%= gettext "Get Map Info" %></strong>: <%= gettext(
+                )}<br />
+                <strong><%= gettext "Get Map Info" %></strong>: {gettext(
                   "Click the 'Get map info' button to fetch the map details and render it within your block."
-                ) %><br /><br />
-                <%= gettext(
+                )}<br /><br />
+                {gettext(
                   "Ensure the URL is correct and fully formatted. This will enable a seamless integration and accurate display of the map in your content."
-                ) %><br /><br />
+                )}<br /><br />
               </small>
               <textarea id={"block-#{@uid}-url"} type="text" class="text monospace" rows="3"></textarea>
               <button id={"block-#{@uid}-button"} type="button" class="secondary small">
-                <%= gettext("Get map info") %>
+                {gettext("Get map info")}
               </button>
             </div>
           </:config>
@@ -94,7 +94,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                 </figure>
                 <div class="instructions">
                   <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                    <%= gettext("Configure map block") %>
+                    {gettext("Configure map block")}
                   </button>
                 </div>
               </div>

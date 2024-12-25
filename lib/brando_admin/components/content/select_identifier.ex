@@ -56,10 +56,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     ~H"""
     <div>
       <div :if={@selected_identifier} class="selected-identifier">
-        <h2 class="titlecase"><%= gettext("Current selected identifier") %></h2>
+        <h2 class="titlecase">{gettext("Current selected identifier")}</h2>
         <.identifier identifier={@selected_identifier} />
       </div>
-      <h2 class="titlecase"><%= gettext("Select content type") %></h2>
+      <h2 class="titlecase">{gettext("Select content type")}</h2>
       <div class="button-group-vertical tiny">
         <button
           :for={{label, schema} <- @available_schemas}
@@ -68,11 +68,11 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
           phx-click={JS.push("select_schema", target: @myself)}
           phx-value-schema={schema}
         >
-          <%= label %>
+          {label}
         </button>
       </div>
       <%= if @selected_schema do %>
-        <h2 class="titlecase"><%= gettext("Available entries") %></h2>
+        <h2 class="titlecase">{gettext("Available entries")}</h2>
         <.identifier
           :for={identifier <- @identifiers}
           identifier={identifier}
@@ -122,20 +122,20 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         <div class="info">
           <div class="name">
             <%= if @identifier.language do %>
-              [<%= @identifier.language %>]
+              [{@identifier.language}]
             <% end %>
-            <%= @identifier.title %>
+            {@identifier.title}
           </div>
           <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> <%= @type %>#<%= Brando.HTML.zero_pad(
+            <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(
               @identifier.entry_id
-            ) %>
-            <span>|</span> <%= Brando.Utils.Datetime.format_datetime(@identifier.updated_at) %> [iid:<%= @identifier.id %>]
+            )}
+            <span>|</span> {Brando.Utils.Datetime.format_datetime(@identifier.updated_at)} [iid:{@identifier.id}]
           </div>
         </div>
       </section>
       <div class="remove">
-        <%= render_slot(@delete) %>
+        {render_slot(@delete)}
       </div>
     </article>
     """

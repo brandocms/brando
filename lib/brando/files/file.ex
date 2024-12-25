@@ -40,14 +40,14 @@ defmodule Brando.Files.File do
   def listing_row(assigns) do
     ~H"""
     <.field columns={1}>
-      <small class="monospace">#<%= @entry.id %></small>
+      <small class="monospace">#{@entry.id}</small>
     </.field>
     <.field columns={7}>
-      <small class="monospace"><strong><%= @entry.filename %></strong></small> <br />
-      <small class="monospace tiny"><%= Brando.Utils.media_url(@entry) %></small>
+      <small class="monospace"><strong>{@entry.filename}</strong></small> <br />
+      <small class="monospace tiny">{Brando.Utils.media_url(@entry)}</small>
     </.field>
     <.field columns={2}>
-      <small class="monospace"><%= Brando.Utils.human_size(@entry.filesize) %></small>
+      <small class="monospace">{Brando.Utils.human_size(@entry.filesize)}</small>
     </.field>
     <.field columns={1}>
       <a href={Brando.Utils.media_url(@entry)} target="_blank">

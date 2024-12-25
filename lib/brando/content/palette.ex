@@ -94,10 +94,10 @@ defmodule Brando.Content.Palette do
       </div>
     </.field>
     <.field columns={3}>
-      <div class="monospace small"><%= @entry.namespace %></div>
+      <div class="monospace small">{@entry.namespace}</div>
     </.field>
     <.update_link entry={@entry} columns={4}>
-      <small><%= @entry.name %></small>
+      <small>{@entry.name}</small>
     </.update_link>
     """
   end

@@ -35,9 +35,9 @@ defmodule BrandoAdmin.Components.ChildrenButton do
         class={[@active, @text]}
         phx-page-loading
       >
-        <%= (@active && gettext("Close")) || "+ #{@count}" %>
+        {(@active && gettext("Close")) || "+ #{@count}"}
         <%= if @text do %>
-          <%= @text %>
+          {@text}
         <% end %>
       </button>
     </div>

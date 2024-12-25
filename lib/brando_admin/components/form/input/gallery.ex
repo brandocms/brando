@@ -111,7 +111,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         <div class="gallery-input">
           <div class="actions">
             <button type="button" class="tiny upload-button">
-              <%= gettext("Upload images") %>
+              {gettext("Upload images")}
               <.live_file_input upload={@parent_uploads[@field.field]} />
             </button>
             <button
@@ -119,12 +119,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               type="button"
               class="tiny"
             >
-              <%= gettext("Select images") %>
+              {gettext("Select images")}
             </button>
           </div>
 
           <%= for entry <- @parent_uploads[@field.field].entries do %>
-            <progress value={entry.progress} max="100"><%= entry.progress %>%</progress>
+            <progress value={entry.progress} max="100">{entry.progress}%</progress>
             <%= for err <- upload_errors(@parent_uploads[@field.field], entry) do %>
               <.alert type={:danger}>
                 <:icon>
@@ -142,16 +142,16 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     <.icon name="hero-x-circle" />
                   </button>
                 </:close>
-                <strong><%= Brando.Upload.error_to_string(err) %></strong>
+                <strong>{Brando.Upload.error_to_string(err)}</strong>
                 <br /><br />
-                <%= gettext("Filename") %> <%= entry.client_name %><br />
-                <%= gettext("Filesize") %> <%= Brando.Utils.human_size(entry.client_size) %>
+                {gettext("Filename")} {entry.client_name}<br />
+                {gettext("Filesize")} {Brando.Utils.human_size(entry.client_size)}
               </.alert>
             <% end %>
           <% end %>
           <%= if @gallery_images == [] do %>
             <small>
-              <%= gettext("No associated gallery") %>
+              {gettext("No associated gallery")}
             </small>
           <% else %>
             <div

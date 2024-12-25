@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <%= if @global_sets == [] do %>
         <.alert type={:info}>
           <:icon><.icon name="hero-exclamation-circle" /></:icon>
-          <%= gettext("The application currently has no globals configured") %>
+          {gettext("The application currently has no globals configured")}
         </.alert>
       <% else %>
         <div class="global-tabs">
@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
                 class={[@active_tab == index && "active"]}
                 phx-click={JS.push("select_tab", value: %{index: index}, target: @myself)}
               >
-                <%= global_set.label %>
+                {global_set.label}
               </button>
             </div>
           </div>
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         />
       </.inputs_for>
 
-      <button class="primary"><%= gettext("Save") %></button>
+      <button class="primary">{gettext("Save")}</button>
     </.form>
     """
   end

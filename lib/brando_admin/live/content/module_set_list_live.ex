@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.ModuleSetListLive do
     ~H"""
     <Content.header title={gettext("Module Sets")} subtitle={gettext("Overview")}>
       <.link navigate={@admin_create_url} class="primary">
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </.link>
     </Content.header>
 

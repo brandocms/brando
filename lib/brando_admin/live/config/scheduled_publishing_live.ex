@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
 
     <div class="scheduled-publishing-live">
       <p class="help">
-        <%= gettext("A list of upcoming publisher queue jobs.") %>
+        {gettext("A list of upcoming publisher queue jobs.")}
       </p>
 
       <table>
@@ -48,15 +48,15 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
                 <circle class={job.state} r="7.5" cy="7.5" cx="7.5" />
               </svg>
-              #<%= job.id %>
+              #{job.id}
             </td>
             <td>
-              <strong><%= job.meta["identifier"]["title"] %></strong> <br />
-              <small><%= job.meta["identifier"]["type"] %>#<%= job.meta["identifier"]["id"] %></small>
+              <strong>{job.meta["identifier"]["title"]}</strong> <br />
+              <small>{job.meta["identifier"]["type"]}#{job.meta["identifier"]["id"]}</small>
             </td>
             <td class="fit date">
-              <%= format_datetime(job.scheduled_at, "%d/%m/%y") %>
-              <span>•</span> <%= format_datetime(job.scheduled_at, "%H:%M") %>
+              {format_datetime(job.scheduled_at, "%d/%m/%y")}
+              <span>•</span> {format_datetime(job.scheduled_at, "%H:%M")}
             </td>
             <td class="fit">
               <button
@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                 class="primary small"
                 phx-click={JS.push("delete_job", value: %{id: job.id})}
               >
-                <%= gettext("Delete job") %>
+                {gettext("Delete job")}
               </button>
             </td>
           </tr>
@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
       </table>
 
       <button type="button" class="primary" phx-click={JS.push("refresh_jobs")}>
-        <%= gettext("Refresh job queue") %>
+        {gettext("Refresh job queue")}
       </button>
     </div>
     """

@@ -75,7 +75,7 @@ defmodule Brando.HTML.Images do
     <div>
       <code>
         Trying to call `picture` tag on an unloaded association<br /><br />
-        <%= inspect(@src, structs: false, pretty: true) %>
+        {inspect(@src, structs: false, pretty: true)}
       </code>
     </div>
     """
@@ -216,7 +216,7 @@ defmodule Brando.HTML.Images do
 
   defp figcaption_tag(assigns) do
     ~H"""
-    <figcaption><%= Phoenix.HTML.raw(@caption) %></figcaption>
+    <figcaption>{Phoenix.HTML.raw(@caption)}</figcaption>
     """
   end
 
@@ -231,7 +231,7 @@ defmodule Brando.HTML.Images do
   defp lightbox(assigns) do
     ~H"""
     <a href={@src} data-srcset={@srcset} data-lightbox={@src}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </a>
     """
   end

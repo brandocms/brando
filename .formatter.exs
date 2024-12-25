@@ -175,7 +175,7 @@ locals_without_parens = [
   inputs: [
     "{mix,.formatter}.exs",
     "priv/*/seeds.exs",
-    "{config,lib,test,e2e}/**/*.{ex,exs,heex}"
-  ],
-  subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
+    "{config,lib,test}/**/*.{ex,exs,heex}"
+  ]
+  # subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
 ]

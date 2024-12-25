@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Components.Button do
           phx-confirm-click={@event}
           phx-page-loading={@loading}
         >
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </button>
       <% else %>
         <button
@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Button do
           phx-click={@event}
           phx-page-loading={@loading}
         >
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </button>
       <% end %>
     </li>

@@ -14,9 +14,9 @@ defmodule BrandoAdmin.Users.UserFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create user") %>
+          {gettext("Create user")}
         <% else %>
-          <%= gettext("Update user") %>
+          {gettext("Update user")}
         <% end %>
       </:header>
     </.live_component>

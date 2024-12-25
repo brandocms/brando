@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>404: <%= gettext("Page not found") %></title>
+    <title>404: {gettext("Page not found")}</title>
     <link rel="shortcut icon" href="/favicon.ico" />
     <link href={Brando.routes().static_path(@conn, "/css/app.css")} rel="stylesheet" />
     <style>
@@ -22,9 +22,9 @@
     <div id="wrapper" class="error error-404">
       <div class="container">
         <h2>404<br /><br />
-          <%= gettext("Page not found.") %>.<br />
-          <%= gettext("Maybe it was outdated and has been deleted?") %><br /><br />
-          <%= gettext("Go back <a href=\"/\">to the main page</a>") |> raw() %>.</h2>
+          {gettext("Page not found.")}.<br />
+          {gettext("Maybe it was outdated and has been deleted?")}<br /><br />
+          {gettext("Go back <a href=\"/\">to the main page</a>") |> raw()}.</h2>
       </div>
     </div>
   </body>

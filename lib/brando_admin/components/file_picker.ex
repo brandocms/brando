@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.FilePicker do
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">
-              <%= gettext("Select similarly typed file from library") %>
+              {gettext("Select similarly typed file from library")}
             </div>
           <% end %>
         </:info>
@@ -82,8 +82,8 @@ defmodule BrandoAdmin.Components.FilePicker do
               phx-page-loading
             >
               <div class="file-picker__info">
-                <div class="file-picker__filename">#<%= file.id %> <%= Utils.file_url(file) %></div>
-                <div class="file-picker__size">(<%= Brando.Utils.human_size(file.filesize) %>)</div>
+                <div class="file-picker__filename">#{file.id} {Utils.file_url(file)}</div>
+                <div class="file-picker__size">({Brando.Utils.human_size(file.filesize)})</div>
               </div>
             </div>
           <% end %>

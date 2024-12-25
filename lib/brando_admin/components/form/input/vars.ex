@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
           phx-target={@myself}
         >
           <.icon name="hero-squares-plus" />
-          <%= gettext("Add entry") %>
+          {gettext("Add entry")}
         </button>
       </Form.field_base>
     </fieldset>

@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Components.SplitDropdown do
         <.dd_icon />
       </button>
       <ul data-testid="split-dropdown-content" class="dropdown-content hidden" id={@id}>
-        <%= render_slot(@inner_block, @id) %>
+        {render_slot(@inner_block, @id)}
       </ul>
     </div>
     """

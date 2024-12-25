@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
         <div id={"#{@field.id}-sortable"} phx-hook="Brando.SubFormSortable">
           <%= if Enum.empty?(inputs_for_poly(@field, [])) do %>
             <input type="hidden" name={@field.name} value="" />
-            <div class="subform-empty">&rarr; <%= gettext("No associated entries") %></div>
+            <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
           <% else %>
             <Form.inputs_for_poly :let={var} field={@field}>
               <div class="subform-entry flex-row" data-id={var.index}>
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
               fill="rgba(252,245,243,1)"
             />
           </svg>
-          <%= gettext("Add entry") %>
+          {gettext("Add entry")}
         </button>
       </Form.field_base>
     </fieldset>

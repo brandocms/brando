@@ -97,7 +97,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
         >
           <:description>
             <%= if @fragment do %>
-              [<%= @fragment.parent_key %>] <%= @fragment.title %> — <%= @fragment.language %>
+              [{@fragment.parent_key}] {@fragment.title} — {@fragment.language}
             <% end %>
           </:description>
           <:config>
@@ -130,14 +130,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
                 </figure>
                 <div class="instructions">
                   <div class="embedded-fragment">
-                    <%= gettext("Embedded fragment") %>: <br />
+                    {gettext("Embedded fragment")}: <br />
                     <div class="fragment-path">
-                      [<%= @fragment.parent_key %>] <%= @fragment.title %> — <%= @fragment.language %>
+                      [{@fragment.parent_key}] {@fragment.title} — {@fragment.language}
                     </div>
                   </div>
                   <%= if @update_url do %>
                     <.link href={@update_url} class="tiny" target="_blank">
-                      <%= gettext("Edit fragment") %>
+                      {gettext("Edit fragment")}
                     </.link>
                   <% end %>
                 </div>
@@ -161,7 +161,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FragmentBlock do
                 </figure>
                 <div class="instructions">
                   <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                    <%= gettext("Configure fragment block") %>
+                    {gettext("Configure fragment block")}
                   </button>
                 </div>
               </div>

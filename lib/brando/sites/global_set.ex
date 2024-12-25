@@ -68,11 +68,11 @@ defmodule Brando.Sites.GlobalSet do
       </svg>
     </.field>
     <.update_link entry={@entry} columns={7}>
-      <div class="monospace small"><%= @entry.key %></div>
-      <%= @entry.label %>
+      <div class="monospace small">{@entry.key}</div>
+      {@entry.label}
     </.update_link>
     <.field columns={3}>
-      <small><%= Enum.count(@entry.vars) %> <%= gettext("variables in set") %></small>
+      <small>{Enum.count(@entry.vars)} {gettext("variables in set")}</small>
     </.field>
     """
   end

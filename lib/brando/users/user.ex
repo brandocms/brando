@@ -114,12 +114,12 @@ defmodule Brando.Users.User do
     ~H"""
     <.cover image={@entry.avatar} columns={1} size={:smallest} />
     <.update_link entry={@entry} columns={14}>
-      <%= @entry.name %>
+      {@entry.name}
       <:outside>
         <br />
-        <small><%= @entry.email %></small>
+        <small>{@entry.email}</small>
         <br />
-        <small class="badge"><%= @entry.role %></small>
+        <small class="badge">{@entry.role}</small>
       </:outside>
     </.update_link>
     """

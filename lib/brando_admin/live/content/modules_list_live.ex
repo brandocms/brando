@@ -15,10 +15,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     ~H"""
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Overview")}>
       <button class="stealth" phx-click={show_modal("#module-import-modal")}>
-        <%= gettext("Import modules") %>
+        {gettext("Import modules")}
       </button>
       <button class="primary" phx-click={JS.push("create_module")}>
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </button>
     </Content.header>
 
@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     >
       <div :if={@imported_modules} class="imported-modules">
         <p>
-          <%= Enum.count(@imported_modules) %> <%= gettext("encoded modules found.") %>
+          {Enum.count(@imported_modules)} {gettext("encoded modules found.")}
         </p>
         <div class="imported-modules mt-2">
           <div :for={m <- @imported_modules} class="imported-module">
@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           type="button"
           phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}
         >
-          <%= gettext("Import modules") %>
+          {gettext("Import modules")}
         </button>
       </div>
 

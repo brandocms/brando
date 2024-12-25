@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Content.PaletteListLive do
     ~H"""
     <Content.header title={gettext("Content Palettes")} subtitle={gettext("Overview")}>
       <.link navigate="/admin/config/content/palettes/create" class="primary">
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </.link>
     </Content.header>
 

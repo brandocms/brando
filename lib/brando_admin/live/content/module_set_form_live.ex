@@ -15,9 +15,9 @@ defmodule BrandoAdmin.Content.ModuleSetFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create module set") %>
+          {gettext("Create module set")}
         <% else %>
-          <%= gettext("Edit module set") %>
+          {gettext("Edit module set")}
         <% end %>
       </:header>
     </.live_component>

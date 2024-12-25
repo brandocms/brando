@@ -14,9 +14,9 @@ defmodule BrandoAdmin.Content.TemplateFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create template") %>
+          {gettext("Create template")}
         <% else %>
-          <%= gettext("Edit template") %>
+          {gettext("Edit template")}
         <% end %>
       </:header>
     </.live_component>

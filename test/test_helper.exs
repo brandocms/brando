@@ -128,7 +128,7 @@ defmodule BrandoIntegrationWeb.Layouts do
     <html>
       <head></head>
       <body>
-        <%= @inner_content %>
+        {@inner_content}
       </body>
     </html>
     """

@@ -65,7 +65,7 @@ defmodule Brando.Content.TableTemplate do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={11}>
-      <%= @entry.name %>
+      {@entry.name}
     </.update_link>
     """
   end

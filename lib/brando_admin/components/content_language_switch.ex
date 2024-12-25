@@ -35,17 +35,17 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
     >
       <div class="inner">
         <div class="top">
-          <h2><%= gettext("Current content language") %></h2>
+          <h2>{gettext("Current content language")}</h2>
           <div class="selected-language">
             <div class="circle">
-              <%= @content_language %>
+              {@content_language}
             </div>
           </div>
         </div>
 
         <%= if @show_language_picker do %>
           <div class="instructions">
-            <%= gettext("Choose the content language you wish to edit entries in") %>
+            {gettext("Choose the content language you wish to edit entries in")}
           </div>
           <div class="languages">
             <%= for language <- @languages do %>
@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
                 phx-value-id={language[:value]}
                 phx-page-loading
               >
-                <%= language[:text] %>
+                {language[:text]}
               </button>
             <% end %>
           </div>

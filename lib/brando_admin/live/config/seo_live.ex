@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
       schema={@schema}
     >
       <:header>
-        <%= gettext("Update SEO") %>
+        {gettext("Update SEO")}
       </:header>
     </.live_component>
 
@@ -30,25 +30,25 @@ defmodule BrandoAdmin.Sites.SEOLive do
       <table>
         <h1>404s</h1>
         <tr>
-          <th><%= gettext("URL") %></th>
-          <th><%= gettext("Hits") %></th>
-          <th><%= gettext("Last hit") %></th>
+          <th>{gettext("URL")}</th>
+          <th>{gettext("Hits")}</th>
+          <th>{gettext("Last hit")}</th>
         </tr>
         <%= for item <- @four_oh_fours do %>
           <tr>
             <td>
               <div class="text-mono">
-                <%= item.url %>
+                {item.url}
               </div>
             </td>
             <td>
               <div class="text-mono">
-                <%= item.hits %>
+                {item.hits}
               </div>
             </td>
             <td>
               <div class="text-mono">
-                <%= item.last_hit_at %>
+                {item.last_hit_at}
               </div>
             </td>
           </tr>

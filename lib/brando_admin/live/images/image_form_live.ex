@@ -14,9 +14,9 @@ defmodule BrandoAdmin.Images.ImageFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create image") %>
+          {gettext("Create image")}
         <% else %>
-          <%= gettext("Edit image") %>
+          {gettext("Edit image")}
         <% end %>
       </:header>
     </.live_component>

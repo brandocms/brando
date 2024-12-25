@@ -57,15 +57,15 @@ defmodule Brando.Images.Image do
     ~H"""
     <.cover image={@entry} columns={2} size={:smallest} padded />
     <.field columns={9}>
-      <small class="monospace">#<%= @entry.id %></small>
+      <small class="monospace">#{@entry.id}</small>
       <br />
-      <small class="monospace"><%= @entry.path %></small>
+      <small class="monospace">{@entry.path}</small>
       <br />
-      <small><%= @entry.width %>&times;<%= @entry.height %></small>
+      <small>{@entry.width}&times;{@entry.height}</small>
       <br />
-      <small><%= inspect(@entry.config_target) %></small>
+      <small>{inspect(@entry.config_target)}</small>
       <br />
-      <div :if={@entry.title} class="badge mini"><%= gettext("Title") %></div>
+      <div :if={@entry.title} class="badge mini">{gettext("Title")}</div>
       <div :if={@entry.alt} class="badge mini">Alt</div>
     </.field>
     """

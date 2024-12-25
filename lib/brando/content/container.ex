@@ -118,11 +118,11 @@ defmodule Brando.Content.Container do
     ~H"""
     <div class="col-2">
       <div class="badge">
-        <%= @entry.namespace %>
+        {@entry.namespace}
       </div>
     </div>
     <.update_link entry={@entry} columns={12}>
-      <%= @entry.name %>
+      {@entry.name}
     </.update_link>
     """
   end

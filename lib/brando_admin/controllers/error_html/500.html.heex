@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>500: <%= gettext("Server Error") %></title>
+    <title>500: {gettext("Server Error")}</title>
     <link rel="shortcut icon" href="/favicon.ico" />
     <link href={Brando.routes().static_path(@conn, "/css/app.css")} rel="stylesheet" />
     <style>
@@ -23,10 +23,10 @@
       <div class="container">
         <h2>
           404<br /><br />
-          <%= gettext("Server Error") %>.<br />
-          <%= gettext("This might occur during a server update or reboot") %><br /><br />
-          <%= gettext("Please try again shortly, or go back <a href=\"/\">to the main page</a>")
-          |> raw() %>.
+          {gettext("Server Error")}.<br />
+          {gettext("This might occur during a server update or reboot")}<br /><br />
+          {gettext("Please try again shortly, or go back <a href=\"/\">to the main page</a>")
+          |> raw()}.
         </h2>
       </div>
     </div>

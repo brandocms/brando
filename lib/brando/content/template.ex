@@ -46,13 +46,13 @@ defmodule Brando.Content.Template do
   def listing_row(assigns) do
     ~H"""
     <.field columns={3}>
-      <div class="badge"><%= @entry.namespace %></div>
+      <div class="badge">{@entry.namespace}</div>
     </.field>
     <.update_link entry={@entry} columns={7}>
-      <%= @entry.name %>
+      {@entry.name}
       <:outside>
         <br />
-        <small><%= @entry.instructions %></small>
+        <small>{@entry.instructions}</small>
       </:outside>
     </.update_link>
     """

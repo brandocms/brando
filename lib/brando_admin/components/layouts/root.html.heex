@@ -3,7 +3,7 @@
   <head>
     <.csrf_meta_tag />
     <.live_title suffix={" | #{Brando.config(:app_name)}"}>
-      <%= assigns[:page_title] || "Admin" %>
+      {assigns[:page_title] || "Admin"}
     </.live_title>
     <meta
       :if={@current_user}
@@ -35,7 +35,7 @@
       <div class="progress"></div>
     </div>
 
-    <%= @inner_content %>
+    {@inner_content}
     <Brando.HTML.breakpoint_debug_tag />
     <Brando.HTML.grid_debug_tag />
   </body>

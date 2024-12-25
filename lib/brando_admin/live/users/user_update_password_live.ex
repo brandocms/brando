@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
       schema={@schema}
     >
       <:header>
-        <%= gettext("Set initial password") %>
+        {gettext("Set initial password")}
       </:header>
     </.live_component>
     """

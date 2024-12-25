@@ -34,18 +34,18 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
     <div class="cache-live">
       <p class="help">
-        <%= gettext(
+        {gettext(
           "A cache is like a snapshot of your data that is accessed in memory to deliver content faster without rebuilding it from scratch every time. If you have changed some content and it is not reflected on the website, you can attempt to empty these caches in order to produce fresh data."
-        ) %>
+        )}
       </p>
       <table>
         <%= for {category, entries} <- @caches do %>
-          <h1><%= category %></h1>
+          <h1>{category}</h1>
           <tr>
-            <th><%= gettext("Type") %></th>
-            <th><%= gettext("Module") %></th>
-            <th><%= gettext("Cache key") %></th>
-            <th><%= gettext("Entry ID") %></th>
+            <th>{gettext("Type")}</th>
+            <th>{gettext("Module")}</th>
+            <th>{gettext("Cache key")}</th>
+            <th>{gettext("Entry ID")}</th>
           </tr>
           <%= for entry <- entries do %>
             <tr>
@@ -53,42 +53,42 @@ defmodule BrandoAdmin.Sites.CacheLive do
                 <% {:list, module, key} -> %>
                   <td>
                     <div class="badge no-border ta-left">
-                      <%= gettext("List") %>
+                      {gettext("List")}
                     </div>
                   </td>
                   <td>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                       <path fill="none" d="M0 0h24v24H0z" /><path d="M2 5l7-3 6 3 6.303-2.701a.5.5 0 0 1 .697.46V19l-7 3-6-3-6.303 2.701a.5.5 0 0 1-.697-.46V5zm14 14.395l4-1.714V5.033l-4 1.714v12.648zm-2-.131V6.736l-4-2v12.528l4 2zm-6-2.011V4.605L4 6.319v12.648l4-1.714z" />
                     </svg>
-                    <%= module %>
+                    {module}
                   </td>
                   <td>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                       <path fill="none" d="M0 0h24v24H0z" /><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z" />
                     </svg>
-                    <%= key %>
+                    {key}
                   </td>
                   <td></td>
                 <% {:single, module, key, entry_id} -> %>
                   <td>
                     <div class="badge no-border">
-                      <%= gettext("Single") %>
+                      {gettext("Single")}
                     </div>
                   </td>
                   <td>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                       <path fill="none" d="M0 0h24v24H0z" /><path d="M2 5l7-3 6 3 6.303-2.701a.5.5 0 0 1 .697.46V19l-7 3-6-3-6.303 2.701a.5.5 0 0 1-.697-.46V5zm14 14.395l4-1.714V5.033l-4 1.714v12.648zm-2-.131V6.736l-4-2v12.528l4 2zm-6-2.011V4.605L4 6.319v12.648l4-1.714z" />
                     </svg>
-                    <%= module %>
+                    {module}
                   </td>
                   <td>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                       <path fill="none" d="M0 0h24v24H0z" /><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z" />
                     </svg>
-                    <%= key %>
+                    {key}
                   </td>
                   <td>
-                    #<%= entry_id %>
+                    #{entry_id}
                   </td>
               <% end %>
             </tr>
@@ -97,7 +97,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
       </table>
 
       <button type="button" class="primary" phx-click={JS.push("empty_caches")}>
-        <%= gettext("Empty all caches") %>
+        {gettext("Empty all caches")}
       </button>
     </div>
     """

@@ -1,10 +1,10 @@
 <%= if @current_user do %>
-  <%= live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true) %>
-  <%= live_render(@socket, BrandoAdmin.Nav,
+  {live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true)}
+  {live_render(@socket, BrandoAdmin.Nav,
     id: "brando-nav",
     session: %{"current_url" => @uri && @uri.path},
     sticky: true
-  ) %>
+  )}
   <div id="admin" phx-hook="Brando.Admin">
     <%= if @socket_connected do %>
       <.live_component
@@ -14,13 +14,13 @@
       />
       <main id="brando-main">
         <article class="content">
-          <%= @inner_content %>
+          {@inner_content}
         </article>
       </main>
     <% end %>
   </div>
 <% else %>
   <div id="admin">
-    <%= @inner_content %>
+    {@inner_content}
   </div>
 <% end %>

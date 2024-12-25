@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
         >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% end %>
           </:description>
           <div class="media-block">
@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                 </svg>
               </figure>
               <div class="instructions">
-                <%= gettext("Select media type:") %>
+                {gettext("Select media type:")}
               </div>
               <div class="buttons">
                 <.select_block
@@ -122,25 +122,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   def translate_block(%{key: "picture"} = assigns) do
     ~H"""
-    <%= gettext("Picture") %>
+    {gettext("Picture")}
     """
   end
 
   def translate_block(%{key: "svg"} = assigns) do
     ~H"""
-    <%= gettext("SVG") %>
+    {gettext("SVG")}
     """
   end
 
   def translate_block(%{key: "gallery"} = assigns) do
     ~H"""
-    <%= gettext("Gallery") %>
+    {gettext("Gallery")}
     """
   end
 
   def translate_block(%{key: "video"} = assigns) do
     ~H"""
-    <%= gettext("Video") %>
+    {gettext("Video")}
     """
   end
 

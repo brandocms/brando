@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
     ~H"""
     <Content.header title={gettext("Navigation")} subtitle={gettext("Overview")}>
       <.link navigate="/admin/config/navigation/menus/create" class="primary">
-        <%= gettext("Create new") %>
+        {gettext("Create new")}
       </.link>
     </Content.header>
 

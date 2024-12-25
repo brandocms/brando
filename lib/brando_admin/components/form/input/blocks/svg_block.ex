@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
         >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
-              <%= @ref_description %>
+              {@ref_description}
             <% end %>
           </:description>
           <:config>
@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           >
             <%= if block_data[:code].value do %>
               <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
-                <%= block_data[:code].value |> raw %>
+                {block_data[:code].value |> raw}
               </div>
             <% else %>
               <div class="empty">
@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                 </figure>
                 <div class="instructions">
                   <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
-                    <%= gettext("Configure SVG block") %>
+                    {gettext("Configure SVG block")}
                   </button>
                 </div>
               </div>

@@ -15,9 +15,9 @@ defmodule BrandoAdmin.Content.PaletteFormLive do
     >
       <:header>
         <%= if @live_action == :create do %>
-          <%= gettext("Create palette") %>
+          {gettext("Create palette")}
         <% else %>
-          <%= gettext("Edit palette") %>
+          {gettext("Edit palette")}
         <% end %>
       </:header>
     </.live_component>

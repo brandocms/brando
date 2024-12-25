@@ -68,12 +68,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           <div>
             <span>
               <%= if @inner_block do %>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               <% else %>
                 <%= if @selected_options != [] do %>
-                  <%= @count_label |> raw %>
+                  {@count_label |> raw}
                 <% else %>
-                  <%= gettext("No selection") %>
+                  {gettext("No selection")}
                 <% end %>
               <% end %>
             </span>
@@ -84,9 +84,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             phx-click={JS.push("toggle_modal", target: @myself) |> show_modal("##{@modal_id}")}
           >
             <%= if @open do %>
-              <%= gettext("Close") %>
+              {gettext("Close")}
             <% else %>
-              <%= gettext("Select") %>
+              {gettext("Select")}
             <% end %>
           </button>
           <Content.modal
@@ -102,7 +102,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   type="button"
                   phx-click={JS.push("show_form", target: @myself)}
                 >
-                  Create <%= @singular %>
+                  Create {@singular}
                 </button>
               <% end %>
             </:header>
@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <div class="field-wrapper">
                   <div class="label-wrapper">
                     <label for="select-modal-search" class="control-label">
-                      <span><%= gettext("Filter options") %></span>
+                      <span>{gettext("Filter options")}</span>
                     </label>
                   </div>
                   <div class="field-base">
@@ -133,9 +133,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     class="options"
                     phx-hook="Brando.RememberScrollPosition"
                   >
-                    <h2 class="titlecase"><%= gettext("Available options") %></h2>
+                    <h2 class="titlecase">{gettext("Available options")}</h2>
                     <%= if Enum.empty?(@input_options) do %>
-                      <%= gettext("No options found") %>
+                      {gettext("No options found")}
                     <% end %>
                     <.option_button
                       :for={opt <- @input_options}
@@ -148,7 +148,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   </div>
                 </div>
                 <div class="selected-labels">
-                  <h2 class="titlecase"><%= gettext("Currently selected") %></h2>
+                  <h2 class="titlecase">{gettext("Currently selected")}</h2>
                   <.labels
                     :let={opt}
                     selected_options={@selected_options}
@@ -213,7 +213,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     class="secondary"
                     phx-click={JS.push("reset", target: @myself)}
                   >
-                    <%= gettext("Reset value") %>
+                    {gettext("Reset value")}
                   </button>
                 </div>
               </div>
@@ -612,10 +612,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       class="selected-label"
     >
       <div class="selected-label-text">
-        <%= render_slot(
+        {render_slot(
           @inner_block,
           get_opt(@selected_option.source, @input_options, @relation_key, @relation_type)
-        ) %>
+        )}
       </div>
     </div>
     """
@@ -625,7 +625,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       when relation_type in [:has_many, {:subform, :has_many}] do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label"><%= gettext("None selected") %></div>
+      <div class="empty-label">{gettext("None selected")}</div>
     <% else %>
       <div
         :for={opt <- @selected_options}
@@ -633,7 +633,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         class="selected-label"
       >
         <div class="selected-label-text">
-          <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
+          {render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type))}
         </div>
       </div>
     <% end %>
@@ -643,11 +643,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def labels(%{relation_type: {:array, _}} = assigns) do
     ~H"""
     <%= if Enum.empty?(@selected_options) do %>
-      <div class="empty-label"><%= gettext("None selected") %></div>
+      <div class="empty-label">{gettext("None selected")}</div>
     <% else %>
       <div :for={opt <- @selected_options} class="selected-label">
         <div class="selected-label-text">
-          <%= render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type)) %>
+          {render_slot(@inner_block, get_opt(opt, @input_options, @relation_key, @relation_type))}
         </div>
       </div>
     <% end %>
@@ -707,13 +707,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assigns = assign_new(assigns, :deletable, fn -> false end)
 
     ~H"""
-    — <%= @opt.label %>
+    — {@opt.label}
     """
   end
 
   defp get_label(%{opt: nil} = assigns) do
     ~H"""
-    <%= gettext("Missing option") %>
+    {gettext("Missing option")}
     """
   end
 
@@ -729,7 +729,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <.status_circle status={@identifier.status} /> {@identifier.title}
     <%= if @deletable do %>
       <button
         class="delete tiny"
@@ -757,7 +757,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <.status_circle status={@identifier.status} /> <%= @identifier.title %>
+    <.status_circle status={@identifier.status} /> {@identifier.title}
     <%= if @deletable do %>
       <button
         class="delete tiny"

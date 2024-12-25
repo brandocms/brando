@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     <fieldset>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <:header>
-          <div class="switch-description"><%= gettext("Advanced") %></div>
+          <div class="switch-description">{gettext("Advanced")}</div>
           <div class="brando-input">
             <div>
               <div class="field-base">
@@ -48,7 +48,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
           <div id={"#{@field.id}-sortable"} phx-hook="Brando.SubFormSortable">
             <%= if Enum.empty?(inputs_for_poly(@field, [])) do %>
               <input type="hidden" name={"#{@field.name}"} value="" />
-              <div class="subform-empty">&rarr; <%= gettext("No associated entries") %></div>
+              <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
             <% end %>
             <Form.inputs_for_poly :let={var} field={@field}>
               <div class="subform-entry flex-row" data-id={var.index}>
@@ -101,7 +101,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
                 fill="rgba(252,245,243,1)"
               />
             </svg>
-            <%= gettext("Add entry") %>
+            {gettext("Add entry")}
           </button>
         <% else %>
           <%= unless Enum.empty?(inputs_for_poly(@field, [])) do %>
