@@ -54,6 +54,12 @@ defmodule Brando.Meta.HTML do
     """
   end
 
+  # we might have malformed or invalid requests without `language` set
+  # just return an empty string in that case
+  def render_meta(assigns) do
+    ~H""
+  end
+
   defp maybe_add_see_also(%{assigns: %{language: language}} = conn) do
     case Cache.Identity.get(language) do
       %{links: []} ->

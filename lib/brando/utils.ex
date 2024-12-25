@@ -586,6 +586,9 @@ defmodule Brando.Utils do
     end
   end
 
+  def get_page_title(%{assigns: %{page_title: title}}), do: title
+  def get_page_title(_), do: ""
+
   @spec render_title(binary | nil, binary, binary | nil) :: binary
   def render_title(nil, title, nil),
     do: "#{title}"

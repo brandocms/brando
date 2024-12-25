@@ -12,9 +12,7 @@ defmodule Brando.JSONLD.HTML do
   @doc """
   Renders all JSON LD
   """
-  def render_json_ld(assigns) do
-    conn = assigns.conn
-    language = conn.assigns.language
+  def render_json_ld(%{conn: %{assigns: %{language: language}} = conn} = assigns) do
     cached_identity = Brando.Cache.Identity.get(language)
 
     if map_size(cached_identity) > 0 do
@@ -52,6 +50,8 @@ defmodule Brando.JSONLD.HTML do
       ~H""
     end
   end
+
+  def render_json_ld(assigns), do: ~H""
 
   def output_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
     breadcrumb_json =
