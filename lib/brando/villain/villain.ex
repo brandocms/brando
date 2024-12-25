@@ -1011,10 +1011,20 @@ defmodule Brando.Villain do
         """
       end
 
+      ref_target = apply_ref_principals(ref_src, ref)
+
       ref_src.data.__struct__
-      |> block_module.apply_ref(ref_src, ref)
+      |> block_module.apply_ref(ref_src, ref_target)
       |> Changeset.change()
     end)
+  end
+
+  # always copy over the name and description from the ref source
+  # in case of changes.
+  defp apply_ref_principals(ref_src, ref_target) do
+    ref_target
+    |> put_in([Access.key(:name)], ref_src.name)
+    |> put_in([Access.key(:description)], ref_src.description)
   end
 
   @protected_and_ignored_var_attrs [
