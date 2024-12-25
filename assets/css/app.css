@@ -1227,3 +1227,7 @@ input::-moz-placeholder {
 .pulse {
   animation: pulse 2s linear infinite;
 }
+
+[data-outline="true"] *:focus {
+  display: inherit !important;
+}

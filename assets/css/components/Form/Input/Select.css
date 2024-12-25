@@ -168,10 +168,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     }
   }
 
-  .select-filter {
-    margin-bottom: 15px;
-  }
-
   .options {
     max-height: 350px;
     overflow-y: scroll;
@@ -290,4 +286,8 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       border-bottom: none;
     }
   }
+}
+
+.select-filter {
+  margin-bottom: 15px;
 }

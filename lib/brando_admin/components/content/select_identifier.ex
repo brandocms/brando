@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      socket
      |> assign(assigns)
      |> assign_new(:selected_schema, fn -> nil end)
+     |> assign_new(:selected_schema_raw, fn -> nil end)
      |> assign_new(:selected_identifier_id, fn ->
        changeset = assigns.field.form.source
        Ecto.Changeset.get_field(changeset, assigns.field.field)
@@ -64,7 +65,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         <button
           :for={{label, schema} <- @available_schemas}
           type="button"
-          class="secondary"
+          class={["secondary", @selected_schema_raw == schema && "selected"]}
           phx-click={JS.push("select_schema", target: @myself)}
           phx-value-schema={schema}
         >
@@ -73,11 +74,33 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       </div>
       <%= if @selected_schema do %>
         <h2 class="titlecase">{gettext("Available entries")}</h2>
-        <.identifier
-          :for={identifier <- @identifiers}
-          identifier={identifier}
-          select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
-        />
+
+        <div
+          id={"#{@id}-select-modal-filter"}
+          class="select-filter"
+          phx-hook="Brando.SelectFilter"
+          data-target=".identifier"
+        >
+          <div class="field-wrapper">
+            <div class="label-wrapper">
+              <label for="identifier-filter" class="control-label">
+                <span>{gettext("Filter identifiers")}</span>
+              </label>
+            </div>
+            <div class="field-base">
+              <input class="text" name="identifier-filter" type="text" value="" />
+            </div>
+          </div>
+        </div>
+
+        <div class="identifier-options">
+          <.identifier
+            :for={identifier <- @identifiers}
+            identifier={identifier}
+            selected_identifier_id={@selected_identifier_id}
+            select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
+          />
+        </div>
       <% end %>
       <Input.input type={:hidden} field={@field} value={@selected_identifier_id} publish />
     </div>
@@ -102,13 +125,15 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       |> assign(:type, String.upcase(translated_type))
 
     ~H"""
-    <article
+    <button
+      type="button"
       data-id={@identifier.id}
       class={[
         "identifier",
         @select && "selectable",
         @identifier.id == @selected_identifier_id && "selected"
       ]}
+      data-label={@identifier.title}
       phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
@@ -137,7 +162,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       <div class="remove">
         {render_slot(@delete)}
       </div>
-    </article>
+    </button>
     """
   end
 
@@ -148,7 +173,8 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     {:noreply,
      socket
      |> assign(:identifiers, identifiers)
-     |> assign(:selected_schema, schema_module)}
+     |> assign(:selected_schema, schema_module)
+     |> assign(:selected_schema_raw, schema)}
   end
 
   def handle_event("select_identifier", %{"id" => id}, socket) do

@@ -16,7 +16,7 @@
 
     .modal-backdrop {
       opacity: 1 !important;
-      display: block !important
+      display: block !important;
     }
 
     .modal-dialog {
@@ -26,7 +26,7 @@
   }
 
   .text-center {
-    text-align: center!important;
+    text-align: center !important;
   }
 }
 
@@ -189,14 +189,19 @@
         border-top-right-radius: 0;
         border-bottom-left-radius: 30px !important;
         border-bottom-right-radius: 30px !important;
-      }    
+      }
 
       + button {
         margin-top: -1px;
       }
 
       &:hover {
-        background-color: var(--brando-color-dark); 
+        background-color: var(--brando-color-dark);
+        color: white;
+      }
+
+      &.selected {
+        background-color: var(--brando-color-dark);
         color: white;
       }
 
@@ -216,7 +221,7 @@
       width: fit-content;
       button {
         font-size: 11px;
-        font-family: 'Mono';
+        font-family: "Mono";
         text-transform: uppercase;
         text-align: left !important;
         padding: 10px 10px 10px;
@@ -231,7 +236,6 @@
           border-bottom-left-radius: 0 !important;
           border-bottom-right-radius: 0 !important;
         }
-
       }
     }
   }

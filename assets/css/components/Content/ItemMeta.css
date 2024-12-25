@@ -123,6 +123,10 @@
 
   &.selectable {
     cursor: pointer;
+
+    &:focus {
+      display: flex !important;
+    }
   }
 
   &.selected {
