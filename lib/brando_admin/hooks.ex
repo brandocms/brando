@@ -87,8 +87,23 @@ defmodule BrandoAdmin.Hooks do
     Enum.reduce(
       Brando.presence().list("url:#{uri.path}"),
       socket,
-      fn {_, presence}, acc ->
-        assign_uri_presence(acc, presence)
+      fn {_, presence}, updated_socket ->
+        # get metas
+        metas = Map.get(presence, :metas)
+        # find the meta with the latest last_active value
+        latest_meta = Enum.max_by(metas, &Map.get(&1, :last_active))
+
+        updated_socket =
+          if Map.get(latest_meta, :active_field) do
+            push_event(updated_socket, "b:set_active_field", %{
+              user_id: presence.user.id,
+              field: latest_meta.active_field
+            })
+          else
+            updated_socket
+          end
+
+        assign_uri_presence(updated_socket, presence)
       end
     )
   end
