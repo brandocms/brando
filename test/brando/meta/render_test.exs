@@ -142,6 +142,8 @@ defmodule Brando.MetaRenderTest do
     assert Brando.Meta.HTML.put_record_meta(conn, record, opts) == %Plug.Conn{
              assigns: %{page_title: "My title"},
              private: %{
+               brando_skip_title_prefix: false,
+               brando_skip_title_postfix: false,
                brando_meta: [
                  {"title", "Our title"},
                  {"mutated_title", "@ Our title"},
