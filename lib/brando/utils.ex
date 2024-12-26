@@ -564,22 +564,38 @@ defmodule Brando.Utils do
   Get title assign from `conn`
   """
   @spec get_page_title(conn) :: binary
-  def get_page_title(%{assigns: %{page_title: title, language: language}}) do
+  def get_page_title(%{assigns: %{page_title: title, language: language}} = conn) do
     organization = Cache.Identity.get(language)
 
     if organization do
       %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
+
+      {title_prefix, title_postfix} =
+        maybe_skip_title_prefix_postfix(
+          title_prefix,
+          title_postfix,
+          conn
+        )
+
       render_title(title_prefix, title, title_postfix)
     else
-      ""
+      render_title(nil, title, nil)
     end
   end
 
-  def get_page_title(%{assigns: %{language: language}}) do
+  def get_page_title(%{assigns: %{language: language}} = conn) do
     organization = Cache.Identity.get(language)
 
     if map_size(organization) > 0 do
       %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization
+
+      {title_prefix, title_postfix} =
+        maybe_skip_title_prefix_postfix(
+          title_prefix,
+          title_postfix,
+          conn
+        )
+
       render_title(title_prefix, title, title_postfix)
     else
       ""
@@ -588,6 +604,20 @@ defmodule Brando.Utils do
 
   def get_page_title(%{assigns: %{page_title: title}}), do: title
   def get_page_title(_), do: ""
+
+  defp maybe_skip_title_prefix_postfix(prefix, postfix, %{
+         private: %{
+           brando_skip_title_prefix: skip_prefix,
+           brando_skip_title_postfix: skip_postfix
+         }
+       }) do
+    {if(skip_prefix == true, do: nil, else: prefix),
+     if(skip_postfix == true, do: nil, else: postfix)}
+  end
+
+  defp maybe_skip_title_prefix_postfix(prefix, postfix, _conn) do
+    {prefix, postfix}
+  end
 
   @spec render_title(binary | nil, binary, binary | nil) :: binary
   def render_title(nil, title, nil),

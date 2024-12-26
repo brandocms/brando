@@ -32,7 +32,7 @@ defmodule <%= application_module %>Web.PageController do
       |> put_section("index")
       |> put_meta(Pages.Page, page)
       |> put_hreflang(page)
-      |> put_title(page.title)
+      |> put_title(page.title, skip_prefix: true, skip_postfix: true)
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> render(page.template)

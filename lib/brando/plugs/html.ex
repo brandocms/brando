@@ -52,7 +52,15 @@ defmodule Brando.Plug.HTML do
   @doc """
   Adds `title` to `conn`'s assigns as `page_title`
   """
-  def put_title(conn, title), do: assign(conn, :page_title, title)
+  def put_title(conn, title, opts \\ []) do
+    skip_prefix = Keyword.get(opts, :skip_prefix, false)
+    skip_postfix = Keyword.get(opts, :skip_postfix, false)
+
+    conn
+    |> put_private(:brando_skip_title_prefix, skip_prefix)
+    |> put_private(:brando_skip_title_postfix, skip_postfix)
+    |> assign(:page_title, title)
+  end
 
   @doc """
   Adds JSON-LD breadcrumbs to conn

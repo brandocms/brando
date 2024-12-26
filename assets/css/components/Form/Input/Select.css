@@ -184,7 +184,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       border: none;
       text-align: left;
       font-size: 14px;
-      font-family: "Mono";
+      @font mono;
 
       &.option-selected {
         background-color: var(--brando-color-blue);
