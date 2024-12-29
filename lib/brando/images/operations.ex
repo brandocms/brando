@@ -73,7 +73,7 @@ defmodule Brando.Images.Operations do
   end
 
   @doc """
-  Perform list of image operations as Flow
+  Perform list of image operations
   """
   @spec perform([operation], user) :: {:ok, map}
   def perform([], _) do
