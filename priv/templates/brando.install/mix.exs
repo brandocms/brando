@@ -1,7 +1,7 @@
 defmodule <%= application_module %>.MixProject do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "VERSION" |> File.read!() |> String.trim()
   @test_envs [:test, :e2e]
 
   def project do

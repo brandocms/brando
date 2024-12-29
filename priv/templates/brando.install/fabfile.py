@@ -79,6 +79,10 @@ GLUE_SETTINGS = {
 
 
 def _get_project_version():
+    if os.path.exists('VERSION'):
+        with open('VERSION') as f:
+            return f.read().strip()
+
     with open('mix.exs') as f:
         contents = f.read()
         r = re.compile('\@version \"(?P<version>.*)\"')
