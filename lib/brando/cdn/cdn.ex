@@ -196,6 +196,7 @@ defmodule Brando.CDN do
   @spec upload_file(map, map, any) :: {:ok, binary} | {:error, binary}
   def upload_file(%Brando.Files.File{} = file, config, user_id) do
     s3_bucket = config(Brando.Files, :bucket)
+    cdn_config = config.cdn || config(Brando.Files)
 
     # upload original
     local_path = config.upload_path
@@ -211,6 +212,12 @@ defmodule Brando.CDN do
 
     case s3_upload(s3_bucket, original_key, dest_key, s3_config, user_id) do
       {:ok, s3_key} ->
+        if cdn_config.keep_local_copy == false do
+          local_path_and_filename = Path.join([local_path, filename])
+          original_path = Brando.Images.Utils.media_path(local_path_and_filename)
+          File.rm!(original_path)
+        end
+
         {:ok, s3_key}
 
       {:error, {:http_error, 403, err}} ->
@@ -222,6 +229,18 @@ defmodule Brando.CDN do
 
   defp get_bucket_for_image_config(%{cdn: %{bucket: bucket}}), do: bucket
   defp get_bucket_for_image_config(_), do: config(Brando.Images, :bucket)
+
+  def maybe_upload_file(file, field_full_path, user, %{cdn: %{enabled: true}}) do
+    queue_upload(file, user, field_full_path)
+  end
+
+  def maybe_upload_file(file, field_full_path, user, _) do
+    if Brando.CDN.enabled?(Brando.Files) do
+      queue_upload(file, user, field_full_path)
+    else
+      {:ok, :no_job}
+    end
+  end
 
   def maybe_upload_image(image, field_full_path, user, %{cdn: %{enabled: true}}) do
     queue_upload(image, user, field_full_path)
@@ -238,6 +257,7 @@ defmodule Brando.CDN do
   def upload_image(src_key, dest_key, config, user_id) do
     s3_bucket = get_bucket_for_image_config(config)
     s3_config = get_s3_config(config, as: :keyword_list)
+    cdn_config = config.cdn || config(Brando.Images)
 
     if !s3_bucket do
       raise """
@@ -255,16 +275,32 @@ defmodule Brando.CDN do
         s3_bucket: s3_bucket
       )
 
-    BrandoAdmin.Progress.update(%Brando.Users.User{id: user_id}, progress_string, %{
-      key: src_key,
+    progress_key = Brando.Utils.generate_uid()
+
+    BrandoAdmin.Progress.update(user_id, progress_string, %{
+      key: progress_key,
       percent: 0,
       filename: src_key
     })
 
-    s3_upload(s3_bucket, src_key, dest_key, s3_config, user_id)
+    case s3_upload(s3_bucket, src_key, dest_key, s3_config, user_id, progress_key) do
+      {:ok, s3_key} ->
+        if cdn_config.keep_local_copy == false do
+          # local_path_and_filename = Path.join([local_path, filename])
+          # original_path = Brando.Images.Utils.media_path(local_path_and_filename)
+          File.rm!(src_key)
+        end
+
+        {:ok, s3_key}
+
+      {:error, {:http_error, 403, err}} ->
+        Logger.error("==> Error uploading file. 403 from AMAZON")
+        Logger.error(inspect(err, pretty: true))
+        {:error, "S3 Upload failed"}
+    end
   end
 
-  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id) do
+  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key \\ nil) do
     src_key
     |> Upload.stream_file()
     |> S3.upload(s3_bucket, s3_dest_key, acl: :public_read)
@@ -278,11 +314,13 @@ defmodule Brando.CDN do
             s3_bucket: s3_bucket
           )
 
-        BrandoAdmin.Progress.update(%Brando.Users.User{id: user_id}, progress_string, %{
-          key: src_key,
-          percent: 100,
-          filename: src_key
-        })
+        if progress_key do
+          BrandoAdmin.Progress.update(user_id, progress_string, %{
+            key: progress_key,
+            percent: 100,
+            filename: src_key
+          })
+        end
 
         {:ok, s3_dest_key}
 

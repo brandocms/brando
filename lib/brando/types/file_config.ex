@@ -15,7 +15,8 @@ defmodule Brando.Type.FileConfig do
             random_filename: false,
             force_filename: nil,
             overwrite: false,
-            size_limit: 10_240_000
+            size_limit: 10_240_000,
+            completed_callback: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

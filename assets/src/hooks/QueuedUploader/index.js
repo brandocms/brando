@@ -1,29 +1,38 @@
 export default (app) => ({
   async mounted() {
-    const chunkSize = 5
+    let uploadChunkSize = this.el.dataset.chunkSize || 5
+    // ensure the uploadChunkSize is a number
+    uploadChunkSize = parseInt(uploadChunkSize, 10)
+
+    console.log('uploadChunkSize --', uploadChunkSize)
+    const uploadFieldName = this.el.dataset.uploadField || 'transformer'
+    console.log('uploadFieldName --', uploadFieldName)
     let filesRemaining = []
     this.el.addEventListener('input', async (event) => {
       event.preventDefault()
+      console.log('Got input')
 
       if (event.target instanceof HTMLInputElement) {
-        const files_html = event.target.files
-        if (files_html) {
-          const files = Array.from(files_html)
+        const selectedFiles = event.target.files
+        if (selectedFiles) {
+          const files = Array.from(selectedFiles)
           filesRemaining = files
-          const firstFiles = files.slice(0, chunkSize)
-          this.upload('transformer', firstFiles)
-
-          filesRemaining.splice(0, chunkSize)
+          const currentChunk = files.slice(0, uploadChunkSize)
+          console.log('this.upload', uploadFieldName, currentChunk)
+          this.upload(uploadFieldName, currentChunk)
+          filesRemaining.splice(0, uploadChunkSize)
         }
       }
     })
 
+    console.log('handleEvent uploader_next_chunk')
     this.handleEvent('uploader_next_chunk', () => {
       console.log('Uploading more files! Remainder:', filesRemaining)
-      const files = filesRemaining.slice(0, chunkSize)
-      if (files.length > 0) {
-        this.upload('transformer', files)
-        filesRemaining.splice(0, chunkSize)
+      const currentChunk = filesRemaining.slice(0, uploadChunkSize)
+      console.log('currentChunk (event)', currentChunk)
+      if (currentChunk.length > 0) {
+        this.upload(uploadFieldName, currentChunk)
+        filesRemaining.splice(0, uploadChunkSize)
       } else {
         console.log('Done uploading, noop!')
       }

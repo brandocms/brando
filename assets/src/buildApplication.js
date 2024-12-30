@@ -250,16 +250,18 @@ export default (hooks, enableDebug = false) => {
           percentEl.innerHTML = `${percent}%`
 
           if (parseInt(percent) === 100) {
+            console.log('percent is 100%!', keyEl)
             const tl = gsap.timeline()
 
             tl.to(keyEl, { opacity: 0 })
               .to(keyEl, { height: 0 })
               .call(() => {
                 keyEl.remove()
-                gsap.to($progressWrapper, { height: getHeights() })
+                gsap.set($progressWrapper, { height: getHeights() })
               })
           }
         } else {
+          console.log('creating with key', key)
           const updateProgress = document.createRange()
             .createContextualFragment(`
             <div class="progress-item" data-progress-key="${key}">
@@ -281,7 +283,7 @@ export default (hooks, enableDebug = false) => {
           gsap.to(keyEl, { opacity: 1, duration: 0.45 })
         }
 
-        gsap.to($progressWrapper, { height: getHeights() })
+        gsap.set($progressWrapper, { height: getHeights() })
       }
     )
 

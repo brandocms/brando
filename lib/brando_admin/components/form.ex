@@ -733,7 +733,7 @@ defmodule BrandoAdmin.Components.Form do
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
       has_alternates?:
-        (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
+        schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() && entry.id,
       has_live_preview?: check_live_preview(schema)
     )
   end
@@ -2144,6 +2144,12 @@ defmodule BrandoAdmin.Components.Form do
       validated_changeset,
       current_user
     )
+
+    file_config = Brando.Utils.try_path(relation_field, [:opts, :cfg])
+
+    if file_config.completed_callback do
+      file_config.completed_callback.(updated_file, current_user)
+    end
 
     edit_file = Map.put(edit_file, :file, updated_file)
     full_path = path ++ [relation_field.field]

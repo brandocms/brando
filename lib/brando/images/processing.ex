@@ -41,9 +41,9 @@ defmodule Brando.Images.Processing do
   @doc """
   Recreate all transforms for a single image
   """
-  @spec recreate_sizes_for_image(image, user) :: {:ok, image} | {:error, changeset}
-  def recreate_sizes_for_image(image, user) do
-    queue_processing(image, user)
+  @spec recreate_sizes_for_image(image, user, list()) :: {:ok, image} | {:error, changeset}
+  def recreate_sizes_for_image(image, user, field_full_path \\ []) do
+    queue_processing(image, user, field_full_path)
   end
 
   @doc """

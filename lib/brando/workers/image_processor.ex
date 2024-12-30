@@ -36,6 +36,7 @@ defmodule Brando.Worker.ImageProcessor do
 
       case Images.update_image(image, image_params, user) do
         {:ok, image} ->
+          maybe_run_completed_callback(image, config, user)
           Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
           broadcast_status(image, field_full_path, :updated)
 
@@ -50,6 +51,19 @@ defmodule Brando.Worker.ImageProcessor do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(400)
+
+  defp maybe_run_completed_callback(image, config, user) do
+    case config.completed_callback do
+      nil ->
+        {:ok, image}
+
+      completed_callback ->
+        case completed_callback.(image, user) do
+          {:ok, image} -> {:ok, image}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
 
   defp broadcast_status(image, path, status) do
     Phoenix.PubSub.broadcast(

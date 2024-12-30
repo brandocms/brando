@@ -27,8 +27,11 @@ defmodule Brando.Worker.FileUploader do
       file_params = %{cdn: true}
 
       case Files.update_file(file, file_params, user) do
-        {:ok, file} -> broadcast_status(file, field_full_path, :updated)
-        err -> err
+        {:ok, file} ->
+          broadcast_status(file, field_full_path, :updated)
+
+        err ->
+          err
       end
     else
       err ->

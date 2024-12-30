@@ -41,7 +41,8 @@ defmodule Brando.Type.ImageConfig do
             cdn: nil,
             formats: [:original],
             overwrite: false,
-            upload_path: Path.join("images", "default")
+            upload_path: Path.join("images", "default"),
+            completed_callback: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
