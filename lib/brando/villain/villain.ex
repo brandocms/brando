@@ -433,7 +433,9 @@ defmodule Brando.Villain do
   """
   @spec list_blocks :: [module()]
   def list_blocks do
-    blueprint_impls = Trait.Blocks.list_implementations()
+    blocks_blueprint_impls = Trait.Blocks.list_implementations()
+    legacy_blueprint_impls = Trait.Villain.list_implementations()
+    blueprint_impls = Enum.uniq(blocks_blueprint_impls ++ legacy_blueprint_impls)
     Enum.map(blueprint_impls, &{&1, &1.__blocks_fields__()})
   end
 
