@@ -835,11 +835,11 @@ defmodule Brando.Utils do
       cdn_config = get_cdn_config(file_field)
 
       if cdn_config do
-        cdn_prefix = Brando.CDN.get_prefix(cdn_config)
+        cdn_prefix = Brando.CDN.get_prefix(cdn_config) || ""
         (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
       else
         if Brando.CDN.enabled?(Brando.Files) do
-          cdn_prefix = Brando.CDN.get_prefix(Brando.Files)
+          cdn_prefix = Brando.CDN.get_prefix(Brando.Files) || ""
           (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
         else
           prefix
@@ -883,8 +883,7 @@ defmodule Brando.Utils do
   def file_url(_), do: ""
 
   def file_url(%{filename: filename, config_target: config_target} = file_field, opts) do
-    prefix = Keyword.get(opts, :prefix, nil)
-    prefix = build_prefix(file_field, prefix)
+    prefix = build_prefix(file_field, Keyword.get(opts, :prefix, nil))
 
     {:ok, config} = Files.get_config_for(config_target)
 
