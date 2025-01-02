@@ -1055,4 +1055,19 @@ defmodule Brando.Query do
         end
     end
   end
+
+  def sanitize_ilike_pattern(text) when is_binary(text) do
+    text
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
+  end
+
+  def sanitize_ilike_pattern(text) when is_list(text) do
+    Enum.map(text, &sanitize_ilike_pattern/1)
+  end
+
+  def sanitize_ilike_pattern(text) do
+    text
+  end
 end

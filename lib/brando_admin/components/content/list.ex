@@ -330,12 +330,27 @@ defmodule BrandoAdmin.Components.Content.List do
       |> build_list_opts(schema, content_language)
       |> params_to_list_opts(params, schema)
 
-    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
+    sanitized_list_opts = sanitize_list_opts(list_opts)
+
+    {:ok, entries} = apply(context, :"list_#{plural}", [sanitized_list_opts])
 
     socket
     |> assign(:list_opts, list_opts)
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
+  end
+
+  defp sanitize_list_opts(%{filter: filters} = list_opts) do
+    sanitized_filters =
+      Enum.reduce(filters, %{}, fn {k, v}, acc ->
+        Map.put(acc, k, Brando.Query.sanitize_ilike_pattern(v))
+      end)
+
+    Map.put(list_opts, :filter, sanitized_filters)
+  end
+
+  defp sanitize_list_opts(list_opts) do
+    list_opts
   end
 
   defp build_list_opts(listing, schema, content_language) do
