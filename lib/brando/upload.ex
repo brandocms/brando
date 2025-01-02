@@ -206,14 +206,18 @@ defmodule Brando.Upload do
   end
 
   defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
+    random_filename? = Map.get(cfg, :random_filename, false)
+    slugify_filename? = Map.get(cfg, :slugify_filename, false)
+
     upload =
-      case Map.get(cfg, :random_filename, false) do
+      case random_filename? do
         true ->
           new_meta = Map.merge(upload.meta, %{filename: random_filename(filename)})
           put_in(upload.meta, new_meta)
 
         _ ->
-          new_meta = Map.merge(upload.meta, %{filename: slugify_filename(filename)})
+          new_filename = (slugify_filename? && slugify_filename(filename)) || filename
+          new_meta = Map.merge(upload.meta, %{filename: new_filename})
           put_in(upload.meta, new_meta)
       end
 
