@@ -38,6 +38,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
       end)
 
     igniter
+    |> rewrite_preview_targets()
     |> copy_gettext_script()
     |> copy_updated_migration_script()
     |> Igniter.add_task("igniter.update_gettext")
@@ -500,7 +501,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
                macros <- extract_macros(zipper),
                zipper <- Sourceror.Zipper.remove(zipper),
                {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-               zipper <- Igniter.Code.Common.add_code(zipper, macros, :before) do
+               zipper <- Igniter.Code.Common.add_code(zipper, macros, placement: :before) do
             fs =
               zipper
               |> Sourceror.Zipper.up()
@@ -527,7 +528,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
                macros <- extract_macros(zipper),
                zipper <- Sourceror.Zipper.remove(zipper),
                {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-               zipper <- Igniter.Code.Common.add_code(zipper, macros, :before) do
+               zipper <- Igniter.Code.Common.add_code(zipper, macros, placement: :before) do
             fs =
               zipper
               |> Sourceror.Zipper.up()
@@ -554,7 +555,7 @@ defmodule Mix.Tasks.Brando.Migrate54 do
             macros = extract_macros(zipper)
             zipper = Sourceror.Zipper.remove(zipper)
             {:ok, zipper} = Igniter.Code.Common.move_to_do_block(zipper)
-            zipper = Igniter.Code.Common.add_code(zipper, macros, :before)
+            zipper = Igniter.Code.Common.add_code(zipper, macros, placement: :before)
 
             fs =
               zipper
@@ -681,6 +682,10 @@ defmodule Mix.Tasks.Brando.Migrate54 do
     Igniter.Code.Function.function_call?(zipper, :selection, 3)
   end
 
+  defp preview_target?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :preview_target, 2)
+  end
+
   defp add_notices(igniter) do
     igniter
   end
@@ -706,13 +711,182 @@ defmodule Mix.Tasks.Brando.Migrate54 do
 
     First extract your translations:
 
-      mix gettext.extract --merge priv/gettext/backend --locale no --plural-forms-header nplurals=2; plural=(n != 1);
-      mix gettext.extract --merge priv/gettext/frontend --locale no --plural-forms-header nplurals=2; plural=(n != 1);
+      mix gettext.extract --merge priv/gettext/backend --locale no --plural-forms-header "nplurals=2; plural=(n != 1)";
+      mix gettext.extract --merge priv/gettext/frontend --locale no --plural-forms-header "nplurals=2; plural=(n != 1)";
 
     Then run the script
 
       ./scripts/sync_gettext.sh priv/gettext/no/LC_MESSAGES
 
     """)
+  end
+
+  defp rewrite_preview_targets(igniter) do
+    rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)
+
+    Igniter.Project.Module.find_and_update_module!(igniter, rewriting_module, fn zipper ->
+      # We only match on calls to preview_target/1
+      Igniter.Code.Common.update_all_matches(
+        zipper,
+        &preview_target?(&1),
+        fn zipper ->
+          # Move into the `do` block of `preview_target do ... end`
+          with {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+            # We’ll gather calls for layout, view_module, and view_template,
+            # remove them from code, and then re-inject them in the new format.
+            #
+            {zipper, layout_call} = extract_and_remove_layout_module(zipper)
+            {zipper, view_module_call} = extract_and_remove_view_module(zipper)
+            {zipper, view_template_call} = extract_and_remove_view_template(zipper)
+
+            # Build the new lines
+            new_lines =
+              build_new_layout_call(layout_call) <>
+                build_new_template_call(view_module_call, view_template_call)
+
+            # Insert them at the end (or beginning) of the do-block
+            updated_zipper = Igniter.Code.Common.add_code(zipper, new_lines, placement: :before)
+
+            {:ok, updated_zipper}
+          else
+            :error ->
+              # If we can't move to the do block for some reason, just carry on.
+              {:ok, zipper}
+          end
+        end
+      )
+    end)
+  end
+
+  defp extract_and_remove_layout_module(zipper) do
+    extract_and_remove_first_match(
+      zipper,
+      &layout_module_call?/1
+    )
+  end
+
+  defp extract_and_remove_view_module(zipper) do
+    extract_and_remove_first_match(
+      zipper,
+      &view_module_call?/1
+    )
+  end
+
+  defp extract_and_remove_view_template(zipper) do
+    extract_and_remove_first_match(
+      zipper,
+      &view_template_call?/1
+    )
+  end
+
+  defp layout_module_call?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :layout_module, 1)
+  end
+
+  defp view_module_call?(zipper) do
+    Igniter.Code.Function.function_call?(zipper, :view_module, 1)
+  end
+
+  defp view_template_call?(zipper) do
+    # Could be `view_template "some_string"` or `view_template fn e -> e.template end`
+    Igniter.Code.Function.function_call?(zipper, :view_template, 1)
+  end
+
+  defp build_new_layout_call(nil), do: ""
+
+  defp build_new_layout_call(ast) do
+    case Sourceror.get_args(ast) do
+      [module_ast] ->
+        module_str = Sourceror.to_string(module_ast)
+
+        """
+        layout {#{module_str}, "app"}
+        """
+
+      _ ->
+        ""
+    end
+  end
+
+  #    Combining view_module + view_template:
+  #    - if view_template is a function: template fn e -> {<view_module>, e.template} end
+  #    - if view_template is a string:  template {<view_module>, "some_string"}
+  # No view_module, skip
+  defp build_new_template_call(nil, _), do: ""
+  # No view_template, skip
+  defp build_new_template_call(_, nil), do: ""
+
+  defp build_new_template_call(view_module_ast, view_template_ast) do
+    [view_module] = Sourceror.get_args(view_module_ast)
+
+    template_args = Sourceror.get_args(view_template_ast)
+    [maybe_function] = template_args
+
+    cond do
+      # Handle a function: e.g. fn e -> e.template end
+      function_ast?(maybe_function) ->
+        """
+        template fn e -> {#{Sourceror.to_string(view_module)}, e.template} end
+        """
+
+      # Otherwise treat it as a string or whatever literal is there
+      true ->
+        """
+        template {#{Sourceror.to_string(view_module)}, #{Sourceror.to_string(maybe_function)}}
+        """
+    end
+  end
+
+  # 6) A small helper to see if the AST is a function literal.
+  defp function_ast?({:fn, _, _}), do: true
+  defp function_ast?(_), do: false
+
+  @doc """
+  Traverse the zipper until the first node matching `predicate` is found.
+  When found, call `update_fn` on that node to return a modified zipper.
+  Halts traversal immediately after the first match/update.
+
+  Returns the updated zipper, or the original zipper if no match is found.
+  """
+  def update_first_match(zipper, predicate, update_fn) do
+    # We’ll rely on Zipper.traverse_while/3 with a :cont / :halt approach.
+    Sourceror.Zipper.traverse_while(zipper, fn z ->
+      if predicate.(z) do
+        case update_fn.(z) do
+          {:ok, new_z} ->
+            # Stop traversal and return the newly updated zipper
+            {:halt, new_z}
+
+          :error ->
+            # You can decide how to handle an :error from update_fn
+            {:halt, z}
+        end
+      else
+        :cont
+      end
+    end)
+  end
+
+  @doc """
+  Finds the first node that matches `predicate`, returns that node’s AST, and removes
+  it from the zipper. If none is found, returns `{zipper, nil}`.
+  """
+  def extract_and_remove_first_match(zipper, predicate) do
+    # We use an accumulator to store our matched node.
+    {final_zipper, matched_node} =
+      Sourceror.Zipper.traverse_while(zipper, nil, fn z, _acc ->
+        if predicate.(z) do
+          node = Sourceror.Zipper.node(z)
+          # Remove the matched node
+          new_z = Sourceror.Zipper.remove(z)
+          # Stop traversal, returning `new_z` as updated zipper, and `node` as the accumulator
+          {:halt, new_z, node}
+        else
+          # Keep traversing
+          {:cont, z, nil}
+        end
+      end)
+
+    {final_zipper, matched_node}
   end
 end
