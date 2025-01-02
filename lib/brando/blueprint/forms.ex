@@ -34,7 +34,7 @@ defmodule Brando.Blueprint.Forms do
   ## Redirect after save
 
   By default, we will redirect to the List view of your blueprint. You
-  can override this by using `redirect_on_save/1`:
+  can override this by passing a 3-arity function to `redirect_on_save/1`:
 
       form do
         redirect_on_save &__MODULE__.my_custom_redirect/3
