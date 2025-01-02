@@ -51,12 +51,12 @@ defmodule BrandoAdmin.Chrome do
           </p>
           <div class="online" phx-update="stream" id="presence-modal-online">
             <%= for {dom_id, presence} <- @streams.active_presences do %>
-              <.presence_modal_item presence={presence} id={dom_id} />
+              <.presence_modal_item presence={presence} id={"#{dom_id}_modal"} />
             <% end %>
           </div>
           <div class="offline" phx-update="stream" id="presence-modal-offline">
             <%= for {dom_id, presence} <- @streams.inactive_presences do %>
-              <.presence_modal_item presence={presence} id={dom_id} />
+              <.presence_modal_item presence={presence} id={"#{dom_id}_modal"} />
             <% end %>
           </div>
         </div>
