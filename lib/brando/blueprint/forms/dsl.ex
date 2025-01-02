@@ -254,5 +254,6 @@ defmodule Brando.Blueprint.Forms.Dsl do
   @moduledoc false
   use Spark.Dsl.Extension,
     sections: [@root],
-    transformers: []
+    transformers: [],
+    imports: [Brando.Blueprint.Forms.Legacy]
 end

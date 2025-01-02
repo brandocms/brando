@@ -26,5 +26,6 @@ defmodule Brando.LivePreview.Dsl do
   @moduledoc false
   use Spark.Dsl.Extension,
     sections: @sections,
-    transformers: []
+    transformers: [],
+    imports: [Brando.LivePreview.Legacy]
 end

@@ -420,4 +420,22 @@ defmodule Brando.LivePreview do
     |> Spark.Dsl.Extension.get_entities([:live_preview])
     |> Enum.any?(&(&1.schema == schema_module))
   end
+
+  defmodule Legacy do
+    # This is here to basically support the migration script
+    @deprecated "use layout/1 instead"
+    defmacro layout_module(_) do
+      nil
+    end
+
+    @deprecated "use template/1 instead"
+    defmacro view_module(_) do
+      nil
+    end
+
+    @deprecated "use template/1 instead"
+    defmacro view_template(_) do
+      nil
+    end
+  end
 end
