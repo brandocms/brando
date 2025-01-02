@@ -53,18 +53,11 @@ config :my_app, MyApp.Endpoint,
 
 Brando uses Gettext for i18n.
 
-To extract your frontend translations:
+To extract and merge your frontend and backend translations:
+(Example for norwegian)
 
-    $ mix gettext.extract
-
-Create your frontend translation directories: (for norwegian)
-
-    $ mkdir -p priv/gettext/frontend/no/LC_MESSAGES
-
-Merge frontend translations
-
-    $ mix gettext.merge priv/gettext/frontend --locale no --plural-forms=2
-    $ mix gettext.merge priv/gettext/backend --locale no
+    $ mix gettext.extract --merge priv/gettext/frontend --locale no --plural-forms-header nplurals="2; plural=(n != 1);"
+    $ mix gettext.extract --merge priv/gettext/backend --locale no --plural-forms-header nplurals="2; plural=(n != 1);"
 
 
 ## Generators
