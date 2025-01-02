@@ -20,12 +20,12 @@ defmodule Brando.LivePreview.Target do
     ],
     layout: [
       type: {:or, [{:tuple, [:atom, {:or, [:string, :atom]}]}, {:fun, 1}]},
-      required: true,
+      required: false,
       doc: "Layout"
     ],
     template: [
       type: {:or, [{:tuple, [:atom, {:or, [:string, :atom]}]}, {:fun, 1}]},
-      required: true,
+      required: false,
       doc: "Template"
     ],
     template_section: [
