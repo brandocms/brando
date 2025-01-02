@@ -3,10 +3,6 @@ defmodule Mix.Tasks.Brando.Gen do
 
   @shortdoc "Generates a Brando-styled schema"
 
-  @generator_modules [
-    Brando.Generators.Domain
-  ]
-
   @moduledoc """
   Generates a Brando resource.
 
@@ -167,8 +163,6 @@ defmodule Mix.Tasks.Brando.Gen do
           camel_plural: camel_plural
         ]
 
-    binding = Enum.reduce(@generator_modules, binding, &apply(&1, :before_copy, [&2]))
-
     schema_test_path = "test/schemas/#{path}_test.exs"
 
     files =
@@ -209,9 +203,40 @@ defmodule Mix.Tasks.Brando.Gen do
     ================================================================================================
     """
 
-    _binding = Enum.reduce(@generator_modules, binding, &apply(&1, :after_copy, [&2]))
+    add_to_files(binding)
 
     Mix.shell().info(instructions)
+  end
+
+  def add_to_files(binding) do
+    Mix.Brando.add_to_file(
+      binding[:domain_filename],
+      "types",
+      "@type #{binding[:singular]} :: #{binding[:app_module]}.#{binding[:domain]}.#{binding[:scoped]}.t()"
+    )
+
+    Mix.Brando.add_to_file(
+      binding[:domain_filename],
+      "header",
+      "alias #{binding[:app_module]}.#{binding[:domain]}.#{binding[:scoped]}"
+    )
+
+    domain_code =
+      EEx.eval_file(
+        Application.app_dir(
+          :brando,
+          "priv/templates/brando.gen/domain_code.eex"
+        ),
+        binding
+      )
+
+    Mix.Brando.add_to_file(
+      binding[:domain_filename],
+      "code",
+      domain_code
+    )
+
+    binding
   end
 
   def migration_type({k, :image}), do: {k, :jsonb}

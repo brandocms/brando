@@ -124,8 +124,21 @@ defmodule Brando.Mixfile do
   end
 
   # Specifies which paths to compile per environment
-  defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
-  defp elixirc_paths(_), do: ["lib", "web"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib"]
+
+  defp elixirc_paths(:prod),
+    do: [
+      "lib/brando.ex",
+      "lib/brando_admin.ex",
+      "lib/brando_web.ex",
+      "lib/brando",
+      "lib/brando_admin",
+      "lib/brando_web"
+    ]
+
+  defp elixirc_paths(:staging), do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Aliases are shortcut or tasks specific to the current project.
   # For example, to create, migrate and run the seeds file at once:
