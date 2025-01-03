@@ -10,6 +10,7 @@ defmodule Brando.HTML do
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
   import Phoenix.HTML
+  alias Brando.Assets.Vite
   alias Brando.Utils
 
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
@@ -585,7 +586,7 @@ defmodule Brando.HTML do
   """
   def inject_critical_css(assigns) do
     ~H|<style>
-  <%= Brando.Assets.Vite.Manifest.critical_css() %>
+  <%= Vite.Manifest.critical_css() %>
 </style>|
   end
 
@@ -620,6 +621,7 @@ defmodule Brando.HTML do
       <.inject_critical_css />
       <%= if @scripts != [] do %><%= render_slot(@scripts) %><% end %>
       <.include_assets only_css />
+      <.render_palettes_css />
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
       <.preload_fonts fonts={@fonts} />
       <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
@@ -629,8 +631,6 @@ defmodule Brando.HTML do
 
       <.render_meta conn={@conn} />
       <.render_rel conn={@conn} />
-      <.render_palettes_css />
-
       <.render_json_ld conn={@conn} />
       <.render_hreflangs conn={@conn} />
 
@@ -650,10 +650,8 @@ defmodule Brando.HTML do
   def include_assets(%{admin: true} = assigns) do
     if Brando.env() in [:prod, :e2e] do
       ~H"""
-      <!-- admin prod assets -->
-      {Brando.Assets.Vite.Render.main_css(:admin) |> raw()}
-
-      {Brando.Assets.Vite.Render.main_js(:admin) |> raw()}
+      {Vite.Render.main_css(:admin) |> raw()}
+      {Vite.Render.main_js(:admin) |> raw()}
       """
     else
       ~H"""
@@ -670,12 +668,12 @@ defmodule Brando.HTML do
   def include_assets(%{only_css: true} = assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      {Brando.Assets.Vite.Render.main_css() |> raw()}
+      {Vite.Render.main_css() |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        {Brando.Assets.Vite.Render.main_css() |> raw()}
+        {Vite.Render.main_css() |> raw()}
         """
       else
         ~H"""
@@ -695,12 +693,12 @@ defmodule Brando.HTML do
   def include_assets(%{only_js: true} = assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      {Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
+      {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        {Brando.Assets.Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
+        {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
         """
       else
         ~H"""
@@ -713,14 +711,14 @@ defmodule Brando.HTML do
   def include_assets(assigns) do
     if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
       ~H"""
-      {Brando.Assets.Vite.Render.main_css(:app) |> raw()}
-      {Brando.Assets.Vite.Render.main_js(:app) |> raw()}
+      {Vite.Render.main_css(:app) |> raw()}
+      {Vite.Render.main_js(:app) |> raw()}
       """
     else
       if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~H"""
-        {Brando.Assets.Vite.Render.main_css() |> raw()}
-        {Brando.Assets.Vite.Render.main_js() |> raw()}
+        {Vite.Render.main_css() |> raw()}
+        {Vite.Render.main_js() |> raw()}
         """
       else
         ~H"""
@@ -744,7 +742,7 @@ defmodule Brando.HTML do
   """
   def include_legacy_assets(assigns) do
     if Application.get_env(Brando.otp_app(), :hmr) === false do
-      ~H"{Brando.Assets.Vite.Render.legacy_js() |> raw()}"
+      ~H"{Vite.Render.legacy_js() |> raw()}"
     else
       ~H||
     end
