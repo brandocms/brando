@@ -8,7 +8,9 @@ defmodule Brando.Assets.Vite do
 
     require Logger
 
-    def read(manifest_file, cache_key) do
+    def read(manifest_file, cache_key, force \\ nil)
+
+    def read(manifest_file, cache_key, nil) do
       case :persistent_term.get(cache_key, nil) do
         nil ->
           hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
@@ -20,6 +22,14 @@ defmodule Brando.Assets.Vite do
         res ->
           res
       end
+    end
+
+    def read(manifest_file, cache_key, :force) do
+      hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
+      res = do_read(manifest_file, hmr?)
+      parsed_manifest = Brando.Assets.Vite.Manifest.parse(res)
+      :persistent_term.put(cache_key, parsed_manifest)
+      parsed_manifest
     end
 
     @doc """
@@ -101,6 +111,14 @@ defmodule Brando.Assets.Vite do
       |> config
       |> Map.get(:manifest_file)
       |> ViteManifestReader.read(config(scope).manifest_cache_key)
+    end
+
+    @spec refresh(atom) :: map()
+    def refresh(scope) do
+      scope
+      |> config
+      |> Map.get(:manifest_file)
+      |> ViteManifestReader.read(config(scope).manifest_cache_key, :force)
     end
 
     defp add_css(manifest, css_files, type) do
