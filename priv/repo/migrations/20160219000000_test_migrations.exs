@@ -459,6 +459,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :metadata, :map, null: false
       add :revision, :integer, null: false
       add :protected, :boolean, default: false
+      add :schema_version, :integer, default: 0
       timestamps()
     end
 

@@ -14,7 +14,6 @@ defmodule Brando.Revisions.RevisionsTest do
 
   test "create_revision", %{user: user} do
     s1a = %Page{
-      id: 1,
       title: "My title!",
       alternate_entries: [],
       alternates: [],
@@ -26,26 +25,36 @@ defmodule Brando.Revisions.RevisionsTest do
       vars: []
     }
 
-    s1b = %{s1a | title: "A new title!"}
-    {:ok, r1} = Revisions.create_revision(s1a, user)
-    {:ok, r2} = Revisions.create_revision(s1b, user)
+    p1 = Brando.repo().insert!(s1a)
+    {:ok, r1} = Revisions.create_revision(p1, user)
+
+    p2 =
+      p1
+      |> Ecto.Changeset.change(title: "New title")
+      |> Brando.repo().update!()
+
+    {:ok, r2} = Revisions.create_revision(p2, user)
 
     refute r1 == r2
     assert r1.revision == 0
     assert r2.revision == 1
     refute r1.encoded_entry == r2.encoded_entry
 
-    assert :erlang.binary_to_term(r1.encoded_entry) == s1a
-    assert :erlang.binary_to_term(r2.encoded_entry) == s1b
+    assert :erlang.binary_to_term(r1.encoded_entry) == p1
+    assert :erlang.binary_to_term(r2.encoded_entry) == p2
   end
 
   test "get_last_revision", %{user: user} do
-    s1a = %Page{id: 1, title: "My title!"}
+    s1a = %Page{title: "My title!"}
     s1b = %{s1a | title: "A new title!"}
-    {:ok, _} = Revisions.create_revision(s1a, user)
-    {:ok, r2} = Revisions.create_revision(s1b, user)
 
-    {:ok, {last_revision, {_, _}}} = Revisions.get_last_revision(Page, s1a.id)
+    p1 = Brando.repo().insert!(s1a)
+    p2 = Brando.repo().insert!(s1b)
+
+    {:ok, _} = Revisions.create_revision(p1, user)
+    {:ok, r2} = Revisions.create_revision(p2, user)
+
+    {:ok, {last_revision, {_, _}}} = Revisions.get_last_revision(Page, p2.id)
     assert last_revision.revision == r2.revision
   end
 
