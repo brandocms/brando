@@ -313,7 +313,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def block_identifier(%{block_identifier: block_identifier} = assigns) do
     changeset = block_identifier.source
-    identifier_changeset = Changeset.get_assoc(changeset, :identifier)
+
+    identifier_changeset =
+      if not match?(%Ecto.Association.NotLoaded{}, changeset.data.identifier) do
+        Changeset.get_assoc(changeset, :identifier)
+      else
+        nil
+      end
 
     identifier =
       if identifier_changeset == nil do
@@ -326,10 +332,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     assigns =
       assigns
       |> assign(:identifier, identifier)
-      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:has_cover?, identifier && Map.has_key?(identifier, :cover))
 
     ~H"""
     <article
+      :if={@identifier}
       data-id={@identifier.id}
       class={[
         "draggable",
