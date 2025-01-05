@@ -25,5 +25,6 @@ defmodule Brando.Revisions.Revision do
     attribute :revision, :integer, required: true
     attribute :description, :text
     attribute :protected, :boolean, default: false
+    attribute :schema_version, :integer, default: 0, required: true
   end
 end

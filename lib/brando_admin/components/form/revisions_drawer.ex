@@ -22,15 +22,23 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   def update(assigns, socket) do
+    socket = assign(socket, assigns)
+
     {:ok,
      socket
-     |> assign(assigns)
+     |> assign_new(:entry_type, fn -> socket.assigns.form.source.data.__struct__ end)
+     |> assign_new(:schema_version, fn ->
+       entry_type = socket.assigns.form.source.data.__struct__
+       Brando.Blueprint.Snapshot.get_current_version(entry_type)
+     end)
      |> assign_new(:show_publish_at, fn -> nil end)
      |> assign_revisions()
      |> assign_active_revision()}
   end
 
-  defp assign_revisions(%{assigns: %{form: form, entry_id: entry_id}} = socket) do
+  defp assign_revisions(socket) do
+    form = socket.assigns.form
+    entry_id = socket.assigns.entry_id
     entry_type = form.source.data.__struct__
 
     case entry_id do
@@ -64,9 +72,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     socket
   end
 
-  defp assign_refreshed_revisions(
-         %{assigns: %{entry_id: entry_id, entry_type: entry_type}} = socket
-       ) do
+  defp assign_refreshed_revisions(socket) do
+    entry_id = socket.assigns.entry_id
+    entry_type = socket.assigns.entry_type
+
     list_opts = %{
       filter: %{entry_id: entry_id, entry_type: entry_type},
       preload: [:creator],
@@ -140,13 +149,25 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           <table class="revisions-table">
             <%= for revision <- @revisions do %>
               <tr
+                id={"revision-line-#{revision.revision}"}
                 class={[
                   "revisions-line",
-                  @active_revision == revision.revision && "active"
+                  @active_revision == revision.revision && "active",
+                  revision.schema_version != @schema_version && "outdated"
                 ]}
+                phx-hook="Brando.ConfirmClick"
+                phx-confirm-click-message={
+                  if revision.schema_version != @schema_version,
+                    do:
+                      gettext(
+                        "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
+                      ),
+                    else: gettext("Are you sure you want to activate this version?")
+                }
+                phx-confirm-click={
+                  JS.push("select_revision", value: %{revision: revision.revision}, target: @myself)
+                }
                 phx-click={JS.push("select_revision", target: @myself)}
-                phx-value-revision={revision.revision}
-                phx-page-loading
               >
                 <td class="fit">
                   #{revision.revision}
@@ -172,7 +193,14 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                 <td class="activate fit">
                   <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
                     <Button.dropdown
-                      confirm={gettext("Are you sure you want to activate this version?")}
+                      confirm={
+                        if revision.schema_version != @schema_version,
+                          do:
+                            gettext(
+                              "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
+                            ),
+                          else: gettext("Are you sure you want to activate this version?")
+                      }
                       value={revision.revision}
                       event={
                         JS.push("activate_revision",

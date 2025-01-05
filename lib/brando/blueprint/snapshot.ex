@@ -25,6 +25,11 @@ defmodule Brando.Blueprint.Snapshot do
 
   @default_opts [snapshot_path: "priv/blueprints/snapshots"]
 
+  @spec get_current_version(module) :: integer
+  def get_current_version(module) do
+    get_snapshot_version(module)
+  end
+
   @spec get_latest_snapshot(module) :: snapshot | nil
   def get_latest_snapshot(module, opts \\ @default_opts) do
     version = get_snapshot_version(module, opts)

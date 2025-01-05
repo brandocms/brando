@@ -59,10 +59,12 @@ defmodule Brando.Revisions do
   """
   @spec create_revision(map, user, revision_active) :: {:ok, revision} | {:error, changeset}
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active \\ true) do
+    schema_version = Brando.Blueprint.Snapshot.get_current_version(entry_type)
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
+    reloaded_entry = Brando.Repo.reload!(entry)
     preloads = Brando.Blueprint.preloads_for(entry_type)
-    entry_with_preloads = Brando.Repo.preload(entry, preloads)
+    entry_with_preloads = Brando.Repo.preload(reloaded_entry, preloads)
     encoded_entry = Utils.term_to_binary(entry_with_preloads)
 
     revision = %{
@@ -73,7 +75,8 @@ defmodule Brando.Revisions do
       metadata: %{},
       revision: next_revision(entry_type_binary, entry_id),
       creator_id: user_id,
-      protected: false
+      protected: false,
+      schema_version: schema_version
     }
 
     %Revision{}

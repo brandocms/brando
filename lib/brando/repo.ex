@@ -3,6 +3,10 @@ defmodule Brando.Repo do
     Application.get_env(:brando, :repo_module)
   end
 
+  def reload!(queryable, opts \\ []) do
+    repo().reload!(queryable, opts)
+  end
+
   def preload(struct, preloads, opts \\ []) do
     repo().preload(struct, preloads, opts)
   end
