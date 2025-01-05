@@ -677,39 +677,30 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
-    refs = Changeset.get_embed(block_changeset, :refs)
+    refs = Ecto.Changeset.get_embed(block_changeset, :refs)
 
     new_refs =
-      Enum.map(refs, fn ref ->
-        if Changeset.get_field(ref, :name) == ref_name do
-          new_ref_data_cs = Changeset.change(new_ref_data, %{uid: Brando.Utils.generate_uid()})
-
-          ref
-          |> Changeset.force_change(:data, new_ref_data_cs)
-          |> Map.put(:action, nil)
-          |> Changeset.apply_changes()
+      Enum.map(refs, fn ref_cs ->
+        if Ecto.Changeset.get_field(ref_cs, :name) == ref_name do
+          Ecto.Changeset.change(ref_cs, data: new_ref_data)
         else
-          ref
+          ref_cs
         end
       end)
 
     updated_changeset =
       if belongs_to == :root do
-        block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
-        changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
+        block_changeset = Ecto.Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Ecto.Changeset.put_embed(block_changeset, :refs, new_refs)
+        changeset = Ecto.Changeset.put_assoc(changeset, :block, updated_block_changeset)
+
         render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
-        changeset = Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Ecto.Changeset.put_embed(changeset, :refs, new_refs)
         render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
-    new_form =
-      build_form_from_changeset(
-        updated_changeset,
-        uid,
-        belongs_to
-      )
+    new_form = build_form_from_changeset(updated_changeset, uid, belongs_to)
 
     socket
     |> assign(:form, new_form)
