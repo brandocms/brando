@@ -87,7 +87,7 @@ defmodule Brando.Assets.Vite do
     }
     `
     """
-    @legacy_extension "-legacy-"
+    @legacy_extension "-legacy"
     defstruct entries: %{}, critical: %{}, legacy: %{}
 
     def config(:app) do
