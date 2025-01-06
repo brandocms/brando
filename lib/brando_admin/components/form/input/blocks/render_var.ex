@@ -897,6 +897,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  def handle_event("focus", _, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("set_target", _, %{assigns: %{myself: myself}} = socket) do
     send_update(
       BrandoAdmin.Components.ImagePicker,
