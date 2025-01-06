@@ -93,11 +93,11 @@ defmodule Brando.Content.Var do
 
   defimpl String.Chars do
     def to_string(%{type: :string, value: value}) do
-      value
+      value || ""
     end
 
     def to_string(%{type: :html, value: value}) do
-      value
+      value || ""
     end
 
     def to_string(%{type: _} = var) do
