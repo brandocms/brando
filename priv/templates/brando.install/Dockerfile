@@ -14,6 +14,7 @@ WORKDIR /opt/app
 
 COPY config/ ./config
 COPY mix.exs mix.lock /opt/app/
+COPY VERSION /opt/app/
 
 RUN mix deps.get --only $MIX_ENV
 
@@ -62,11 +63,11 @@ COPY assets/backend/package.json assets/backend/yarn.lock ./
 COPY assets/backend/.yalc ./.yalc
 # Use the yarn cache directory as a cache mount
 RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-      yarn \
-      install \
-      --pure-lockfile \
-      --prefer-offline \
-      --progress=false
+  yarn \
+  install \
+  --pure-lockfile \
+  --prefer-offline \
+  --progress=false
 
 COPY assets/backend/ ./
 
@@ -86,17 +87,17 @@ COPY assets/frontend/package.json assets/frontend/yarn.lock ./
 #COPY assets/frontend/.yalc ./.yalc
 # Use the yarn cache directory as a cache mount
 RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-      yarn \
-      install \
-      --pure-lockfile \
-      --prefer-offline \
-      --progress=false
+  yarn \
+  install \
+  --pure-lockfile \
+  --prefer-offline \
+  --progress=false
 
 COPY assets/frontend/ ./
 
 RUN yarn build
 RUN mkdir -p ../../priv/static/assets/__srcmaps && \
-      mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
+  mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
 
 
 # -----------------------------------
