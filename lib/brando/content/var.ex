@@ -96,6 +96,10 @@ defmodule Brando.Content.Var do
       value
     end
 
+    def to_string(%{type: :html, value: value}) do
+      value
+    end
+
     def to_string(%{type: _} = var) do
       inspect(var, pretty: true)
     end
