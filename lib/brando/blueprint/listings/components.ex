@@ -63,6 +63,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :entry, :map, required: true
   attr :columns, :integer, required: true
   attr :offset, :integer, default: nil
+  attr :skip_style, :boolean, default: false
   slot :inner_block
   slot :before
   slot :outside
@@ -79,7 +80,7 @@ defmodule Brando.Blueprint.Listings.Components do
       @offset && "offset-#{@offset}"
     ]}>
       {render_slot(@before)}
-      <.link navigate={@update_url} class="entry-link">
+      <.link navigate={@update_url} class={!@skip_style && "entry-link"}>
         {render_slot(@inner_block)}
       </.link>
       {render_slot(@outside)}
