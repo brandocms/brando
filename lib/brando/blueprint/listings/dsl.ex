@@ -35,7 +35,7 @@ defmodule Brando.Blueprint.Listings.Dsl do
       ],
       type: [
         type: :atom,
-        required: true,
+        default: :csv,
         doc: "Type of export"
       ],
       query: [
