@@ -135,6 +135,8 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
+    Module.register_attribute(__CALLER__.module, :router_scope, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :router_scope, Keyword.get(opts, :router_scope))
 
     gettext_module =
       case Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__) do
