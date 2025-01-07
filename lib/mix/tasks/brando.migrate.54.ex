@@ -38,10 +38,6 @@ if Code.ensure_loaded?(Igniter) do
                  {:ok, zipper} <- rewrite_villain(zipper, module),
                  {:ok, zipper} <- add_villain_relations(zipper, module) do
               {:ok, zipper}
-            else
-              wat? ->
-                IO.inspect(wat?)
-                raise "failed"
             end
           end)
         end)
