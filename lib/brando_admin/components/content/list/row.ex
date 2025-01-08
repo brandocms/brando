@@ -554,10 +554,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def handle_event("update_entry", %{"entry_id" => entry_id, "schema" => schema}, socket) do
-    # extract admin url from identifier
     schema = Module.concat([schema])
-    url = schema.__admin_url__(%{id: entry_id})
-
+    url = schema.__admin_route__(:update, [entry_id])
     {:noreply, push_navigate(socket, to: url)}
   end
 
