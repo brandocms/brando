@@ -195,7 +195,6 @@ defmodule BrandoAdmin.LiveView.Listing do
       %{assigns: %{current_user: user, schema: schema}} = socket ->
         singular = schema.__naming__().singular
         context = schema.__modules__().context
-        form_view = schema.__modules__().admin_form_view
 
         override_opts = [
           change_fields: [{:language, language}],
@@ -213,11 +212,8 @@ defmodule BrandoAdmin.LiveView.Listing do
           _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
         end
 
-        send(
-          self(),
-          {:set_content_language_and_navigate, language,
-           Brando.routes().admin_live_path(socket, form_view, :update, duped_entry.id)}
-        )
+        update_url = schema.__admin_route__(:update, [duped_entry.id])
+        send(self(), {:set_content_language_and_navigate, language, update_url})
 
         {:halt, socket}
 
