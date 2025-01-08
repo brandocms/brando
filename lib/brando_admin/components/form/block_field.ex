@@ -19,6 +19,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&{:ok, &1})
   end
 
+  # duplicate block (that is an entry block)
+  # this is received when the block is done gathering all its children changesets
   def update(%{event: "duplicate_block", uid: uid, changeset: changeset, populated: true}, socket) do
     block_module = socket.assigns.block_module
     block_cs = Changeset.get_assoc(changeset, :block)
@@ -118,12 +120,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       {:ok, socket}
     else
+      # the block has no children, duplicate it right away.
       vars = Changeset.get_assoc(block_cs, :vars, :struct)
       table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
 
       updated_block_cs =
         block_cs
-        |> Map.put(:action, :insert)
         |> Changeset.apply_changes()
         |> Map.merge(%{
           id: nil,
@@ -141,6 +143,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> Changeset.update_change(:refs, fn ref_changesets ->
           Enum.reject(ref_changesets, &(&1.action == :replace))
         end)
+        |> Map.put(:action, :insert)
 
       entry_block_cs =
         block_module

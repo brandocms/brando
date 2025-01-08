@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # duplicate block (that is not an entry block)
   # event is received in the parent block (multi or container)
-
+  # this is received when the block is done gathering all its children changesets
   def update(%{event: "duplicate_block", uid: uid, changeset: block_cs, populated: true}, socket) do
     block_list = socket.assigns.block_list
     changesets = socket.assigns.changesets
