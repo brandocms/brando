@@ -977,16 +977,26 @@ defmodule Brando.Villain do
   def add_uid_to_ref_changesets(nil), do: nil
 
   def add_uid_to_ref_changesets(refs) when is_list(refs) do
-    Enum.map(refs, fn ref ->
+    Enum.reduce(refs, [], fn ref, acc ->
       data = Changeset.get_field(ref, :data)
-      data_changeset = Changeset.change(data)
 
-      updated_data_changeset =
-        Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
+      if data do
+        data_changeset = Changeset.change(data)
 
-      ref
-      |> Changeset.put_change(:data, updated_data_changeset)
-      |> Map.put(:action, :insert)
+        updated_data_changeset =
+          Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
+
+        updated_ref =
+          ref
+          |> Changeset.put_change(:data, updated_data_changeset)
+          |> Map.put(:action, :insert)
+
+        [updated_ref | acc]
+      else
+        require Logger
+        Logger.debug("=> Malformed ref: #{inspect(ref)}")
+        acc
+      end
     end)
   end
 

@@ -255,12 +255,17 @@ defmodule Brando.Query.Mutations do
   end
 
   defp duplicate_refs(refs) do
-    refs
-    |> get_and_update_in(
-      [Access.all(), Access.key(:data), Access.key(:uid)],
-      &{&1, Brando.Utils.generate_uid()}
-    )
-    |> elem(1)
+    Enum.reduce(refs, [], fn
+      %{data: %{uid: _uid}} = ref, acc ->
+        new_uid = Brando.Utils.generate_uid()
+        updated_ref = put_in(ref, [Access.key(:data), Access.key(:uid)], new_uid)
+        [updated_ref | acc]
+
+      ref, acc ->
+        require Logger
+        Logger.debug("=> Malformed ref? #{inspect(ref, pretty: true)}")
+        acc
+    end)
   end
 
   defp maybe_change_fields(entry, %{change_fields: change_fields}) do
