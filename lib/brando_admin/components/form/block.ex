@@ -1711,14 +1711,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = assigns.form.source
     belongs_to = assigns.belongs_to
     block_cs = get_block_changeset(changeset, belongs_to)
+    fragment_id = Changeset.get_field(block_cs, :fragment_id)
 
     assigns =
       assigns
       |> assign(:uid, Changeset.get_field(block_cs, :uid))
       |> assign(:type, Changeset.get_field(block_cs, :type))
-      |> assign(:fragment_id, Changeset.get_field(block_cs, :fragment_id))
+      |> assign(:fragment_id, fragment_id)
       |> assign(:active, Changeset.get_field(block_cs, :active))
       |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign(
+        :update_url,
+        fragment_id && Brando.Pages.Fragment.__admin_route__(:update, [fragment_id])
+      )
 
     ~H"""
     <div
@@ -1812,7 +1817,11 @@ defmodule BrandoAdmin.Components.Form.Block do
                       {gettext("Add fragment")}
                     </button>
                   </div>
-                  <div :if={@fragment} class="fragment-info"></div>
+                  <div :if={@fragment} class="fragment-info">
+                    <.link :if={@update_url} class="tiny button" href={@update_url} target="_blank">
+                      {gettext("Edit fragment")}
+                    </.link>
+                  </div>
                 </div>
               </div>
             </.inputs_for>
