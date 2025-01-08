@@ -1273,8 +1273,11 @@ defmodule Brando.Villain do
     Changeset.put_assoc(changeset, :table_rows, duplicated_table_rows)
   end
 
-  def duplicate_table_row(table_row_cs) do
-    Map.merge(table_row_cs, %{id: nil, block_id: nil})
-    |> Brando.Utils.map_from_struct()
+  def duplicate_table_row(table_row_struct) do
+    table_row_struct
+    |> Changeset.change()
+    |> Changeset.put_change(:id, nil)
+    |> Changeset.put_change(:block_id, nil)
+    |> Map.put(:action, :insert)
   end
 end
