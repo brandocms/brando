@@ -97,23 +97,6 @@ defmodule Brando.Blueprint.Dsl do
         @primary_key
       end
 
-      def __admin_url__(entry) do
-        modules = __modules__()
-
-        case Code.ensure_loaded(modules.admin_form_view) do
-          {:module, _} ->
-            Brando.routes().admin_live_path(
-              Brando.endpoint(),
-              modules.admin_form_view,
-              :update,
-              entry.id
-            )
-
-          _ ->
-            ""
-        end
-      end
-
       @all_attributes @attrs
       @all_relations @relations
       @all_assets @assets
