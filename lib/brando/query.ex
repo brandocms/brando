@@ -480,7 +480,7 @@ defmodule Brando.Query do
   @doc """
   Check cache for query matching args
   """
-  @spec try_cache(any(), any()) :: {:hit, any()} | {:miss, any()} | :no_cache
+  @spec try_cache(any(), any()) :: {:hit, any()} | {:miss, any(), any()} | :no_cache
   def try_cache(query_key, cache_opts)
   def try_cache(_query_key, nil), do: :no_cache
   def try_cache(_query_key, false), do: :no_cache
