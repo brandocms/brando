@@ -568,7 +568,18 @@ defmodule Brando.Content do
     {:ok, identifiers}
   end
 
-  def get_entries_from_identifiers(identifiers, preloads \\ []) do
+  def get_entries_from_identifiers(identifiers, preloads \\ [])
+
+  def get_entries_from_identifiers(identifiers, preloads) when is_list(preloads) do
+    IO.warn(
+      "get_entries_from_identifiers(identifiers, preloads) is deprecated, " <>
+        "use get_entries_from_identifiers(identifiers, %{preload: preloads}) instead"
+    )
+
+    get_entries_from_identifiers(identifiers, %{preload: preloads})
+  end
+
+  def get_entries_from_identifiers(identifiers, query_opts) do
     entry_blueprint =
       identifiers
       |> Enum.with_index()
@@ -581,13 +592,22 @@ defmodule Brando.Content do
       for {schema, entry_blueprints} <- grouped_entries do
         schema_ids = Enum.map(entry_blueprints, &elem(&1, 1))
 
-        query =
-          from t in schema,
+        base_query =
+          from(t in schema,
             where: t.id in ^schema_ids,
-            order_by: fragment("array_position(?, ?)", ^schema_ids, t.id),
-            preload: ^preloads
+            order_by: fragment("array_position(?, ?)", ^schema_ids, t.id)
+          )
 
-        Brando.Repo.all(query)
+        {:ok, entries} =
+          Brando.Query.handle_list_query(
+            __MODULE__,
+            {:list, schema, query_opts},
+            query_opts,
+            base_query,
+            schema
+          )
+
+        entries
       end
 
     flattened_unsorted_entries = List.flatten(unsorted_entries)
