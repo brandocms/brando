@@ -52,12 +52,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      socket
      |> assign(assigns)
      |> prepare_input_component()
-     |> assign_new(:selected_schema, fn -> nil end)
      |> assign_new(:join_schema, fn -> join_schema end)
      |> assign_new(:selected_identifiers, fn -> Enum.map(field.value, & &1.identifier) end)
-     |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
-       selected_identifiers
-     end)
      |> assign_new(:max_length, fn -> get_in(field_opts, [:constraints, :max_length]) end)
      |> assign_new(:min_length, fn -> get_in(field_opts, [:constraints, :min_length]) end)
      |> assign_available_schemas(wanted_schemas)
@@ -72,11 +68,40 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def assign_selected_schema(%{assigns: %{available_schemas: available_schemas}} = socket)
       when length(available_schemas) == 1 do
-    assign_new(socket, :selected_schema, fn -> List.first(available_schemas) end)
+    socket
+    |> assign_new(:selected_schema, fn -> List.first(available_schemas) end)
+    |> assign_new(:available_identifiers, fn ->
+      {_, schema_module, list_opts} = List.first(available_schemas)
+      field_opts = socket.assigns.opts
+
+      list_opts =
+        case Keyword.get(field_opts, :filter_language, false) do
+          false ->
+            list_opts
+
+          true ->
+            form = socket.assigns.field.form
+            language = form[:language]
+
+            if language do
+              language_atom = String.to_existing_atom(language.value)
+              Map.put(list_opts, :language, language_atom)
+            else
+              list_opts
+            end
+        end
+
+      {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
+      identifiers
+    end)
   end
 
   def assign_selected_schema(socket) do
-    assign_new(socket, :selected_schema, fn -> nil end)
+    socket
+    |> assign_new(:selected_schema, fn -> nil end)
+    |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
+      selected_identifiers
+    end)
   end
 
   def render(assigns) do
@@ -149,8 +174,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         </button>
 
         <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
-          <h2 class="titlecase">{gettext("Select content type")}</h2>
-          <div class="button-group-vertical">
+          <h2 :if={!@selected_schema} class="titlecase">{gettext("Select content type")}</h2>
+          <div :if={!@selected_schema} class="button-group-vertical">
             <button
               :for={{label, schema, _} <- @available_schemas}
               type="button"
