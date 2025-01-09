@@ -33,9 +33,9 @@
     reduce-css-calc "^2.1.8"
 
 "@brandocms/jupiter@^3.53.0":
-  version "3.54.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.0.tgz#564aacf66bf79c37c12754ecdaae2cf128bac8cc"
-  integrity sha512-ex92kXg6OYJN+Wli25spLnBo6P2YMVnSORmZukl6wVszSRZcoE3I1Rv6Wkwdr4j6G81vzwGgI1UIsfIrWWnKEg==
+  version "3.54.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.1.tgz#c96169bd53fe516431ac15feb291249813b1bb52"
+  integrity sha512-n6Z+vtulokWXfYQ+KtTJ6VXjCpmItDZh60TtCVZGSubTcklOpN0WvLPla8Nv9Z9OapXfh07MdW61y7DKYg5aDA==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -306,9 +306,9 @@
   integrity sha512-tQd/1efJuzPC6rCFwEvLtci/xNFcTZknmXs98FYDfGE4wP9ClFV98nyKrzJKVPMhdDnjzLhdUyMX4PsQAPjwIw==
 
 "@fontsource/jetbrains-mono@^5.1.1":
-  version "5.1.1"
-  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.1.1.tgz#451e9a592c46582e61f28311b0dfe5a222f499bf"
-  integrity sha512-5rwvmdQQpXev4LlBX1P+7h2dguu6iwW/9Npjde4+DEq+HgpVJI/7QY8DI1NVVFdvLtXZNP+vO2L/5BQED6FUhA==
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.1.2.tgz#dcd74209b9aa5ba9f21eafaba09c8dd758333cde"
+  integrity sha512-muYZK6W3NTrKpKTjoF2dkrtMjXLlPZhniLiLjMmfegRibl2L6jUJh9gB6UcbcZs3zHdIYTmzMkXNbNoI2kXX3Q==
 
 "@jridgewell/gen-mapping@^0.3.5":
   version "0.3.8"
@@ -571,9 +571,9 @@
   integrity sha512-JyLbfyY3cPctq9sVdpcRWTcoUOoq3/MnGE1eP6eBNyMTHyBPcM9TPhOkgj+xkD1zW/884jfelB+wa70RT/AMxQ==
 
 "@tiptap/extension-color@^2.9.1":
-  version "2.10.4"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-color/-/extension-color-2.10.4.tgz#fc1a686d458c4cda39163e8c889c4441cb4c7d27"
-  integrity sha512-LgYECcWnTfonqzTUJQN+ujNlWQahGg4G6typRR44opNxwGTlmXHjc6h/JwgLiYxSMZke3EDP/17BSQDH9MMrIA==
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-color/-/extension-color-2.11.0.tgz#0008ac39d1e8b141d24591a30ce22c84e53fff27"
+  integrity sha512-9dO6zr7Zzz7vvJAct+IGHvYpV6pHcNyifLjmXNdJdKY118lnoeQfu1dsxiPGl9KXCv5bHgn4dUg3CsrnAlb9OQ==
 
 "@tiptap/extension-document@^2.9.1":
   version "2.10.3"
@@ -658,9 +658,9 @@
   integrity sha512-7cgAPpUNgO/3QdvCN9/6dWP6JQC641o8dSgkyv0XzVv0nxISck4SU+2eADRYQLyP2s4M3xuSEFhCCiKZleK2yA==
 
 "@tiptap/extension-text-style@^2.9.1":
-  version "2.10.4"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-text-style/-/extension-text-style-2.10.4.tgz#07af922c266fef7da13cc83befbbd5da512b7402"
-  integrity sha512-ibq7avkcwHyUSG53Hf+P31rrwsKVbbiqbWZM4kXC7M2X3iUwFrtvaa+SWzyWQfE1jl2cCrD1+rfSkj/alcOKGg==
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-text-style/-/extension-text-style-2.11.0.tgz#2acb6207fe6acdb5479384682846980be15caa80"
+  integrity sha512-vuA16wMZ6J3fboL7FObwV2f5uN9Vg0WYmqU7971vxzJyaRj9VE1eeH8Kh5fq4RgwDzc13MZGvZZV4HcE1R8o8A==
 
 "@tiptap/extension-text@^2.9.1":
   version "2.10.3"
@@ -1020,9 +1020,9 @@ escape-string-regexp@^4.0.0:
   integrity sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==
 
 esm-env@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/esm-env/-/esm-env-1.2.1.tgz#34c2a0ba60582948afbe7bd779bc66f9d3aece7e"
-  integrity sha512-U9JedYYjCnadUlXk7e1Kr+aENQhtUaoaV9+gZm1T8LC/YBAPJx3NSPIAurFOC0U5vrdSevnUJS2/wUVxGwPhng==
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/esm-env/-/esm-env-1.2.2.tgz#263c9455c55861f41618df31b20cb571fc20b75e"
+  integrity sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==
 
 esrap@^1.3.2:
   version "1.3.2"
@@ -1248,9 +1248,9 @@ phoenix@1.7.14:
   integrity sha512-3tZ76PiH/2g+Kyzhz8+GIFYrnx3lRnwi/Qt3ZUH04xpMxXL7Guerd5aaxtpWal73X+H8iLAjo2c+AgRy2KYQcQ==
 
 phoenix_html@^4.1.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.1.1.tgz#0be8c4a0592350b18ff97671eb12f9c6445b5a5a"
-  integrity sha512-RpvlxDkP13MTQkfbZGFD7XrLgE28mqlwU+rSQxhNyj9U0KzPgeeh4ctn+Mz7jlpsKFAhLe47PXQsff3EXJ4mbg==
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.2.0.tgz#c8398954b479daaa198be92ca7818a4ddcd222f1"
+  integrity sha512-Nyij6LOiAxuoD6vWUpRfbgjg+Rpt0B/opFM3KjYRhL5faViXU9R30al2bQAEKu4K5E2NOZGUOd18cxABKetiJw==
 
 phoenix_live_view@^1.0.0-rc.7:
   version "1.0.1"
@@ -1593,9 +1593,9 @@ svelte-preprocess@^6.0.3:
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
 svelte@^5.2.4:
-  version "5.16.0"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.16.0.tgz#43ef960ee20ccf3fe8a52882a5253acaeb52ec2b"
-  integrity sha512-Ygqsiac6UogVED2ruKclU+pOeMThxWtp9LG+li7BXeDKC2paVIsRTMkNmcON4Zejerd1s5sZHWx6ZtU85xklVg==
+  version "5.17.1"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.17.1.tgz#6a32c7ba37f2efa227b7fa17c42470dc37b13cd4"
+  integrity sha512-HitqD0XhU9OEytPuux/XYzxle4+7D8+fIb1tHbwMzOtBzDZZO+ESEuwMbahJ/3JoklfmRPB/Gzp74L87Qrxfpw==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
@@ -1613,9 +1613,9 @@ svelte@^5.2.4:
     zimmerframe "^1.1.2"
 
 sweetalert2@^11.14.5:
-  version "11.15.3"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.3.tgz#6322a7c5fa2e835d5a3570c83e55071e357cd4a7"
-  integrity sha512-+0imNg+XYL8tKgx8hM0xoiXX3KfgxHDmiDc8nTJFO89fQEEhJlkecSdyYOZ3IhVMcUmoNte4fTIwWiugwkPU6w==
+  version "11.15.10"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.10.tgz#315ed4d0933bb1b6fbd7d0daf3d160bd3cc78b64"
+  integrity sha512-Sjiwcd5mWiz8X0JFkHsso2EPVQHrLCjVv+xR6Ry2LKf4KY6kSi4U5pM0Tgmn1c7SMfkyDqPal2NWqwj6vck8bw==
 
 tippy.js@^6.3.7:
   version "6.3.7"
