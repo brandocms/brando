@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               {gettext("Select")}
             <% end %>
           </button>
-          <div :if={@open} class="inline-options">
+          <div :if={@open && @inline} class="inline-options">
             <%= for opt <- @input_options do %>
               <button
                 type="button"
