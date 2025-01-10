@@ -88,6 +88,10 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
     """
   end
 
+  def handle_event("focus", _, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.field.form.source
 
