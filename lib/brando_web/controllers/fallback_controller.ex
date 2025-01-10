@@ -50,6 +50,14 @@ defmodule BrandoWeb.FallbackController do
     |> render(:"401")
   end
 
+  def call(conn, {:error, :bad_request}) do
+    conn
+    |> put_status(:bad_request)
+    |> put_layout(false)
+    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
+    |> render(:"400")
+  end
+
   defp render_error_page(conn, 404) do
     # run conn through :browser pipeline
     conn = Brando.router().browser(conn, [])
