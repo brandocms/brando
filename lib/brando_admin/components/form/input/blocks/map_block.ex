@@ -126,6 +126,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     block_data_cs = Block.get_block_data_changeset(block)
     block_data = Changeset.apply_changes(block_data_cs)
     data_map = Map.from_struct(block_data)
-    Map.merge(data_map, new_data) |> dbg()
+    Map.merge(data_map, new_data)
   end
 end
