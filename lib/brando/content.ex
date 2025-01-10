@@ -568,7 +568,7 @@ defmodule Brando.Content do
     {:ok, identifiers}
   end
 
-  def get_entries_from_identifiers(identifiers, preloads \\ [])
+  def get_entries_from_identifiers(identifiers, preloads_or_opts \\ %{})
 
   def get_entries_from_identifiers(identifiers, preloads) when is_list(preloads) do
     IO.warn(
