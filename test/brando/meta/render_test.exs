@@ -160,4 +160,22 @@ defmodule Brando.MetaRenderTest do
              }
            }
   end
+
+  test "ensure we strip out all nil values" do
+    mock_conn =
+      Brando.Plug.HTML.put_meta(
+        %Plug.Conn{assigns: %{language: "en"}},
+        Brando.Pages.Page,
+        %{title: "My own title", meta_description: nil}
+      )
+
+    assigns = %{mock_conn: mock_conn}
+
+    comp = ~H"""
+    <.render_meta conn={@mock_conn} />
+    """
+
+    assert rendered_to_string(comp) ==
+             "<meta name=\"title\" content=\"My own title\"><meta property=\"og:title\" content=\"My own title\"><meta property=\"og:site_name\" content=\"MyApp\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"http://localhost\"><meta name=\"description\" content=\"Fallback meta description\"><meta property=\"og:description\" content=\"Fallback meta description\"><meta property=\"og:see_also\" content=\"https://instagram.com/test\"><meta property=\"og:see_also\" content=\"https://facebook.com/test\"><meta name=\"key1\" content=\"value1\"><meta name=\"key2\" content=\"value2\">"
+  end
 end

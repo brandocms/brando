@@ -38,7 +38,7 @@ defmodule Brando.Blueprint.Meta do
         result = mutator.(data)
 
         Enum.reduce(targets, acc, fn target, acc ->
-          acc ++ [{target, result}]
+          (result && acc ++ [{target, result}]) || acc
         end)
     end)
   end
