@@ -72,4 +72,8 @@ defmodule E2eProjectWeb.PageController do
       end
     end
   end
+
+  def redirect_success(conn, _) do
+    send_resp(conn, 200, "OK!")
+  end
 end

@@ -54,9 +54,6 @@ defmodule E2eProjectWeb.Router do
 
   admin_routes do
     live "/", E2eProjectAdmin.DashboardLive
-    # live "/projects", E2eProjectAdmin.Projects.ProjectListLive
-    # live "/projects/create", E2eProjectAdmin.Projects.ProjectCreateLive
-    # live "/projects/update/:entry_id", E2eProjectAdmin.Projects.ProjectUpdateLive
   end
 
   scope "/coming-soon", E2eProjectWeb do
@@ -71,6 +68,7 @@ defmodule E2eProjectWeb.Router do
 
   scope "/" do
     pipe_through :browser
+    get "/new/redirect", E2eProjectWeb.PageController, :redirect_success
     page_routes()
   end
 end
