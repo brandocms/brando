@@ -116,9 +116,9 @@
     "@lezer/lr" "^1.3.1"
 
 "@codemirror/lang-markdown@^6.3.1":
-  version "6.3.1"
-  resolved "https://registry.yarnpkg.com/@codemirror/lang-markdown/-/lang-markdown-6.3.1.tgz#067e4e18993fa3520e2a980d2dce5fe23dd245a0"
-  integrity sha512-y3sSPuQjBKZQbQwe3ZJKrSW6Silyl9PnrU/Mf0m2OQgIlPoSYTtOvEL7xs94SVMkb8f4x+SQFnzXPdX4Wk2lsg==
+  version "6.3.2"
+  resolved "https://registry.yarnpkg.com/@codemirror/lang-markdown/-/lang-markdown-6.3.2.tgz#841a922c9305c035678600de5187c1b7a80f6c21"
+  integrity sha512-c/5MYinGbFxYl4itE9q/rgN/sMTjOr8XL5OWnC+EaRMLfCbVUmmubTJfdgpfcSS2SCaT7b+Q+xi3l6CgoE+BsA==
   dependencies:
     "@codemirror/autocomplete" "^6.7.1"
     "@codemirror/lang-html" "^6.0.0"
@@ -129,9 +129,9 @@
     "@lezer/markdown" "^1.0.0"
 
 "@codemirror/language@^6.0.0", "@codemirror/language@^6.3.0", "@codemirror/language@^6.4.0", "@codemirror/language@^6.6.0":
-  version "6.10.7"
-  resolved "https://registry.yarnpkg.com/@codemirror/language/-/language-6.10.7.tgz#415ba3bb983416daa98084c010f4db59db45920e"
-  integrity sha512-aOswhVOLYhMNeqykt4P7+ukQSpGL0ynZYaEyFDVHE7fl2xgluU3yuE9MdgYNfw6EmaNidoFMIQ2iTh1ADrnT6A==
+  version "6.10.8"
+  resolved "https://registry.yarnpkg.com/@codemirror/language/-/language-6.10.8.tgz#3e3a346a2b0a8cf63ee1cfe03349eb1965dce5f9"
+  integrity sha512-wcP8XPPhDH2vTqf181U8MbZnW+tDyPYy0UzVOa+oHORjyT+mhhom9vBd7dApJwoDz9Nb/a8kHjJIsuA/t8vNFw==
   dependencies:
     "@codemirror/state" "^6.0.0"
     "@codemirror/view" "^6.23.0"
@@ -158,26 +158,33 @@
     "@codemirror/view" "^6.0.0"
     crelt "^1.0.5"
 
-"@codemirror/state@^6.0.0", "@codemirror/state@^6.4.0", "@codemirror/state@^6.4.1", "@codemirror/state@^6.5.0":
+"@codemirror/state@^6.0.0", "@codemirror/state@^6.4.1", "@codemirror/state@^6.5.0":
+  version "6.5.1"
+  resolved "https://registry.yarnpkg.com/@codemirror/state/-/state-6.5.1.tgz#e5c0599f7b43cf03f19e05861317df5425c07904"
+  integrity sha512-3rA9lcwciEB47ZevqvD8qgbzhM9qMb8vCcQCNmDfVRPQG4JT9mSb0Jg8H7YjKGGQcFnLN323fj9jdnG59Kx6bg==
+  dependencies:
+    "@marijn/find-cluster-break" "^1.0.0"
+
+"@codemirror/state@^6.4.0":
   version "6.5.0"
   resolved "https://registry.yarnpkg.com/@codemirror/state/-/state-6.5.0.tgz#e98dde85620618651543152fe1c2483300a0ccc9"
   integrity sha512-MwBHVK60IiIHDcoMet78lxt6iw5gJOGSbNbOIVBHWVXIH4/Nq1+GQgLLGgI1KlnN86WDXsPudVaqYHKBIx7Eyw==
   dependencies:
     "@marijn/find-cluster-break" "^1.0.0"
 
-"@codemirror/view@^6.0.0", "@codemirror/view@^6.17.0", "@codemirror/view@^6.23.0", "@codemirror/view@^6.27.0", "@codemirror/view@^6.35.0":
-  version "6.36.0"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.0.tgz#4f4a24002a58ab4e478b5497cd8316f642d7a2f6"
-  integrity sha512-aMePDnkNNKE8dSOo1w689xYa3dijREbRajiRcgjSGc2TWN7MTdE+9pm5fxwdz0C4D9Di1VZomrn2M+xDe7tTVg==
+"@codemirror/view@^6.0.0", "@codemirror/view@^6.17.0", "@codemirror/view@^6.23.0", "@codemirror/view@^6.34.3", "@codemirror/view@^6.35.0":
+  version "6.36.2"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.2.tgz#aeb644e161440734ac5a153bf6e5b4a4355047be"
+  integrity sha512-DZ6ONbs8qdJK0fdN7AB82CgI6tYXf4HWk1wSVa0+9bhVznCuuvhQtX8bFBoy3dv8rZSQqUd8GvhVAcielcidrA==
   dependencies:
     "@codemirror/state" "^6.5.0"
     style-mod "^4.1.0"
     w3c-keyname "^2.2.4"
 
-"@codemirror/view@^6.34.3":
-  version "6.36.1"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.1.tgz#3c543b8fd72c96b30c4b2b1464d1ebce7e0c5c4b"
-  integrity sha512-miD1nyT4m4uopZaDdO2uXU/LLHliKNYL9kB1C1wJHrunHLm/rpkb5QVSokqgw9hFqEZakrdlb/VGWX8aYZTslQ==
+"@codemirror/view@^6.27.0":
+  version "6.36.0"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.0.tgz#4f4a24002a58ab4e478b5497cd8316f642d7a2f6"
+  integrity sha512-aMePDnkNNKE8dSOo1w689xYa3dijREbRajiRcgjSGc2TWN7MTdE+9pm5fxwdz0C4D9Di1VZomrn2M+xDe7tTVg==
   dependencies:
     "@codemirror/state" "^6.5.0"
     style-mod "^4.1.0"
@@ -389,9 +396,9 @@
     "@lezer/common" "^1.0.0"
 
 "@lezer/markdown@^1.0.0":
-  version "1.3.2"
-  resolved "https://registry.yarnpkg.com/@lezer/markdown/-/markdown-1.3.2.tgz#9d648b2a6cb47523f3d7ab494eee8c7be4f1ea9e"
-  integrity sha512-Wu7B6VnrKTbBEohqa63h5vxXjiC4pO5ZQJ/TDbhJxPQaaIoRD/6UVDhSDtVsCwVZV12vvN9KxuLL3ATMnlG0oQ==
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@lezer/markdown/-/markdown-1.4.0.tgz#404455209fbc65c029b865409efe4b6d36778ab5"
+  integrity sha512-mk4MYeq6ZQdxgsgRAe0G7kqPRV6Desajfa14TcHoGGXIqqj1/2ARN31VFpmrXDgvXiGBWpA7RXtv0he+UdTkGw==
   dependencies:
     "@lezer/common" "^1.0.0"
     "@lezer/highlight" "^1.0.0"
@@ -571,9 +578,9 @@
   integrity sha512-JyLbfyY3cPctq9sVdpcRWTcoUOoq3/MnGE1eP6eBNyMTHyBPcM9TPhOkgj+xkD1zW/884jfelB+wa70RT/AMxQ==
 
 "@tiptap/extension-color@^2.9.1":
-  version "2.11.0"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-color/-/extension-color-2.11.0.tgz#0008ac39d1e8b141d24591a30ce22c84e53fff27"
-  integrity sha512-9dO6zr7Zzz7vvJAct+IGHvYpV6pHcNyifLjmXNdJdKY118lnoeQfu1dsxiPGl9KXCv5bHgn4dUg3CsrnAlb9OQ==
+  version "2.11.2"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-color/-/extension-color-2.11.2.tgz#fbeab0af7b05cdef715cd0a0797e86025641f0c3"
+  integrity sha512-KUfASlEXrZeioBeSnpQWmCIiWtVaHDXJ+ZD0giSGSTQ4JwqdsIYZd8HpUrQjsfTkrqxW13zxQ1VklfvSPM8PQA==
 
 "@tiptap/extension-document@^2.9.1":
   version "2.10.3"
@@ -658,9 +665,9 @@
   integrity sha512-7cgAPpUNgO/3QdvCN9/6dWP6JQC641o8dSgkyv0XzVv0nxISck4SU+2eADRYQLyP2s4M3xuSEFhCCiKZleK2yA==
 
 "@tiptap/extension-text-style@^2.9.1":
-  version "2.11.0"
-  resolved "https://registry.yarnpkg.com/@tiptap/extension-text-style/-/extension-text-style-2.11.0.tgz#2acb6207fe6acdb5479384682846980be15caa80"
-  integrity sha512-vuA16wMZ6J3fboL7FObwV2f5uN9Vg0WYmqU7971vxzJyaRj9VE1eeH8Kh5fq4RgwDzc13MZGvZZV4HcE1R8o8A==
+  version "2.11.2"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-text-style/-/extension-text-style-2.11.2.tgz#5a7f068c251b39b07893110cbc546004944f880c"
+  integrity sha512-RAa7BTwEOJRZN3EB2lg03KXyu7JC/Ce96cerh3D0Fo78yrtKOArPaiVHoTki6ZEIG43ccHEit1PPjMYxivPPeg==
 
 "@tiptap/extension-text@^2.9.1":
   version "2.10.3"
@@ -1025,9 +1032,9 @@ esm-env@^1.2.1:
   integrity sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==
 
 esrap@^1.3.2:
-  version "1.3.2"
-  resolved "https://registry.yarnpkg.com/esrap/-/esrap-1.3.2.tgz#a0644603f7f8e9f068c77052d6e16cd4062b5f88"
-  integrity sha512-C4PXusxYhFT98GjLSmb20k9PREuUdporer50dhzGuJu9IJXktbMddVCMLAERl5dAHyAi73GWWCE4FVHGP1794g==
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/esrap/-/esrap-1.4.2.tgz#f9d19aaf59585abcb6f22213a47ad84d5df5a0d3"
+  integrity sha512-FhVlJzvTw7ZLxYZ7RyHwQCFE64dkkpzGNNnphaGCLwjqGk1SQcqzbgdx9FowPCktx6NOSHkzvcZ3vsvdH54YXA==
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.4.15"
 
@@ -1253,9 +1260,9 @@ phoenix_html@^4.1.1:
   integrity sha512-Nyij6LOiAxuoD6vWUpRfbgjg+Rpt0B/opFM3KjYRhL5faViXU9R30al2bQAEKu4K5E2NOZGUOd18cxABKetiJw==
 
 phoenix_live_view@^1.0.0-rc.7:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.1.tgz#cf388de6d38f072d8cca3970ea19d482d0aa22dd"
-  integrity sha512-EwQrVOKerC2rlULDgb9MrL27MfPeOrikkPd9QykbNFKoez3zfskudDL9ajE4BNGilaiQBacx14lCAJXP54Yz1w==
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.2.tgz#cf821b06caa78996bc4871efec6a6afeb1cfc224"
+  integrity sha512-LCytOz0Ud5dT464wIiMTztaMCAQBQdVA2UwWcurD9E75VAS5RBt/p+Lb6DON0qKrjSEjYqiTh6SwJq6zlaPNzw==
 
 picocolors@^0.2.1:
   version "0.2.1"
@@ -1593,9 +1600,9 @@ svelte-preprocess@^6.0.3:
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
 svelte@^5.2.4:
-  version "5.17.1"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.17.1.tgz#6a32c7ba37f2efa227b7fa17c42470dc37b13cd4"
-  integrity sha512-HitqD0XhU9OEytPuux/XYzxle4+7D8+fIb1tHbwMzOtBzDZZO+ESEuwMbahJ/3JoklfmRPB/Gzp74L87Qrxfpw==
+  version "5.17.3"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.17.3.tgz#cb17151f1e725d2c9b483ff8e9ca1a3dcfa59a72"
+  integrity sha512-eLgtpR2JiTgeuNQRCDcLx35Z7Lu9Qe09GPOz+gvtR9nmIZu5xgFd6oFiLGQlxLD0/u7xVyF5AUkjDVyFHe6Bvw==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
