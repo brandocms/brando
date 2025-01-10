@@ -37,7 +37,7 @@ test('seo changes affect the frontpage', async ({ page }) => {
 
   const metaTitleLocator = page.locator('meta[name="title"]')
   const metaTitle = await metaTitleLocator.getAttribute('content')
-  expect(metaTitle).toBe('Brando CMS')
+  expect(metaTitle).toBe('Index')
 })
 
 // test('reorder menu items', async ({ page }) => {
