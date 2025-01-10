@@ -10,7 +10,7 @@
   "scripts": {
     "playwright-install": "playwright install",
     "test": "playwright test",
-    "playwright:ui": "playwright test --ui",
+    "test:ui": "playwright test --ui",
     "playwright:gen": "playwright codegen"
   }
 }

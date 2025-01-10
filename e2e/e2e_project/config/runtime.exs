@@ -10,6 +10,10 @@ config :e2e_project, E2eProjectWeb.Endpoint,
   ]
 
 if config_env() not in [:test, :e2e] do
+
+  require Logger
+  Logger.error "==> Starting E2E Project in #{config_env()} environment"
+
   config :e2e_project, E2eProject.Repo,
     url: System.get_env("BRANDO_DB_URL"),
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")

@@ -13,6 +13,10 @@ defmodule E2eProject.MixProject do
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       test_paths: test_paths(Mix.env()),
+      preferred_cli_env: [
+        "test.e2e": :e2e,
+        "e2e.setup": :e2e
+      ],
       aliases: aliases(),
       deps: deps(),
       releases: [
@@ -48,7 +52,7 @@ defmodule E2eProject.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "1.7.14"},
+      {:phoenix, "1.7.18"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -62,7 +66,7 @@ defmodule E2eProject.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 1.0.0-rc", override: true},
+      {:phoenix_live_view, "~> 1.0.0", override: true},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
@@ -95,6 +99,13 @@ defmodule E2eProject.MixProject do
       "test.all": ["test.unit", "test.e2e"],
       "test.unit": &run_unit_tests/1,
       "test.e2e": &run_e2e_tests/1,
+      "e2e.setup": [
+        "deps.get",
+        "ecto.drop",
+        "ecto.create",
+        "ecto.migrate",
+        "run priv/repo/e2e_seeds.exs"
+      ],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end
