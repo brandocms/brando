@@ -25,6 +25,42 @@ defmodule Brando.Mixfile do
     ]
   end
 
+  # Specifies which paths to compile per environment
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  # Aliases are shortcut or tasks specific to the current project.
+  # For example, to create, migrate and run the seeds file at once:
+  #
+  #     $ mix ecto.setup
+  #
+  # See the documentation for `Mix` for more info on aliases.
+  defp aliases do
+    [
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "ecto.seed": ["run priv/repo/seeds.exs"]
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["Univers TM"],
+      licenses: ["MIT"],
+      files: [
+        "assets",
+        "config",
+        "lib",
+        "priv",
+        "test",
+        "mix.exs",
+        "README.md",
+        "CHANGELOG.md",
+        "UPGRADE.md"
+      ]
+    ]
+  end
+
   defp deps do
     [
       {:phoenix, "1.7.18"},
@@ -35,7 +71,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.12.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.1", override: true},
+      {:phoenix_live_view, "1.0.2", override: true},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -102,42 +138,6 @@ defmodule Brando.Mixfile do
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs, runtime: false},
       {:inch_ex, "~> 2.1.0-rc", only: :docs, runtime: false}
-    ]
-  end
-
-  defp package do
-    [
-      maintainers: ["Univers TM"],
-      licenses: ["MIT"],
-      files: [
-        "assets",
-        "config",
-        "lib",
-        "priv",
-        "test",
-        "mix.exs",
-        "README.md",
-        "CHANGELOG.md",
-        "UPGRADE.md"
-      ]
-    ]
-  end
-
-  # Specifies which paths to compile per environment
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
-
-  # Aliases are shortcut or tasks specific to the current project.
-  # For example, to create, migrate and run the seeds file at once:
-  #
-  #     $ mix ecto.setup
-  #
-  # See the documentation for `Mix` for more info on aliases.
-  defp aliases do
-    [
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "ecto.seed": ["run priv/repo/seeds.exs"]
     ]
   end
 end
