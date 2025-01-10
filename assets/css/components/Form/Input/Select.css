@@ -262,6 +262,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   border-radius: 6px;
   overflow: clip;
   border: 1px dashed #aaa;
+  color: var(--brando-color-dark);
   z-index: 2;
 
   &.hidden {
