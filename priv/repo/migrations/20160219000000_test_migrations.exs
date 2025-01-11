@@ -5,6 +5,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   import Brando.SoftDelete.Migration
 
   def up do
+    Oban.Migrations.up()
+
     create table(:images) do
       add :title, :text
       add :credits, :text
@@ -505,6 +507,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   end
 
   def down do
+    Oban.Migrations.down()
+
     drop table(:users)
     drop index(:users, [:email], unique: true)
 
