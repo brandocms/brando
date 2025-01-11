@@ -733,7 +733,7 @@ defmodule BrandoAdmin.Components.Form do
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
       has_alternates?:
-        schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?() && entry.id,
+        (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
       has_live_preview?: check_live_preview(schema)
     )
   end
