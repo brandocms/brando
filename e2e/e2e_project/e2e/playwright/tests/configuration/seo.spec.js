@@ -24,15 +24,25 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await page.locator('input[name="seo[redirects][0][code]"]').click()
   await page.locator('input[name="seo[redirects][0][code]"]').fill('301')
   // Add SEO image
-  // await page.getByRole('button', { name: 'Add image' }).click()
-  // await page
-  //   .locator('input[name="fallback_meta_image"]')
-  //   .setInputFiles('./fixtures/image.jpg')
-  // await page.getByRole('button', { name: 'Close' }).click()
-  // await expect(page.getByText('No image associated with')).toHaveCount(0)
-  // await page.waitForSelector('.image-wrapper-compact > .img-placeholder', {
-  //   state: 'detached',
-  // })
+  await page.getByRole('button', { name: 'Add image' }).click()
+  await page
+    .locator('input[name="fallback_meta_image"]')
+    .setInputFiles('./fixtures/image.jpg')
+  // Close drawer
+  await page.getByRole('button', { name: 'Close' }).click()
+  // Wait for the drawer to vanish or the form to be detached
+  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await page.evaluate(() => {
+    document
+      .querySelector('#image-drawer-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+
+  // Or run your syncLV function again (if you have a helper that
+  // ensures the LiveView socket is in sync)
+  await syncLV(page)
+
+  await expect(page.getByText('No image associated with')).toHaveCount(0)
   await page.getByTestId('submit').click()
   await syncLV(page)
   await expect(page).toHaveURL('/admin/config/seo')

@@ -43,21 +43,17 @@ async function addGlobalVar(
     .click()
   await page.getByRole('button', { name: '50%' }).click()
 
-  // Fill instructions if any
   if (instructions) {
     await page
       .locator(`#global_set_vars_${index}_instructions`)
       .fill(instructions)
   }
 
-  // Fill placeholder if any
   if (placeholder) {
     await page.getByLabel('Placeholder').fill(placeholder)
   }
 
-  // If we specifically want to clear the placeholder field:
   if (value) {
-    // Example of clearing out that field:
     await page.getByLabel(label).fill(value)
   }
 
