@@ -1,6 +1,6 @@
 .entry-template {
   @space margin-top 50px;
-  
+
   > h2 {
     @space margin-top 25px;
     @space margin-bottom 10px;
@@ -13,11 +13,11 @@
   > .block-editor {
     @space margin-top 35px;
   }
-
 }
 
 .block-editor {
   @row 2;
+  width: calc(100vw - var(--navigation-width) - var(--container-padding));
 
   .code {
     @column 10/16;
@@ -25,7 +25,7 @@
 
   .properties {
     @column 6/16;
-    
+
     .field-wrapper {
       @space margin-bottom 1;
     }
@@ -45,7 +45,9 @@
     .inner {
       @space padding-x 0.5rem;
 
-      input.text, label, textarea {
+      input.text,
+      label,
+      textarea {
         font-size: 15px;
       }
 
@@ -55,7 +57,7 @@
           padding: 1vw;
           border-radius: 10px;
           margin-bottom: 15px;
-          font-family: 'Mono';
+          font-family: "Mono";
 
           .col-var-toggle {
             display: flex;
@@ -68,20 +70,20 @@
             }
           }
 
-          .col-var-form {          
+          .col-var-form {
             @space margin-top 15px;
             &.hidden {
               display: none;
             }
           }
         }
-
-        
       }
 
-      .refs, .vars, .datasource {
+      .refs,
+      .vars,
+      .datasource {
         @space margin-top 20px;
-        
+
         .button-group {
           @space margin-top 20px;
         }
@@ -114,7 +116,7 @@
           li {
             @space padding-y 8px;
             @space padding-x 8px;
-            
+
             user-select: none;
             pointer-events: all;
 
