@@ -7,7 +7,7 @@
 * Imports
 */
 
-@import './includes/fonts.css';
+@import "./includes/fonts.css";
 @import "./includes/cookies.css";
 @import "./includes/modules.css";
 @import "./includes/navigation.css";
@@ -16,7 +16,11 @@
 @europa base;
 
 /* lazyload fix for chrome. sometimes IntersectionObserver doesn't pick up the image */
-img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
+img[data-src],
+img[data-srcset] {
+  min-height: 1px;
+  min-width: 100%;
+}
 
 .no-js body.unloaded {
   opacity: 1;
@@ -30,7 +34,8 @@ img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
   transform: none;
 }
 
-html, body {
+html,
+body {
   min-height: 100%;
 }
 
@@ -73,16 +78,18 @@ html.moonwalk {
       transform: translateY(0);
       opacity: 1;
       visibility: visible;
-      transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
-                   opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
+      transition:
+        transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+        opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
       transition-delay: 0.02s;
     }
   }
 
   [data-moonwalk="panner"] {
     transform: translateX(0);
-    transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
-                 opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
+    transition:
+      transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+      opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
     opacity: 0;
 
     &.moonwalked {
@@ -111,7 +118,9 @@ p {
   > a {
     @color fg link.regular.text;
     border-bottom: 1px solid theme(colors.link.regular.border);
-    transition: border-color 250ms ease-out, color 250ms ease-out;
+    transition:
+      border-color 250ms ease-out,
+      color 250ms ease-out;
     padding-bottom: 3px;
 
     &:hover {
@@ -128,7 +137,7 @@ p {
 
 .video-wrapper {
   &.video-embed {
-    padding-bottom: calc(var(--aspect-ratio, .5625) * 100%);
+    padding-bottom: calc(var(--aspect-ratio, 0.5625) * 100%);
 
     video {
       top: 0;
@@ -156,8 +165,35 @@ p {
   position: relative;
   opacity: 0;
   visibility: hidden;
+  aspect-ratio: var(--aspect-ratio-division);
+  background-color: #000000;
+  overflow: hidden;
+  transition: background-color 350ms ease;
+
+  &[data-play-button],
+  &[data-progress] {
+    video {
+      cursor: pointer;
+    }
+  }
+
+  &[data-can-play] {
+    video {
+      opacity: 1;
+    }
+  }
+
+  &[data-playing] {
+    background-color: transparent;
+  }
+
+  &[data-revealed] {
+    opacity: 1;
+    visibility: visible;
+  }
 
   [data-cover] {
+    pointer-events: none;
     position: absolute;
     top: 0;
     left: 0;
@@ -174,6 +210,7 @@ p {
         width: 100%;
 
         img {
+          aspect-ratio: var(--aspect-ratio-division);
           height: 100%;
           width: 100%;
           object-fit: cover;
@@ -182,9 +219,55 @@ p {
     }
   }
 
-  video {
+  .video-play-button-wrapper {
+    top: 50%;
+    left: 50%;
+    position: absolute;
+    color: white;
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    transition: opacity 350ms ease;
+    pointer-events: none;
+    cursor: pointer !important;
+    opacity: 0;
+
+    .video-play-button {
+      font-family: sans-serif;
+      border: none;
+      font-size: 150px;
+    }
+  }
+
+  &[data-can-play] {
+    .video-play-button-wrapper {
+      opacity: 1;
+    }
+  }
+
+  &[data-playing] {
+    .video-play-button-wrapper {
+      opacity: 0;
+    }
+
+    .progress-bar-container {
+      opacity: 1;
+    }
+  }
+
+  media-player {
+    height: 100%;
     width: 100%;
-    z-index: 3;
+    z-index: 1;
+    border-radius: 10px;
+    @space border-radius 6px $mobile;
+    aspect-ratio: var(--aspect-ratio-division);
+    overflow: hidden;
+    object-fit: contain;
+  }
+
+  video {
+    opacity: 0;
+    transition: opacity 550ms ease;
   }
 }
 
@@ -197,7 +280,7 @@ p {
 [data-ll-srcset] {
   opacity: 0;
   transition: opacity 350ms ease-in;
-  
+
   &[data-ll-srcset-initialized] {
     opacity: 1;
   }
@@ -209,7 +292,7 @@ p {
     &[data-ll-loaded] {
       transition: opacity 350ms ease-in 50ms;
       opacity: 1;
-      background-color: rgba(0,0,0,0);
+      background-color: rgba(0, 0, 0, 0);
     }
   }
 }
@@ -228,7 +311,7 @@ p {
   }
 
   50% {
-    opacity: .8;
+    opacity: 0.8;
   }
 }
 

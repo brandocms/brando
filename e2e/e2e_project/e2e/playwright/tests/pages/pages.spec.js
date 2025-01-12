@@ -70,17 +70,42 @@ test('creates a simple page', async ({ page }) => {
   ).not.toBeVisible()
   await expect(page.getByText('Module | Example module')).toBeVisible()
   const exampleBlock = page.locator('.entry-block').nth(2)
-  await exampleBlock.getByText('Text').click()
-  await exampleBlock.getByText('Text').fill('More text')
+  await exampleBlock
+    .locator('textarea')
+    .filter({ hasText: 'Heading' })
+    .fill('Another heading')
 
-  await exampleBlock.getByLabel('Rich-Text Editor').getByText('Text').click()
-  await page.keyboard.type(
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
+  const editor = exampleBlock.locator(
+    '.tiptap-wrapper [contenteditable="true"]'
   )
+  await editor.click()
+  await page.keyboard.down('ControlOrMeta')
+  await page.keyboard.press('A')
+  await page.keyboard.up('ControlOrMeta')
+  await page.keyboard.press('Backspace')
+
+  // Type new content
+  await page.keyboard.type('Hello from Playwright!')
+
+  const editorContent = await editor.innerText()
+  expect(editorContent).toBe('Hello from Playwright!')
+
+  await editor.evaluate((node) => {
+    node.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+
+  // wait for the editor to update
+  await page.waitForTimeout(1000)
 
   await syncLV(page)
   await page.getByTestId('submit').click()
+  await expect(
+    page.locator('div').filter({ hasText: 'Providing root block' }).first()
+  ).toBeVisible()
   await syncLV(page)
+  await expect(
+    page.locator('div').filter({ hasText: 'Providing root block' }).first()
+  ).not.toBeVisible()
 
   await expect(page).toHaveURL('/admin/pages')
   await expect(page.getByRole('link', { name: 'About →' })).toBeVisible()
@@ -91,4 +116,10 @@ test('creates a simple page', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'About Brando CMS' })
   ).toBeVisible()
+
+  await expect(
+    page.getByRole('heading', { name: 'Another heading' })
+  ).toBeVisible()
+
+  await expect(page.getByText('Hello from Playwright!')).toBeVisible()
 })
