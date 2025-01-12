@@ -8,14 +8,14 @@
 * BREAKING: Changed Meta dsl (moved to Spark). See full example in meta.md in guides.
   `meta_field` has been renamed to `field`
 
-* BREAKING: Run `mix brando.identifiers.sync` to create missing identifiers, 
+* BREAKING: Run `mix brando.identifiers.sync` to create missing identifiers,
   delete orphaned identifiers and update URLs
 
 * BREAKING: If you are updating to the new block system, resave your entries:
   `mix brando.entries.resave`
 
 * BREAKING: The new `gettext` update requires some changes to your code.
-  Replace all occurrences of 
+  Replace all occurrences of
       `import MyAppAdmin.Gettext`
   with
       `use Gettext, backend: MyAppAdmin.Gettext`
@@ -29,7 +29,7 @@
   any custom logic in your `Create` view, move this to your `Update` view and add a
   conditional check in your mount:
   ```
-  if socket.assigns.live_action == :create do 
+  if socket.assigns.live_action == :create do
     # ...
   end
   ```
@@ -52,7 +52,7 @@
   ```
 
 * BREAKING: Simplified `:entries` (for related entries) -- removed the indirection
-  of adding `_identifiers` to the assoc's name, so if you have 
+  of adding `_identifiers` to the assoc's name, so if you have
   ```
   relation :related_entries, :entries, constraints: [max_length: 3]
   ```
@@ -63,9 +63,9 @@
   case_ids = Enum.map(case.related_entries, &1.identifier.entry_id)
   related_cases = Cases.list_cases!(%{matches: %{ids: ids}})
 
-  # or 
+  # or
   identifiers = Enum.map(case.related_entries, &1.identifier)
-  Brando.Content.get_entries_from_identifiers(identifiers, [:categories, :cover])
+  Brando.Content.get_entries_from_identifiers(identifiers, %{preload: [:categories, :cover]})
   ```
 
 * BREAKING: `Brando.Villain.list_villains/0` is now `Brando.Villain.list_blocks/0`
@@ -76,7 +76,7 @@
       relation :blocks, :has_many, module: :blocks
     end
 
-* BREAKING: added `url` field to identifiers. Go through your blueprints and ensure 
+* BREAKING: added `url` field to identifiers. Go through your blueprints and ensure
   that `persist_identifier false` is set for all schemas you don't want to create identifiers for.
 
   Run `mix brando.identifiers.sync` to create missing identifiers, delete orphaned identifiers and update URLs
@@ -125,7 +125,7 @@
   ```
 
 * BREAKING: If you upgrade to Vite 3, they suddenly output `admin/main.css` instead of `admin/admin.css`.
-  To fix, edit your `assets/backend/vite.config.js` and replace `manifest: false` 
+  To fix, edit your `assets/backend/vite.config.js` and replace `manifest: false`
   with `manifest: 'admin_manifest.json`. You can also add in a hash since we now use a manifest:
   ```
   entryFileNames: `assets/admin/admin-[hash].js`,
@@ -141,7 +141,7 @@
   - Upgrade `assets/backend` europacss to `> 0.12`
 
 * BREAKING: Updated Sentry to 10.x. Add to your `Dockerfile` before mix release:
-  
+
     RUN mix sentry.package_source_code
     RUN mix release
 
@@ -156,7 +156,7 @@
       pubsub_server: MyApp.PubSub,
       presence: __MODULE__
 
-* To enable presence in your update forms, add `presences={@presences}` to your 
+* To enable presence in your update forms, add `presences={@presences}` to your
   `Form` live components in update views:
 
   ```
@@ -180,10 +180,10 @@
 * BREAKING: Dropped `use Phoenix.HTML` so your `error_tag` in `error_helpers.ex` won't
   work anymore. Check out https://github.com/phoenixframework/phoenix/blob/main/installer/templates/phx_web/components/core_components.ex for how to implement errors in the frontend.
 
-* BREAKING: If updating frontend to Vite 5, you need to explicitly set the manifest path. 
+* BREAKING: If updating frontend to Vite 5, you need to explicitly set the manifest path.
   So change `manifest: true`, to `manifest: 'manifest.json'`
 
-* BREAKING: Rewritten `:entries` (related entries). Now stores identifiers in a table and 
+* BREAKING: Rewritten `:entries` (related entries). Now stores identifiers in a table and
   references this table for related entries.
 
   Blueprint setup is same as before:
@@ -198,12 +198,12 @@
         filter_language: true
 
 
-* BREAKING: Datasources — *selection* list callback should return identifiers 
-  instead of entries, and the select callback itself receives identifiers as the 
+* BREAKING: Datasources — *selection* list callback should return identifiers
+  instead of entries, and the select callback itself receives identifiers as the
   sole argument:
 
   ```elixir
-  selection :featured, 
+  selection :featured,
     fn schema, language, _vars ->
       Brando.Content.list_identifiers(schema, %{language: language})
     end,
@@ -219,16 +219,16 @@
     end
   ```
 
-* BREAKING: Updated `mix brando.upgrade` script. Copy the new script into 
-  your application: 
-  
+* BREAKING: Updated `mix brando.upgrade` script. Copy the new script into
+  your application:
+
   ```zsh
   $ cp deps/brando/priv/templates/brando.install/lib/mix/brando.upgrade.ex lib/mix/brando.upgrade.ex
   ```
 
 * BREAKING: Deprecated `:many_to_many` for now. This might return later if
   there's a usecase for it. Right now it is replaced by `:has_many` `through`
-  associations instead. 
+  associations instead.
 
   Before:
 
@@ -256,7 +256,7 @@
   ```
 
   If you use the `ArticleContributor` schema for a multi select, you must
-  add `@allow_mark_as_deleted true` to this schema. Also you need to add a 
+  add `@allow_mark_as_deleted true` to this schema. Also you need to add a
   `relation_key` to the input declaration:
 
   ```elixir
@@ -266,7 +266,7 @@
     resetable: true,
     label: t("Contributors")
   ```
-* BREAKING: `ErrorView` is now `ErrorHTML`. If you are using Brando's error 
+* BREAKING: `ErrorView` is now `ErrorHTML`. If you are using Brando's error
   templates, you must swap your endpoint's `render_errors` key with:
   ```elixir
   config :my_app, MyApp.Endpoint,
@@ -289,15 +289,15 @@
 
   This means you should remove these from your listings (unless you want them doubled)
 
-* BREAKING: `@identity` now refers to the current language identity, instead 
+* BREAKING: `@identity` now refers to the current language identity, instead
   of a map of all languages
-* BREAKING: Remove datasource block and introduce module blocks with 
-  datasource instead. Run `mix brando.upgrade && mix ecto.migrate` 
+* BREAKING: Remove datasource block and introduce module blocks with
+  datasource instead. Run `mix brando.upgrade && mix ecto.migrate`
   to convert your existing datasource blocks to module blocks.
 * BREAKING: Admin now reads JS and CSS from `priv/static/admin_manifest.json`.
   Make sure to set this in `assets/backend/vite.config.js` to:
   `manifest: 'admin_manifest.json`
-* BREAKING: CDN config is now per asset module, so instead of 
+* BREAKING: CDN config is now per asset module, so instead of
   ```elixir
   config :brando, Brando.CDN, #...
   ```
@@ -321,15 +321,15 @@
   ```
 
   You can use a prefab'ed MyAppWeb setup by replacing your `use MyAppWeb, :controller` (etc)
-  with `use BrandoWeb, :controller` (etc). You can also use 
+  with `use BrandoWeb, :controller` (etc). You can also use
 
   `use BrandoWeb, :legacy_controller`
 
   for utilizing the new layouts setup, but use regular template views.
 
-  Convert your layout templates to heex, rename the layout view to 
+  Convert your layout templates to heex, rename the layout view to
   `MyAppWeb.Layouts`, move it to `my_app_web/components/layouts.ex` and add
-  
+
   ```elixir
   use BrandoWeb, :html
 
@@ -367,7 +367,7 @@
   # or
   template fn e -> {MyAppWeb.ProjectView, e.template} end
   ```
-  
+
 * Use Finch for emails:
   - Add `finch` as a dep to your `mix.exs`:
   ```elixir
@@ -403,13 +403,13 @@
 * Add alternate entries
 * Add default actions to listing rows: `edit`, `delete`, `duplicate`
 * Add `select` var type
-* Add `video_file_options/1` callback to Villain parser. Return a kw list of 
+* Add `video_file_options/1` callback to Villain parser. Return a kw list of
   options you want to use for video blocks.
 * Add split dropdown button to form tabs for more advanced save options
 * Update revisions when saving entry without redirecting
 * Add scheduled publishing for revisions
 * Fix max width for #content
-* Presence in update forms. Add `presences={@presences}` to your 
+* Presence in update forms. Add `presences={@presences}` to your
   `my_schema_update_live.ex` live view
 * Automatically add uploaded gallery images to gallery
 * Add `alert` and `after_save` to forms:
@@ -450,7 +450,7 @@ end
 * Set img `data-src` as transparent svg when we have `dominant_color`/`svg` placeholder
 * Show live preview as shrinked webpage in iframe
 * Reapply module ref on update
-* Support showing entry URL for slug field with `show_url: true`. 
+* Support showing entry URL for slug field with `show_url: true`.
 * Improve pagination limits for listings
 
 
@@ -458,7 +458,7 @@ end
 
 * First LV version
 * Config: Add `admin_module: MyAppAdmin` to your `config/brando.exs`
-* `Trait.changeset_mutator/4` is now `Trait.changeset_mutator/5`. It receives 
+* `Trait.changeset_mutator/4` is now `Trait.changeset_mutator/5`. It receives
   some additional opts from changeset, that normally would not be touched.
 * Page properties are now page vars. `get_prop` -> `get_var`
 * `render_sections_css` -> `render_palettes_css`
