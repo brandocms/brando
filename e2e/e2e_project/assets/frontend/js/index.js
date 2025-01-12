@@ -9,6 +9,7 @@
 import {
   Application,
   Cookies,
+  Dom,
   Events,
   Lazyload,
   Links,
@@ -16,12 +17,13 @@ import {
   Moonwalk,
   FixedHeader,
   Typography,
-  gsap
 } from '@brandocms/jupiter'
 
 /**
  * APP SPECIFIC MODULE IMPORTS
  */
+
+import SmartVideo from './modules/SmarterVideo'
 
 /**
  * CONFIG IMPORTS
@@ -36,16 +38,23 @@ import '../css/app.css'
 const app = new Application({
   breakpointConfig: configureBreakpoints,
   faderOpts: {
-    fadeIn: callback => {
+    fadeIn: (callback) => {
       document.body.classList.remove('unloaded')
       callback()
-    }
-  }
+    },
+  },
 })
 
 app.registerCallback(Events.APPLICATION_READY, () => {
   app.links = new Links(app)
   app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
+
+  app.smartVideos = []
+
+  Dom.all('[data-smart-video]').forEach((v) => {
+    const video = new SmartVideo(app, v)
+    app.smartVideos.push(video)
+  })
 })
 
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
@@ -62,7 +71,9 @@ app.registerCallback(Events.APPLICATION_REVEALED, () => {
 
 // trigger ready state
 if (
-  document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading'
+  document.attachEvent
+    ? document.readyState === 'complete'
+    : document.readyState !== 'loading'
 ) {
   app.initialize()
 } else {

@@ -10,6 +10,7 @@ config :e2e_project, E2eProject.Repo,
   password: "postgres",
   hostname: "localhost",
   database: "e2e_project_test",
+  ownership_timeout: 1_000_000,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
@@ -27,7 +28,7 @@ config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
 
 # Print only warnings and errors during test
-config :logger, level: :warning
+config :logger, level: :debug
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

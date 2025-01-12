@@ -241,3 +241,133 @@ for lang <- languages do
 
   E2eProject.Repo.insert!(footer_fragment)
 end
+
+# Create modules
+
+%Brando.Content.Module{
+   type: :liquid,
+   name: %{"en" => "Heading", "no" => "Overskrift"},
+   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
+   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
+   class: "header",
+   code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+   svg: nil,
+   multi: false,
+   datasource: false,
+   datasource_module: nil,
+   datasource_type: nil,
+   datasource_query: nil,
+   sequence: 0,
+   deleted_at: nil,
+   table_template_id: nil,
+   table_template: nil,
+   parent_id: nil,
+   refs: [
+     %Brando.Content.Module.Ref{
+       name: "h2",
+       description: nil,
+       data: %Brando.Villain.Blocks.HeaderBlock{
+         uid: "23JQYQHHdkMIXRzR7J2SQU",
+         type: "header",
+         active: true,
+         collapsed: false,
+         marked_as_deleted: false,
+         data: %Brando.Villain.Blocks.HeaderBlock.Data{
+           class: nil,
+           text: "Text",
+           level: 2,
+           link: nil,
+           placeholder: nil,
+           id: nil,
+           marked_as_deleted: false
+         }
+       },
+       marked_as_deleted: false
+     }
+   ],
+   vars: []
+ } |> E2eProject.Repo.insert!()
+
+ %Brando.Content.Module{
+   type: :liquid,
+   name: %{"en" => "Single Asset", "no" => "Enkelt bilde/video"},
+   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
+   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
+   class: "asset",
+   code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+   svg: nil,
+   multi: false,
+   datasource: false,
+   datasource_module: nil,
+   datasource_type: nil,
+   datasource_query: nil,
+   sequence: 4,
+   deleted_at: nil,
+   table_template_id: nil,
+   table_template: nil,
+   parent_id: nil,
+   refs: [
+     %Brando.Content.Module.Ref{
+       name: "media",
+       description: nil,
+       data: %Brando.Villain.Blocks.MediaBlock{
+         uid: "23JQyqc9rQfBRqDcRLEn77",
+         type: "media",
+         active: true,
+         collapsed: false,
+         marked_as_deleted: false,
+         data: %Brando.Villain.Blocks.MediaBlock.Data{
+           available_blocks: ["picture", "video"],
+           marked_as_deleted: false,
+           template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
+             picture_class: nil,
+             img_class: nil,
+             link: nil,
+             srcset: nil,
+             media_queries: nil,
+             title: nil,
+             credits: nil,
+             formats: [:original, :webp],
+             alt: nil,
+             path: nil,
+             width: nil,
+             height: nil,
+             sizes: nil,
+             cdn: false,
+             lazyload: true,
+             moonwalk: true,
+             dominant_color: nil,
+             placeholder: :dominant_color_faded,
+             config_target: nil,
+             fetchpriority: :auto,
+             marked_as_deleted: false,
+             focal: nil
+           },
+           template_video: %Brando.Villain.Blocks.VideoBlock.Data{
+             url: nil,
+             source: nil,
+             remote_id: nil,
+             poster: nil,
+             width: nil,
+             height: nil,
+             autoplay: true,
+             opacity: 0,
+             preload: true,
+             play_button: false,
+             controls: false,
+             cover: "false",
+             thumbnail_url: nil,
+             title: nil,
+             aspect_ratio: nil,
+             marked_as_deleted: false,
+             cover_image: nil
+           },
+           template_gallery: nil,
+           template_svg: nil
+         }
+       },
+       marked_as_deleted: false
+     }
+   ],
+   vars: [],
+ } |> E2eProject.Repo.insert!()

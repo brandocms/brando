@@ -20,7 +20,7 @@ module.exports = defineConfig({
     url: 'http://localhost:4444/',
     stdout: 'pipe',
     stderr: 'pipe',
-    reuseExistingServer: !process.env.CI
+    reuseExistingServer: !process.env.CI,
   },
   testDir: './tests',
   /* Run tests in files in parallel */
@@ -36,16 +36,16 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     baseURL: 'http://localhost:4444/',
-    ignoreHTTPSErrors: true
+    ignoreHTTPSErrors: true,
   },
-  // globalTeardown: require.resolve('./teardown'),
+  globalTeardown: require.resolve('./teardown'),
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
-    }
+    // {
+    //   name: 'chromium',
+    //   use: { ...devices['Desktop Chrome'] },
+    // },
 
     // {
     //   name: 'firefox',
@@ -72,9 +72,9 @@ module.exports = defineConfig({
     //   name: 'Microsoft Edge',
     //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
     // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ]
+    {
+      name: 'Google Chrome',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+  ],
 })

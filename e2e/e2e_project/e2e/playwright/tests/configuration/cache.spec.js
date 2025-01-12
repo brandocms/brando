@@ -18,5 +18,7 @@ test('has cache and clears cache', async ({ page }) => {
   await expect(page.locator('td').getByText('#1')).toBeVisible()
 
   await page.getByRole('button', { name: 'Empty all caches' }).click()
-  await expect(page.locator('td').getByText('pages')).not.toBeVisible()
+  await expect(
+    page.getByRole('cell', { name: 'pages', exact: true })
+  ).not.toBeVisible()
 })

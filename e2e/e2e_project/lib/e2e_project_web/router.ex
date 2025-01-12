@@ -10,6 +10,7 @@ defmodule E2eProjectWeb.Router do
   @sql_sandbox Application.compile_env(:e2e_project, :sql_sandbox) || false
 
   pipeline :browser do
+    plug :halt
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
@@ -38,6 +39,14 @@ defmodule E2eProjectWeb.Router do
   pipeline :basic_httpauth do
     plug :basic_auth, username: "admin", password: "JM6wBszRWc"
   end
+
+  defp halt(%{request_path: "/halt"}, _opts) do
+    send(:e2e_helper, :halt)
+    # this ensure playwright waits until the server force stops
+    Process.sleep(:infinity)
+  end
+
+  defp halt(conn, _opts), do: conn
 
   if @sql_sandbox do
     forward "/__e2e", Brando.Plug.E2ETest

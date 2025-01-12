@@ -1,11 +1,6 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
-//
-// TODO:
-// - Add test for SEO image, currently fails..
-//
-
 test('seo changes affect the frontpage', async ({ page }) => {
   await page.goto('/admin')
   await page.getByText('Configuration').click()
