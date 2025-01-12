@@ -96,4 +96,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
     {:noreply, assign_entry_id(socket)}
   end
+
+  def handle_info({:EXIT, _port, :normal}, socket) do
+    {:noreply, socket}
+  end
 end
