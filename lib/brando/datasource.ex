@@ -21,7 +21,7 @@ defmodule Brando.Datasource do
           get fn identifiers ->
             Brando.Content.get_entries_from_identifiers(
               identifiers,
-              [:categories, :cover, :palette]
+              %{preload: [:categories, :cover, :palette]}
             )
           end
         end
@@ -107,7 +107,7 @@ defmodule Brando.Datasource do
     fn identifiers ->
       Brando.Content.get_entries_from_identifiers(
         identifiers,
-        [:categories, :cover, :palette]
+        %{preload: [:categories, :cover, :palette]}
       )
     end
   end
@@ -136,7 +136,7 @@ defmodule Brando.Datasource do
           get fn identifiers ->
             Brando.Content.get_entries_from_identifiers(
               identifiers,
-              [:categories, :cover, :palette]
+              %{preload: [:categories, :cover, :palette]}
             )
           end
         end

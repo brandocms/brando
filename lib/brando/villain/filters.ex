@@ -1166,7 +1166,7 @@ defmodule Brando.Villain.Filters do
     {:ok, [entry]} =
       Brando.Content.get_entries_from_identifiers(
         [identifier],
-        preloads
+        %{preload: preloads}
       )
 
     entry
