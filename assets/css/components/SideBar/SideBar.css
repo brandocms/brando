@@ -2,4 +2,19 @@
   width: var(--navigation-width);
   flex-grow: 1;
   flex-shrink: 0;
+  transition:
+    width 0.4s,
+    display 0.4s allow-discrete;
+
+  &.hidden {
+    width: 0;
+    display: block;
+    transition: width 0.4s;
+  }
 }
+
+/* @starting-style {
+  [data-phx-main] .sidebar.hidden {
+    width: var(--navigation-width);
+  }
+} */
