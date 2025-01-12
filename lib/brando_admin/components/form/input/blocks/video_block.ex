@@ -335,7 +335,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                         </div>
                       </div>
                       <button
-                        class="tiny"
+                        class="tiny mt-1"
                         type="button"
                         phx-click={show_modal("#block-#{@uid}_config")}
                       >
