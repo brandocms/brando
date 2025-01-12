@@ -3233,6 +3233,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :fit_content, :boolean, default: false
   attr :uid, :string
   attr :id_prefix, :string
+  attr :skip_presence, :boolean, default: false
   slot :meta
   slot :header
 
@@ -3278,10 +3279,16 @@ defmodule BrandoAdmin.Components.Form do
         <label
           for={"#{@f_id}"}
           class={["control-label", @failed && "failed"]}
-          data-field-presence={@f_name}
+          data-field-presence={!@skip_presence && @f_name}
         >
           <span>{@label}</span>
-          <div class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
+          <div
+            :if={!@skip_presence}
+            class="field-presence"
+            phx-update="ignore"
+            id={"#{@f_id}-field-presence"}
+          >
+          </div>
         </label>
         <.error_tag
           :if={@field}
@@ -3791,6 +3798,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :class, :any, default: nil
   attr :click, :any, default: nil
   attr :popover, :string, default: nil
+  attr :skip_presence, :boolean, default: false
   slot :inner_block
 
   def label(assigns) do
@@ -3818,7 +3826,13 @@ defmodule BrandoAdmin.Components.Form do
       data-field-presence={@f_name}
     >
       {render_slot(@inner_block)}
-      <div class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
+      <div
+        :if={!@skip_presence}
+        class="field-presence"
+        phx-update="ignore"
+        id={"#{@f_id}-field-presence"}
+      >
+      </div>
     </label>
     """
   end

@@ -2571,7 +2571,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       </Content.modal>
 
       <Input.input type={:hidden} field={@block[:uid]} />
-      <Input.input type={:hidden} field={@block[:type]} />
 
       <div
         id={"block-#{@uid}"}
@@ -2988,10 +2987,10 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
         <% end %>
       </div>
-      <div class="block-content" id={"block-#{@uid}-block-content"}>
+      <div class="block-content" id={"block-#{@uid}-block-toolbar-content"}>
         {render_slot(@inner_block)}
       </div>
-      <div class="block-actions" id={"block-#{@uid}-block-actions"}>
+      <div class="block-actions" id={"block-#{@uid}-block-toolbar-actions"}>
         <.handle :if={!@is_ref?} />
         <div
           :if={@instructions}

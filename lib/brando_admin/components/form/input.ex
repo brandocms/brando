@@ -498,9 +498,19 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :value, :any
+  attr :id_prefix, :string, default: nil
+
+  def hidden(%{value: _value} = assigns) do
+    ~H"""
+    <.input type={:hidden} field={@field} value={@value} id_prefix={@id_prefix} />
+    """
+  end
+
   def hidden(assigns) do
     ~H"""
-    <.input type={:hidden} field={@field} />
+    <.input type={:hidden} field={@field} id_prefix={@id_prefix} />
     """
   end
 
@@ -628,6 +638,10 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   defp process_input_id(%{id: nil} = assigns), do: assign(assigns, :id, assigns.field.id)
   defp process_input_id(%{id: ""} = assigns), do: assign(assigns, :id, assigns.field.id)
+
+  defp process_input_id(%{id: id, id_prefix: id_prefix} = assigns),
+    do: assign(assigns, :id, "f-#{id_prefix}-#{id}")
+
   defp process_input_id(%{id: id} = assigns), do: assign(assigns, :id, id)
   defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
 
@@ -965,7 +979,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       left_justify_meta
     >
-      <Form.label field={@field} class={["switch", @compact && "small"]}>
+      <Form.label field={@field} class={["switch", @compact && "small"]} skip_presence>
         <%= if @inner_block do %>
           {render_slot(@inner_block)}
         <% else %>

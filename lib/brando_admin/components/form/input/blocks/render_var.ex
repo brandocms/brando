@@ -329,6 +329,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     label="Options"
                     instructions=""
                     left_justify_meta
+                    skip_presence
                   >
                     <Form.label field={@var[:options]}>
                       <.inputs_for :let={opt} field={@var[:options]}>
@@ -513,8 +514,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       />
 
       <.inputs_for :let={opt} field={@var[:options]}>
-        <Input.hidden field={opt[:label]} />
-        <Input.hidden field={opt[:value]} />
+        <Input.hidden field={opt[:label]} id_prefix="hidden_opts" />
+        <Input.hidden field={opt[:value]} id_prefix="hidden_opts" />
       </.inputs_for>
     </div>
     """
@@ -523,7 +524,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :image} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:image_id]} label={@label} instructions={@instructions}>
+      <Form.field_base
+        field={@var[:image_id]}
+        label={@label}
+        instructions={@instructions}
+        skip_presence
+      >
         <div class="input-image">
           <Input.Image.image_preview
             image={@image}
@@ -552,7 +558,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :file} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:file_id]} label={@label} instructions={@instructions}>
+      <Form.field_base
+        field={@var[:file_id]}
+        label={@label}
+        instructions={@instructions}
+        skip_presence
+      >
         <div class="input-file">
           <Input.File.file_preview
             publish
@@ -581,7 +592,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :link} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions}>
+      <Form.field_base
+        field={@var[:identifier_id]}
+        label={@label}
+        instructions={@instructions}
+        skip_presence
+      >
         <div class="input-link">
           <.link_preview
             var={@var}
