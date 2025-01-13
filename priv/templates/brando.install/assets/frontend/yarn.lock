@@ -1215,10 +1215,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.53.0":
-  version "3.53.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.53.0.tgz#569011ee58b231e6b449fe9c8739f84e4c12f413"
-  integrity sha512-n4ArfJ1CHlax9hVLFiQYQtoGk0/Z+EM2Y2UGHxe0VUwOypRhDciWpjHIvw+2K9/rdqN7wjvBJHUTFr6CVyPnGw==
+"@brandocms/jupiter@^3.54.1":
+  version "3.54.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.1.tgz#c96169bd53fe516431ac15feb291249813b1bb52"
+  integrity sha512-n6Z+vtulokWXfYQ+KtTJ6VXjCpmItDZh60TtCVZGSubTcklOpN0WvLPla8Nv9Z9OapXfh07MdW61y7DKYg5aDA==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
