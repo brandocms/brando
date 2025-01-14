@@ -35,5 +35,6 @@ defmodule Brando.Blueprint.Meta.Dsl do
   @moduledoc false
   use Spark.Dsl.Extension,
     sections: [@root],
-    transformers: []
+    transformers: [],
+    imports: [Brando.Blueprint.Meta.Legacy]
 end
