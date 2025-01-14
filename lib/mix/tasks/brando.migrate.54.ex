@@ -679,7 +679,7 @@ if Code.ensure_loaded?(Igniter) do
 
       Then run the script
 
-        ./scripts/sync_gettext.sh priv/gettext/no/LC_MESSAGES
+        ./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES
 
       """)
     end
