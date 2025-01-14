@@ -1,5 +1,40 @@
 ## 0.54.0
 
+Before running the migration script, you must fix some `form` syntax in your blueprints.
+If you're passing parameters to the `form` macro, they must be moved to their own functions.
+For instance, if you have:
+
+```elixir
+form default_params: %{"status" => "draft"} do
+  # ...
+end
+```
+
+You must change this to:
+
+```elixir
+form do
+  default_params %{"status" => "draft"}
+  # ...
+end
+```
+
+Then pull down migration changes with `mix brando.upgrade`.
+
+Commit all changes before running the migration script with `mix brando.migrate54`
+
+Then run migrations with `mix ecto.migrate`
+
+Finally resave entries with `mix brando.entries.resave`, sync identifiers with `mix brando.identifiers.sync`
+then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
+if your translations are in `priv/gettext/backend/no/LC_MESSAGES`.
+
+* BREAKING: Add `config :brando, repo_module: MyApp.Repo` to your `config/brando.exs`
+
+* BREAKING: If you upgrade to Vite 5+, they have moved the default manifest directory to `.vite`.
+  To fix, edit your `assets/front/vite.config.js` and replace `manifest: true`
+  with `manifest: 'manifest.json`.
+
 * BREAKING: Changed Listings dsl (moved to Spark). See full example in listings.md in guides.
 
 * BREAKING: Changed JSON-LD dsl (moved to Spark). See full example in jsonld.md in guides.
