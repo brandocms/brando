@@ -15,6 +15,7 @@ config :brando,
   app_module: <%= application_module %>,
   web_module: <%= application_module %>Web,
   admin_module: <%= application_module %>Admin,
+  repo_module: <%= application_module %>.Repo,
 
   # cron_jobs: [
   #   {"0 0 * * *", <%= application_module %>.Worker.RefreshFrontpage}
