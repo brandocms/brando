@@ -359,7 +359,7 @@ defmodule Brando.Blueprint.Dsl do
           @all_assets,
           @castable_relations,
           @castable_assets,
-          @required_attrs,
+          @all_required_attrs,
           @optional_attrs,
           opts
         )

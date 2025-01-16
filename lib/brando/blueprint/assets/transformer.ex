@@ -25,10 +25,13 @@ defmodule Brando.Blueprint.Assets.Transformer do
     {required_assets, optional_assets} =
       Enum.reduce(entities, {[], []}, fn
         %{name: name, opts: opts}, {required_assets, optional_assets} ->
+          # add _id to name
+          relation = String.to_atom("#{name}_id")
+
           if Map.get(opts, :required) do
-            {[name | required_assets], optional_assets}
+            {[relation | required_assets], optional_assets}
           else
-            {required_assets, [name | optional_assets]}
+            {required_assets, [relation | optional_assets]}
           end
       end)
 

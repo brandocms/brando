@@ -83,4 +83,9 @@ defmodule Brando.Blueprint.RelationsTest do
                 unique: true
               }}
   end
+
+  test "required_attrs" do
+    required_attrs = Brando.BlueprintTest.P1.__required_attrs__()
+    assert required_attrs == [:title, :location_id, :creator_id, :image_id]
+  end
 end

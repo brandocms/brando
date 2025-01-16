@@ -488,20 +488,6 @@ defmodule Brando.Blueprint do
     end
   end
 
-  def get_required_relations(rels) do
-    rels
-    |> Enum.filter(&Map.get(&1.opts, :required))
-    |> Enum.filter(&(&1.type == :belongs_to))
-    |> Enum.map(&get_relation_key/1)
-  end
-
-  def get_required_assets(assets) do
-    assets
-    |> Enum.filter(&Map.get(&1.opts, :required))
-    |> Enum.filter(&(&1.type != :gallery))
-    |> Enum.map(&get_relation_key/1)
-  end
-
   def get_castable_relation_fields(rels) do
     rels
     |> Enum.filter(&(&1.type == :belongs_to))
@@ -646,13 +632,9 @@ defmodule Brando.Blueprint do
       |> maybe_mark_for_deletion(module)
       |> maybe_sequence(module, sequence)
 
-    :telemetry.execute(
-      [:brando, :run_changeset],
-      %{
-        duration: System.monotonic_time() - start
-      },
-      %{schema: changeset.data.__struct__}
-    )
+    :telemetry.execute([:brando, :run_changeset], %{duration: System.monotonic_time() - start}, %{
+      schema: changeset.data.__struct__
+    })
 
     changeset
   end

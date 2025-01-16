@@ -30,6 +30,22 @@ defmodule Brando.BlueprintTest.P1 do
     end
   end
 
+  defmodule Location do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Projects",
+      schema: "Location",
+      singular: "location",
+      plural: "locations",
+      gettext_module: Brando.Gettext
+
+    trait Brando.Trait.Sequenced
+
+    attributes do
+      attribute :name, :text
+    end
+  end
+
   defmodule ProjectContributor do
     use Brando.Blueprint,
       application: "Brando",
@@ -57,13 +73,17 @@ defmodule Brando.BlueprintTest.P1 do
     plural: "projects",
     gettext_module: Brando.Gettext
 
+  trait Brando.Trait.Creator
+
   attributes do
-    attribute :title, :string, unique: true
+    attribute :title, :string, unique: true, required: true
+  end
+
+  assets do
+    asset :image, :image, required: true, cfg: %{}
   end
 
   relations do
-    relation :creator, :belongs_to, module: Brando.Users.User
-
     relation :project_contributors, :has_many,
       module: __MODULE__.ProjectContributor,
       preload_order: [asc: :sequence],
@@ -77,5 +97,6 @@ defmodule Brando.BlueprintTest.P1 do
 
     relation :property, :embeds_one, module: __MODULE__.Property
     relation :properties, :embeds_many, module: __MODULE__.Property
+    relation :location, :belongs_to, module: __MODULE__.Location, cast: true, required: true
   end
 end
