@@ -111,7 +111,7 @@ defmodule Brando.Navigation.Menu do
 
   def listing_row(assigns) do
     ~H"""
-    <.update_link entry={@entry} columns={9}>
+    <.update_link entry={@entry} columns={10}>
       {@entry.title}
       <:outside>
         <br />
