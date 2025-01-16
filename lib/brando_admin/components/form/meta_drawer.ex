@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           id={"#{@form.id}-meta-image"}
           field={@form[:meta_image]}
           parent_uploads={@parent_uploads}
+          current_user={@current_user}
           label={gettext("META image")}
         />
       </div>

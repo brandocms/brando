@@ -1133,6 +1133,7 @@ defmodule BrandoAdmin.Components.Form do
               id={"#{@id}-meta-drawer"}
               form={@form}
               parent_uploads={@uploads}
+              current_user={@current_user}
               close={toggle_drawer("##{@id}-meta-drawer")}
             />
 
