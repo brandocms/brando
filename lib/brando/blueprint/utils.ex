@@ -117,7 +117,10 @@ defmodule Brando.Blueprint.Utils do
   end
 
   @doc """
-  Processes a list of values and returns the first non-nil value. If a value is a tuple with `:strip_tags` as the first element, it sanitizes the value by stripping HTML tags.
+  Processes a list of values and returns the first non-nil value.
+  If a value is a tuple with `:strip_tags` as the first element, it sanitizes the value by stripping HTML tags.
+  If a value is a tuple with `:strip_tags_and_truncate` as the first element, it sanitizes the value by stripping
+  HTML tags and truncating it.
 
   ## Parameters
 
@@ -145,6 +148,12 @@ defmodule Brando.Blueprint.Utils do
           _ -> {:halt, HtmlSanitizeEx.strip_tags(value)}
         end
 
+      {:strip_tags_and_truncate, value}, _ ->
+        case value do
+          nil -> {:cont, nil}
+          _ -> {:halt, value |> HtmlSanitizeEx.strip_tags() |> Brando.Utils.truncate(160)}
+        end
+
       nil, _ ->
         {:cont, nil}
 
@@ -161,6 +170,14 @@ defmodule Brando.Blueprint.Utils do
         case Utils.try_path(data, keys) do
           nil -> {:cont, nil}
           val -> {:halt, HtmlSanitizeEx.strip_tags(val)}
+        end
+
+      {:strip_tags_and_truncate, key}, _ ->
+        keys = (is_list(key) && key) || List.wrap(key)
+
+        case Utils.try_path(data, keys) do
+          nil -> {:cont, nil}
+          value -> {:halt, value |> HtmlSanitizeEx.strip_tags() |> Brando.Utils.truncate(160)}
         end
 
       key, _ ->
