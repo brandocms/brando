@@ -618,8 +618,8 @@ defmodule Brando.HTML do
       <%= if @async_scripts != [] do %><%= render_slot(@async_scripts) %><% end %>
       <.init_js />
       <%= if @import_styles != [] do %><%= render_slot(@import_styles) %><% end %>
-      <.inject_critical_css />
       <%= if @scripts != [] do %><%= render_slot(@scripts) %><% end %>
+      <.inject_critical_css />
       <.include_assets only_css />
       <.render_palettes_css />
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
