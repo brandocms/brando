@@ -299,7 +299,7 @@ defmodule Brando.Assets.Vite do
               ]
           end)
         else
-          ""
+          []
         end
 
       helper =
