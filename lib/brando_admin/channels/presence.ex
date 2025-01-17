@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Presence do
+  @moduledoc false
   defmacro __using__(opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     pubsub_server = Keyword.fetch!(opts, :pubsub_server)
@@ -18,7 +19,7 @@ defmodule BrandoAdmin.Presence do
           presences
           |> Map.keys()
           |> Brando.Users.get_users_map()
-          |> Enum.into(%{})
+          |> Map.new()
 
         for {id, %{metas: metas}} <- presences, into: %{} do
           user = users[String.to_integer(id)]
@@ -41,7 +42,7 @@ defmodule BrandoAdmin.Presence do
           presences
           |> Map.keys()
           |> Brando.Users.get_users_map()
-          |> Enum.into(%{})
+          |> Map.new()
 
         for {key, %{metas: metas}} <- presences, into: %{} do
           {key, %{metas: metas, user: users[String.to_integer(key)]}}
