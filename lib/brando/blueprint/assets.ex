@@ -72,16 +72,18 @@ defmodule Brando.Blueprint.Assets do
           }
         }
   """
-  alias Ecto.Changeset
-  alias Brando.Blueprint
   import Ecto.Query
 
+  alias Brando.Blueprint
+  alias Ecto.Changeset
+  alias Spark.Dsl.Extension
+
   def __assets__(module) do
-    Spark.Dsl.Extension.get_entities(module, [:assets])
+    Extension.get_entities(module, [:assets])
   end
 
   def __asset__(module, name) do
-    Spark.Dsl.Extension.get_persisted(module, name)
+    Extension.get_persisted(module, name)
   end
 
   def __asset_opts__(module, name) do
@@ -114,11 +116,7 @@ defmodule Brando.Blueprint.Assets do
 
   ##
   ## embeds_many
-  def run_cast_asset(
-        %{type: :embeds_many, name: name, opts: opts},
-        changeset,
-        _user
-      ) do
+  def run_cast_asset(%{type: :embeds_many, name: name, opts: opts}, changeset, _user) do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         Changeset.put_embed(changeset, name, [])
@@ -132,11 +130,7 @@ defmodule Brando.Blueprint.Assets do
     end
   end
 
-  def run_cast_asset(
-        %{type: :gallery, name: name, opts: opts},
-        changeset,
-        _user
-      ) do
+  def run_cast_asset(%{type: :gallery, name: name, opts: opts}, changeset, _user) do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do
@@ -158,6 +152,7 @@ defmodule Brando.Blueprint.Assets do
   ## catch all for non casted assets
   def run_cast_asset(asset, changeset, _user) do
     require Logger
+
     Logger.error("--> not casted: #{inspect(asset.name, pretty: true)}")
     changeset
   end
