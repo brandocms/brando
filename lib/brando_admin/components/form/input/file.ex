@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.File do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
 
@@ -106,20 +108,12 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def handle_event(
         "open_file",
         _,
-        %{
-          assigns: %{
-            field: field,
-            relation_field: relation_field,
-            file_id: file_id,
-            file: file,
-            myself: myself
-          }
-        } = socket
+        %{assigns: %{field: field, relation_field: relation_field, file_id: file_id, file: file, myself: myself}} = socket
       ) do
     path =
       ~r/\[(\w+)\]/
       |> Regex.scan(field.form.name, capture: :all_but_first)
-      |> Enum.map(&(List.first(&1) |> String.to_existing_atom()))
+      |> Enum.map(&(&1 |> List.first() |> String.to_existing_atom()))
 
     module = field.form.source.data.__struct__
 
@@ -146,11 +140,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_file",
-        %{"id" => selected_file_id},
-        %{assigns: %{field: field}} = socket
-      ) do
+  def handle_event("select_file", %{"id" => selected_file_id}, %{assigns: %{field: field}} = socket) do
     {:ok, file} = Brando.Files.get_file(selected_file_id)
     module = field.form.source.data.__struct__
 
