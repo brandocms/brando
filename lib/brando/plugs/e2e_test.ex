@@ -1,16 +1,18 @@
 defmodule Brando.Plug.E2ETest do
   use Plug.Router
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   plug :match
   plug :dispatch
 
   defp checkout_shared_db_conn do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Repo.repo(), ownership_timeout: :infinity)
-    :ok = Ecto.Adapters.SQL.Sandbox.mode(Brando.Repo.repo(), {:shared, self()})
+    :ok = Sandbox.checkout(Brando.Repo.repo(), ownership_timeout: :infinity)
+    :ok = Sandbox.mode(Brando.Repo.repo(), {:shared, self()})
   end
 
   defp checkin_shared_db_conn(_) do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkin(Brando.Repo.repo())
+    :ok = Sandbox.checkin(Brando.Repo.repo())
   end
 
   post "/db/checkout" do
@@ -45,12 +47,12 @@ defmodule Brando.Plug.E2ETest do
     # like this allows you to call your factory via your test API easily.
     with {:ok, schema_binary} <- Map.fetch(conn.body_params, "schema"),
          {:ok, attrs} <- Map.fetch(conn.body_params, "attributes"),
-         creator_id <- Map.get(conn.body_params, "creator_id"),
+         creator_id = Map.get(conn.body_params, "creator_id"),
          {:ok, fields} <- Map.fetch(conn.body_params, "fields") do
       schema = Module.concat([schema_binary])
       context = schema.__modules__().context
       singular = schema.__naming__().singular
-      atom_attrs = Enum.map(attrs, fn {k, v} -> {String.to_atom(k), v} end) |> Enum.into(%{})
+      atom_attrs = Map.new(attrs, fn {k, v} -> {String.to_atom(k), v} end)
       atom_fields = Enum.map(fields, &String.to_atom/1) ++ [:id]
 
       # merge the attrs into our factory data
