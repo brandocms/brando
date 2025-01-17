@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Pages.PageListLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Listing, schema: Brando.Pages.Page
 
   alias Brando.Pages
@@ -53,11 +54,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
     {:noreply, push_navigate(socket, to: update_url)}
   end
 
-  def handle_event(
-        "duplicate_fragment",
-        %{"id" => entry_id},
-        %{assigns: %{current_user: user}} = socket
-      ) do
+  def handle_event("duplicate_fragment", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket) do
     case Pages.duplicate_fragment(entry_id, user) do
       {:ok, _} ->
         send(self(), {:toast, gettext("Fragment duplicated")})
@@ -79,11 +76,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "delete_fragment",
-        %{"id" => entry_id},
-        %{assigns: %{current_user: user}} = socket
-      ) do
+  def handle_event("delete_fragment", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket) do
     schema = socket.assigns.schema
 
     case Pages.delete_fragment(entry_id, user) do
