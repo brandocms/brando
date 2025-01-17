@@ -1,13 +1,14 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  alias Ecto.Changeset
-  alias Brando.Villain.Blocks.PictureBlock
 
+  alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias Ecto.Changeset
 
   # prop uploads, :any
   # prop base_form, :any
