@@ -343,11 +343,11 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       def __listings__ do
-        Spark.Dsl.Extension.get_entities(__MODULE__, [:listings])
+        SDE.get_entities(__MODULE__, [:listings])
       end
 
       def __forms__ do
-        Spark.Dsl.Extension.get_entities(__MODULE__, [:forms])
+        SDE.get_entities(__MODULE__, [:forms])
       end
 
       def __form__ do
