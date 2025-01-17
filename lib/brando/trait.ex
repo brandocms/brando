@@ -70,7 +70,7 @@ defmodule Brando.Trait do
 
   def run_changeset_mutators(changeset, module, traits, user, opts) do
     Enum.reduce(traits, changeset, fn {trait, trait_opts}, updated_changeset ->
-      trait.changeset_mutator(module, Enum.into(trait_opts, %{}), updated_changeset, user, opts)
+      trait.changeset_mutator(module, Map.new(trait_opts), updated_changeset, user, opts)
     end)
   end
 
