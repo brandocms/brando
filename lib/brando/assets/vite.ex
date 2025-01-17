@@ -1,10 +1,13 @@
 defmodule Brando.Assets.Vite do
+  @moduledoc false
   defmodule ViteManifestReader do
     @moduledoc """
     Finding proper path for `cache_manifest.json` in releases is a non-trivial operation,
     so we keep this logic in a dedicated module with some logic copied verbatim from
     a Phoenix private function from Phoenix.Endpoint.Supervisor
     """
+
+    alias Brando.Assets.Vite.Manifest
 
     require Logger
 
@@ -15,7 +18,7 @@ defmodule Brando.Assets.Vite do
         nil ->
           hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
           res = do_read(manifest_file, hmr?)
-          parsed_manifest = Brando.Assets.Vite.Manifest.parse(res)
+          parsed_manifest = Manifest.parse(res)
           :persistent_term.put(cache_key, parsed_manifest)
           parsed_manifest
 
@@ -27,7 +30,7 @@ defmodule Brando.Assets.Vite do
     def read(manifest_file, cache_key, :force) do
       hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
       res = do_read(manifest_file, hmr?)
-      parsed_manifest = Brando.Assets.Vite.Manifest.parse(res)
+      parsed_manifest = Manifest.parse(res)
       :persistent_term.put(cache_key, parsed_manifest)
       parsed_manifest
     end
@@ -111,7 +114,7 @@ defmodule Brando.Assets.Vite do
     @spec read(atom) :: map()
     def read(scope) do
       scope
-      |> config
+      |> config()
       |> Map.get(:manifest_file)
       |> ViteManifestReader.read(config(scope).manifest_cache_key)
     end
@@ -119,7 +122,7 @@ defmodule Brando.Assets.Vite do
     @spec refresh(atom) :: map()
     def refresh(scope) do
       scope
-      |> config
+      |> config()
       |> Map.get(:manifest_file)
       |> ViteManifestReader.read(config(scope).manifest_cache_key, :force)
     end
@@ -147,8 +150,7 @@ defmodule Brando.Assets.Vite do
     """
     def parse(manifest) do
       Enum.reduce(manifest, %__MODULE__{}, fn
-        {_, %{"isEntry" => true, "name" => "critical", "file" => file, "css" => css_files}},
-        acc ->
+        {_, %{"isEntry" => true, "name" => "critical", "file" => file, "css" => css_files}}, acc ->
           acc
           |> add_css(css_files, :critical)
           |> add_js(file, :critical)
@@ -178,12 +180,12 @@ defmodule Brando.Assets.Vite do
             get_in(manifest, [Access.key(:critical), Access.key(:css_files, [])])
 
           res =
-            if critical_css_files != [] do
+            if critical_css_files == [] do
+              "/* no critical css */"
+            else
               Brando.env()
               |> critical_css(critical_css_files)
               |> Phoenix.HTML.raw()
-            else
-              "/* no critical css */"
             end
 
           :persistent_term.put(config(scope).critical_css_cache_key, res)
@@ -245,7 +247,9 @@ defmodule Brando.Assets.Vite do
   end
 
   defmodule Render do
+    @moduledoc false
     alias Brando.Assets.Vite.Manifest
+
     def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
 
     def main_css(scope \\ :app) do
@@ -292,7 +296,9 @@ defmodule Brando.Assets.Vite do
       legacy_files = Brando.Utils.try_path(manifest, [:legacy, :files]) || []
 
       digested_legacy_files =
-        if legacy_files != [] do
+        if legacy_files == [] do
+          []
+        else
           Enum.reduce(Enum.with_index(legacy_files), [], fn {file, idx}, acc ->
             digested_entry = static_path(file)
 
@@ -301,12 +307,10 @@ defmodule Brando.Assets.Vite do
                 "<script nomodule phx-track-static id=\"vite-legacy-entry-#{idx}\" data-src=\"#{digested_entry}\">System.import(document.getElementById('vite-legacy-entry-#{idx}').getAttribute('data-src'))</script>"
               ]
           end)
-        else
-          []
         end
 
       helper =
-        "<script nomodule>!function(){var e=document,t=e.createElement(\"script\");if(!(\"noModule\" in t)&&\"onbeforeload\" in t){var n=!1;e.addEventListener(\"beforeload\",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute(\"nomodule\")||!n)return;e.preventDefault()}),!0),t.type=\"module\",t.src=\".\",e.head.appendChild(t),t.remove()}}();</script>"
+        ~s[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule" in t)&&"onbeforeload" in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>]
 
       [helper, Enum.join(digested_legacy_files, "\n")]
     end
