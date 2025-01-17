@@ -1,3 +1,5 @@
+alias BrandoIntegration.Repo, as: Repo
+
 :erlang.system_flag(:backtrace_depth, 30)
 
 # Clear tmp dir
@@ -14,6 +16,7 @@ Supervisor.start_link(
 )
 
 defmodule BrandoIntegration.Presence do
+  @moduledoc false
   use BrandoAdmin.Presence,
     otp_app: :brando,
     pubsub_server: BrandoIntegration.PubSub,
@@ -21,24 +24,26 @@ defmodule BrandoIntegration.Presence do
 end
 
 defmodule BrandoIntegrationWeb.Gettext do
+  @moduledoc false
   use Gettext.Backend, otp_app: :brando, priv: "priv/gettext/frontend"
 end
 
 defmodule BrandoIntegrationAdmin.Gettext do
+  @moduledoc false
   use Gettext.Backend, otp_app: :brando, priv: "priv/gettext/backend"
 end
 
 defmodule BrandoIntegrationWeb.Villain.Filters do
+  @moduledoc false
   use Brando.Villain.Filters
 end
 
 defmodule Brando.Villain.ParserTest.Parser do
+  @moduledoc false
   use Brando.Villain.Parser
 end
 
 # Basic test repo
-alias BrandoIntegration.Repo, as: Repo
-
 defmodule BrandoIntegrationWeb.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
@@ -64,6 +69,7 @@ defmodule BrandoIntegrationWeb.Endpoint do
 end
 
 defmodule BrandoIntegration.Authorization do
+  @moduledoc false
   use Brando.Authorization
 
   types([{"User", Brando.Users.User}])
@@ -112,15 +118,18 @@ defmodule BrandoIntegration.AdminSocket do
 end
 
 defmodule BrandoIntegration.Processor.Commands do
+  @moduledoc false
   def command(_, _, _), do: {:ok, 0}
 end
 
 defmodule BrandoIntegrationWeb.PageHTML do
   use Phoenix.Component
+
   embed_templates "fixtures/templates/page_html/*"
 end
 
 defmodule BrandoIntegrationWeb.Layouts do
+  @moduledoc false
   use Phoenix.Component
 
   def app(assigns) do
@@ -136,6 +145,7 @@ defmodule BrandoIntegrationWeb.Layouts do
 end
 
 defmodule BrandoIntegrationWeb.LivePreview do
+  @moduledoc false
   use Brando.LivePreview
 
   preview_target Brando.Pages.Page do
@@ -163,6 +173,7 @@ defmodule BrandoIntegrationWeb.LivePreview do
 end
 
 defmodule CompileTimeAssertions do
+  @moduledoc false
   defmodule DidNotRaise, do: defstruct(message: nil)
 
   defmacro assert_compile_time_raise(expected_exception, expected_message, fun) do
@@ -182,18 +193,22 @@ defmodule CompileTimeAssertions do
 end
 
 defmodule BrandoIntegration.TestCase do
+  @moduledoc false
   use ExUnit.CaseTemplate
 
   using do
     quote do
-      require Repo
       import Ecto.Query
+
       alias Ecto.Integration.Repo, as: Repo
+
+      require Repo
     end
   end
 end
 
 defmodule BrandoIntegration.ModuleWithDatasource do
+  @moduledoc false
   use Brando.Blueprint,
     application: "BrandoIntegration",
     domain: "Tests",
