@@ -46,24 +46,12 @@ defmodule Brando.Authorization.Rule do
             conditions: nil,
             inverted: false
 
-  def test_rule(
-        %__MODULE__{action: :manage, subject: "all", inverted: false},
-        action,
-        _subject_struct,
-        _subject,
-        _acc
-      )
+  def test_rule(%__MODULE__{action: :manage, subject: "all", inverted: false}, action, _subject_struct, _subject, _acc)
       when action in [:create, :read, :update, :delete, :manage] do
     true
   end
 
-  def test_rule(
-        %__MODULE__{action: :manage, subject: "all", inverted: true},
-        action,
-        _subject_struct,
-        _subject,
-        _acc
-      )
+  def test_rule(%__MODULE__{action: :manage, subject: "all", inverted: true}, action, _subject_struct, _subject, _acc)
       when action in [:create, :read, :update, :delete, :manage] do
     false
   end
@@ -90,8 +78,7 @@ defmodule Brando.Authorization.Rule do
         _subject,
         _acc
       )
-      when rule_subject == subject_struct and
-             action in [:manage, :create, :update, :read, :delete] do
+      when rule_subject == subject_struct and action in [:manage, :create, :update, :read, :delete] do
     !inverted
   end
 
@@ -103,8 +90,7 @@ defmodule Brando.Authorization.Rule do
         subject,
         acc
       )
-      when rule_subject == subject_struct and
-             action in [:manage, :create, :update, :read, :delete] do
+      when rule_subject == subject_struct and action in [:manage, :create, :update, :read, :delete] do
     subject_conditions = Map.take(subject, Map.keys(conditions))
 
     if Map.equal?(subject_conditions, conditions) do
