@@ -1,7 +1,9 @@
 defmodule Brando.Blueprint.Unique do
-  alias Brando.Utils
+  @moduledoc false
   import Ecto.Changeset
   import Ecto.Query
+
+  alias Brando.Utils
 
   def run_unique_attribute_constraints(changeset, module, attributes) do
     attributes
@@ -71,11 +73,11 @@ defmodule Brando.Blueprint.Unique do
             nil
 
           with_fields when is_list(with_fields) ->
-            field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+            field = String.to_existing_atom("#{to_string(f.name)}_id")
             unique_constraint(new_changeset, [field] ++ with_fields, message: message)
 
           with_field ->
-            field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+            field = String.to_existing_atom("#{to_string(f.name)}_id")
             unique_constraint(new_changeset, [field, with_field], message: message)
         end
     end)
