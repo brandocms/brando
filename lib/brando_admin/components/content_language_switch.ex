@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.ContentLanguageSwitch do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
@@ -11,7 +12,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
       case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
         nil ->
           # The language isn't one of the configured languages. Set to first
-          first_lang = Brando.config(:languages) |> List.first()
+          first_lang = :languages |> Brando.config() |> List.first()
           send(self(), {:set_content_language, first_lang[:value]})
           first_lang[:text]
 
@@ -65,18 +66,12 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
     """
   end
 
-  def handle_event(
-        "select_language",
-        %{"id" => id},
-        %{assigns: %{content_language: content_language}} = socket
-      ) do
-    case content_language == id do
-      true ->
-        {:noreply, socket |> assign(:show_language_picker, false)}
-
-      false ->
-        send(self(), {:set_content_language, id})
-        {:noreply, socket |> assign(:show_language_picker, false)}
+  def handle_event("select_language", %{"id" => id}, %{assigns: %{content_language: content_language}} = socket) do
+    if content_language == id do
+      {:noreply, assign(socket, :show_language_picker, false)}
+    else
+      send(self(), {:set_content_language, id})
+      {:noreply, assign(socket, :show_language_picker, false)}
     end
   end
 

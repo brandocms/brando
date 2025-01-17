@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Content do
+  @moduledoc false
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 

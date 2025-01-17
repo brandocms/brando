@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Content.List do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
-
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Trait.Creator
@@ -9,7 +9,6 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.SoftDelete
   alias Brando.Trait.Status
   alias Brando.Trait.Translatable
-
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content.List.Row
 
@@ -153,11 +152,7 @@ defmodule BrandoAdmin.Components.Content.List do
      |> push_query_params(%{"order" => sort_string}, ["order[asc]", "order[desc]", "order"])}
   end
 
-  def handle_event(
-        "update_status",
-        %{"status" => status},
-        %{assigns: %{list_opts: list_opts}} = socket
-      ) do
+  def handle_event("update_status", %{"status" => status}, %{assigns: %{list_opts: list_opts}} = socket) do
     status_atom = String.to_existing_atom(status)
     new_list_opts = update_status(list_opts, status_atom)
 
@@ -168,20 +163,12 @@ defmodule BrandoAdmin.Components.Content.List do
     end
   end
 
-  def handle_event(
-        "change_page",
-        %{"page" => page},
-        socket
-      ) do
+  def handle_event("change_page", %{"page" => page}, socket) do
     page_number = String.to_integer(page)
     {:noreply, push_query_params(socket, %{"page" => page_number + 1})}
   end
 
-  def handle_event(
-        "change_limit",
-        %{"limit" => limit},
-        socket
-      ) do
+  def handle_event("change_limit", %{"limit" => limit}, socket) do
     {:noreply, push_query_params(socket, %{"limit" => limit})}
   end
 
@@ -193,11 +180,7 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, assign(socket, :selected_rows, [])}
   end
 
-  def handle_event(
-        "sequenced",
-        %{"sortable_id" => sortable_id} = params,
-        %{assigns: %{schema: schema}} = socket
-      ) do
+  def handle_event("sequenced", %{"sortable_id" => sortable_id} = params, %{assigns: %{schema: schema}} = socket) do
     case String.split(sortable_id, "|") do
       ["child_listing", _parent_entry_id, child_field] ->
         relation =
@@ -415,8 +398,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
       {"order", order}, new_list_opts ->
         order =
-          order
-          |> Enum.map(fn
+          Enum.map(order, fn
             {k, v} when is_binary(k) -> {String.to_existing_atom(k), String.to_existing_atom(v)}
             {k, v} -> {k, v}
           end)
@@ -438,16 +420,16 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp maybe_order_by(list_opts, schema, listing) do
-    if listing.sorts != [] do
-      # set the first sort as default
-      first_sort = List.first(listing.sorts)
-      Map.put(list_opts, :order, first_sort.order)
-    else
+    if listing.sorts == [] do
       if schema.has_trait(Sequenced) && !Map.get(list_opts, :order) do
         Map.put(list_opts, :order, [{:asc, :sequence}, {:desc, :inserted_at}])
       else
         list_opts
       end
+    else
+      # set the first sort as default
+      first_sort = List.first(listing.sorts)
+      Map.put(list_opts, :order, first_sort.order)
     end
   end
 
@@ -478,7 +460,8 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp preload_assets(list_opts, schema) do
     preloads =
-      Brando.Blueprint.Assets.__assets__(schema)
+      schema
+      |> Brando.Blueprint.Assets.__assets__()
       |> Enum.filter(&(&1.type == :image))
       |> Enum.map(& &1.name)
 
@@ -497,8 +480,7 @@ defmodule BrandoAdmin.Components.Content.List do
     end)
   end
 
-  defp update_status(%{status: current_status} = list_opts, status)
-       when current_status == status do
+  defp update_status(%{status: current_status} = list_opts, status) when current_status == status do
     Map.delete(list_opts, :status)
   end
 
@@ -818,7 +800,8 @@ defmodule BrandoAdmin.Components.Content.List do
   defp get_duplication_langs(_, false), do: []
 
   defp get_duplication_langs(content_language, true) do
-    Brando.config(:languages)
+    :languages
+    |> Brando.config()
     |> Enum.map(& &1[:value])
     |> Enum.reject(&(&1 == content_language))
   end

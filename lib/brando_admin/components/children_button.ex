@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.ChildrenButton do
   # TODO: Can this be a function component with its event handled in the row instead?
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
@@ -44,11 +45,7 @@ defmodule BrandoAdmin.Components.ChildrenButton do
     """
   end
 
-  def handle_event(
-        "toggle",
-        _,
-        %{assigns: %{fields: child_fields, singular: singular, entry: %{id: id}}} = socket
-      ) do
+  def handle_event("toggle", _, %{assigns: %{fields: child_fields, singular: singular, entry: %{id: id}}} = socket) do
     id = "list-row-#{singular}-#{id}"
 
     send_update(BrandoAdmin.Components.Content.List.Row,

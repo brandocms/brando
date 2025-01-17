@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.CircleDropdown do
+  @moduledoc false
   use BrandoAdmin, :component
 
   def update(assigns, socket) do

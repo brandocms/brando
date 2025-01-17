@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Badge do
+  @moduledoc false
   use BrandoAdmin, :component
 
   def language(assigns) do
