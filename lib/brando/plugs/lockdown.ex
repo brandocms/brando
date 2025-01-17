@@ -25,11 +25,12 @@ defmodule Brando.Plug.Lockdown do
 
   `https://website/?key=<pass>`
   """
-  alias Brando.Users
+  @behaviour Plug
+
   import Phoenix.Controller, only: [redirect: 2]
   import Plug.Conn, only: [halt: 1]
 
-  @behaviour Plug
+  alias Brando.Users
 
   def init(options), do: options
 
@@ -62,14 +63,14 @@ defmodule Brando.Plug.Lockdown do
   defp check_lockdown_date(conn, nil) do
     conn
     |> redirect(to: Brando.helpers().lockdown_path(conn, :index))
-    |> halt
+    |> halt()
   end
 
   defp check_lockdown_date(conn, lockdown_until) do
-    if DateTime.compare(lockdown_until, DateTime.utc_now()) == :gt do
+    if DateTime.after?(lockdown_until, DateTime.utc_now()) do
       conn
       |> redirect(to: Brando.helpers().lockdown_path(conn, :index))
-      |> halt
+      |> halt()
     else
       conn
     end
