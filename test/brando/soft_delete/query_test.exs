@@ -2,46 +2,57 @@ defmodule Brando.SoftDelete.QueryTest do
   use ExUnit.Case
   use Brando.ConnCase
 
+  alias Brando.Content.Container
+  alias Brando.Content.Palette
+  alias Brando.Content.Template
   alias Brando.Factory
+  alias Brando.Images.Gallery
+  alias Brando.Images.Image
+  alias Brando.MigrationTest.Profile
+  alias Brando.Pages.Fragment
+  alias Brando.Pages.Page
+  alias Brando.Persons.Person
   alias Brando.SoftDelete.Query
+  alias Brando.Users.User
+  alias Brando.Videos.Video
 
   test "list_soft_delete_schemas" do
     assert Enum.sort(Query.list_soft_delete_schemas()) == [
              Brando.BlueprintTest.Project,
-             Brando.Content.Container,
+             Container,
              Brando.Content.Module,
-             Brando.Content.Palette,
-             Brando.Content.Template,
+             Palette,
+             Template,
              Brando.Files.File,
-             Brando.Images.Gallery,
-             Brando.Images.Image,
-             Brando.MigrationTest.Profile,
+             Gallery,
+             Image,
+             Profile,
              Brando.MigrationTest.Project,
-             Brando.Pages.Fragment,
-             Brando.Pages.Page,
-             Brando.Persons.Person,
-             Brando.Users.User,
-             Brando.Videos.Video
+             Fragment,
+             Page,
+             Person,
+             User,
+             Video
            ]
   end
 
   test "count_soft_deletions" do
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
-             {Brando.Content.Container, 0},
+             {Container, 0},
              {Brando.Content.Module, 0},
-             {Brando.Content.Palette, 0},
-             {Brando.Content.Template, 0},
+             {Palette, 0},
+             {Template, 0},
              {Brando.Files.File, 0},
-             {Brando.Images.Gallery, 0},
-             {Brando.Images.Image, 0},
-             {Brando.MigrationTest.Profile, 0},
+             {Gallery, 0},
+             {Image, 0},
+             {Profile, 0},
              {Brando.MigrationTest.Project, 0},
-             {Brando.Pages.Fragment, 0},
-             {Brando.Pages.Page, 0},
-             {Brando.Persons.Person, 0},
-             {Brando.Users.User, 0},
-             {Brando.Videos.Video, 0}
+             {Fragment, 0},
+             {Page, 0},
+             {Person, 0},
+             {User, 0},
+             {Video, 0}
            ]
 
     sixty_days_in_seconds = -60 * 24 * 3600
@@ -67,23 +78,23 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
-             {Brando.Content.Container, 0},
+             {Container, 0},
              {Brando.Content.Module, 0},
-             {Brando.Content.Palette, 0},
-             {Brando.Content.Template, 0},
+             {Palette, 0},
+             {Template, 0},
              {Brando.Files.File, 0},
-             {Brando.Images.Gallery, 0},
-             {Brando.Images.Image, 1},
-             {Brando.MigrationTest.Profile, 0},
+             {Gallery, 0},
+             {Image, 1},
+             {Profile, 0},
              {Brando.MigrationTest.Project, 0},
-             {Brando.Pages.Fragment, 1},
-             {Brando.Pages.Page, 1},
-             {Brando.Persons.Person, 0},
-             {Brando.Users.User, 2},
-             {Brando.Videos.Video, 0}
+             {Fragment, 1},
+             {Page, 1},
+             {Person, 0},
+             {User, 2},
+             {Video, 0}
            ]
 
-    deleted_users = Query.list_soft_deleted_entries(Brando.Users.User)
+    deleted_users = Query.list_soft_deleted_entries(User)
     assert Enum.count(deleted_users) == 2
 
     deleted_entries = Query.list_soft_deleted_entries()
@@ -93,20 +104,20 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Enum.sort(Query.count_soft_deletions()) == [
              {Brando.BlueprintTest.Project, 0},
-             {Brando.Content.Container, 0},
+             {Container, 0},
              {Brando.Content.Module, 0},
-             {Brando.Content.Palette, 0},
-             {Brando.Content.Template, 0},
+             {Palette, 0},
+             {Template, 0},
              {Brando.Files.File, 0},
-             {Brando.Images.Gallery, 0},
-             {Brando.Images.Image, 0},
-             {Brando.MigrationTest.Profile, 0},
+             {Gallery, 0},
+             {Image, 0},
+             {Profile, 0},
              {Brando.MigrationTest.Project, 0},
-             {Brando.Pages.Fragment, 1},
-             {Brando.Pages.Page, 0},
-             {Brando.Persons.Person, 0},
-             {Brando.Users.User, 0},
-             {Brando.Videos.Video, 0}
+             {Fragment, 1},
+             {Page, 0},
+             {Person, 0},
+             {User, 0},
+             {Video, 0}
            ]
   end
 end
