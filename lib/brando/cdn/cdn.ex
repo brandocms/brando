@@ -110,9 +110,7 @@ defmodule Brando.CDN do
   end
 
   def get_s3_config(_, as: type) do
-    s3_config =
-      Brando.Images
-      |> config(:s3)
+    s3_config = config(Brando.Images, :s3)
 
     if type == :keyword_list do
       s3_config
