@@ -172,6 +172,7 @@ locals_without_parens = [
   export: [locals_without_parens: locals_without_parens ++ spark_locals_without_parens],
   import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html, :spark],
   plugins: [Phoenix.LiveView.HTMLFormatter, Spark.Formatter],
+  line_length: 122,
   inputs: [
     "{mix,.formatter}.exs",
     "priv/*/seeds.exs",
