@@ -4,6 +4,18 @@ defmodule Brando.Users.User do
   and helper functions for dealing with the user schema.
   """
 
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Users",
+    schema: "User",
+    singular: "user",
+    plural: "users",
+    gettext_module: Brando.Gettext
+
+  use Gettext, backend: Brando.Gettext
+
+  alias Brando.Users.UserConfig
+
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
@@ -28,16 +40,6 @@ defmodule Brando.Users.User do
       {"large", "700w"}
     ]
   ]
-
-  use Brando.Blueprint,
-    application: "Brando",
-    domain: "Users",
-    schema: "User",
-    singular: "user",
-    plural: "users",
-    gettext_module: Brando.Gettext
-
-  use Gettext, backend: Brando.Gettext
 
   trait Brando.Trait.Password
   trait Brando.Trait.SoftDelete
@@ -131,9 +133,7 @@ defmodule Brando.Users.User do
 
       tab t("Content") do
         alert :info,
-              t(
-                "The administrator has set a mandatory password change on first login for this website."
-              )
+              t("The administrator has set a mandatory password change on first login for this website.")
 
         fieldset do
           size :half
@@ -169,14 +169,11 @@ defmodule Brando.Users.User do
           inputs_for :config do
             label t("Config")
 
-            input :reset_password_on_first_login, :toggle,
-              label: t("Reset password on first login", Brando.Users.UserConfig)
+            input :reset_password_on_first_login, :toggle, label: t("Reset password on first login", UserConfig)
 
-            input :show_mutation_notifications, :toggle,
-              label: t("Show mutation notifications", Brando.Users.UserConfig)
+            input :show_mutation_notifications, :toggle, label: t("Show mutation notifications", UserConfig)
 
-            input :prefers_reduced_motion, :toggle,
-              label: t("Prefers reduced motion", Brando.Users.UserConfig)
+            input :prefers_reduced_motion, :toggle, label: t("Prefers reduced motion", UserConfig)
           end
         end
       end
@@ -199,8 +196,7 @@ defmodule Brando.Users.User do
 
       send(
         self(),
-        {:toast,
-         gettext("Current user updated. You should reload your application to see the changes.")}
+        {:toast, gettext("Current user updated. You should reload your application to see the changes.")}
       )
     end
   end
