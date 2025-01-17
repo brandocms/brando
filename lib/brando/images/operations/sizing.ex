@@ -3,6 +3,7 @@ defmodule Brando.Images.Operations.Sizing do
   Sizing operations
   """
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Images
   alias Brando.Images.Focal
   alias BrandoAdmin.Progress
@@ -86,12 +87,7 @@ defmodule Brando.Images.Operations.Sizing do
         processed_formats: processed_formats,
         total_operations: total_operations,
         operation_index: operation_index,
-        image_struct: %{
-          path: image_src,
-          focal: focal,
-          width: width,
-          height: height
-        },
+        image_struct: %{path: image_src, focal: focal, width: width, height: height},
         filename: filename,
         sized_image_path: image_dest,
         sized_image_dir: image_dest_dir,
@@ -171,9 +167,10 @@ defmodule Brando.Images.Operations.Sizing do
   Check if `image_src_path` exists
   """
   def image_src_exists(%Images.ConversionParameters{image_src_path: src}) do
-    case File.exists?(src) do
-      true -> {:ok, {:image, :exists}}
-      false -> {:error, {:image, :not_found}}
+    if File.exists?(src) do
+      {:ok, {:image, :exists}}
+    else
+      {:error, {:image, :not_found}}
     end
   end
 
@@ -196,10 +193,7 @@ defmodule Brando.Images.Operations.Sizing do
   @doc """
   Add size cfg to conversion parameters
   """
-  def add_size_cfg(
-        %{original_width: width, original_height: height} = conversion_parameters,
-        size_cfg
-      ) do
+  def add_size_cfg(%{original_width: width, original_height: height} = conversion_parameters, size_cfg) do
     Map.put(
       conversion_parameters,
       :size_cfg,
@@ -348,11 +342,7 @@ defmodule Brando.Images.Operations.Sizing do
   @doc """
   Add anchor for cropping by focal point to conversion parameters
   """
-  def add_anchor(
-        %{
-          crop: true
-        } = conversion_parameters
-      ) do
+  def add_anchor(%{crop: true} = conversion_parameters) do
     conversion_parameters
     |> get_original_focal_point()
     |> transform_focal_point()
@@ -396,11 +386,7 @@ defmodule Brando.Images.Operations.Sizing do
   Get pixel X and Y of focal point and add to conversion parameters
   """
   def get_original_focal_point(
-        %{
-          focal_point: focal,
-          original_width: original_width,
-          original_height: original_height
-        } = conversion_parameters
+        %{focal_point: focal, original_width: original_width, original_height: original_height} = conversion_parameters
       ) do
     original_focal_point = %{
       x: round(focal.x / 1 / 100 * original_width / 1),
@@ -503,8 +489,7 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
-  defp maybe_change_format(type) when type in @supported_formats,
-    do: Atom.to_string(type)
+  defp maybe_change_format(type) when type in @supported_formats, do: Atom.to_string(type)
 
   defp maybe_change_format(_), do: "jpg"
 end
