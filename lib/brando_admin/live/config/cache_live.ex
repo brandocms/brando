@@ -1,9 +1,12 @@
 defmodule BrandoAdmin.Sites.CacheLive do
+  @moduledoc false
   use BrandoAdmin, :live_view
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
+
   import Phoenix.Component
+
   alias BrandoAdmin.Components.Content
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
@@ -17,9 +20,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
        |> assign_current_user(token)
        |> set_admin_locale()}
     else
-      {:ok,
-       socket
-       |> assign(:socket_connected, false)}
+      {:ok, assign(socket, :socket_connected, false)}
     end
   end
 
@@ -116,12 +117,12 @@ defmodule BrandoAdmin.Sites.CacheLive do
     Cachex.clear(:query)
     send(self(), {:toast, gettext("Caches cleared!")})
 
-    {:noreply, socket |> assign_caches()}
+    {:noreply, assign_caches(socket)}
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket
