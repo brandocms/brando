@@ -10,10 +10,13 @@ defmodule BrandoAdmin.Chrome do
   """
 
   use Phoenix.LiveView
-  alias BrandoAdmin.Components.Content
   use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Utils, only: [show_modal: 1]
+
+  alias Brando.Utils.Datetime
+  alias BrandoAdmin.Components.Content
+
   ##
 
   def mount(_params, _session, socket) do
@@ -86,13 +89,13 @@ defmodule BrandoAdmin.Chrome do
         |> String.to_integer()
         |> DateTime.from_unix!()
         |> DateTime.shift_zone!(Brando.timezone())
-        |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+        |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
       else
         if assigns.presence.last_login do
           assigns.presence.last_login
           |> DateTime.from_naive!("Etc/UTC")
           |> DateTime.shift_zone!(Brando.timezone())
-          |> Brando.Utils.Datetime.format_datetime("%d/%m/%y %H:%M:%S")
+          |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
         end
       end
 
@@ -141,10 +144,7 @@ defmodule BrandoAdmin.Chrome do
     """
   end
 
-  def handle_info(
-        {_, {:presence, %{user_joined: %{user: user, metas: metas}}}},
-        socket
-      ) do
+  def handle_info({_, {:presence, %{user_joined: %{user: user, metas: metas}}}}, socket) do
     last_active =
       metas
       |> Enum.map(& &1.online_at)
@@ -243,7 +243,7 @@ defmodule BrandoAdmin.Chrome do
 
   defp build_presences do
     presences = Brando.presence().list("lobby")
-    presence_map = Enum.into(presences, %{})
+    presence_map = Map.new(presences)
     all_users_map = Brando.Users.get_users_map()
 
     Enum.map(all_users_map, fn {id, user} ->
