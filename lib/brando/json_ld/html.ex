@@ -3,9 +3,10 @@ defmodule Brando.JSONLD.HTML do
   HTML functions for rendering JSONLD data
   """
 
-  alias Brando.JSONLD
-  import Phoenix.HTML
   import Phoenix.Component
+  import Phoenix.HTML
+
+  alias Brando.JSONLD
 
   @type conn :: Plug.Conn.t()
 
@@ -55,7 +56,9 @@ defmodule Brando.JSONLD.HTML do
 
   def output_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
     breadcrumb_json =
-      Enum.map(Enum.with_index(breadcrumbs), fn {{name, url}, idx} ->
+      breadcrumbs
+      |> Enum.with_index()
+      |> Enum.map(fn {{name, url}, idx} ->
         JSONLD.Schema.ListItem.build(idx + 1, name, url)
       end)
       |> JSONLD.Schema.BreadcrumbList.build()
