@@ -11,9 +11,9 @@ defmodule Brando.FactoryMixin do
   """
   defmacro __using__(_) do
     quote do
-      alias Brando.Pages.Page
-      alias Brando.Pages.Fragment
       alias Brando.Content.Module
+      alias Brando.Pages.Fragment
+      alias Brando.Pages.Page
       alias Brando.Type.ImageConfig
       alias Brando.Users.User
 
@@ -63,7 +63,7 @@ defmodule Brando.FactoryMixin do
         %Module{
           class: "header middle",
           code:
-            "<article data-v=\"text center\" data-moonwalk-section>\n  <div class=\"inner\" data-moonwalk>\n    <div class=\"text\">\n      %{H2}\n    </div>\n  </div>\n</article>",
+            ~s(<article data-v="text center" data-moonwalk-section>\n  <div class="inner" data-moonwalk>\n    <div class="text">\n      %{H2}\n    </div>\n  </div>\n</article>),
           deleted_at: nil,
           help_text: "Help Text",
           name: "Heading",
