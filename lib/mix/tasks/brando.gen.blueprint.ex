@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Blueprint do
-  use Mix.Task
-
   @shortdoc "Generates a blueprint module template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Blueprint do
       mix brando.gen.blueprint
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -19,19 +19,18 @@ defmodule Mix.Tasks.Brando.Gen.Blueprint do
 
     app = Mix.Project.config()[:app]
 
-    domain = Mix.shell().prompt("+ Enter domain") |> String.trim("\n")
-    schema = Mix.shell().prompt("+ Enter schema") |> String.trim("\n")
+    domain = "+ Enter domain" |> Mix.shell().prompt() |> String.trim("\n")
+    schema = "+ Enter schema" |> Mix.shell().prompt() |> String.trim("\n")
 
     binding = [
-      app_module: to_string(Brando.config(:app_module)) |> String.replace("Elixir.", ""),
+      app_module: :app_module |> Brando.config() |> to_string() |> String.replace("Elixir.", ""),
       domain: domain,
       schema: schema,
       application_name: Atom.to_string(app)
     ]
 
     files = [
-      {:eex, "blueprint.ex",
-       "lib/application_name/#{Macro.underscore(domain)}/#{Macro.underscore(schema)}.ex"}
+      {:eex, "blueprint.ex", "lib/application_name/#{Macro.underscore(domain)}/#{Macro.underscore(schema)}.ex"}
     ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.blueprint", "", binding, files)
