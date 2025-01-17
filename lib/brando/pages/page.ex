@@ -3,8 +3,6 @@ defmodule Brando.Pages.Page do
   Ecto schema for the Page schema.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Pages",
@@ -14,8 +12,12 @@ defmodule Brando.Pages.Page do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
+  alias Brando.JSONLD
   alias Brando.Pages
   alias Brando.Pages.Fragment
+
+  @type t :: %__MODULE__{}
 
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds
@@ -31,8 +33,6 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.Blocks
 
   # --
-
-  alias Brando.JSONLD
 
   @derived_fields ~w(
     id
@@ -344,8 +344,7 @@ defmodule Brando.Pages.Page do
   defp filter_self(parents, id) when not is_nil(id), do: Enum.filter(parents, &(&1.id != id))
   defp filter_self(parents, _), do: parents
 
-  defp filter_language(parents, language) when not is_nil(language),
-    do: Enum.filter(parents, &(&1.language == language))
+  defp filter_language(parents, language) when not is_nil(language), do: Enum.filter(parents, &(&1.language == language))
 
   defp filter_language(parents, _), do: parents
 
