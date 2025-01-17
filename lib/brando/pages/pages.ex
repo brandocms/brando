@@ -7,8 +7,8 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
-  alias Brando.Pages.Page
   alias Brando.Pages.Fragment
+  alias Brando.Pages.Page
   alias Brando.Users.User
   alias Brando.Villain
   alias Ecto.Changeset
@@ -90,9 +90,7 @@ defmodule Brando.Pages do
   mutation :delete, Page
 
   mutation :duplicate,
-           {Page,
-            delete_fields: [:children, :parent],
-            change_fields: [:uri, :title, vars: &__MODULE__.duplicate_vars/2]}
+           {Page, delete_fields: [:children, :parent], change_fields: [:uri, :title, vars: &__MODULE__.duplicate_vars/2]}
 
   def duplicate_vars(entry, _) do
     entry
@@ -234,6 +232,7 @@ defmodule Brando.Pages do
   """
   def get_fragments(parent_key) when is_binary(parent_key) do
     require Logger
+
     IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
     get_fragments(%{filter: %{parent_key: parent_key}})
   end
@@ -357,11 +356,11 @@ defmodule Brando.Pages do
 
     case fragment do
       nil ->
-        ~s(<div class="page-fragment-missing">
+        Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              key..: #{key}<br />
              lang.: #{language}
-           </div>) |> Phoenix.HTML.raw()
+           </div>))
 
       fragment ->
         Phoenix.HTML.raw(fragment.rendered_blocks)
@@ -373,11 +372,11 @@ defmodule Brando.Pages do
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
       nil ->
-        ~s(<div class="page-fragment-missing text-mono">
+        Phoenix.HTML.raw(~s(<div class="page-fragment-missing text-mono">
              <strong>Missing page fragment</strong> <br />
              key...: #{key}<br />
              frags.: #{inspect(Map.keys(fragments))}
-           </div>) |> Phoenix.HTML.raw()
+           </div>))
 
       fragment ->
         Phoenix.HTML.raw(fragment.rendered_blocks)
@@ -396,12 +395,12 @@ defmodule Brando.Pages do
 
     case get_fragment(opts) do
       {:error, {:fragment, :not_found}} ->
-        ~s(<div class="page-fragment-missing">
+        Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
              key...: #{key}<br />
              lang..: #{language}
-           </div>) |> Phoenix.HTML.raw()
+           </div>))
 
       {:ok, fragment} ->
         Phoenix.HTML.raw(fragment.rendered_blocks)
