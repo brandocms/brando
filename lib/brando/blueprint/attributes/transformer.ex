@@ -1,7 +1,9 @@
 defmodule Brando.Blueprint.Attributes.Transformer do
+  @moduledoc false
   use Spark.Dsl.Transformer
-  alias Spark.Dsl.Transformer
+
   alias Brando.Blueprint.Attributes
+  alias Spark.Dsl.Transformer
 
   @impl true
   def before?(_) do

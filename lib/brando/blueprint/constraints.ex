@@ -23,7 +23,7 @@ defmodule Brando.Blueprint.Constraints do
     |> Enum.filter(&Map.get(&1.opts, :constraints, false))
     |> Enum.reduce(changeset, fn
       %{opts: %{constraints: constraints}} = attr, new_changeset ->
-        constraints_map = Enum.into(constraints, %{})
+        constraints_map = Map.new(constraints)
 
         Enum.reduce(constraints_map, new_changeset, fn constraint, validated_changeset ->
           run_validation(constraint, validated_changeset, attr)
