@@ -3,9 +3,10 @@ defmodule Brando.System do
   @moduledoc """
   Simple checks on startup to verify system integrity
   """
-  require Logger
-  alias Brando.Exception.ConfigError
   alias Brando.Cache
+  alias Brando.Exception.ConfigError
+
+  require Logger
 
   def initialize do
     run_checks()
@@ -141,10 +142,11 @@ defmodule Brando.System do
   end
 
   defp check_identity_exists do
-    with [] <- Brando.Repo.all(Brando.Sites.Identity) do
-      Logger.error("==> No identities found.")
-      {:ok, {:identity, :exists}}
-    else
+    case Brando.Repo.all(Brando.Sites.Identity) do
+      [] ->
+        Logger.error("==> No identities found.")
+        {:ok, {:identity, :exists}}
+
       identities ->
         for identity <- identities do
           Logger.debug("==> identity: [#{identity.language}] exists")
@@ -155,10 +157,11 @@ defmodule Brando.System do
   end
 
   defp check_seo_exists do
-    with [] <- Brando.Repo.all(Brando.Sites.SEO) do
-      Logger.error("==> No seo entries found.")
-      {:ok, {:seo, :exists}}
-    else
+    case Brando.Repo.all(Brando.Sites.SEO) do
+      [] ->
+        Logger.error("==> No seo entries found.")
+        {:ok, {:seo, :exists}}
+
       seos ->
         for seo <- seos do
           Logger.debug("==> seo: [#{seo.language}] exists")
