@@ -3,6 +3,8 @@ defmodule Brando.Publisher do
   Helpers fpr scheduling and publishing content
   """
   import Ecto.Query
+
+  alias Brando.Blueprint.Identifier
   alias Brando.Users.User
   alias Brando.Worker
   alias Ecto.Changeset
@@ -22,12 +24,12 @@ defmodule Brando.Publisher do
         user
       )
       when not is_nil(publish_at) do
-    if DateTime.compare(publish_at, DateTime.utc_now()) == :lt do
+    if DateTime.before?(publish_at, DateTime.utc_now()) do
       # the publishing date is in the past, just leave it
       {:ok, entry}
     else
       args = %{schema: schema, id: id, user_id: user.id, status: :published}
-      entry_identifier = Brando.Blueprint.Identifier.identifier_for(entry)
+      entry_identifier = Identifier.identifier_for(entry)
 
       Brando.Repo.delete_all(
         from j in Oban.Job,
@@ -57,7 +59,7 @@ defmodule Brando.Publisher do
 
     revision_identifier =
       decoded_entry
-      |> Brando.Blueprint.Identifier.identifier_for()
+      |> Identifier.identifier_for()
       |> maybe_add_revision_description(revision)
 
     args
@@ -87,11 +89,10 @@ defmodule Brando.Publisher do
     end
   end
 
-  def maybe_override_status(%{changes: %{publish_at: publish_at}} = changeset)
-      when not is_nil(publish_at) do
+  def maybe_override_status(%{changes: %{publish_at: publish_at}} = changeset) when not is_nil(publish_at) do
     status = Changeset.get_field(changeset, :status)
 
-    if DateTime.compare(publish_at, DateTime.utc_now()) == :gt do
+    if DateTime.after?(publish_at, DateTime.utc_now()) do
       if status in [:pending, :published] do
         Changeset.put_change(changeset, :status, :pending)
       else
