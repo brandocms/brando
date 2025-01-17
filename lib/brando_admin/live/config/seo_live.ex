@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.SEOLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.SEO
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
 
@@ -68,17 +70,13 @@ defmodule BrandoAdmin.Sites.SEOLive do
     assign_new(socket, :four_oh_fours, fn -> Brando.Sites.FourOhFour.list() end)
   end
 
-  defp assign_entry_id(
-         %{
-           assigns: %{current_user: %{config: %{content_language: content_language}}}
-         } = socket
-       ) do
+  defp assign_entry_id(%{assigns: %{current_user: %{config: %{content_language: content_language}}}} = socket) do
     case Sites.get_seo(%{matches: %{language: content_language}}) do
       {:ok, seo} ->
         assign(socket, :entry_id, seo.id)
 
       {:error, _} ->
-        first_seo = Sites.list_seos!() |> List.first()
+        first_seo = List.first(Sites.list_seos!())
 
         {:ok, seo} =
           Sites.duplicate_seo(first_seo.id, :system, merge_fields: %{language: content_language})
