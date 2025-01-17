@@ -60,19 +60,20 @@ defmodule Brando.Authorization do
         def can?(%Brando.Users.User{} = user, action, subject) when is_map(subject) do
           rules = @authorization_module.__rules__(user.role)
 
-          case Enum.reduce(
-                 rules,
-                 false,
-                 &Brando.Authorization.Rule.test_rule(
-                   &1,
-                   action,
-                   subject.__struct__,
-                   subject,
-                   &2
-                 )
-               ) do
-            true -> {:ok, :authorized}
-            false -> {:error, :unauthorized}
+          if Enum.reduce(
+               rules,
+               false,
+               &Brando.Authorization.Rule.test_rule(
+                 &1,
+                 action,
+                 subject.__struct__,
+                 subject,
+                 &2
+               )
+             ) do
+            {:ok, :authorized}
+          else
+            {:error, :unauthorized}
           end
         end
       end
