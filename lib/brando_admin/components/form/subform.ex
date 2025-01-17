@@ -17,10 +17,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop instructions, :string
   # prop placeholder, :string
 
-  def update(
-        %{action: :update_changeset, index: index, updated_changeset: updated_changeset},
-        socket
-      ) do
+  def update(%{action: :update_changeset, index: index, updated_changeset: updated_changeset}, socket) do
     field_name = socket.assigns.subform.name
     changeset = socket.assigns.field.form.source
     module = changeset.data.__struct__
