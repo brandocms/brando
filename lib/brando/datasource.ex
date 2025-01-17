@@ -195,6 +195,7 @@ defmodule Brando.Datasource do
   mutations, you can move the datasource to the `Grantee` schema instead!
   """
   alias Brando.Villain
+  alias Spark.Dsl.Extension
 
   @doc """
   List all registered data sources
@@ -207,25 +208,25 @@ defmodule Brando.Datasource do
   end
 
   def datasources(module) do
-    Spark.Dsl.Extension.get_entities(module, [:datasources])
+    Extension.get_entities(module, [:datasources])
   end
 
   def datasources(module, type) do
     module
-    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Extension.get_entities([:datasources])
     |> Enum.filter(&(&1.type == type))
     |> Enum.map(& &1.key)
   end
 
   def get_datasource(module, :*, key) do
     module
-    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Extension.get_entities([:datasources])
     |> Enum.find(&(&1.key == key))
   end
 
   def get_datasource(module, type, key) do
     module
-    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Extension.get_entities([:datasources])
     |> Enum.find(&(&1.type == type && &1.key == key))
   end
 
@@ -315,7 +316,7 @@ defmodule Brando.Datasource do
     module
     |> List.wrap()
     |> Module.concat()
-    |> Spark.Dsl.Extension.get_entities([:datasources])
+    |> Extension.get_entities([:datasources])
     |> Enum.find(&(&1.type == type && &1.key == String.to_existing_atom(query)))
     |> case do
       nil -> nil
