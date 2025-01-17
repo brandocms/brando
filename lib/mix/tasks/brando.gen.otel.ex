@@ -60,15 +60,15 @@ if Code.ensure_loaded?(Igniter) do
         :opentelemetry,
         [:resource],
         {:code,
-        Sourceror.parse_string!("""
-        [service: [
-            name: "by",
-            namespace: "BielkeYang"
-          ],
-          host: [
-            name: "localdev"
-        ]]
-        """)}
+         Sourceror.parse_string!("""
+         [service: [
+             name: "by",
+             namespace: "BielkeYang"
+           ],
+           host: [
+             name: "localdev"
+         ]]
+         """)}
       )
       |> Igniter.Project.Config.configure(
         "runtime.exs",
@@ -99,9 +99,9 @@ if Code.ensure_loaded?(Igniter) do
         :opentelemetry_exporter,
         [:otlp_headers],
         {:code,
-        Sourceror.parse_string!("""
-        [{"x-honeycomb-team", System.fetch_env!("HONEYCOMB_API_KEY")}, {"x-honeycomb-dataset", "dev"}]
-        """)}
+         Sourceror.parse_string!("""
+         [{"x-honeycomb-team", System.fetch_env!("HONEYCOMB_API_KEY")}, {"x-honeycomb-dataset", "dev"}]
+         """)}
       )
     end
 
@@ -134,18 +134,18 @@ if Code.ensure_loaded?(Igniter) do
 
       Igniter.update_elixir_file(igniter, "mix.exs", fn zipper ->
         with {:ok, zipper} <- Igniter.Code.Function.move_to_def(zipper, :project, 0),
-            {:ok, zipper} <-
-              Igniter.Code.Keyword.put_in_keyword(
-                zipper,
-                [:releases, app_atom, :applications, :opentelemetry_exporter],
-                :permanent
-              ),
-            {:ok, zipper} <-
-              Igniter.Code.Keyword.put_in_keyword(
-                zipper,
-                [:releases, app_atom, :applications, :opentelemetry],
-                :temporary
-              ) do
+             {:ok, zipper} <-
+               Igniter.Code.Keyword.put_in_keyword(
+                 zipper,
+                 [:releases, app_atom, :applications, :opentelemetry_exporter],
+                 :permanent
+               ),
+             {:ok, zipper} <-
+               Igniter.Code.Keyword.put_in_keyword(
+                 zipper,
+                 [:releases, app_atom, :applications, :opentelemetry],
+                 :temporary
+               ) do
           {:ok, zipper}
         end
       end)
