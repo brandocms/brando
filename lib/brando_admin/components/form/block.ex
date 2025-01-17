@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Block do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
   import Phoenix.LiveView.TagEngine
@@ -93,10 +94,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(
-        %{event: "duplicate_block", uid: uid, changeset: block_cs, children: children},
-        socket
-      ) do
+  def update(%{event: "duplicate_block", uid: uid, changeset: block_cs, children: children}, socket) do
     block_list = socket.assigns.block_list
     changesets = socket.assigns.changesets
     sequence = Enum.find_index(block_list, &(&1 == uid))
@@ -233,7 +231,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     this_uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
 
-    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
+    if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
       # if the changeset struct is a block we put it directly,
@@ -277,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       end
     end
 
-    {:ok, socket |> assign(:changesets, updated_changesets)}
+    {:ok, assign(socket, :changesets, updated_changesets)}
   end
 
   # event sent from RenderVar for :file, :image, :link vars
@@ -554,15 +552,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:ok, socket}
   end
 
-  def update(
-        %{
-          event: "provide_child_block",
-          changeset: child_changeset,
-          uid: uid,
-          tag: tag
-        },
-        socket
-      ) do
+  def update(%{event: "provide_child_block", changeset: child_changeset, uid: uid, tag: tag}, socket) do
     parent_uid = socket.assigns.uid
     parent_cid = socket.assigns.parent_cid
     level = socket.assigns.level
@@ -571,7 +561,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
 
-    unless Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
+    if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
       # if the changeset struct is a block we put it directly,
@@ -627,10 +617,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:ok, stream_insert(socket, :children_forms, form)}
   end
 
-  def update(
-        %{event: "insert_block", sequence: sequence, module_id: module_id, type: type},
-        socket
-      ) do
+  def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do
     module_id = String.to_integer(module_id)
     user_id = socket.assigns.current_user_id
     parent_id = nil
@@ -709,10 +696,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(
-        %{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data},
-        socket
-      ) do
+  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data}, socket) do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -948,9 +932,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update_changeset_data_block_var(socket, _, _, _), do: socket
 
-  def maybe_get_live_preview_status(
-        %{assigns: %{form_is_new: true, block_initialized: false}} = socket
-      ) do
+  def maybe_get_live_preview_status(%{assigns: %{form_is_new: true, block_initialized: false}} = socket) do
     form_cid = socket.assigns.form_cid
     cid = socket.assigns.myself
     send_update(form_cid, %{event: "get_live_preview_status", cid: cid})
@@ -1008,9 +990,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def maybe_render_module(
-        %{assigns: %{initial_render: false, live_preview_active?: true}} = socket
-      ) do
+  def maybe_render_module(%{assigns: %{initial_render: false, live_preview_active?: true}} = socket) do
     changeset = socket.assigns.form.source
     entry = socket.assigns.entry
     uid = socket.assigns.uid
@@ -1074,8 +1054,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_assign_fragment(%{assigns: %{fragment_id: nil}} = socket) do
-    socket
-    |> assign_new(:fragment, fn -> nil end)
+    assign_new(socket, :fragment, fn -> nil end)
   end
 
   def maybe_assign_fragment(%{assigns: %{fragment_id: fragment_id}} = socket) do
@@ -1175,9 +1154,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def maybe_register_block_wanting_entry(
-        %{assigns: %{block_initialized: false, is_datasource?: true}} = socket
-      ) do
+  def maybe_register_block_wanting_entry(%{assigns: %{block_initialized: false, is_datasource?: true}} = socket) do
     cid = socket.assigns.myself
     form_cid = socket.assigns.form_cid
 
@@ -1208,12 +1185,12 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp maybe_parse_module(%{assigns: %{module_not_found: true}} = socket), do: socket
 
-  defp maybe_parse_module(
-         %{assigns: %{module_code: module_code, module_type: :liquid} = assigns} = socket
-       ) do
+  defp maybe_parse_module(%{assigns: %{module_code: module_code, module_type: :liquid} = assigns} = socket) do
     block_initialized = assigns.block_initialized
 
-    if not block_initialized do
+    if block_initialized do
+      socket
+    else
       module_code =
         module_code
         |> liquid_strip_logic()
@@ -1252,8 +1229,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
 
             [module_variable, "", ""] ->
-              {:module_variable, module_variable,
-               liquid_render_module_variable(module_variable, vars)}
+              {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
 
             ["", "entry." <> pic = pic_var, ""] ->
               {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
@@ -1269,8 +1245,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       socket
       |> assign(:liquid_splits, splits)
       |> assign(:vars, vars)
-    else
-      socket
     end
   end
 
@@ -1282,9 +1256,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   # we preload it and stick it in the data field. My least favorite part of dealing with
   # changesets + revisions
   defp maybe_preload_changeset_data(changeset, assoc, :root) do
-    if assoc_is_loaded(
-         get_in(changeset, [Access.key(:data), Access.key(:block), Access.key(:vars)])
-       ) do
+    if assoc_is_loaded(get_in(changeset, [Access.key(:data), Access.key(:block), Access.key(:vars)])) do
       changeset
     else
       update_in(changeset.data.block, &Brando.Repo.repo().preload(&1, assoc))
@@ -1362,9 +1334,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
   end
 
-  def maybe_assign_children(
-        %{assigns: %{type: :module, multi: true, children: children}} = socket
-      ) do
+  def maybe_assign_children(%{assigns: %{type: :module, multi: true, children: children}} = socket) do
     current_user_id = socket.assigns.current_user_id
 
     children_forms =
@@ -2452,11 +2422,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
       |> assign_new(:component_target, fn ->
-        type_atom = assigns.block[:type].value |> String.to_existing_atom()
+        type_atom = String.to_existing_atom(assigns.block[:type].value)
 
         block_type =
           (type_atom
-           |> to_string
+           |> to_string()
            |> Macro.camelize()) <> "Block"
 
         block_module = Module.concat([Blocks, block_type])
@@ -3291,16 +3261,14 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     # Initialize empty meta structure for this identifier if missing
     identifier_metas =
-      if !Map.has_key?(current_metas, key) do
+      if Map.has_key?(current_metas, key) do
+        current_metas
         # Create default meta map with empty values for all fields
+      else
         default_meta =
-          datasource_meta
-          |> Enum.map(fn field -> {to_string(field.key), nil} end)
-          |> Map.new()
+          Map.new(datasource_meta, fn field -> {to_string(field.key), nil} end)
 
         Map.put(current_metas, key, default_meta)
-      else
-        current_metas
       end
 
     this_meta = Map.get(identifier_metas, key)
@@ -3445,7 +3413,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     var_changesets =
       Enum.map(
         vars_without_pk,
-        &(Changeset.change(&1, %{table_template_id: nil}) |> Map.put(:action, :insert))
+        &(&1 |> Changeset.change(%{table_template_id: nil}) |> Map.put(:action, :insert))
       )
 
     new_row = %Brando.Content.TableRow{vars: var_changesets}
@@ -3507,13 +3475,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         %{action: :replace} = replaced_changeset ->
           Enum.map(block_identifiers, fn block_identifier ->
-            case Changeset.get_field(block_identifier, :identifier_id) == identifier_id do
-              true ->
-                action = (Changeset.get_field(block_identifier, :id) == nil && :insert) || nil
-                Map.put(replaced_changeset, :action, action)
-
-              false ->
-                block_identifier
+            if Changeset.get_field(block_identifier, :identifier_id) == identifier_id do
+              action = (Changeset.get_field(block_identifier, :id) == nil && :insert) || nil
+              Map.put(replaced_changeset, :action, action)
+            else
+              block_identifier
             end
           end)
 
@@ -3955,20 +3921,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   # reposition a main block
-  def handle_event(
-        "reposition",
-        %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid},
-        socket
-      )
+  def handle_event("reposition", %{"id" => _id, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid}, socket)
       when new_idx == old_idx do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reposition",
-        %{"uid" => uid, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid},
-        socket
-      ) do
+  def handle_event("reposition", %{"uid" => uid, "new" => new_idx, "old" => old_idx, "parent_uid" => _parent_uid}, socket) do
     block_list = socket.assigns.block_list
     changesets = socket.assigns.changesets
 
@@ -4018,14 +3976,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       dom_id: dom_id
     })
 
-    {:noreply, socket |> assign(:deleted, true)}
+    {:noreply, assign(socket, :deleted, true)}
   end
 
-  def handle_event(
-        "validate_block",
-        %{"_target" => params_target, "child_block" => params},
-        socket
-      ) do
+  def handle_event("validate_block", %{"_target" => params_target, "child_block" => params}, socket) do
     form = socket.assigns.form
     changeset = form.source
     uid = socket.assigns.uid
@@ -4055,11 +4009,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "validate_block",
-        %{"_target" => params_target, "entry_block" => params},
-        socket
-      ) do
+  def handle_event("validate_block", %{"_target" => params_target, "entry_block" => params}, socket) do
     form = socket.assigns.form
     changeset = form.source
     uid = socket.assigns.uid
@@ -4222,17 +4172,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def render_and_update_entry_block_changeset(
-        changeset,
-        entry,
-        has_vars?,
-        has_table_rows?,
-        force_render? \\ false
-      ) do
+  def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
     skip_children =
-      case force_render? do
-        true -> :force_render
-        false -> true
+      if force_render? do
+        :force_render
+      else
+        true
       end
 
     rendered_html =
@@ -4334,11 +4279,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # if the target param updated is a var and it's not an image or file, we extract the value
   # and update the liquex block var
-  def maybe_update_liquex_block_var(
-        socket,
-        [_block_type, "vars", _idx, "value"] = params_target,
-        params
-      ) do
+  def maybe_update_liquex_block_var(socket, [_block_type, "vars", _idx, "value"] = params_target, params) do
     var_target =
       params_target
       |> List.delete_at(0)
@@ -4422,8 +4363,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
-  defp liquid_strip_logic(module_code),
-    do: Regex.replace(@liquid_regex_strips, module_code, "")
+  defp liquid_strip_logic(module_code), do: Regex.replace(@liquid_regex_strips, module_code, "")
 
   defp liquid_render_entry_picture_src("entry." <> var_path_string, assigns) do
     entry = assigns.entry
@@ -4501,7 +4441,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    Brando.Utils.try_path(entry, var_path) |> raw()
+    entry |> Brando.Utils.try_path(var_path) |> raw()
   rescue
     ArgumentError ->
       "{{ entry.#{var_path_string} }}"
