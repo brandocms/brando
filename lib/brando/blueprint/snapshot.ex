@@ -74,13 +74,11 @@ defmodule Brando.Blueprint.Snapshot do
     root_path = Keyword.get(opts, :snapshot_path)
 
     snapshot_path =
-      [
-        module.__naming__().application,
-        module.__naming__().domain,
-        module.__naming__().schema
-      ]
-      |> Enum.map(&String.downcase/1)
-      |> Enum.join("_")
+      Enum.map_join(
+        [module.__naming__().application, module.__naming__().domain, module.__naming__().schema],
+        "_",
+        &String.downcase/1
+      )
 
     Path.join(root_path, snapshot_path)
   end
