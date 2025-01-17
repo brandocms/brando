@@ -1,10 +1,11 @@
 defmodule Brando.Blueprint.Migrations do
-  alias Brando.Blueprint.Snapshot
-
-  alias Brando.Blueprint.Migrations.Operations
+  @moduledoc false
   alias Brando.Blueprint.Assets.Asset
   alias Brando.Blueprint.Attributes.Attribute
+  alias Brando.Blueprint.Migrations.Operations
   alias Brando.Blueprint.Relations.Relation
+  alias Brando.Blueprint.Snapshot
+  alias Brando.Trait.Translatable
 
   @default_opts [
     migration_path: "priv/repo/migrations",
@@ -20,30 +21,12 @@ defmodule Brando.Blueprint.Migrations do
     |> do_create_migration(module, opts)
   end
 
-  def do_create_migration(
-        {
-          [],
-          [],
-          [],
-          [],
-          [],
-          []
-        },
-        _module,
-        _opts
-      ) do
+  def do_create_migration({[], [], [], [], [], []}, _module, _opts) do
     {nil, "No changes neccessary"}
   end
 
   def do_create_migration(
-        {
-          attributes_to_add,
-          attributes_to_remove,
-          assets_to_add,
-          assets_to_remove,
-          relations_to_add,
-          relations_to_remove
-        },
+        {attributes_to_add, attributes_to_remove, assets_to_add, assets_to_remove, relations_to_add, relations_to_remove},
         module,
         opts
       ) do
@@ -76,8 +59,8 @@ defmodule Brando.Blueprint.Migrations do
 
     sequence = get_sequence(module, opts)
 
-    wrap_in_operation_type(
-      {up, down},
+    {up, down}
+    |> wrap_in_operation_type(
       {up_indexes, down_indexes},
       operation_type,
       module,
@@ -101,14 +84,7 @@ defmodule Brando.Blueprint.Migrations do
     Code.format_string!(content, locals_without_parens: locals_without_parens())
   end
 
-  defp wrap_in_operation_type(
-         {up, _},
-         {up_indexes, down_indexes},
-         :create,
-         module,
-         sequence,
-         opts
-       ) do
+  defp wrap_in_operation_type({up, _}, {up_indexes, down_indexes}, :create, module, sequence, opts) do
     application = module.__naming__().application
     domain = module.__naming__().domain
     schema = module.__naming__().schema
@@ -116,7 +92,7 @@ defmodule Brando.Blueprint.Migrations do
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
 
     alternates_source = "#{table_name}_alternates"
-    alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
+    alternates? = opts[:add_alternates] && module.has_trait(Translatable)
     entries? = opts[:add_entries] != []
     blocks? = opts[:add_blocks] != []
     uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
@@ -177,14 +153,7 @@ defmodule Brando.Blueprint.Migrations do
     """
   end
 
-  defp wrap_in_operation_type(
-         {up, down},
-         {up_indexes, down_indexes},
-         :alter,
-         module,
-         sequence,
-         opts
-       ) do
+  defp wrap_in_operation_type({up, down}, {up_indexes, down_indexes}, :alter, module, sequence, opts) do
     application = module.__naming__().application
     domain = module.__naming__().domain
     schema = module.__naming__().schema
@@ -192,7 +161,7 @@ defmodule Brando.Blueprint.Migrations do
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
 
     alternates_source = "#{table_name}_alternates"
-    alternates? = opts[:add_alternates] && module.has_trait(Brando.Trait.Translatable)
+    alternates? = opts[:add_alternates] && module.has_trait(Translatable)
     entries? = opts[:add_entries] != []
     blocks? = opts[:add_blocks] != []
 
@@ -242,7 +211,7 @@ defmodule Brando.Blueprint.Migrations do
 
   defp build_blocks(table_name, opts, blocks?) do
     if blocks? do
-      up =
+      for_result =
         for f <- opts[:add_blocks] do
           join_source = Enum.join([table_name, f.name], "_")
 
@@ -256,9 +225,10 @@ defmodule Brando.Blueprint.Migrations do
           create unique_index(:#{join_source}, [:entry_id, :block_id])
           """
         end
-        |> Enum.join("\r\n\r\n")
 
-      down =
+      up = Enum.join(for_result, "\r\n\r\n")
+
+      for_result =
         for f <- opts[:add_blocks] do
           join_source = Enum.join([table_name, f.name], "_")
 
@@ -266,7 +236,8 @@ defmodule Brando.Blueprint.Migrations do
           drop table(:#{join_source})
           """
         end
-        |> Enum.join("\r\n\r\n")
+
+      down = Enum.join(for_result, "\r\n\r\n")
 
       {up, down}
     else
@@ -276,7 +247,7 @@ defmodule Brando.Blueprint.Migrations do
 
   defp build_entries(table_name, opts, entries?) do
     if entries? do
-      up =
+      for_result =
         for f <- opts[:add_entries] do
           entries_source = "#{table_name}_#{f.name}_identifiers"
 
@@ -291,9 +262,10 @@ defmodule Brando.Blueprint.Migrations do
           create unique_index(:#{entries_source}, [:parent_id, :identifier_id])
           """
         end
-        |> Enum.join("\r\n\r\n")
 
-      down =
+      up = Enum.join(for_result, "\r\n\r\n")
+
+      for_result =
         for f <- opts[:add_entries] do
           entries_source = "#{table_name}_#{f.name}_identifiers"
 
@@ -301,7 +273,8 @@ defmodule Brando.Blueprint.Migrations do
           drop table(:#{entries_source})
           """
         end
-        |> Enum.join("\r\n\r\n")
+
+      down = Enum.join(for_result, "\r\n\r\n")
 
       {up, down}
     else
