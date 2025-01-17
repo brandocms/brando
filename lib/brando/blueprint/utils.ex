@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Utils do
+  @moduledoc false
   alias Brando.Utils
 
   @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param]
@@ -24,8 +25,7 @@ defmodule Brando.Blueprint.Utils do
 
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
 
-  def to_ecto_opts(:belongs_to, opts),
-    do: opts |> Map.drop(@strip_ecto_opts ++ [:on_delete]) |> Map.to_list()
+  def to_ecto_opts(:belongs_to, opts), do: opts |> Map.drop(@strip_ecto_opts ++ [:on_delete]) |> Map.to_list()
 
   def to_ecto_opts(:has_one, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
@@ -64,23 +64,17 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_opts(_type, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
 
   @strip_changeset_opts [:cast, :module]
-  def to_changeset_opts(:has_one, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+  def to_changeset_opts(:has_one, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
-  def to_changeset_opts(:belongs_to, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+  def to_changeset_opts(:belongs_to, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
-  def to_changeset_opts(:many_to_many, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+  def to_changeset_opts(:many_to_many, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
-  def to_changeset_opts(:has_many, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+  def to_changeset_opts(:has_many, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
 
-  def to_changeset_opts(:embeds_one, opts),
-    do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
+  def to_changeset_opts(:embeds_one, opts), do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
 
-  def to_changeset_opts(:embeds_many, opts),
-    do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
+  def to_changeset_opts(:embeds_many, opts), do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
 
   def to_changeset_opts(_type, opts), do: Map.to_list(opts)
 
