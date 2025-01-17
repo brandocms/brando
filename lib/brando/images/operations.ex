@@ -2,11 +2,11 @@ defmodule Brando.Images.Operations do
   @moduledoc """
   This is where we process images
   """
-  require Logger
-
   alias Brando.Images
-  alias BrandoAdmin.Progress
   alias Brando.Utils
+  alias BrandoAdmin.Progress
+
+  require Logger
 
   @type image :: Brando.Images.Image.t()
   @type image_config :: Brando.Type.ImageConfig.t()
@@ -131,14 +131,11 @@ defmodule Brando.Images.Operations do
     end)
   end
 
-  defp get_operation_by_image_id(image_id, operations),
-    do: Enum.find(operations, &(&1.image_id == image_id))
+  defp get_operation_by_image_id(image_id, operations), do: Enum.find(operations, &(&1.image_id == image_id))
 
   # convert a list of transforms to a map of sizes
   defp transforms_to_sizes(transforms) do
-    transforms
-    |> Enum.map(&{&1.size_key, &1.image_path})
-    |> Enum.into(%{})
+    Map.new(transforms, &{&1.size_key, &1.image_path})
   end
 
   def resize_image(%Images.Operation{} = operation) do
