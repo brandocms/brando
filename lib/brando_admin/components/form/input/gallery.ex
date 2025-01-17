@@ -1,14 +1,16 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Changeset
-  use Gettext, backend: Brando.Gettext
 
   alias Brando.Images.GalleryImage
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.ImagePicker
 
   # prop form, :form
   # prop field, :atom
@@ -40,11 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def update(
-        %{
-          action: :update_image,
-          updated_image: updated_image,
-          force_validation: true
-        },
+        %{action: :update_image, updated_image: updated_image, force_validation: true},
         %{assigns: %{gallery_images: gallery_images}} = socket
       ) do
     updated_image_id = updated_image.id
@@ -101,13 +99,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base
-        field={@field}
-        label={@label}
-        instructions={@instructions}
-        class={@class}
-        compact={@compact}
-      >
+      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="gallery-input">
           <div class="actions">
             <button type="button" class="tiny upload-button">
@@ -167,20 +159,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 <Input.input type={:hidden} field={gallery_form[:config_target]} />
 
                 <.inputs_for :let={gallery_image} field={gallery_form[:gallery_images]}>
-                  <figure
-                    class="gallery-image sort-handle draggable"
-                    data-id={gallery_image[:image_id].value}
-                  >
+                  <figure class="gallery-image sort-handle draggable" data-id={gallery_image[:image_id].value}>
                     <.gallery_image
                       gallery_images={@gallery_images}
                       gallery_image_field={gallery_image}
                       parent_form_name={gallery_form.name}
                     />
-                    <input
-                      type="hidden"
-                      name={"#{gallery_form.name}[sort_gallery_image_ids][]"}
-                      value={gallery_image.index}
-                    />
+                    <input type="hidden" name={"#{gallery_form.name}[sort_gallery_image_ids][]"} value={gallery_image.index} />
                   </figure>
                   <Input.input type={:hidden} field={gallery_image[:image_id]} />
                   <Input.input type={:hidden} field={gallery_image[:gallery_id]} />
@@ -207,11 +192,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     ~H"""
     <div :if={@gallery_image}>
       <%= if @gallery_image.image.status == :processed do %>
-        <img
-          width="25"
-          height="25"
-          src={"#{Utils.img_url(@gallery_image.image, :thumb, prefix: Utils.media_url())}"}
-        />
+        <img width="25" height="25" src={"#{Utils.img_url(@gallery_image.image, :thumb, prefix: Utils.media_url())}"} />
         <button
           type="button"
           class="delete-image"
@@ -223,13 +204,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         </button>
       <% else %>
         <div class="img-placeholder">
-          <svg
-            class="spin"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-          >
+          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
             <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
           </svg>
         </div>
@@ -259,7 +234,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     field = socket.assigns.field
     field_name = field.field
 
-    send_update(BrandoAdmin.Components.ImagePicker,
+    send_update(ImagePicker,
       id: "image-picker",
       config_target: {"gallery", schema, field_name},
       event_target: myself,
@@ -273,13 +248,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   def handle_event(
         "select_image",
         %{"id" => image_id, "selected" => "false"},
-        %{
-          assigns: %{
-            field: field,
-            gallery_images: gallery_images,
-            current_user: current_user
-          }
-        } = socket
+        %{assigns: %{field: field, gallery_images: gallery_images, current_user: current_user}} = socket
       ) do
     changeset = field.form.source
     field_name = field.field
@@ -325,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     selected_images = Enum.map(new_gallery_images, & &1.image.path)
 
-    send_update(BrandoAdmin.Components.ImagePicker,
+    send_update(ImagePicker,
       id: "image-picker",
       selected_images: selected_images
     )
@@ -342,19 +311,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       force_validation: true
     )
 
-    {:noreply,
-     assign(socket, gallery_images: new_gallery_images, selected_images: selected_images)}
+    {:noreply, assign(socket, gallery_images: new_gallery_images, selected_images: selected_images)}
   end
 
   def handle_event(
         "select_image",
         %{"id" => image_id, "selected" => "true"},
-        %{
-          assigns: %{
-            field: field,
-            gallery_images: gallery_images
-          }
-        } = socket
+        %{assigns: %{field: field, gallery_images: gallery_images}} = socket
       ) do
     changeset = field.form.source
     gallery = Ecto.Changeset.get_field(changeset, field.field)
@@ -363,7 +326,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     new_gallery_images = Enum.filter(gallery_images, &(&1.image_id != image_id))
     selected_images = Enum.map(new_gallery_images, & &1.image.path)
 
-    send_update(BrandoAdmin.Components.ImagePicker,
+    send_update(ImagePicker,
       id: "image-picker",
       selected_images: selected_images
     )
@@ -392,8 +355,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       force_validation: true
     )
 
-    {:noreply,
-     assign(socket, gallery_images: new_gallery_images, selected_images: selected_images)}
+    {:noreply, assign(socket, gallery_images: new_gallery_images, selected_images: selected_images)}
   end
 
   # def handle_event(
