@@ -1,8 +1,9 @@
 defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
+  @moduledoc false
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
-
   use Gettext, backend: Brando.Gettext
+
   import Brando.Utils.Datetime
   import Phoenix.Component
 
@@ -18,9 +19,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
        |> assign_current_user(token)
        |> set_admin_locale()}
     else
-      {:ok,
-       socket
-       |> assign(:socket_connected, false)}
+      {:ok, assign(socket, :socket_connected, false)}
     end
   end
 
@@ -90,19 +89,19 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
   def handle_event("refresh_jobs", _, socket) do
     send(self(), {:toast, gettext("Job queue refreshed")})
 
-    {:noreply, socket |> assign_jobs()}
+    {:noreply, assign_jobs(socket)}
   end
 
   def handle_event("delete_job", %{"id" => job_id}, socket) do
     Publisher.delete_job(job_id)
     send(self(), {:toast, gettext("Job deleted")})
 
-    {:noreply, socket |> assign_jobs()}
+    {:noreply, assign_jobs(socket)}
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket
