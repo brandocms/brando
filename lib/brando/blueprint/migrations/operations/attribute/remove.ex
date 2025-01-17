@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
+  @moduledoc false
   import Brando.Blueprint.Migrations.Types
 
   defstruct attribute: nil,
@@ -44,10 +45,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down_indexes(%{
-        attribute: %{name: name, opts: %{unique: [prevent_collision: true]}},
-        module: module
-      }) do
+  def down_indexes(%{attribute: %{name: name, opts: %{unique: [prevent_collision: true]}}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
@@ -55,10 +53,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down_indexes(%{
-        attribute: %{name: name, opts: %{unique: true}},
-        module: module
-      }) do
+  def down_indexes(%{attribute: %{name: name, opts: %{unique: true}}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
@@ -66,10 +61,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down_indexes(%{
-        attribute: %{name: name, opts: %{unique: [with: other_fields]}},
-        module: module
-      })
+  def down_indexes(%{attribute: %{name: name, opts: %{unique: [with: other_fields]}}, module: module})
       when is_list(other_fields) do
     table_name = module.__naming__().table_name
 
@@ -78,10 +70,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down_indexes(%{
-        attribute: %{name: name, opts: %{unique: [with: other_field]}},
-        module: module
-      })
+  def down_indexes(%{attribute: %{name: name, opts: %{unique: [with: other_field]}}, module: module})
       when is_atom(other_field) do
     table_name = module.__naming__().table_name
 
@@ -90,10 +79,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down_indexes(%{
-        attribute: %{name: name, opts: %{unique: [prevent_collision: coll_field]}},
-        module: module
-      })
+  def down_indexes(%{attribute: %{name: name, opts: %{unique: [prevent_collision: coll_field]}}, module: module})
       when is_atom(coll_field) do
     table_name = module.__naming__().table_name
 
@@ -114,10 +100,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def up_indexes(%{
-        attribute: %{name: name, opts: %{unique: [prevent_collision: true]}},
-        module: module
-      }) do
+  def up_indexes(%{attribute: %{name: name, opts: %{unique: [prevent_collision: true]}}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
@@ -125,10 +108,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def up_indexes(%{
-        attribute: %{name: name, opts: %{unique: [prevent_collision: coll_field]}},
-        module: module
-      })
+  def up_indexes(%{attribute: %{name: name, opts: %{unique: [prevent_collision: coll_field]}}, module: module})
       when is_atom(coll_field) do
     table_name = module.__naming__().table_name
 
@@ -137,10 +117,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def up_indexes(%{
-        attribute: %{name: name, opts: %{unique: true}},
-        module: module
-      }) do
+  def up_indexes(%{attribute: %{name: name, opts: %{unique: true}}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
