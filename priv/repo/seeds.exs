@@ -1,6 +1,6 @@
 BrandoIntegration.Repo.start_link()
 
-%Brando.Sites.Identity{
+Brando.Repo.insert!(%Brando.Sites.Identity{
   type: "organization",
   name: "Organization name",
   alternate_name: "Shortform name",
@@ -16,29 +16,13 @@ BrandoIntegration.Repo.start_link()
   title_postfix: "",
   logo: nil,
   links: [
-    %Brando.Link{
-      name: "Instagram",
-      url: "https://instagram.com/test"
-    },
-    %Brando.Link{
-      name: "Facebook",
-      url: "https://facebook.com/test"
-    }
+    %Brando.Link{name: "Instagram", url: "https://instagram.com/test"},
+    %Brando.Link{name: "Facebook", url: "https://facebook.com/test"}
   ],
-  metas: [
-    %Brando.Meta{
-      key: "key1",
-      value: "value1"
-    },
-    %Brando.Meta{
-      key: "key2",
-      value: "value2"
-    }
-  ]
-}
-|> Brando.Repo.insert!()
+  metas: [%Brando.Meta{key: "key1", value: "value1"}, %Brando.Meta{key: "key2", value: "value2"}]
+})
 
-%Brando.Sites.SEO{
+Brando.Repo.insert!(%Brando.Sites.SEO{
   fallback_meta_description: "Fallback meta description",
   fallback_meta_title: "Fallback meta title",
   fallback_meta_image: nil,
@@ -48,5 +32,4 @@ BrandoIntegration.Repo.start_link()
   User-agent: *
   Disallow: /admin/
   """
-}
-|> Brando.Repo.insert!()
+})
