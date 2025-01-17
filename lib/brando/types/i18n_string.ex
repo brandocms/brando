@@ -37,9 +37,7 @@ defmodule Brando.Type.I18nString do
   def dump(map) when is_map(map) do
     # Go through map values and set to nil if empty string
     map =
-      map
-      |> Enum.map(fn {key, value} -> {key, if(value == "", do: nil, else: value)} end)
-      |> Enum.into(%{})
+      Map.new(map, fn {key, value} -> {key, if(value == "", do: nil, else: value)} end)
 
     # Check if all map values are empty strings
     if Enum.all?(map, fn {_key, value} -> is_nil(value) end) do
