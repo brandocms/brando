@@ -2,11 +2,13 @@ defmodule Brando.Plug.HTML do
   @moduledoc """
   A plug with HTML oriented helpers
   """
-  require Logger
   import Plug.Conn
+
+  alias Brando.JSONLD
   alias Brando.Pages.Page
   alias Brando.Utils
-  alias Brando.JSONLD
+
+  require Logger
 
   @type conn :: Plug.Conn.t()
 
@@ -41,8 +43,7 @@ defmodule Brando.Plug.HTML do
       plug :put_css_classes, "wrapper box"
   """
   @spec put_css_classes(conn, binary | [binary]) :: conn
-  def put_css_classes(conn, classes) when is_binary(classes),
-    do: put_private(conn, :brando_css_classes, classes)
+  def put_css_classes(conn, classes) when is_binary(classes), do: put_private(conn, :brando_css_classes, classes)
 
   def put_css_classes(conn, classes) when is_list(classes),
     do: put_private(conn, :brando_css_classes, Enum.join(classes, " "))
@@ -84,8 +85,7 @@ defmodule Brando.Plug.HTML do
   @doc """
   Adds JSON-LD to conn
   """
-  def put_json_ld(conn, :breadcrumbs, breadcrumbs),
-    do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
+  def put_json_ld(conn, :breadcrumbs, breadcrumbs), do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
 
   def put_json_ld(conn, module, data, extra_fields \\ []) do
     meta_meta = %{
@@ -148,8 +148,7 @@ defmodule Brando.Plug.HTML do
     conn
   end
 
-  def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry)
-      when is_list(alternate_entries) do
+  def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry) when is_list(alternate_entries) do
     canonical = {entry.language, Brando.HTML.absolute_url(entry, :with_host)}
 
     hreflangs =
