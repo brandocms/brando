@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Menu do
   defmacro __using__(_) do
     quote do
       import BrandoAdmin.Menu
+
       @before_compile BrandoAdmin.Menu
     end
   end
@@ -37,8 +38,7 @@ defmodule BrandoAdmin.Menu do
     Enum.map(menus, &__MODULE__.translate_menu/1)
   end
 
-  def translate_menu(%{name: msgid, items: items} = menu)
-      when is_nil(items) or items == [] do
+  def translate_menu(%{name: msgid, items: items} = menu) when is_nil(items) or items == [] do
     %{menu | name: translate_msgid(msgid)}
   end
 
@@ -150,7 +150,7 @@ defmodule BrandoAdmin.Menu do
   end
 
   def strip_preloads(query) do
-    Map.drop(query, [:preload])
+    Map.delete(query, :preload)
   end
 
   def encode_advanced_order(%{order: orders} = query) when is_binary(orders) do
