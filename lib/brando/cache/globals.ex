@@ -65,8 +65,7 @@ defmodule Brando.Cache.Globals do
         set_globals =
           vars
           |> Enum.map(&preload_images/1)
-          |> Enum.map(&{&1.key, &1})
-          |> Enum.into(%{})
+          |> Map.new(&{&1.key, &1})
 
         put_in(
           acc,
@@ -79,8 +78,7 @@ defmodule Brando.Cache.Globals do
     end)
   end
 
-  defp preload_images(%Brando.Content.Var{type: :image} = image_var),
-    do: Brando.Repo.preload(image_var, :image)
+  defp preload_images(%Brando.Content.Var{type: :image} = image_var), do: Brando.Repo.preload(image_var, :image)
 
   defp preload_images(var), do: var
 end
