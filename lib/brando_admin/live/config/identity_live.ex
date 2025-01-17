@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.IdentityLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.Identity
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Sites
   alias BrandoAdmin.Components.Form
 
@@ -33,22 +35,16 @@ defmodule BrandoAdmin.Sites.IdentityLive do
     end)
   end
 
-  defp assign_entry_id(
-         %{
-           assigns: %{current_user: %{config: %{content_language: content_language}}}
-         } = socket
-       ) do
+  defp assign_entry_id(%{assigns: %{current_user: %{config: %{content_language: content_language}}}} = socket) do
     case Sites.get_identity(%{matches: %{language: content_language}}) do
       {:ok, identity} ->
         assign(socket, :entry_id, identity.id)
 
       {:error, _} ->
-        first_identity = Sites.list_identities!() |> List.first()
+        first_identity = List.first(Sites.list_identities!())
 
         {:ok, identity} =
-          Sites.duplicate_identity(first_identity.id, :system,
-            merge_fields: %{language: content_language}
-          )
+          Sites.duplicate_identity(first_identity.id, :system, merge_fields: %{language: content_language})
 
         assign(socket, :entry_id, identity.id)
     end
