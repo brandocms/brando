@@ -1,14 +1,15 @@
 defmodule BrandoAdmin.Components.Form.Input.Entries do
+  @moduledoc false
   use BrandoAdmin, :live_component
-
   use Gettext, backend: Brando.Gettext
+
   import Brando.Utils.Datetime, only: [format_datetime: 1]
 
+  alias Brando.Blueprint.Identifier
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
-  alias BrandoAdmin.Components.Content.List.Row
-
   alias Ecto.Changeset
 
   # prop form, :form
@@ -62,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def assign_available_schemas(socket, wanted_schemas) do
     assign_new(socket, :available_schemas, fn ->
-      Brando.Blueprint.Identifier.get_entry_types(wanted_schemas)
+      Identifier.get_entry_types(wanted_schemas)
     end)
   end
 
@@ -75,23 +76,21 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       field_opts = socket.assigns.opts
 
       list_opts =
-        case Keyword.get(field_opts, :filter_language, false) do
-          false ->
+        if Keyword.get(field_opts, :filter_language, false) do
+          form = socket.assigns.field.form
+          language = form[:language]
+
+          if language do
+            language_atom = String.to_existing_atom(language.value)
+            Map.put(list_opts, :language, language_atom)
+          else
             list_opts
-
-          true ->
-            form = socket.assigns.field.form
-            language = form[:language]
-
-            if language do
-              language_atom = String.to_existing_atom(language.value)
-              Map.put(list_opts, :language, language_atom)
-            else
-              list_opts
-            end
+          end
+        else
+          list_opts
         end
 
-      {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
+      {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
       identifiers
     end)
   end
@@ -107,13 +106,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base
-        field={@field}
-        label={@label}
-        instructions={@instructions}
-        class={@class}
-        compact={@compact}
-      >
+      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <%= if Enum.empty?(@selected_identifiers) do %>
           <div class="empty-list">
             {gettext("No selected entries")}
@@ -134,10 +127,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           >
             <input type="hidden" name={@field.name} id={@field.id} />
             <.inputs_for :let={identifier_form} field={@field}>
-              <.assoc_identifier
-                assoc_identifier={identifier_form}
-                available_identifiers={@selected_identifiers}
-              >
+              <.assoc_identifier assoc_identifier={identifier_form} available_identifiers={@selected_identifiers}>
                 <%!-- <input
                   type="hidden"
                   name={identifier_form[:id].name}
@@ -149,11 +139,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
                   value={identifier_form.index}
                 /> --%>
                 <:delete>
-                  <input
-                    type="hidden"
-                    name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
-                    value={identifier_form.index}
-                  />
+                  <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={identifier_form.index} />
                   <button
                     type="button"
                     name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
@@ -228,13 +214,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
         %{action: :replace} = replaced_changeset ->
           Enum.map(assoc_identifiers, fn assoc_identifier ->
-            case Changeset.get_field(assoc_identifier, :identifier_id) == identifier_id do
-              true ->
-                action = (Changeset.get_field(assoc_identifier, :id) == nil && :insert) || nil
-                Map.put(replaced_changeset, :action, action)
-
-              false ->
-                assoc_identifier
+            if Changeset.get_field(assoc_identifier, :identifier_id) == identifier_id do
+              action = (Changeset.get_field(assoc_identifier, :id) == nil && :insert) || nil
+              Map.put(replaced_changeset, :action, action)
+            else
+              assoc_identifier
             end
           end)
 
@@ -292,33 +276,27 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     end
   end
 
-  def handle_event(
-        "select_schema",
-        %{"schema" => schema},
-        %{assigns: %{available_schemas: available_schemas}} = socket
-      ) do
+  def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
     schema_module = Module.concat([schema])
     {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
     field_opts = socket.assigns.opts
 
     list_opts =
-      case Keyword.get(field_opts, :filter_language, false) do
-        false ->
+      if Keyword.get(field_opts, :filter_language, false) do
+        form = socket.assigns.field.form
+        language = form[:language]
+
+        if language do
+          language_atom = String.to_existing_atom(language.value)
+          Map.put(list_opts, :language, language_atom)
+        else
           list_opts
-
-        true ->
-          form = socket.assigns.field.form
-          language = form[:language]
-
-          if language do
-            language_atom = String.to_existing_atom(language.value)
-            Map.put(list_opts, :language, language_atom)
-          else
-            list_opts
-          end
+        end
+      else
+        list_opts
       end
 
-    {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, list_opts)
+    {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
 
     {:noreply,
      socket
@@ -340,10 +318,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     changeset = block_identifier.source
 
     identifier_changeset =
-      if not match?(%Ecto.Association.NotLoaded{}, changeset.data.identifier) do
-        Changeset.get_assoc(changeset, :identifier)
-      else
+      if match?(%Ecto.Association.NotLoaded{}, changeset.data.identifier) do
         nil
+      else
+        Changeset.get_assoc(changeset, :identifier)
       end
 
     identifier =
@@ -619,9 +597,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           {@identifier.title}
         </div>
         <div class="meta-info">
-          <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(
-            @identifier.entry_id
-          )}
+          <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(@identifier.entry_id)}
           <span>|</span> {format_datetime(@identifier.updated_at)}
         </div>
       </div>
@@ -644,7 +620,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       |> Changeset.put_change(:identifier_id, identifier_id)
       |> Map.put(:action, :insert)
 
-    (assoc_identifiers ++ [new_assoc_identifier]) |> dbg
+    assoc_identifiers ++ [new_assoc_identifier]
   end
 
   def remove_identifier(assoc_identifiers, identifier_id) do
