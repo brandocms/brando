@@ -1,17 +1,18 @@
 defmodule BrandoAdmin.Components.Content.List.Row do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
   use Gettext, backend: Brando.Gettext
-  import Brando.Utils.Datetime
 
-  alias BrandoAdmin.Components.Badge
-  alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.ChildrenButton
-  alias BrandoAdmin.Components.CircleDropdown
-  alias BrandoAdmin.Components.Form.Input.Entries
+  import Brando.Utils.Datetime
 
   alias Brando.Blueprint.Identifier
   alias Brando.Trait
+  alias BrandoAdmin.Components.Badge
+  alias BrandoAdmin.Components.ChildrenButton
+  alias BrandoAdmin.Components.CircleDropdown
+  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Input.Entries
 
   # prop entry, :any
   # prop selected_rows, :list
@@ -364,8 +365,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def status_circle(%{status: :pending, publish_at: publish_at} = assigns)
-      when not is_nil(publish_at) do
+  def status_circle(%{status: :pending, publish_at: publish_at} = assigns) when not is_nil(publish_at) do
     ~H"""
     <svg
       data-testid="status-pending"
@@ -396,8 +396,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns),
-    do: ~H""
+  def alternates(%{entry: %{alternate_entries: %Ecto.Association.NotLoaded{}}} = assigns), do: ~H""
 
   def alternates(%{entry: %{alternate_entries: alternate_entries}} = assigns) do
     assigns =
@@ -559,11 +558,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     {:noreply, push_navigate(socket, to: url)}
   end
 
-  def handle_event(
-        "remove_entry",
-        %{"schema" => schema, "parent_id" => parent_id, "id" => id},
-        socket
-      ) do
+  def handle_event("remove_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
     alternate_schema = Module.concat(schema, Alternate)
     _ = alternate_schema.delete(id, parent_id)
 
@@ -575,7 +570,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     {:noreply, socket}
   end
 
-  defp statuses() do
+  defp statuses do
     [:published, :disabled, :draft, :pending]
   end
 
@@ -588,7 +583,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp get_duplication_langs(_, false), do: []
 
   defp get_duplication_langs(content_language, true) do
-    Brando.config(:languages)
+    :languages
+    |> Brando.config()
     |> Enum.map(& &1[:value])
     |> Enum.reject(&(&1 == content_language))
   end
