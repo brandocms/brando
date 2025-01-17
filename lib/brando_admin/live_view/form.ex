@@ -171,10 +171,10 @@ defmodule BrandoAdmin.LiveView.Form do
         image_schema = Module.concat([image_schema_binary])
 
         full_path =
-          if image_schema != schema do
-            path
-          else
+          if image_schema == schema do
             [field_atom]
+          else
+            path
           end
 
         singular = schema.__naming__().singular
@@ -250,30 +250,21 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_alert_info(
-         {:alert, message},
-         %{assigns: %{current_user: current_user}} = socket
-       ) do
+  defp handle_hooks_alert_info({:alert, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.Alert.send_to(current_user, message)
     {:halt, socket}
   end
 
   defp handle_hooks_alert_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_toast_info(
-         {:toast, message},
-         %{assigns: %{current_user: current_user}} = socket
-       ) do
+  defp handle_hooks_toast_info({:toast, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.Toast.send_to(current_user, message)
     {:halt, socket}
   end
 
   defp handle_hooks_toast_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_progress_popup_info(
-         {:progress_popup, message},
-         %{assigns: %{current_user: current_user}} = socket
-       ) do
+  defp handle_hooks_progress_popup_info({:progress_popup, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.ProgressPopup.send_to(current_user, message)
     {:halt, socket}
   end
@@ -347,8 +338,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp handle_hooks_active_field_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_modules_info({_module, [:module, action]}, socket)
-       when action in [:created, :updated] do
+  defp handle_hooks_modules_info({_module, [:module, action]}, socket) when action in [:created, :updated] do
     schema = socket.assigns.schema
 
     for %{name: field} <- schema.__blocks_fields__() do
@@ -388,7 +378,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket
