@@ -1,14 +1,14 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
+  @moduledoc false
   use BrandoAdmin, :live_component
-
   use Gettext, backend: Brando.Gettext
 
-  alias Ecto.Changeset
   alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias Ecto.Changeset
 
   # prop uploads, :any
   # prop base_form, :any
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       end
 
     image = Changeset.apply_changes(block_data_cs)
-    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
+    file_name = if is_map(image) && image.path, do: Path.basename(image.path)
 
     {:ok,
      socket

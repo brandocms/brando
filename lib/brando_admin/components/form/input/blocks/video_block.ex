@@ -1,14 +1,17 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
+
   import BrandoAdmin.Components.Content.List.Checklist
-  alias Ecto.Changeset
+
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
-  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Block
+  alias BrandoAdmin.Components.Form.Input
+  alias Ecto.Changeset
 
   # prop block, :any
   # prop block_count, :integer

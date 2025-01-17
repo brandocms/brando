@@ -1,12 +1,13 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
 
-  alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias Ecto.Changeset
 
   # prop base_form, :any
   # prop data_field, :atom
