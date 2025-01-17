@@ -623,18 +623,20 @@ defmodule Brando.Content do
   end
 
   def has_identifier(module) do
-    case module.__has_identifier__() do
-      true -> {:ok, :has_identifier}
-      false -> {:error, :no_identifier}
+    if module.__has_identifier__() do
+      {:ok, :has_identifier}
+    else
+      {:error, :no_identifier}
     end
   rescue
     UndefinedFunctionError -> {:error, :no_identifier}
   end
 
   def persist_identifier(module) do
-    case module.__persist_identifier__() do
-      true -> {:ok, :persist_identifier}
-      false -> {:error, :ignore_identifier}
+    if module.__persist_identifier__() do
+      {:ok, :persist_identifier}
+    else
+      {:error, :ignore_identifier}
     end
   rescue
     UndefinedFunctionError -> {:error, :no_identifier}
