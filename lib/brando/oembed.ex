@@ -1,4 +1,5 @@
 defmodule Brando.OEmbed do
+  @moduledoc false
   @providers %{
     "youtube" => "https://www.youtube.com/oembed?format=json&url=",
     "vimeo" => "https://vimeo.com/api/oembed.json?url="
@@ -14,9 +15,8 @@ defmodule Brando.OEmbed do
   end
 
   def fetch(url) do
-    with %{body: body, status: 200} <- Req.get!(url) do
-      {:ok, body}
-    else
+    case Req.get!(url) do
+      %{body: body, status: 200} -> {:ok, body}
       _ -> {:error, "oEmbed url not found"}
     end
   end
