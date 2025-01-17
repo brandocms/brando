@@ -1,18 +1,17 @@
 defmodule BrandoAdmin.Content.ModuleFormLive do
+  @moduledoc false
   use BrandoAdmin, :live_view
   use BrandoAdmin.Toast
-
   use Gettext, backend: Brando.Gettext
 
-  alias Ecto.Changeset
-  alias Brando.Villain
   alias Brando.Content.Module.Ref
   alias Brando.Content.Var
-
+  alias Brando.Villain
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
+  alias Ecto.Changeset
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
     if connected?(socket) do
@@ -85,11 +84,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   end
 
   ## Sequence event
-  def handle_event(
-        "create_ref",
-        %{"type" => block_type},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("create_ref", %{"type" => block_type}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     refs = Changeset.get_field(changeset, :refs)
 
@@ -108,14 +103,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     updated_changeset = Changeset.put_change(changeset, :refs, [new_ref | refs])
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, socket |> assign(:form, updated_form)}
+    {:noreply, assign(socket, :form, updated_form)}
   end
 
-  def handle_event(
-        "delete_ref",
-        %{"id" => ref_name},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("delete_ref", %{"id" => ref_name}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     refs = Changeset.get_field(changeset, :refs)
     filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
@@ -123,14 +114,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     updated_changeset = Changeset.put_change(changeset, :refs, filtered_refs)
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, socket |> assign(:form, updated_form)}
+    {:noreply, assign(socket, :form, updated_form)}
   end
 
-  def handle_event(
-        "duplicate_ref",
-        %{"id" => ref_name},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("duplicate_ref", %{"id" => ref_name}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     refs = Changeset.get_field(changeset, :refs)
     ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
@@ -140,17 +127,13 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     updated_changeset = Changeset.put_change(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])
 
-    {:noreply, socket |> assign(:form, updated_form)}
+    {:noreply, assign(socket, :form, updated_form)}
   end
 
-  def handle_event(
-        "create_var",
-        %{"type" => var_type},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("create_var", %{"type" => var_type}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     vars = Changeset.get_field(changeset, :vars) || []
-    var_type = var_type |> String.to_existing_atom()
+    var_type = String.to_existing_atom(var_type)
 
     new_var =
       %Var{
@@ -168,11 +151,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
      |> assign(:var_name, nil)}
   end
 
-  def handle_event(
-        "delete_var",
-        %{"id" => var_key},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("delete_var", %{"id" => var_key}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     vars = Changeset.get_field(changeset, :vars)
     filtered_vars = Enum.reject(vars, &(&1.key == var_key))
@@ -186,11 +165,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
      |> assign(:var_name, nil)}
   end
 
-  def handle_event(
-        "duplicate_var",
-        %{"id" => var_key},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_event("duplicate_var", %{"id" => var_key}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     vars = Changeset.get_field(changeset, :vars)
     var_to_dupe = Enum.find(vars, &(&1.key == var_key))
@@ -244,6 +219,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         {:noreply, push_navigate(socket, to: "/admin/config/content/modules")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        require Logger
+
         raise "Changeset error"
 
         traversed_errors =
@@ -251,8 +228,6 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
             msg -> msg
           end)
-
-        require Logger
 
         Logger.error("""
 
@@ -272,10 +247,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     end
   end
 
-  def handle_info(
-        {:add_select_var_option, var_key},
-        %{assigns: %{form: form}} = socket
-      ) do
+  def handle_info({:add_select_var_option, var_key}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
     vars = Changeset.get_field(changeset, :vars) || []
 
@@ -301,7 +273,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket
