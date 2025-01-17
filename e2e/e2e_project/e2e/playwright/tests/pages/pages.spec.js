@@ -123,3 +123,73 @@ test('creates a simple page', async ({ page }) => {
 
   await expect(page.getByText('Hello from Playwright!')).toBeVisible()
 })
+
+test('creates meta information', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByRole('link', { name: 'Pages & Sections' }).click()
+  await page.getByRole('link', { name: 'Create page' }).click()
+  await syncLV(page)
+
+  await page.getByLabel('Published').check()
+  await page.getByLabel('Title', { exact: true }).click()
+  await page.getByLabel('Title', { exact: true }).fill('Hello')
+  await page.getByLabel('URI').click()
+  await page.getByLabel('URI').fill('hello')
+
+  // add heading block
+  await page.getByRole('button', { name: 'Add block' }).click()
+  await page.getByRole('button', { name: 'HEADERS' }).click()
+  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await expect(
+    page.locator('#block-field-blocks-module-picker')
+  ).not.toBeVisible()
+  await expect(page.getByText('Module | Heading')).toBeVisible()
+  await page.getByText('Text').click()
+  await page.getByText('Text').fill('Hello!')
+
+  // open meta drawer
+  await page.getByRole('button', { name: 'Meta' }).click()
+  await page.locator('input[name="page[meta_title]"]').fill('Overridden title')
+  await page
+    .locator('textarea[name="page[meta_description]"]')
+    .fill('Overridden description')
+
+  // Add SEO image
+  await page.getByRole('button', { name: 'Add image' }).click()
+  await page
+    .locator('input[name="meta_image"]')
+    .setInputFiles('./fixtures/image.jpg')
+  // Close drawer
+  await page.getByRole('button', { name: 'Close' }).first().click()
+  // Wait for the drawer to vanish or the form to be detached
+  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await page.evaluate(() => {
+    document
+      .querySelector('#image-drawer-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+
+  await syncLV(page)
+  await page.getByTestId('submit').click()
+  await expect(
+    page.locator('div').filter({ hasText: 'Providing root block' }).first()
+  ).toBeVisible()
+  await syncLV(page)
+  await expect(
+    page.locator('div').filter({ hasText: 'Providing root block' }).first()
+  ).not.toBeVisible()
+
+  await expect(page).toHaveURL('/admin/pages')
+
+  // take a look at the frontend
+  await page.goto('/hello')
+  await expect(page.getByRole('heading', { name: 'Hello!' })).toBeVisible()
+
+  const metaDescriptionLocator = page.locator('meta[name="description"]')
+  const metaDescription = await metaDescriptionLocator.getAttribute('content')
+  expect(metaDescription).toBe('Overridden description')
+
+  const metaTitleLocator = page.locator('meta[name="title"]')
+  const metaTitle = await metaTitleLocator.getAttribute('content')
+  expect(metaTitle).toBe('Overridden title')
+})
