@@ -4,11 +4,13 @@ defmodule Brando.Users do
   """
   use BrandoAdmin, :context
   use Brando.Query
+  use Gettext, backend: Brando.Gettext
+
+  import Ecto.Query
+
   alias Brando.Users.User
   alias Brando.Users.UserToken
   alias Brando.Utils
-  import Ecto.Query
-  use Gettext, backend: Brando.Gettext
 
   @type user :: User.t()
 
@@ -108,7 +110,7 @@ defmodule Brando.Users do
     raise "TODO"
   end
 
-  def get_users_map() do
+  def get_users_map do
     list_opts = %{
       select: [:id, :name, :last_login],
       cache: {:ttl, :infinite},
