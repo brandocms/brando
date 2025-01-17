@@ -1,8 +1,10 @@
 defmodule BrandoAdmin.Components.Form.MetaDrawer do
+  @moduledoc false
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
-  alias BrandoAdmin.Components.Form.Input
+
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Input
 
   # prop form, :form, required: true
   # prop blueprint, :any, required: true

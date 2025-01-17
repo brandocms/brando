@@ -1,12 +1,13 @@
 defmodule BrandoAdmin.Components.Form.Input.Vars do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
+  use Gettext, backend: Brando.Gettext
+
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
-
-  use Gettext, backend: Brando.Gettext
-  import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   # prop form, :form
   # prop subform, :form

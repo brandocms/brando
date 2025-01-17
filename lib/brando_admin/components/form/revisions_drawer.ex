@@ -1,9 +1,11 @@
 defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
+  @moduledoc false
   use BrandoAdmin, :live_component
+  use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
-  use Gettext, backend: Brando.Gettext
 
   # prop form, :form, required: true
   # prop current_user, :any, required: true
@@ -88,8 +90,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   defp assign_active_revision(%{assigns: %{revisions: revisions}} = socket) do
-    socket
-    |> assign_new(:active_revision, fn ->
+    assign_new(socket, :active_revision, fn ->
       case Enum.find(revisions, & &1.active) do
         nil -> nil
         %{revision: revision} -> revision
@@ -354,17 +355,11 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     """
   end
 
-  def handle_event(
-        "purge_inactive_revisions",
-        _,
-        %{assigns: %{entry_id: entry_id, form: %{source: changeset}}} = socket
-      ) do
+  def handle_event("purge_inactive_revisions", _, %{assigns: %{entry_id: entry_id, form: %{source: changeset}}} = socket) do
     schema = changeset.data.__struct__
     Brando.Revisions.purge_revisions(schema, entry_id)
 
-    {:noreply,
-     socket
-     |> assign_refreshed_revisions()}
+    {:noreply, assign_refreshed_revisions(socket)}
   end
 
   def handle_event(
@@ -375,9 +370,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.delete_revision(schema, entry_id, selected_revision_id)
 
-    {:noreply,
-     socket
-     |> assign_refreshed_revisions()}
+    {:noreply, assign_refreshed_revisions(socket)}
   end
 
   def handle_event(
@@ -388,21 +381,13 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.protect_revision(schema, entry_id, selected_revision_id, true)
 
-    {:noreply,
-     socket
-     |> assign_refreshed_revisions()}
+    {:noreply, assign_refreshed_revisions(socket)}
   end
 
   def handle_event(
         "schedule",
         %{"revision" => revision, "publish_at" => publish_at},
-        %{
-          assigns: %{
-            current_user: current_user,
-            entry_id: entry_id,
-            form: %{source: changeset}
-          }
-        } = socket
+        %{assigns: %{current_user: current_user, entry_id: entry_id, form: %{source: changeset}}} = socket
       ) do
     schema = changeset.data.__struct__
 
@@ -434,24 +419,14 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.protect_revision(schema, entry_id, selected_revision_id, false)
 
-    {:noreply,
-     socket
-     |> assign_refreshed_revisions()}
+    {:noreply, assign_refreshed_revisions(socket)}
   end
 
   def handle_event("store_revision", _, socket) do
     changeset = socket.assigns.form.source
     current_user = socket.assigns.current_user
 
-    if changeset.errors != [] do
-      error_title = gettext("Error")
-
-      error_notice =
-        gettext("Error while saving form. Please correct marked fields and resubmit")
-
-      {:noreply,
-       push_event(socket, "b:alert", %{title: error_title, message: error_notice, type: "error"})}
-    else
+    if changeset.errors == [] do
       entry = Ecto.Changeset.apply_changes(changeset)
       {:ok, revision} = Brando.Revisions.create_revision(entry, current_user, false)
 
@@ -459,6 +434,13 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
        socket
        |> assign_refreshed_revisions()
        |> assign(:active_revision, revision.revision)}
+    else
+      error_title = gettext("Error")
+
+      error_notice =
+        gettext("Error while saving form. Please correct marked fields and resubmit")
+
+      {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_notice, type: "error"})}
     end
   end
 
@@ -480,9 +462,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def handle_event(
         "activate_revision",
         %{"value" => selected_revision_id},
-        %{
-          assigns: %{entry_id: entry_id, form: form, current_user: current_user}
-        } = socket
+        %{assigns: %{entry_id: entry_id, form: form, current_user: current_user}} = socket
       ) do
     module = form.source.data.__struct__
     form_cid = socket.assigns.form_cid

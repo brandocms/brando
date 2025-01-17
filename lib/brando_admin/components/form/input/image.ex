@@ -1,8 +1,9 @@
 defmodule BrandoAdmin.Components.Form.Input.Image do
+  @moduledoc false
   use BrandoAdmin, :live_component
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Changeset
-  use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -58,10 +59,10 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         module_from_form = form.source.data.__struct__
 
         module =
-          if path != [] do
-            Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
-          else
+          if path == [] do
             module_from_form
+          else
+            Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
           end
 
         "#{module.__naming__().singular}_form"
@@ -163,7 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           end
       end
 
-    file_name = if is_map(image) && image.path, do: Path.basename(image.path), else: nil
+    file_name = if is_map(image) && image.path, do: Path.basename(image.path)
 
     {:ok,
      socket
@@ -243,10 +244,10 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     module_from_form = form.source.data.__struct__
 
     module =
-      if path != [] do
-        Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
-      else
+      if path == [] do
         module_from_form
+      else
+        Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
       end
 
     send_update(BrandoAdmin.Components.ImagePicker,
@@ -281,11 +282,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign(:form_id, form_id)}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => selected_image_id},
-        %{assigns: %{form_id: form_id}} = socket
-      ) do
+  def handle_event("select_image", %{"id" => selected_image_id}, %{assigns: %{form_id: form_id}} = socket) do
     on_change = socket.assigns.on_change
     {:ok, image} = Brando.Images.get_image(selected_image_id)
 
@@ -317,8 +314,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     type_from_path =
       if assigns.image do
         Brando.Images.Utils.image_type(assigns.image.path)
-      else
-        nil
       end
 
     assigns =

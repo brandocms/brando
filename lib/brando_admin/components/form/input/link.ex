@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.Link do
+  @moduledoc false
   use BrandoAdmin, :live_component
+
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   # prop form, :form

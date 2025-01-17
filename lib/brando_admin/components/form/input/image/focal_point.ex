@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.Image.FocalPoint do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 

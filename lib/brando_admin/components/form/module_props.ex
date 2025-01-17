@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Components.Form.ModuleProps do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Datasource
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -1075,11 +1077,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "toggle_col_var",
-        %{"id" => col_name},
-        %{assigns: %{open_col_vars: open_col_vars}} = socket
-      ) do
+  def handle_event("toggle_col_var", %{"id" => col_name}, %{assigns: %{open_col_vars: open_col_vars}} = socket) do
     updated_open_col_vars =
       if col_name in open_col_vars do
         Enum.reject(open_col_vars, &(&1 == col_name))

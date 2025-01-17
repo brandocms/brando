@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery.ImagePreview do
+  @moduledoc false
   use BrandoAdmin, :component
   # use Phoenix.HTML
   import Ecto.Changeset
+
   alias Brando.Utils
 
   # prop form, :form
