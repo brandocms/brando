@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.Nav do
+  @moduledoc false
   use BrandoAdmin, :child_live_view
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content
+
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
 
   def mount(_, %{"user_token" => _token, "current_url" => url}, socket) do
@@ -27,16 +30,14 @@ defmodule BrandoAdmin.Nav do
     current_user = socket.assigns.current_user
 
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket
   end
 
   def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)}
+    {:ok, assign(socket, assigns)}
   end
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
@@ -202,11 +203,7 @@ defmodule BrandoAdmin.Nav do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "toggle",
-        _,
-        %{assigns: %{fields: child_fields, singular: singular, entry: %{id: id}}} = socket
-      ) do
+  def handle_event("toggle", _, %{assigns: %{fields: child_fields, singular: singular, entry: %{id: id}}} = socket) do
     id = "list-row-#{singular}-#{id}"
 
     send_update(BrandoAdmin.Components.Content.List.Row,
