@@ -230,11 +230,14 @@ defmodule Brando.Blueprint.Forms do
   end
 
   def get_tab_for_field(field, %Forms.Form{tabs: tabs}) do
-    tab =
+    for_result =
       for tab <- tabs,
           %Forms.Fieldset{fields: inputs} <- tab.fields do
         find_field(inputs, field) && tab.name
       end
+
+    tab =
+      for_result
       |> Enum.filter(&is_binary(&1))
       |> List.first()
 
@@ -242,10 +245,13 @@ defmodule Brando.Blueprint.Forms do
   end
 
   def get_field(field, %Forms.Form{tabs: tabs}) do
-    for tab <- tabs,
-        %Forms.Fieldset{fields: inputs} <- tab.fields do
-      find_field_normalized(inputs, field)
-    end
+    for_result =
+      for tab <- tabs,
+          %Forms.Fieldset{fields: inputs} <- tab.fields do
+        find_field_normalized(inputs, field)
+      end
+
+    for_result
     |> Enum.reject(&is_nil(&1))
     |> List.first()
   end
