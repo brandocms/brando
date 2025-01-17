@@ -16,18 +16,20 @@ defmodule Brando.Revisions do
       ```
   """
 
-  @type changeset :: Ecto.Changeset.t()
-  @type revision :: Brando.Revisions.Revision.t()
-  @type revision_active :: boolean
-  @type user :: Brando.Users.User.t()
-
   use Brando.Query
+
   import Ecto.Query
+
   alias Brando.Cache
   alias Brando.Datasource
   alias Brando.Query
   alias Brando.Revisions.Revision
   alias Brando.Utils
+
+  @type changeset :: Ecto.Changeset.t()
+  @type revision :: Brando.Revisions.Revision.t()
+  @type revision_active :: boolean
+  @type user :: Brando.Users.User.t()
 
   query :list, Revision do
     fn query -> from(q in query) end
@@ -39,7 +41,7 @@ defmodule Brando.Revisions do
         from q in query, where: q.entry_id == ^entry_id
 
       {:entry_type, entry_type}, query when is_binary(entry_type) ->
-        entry_type = Module.concat([entry_type]) |> to_string()
+        entry_type = [entry_type] |> Module.concat() |> to_string()
         from q in query, where: q.entry_type == ^entry_type
 
       {:entry_type, entry_type}, query when is_atom(entry_type) ->
