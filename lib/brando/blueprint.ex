@@ -104,16 +104,17 @@ defmodule Brando.Blueprint do
 
   """
 
-  alias Ecto.Changeset
-  alias Brando.Blueprint.Constraints
+  import Brando.Blueprint.Utils
+
   alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Assets.Asset
+  alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
   alias Brando.Trait
-  import Brando.Blueprint.Utils
+  alias Ecto.Changeset
 
   defstruct naming: %{},
             modules: %{},
@@ -159,19 +160,9 @@ defmodule Brando.Blueprint do
 
     quote location: :keep do
       use Ecto.Schema
-      @data_layer :database
-      @allow_mark_as_deleted false
-      @factory %{}
-
-      if String.downcase(@domain) == String.downcase(@plural) do
-        @table_name "#{@plural}"
-      else
-        @table_name "#{String.downcase(@domain)}_#{@plural}"
-      end
-
       use Gettext, backend: unquote(gettext_module)
+      use Brando.Blueprint.Dsl
 
-      require PolymorphicEmbed
       import Brando.Blueprint
       import Brando.Blueprint.AbsoluteURL
       import Brando.Blueprint.Assets
@@ -186,10 +177,22 @@ defmodule Brando.Blueprint do
       import Brando.Blueprint.Translations
       import Brando.Blueprint.Utils
       import Brando.Utils.Schema
-      import Phoenix.Component, except: [form: 1]
       import Ecto.Changeset
+      import Phoenix.Component, except: [form: 1]
 
-      def __blueprint__(), do: true
+      require PolymorphicEmbed
+
+      @data_layer :database
+      @allow_mark_as_deleted false
+      @factory %{}
+
+      if String.downcase(@domain) == String.downcase(@plural) do
+        @table_name "#{@plural}"
+      else
+        @table_name "#{String.downcase(@domain)}_#{@plural}"
+      end
+
+      def __blueprint__, do: true
       def __absolute_url__(_), do: nil
       defoverridable __absolute_url__: 1
 
@@ -201,8 +204,6 @@ defmodule Brando.Blueprint do
 
       def __persist_identifier__, do: true
       defoverridable __persist_identifier__: 0
-
-      use Brando.Blueprint.Dsl
     end
   end
 
@@ -221,6 +222,7 @@ defmodule Brando.Blueprint do
                       "#{Phoenix.Naming.camelize(to_string(entries_rel.name))}Identifier"
                     ]) do
             use Ecto.Schema
+
             import Ecto.Query
 
             schema "#{parent_table_name}_#{entries_rel.name}_identifiers" do
@@ -265,11 +267,14 @@ defmodule Brando.Blueprint do
                       "#{Phoenix.Naming.camelize(to_string(blocks_rel.name))}"
                     ]) do
             use Ecto.Schema
+
             import Ecto.Query
+
+            alias Brando.Content.Block
 
             schema "#{parent_table_name}_#{blocks_rel.name}" do
               Ecto.Schema.belongs_to(:entry, parent_module)
-              Ecto.Schema.belongs_to(:block, Brando.Content.Block, on_replace: :update)
+              Ecto.Schema.belongs_to(:block, Block, on_replace: :update)
               Ecto.Schema.field(:sequence, :integer)
               Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
             end
@@ -278,7 +283,7 @@ defmodule Brando.Blueprint do
             def changeset(entry_block, attrs, user, recursive? \\ false) do
               entry_block
               |> Ecto.Changeset.cast(attrs, [:entry_id, :block_id, :sequence])
-              |> Brando.Content.Block.maybe_cast_recursive(recursive?, user)
+              |> Block.maybe_cast_recursive(recursive?, user)
               |> Ecto.Changeset.unique_constraint([:entry, :block],
                 name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
               )
@@ -412,6 +417,7 @@ defmodule Brando.Blueprint do
 
         relation ->
           require Logger
+
           Logger.error("==> relation type not caught")
           Logger.error(inspect(relation, pretty: true))
       end)
@@ -451,6 +457,7 @@ defmodule Brando.Blueprint do
 
         asset ->
           require Logger
+
           Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")
       end)
     end
@@ -491,13 +498,13 @@ defmodule Brando.Blueprint do
   def get_castable_relation_fields(rels) do
     rels
     |> Enum.filter(&(&1.type == :belongs_to))
-    |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
+    |> Enum.map(&(&1.name |> to_string() |> Kernel.<>("_id") |> String.to_atom()))
   end
 
   def get_castable_asset_fields(rels) do
     rels
     |> Enum.filter(&(&1.type in [:file, :image, :video, :gallery]))
-    |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
+    |> Enum.map(&(&1.name |> to_string() |> Kernel.<>("_id") |> String.to_atom()))
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
@@ -512,8 +519,7 @@ defmodule Brando.Blueprint do
     %{domain: domain, schema: schema} = module.__naming__()
     gettext_domain = String.downcase("#{domain}_#{schema}")
 
-    translations
-    |> Enum.map(fn
+    Enum.map(translations, fn
       {key, value} when is_map(value) ->
         {key, run_translations(module, value, ctx || key)}
 
@@ -523,9 +529,7 @@ defmodule Brando.Blueprint do
   end
 
   def build_id(application, domain, schema) do
-    [application, domain, schema]
-    |> Enum.map(&String.downcase/1)
-    |> Enum.join("-")
+    Enum.map_join([application, domain, schema], "-", &String.downcase/1)
   end
 
   defmacro factory(map) do
@@ -709,9 +713,7 @@ defmodule Brando.Blueprint do
   end
 
   defmacro listing_query(_) do
-    IO.warn(
-      "listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate.54"
-    )
+    IO.warn("listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate.54")
   end
 
   defmacro filters(_) do
@@ -733,9 +735,7 @@ defmodule Brando.Blueprint do
   end
 
   defmacro template(_template, _opts \\ []) do
-    IO.warn(
-      "template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate.54"
-    )
+    IO.warn("template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate.54")
   end
 
   defmacro __after_compile__(env, _) do
