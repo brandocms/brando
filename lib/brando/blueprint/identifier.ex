@@ -8,11 +8,12 @@ defmodule Brando.Blueprint.Identifier do
 
   """
 
+  import Ecto.Query
+
+  alias Brando.Content.Identifier
+  alias Brando.Utils
   alias Brando.Villain
   alias Brando.Villain.LiquexParser
-  alias Brando.Utils
-
-  import Ecto.Query
 
   defmacro persist_identifier(persist?) do
     quote location: :keep do
@@ -77,11 +78,9 @@ defmodule Brando.Blueprint.Identifier do
         url =
           if {:__absolute_url__, 1} in entry.__struct__.__info__(:functions) do
             __absolute_url__(entry)
-          else
-            nil
           end
 
-        %Brando.Content.Identifier{
+        %Identifier{
           entry_id: entry.id,
           title: title,
           status: status,
@@ -134,7 +133,7 @@ defmodule Brando.Blueprint.Identifier do
     Brando.Content.list_identifiers(schema, list_opts)
   end
 
-  def get_entry_for_identifier(%Brando.Content.Identifier{entry_id: entry_id, schema: schema}) do
+  def get_entry_for_identifier(%Identifier{entry_id: entry_id, schema: schema}) do
     if function_exported?(schema, :__info__, 1) do
       context = schema.__modules__().context
       singular = schema.__naming__().singular
@@ -216,7 +215,7 @@ defmodule Brando.Blueprint.Identifier do
     IO.puts("=> Syncing identifiers. Relevant modules: #{inspect(relevant_modules)}")
 
     # select all identifiers with schema not in `relevant_modules`
-    delete_query = from i in Brando.Content.Identifier, where: i.schema not in ^relevant_modules
+    delete_query = from i in Identifier, where: i.schema not in ^relevant_modules
     Brando.Repo.delete_all(delete_query, [])
 
     IO.puts(
@@ -280,7 +279,7 @@ defmodule Brando.Blueprint.Identifier do
 
     for module <- relevant_modules do
       identifiers_query =
-        from i in Brando.Content.Identifier, select: i.entry_id, where: i.schema == ^module
+        from i in Identifier, select: i.entry_id, where: i.schema == ^module
 
       current_identifiers = Brando.Repo.all(identifiers_query)
 
