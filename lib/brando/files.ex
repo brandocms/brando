@@ -11,6 +11,7 @@ defmodule Brando.Files do
   import Ecto.Query
 
   alias Brando.Files.File
+  alias Brando.Type.FileConfig
   alias Brando.Users.User
 
   @type id :: binary | integer
@@ -90,8 +91,8 @@ defmodule Brando.Files do
   """
   def get_config_for(%{config_target: nil}) do
     maybe_struct(
-      Brando.Type.FileConfig,
-      Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
+      FileConfig,
+      Brando.config(Brando.Files)[:default_config] || FileConfig.default_config()
     )
   end
 
@@ -113,9 +114,9 @@ defmodule Brando.Files do
 
         ["default"] ->
           maybe_struct(
-            Brando.Type.FileConfig,
+            FileConfig,
             Brando.config(Brando.Files)[:default_config] ||
-              Brando.Type.FileConfig.default_config()
+              FileConfig.default_config()
           )
       end
 
@@ -130,6 +131,6 @@ defmodule Brando.Files do
     get_config_for(%{config_target: "default"})
   end
 
-  defp maybe_struct(_struct_type, %Brando.Type.FileConfig{} = config), do: config
+  defp maybe_struct(_struct_type, %FileConfig{} = config), do: config
   defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end
