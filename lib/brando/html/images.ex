@@ -4,6 +4,8 @@ defmodule Brando.HTML.Images do
   """
 
   use Phoenix.Component
+
+  alias Brando.Blueprint.Assets
   alias Brando.Utils
 
   @placeholders [
@@ -179,7 +181,7 @@ defmodule Brando.HTML.Images do
   defp source_tags(%{src: %{formats: nil}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
-    if Enum.all?(Map.drop(attrs.source, ["type"]), fn {_k, v} -> v == false end) do
+    if Enum.all?(Map.delete(attrs.source, "type"), fn {_k, v} -> v == false end) do
       ~H||
     else
       ~H|<source {@attrs.source} />|
@@ -189,7 +191,7 @@ defmodule Brando.HTML.Images do
   defp source_tags(%{src: %{formats: formats}, attrs: attrs} = assigns) do
     # if all source attrs are false (except type, which we don't care about)
     # drop the source tag
-    if Enum.all?(Map.drop(attrs.source, ["type"]), fn {_k, v} -> v == false end) do
+    if Enum.all?(Map.delete(attrs.source, "type"), fn {_k, v} -> v == false end) do
       ~H||
     else
       sizes_format = List.first(formats)
@@ -247,8 +249,7 @@ defmodule Brando.HTML.Images do
 
   defp suffix_srcs(false, _), do: false
 
-  defp suffix_srcs(srcs, suffix),
-    do: String.replace(srcs, [".jpg", ".jpeg", ".png", ".avif", ".gif"], suffix)
+  defp suffix_srcs(srcs, suffix), do: String.replace(srcs, [".jpg", ".jpeg", ".png", ".avif", ".gif"], suffix)
 
   defp add_alt(attrs, image_struct) do
     alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, "") || "")
@@ -640,11 +641,7 @@ defmodule Brando.HTML.Images do
   def get_sizes(nil), do: nil
   def get_sizes(sizes) when is_list(sizes), do: Enum.join(sizes, ", ")
 
-  def get_sizes(_),
-    do:
-      raise(ArgumentError,
-        message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
-      )
+  def get_sizes(_), do: raise(ArgumentError, message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>)
 
   @doc """
   Get just the srcset
@@ -684,7 +681,7 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, Brando.Blueprint.Assets.__asset_opts__(mod, field)}
+    {:ok, %{cfg: cfg}} = {:ok, Assets.__asset_opts__(mod, field)}
 
     if !Map.get(cfg, :srcset) do
       raise ArgumentError,
@@ -730,7 +727,7 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, Brando.Blueprint.Assets.__asset_opts__(mod, field)}
+    {:ok, %{cfg: cfg}} = {:ok, Assets.__asset_opts__(mod, field)}
 
     if !cfg.srcset do
       raise ArgumentError,
@@ -739,8 +736,7 @@ defmodule Brando.HTML.Images do
 
     if !Map.get(cfg.srcset, key) do
       raise ArgumentError,
-        message:
-          "no `#{inspect(key)}` key set in #{inspect(mod)}'s #{inspect(field)} srcset config"
+        message: "no `#{inspect(key)}` key set in #{inspect(mod)}'s #{inspect(field)} srcset config"
     end
 
     # check if it is cropped
@@ -877,7 +873,8 @@ defmodule Brando.HTML.Images do
   end
 
   defp sort_srcset(map) when is_map(map) do
-    Map.to_list(map)
+    map
+    |> Map.to_list()
     |> Enum.sort(fn {_k1, s1}, {_k2, s2} ->
       t1 =
         s1
