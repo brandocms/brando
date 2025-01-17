@@ -1,6 +1,9 @@
 defmodule BrandoAdmin.Utils do
+  @moduledoc false
   use BrandoAdmin.Translator
+
   import Phoenix.Component
+
   alias Phoenix.LiveView.JS
 
   def prepare_subform_component(%{assigns: assigns} = socket) do
@@ -87,8 +90,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def toggle_dropdown(js \\ %JS{}, dropdown_id) do
-    js
-    |> JS.toggle(
+    JS.toggle(js,
       to: dropdown_id,
       in: {"transition ease-out duration-300", "opacity-0 y-100", "opacity-100 y-0"},
       out: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
@@ -97,8 +99,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def show_dropdown(js \\ %JS{}, dropdown_id) do
-    js
-    |> JS.show(
+    JS.show(js,
       to: dropdown_id,
       transition: {"transition ease-out duration-300", "opacity-0 y-100", "opacity-100 y-0"},
       time: 300
@@ -106,8 +107,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def hide_dropdown(js \\ %JS{}, dropdown_id) do
-    js
-    |> JS.hide(
+    JS.hide(js,
       to: dropdown_id,
       transition: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
       time: 300
@@ -131,8 +131,7 @@ defmodule BrandoAdmin.Utils do
     |> JS.show(
       to: "#{modal_id} .modal-dialog",
       blocking: false,
-      transition:
-        {"transition ease-out delay-300 duration-300", "opacity-0 y-100", "opacity-100 y-0"},
+      transition: {"transition ease-out delay-300 duration-300", "opacity-0 y-100", "opacity-100 y-0"},
       time: 600
     )
   end
@@ -160,8 +159,7 @@ defmodule BrandoAdmin.Utils do
   end
 
   def toggle_drawer(js \\ %JS{}, drawer_id) do
-    js
-    |> JS.toggle(
+    JS.toggle(js,
       to: drawer_id,
       in: {"transition ease-out duration-300", "x-100", "x-0"},
       out: {"transition ease-in duration-300", "x-0", "x-100"},
@@ -172,7 +170,7 @@ defmodule BrandoAdmin.Utils do
   def make_id(entry) do
     slugged_struct =
       entry.__struct__
-      |> to_string
+      |> to_string()
       |> Brando.Utils.slugify()
 
     "#{slugged_struct}-#{entry.id}"
