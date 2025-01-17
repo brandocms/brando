@@ -1,4 +1,5 @@
 defmodule Brando.Trait.CastPolymorphicEmbeds do
+  @moduledoc false
   use Brando.Trait
 
   def changeset_mutator(module, _config, changeset, _user, _opts) do

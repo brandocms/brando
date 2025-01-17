@@ -28,9 +28,7 @@ defmodule Brando.Images.Uploads.Schema do
     end
   end
 
-  def build_upload_entry(%{
-        "image" => %Plug.Upload{filename: filename, content_type: content_type}
-      }) do
+  def build_upload_entry(%{"image" => %Plug.Upload{filename: filename, content_type: content_type}}) do
     {:ok, %{client_name: filename, client_type: content_type}}
   end
 

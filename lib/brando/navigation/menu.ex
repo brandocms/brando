@@ -1,4 +1,5 @@
 defmodule Brando.Navigation.Menu do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Navigation",
@@ -8,9 +9,11 @@ defmodule Brando.Navigation.Menu do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
   import Ecto.Query
-  alias Brando.Navigation.Item
+
   alias Brando.Content.Var
+  alias Brando.Navigation.Item
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

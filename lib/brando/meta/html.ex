@@ -4,6 +4,7 @@ defmodule Brando.Meta.HTML do
   """
   import Brando.Plug.HTML
   import Phoenix.Component
+
   alias Brando.Cache
 
   @type conn :: Plug.Conn.t()

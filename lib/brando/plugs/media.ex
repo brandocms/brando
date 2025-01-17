@@ -1,4 +1,5 @@
 defmodule Brando.Plug.Media do
+  @moduledoc false
   import Plug.Conn
 
   def init(opts) do
@@ -6,8 +7,7 @@ defmodule Brando.Plug.Media do
       at: Keyword.fetch!(opts, :at),
       from: Brando.config(:media_path),
       cache_control_for_etags: (Brando.env() == :prod && "public, max-age=31536000") || false,
-      cache_control_for_vsn_requests:
-        (Brando.env() == :prod && "public, max-age=31536000") || false
+      cache_control_for_vsn_requests: (Brando.env() == :prod && "public, max-age=31536000") || false
     ]
 
     Plug.Static.init(static_opts)

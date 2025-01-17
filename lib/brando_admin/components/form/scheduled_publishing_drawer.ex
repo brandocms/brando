@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
+  @moduledoc false
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
 

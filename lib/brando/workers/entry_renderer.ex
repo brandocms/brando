@@ -1,5 +1,7 @@
 defmodule Brando.Worker.EntryRenderer do
+  @moduledoc false
   use Oban.Worker, queue: :default, max_attempts: 5
+
   require Logger
 
   @impl Oban.Worker

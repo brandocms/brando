@@ -3,6 +3,7 @@ defmodule Brando.Trait.EnsureUID do
   Ensure UID field is set by generating if not
   """
   use Brando.Trait
+
   import Ecto.Changeset
 
   def changeset_mutator(_module, _config, changeset, _user, _opts) do

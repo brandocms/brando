@@ -3,6 +3,7 @@ defmodule Brando.Trait.Creator do
   Automatically sets creator to user
   """
   use Brando.Trait
+
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()

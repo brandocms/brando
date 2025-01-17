@@ -27,9 +27,11 @@ defmodule Brando.Villain.Migration do
   @doc """
   Macro for villain migrations.
   """
+  # TODO: Remove in 0.55
+  @deprecated "Move to :blocks"
   defmacro villain(field \\ nil) do
-    data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
-    html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+    data_field = (field && field |> to_string() |> Kernel.<>("_data") |> String.to_atom()) || :data
+    html_field = (field && field |> to_string() |> Kernel.<>("_html") |> String.to_atom()) || :html
 
     quote do
       Ecto.Migration.add(unquote(data_field), :jsonb)

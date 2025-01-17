@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Backend do
-  use Mix.Task
-
   @shortdoc "Generates a backend template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Backend do
       mix brando.gen.backend
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -36,14 +36,10 @@ defmodule Mix.Tasks.Brando.Gen.Backend do
       # Backend resources
       {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
       {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Light.woff2",
-       "assets/backend/public/fonts/Main-Light.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Medium.woff2",
-       "assets/backend/public/fonts/Main-Medium.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Regular.woff2",
-       "assets/backend/public/fonts/Main-Regular.woff2"},
-      {:copy, "assets/backend/public/images/admin/avatar.svg",
-       "assets/backend/public/images/admin/avatar.svg"},
+      {:copy, "assets/backend/public/fonts/Main-Light.woff2", "assets/backend/public/fonts/Main-Light.woff2"},
+      {:copy, "assets/backend/public/fonts/Main-Medium.woff2", "assets/backend/public/fonts/Main-Medium.woff2"},
+      {:copy, "assets/backend/public/fonts/Main-Regular.woff2", "assets/backend/public/fonts/Main-Regular.woff2"},
+      {:copy, "assets/backend/public/images/admin/avatar.svg", "assets/backend/public/images/admin/avatar.svg"},
 
       # Backend src
       {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},

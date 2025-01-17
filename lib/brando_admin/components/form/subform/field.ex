@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Subform.Field do
+  @moduledoc false
   use BrandoAdmin, :component
   # use Phoenix.HTML
 

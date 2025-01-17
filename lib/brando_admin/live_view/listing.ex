@@ -7,9 +7,10 @@ defmodule BrandoAdmin.LiveView.Listing do
   use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
 
   """
-  import Phoenix.LiveView
-  import Phoenix.Component
   use Gettext, backend: Brando.Gettext
+
+  import Phoenix.Component
+  import Phoenix.LiveView
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
@@ -126,9 +127,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         {:halt, socket}
 
-      "delete_selected",
-      %{"ids" => ids},
-      %{assigns: %{current_user: user, schema: schema}} = socket ->
+      "delete_selected", %{"ids" => ids}, %{assigns: %{current_user: user, schema: schema}} = socket ->
         ids = Jason.decode!(ids)
 
         singular = schema.__naming__().singular
@@ -243,14 +242,12 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         send(
           self(),
-          {:toast,
-           gettext("Content language is now %{language}", language: String.upcase(language))}
+          {:toast, gettext("Content language is now %{language}", language: String.upcase(language))}
         )
 
         {:halt, assign(socket, :current_user, updated_current_user)}
 
-      {:set_content_language_and_navigate, language, url},
-      %{assigns: %{current_user: current_user}} = socket ->
+      {:set_content_language_and_navigate, language, url}, %{assigns: %{current_user: current_user}} = socket ->
         {:ok, updated_current_user} =
           Brando.Users.update_user(
             current_user,
@@ -301,14 +298,12 @@ defmodule BrandoAdmin.LiveView.Listing do
 
         send(
           self(),
-          {:toast,
-           gettext("Content language is now %{language}", language: String.upcase(language))}
+          {:toast, gettext("Content language is now %{language}", language: String.upcase(language))}
         )
 
         {:halt, assign(socket, :current_user, updated_current_user)}
 
-      {:set_content_language_and_navigate, language, url},
-      %{assigns: %{current_user: current_user}} = socket ->
+      {:set_content_language_and_navigate, language, url}, %{assigns: %{current_user: current_user}} = socket ->
         {:ok, updated_current_user} =
           Brando.Users.update_user(
             current_user,
@@ -341,7 +336,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket

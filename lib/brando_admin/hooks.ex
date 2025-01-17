@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Hooks do
-  import Phoenix.LiveView
+  @moduledoc false
   import Phoenix.Component
+  import Phoenix.LiveView
 
   def on_mount(:urls, _, %{"user_token" => token}, socket) do
     socket =
@@ -22,8 +23,7 @@ defmodule BrandoAdmin.Hooks do
     end)
   end
 
-  def handle_params(params, url, %{assigns: %{current_user: user}} = socket)
-      when not is_nil(user) do
+  def handle_params(params, url, %{assigns: %{current_user: user}} = socket) when not is_nil(user) do
     uri = URI.parse(url)
     user_id = user.id
 
@@ -112,14 +112,12 @@ defmodule BrandoAdmin.Hooks do
     %{user: user} = presence
     %{presence_ids: presence_ids} = socket.assigns
 
-    cond do
-      Map.has_key?(presence_ids, user.id) ->
-        socket
-
-      true ->
-        socket
-        |> update(:presences, &Map.put(&1, user.id, user))
-        |> update(:presence_ids, &Map.put(&1, user.id, System.system_time()))
+    if Map.has_key?(presence_ids, user.id) do
+      socket
+    else
+      socket
+      |> update(:presences, &Map.put(&1, user.id, user))
+      |> update(:presence_ids, &Map.put(&1, user.id, System.system_time()))
     end
   end
 

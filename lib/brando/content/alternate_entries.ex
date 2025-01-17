@@ -1,4 +1,5 @@
 defmodule Brando.Content.AlternateEntries do
+  @moduledoc false
   @doc """
   Preload the alternate entries for a translatable schema
   """

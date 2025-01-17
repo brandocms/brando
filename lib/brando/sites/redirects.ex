@@ -1,4 +1,5 @@
 defmodule Brando.Sites.Redirects do
+  @moduledoc false
   @doc """
   Check `test_path` against registered redirects
   """

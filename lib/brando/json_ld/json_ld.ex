@@ -92,7 +92,7 @@ defmodule Brando.JSONLD do
       |> Enum.reject(&String.starts_with?(to_string(&1), ["@context", "@type"]))
       |> Enum.count()
 
-    if key_count > 0, do: to_slim_map(map), else: nil
+    if key_count > 0, do: to_slim_map(map)
   end
 
   defp slim_map(value), do: value
@@ -101,16 +101,13 @@ defmodule Brando.JSONLD do
   Convert date to ISO friendly string
   """
   @spec to_date(date :: any) :: binary
-  def to_date(date),
-    do: Calendar.strftime(date, "%Y-%m-%d")
+  def to_date(date), do: Calendar.strftime(date, "%Y-%m-%d")
 
   @doc """
   Convert datetime to ISO friendly string
   """
   @spec to_datetime(datetime :: any) :: binary
-  def to_datetime(%NaiveDateTime{} = datetime),
-    do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+  def to_datetime(%NaiveDateTime{} = datetime), do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
 
-  def to_datetime(%DateTime{} = datetime),
-    do: datetime |> DateTime.to_iso8601()
+  def to_datetime(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 end

@@ -1,4 +1,5 @@
 defmodule Brando.Utils.Datetime do
+  @moduledoc false
   def format_datetime(datetime, format_string \\ "%d/%m/%y", locale \\ nil)
 
   def format_datetime(nil, _, _), do: ""
@@ -6,15 +7,9 @@ defmodule Brando.Utils.Datetime do
   def format_datetime(%Date{} = date, format_string, locale) do
     locale = locale || Gettext.get_locale()
 
-    date
-    |> Calendar.strftime(
-      format_string,
-      month_names: fn month ->
-        get_month_name(month, locale)
-      end,
-      day_of_week_names: fn day ->
-        get_day_name(day, locale)
-      end
+    Calendar.strftime(date, format_string,
+      month_names: fn month -> get_month_name(month, locale) end,
+      day_of_week_names: fn day -> get_day_name(day, locale) end
     )
   end
 

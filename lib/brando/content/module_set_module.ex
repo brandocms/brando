@@ -3,8 +3,6 @@ defmodule Brando.Content.ModuleSetModule do
   Blueprint for the ModuleSetModule schema — a join table between ModuleSet and Module.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -14,7 +12,10 @@ defmodule Brando.Content.ModuleSetModule do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Content
+
+  @type t :: %__MODULE__{}
 
   @allow_mark_as_deleted true
 

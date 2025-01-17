@@ -1,4 +1,5 @@
 defmodule Brando.Villain.Blocks do
+  @moduledoc false
   alias Brando.Villain.Blocks
 
   def list_blocks do

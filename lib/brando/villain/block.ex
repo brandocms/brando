@@ -9,9 +9,12 @@ defmodule Brando.Villain.Block do
     type = Keyword.fetch!(opts, :type)
 
     quote generated: true do
-      use Ecto.Schema
-      import Ecto.Changeset
       @behaviour Brando.Villain.Block
+
+      use Ecto.Schema
+
+      import Ecto.Changeset
+
       @primary_key false
 
       embedded_schema do

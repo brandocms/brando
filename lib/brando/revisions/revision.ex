@@ -1,4 +1,5 @@
 defmodule Brando.Revisions.Revision do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Revisions",

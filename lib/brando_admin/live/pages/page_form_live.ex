@@ -1,26 +1,16 @@
 defmodule BrandoAdmin.Pages.PageFormLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Page
-  alias BrandoAdmin.Components.Form
   use Gettext, backend: Brando.Gettext
 
-  def mount(
-        %{"parent_id" => parent_id, "language" => language},
-        _session,
-        %{assigns: %{live_action: :create}} = socket
-      ) do
-    {:ok,
-     socket
-     |> assign(:initial_params, %{
-       parent_id: parent_id,
-       language: language,
-       template: "default.html"
-     })}
+  alias BrandoAdmin.Components.Form
+
+  def mount(%{"parent_id" => parent_id, "language" => language}, _session, %{assigns: %{live_action: :create}} = socket) do
+    {:ok, assign(socket, :initial_params, %{parent_id: parent_id, language: language, template: "default.html"})}
   end
 
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:initial_params, %{})}
+    {:ok, assign(socket, :initial_params, %{})}
   end
 
   def render(assigns) do

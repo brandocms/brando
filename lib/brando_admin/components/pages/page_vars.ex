@@ -1,8 +1,10 @@
 defmodule BrandoAdmin.Components.Pages.PageVars do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
+
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
   alias BrandoAdmin.Components.Form
@@ -121,7 +123,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   end
 
   def handle_event("toggle_advanced", _, socket) do
-    {:noreply, socket |> assign(:advanced, !socket.assigns.advanced)}
+    {:noreply, assign(socket, :advanced, !socket.assigns.advanced)}
   end
 
   def handle_event("add_subentry", _, socket) do

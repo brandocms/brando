@@ -1,4 +1,5 @@
 defmodule Brando.SSG do
+  @moduledoc false
   @doc """
   Static site generation
 

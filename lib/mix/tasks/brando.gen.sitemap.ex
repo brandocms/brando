@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Sitemap do
-  use Mix.Task
-
   @shortdoc "Generates a sitemap module template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Sitemap do
       mix brando.gen.sitemap
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -20,7 +20,7 @@ defmodule Mix.Tasks.Brando.Gen.Sitemap do
     app = Mix.Project.config()[:app]
 
     binding = [
-      web_module: to_string(Brando.config(:web_module)) |> String.replace("Elixir.", ""),
+      web_module: :web_module |> Brando.config() |> to_string() |> String.replace("Elixir.", ""),
       application_name: Atom.to_string(app)
     ]
 

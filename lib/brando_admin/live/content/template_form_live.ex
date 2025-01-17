@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Content.TemplateFormLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Content.Template
-  alias BrandoAdmin.Components.Form
   use Gettext, backend: Brando.Gettext
+
+  alias BrandoAdmin.Components.Form
 
   def render(assigns) do
     ~H"""

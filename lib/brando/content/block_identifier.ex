@@ -1,4 +1,5 @@
 defmodule Brando.Content.BlockIdentifier do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",

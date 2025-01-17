@@ -1,4 +1,5 @@
 defmodule Brando.LivePreview.Target.Assign do
+  @moduledoc false
   defstruct key: nil,
             value_fn: nil
 

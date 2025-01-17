@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Install.Fabfile do
-  use Mix.Task
-
   @shortdoc "Copy fabfile and pgbackup"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Install.Fabfile do
       mix brando.install.fabfile
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""

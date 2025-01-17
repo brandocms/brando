@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.GlobalTabs do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+
   alias Brando.Sites
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -89,12 +91,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   def handle_event(
         "validate",
         %{"global_set" => params},
-        %{
-          assigns: %{
-            current_user: current_user,
-            global_sets: global_sets
-          }
-        } = socket
+        %{assigns: %{current_user: current_user, global_sets: global_sets}} = socket
       ) do
     # get entry from params id
     entry = Enum.find(global_sets, &(&1.id == String.to_integer(params["id"])))
@@ -110,12 +107,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   def handle_event(
         "submit",
         %{"global_set" => params},
-        %{
-          assigns: %{
-            current_user: current_user,
-            global_sets: global_sets
-          }
-        } = socket
+        %{assigns: %{current_user: current_user, global_sets: global_sets}} = socket
       ) do
     # get entry from params id
     entry = Enum.find(global_sets, &(&1.id == String.to_integer(params["id"])))

@@ -3,8 +3,6 @@ defmodule Brando.Content.ModuleSet do
   Blueprint for the ModuleSet schema.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -16,6 +14,8 @@ defmodule Brando.Content.ModuleSet do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Content
+
+  @type t :: %__MODULE__{}
 
   # ++ Traits
   trait Brando.Trait.Creator

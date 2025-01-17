@@ -5,8 +5,6 @@ defmodule Brando.Content.Container do
   A container can hold multiple blocks
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -16,6 +14,8 @@ defmodule Brando.Content.Container do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   identifier "[{{ entry.namespace }}] {{ entry.name}}"
   persist_identifier false

@@ -27,9 +27,7 @@ defmodule Brando.Files.Uploads.Schema do
     end
   end
 
-  def build_upload_entry(%{
-        "file" => %Plug.Upload{filename: filename, content_type: content_type, path: path}
-      }) do
+  def build_upload_entry(%{"file" => %Plug.Upload{filename: filename, content_type: content_type, path: path}}) do
     client_size =
       case File.stat(path) do
         {:ok, %{size: size}} -> size

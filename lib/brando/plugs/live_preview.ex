@@ -3,8 +3,10 @@ defmodule Brando.Plug.LivePreview do
   Router for live-preview
   """
 
-  import Plug.Conn
   @behaviour Plug
+
+  import Plug.Conn
+
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
 
   def init(opts), do: opts

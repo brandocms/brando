@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Release do
-  use Mix.Task
-
   @shortdoc "Generates an Elixir release template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Release do
       mix brando.gen.release
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -81,6 +81,6 @@ defmodule Mix.Tasks.Brando.Gen.Release do
   end
 
   defp random_string(length) do
-    :crypto.strong_rand_bytes(length) |> Base.encode64() |> binary_part(0, length)
+    length |> :crypto.strong_rand_bytes() |> Base.encode64() |> binary_part(0, length)
   end
 end

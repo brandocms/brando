@@ -74,8 +74,7 @@ defmodule Brando.I18n do
   @doc """
   Get `language` from assigns.
   """
-  def get_language(conn),
-    do: Map.get(conn.assigns, :language, Brando.config(:default_admin_language))
+  def get_language(conn), do: Map.get(conn.assigns, :language, Brando.config(:default_admin_language))
 
   @doc """
   Extract language from path or fall back to default language

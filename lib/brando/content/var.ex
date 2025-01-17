@@ -3,8 +3,6 @@ defmodule Brando.Content.Var do
   Blueprint for a generic block var.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -12,6 +10,8 @@ defmodule Brando.Content.Var do
     singular: "var",
     plural: "vars",
     gettext_module: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   # ++ Traits
   trait Brando.Trait.Creator

@@ -1,12 +1,13 @@
 defmodule Mix.Tasks.Brando.Install do
-  use Mix.Task
-  import Mix.Generator
+  @shortdoc "Generates files for Brando."
 
   @moduledoc """
   Install Brando.
   """
 
-  @shortdoc "Generates files for Brando."
+  use Mix.Task
+
+  import Mix.Generator
 
   @new [
     # Mix template
@@ -68,8 +69,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Page files
     {:eex, "lib/application_name_web/controllers/page_controller.ex",
      "lib/application_name_web/controllers/page_controller.ex"},
-    {:eex, "lib/application_name_web/controllers/page_html.ex",
-     "lib/application_name_web/controllers/page_html.ex"},
+    {:eex, "lib/application_name_web/controllers/page_html.ex", "lib/application_name_web/controllers/page_html.ex"},
     {:eex, "lib/application_name_web/controllers/page_html/index.html.heex",
      "lib/application_name_web/controllers/page_html/index.html.heex"},
     {:eex, "lib/application_name_web/controllers/page_html/default.html.heex",
@@ -78,8 +78,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Fallback and errors
     {:eex, "lib/application_name_web/controllers/fallback_controller.ex",
      "lib/application_name_web/controllers/fallback_controller.ex"},
-    {:eex, "lib/application_name_web/controllers/error_html.ex",
-     "lib/application_name_web/controllers/error_html.ex"},
+    {:eex, "lib/application_name_web/controllers/error_html.ex", "lib/application_name_web/controllers/error_html.ex"},
     {:eex, "lib/application_name_web/controllers/error_html/404.html.heex",
      "lib/application_name_web/controllers/error_html/404.html.heex"},
     {:eex, "lib/application_name_web/controllers/error_html/500.html.heex",
@@ -94,10 +93,8 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/components/partials/logo.html.heex"},
 
     # Default Villain parser & filters
-    {:eex, "lib/application_name_web/villain/parser.ex",
-     "lib/application_name_web/villain/parser.ex"},
-    {:eex, "lib/application_name_web/villain/filters.ex",
-     "lib/application_name_web/villain/filters.ex"},
+    {:eex, "lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},
+    {:eex, "lib/application_name_web/villain/filters.ex", "lib/application_name_web/villain/filters.ex"},
 
     # E2E test setup
     {:eex, "lib/application_name/factory.ex", "lib/application_name/factory.ex"},
@@ -113,20 +110,16 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "config/runtime.exs", "config/runtime.exs"},
 
     # Initial migration files
-    {:eex, "migrations/20150123230712_create_users.exs",
-     "priv/repo/migrations/20150123230712_create_users.exs"},
+    {:eex, "migrations/20150123230712_create_users.exs", "priv/repo/migrations/20150123230712_create_users.exs"},
     {:eex, "migrations/20150215090305_create_imagecategories.exs",
      "priv/repo/migrations/20150215090305_create_imagecategories.exs"},
     {:eex, "migrations/20150215090306_create_imageseries.exs",
      "priv/repo/migrations/20150215090306_create_imageseries.exs"},
-    {:eex, "migrations/20150215090307_create_images.exs",
-     "priv/repo/migrations/20150215090307_create_images.exs"},
-    {:eex, "migrations/20171103152200_create_pages.exs",
-     "priv/repo/migrations/20171103152200_create_pages.exs"},
+    {:eex, "migrations/20150215090307_create_images.exs", "priv/repo/migrations/20150215090307_create_images.exs"},
+    {:eex, "migrations/20171103152200_create_pages.exs", "priv/repo/migrations/20171103152200_create_pages.exs"},
     {:eex, "migrations/20171103152205_create_pagefragments.exs",
      "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
-    {:eex, "migrations/20190426105600_create_templates.exs",
-     "priv/repo/migrations/20190426105600_create_templates.exs"},
+    {:eex, "migrations/20190426105600_create_templates.exs", "priv/repo/migrations/20190426105600_create_templates.exs"},
     {:eex, "migrations/20190630110527_brando_01_set_image_as_jsonb.exs",
      "priv/repo/migrations/20190630110527_brando_01_set_image_as_jsonb.exs"},
     {:eex, "migrations/20190630110528_brando_02_add_fragments_to_pages.exs",
@@ -231,8 +224,7 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20240527120716_brando_51_add_previews.exs"},
     {:eex, "migrations/20240527120717_brando_52_add_navigation_language_idx.exs",
      "priv/repo/migrations/20240527120717_brando_52_add_navigation_language_idx.exs"},
-    {:eex,
-     "migrations/20240527120719_brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs",
+    {:eex, "migrations/20240527120719_brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs",
      "priv/repo/migrations/20240527120719_brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs"},
     {:eex, "migrations/20240527120720_brando_54_add_revision_description.exs",
      "priv/repo/migrations/20240527120720_brando_54_add_revision_description.exs"},
@@ -248,8 +240,7 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20240527120728_brando_59_convert_module_vars_to_list.exs"},
     {:eex, "migrations/20240527120729_brando_60_convert_villain_vars_to_list.exs",
      "priv/repo/migrations/20240527120729_brando_60_convert_villain_vars_to_list.exs"},
-    {:eex,
-     "migrations/20240527120731_brando_61_convert_villain_picture_and_gallery_urls_to_path.exs",
+    {:eex, "migrations/20240527120731_brando_61_convert_villain_picture_and_gallery_urls_to_path.exs",
      "priv/repo/migrations/20240527120731_brando_61_convert_villain_picture_and_gallery_urls_to_path.exs"},
     {:eex, "migrations/20240527120732_brando_62_embed_poly_globals.exs",
      "priv/repo/migrations/20240527120732_brando_62_embed_poly_globals.exs"},
@@ -285,8 +276,7 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20240527120755_brando_77_replace_slideshow_blocks_with_gallery.exs"},
     {:eex, "migrations/20240527120756_brando_78_move_multi_refs_and_vars_under_data.exs",
      "priv/repo/migrations/20240527120756_brando_78_move_multi_refs_and_vars_under_data.exs"},
-    {:eex,
-     "migrations/20240527120758_brando_79_strip_media_prefix_from_picture_and_gallery_blocks.exs",
+    {:eex, "migrations/20240527120758_brando_79_strip_media_prefix_from_picture_and_gallery_blocks.exs",
      "priv/repo/migrations/20240527120758_brando_79_strip_media_prefix_from_picture_and_gallery_blocks.exs"},
     {:eex, "migrations/20240527120759_brando_80_extract_embeds_one_image_fields.exs",
      "priv/repo/migrations/20240527120759_brando_80_extract_embeds_one_image_fields.exs"},
@@ -365,8 +355,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Layouts
-    {:eex, "lib/application_name_web/components/layouts.ex",
-     "lib/application_name_web/components/layouts.ex"},
+    {:eex, "lib/application_name_web/components/layouts.ex", "lib/application_name_web/components/layouts.ex"},
     {:eex, "lib/application_name_web/components/layouts/app.html.heex",
      "lib/application_name_web/components/layouts/app.html.heex"},
     {:eex, "lib/application_name_web/components/layouts/bare.html.heex",
@@ -390,13 +379,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"},
 
     # Live Preview
-    {:eex, "lib/application_name_web/live_preview.ex",
-     "lib/application_name_web/live_preview.ex"},
+    {:eex, "lib/application_name_web/live_preview.ex", "lib/application_name_web/live_preview.ex"},
 
     # Admin
     {:eex, "lib/application_name_admin/menus.ex", "lib/application_name_admin/menus.ex"},
-    {:eex, "lib/application_name_admin/live/dashboard_live.ex",
-     "lib/application_name_admin/live/dashboard_live.ex"}
+    {:eex, "lib/application_name_admin/live/dashboard_live.ex", "lib/application_name_admin/live/dashboard_live.ex"}
   ]
 
   @static [
@@ -406,10 +393,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "Dockerfile", "Dockerfile"},
     {:copy, "fabfile.py", "fabfile.py"},
     {:eex, "deployment.cfg", "deployment.cfg"},
-    {:eex, "scripts/sync_media_from_local_to_remote.sh",
-     "scripts/sync_media_from_local_to_remote.sh"},
-    {:eex, "scripts/sync_media_from_remote_to_local.sh",
-     "scripts/sync_media_from_remote_to_local.sh"},
+    {:eex, "scripts/sync_media_from_local_to_remote.sh", "scripts/sync_media_from_local_to_remote.sh"},
+    {:eex, "scripts/sync_media_from_remote_to_local.sh", "scripts/sync_media_from_remote_to_local.sh"},
 
     # Backend tooling
     {:copy, "assets/backend/europa.config.cjs", "assets/backend/europa.config.cjs"},
@@ -422,14 +407,10 @@ defmodule Mix.Tasks.Brando.Install do
     # Backend resources
     {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
     {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
-    {:copy, "assets/backend/public/fonts/Main-Light.woff2",
-     "assets/backend/public/fonts/Main-Light.woff2"},
-    {:copy, "assets/backend/public/fonts/Main-Medium.woff2",
-     "assets/backend/public/fonts/Main-Medium.woff2"},
-    {:copy, "assets/backend/public/fonts/Main-Regular.woff2",
-     "assets/backend/public/fonts/Main-Regular.woff2"},
-    {:copy, "assets/backend/public/images/admin/avatar.svg",
-     "assets/backend/public/images/admin/avatar.svg"},
+    {:copy, "assets/backend/public/fonts/Main-Light.woff2", "assets/backend/public/fonts/Main-Light.woff2"},
+    {:copy, "assets/backend/public/fonts/Main-Medium.woff2", "assets/backend/public/fonts/Main-Medium.woff2"},
+    {:copy, "assets/backend/public/fonts/Main-Regular.woff2", "assets/backend/public/fonts/Main-Regular.woff2"},
+    {:copy, "assets/backend/public/images/admin/avatar.svg", "assets/backend/public/images/admin/avatar.svg"},
 
     # Backend src
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
@@ -453,23 +434,18 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend src - CSS
     {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
     {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
-    {:copy, "assets/frontend/css/includes/cookies.css",
-     "assets/frontend/css/includes/cookies.css"},
+    {:copy, "assets/frontend/css/includes/cookies.css", "assets/frontend/css/includes/cookies.css"},
     {:copy, "assets/frontend/css/includes/fonts.css", "assets/frontend/css/includes/fonts.css"},
-    {:copy, "assets/frontend/css/includes/modules.css",
-     "assets/frontend/css/includes/modules.css"},
-    {:copy, "assets/frontend/css/includes/navigation.css",
-     "assets/frontend/css/includes/navigation.css"},
+    {:copy, "assets/frontend/css/includes/modules.css", "assets/frontend/css/includes/modules.css"},
+    {:copy, "assets/frontend/css/includes/navigation.css", "assets/frontend/css/includes/navigation.css"},
 
     # Frontend JS
 
     {:keep, "assets/frontend/js/modules", "assets/frontend/js/modules"},
     {:copy, "assets/frontend/js/index.js", "assets/frontend/js/index.js"},
     {:copy, "assets/frontend/js/critical.js", "assets/frontend/js/critical.js"},
-    {:copy, "assets/frontend/js/config/BREAKPOINTS.js",
-     "assets/frontend/js/config/BREAKPOINTS.js"},
-    {:copy, "assets/frontend/js/config/MOBILE_MENU.js",
-     "assets/frontend/js/config/MOBILE_MENU.js"},
+    {:copy, "assets/frontend/js/config/BREAKPOINTS.js", "assets/frontend/js/config/BREAKPOINTS.js"},
+    {:copy, "assets/frontend/js/config/MOBILE_MENU.js", "assets/frontend/js/config/MOBILE_MENU.js"},
     {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
     {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
   ]
@@ -477,7 +453,7 @@ defmodule Mix.Tasks.Brando.Install do
   @root Path.expand("../../../priv", __DIR__)
 
   for {format, source, _} <- @new ++ @static do
-    unless format in [:keep, :copy] do
+    if format not in [:keep, :copy] do
       @external_resource Path.join([@root, "templates/brando.install", source])
       def render(unquote(Path.join("templates/brando.install", source))),
         do: unquote(File.read!(Path.join([@root, "templates/brando.install", source])))
@@ -542,6 +518,6 @@ defmodule Mix.Tasks.Brando.Install do
   end
 
   defp random_string(length) do
-    :crypto.strong_rand_bytes(length) |> Base.encode64() |> binary_part(0, length)
+    length |> :crypto.strong_rand_bytes() |> Base.encode64() |> binary_part(0, length)
   end
 end

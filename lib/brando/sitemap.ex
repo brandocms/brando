@@ -45,7 +45,7 @@ defmodule Brando.Sitemap do
   @doc """
   Convert map to Sitemapper.URL
   """
-  def url(map), do: struct!(Sitemapper.URL, map) |> check_lastmod()
+  def url(map), do: Sitemapper.URL |> struct!(map) |> check_lastmod()
 
   @doc """
   Validate that the lastmod has a timezone, or else Google might
@@ -67,7 +67,7 @@ defmodule Brando.Sitemap do
   @doc """
   Check if sitemap exists
   """
-  def exists?() do
+  def exists? do
     sitemap_module = Brando.web_module(Sitemap)
     function_exported?(sitemap_module, :__info__, 1)
   end

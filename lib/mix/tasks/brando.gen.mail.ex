@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Mail do
-  use Mix.Task
-
   @shortdoc "Generates a mailer template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Mail do
       mix brando.gen.mailer
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -27,8 +27,7 @@ defmodule Mix.Tasks.Brando.Gen.Mail do
     files = [
       {:eex, "lib/application_name/mailer.ex", "lib/application_name/mailer.ex"},
       {:eex, "lib/application_name/emails.ex", "lib/application_name/emails.ex"},
-      {:eex, "lib/application_name/contact/contact_form.ex",
-       "lib/application_name/contact/contact_form.ex"}
+      {:eex, "lib/application_name/contact/contact_form.ex", "lib/application_name/contact/contact_form.ex"}
     ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.mail", "", binding, files)

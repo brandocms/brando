@@ -5,8 +5,6 @@ defmodule Brando.Content.TableRow do
   Table rows are used in blocks for a flexible table structure.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -16,6 +14,8 @@ defmodule Brando.Content.TableRow do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped

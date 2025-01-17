@@ -1,4 +1,5 @@
 defmodule Brando.Trait.Focal do
+  @moduledoc false
   use Brando.Trait
 
   def changeset_mutator(_module, _config, %{changes: %{focal: _}} = changeset, _user, _opts) do

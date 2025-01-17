@@ -3,9 +3,11 @@ defmodule Brando.Trait.ProtectPassword do
   Protect password changes from other users than superusers and the user itself
   """
   use Brando.Trait
-  alias Ecto.Changeset
-  import Ecto.Changeset
   use Gettext, backend: Brando.Gettext
+
+  import Ecto.Changeset
+
+  alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
   @type config :: list()

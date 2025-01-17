@@ -1,4 +1,5 @@
 defmodule Brando.JSONLD.Schema.ListItem do
+  @moduledoc false
   @derive Jason.Encoder
   defstruct "@type": "ListItem",
             position: nil,

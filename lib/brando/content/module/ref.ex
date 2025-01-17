@@ -2,10 +2,6 @@ defmodule Brando.Content.Module.Ref do
   @moduledoc """
   Ecto schema for a module ref
   """
-  alias Brando.Villain.Blocks
-
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Villain",
@@ -13,6 +9,10 @@ defmodule Brando.Content.Module.Ref do
     singular: "ref",
     plural: "refs",
     gettext_module: Brando.Gettext
+
+  alias Brando.Villain.Blocks
+
+  @type t :: %__MODULE__{}
 
   @primary_key false
   data_layer :embedded

@@ -1,10 +1,11 @@
 defmodule Brando.Sites.FourOhFour do
+  @moduledoc false
   def add_404(conn) do
     Cachex.incr(:four_oh_four, Path.join(["/" | conn.path_info]), 1)
     conn
   end
 
-  def list() do
+  def list do
     :four_oh_four
     |> Cachex.stream!()
     |> Enum.map(fn {:entry, url, hits, timestamp, _} ->

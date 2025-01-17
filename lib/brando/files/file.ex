@@ -80,8 +80,7 @@ defmodule Brando.Files.File do
 
   defimpl String.Chars do
     def to_string(file) do
-      file
-      |> Brando.Utils.file_url()
+      Brando.Utils.file_url(file)
     end
   end
 end

@@ -1,4 +1,5 @@
 defmodule Brando.Trait.Meta do
+  @moduledoc false
   use Brando.Trait
 
   def generate_code(_, _) do

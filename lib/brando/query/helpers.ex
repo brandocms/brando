@@ -1,4 +1,5 @@
 defmodule Brando.Query.Helpers do
+  @moduledoc false
   @doc """
   Check if `field` on `schema` contains `data`
 

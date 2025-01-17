@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.UserAuth do
-  import Plug.Conn
-  import Phoenix.Controller
+  @moduledoc false
   use Gettext, backend: Brando.Gettext
+
+  import Phoenix.Controller
+  import Plug.Conn
+
   alias Brando.Users
 
   # Make the remember me cookie valid for 60 days.
@@ -159,7 +162,7 @@ defmodule BrandoAdmin.UserAuth do
     case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
       nil ->
         # set content_language to first language
-        first_lang = Brando.config(:languages) |> List.first()
+        first_lang = :languages |> Brando.config() |> List.first()
         updated_data = %{config: %{content_language: first_lang[:value]}}
 
         {:ok, _updated_current_user} =

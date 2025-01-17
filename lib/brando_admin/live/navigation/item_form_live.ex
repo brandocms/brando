@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Navigation.ItemUpdateLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Navigation.Item
-  alias BrandoAdmin.Components.Form
   use Gettext, backend: Brando.Gettext
+
+  alias BrandoAdmin.Components.Form
 
   def mount(%{"menu_id" => menu_id, "language" => language}, _session, socket) do
     if socket.assigns.live_action == :create do

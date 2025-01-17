@@ -3,6 +3,7 @@
 Mix.shell(Mix.Shell.Process)
 
 defmodule MixHelper do
+  @moduledoc false
   import ExUnit.Assertions
 
   def tmp_path do

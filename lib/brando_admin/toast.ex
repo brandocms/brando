@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Toast do
+  @moduledoc false
   defmacro __using__(_) do
     quote do
       def handle_info({:toast, message}, %{assigns: %{current_user: current_user}} = socket) do

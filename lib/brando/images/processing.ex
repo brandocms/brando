@@ -1,5 +1,6 @@
 defmodule Brando.Images.Processing do
-  require Logger
+  @moduledoc false
+  import Ecto.Query
 
   alias Brando.Images
   alias Brando.Images.Image
@@ -9,7 +10,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Worker
   alias Ecto.Changeset
 
-  import Ecto.Query
+  require Logger
 
   @type changeset :: Changeset.t()
   @type id :: binary | integer

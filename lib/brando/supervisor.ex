@@ -5,6 +5,7 @@ defmodule Brando.Supervisor do
   Looks after our cache.
   """
   use Supervisor
+
   import Cachex.Spec
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}

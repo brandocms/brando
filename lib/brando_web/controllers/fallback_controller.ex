@@ -5,10 +5,11 @@ defmodule BrandoWeb.FallbackController do
 
   import Brando.Plug.HTML
   import Plug.Conn
-  alias Brando.Pages
-  alias Brando.Sites.Redirects
-  alias Brando.Sites.FourOhFour
+
   alias Brando.I18n
+  alias Brando.Pages
+  alias Brando.Sites.FourOhFour
+  alias Brando.Sites.Redirects
 
   @doc """
   Handle errors

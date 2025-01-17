@@ -1,9 +1,10 @@
 defmodule BrandoAdmin.Globals.GlobalsLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet
+  use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.GlobalTabs
-  use Gettext, backend: Brando.Gettext
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :active_tab, nil)}

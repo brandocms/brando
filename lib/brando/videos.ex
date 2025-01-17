@@ -10,8 +10,8 @@ defmodule Brando.Videos do
 
   import Ecto.Query
 
-  alias Brando.Videos.Video
   alias Brando.Users.User
+  alias Brando.Videos.Video
 
   @type id :: binary | integer
   @type changeset :: changeset

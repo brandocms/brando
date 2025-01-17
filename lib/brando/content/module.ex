@@ -24,8 +24,6 @@ defmodule Brando.Content.Module do
   it will be excluded from rendering in the frontend.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -35,7 +33,10 @@ defmodule Brando.Content.Module do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
   alias Phoenix.LiveView.JS
+
+  @type t :: %__MODULE__{}
 
   identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"
   persist_identifier false

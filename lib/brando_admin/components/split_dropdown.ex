@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.SplitDropdown do
+  @moduledoc false
   use BrandoAdmin, :component
 
   def update(assigns, socket) do

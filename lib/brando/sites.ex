@@ -3,6 +3,7 @@ defmodule Brando.Sites do
   Context for Sites
   """
   use Brando.Query
+
   import Ecto.Query
 
   alias Brando.Cache
@@ -166,8 +167,7 @@ defmodule Brando.Sites do
   """
   mutation :update, SEO do
     fn entry ->
-      {:ok, entry}
-      |> Cache.SEO.update()
+      Cache.SEO.update({:ok, entry})
 
       #! TODO: |> update_villains_referencing_seo()
     end

@@ -1,7 +1,10 @@
 defmodule Brando.Worker.ImageProcessor do
+  @moduledoc false
   use Oban.Worker, queue: :image_processing, max_attempts: 5
+
   alias Brando.Images
   alias Brando.Users
+
   require Logger
 
   @impl Oban.Worker

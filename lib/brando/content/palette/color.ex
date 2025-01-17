@@ -5,8 +5,6 @@ defmodule Brando.Content.Palette.Color do
   Colors are embedded by palettes
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -14,6 +12,8 @@ defmodule Brando.Content.Palette.Color do
     singular: "color",
     plural: "colors",
     gettext_module: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   @primary_key false
   data_layer :embedded

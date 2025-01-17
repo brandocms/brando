@@ -1,11 +1,11 @@
 defmodule Mix.Tasks.Brando.Identifiers.Sync do
-  use Mix.Task
-
   @shortdoc "Clean up, update existing and recreate missing identifiers"
 
   @moduledoc """
   This task will clean up, update existing and recreate missing identifiers.
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run([]) do
     Application.put_env(:phoenix, :serve_endpoints, true)

@@ -1,5 +1,7 @@
 defmodule Brando.Worker.SoftDeletePurger do
+  @moduledoc false
   use Oban.Worker, queue: :default, max_attempts: 2
+
   require Logger
 
   @impl Oban.Worker

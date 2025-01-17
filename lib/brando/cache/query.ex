@@ -16,8 +16,7 @@ defmodule Brando.Cache.Query do
   def put(key, val, ttl \\ :timer.minutes(15))
   def put(key, val, ttl), do: @cache_module.put(:query, key, val, expire: ttl)
 
-  def put({:single, src, hash}, val, ttl, id),
-    do: @cache_module.put(:query, {:single, src, hash, id}, val, expire: ttl)
+  def put({:single, src, hash}, val, ttl, id), do: @cache_module.put(:query, {:single, src, hash, id}, val, expire: ttl)
 
   defp get_from_cache({:single, source, key}), do: find_single_entry(source, key)
   defp get_from_cache(key), do: @cache_module.get(:query, key)

@@ -1,11 +1,11 @@
 defmodule Mix.Tasks.Brando.Gen.Languages do
-  use Mix.Task
-
   @shortdoc "Generate identities and seo tables for new languages"
 
   @moduledoc """
   Generate identites and seo tables for new languages
   """
+  use Mix.Task
+
   @spec run([]) :: no_return
   def run([]) do
     Application.put_env(:phoenix, :serve_endpoints, true)
@@ -25,10 +25,11 @@ defmodule Mix.Tasks.Brando.Gen.Languages do
       |> create_language()
       |> Enum.reverse()
 
-    first_language_code = languages |> List.first() |> elem(0) |> to_string
+    first_language_code = languages |> List.first() |> elem(0) |> to_string()
 
     default_language =
-      prompt_with_default("Enter default language", first_language_code)
+      "Enter default language"
+      |> prompt_with_default(first_language_code)
       |> String.to_atom()
 
     Mix.shell().info([:blue, "\n==> Creating SEO and identity tables for languages.\n"])
@@ -72,7 +73,7 @@ defmodule Mix.Tasks.Brando.Gen.Languages do
 
   defp create_language(acc) do
     label = prompt_with_default("Enter language label", "English")
-    key = prompt_with_default("Enter language key", "en") |> String.to_atom()
+    key = "Enter language key" |> prompt_with_default("en") |> String.to_atom()
     acc = [{key, label} | acc]
 
     if Mix.shell().yes?("Create another language?") do
@@ -83,7 +84,7 @@ defmodule Mix.Tasks.Brando.Gen.Languages do
   end
 
   defp prompt_with_default(prompt, default) do
-    case Mix.shell().prompt("+ #{prompt} [#{default}]") |> String.trim("\n") do
+    case "+ #{prompt} [#{default}]" |> Mix.shell().prompt() |> String.trim("\n") do
       "" -> default
       ret -> ret
     end

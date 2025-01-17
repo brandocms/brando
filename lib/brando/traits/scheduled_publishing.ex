@@ -3,6 +3,7 @@ defmodule Brando.Trait.ScheduledPublishing do
   Adds `publish_at`
   """
   use Brando.Trait
+
   import Ecto.Changeset
 
   def generate_code(_, _) do

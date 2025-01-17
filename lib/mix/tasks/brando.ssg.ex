@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Ssg do
-  use Mix.Task
-
   @shortdoc "Static site generation"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Ssg do
       mix brando.ssg
 
   """
+  use Mix.Task
+
   @default_host "http://localhost:4000"
   def run(_) do
     Application.put_env(:phoenix, :serve_endpoints, true)

@@ -3,8 +3,6 @@ defmodule Brando.Content.Template do
   Villain templates
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -14,6 +12,8 @@ defmodule Brando.Content.Template do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   identifier false
   persist_identifier false

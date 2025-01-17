@@ -2,9 +2,9 @@ defmodule Brando.Images.Processor.Dummy do
   @moduledoc """
   Dummy processing
   """
-  alias Brando.Images
-
   @behaviour Brando.Images.Processor
+
+  alias Brando.Images
 
   @doc """
   Wrapper for System.cmd

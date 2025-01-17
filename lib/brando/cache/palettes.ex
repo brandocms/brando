@@ -59,12 +59,13 @@ defmodule Brando.Cache.Palettes do
   end
 
   defp process_palettes(palettes) do
-    Enum.reduce(palettes, [], fn palette, acc ->
+    palettes
+    |> Enum.reduce([], fn palette, acc ->
       [namespace_css(palette) | acc]
     end)
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("\r\n")
-    |> minify_css
+    |> minify_css()
     |> Phoenix.HTML.raw()
   end
 

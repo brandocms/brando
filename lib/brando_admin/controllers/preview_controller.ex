@@ -3,6 +3,7 @@ defmodule Brando.PreviewController do
   Controller for shared ephemeral previews
   """
   use BrandoAdmin, :controller
+
   alias Brando.Sites
   alias Brando.Utils
 

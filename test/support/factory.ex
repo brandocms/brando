@@ -1,15 +1,16 @@
 defmodule Brando.Factory do
+  @moduledoc false
   use ExMachina.Ecto, repo: Brando.Repo.repo()
 
-  alias Brando.Sites.GlobalSet
-  alias Brando.Pages.Page
-  alias Brando.Pages.Fragment
-  alias Brando.Image
-  alias Brando.Users.User
   alias Brando.Content
   alias Brando.Content.Module
   alias Brando.Content.Palette
+  alias Brando.Image
   alias Brando.Images.Image
+  alias Brando.Pages.Fragment
+  alias Brando.Pages.Page
+  alias Brando.Sites.GlobalSet
+  alias Brando.Users.User
 
   @encrypted_password Bcrypt.hash_pwd_salt("admin")
 

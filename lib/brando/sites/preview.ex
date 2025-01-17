@@ -1,4 +1,5 @@
 defmodule Brando.Sites.Preview do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",

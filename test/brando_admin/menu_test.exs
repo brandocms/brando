@@ -2,6 +2,7 @@ defmodule BrandoAdmin.MenuTest do
   use ExUnit.Case
 
   defmodule MenuItemBlueprint do
+    @moduledoc false
     use BrandoAdmin.Menu
 
     menus do
@@ -10,6 +11,7 @@ defmodule BrandoAdmin.MenuTest do
   end
 
   defmodule MenuItemCustom do
+    @moduledoc false
     use BrandoAdmin.Menu
 
     menus do
@@ -18,6 +20,7 @@ defmodule BrandoAdmin.MenuTest do
   end
 
   defmodule MenuItemSubitem do
+    @moduledoc false
     use BrandoAdmin.Menu
 
     menus do

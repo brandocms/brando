@@ -1,4 +1,5 @@
 defmodule Brando.Plug.SSG do
+  @moduledoc false
   def init(_) do
     Application.get_env(:brando, :ssg_run, :normal)
   end

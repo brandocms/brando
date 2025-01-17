@@ -3,6 +3,7 @@ defmodule Brando.SEOController do
   Controller for i18n actions.
   """
   use BrandoAdmin, :controller
+
   alias Brando.Cache
 
   @default_robots """

@@ -1,4 +1,5 @@
 defmodule Brando.Navigation.Item do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Navigation",

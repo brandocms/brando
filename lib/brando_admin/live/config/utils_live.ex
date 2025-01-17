@@ -1,8 +1,10 @@
 defmodule BrandoAdmin.Sites.UtilsLive do
+  @moduledoc false
   use BrandoAdmin, :live_view
-
   use Gettext, backend: Brando.Gettext
+
   import Phoenix.Component
+
   alias BrandoAdmin.Components.Content
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
@@ -17,9 +19,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> set_admin_locale()
        |> assign_info()}
     else
-      {:ok,
-       socket
-       |> assign(:socket_connected, false)}
+      {:ok, assign(socket, :socket_connected, false)}
     end
   end
 
@@ -145,7 +145,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
-    |> to_string
+    |> to_string()
     |> Gettext.put_locale()
 
     socket

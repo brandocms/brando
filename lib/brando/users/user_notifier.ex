@@ -5,8 +5,10 @@ defmodule Brando.Users.UserNotifier do
   #   * Swoosh - https://hexdocs.pm/swoosh
   #   * Bamboo - https://hexdocs.pm/bamboo
   #
+  @moduledoc false
   defp deliver(to, body) do
     require Logger
+
     Logger.debug(body)
     {:ok, %{to: to, body: body}}
   end

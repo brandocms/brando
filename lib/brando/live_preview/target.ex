@@ -1,4 +1,5 @@
 defmodule Brando.LivePreview.Target do
+  @moduledoc false
   defstruct __identifier__: nil,
             schema: nil,
             layout: nil,

@@ -1,4 +1,5 @@
 defmodule Brando.CDN.S3Config do
+  @moduledoc false
   defstruct access_key_id: nil,
             secret_access_key: nil,
             scheme: "https://",

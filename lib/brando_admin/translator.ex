@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Translator do
+  @moduledoc false
   defmacro __using__(_) do
     quote do
       def g(schema, nil), do: nil

@@ -1,4 +1,5 @@
 defmodule Brando.Sites.GlobalSet do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",

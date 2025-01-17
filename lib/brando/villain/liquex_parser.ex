@@ -1,4 +1,5 @@
 defmodule Brando.Villain.LiquexParser do
+  @moduledoc false
   use Liquex.Parser,
     tags: [
       Brando.Villain.Tags.HeadlessRef,

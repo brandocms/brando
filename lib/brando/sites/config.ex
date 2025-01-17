@@ -1,4 +1,5 @@
 defmodule Brando.Config do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",

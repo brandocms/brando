@@ -1,4 +1,5 @@
 defmodule Brando.CDN.Config do
+  @moduledoc false
   defstruct enabled: false,
             direct: false,
             media_url: nil,

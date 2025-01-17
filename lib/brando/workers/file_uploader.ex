@@ -1,8 +1,11 @@
 defmodule Brando.Worker.FileUploader do
+  @moduledoc false
   use Oban.Worker, queue: :default, max_attempts: 5
+
   alias Brando.CDN
   alias Brando.Files
   alias Brando.Users
+
   require Logger
 
   @impl Oban.Worker

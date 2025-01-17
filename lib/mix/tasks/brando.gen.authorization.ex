@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Authorization do
-  use Mix.Task
-
   @shortdoc "Generates an authorization module template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Authorization do
       mix brando.gen.authorization
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""

@@ -5,6 +5,7 @@ defmodule Brando.Content.EmbeddedIdentifier do
   Due to cyclic dependencies, this is a regular embedded ecto schema instead of a blueprint
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key false

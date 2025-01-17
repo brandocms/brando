@@ -17,8 +17,7 @@ defmodule Brando.I18n.Helpers do
   end
 
   @deprecated "Use `localized_path/3` instead"
-  def localized(locale, fun, args),
-    do: localized_path(locale, fun, args)
+  def localized(locale, fun, args), do: localized_path(locale, fun, args)
 
   def localized_path(locale, fun, args) do
     locale = (is_binary(locale) && locale) || to_string(locale)
@@ -33,7 +32,7 @@ defmodule Brando.I18n.Helpers do
     else
       localized_fun = :"#{locale}_#{fun}"
 
-      if Brando.helpers().__info__(:functions) |> Keyword.has_key?(localized_fun) do
+      if :functions |> Brando.helpers().__info__() |> Keyword.has_key?(localized_fun) do
         apply(Brando.helpers(), localized_fun, args)
       else
         # fallback to regular function (mostly used for page_path)

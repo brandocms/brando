@@ -1,4 +1,5 @@
 defmodule Brando.Pages.Property do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Pages",

@@ -1,6 +1,7 @@
 defmodule Brando.Type.Atom do
   @moduledoc false
   use Ecto.Type
+
   def type, do: :string
   def cast(value) when is_binary(value), do: {:ok, String.to_existing_atom(value)}
   def cast(value) when is_atom(value), do: {:ok, value}

@@ -1,19 +1,16 @@
 defmodule BrandoAdmin.Components.ImagePicker do
+  @moduledoc false
   use BrandoAdmin, :live_component
-  alias BrandoAdmin.Components.Content
   use Gettext, backend: Brando.Gettext
+
+  alias BrandoAdmin.Components.Content
 
   def mount(socket) do
     {:ok, assign_new(socket, :z_index, fn -> 1100 end)}
   end
 
   def update(
-        %{
-          config_target: config_target,
-          event_target: event_target,
-          multi: multi,
-          selected_images: selected_images
-        },
+        %{config_target: config_target, event_target: event_target, multi: multi, selected_images: selected_images},
         socket
       ) do
     {:ok,

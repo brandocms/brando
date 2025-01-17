@@ -201,8 +201,7 @@ defmodule Brando.SoftDelete.Repo do
         {:ok, entry}
       end
 
-      defp maybe_delete_identifier({:error, entry}),
-        do: {:error, entry}
+      defp maybe_delete_identifier({:error, entry}), do: {:error, entry}
 
       defp maybe_delete_identifier(entry) when is_map(entry) do
         Brando.Content.delete_identifier(entry.__struct__, entry)

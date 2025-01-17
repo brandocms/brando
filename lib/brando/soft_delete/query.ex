@@ -2,8 +2,9 @@ defmodule Brando.SoftDelete.Query do
   @moduledoc """
   Query tools for Soft deletion
   """
-  alias Brando.Trait
   import Ecto.Query
+
+  alias Brando.Trait
 
   @doc """
   Excludes all deleted entries from query

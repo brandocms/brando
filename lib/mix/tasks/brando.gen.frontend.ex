@@ -1,6 +1,4 @@
 defmodule Mix.Tasks.Brando.Gen.Frontend do
-  use Mix.Task
-
   @shortdoc "Generates a frontend template"
 
   @moduledoc """
@@ -9,6 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
       mix brando.gen.frontend
 
   """
+  use Mix.Task
+
   @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
@@ -41,23 +41,18 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
       # Frontend src - CSS
       {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
       {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
-      {:copy, "assets/frontend/css/includes/cookies.css",
-       "assets/frontend/css/includes/cookies.css"},
+      {:copy, "assets/frontend/css/includes/cookies.css", "assets/frontend/css/includes/cookies.css"},
       {:copy, "assets/frontend/css/includes/fonts.css", "assets/frontend/css/includes/fonts.css"},
-      {:copy, "assets/frontend/css/includes/modules.css",
-       "assets/frontend/css/includes/modules.css"},
-      {:copy, "assets/frontend/css/includes/navigation.css",
-       "assets/frontend/css/includes/navigation.css"},
+      {:copy, "assets/frontend/css/includes/modules.css", "assets/frontend/css/includes/modules.css"},
+      {:copy, "assets/frontend/css/includes/navigation.css", "assets/frontend/css/includes/navigation.css"},
 
       # Frontend JS
 
       {:keep, "assets/frontend/js/modules", "assets/frontend/js/modules"},
       {:copy, "assets/frontend/js/index.js", "assets/frontend/js/index.js"},
       {:copy, "assets/frontend/js/critical.js", "assets/frontend/js/critical.js"},
-      {:copy, "assets/frontend/js/config/BREAKPOINTS.js",
-       "assets/frontend/js/config/BREAKPOINTS.js"},
-      {:copy, "assets/frontend/js/config/MOBILE_MENU.js",
-       "assets/frontend/js/config/MOBILE_MENU.js"},
+      {:copy, "assets/frontend/js/config/BREAKPOINTS.js", "assets/frontend/js/config/BREAKPOINTS.js"},
+      {:copy, "assets/frontend/js/config/MOBILE_MENU.js", "assets/frontend/js/config/MOBILE_MENU.js"},
       {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
       {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
     ]

@@ -3,6 +3,7 @@ defmodule Brando.Trait.Status do
   Adds `deleted_at`
   """
   use Brando.Trait
+
   import Ecto.Query
 
   def generate_code(_, _) do

@@ -3,8 +3,10 @@ defmodule Brando.Trait.Password do
   Hashes pw on changes
   """
   use Brando.Trait
-  alias Ecto.Changeset
+
   import Ecto.Changeset
+
+  alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
   @type config :: list()

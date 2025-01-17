@@ -1,7 +1,8 @@
 defmodule Mix.Tasks.Brando.Static.Build do
-  use Mix.Task
-
   @shortdoc "Build static files and digest"
+
+  @moduledoc false
+  use Mix.Task
 
   def run(args) do
     {parsed_opts, _, _} = OptionParser.parse(args, switches: [verbose: :boolean, clean: :boolean])

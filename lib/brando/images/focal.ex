@@ -1,4 +1,5 @@
 defmodule Brando.Images.Focal do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Images",

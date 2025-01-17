@@ -10,8 +10,9 @@ defmodule Brando.Images.Image do
     plural: "images",
     gettext_module: Brando.Gettext
 
-  alias Brando.Images.Focal
   use Gettext, backend: Brando.Gettext
+
+  alias Brando.Images.Focal
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
@@ -27,8 +28,7 @@ defmodule Brando.Images.Image do
     attribute :credits, :text
     attribute :alt, :text
 
-    attribute :formats, {:array, Ecto.Enum},
-      values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+    attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
 
     attribute :path, :text, required: true
     attribute :width, :integer

@@ -5,8 +5,6 @@ defmodule Brando.Content.TableTemplate do
   Table templates are used in blocks that require a table structure.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Blueprint,
     application: "Brando",
     domain: "Content",
@@ -16,6 +14,8 @@ defmodule Brando.Content.TableTemplate do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+
+  @type t :: %__MODULE__{}
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
