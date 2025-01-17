@@ -831,9 +831,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       ) do
     context = module.__modules__().context
 
-    select_changeset =
-      select_changeset
-      |> Map.put(:action, :create)
+    select_changeset = Map.put(select_changeset, :action, :create)
 
     case apply(context, :"create_#{singular}", [select_changeset, current_user]) do
       {:ok, _} ->
