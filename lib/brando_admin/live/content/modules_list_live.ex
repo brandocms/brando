@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Content.ModuleListLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content
   alias Phoenix.LiveView.JS
 
