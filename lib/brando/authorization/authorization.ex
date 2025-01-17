@@ -86,9 +86,9 @@ defmodule Brando.Authorization do
     types =
       env.module
       |> Module.get_attribute(:types)
-      |> Enum.into(%{})
+      |> Map.new()
 
-    types_reversed = Enum.into(types, %{}, &{elem(&1, 1), elem(&1, 0)})
+    types_reversed = Map.new(types, &{elem(&1, 1), elem(&1, 0)})
 
     [compile_types(types, types_reversed), compile_rules(rules, types, types_reversed)]
   end
@@ -136,8 +136,7 @@ defmodule Brando.Authorization do
     role_buckets =
       rules
       |> Keyword.keys()
-      |> Enum.map(&{&1, []})
-      |> Enum.into(%{})
+      |> Map.new(&{&1, []})
 
     reduced_rules =
       Enum.reduce(rules, role_buckets, fn {role, rule}, acc ->
