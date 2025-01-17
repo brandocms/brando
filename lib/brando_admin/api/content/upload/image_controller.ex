@@ -3,7 +3,9 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
   Main controller for Brando backend
   """
   use BrandoAdmin, :controller
+
   alias Brando.Images.Uploads.Schema
+  alias Brando.Type.ImageConfig
 
   def create(conn, %{"uid" => uid, "formats" => formats} = params) do
     user = Brando.Utils.current_user(conn)
@@ -24,10 +26,10 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
         nil ->
           default_config =
             Brando.config(Brando.Images)[:default_config] ||
-              Brando.Type.ImageConfig.default_config()
+              ImageConfig.default_config()
 
           default_config_struct =
-            maybe_struct(Brando.Type.ImageConfig, default_config)
+            maybe_struct(ImageConfig, default_config)
 
           {default_config_struct, Map.put(params, "config_target", "default")}
 
@@ -85,11 +87,9 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
   end
 
   defp sizes_with_media_url(image) do
-    image.sizes
-    |> Enum.map(fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-    |> Enum.into(%{})
+    Map.new(image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
   end
 
-  defp maybe_struct(_struct_type, %Brando.Type.ImageConfig{} = config), do: config
+  defp maybe_struct(_struct_type, %ImageConfig{} = config), do: config
   defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end
