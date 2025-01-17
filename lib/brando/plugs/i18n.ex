@@ -3,6 +3,7 @@ defmodule Brando.Plug.I18n do
   A plug for checking i18n
   """
   import Brando.Utils, only: [current_user: 1]
+
   alias Brando.I18n
 
   @doc """
@@ -19,7 +20,7 @@ defmodule Brando.Plug.I18n do
   """
   @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_locale(conn, opts) do
-    opts = Enum.into(opts, %{})
+    opts = Map.new(opts)
     extracted_language = extract_language(conn, opts)
 
     Gettext.put_locale(Brando.web_module(Gettext), extracted_language)
@@ -73,8 +74,7 @@ defmodule Brando.Plug.I18n do
     extracted_language
   end
 
-  defp maybe_prefix_language_to_path(%{path_info: ["admin" | _]} = conn, _, %{force_path: _}),
-    do: conn
+  defp maybe_prefix_language_to_path(%{path_info: ["admin" | _]} = conn, _, %{force_path: _}), do: conn
 
   defp maybe_prefix_language_to_path(conn, extracted_language, %{force_path: _}) do
     %{conn | path_info: [extracted_language | conn.path_info]}
