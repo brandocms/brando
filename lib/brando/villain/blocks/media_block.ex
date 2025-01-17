@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.MediaBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "media"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -26,7 +31,4 @@ defmodule Brando.Villain.Blocks.MediaBlock do
       relation :template_svg, :embeds_one, module: Blocks.SvgBlock.Data
     end
   end
-
-  use Brando.Villain.Block,
-    type: "media"
 end

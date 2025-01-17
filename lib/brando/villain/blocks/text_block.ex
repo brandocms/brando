@@ -1,6 +1,12 @@
 defmodule Brando.Villain.Blocks.TextBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "text"
+
   defmodule Data do
+    @moduledoc false
     use Ecto.Schema
+
     import Ecto.Changeset
 
     @primary_key false
@@ -15,9 +21,6 @@ defmodule Brando.Villain.Blocks.TextBlock do
       cast(struct, params, ~w(text type extensions)a)
     end
   end
-
-  use Brando.Villain.Block,
-    type: "text"
 
   def protected_attrs do
     [:text]

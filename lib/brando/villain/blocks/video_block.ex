@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.VideoBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "video"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -36,9 +41,6 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       relation :cover_image, :embeds_one, module: Brando.Villain.Blocks.PictureBlock.Data
     end
   end
-
-  use Brando.Villain.Block,
-    type: "video"
 
   def protected_attrs do
     [:url, :source, :remote_id, :width, :height, :thumbnail_url]

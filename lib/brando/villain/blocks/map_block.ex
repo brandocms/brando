@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.MapBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "map"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -18,7 +23,4 @@ defmodule Brando.Villain.Blocks.MapBlock do
       attribute :source, :enum, values: [:gmaps]
     end
   end
-
-  use Brando.Villain.Block,
-    type: "map"
 end

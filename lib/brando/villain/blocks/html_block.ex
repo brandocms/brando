@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.HtmlBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "html"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -17,9 +22,6 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
       attribute :text, :text
     end
   end
-
-  use Brando.Villain.Block,
-    type: "html"
 
   def protected_attrs do
     [:text]

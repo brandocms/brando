@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.PictureBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "picture"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -25,8 +30,7 @@ defmodule Brando.Villain.Blocks.PictureBlock do
       attribute :title, :text
       attribute :credits, :text
 
-      attribute :formats, {:array, Ecto.Enum},
-        values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+      attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
 
       attribute :alt, :text
       attribute :path, :text
@@ -53,9 +57,6 @@ defmodule Brando.Villain.Blocks.PictureBlock do
       relation :focal, :embeds_one, module: Focal, on_replace: :delete
     end
   end
-
-  use Brando.Villain.Block,
-    type: "picture"
 
   def protected_attrs do
     [:sizes, :path, :dominant_color, :focal, :height, :width, :formats, :fetchpriority]

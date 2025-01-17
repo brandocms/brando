@@ -1,12 +1,12 @@
 defmodule Brando.Villain.Filters do
+  @moduledoc """
+  Contains all the basic filters for Liquid
+  """
+
   use Phoenix.Component
   alias Brando.Content.Var
   alias Brando.Utils
   alias Liquex.Context
-
-  @moduledoc """
-  Contains all the basic filters for Liquid
-  """
 
   @type filter_t :: {:filter, [...]}
   @callback apply(any, filter_t, map) :: any
@@ -17,27 +17,19 @@ defmodule Brando.Villain.Filters do
 
       @spec apply(any, Brando.Villain.Filters.filter_t(), map) :: any
       @impl Brando.Villain.Filters
-      def apply(value, filter, context),
-        do: Brando.Villain.Filters.apply(__MODULE__, value, filter, context)
+      def apply(value, filter, context), do: Brando.Villain.Filters.apply(__MODULE__, value, filter, context)
     end
   end
 
   @spec filter_name(filter_t) :: String.t()
   def filter_name({:filter, [filter_name | _]}), do: filter_name
 
-  def apply(
-        mod \\ __MODULE__,
-        value,
-        {:filter, [function, {:arguments, arguments}]},
-        context
-      ) do
+  def apply(mod \\ __MODULE__, value, {:filter, [function, {:arguments, arguments}]}, context) do
     func = String.to_existing_atom(function)
 
     function_args =
-      Enum.map(
-        arguments,
-        &Liquex.Argument.eval(&1, context)
-      )
+      arguments
+      |> Enum.map(&Liquex.Argument.eval(&1, context))
       |> merge_keywords()
 
     mod =
@@ -63,11 +55,13 @@ defmodule Brando.Villain.Filters do
       |> Enum.reverse()
       |> Enum.split_while(&is_tuple/1)
 
-    case keywords do
-      [] -> rest
-      _ -> [Enum.reverse(keywords) | rest]
-    end
-    |> Enum.reverse()
+    case_result =
+      case keywords do
+        [] -> rest
+        _ -> [Enum.reverse(keywords) | rest]
+      end
+
+    Enum.reverse(case_result)
   end
 
   @doc """
@@ -167,10 +161,10 @@ defmodule Brando.Villain.Filters do
   @spec ceil(number | String.t(), map()) :: number
   def ceil(value, _) when is_binary(value) do
     {num, ""} = Float.parse(value)
-    Float.ceil(num) |> trunc()
+    num |> Float.ceil() |> trunc()
   end
 
-  def ceil(value, _), do: Float.ceil(value) |> trunc()
+  def ceil(value, _), do: value |> Float.ceil() |> trunc()
 
   @doc """
   Removes any nil values from an array.
@@ -184,8 +178,7 @@ defmodule Brando.Villain.Filters do
       [1,2,3]
   """
   @spec compact([any], map()) :: [any]
-  def compact(value, _) when is_list(value),
-    do: Enum.reject(value, &is_nil/1)
+  def compact(value, _) when is_list(value), do: Enum.reject(value, &is_nil/1)
 
   @doc """
   Concatenates (joins together) multiple arrays. The resulting array contains all the items
@@ -195,8 +188,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.concat([1,2], [3,4], %{})
       [1,2,3,4]
   """
-  def concat(value, other, _) when is_list(value) and is_list(other),
-    do: value ++ other
+  def concat(value, other, _) when is_list(value) and is_list(other), do: value ++ other
 
   @doc """
   Allows you to specify a fallback in case a value doesn’t exist. default will show its value
@@ -260,8 +252,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.escape("Tetsuro Takara", %{})
       "Tetsuro Takara"
   """
-  def escape(value, _),
-    do: HtmlEntities.encode(to_string(value))
+  def escape(value, _), do: HtmlEntities.encode(to_string(value))
 
   @doc """
   Escapes a string by replacing characters with escape sequences (so that the string can
@@ -273,8 +264,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.escape_once("1 &lt; 2 &amp; 3", %{})
       "1 &lt; 2 &amp; 3"
   """
-  def escape_once(value, _),
-    do: to_string(value) |> HtmlEntities.decode() |> HtmlEntities.encode()
+  def escape_once(value, _), do: value |> to_string() |> HtmlEntities.decode() |> HtmlEntities.encode()
 
   @doc """
   Returns the first item of an array.
@@ -338,7 +328,7 @@ defmodule Brando.Villain.Filters do
       "So much room for activities!          "
   """
   @spec lstrip(String.t(), Context.t()) :: String.t()
-  def lstrip(value, _), do: to_string(value) |> String.trim_leading()
+  def lstrip(value, _), do: value |> to_string() |> String.trim_leading()
 
   @doc """
   Creates an array (`arr`) of values by extracting the values of a named property from another object (`key`).
@@ -377,8 +367,7 @@ defmodule Brando.Villain.Filters do
       3.357
   """
   @spec modulo(number, number, Context.t()) :: number
-  def modulo(left, right, _) when is_float(left) or is_float(right),
-    do: :math.fmod(left, right) |> Float.round(5)
+  def modulo(left, right, _) when is_float(left) or is_float(right), do: left |> :math.fmod(right) |> Float.round(5)
 
   def modulo(left, right, _), do: rem(left, right)
 
@@ -473,8 +462,7 @@ defmodule Brando.Villain.Filters do
       "Take your protein pills and put my helmet on"
   """
   def replace_first(value, original, replacement, _),
-    do:
-      String.replace(to_string(value), to_string(original), to_string(replacement), global: false)
+    do: String.replace(to_string(value), to_string(original), to_string(replacement), global: false)
 
   @doc """
   Reverses the order of the items in an array. reverse cannot reverse a string.
@@ -517,7 +505,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.rstrip("          So much room for activities!          ", %{})
       "          So much room for activities!"
   """
-  def rstrip(value, _), do: to_string(value) |> String.trim_trailing()
+  def rstrip(value, _), do: value |> to_string() |> String.trim_trailing()
 
   @doc """
   Returns the number of characters in a string or the number of items in an array.
@@ -557,8 +545,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.slice("Liquid", -3, 2, %{})
       "ui"
   """
-  def slice(value, start, length \\ 1, _),
-    do: String.slice(to_string(value), start, length)
+  def slice(value, start, length \\ 1, _), do: String.slice(to_string(value), start, length)
 
   @doc """
   Sorts items in an array in case-sensitive order.
@@ -581,8 +568,7 @@ defmodule Brando.Villain.Filters do
   """
   def sort_natural(list, _), do: Liquex.Collection.sort_case_insensitive(list)
 
-  def sort_natural(list, field_name, _),
-    do: Liquex.Collection.sort_case_insensitive(list, field_name)
+  def sort_natural(list, field_name, _), do: Liquex.Collection.sort_case_insensitive(list, field_name)
 
   @doc """
   Divides a string into an array using the argument as a separator. split is
@@ -625,7 +611,8 @@ defmodule Brando.Villain.Filters do
       "Hellothere"
   """
   def strip_newlines(value, _) do
-    to_string(value)
+    value
+    |> to_string()
     |> String.replace("\r", "")
     |> String.replace("\n", "")
   end
@@ -696,7 +683,7 @@ defmodule Brando.Villain.Filters do
   """
   def truncatewords(value, length, ellipsis \\ "...", _) do
     value = to_string(value)
-    words = value |> String.split()
+    words = String.split(value)
 
     if length(words) <= length do
       value
@@ -822,8 +809,7 @@ defmodule Brando.Villain.Filters do
     |> Utils.Datetime.format_datetime(format, nil)
   end
 
-  def date(%NaiveDateTime{} = value, format, _),
-    do: Utils.Datetime.format_datetime(value, format, nil)
+  def date(%NaiveDateTime{} = value, format, _), do: Utils.Datetime.format_datetime(value, format, nil)
 
   def date("now", format, context), do: date(DateTime.utc_now(), format, context)
   def date("today", format, context), do: date(Date.utc_today(), format, context)

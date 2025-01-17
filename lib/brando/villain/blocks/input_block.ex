@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.InputBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "input"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -21,9 +26,6 @@ defmodule Brando.Villain.Blocks.InputBlock do
       attribute :value, :text
     end
   end
-
-  use Brando.Villain.Block,
-    type: "input"
 
   def protected_attrs do
     [:text]

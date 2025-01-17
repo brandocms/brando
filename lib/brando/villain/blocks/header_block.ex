@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.HeaderBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "header"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -22,9 +27,6 @@ defmodule Brando.Villain.Blocks.HeaderBlock do
       attribute :id, :text
     end
   end
-
-  use Brando.Villain.Block,
-    type: "header"
 
   def protected_attrs do
     [:text]

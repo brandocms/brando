@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.SvgBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "svg"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -18,9 +23,6 @@ defmodule Brando.Villain.Blocks.SvgBlock do
       attribute :code, :text
     end
   end
-
-  use Brando.Villain.Block,
-    type: "svg"
 
   def protected_attrs do
     [:code]

@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.GalleryBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "gallery"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -32,8 +37,7 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
         values: [:gallery, :slider, :slideshow],
         default: :gallery
 
-      attribute :formats, {:array, Ecto.Enum},
-        values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+      attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
     end
 
     relations do
@@ -43,9 +47,6 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
         sort_param: :sort_images
     end
   end
-
-  use Brando.Villain.Block,
-    type: "gallery"
 
   def protected_attrs do
     [:images]

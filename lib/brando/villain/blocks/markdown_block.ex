@@ -1,5 +1,10 @@
 defmodule Brando.Villain.Blocks.MarkdownBlock do
+  @moduledoc false
+  use Brando.Villain.Block,
+    type: "markdown"
+
   defmodule Data do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
@@ -17,9 +22,6 @@ defmodule Brando.Villain.Blocks.MarkdownBlock do
       attribute :text, :text
     end
   end
-
-  use Brando.Villain.Block,
-    type: "markdown"
 
   def protected_attrs do
     [:text]
