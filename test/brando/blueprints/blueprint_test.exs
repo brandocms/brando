@@ -38,7 +38,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "__required_attrs__" do
     required_attrs = Brando.BlueprintTest.Project.__required_attrs__()
-    assert required_attrs == [:slug, :creator_id]
+    assert required_attrs == [:slug]
   end
 
   test "__optional_attrs__" do

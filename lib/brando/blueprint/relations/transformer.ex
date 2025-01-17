@@ -23,20 +23,53 @@ defmodule Brando.Blueprint.Relations.Transformer do
         Transformer.persist(updated_dsl_state, relation.name, relation)
       end)
 
-    {required_relations, optional_relations} =
-      Enum.reduce(relations, {[], []}, fn
-        %{opts: opts} = rel, {required_relations, optional_relations} ->
-          if Map.get(opts, :required) do
-            {[Brando.Blueprint.get_relation_key(rel) | required_relations], optional_relations}
-          else
-            {required_relations, [Brando.Blueprint.get_relation_key(rel) | optional_relations]}
-          end
-      end)
+    processed_relations =
+      Enum.reduce(
+        relations,
+        %{required: [], optional: [], castable: [], castable_required: []},
+        fn
+          rel, acc ->
+            relation_key = Brando.Blueprint.get_relation_key(rel)
+
+            acc
+            |> maybe_add_castable_relation(rel, relation_key)
+            |> maybe_add_required_relation()
+            |> maybe_add_castable_required_relation()
+        end
+      )
 
     dsl_state
-    |> Transformer.persist(:required_relations, required_relations)
-    |> Transformer.persist(:optional_relations, optional_relations)
+    |> Transformer.persist(:required_relations, processed_relations.required)
+    |> Transformer.persist(:optional_relations, processed_relations.optional)
+    |> Transformer.persist(:castable_relations, processed_relations.castable)
+    |> Transformer.persist(:castable_required_relations, processed_relations.castable_required)
     |> then(&{:ok, &1})
+  end
+
+  defp maybe_add_castable_relation(acc, %{type: :belongs_to} = relation, relation_key) do
+    {true, %{acc | castable: [relation_key | acc.castable]}, relation, relation_key}
+  end
+
+  defp maybe_add_castable_relation(acc, relation, relation_key) do
+    {false, acc, relation, relation_key}
+  end
+
+  defp maybe_add_required_relation(
+         {status, acc, %{opts: %{required: true}} = relation, relation_key}
+       ) do
+    {status, true, %{acc | required: [relation_key | acc.required]}, relation, relation_key}
+  end
+
+  defp maybe_add_required_relation({status, acc, relation, relation_key}) do
+    {status, false, acc, relation, relation_key}
+  end
+
+  defp maybe_add_castable_required_relation({true, true, acc, _, relation_key}) do
+    %{acc | castable_required: [relation_key | acc.castable_required]}
+  end
+
+  defp maybe_add_castable_required_relation({_, _, acc, _, _}) do
+    acc
   end
 
   defp set_entries_join_module(dsl_state) do

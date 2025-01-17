@@ -66,21 +66,32 @@ defmodule Brando.Blueprint.Dsl do
   def handle_before_compile(_opts) do
     quote location: :keep, unquote: false do
       alias Brando.Exception.BlueprintError
+      alias Spark.Dsl.Extension, as: SDE
 
-      @required_attrs Spark.Dsl.Extension.get_persisted(__MODULE__, :required_attrs, [])
-      @optional_attrs Spark.Dsl.Extension.get_persisted(__MODULE__, :optional_attrs, [])
-      @attrs Enum.reverse(Spark.Dsl.Extension.get_entities(__MODULE__, [:attributes]))
+      @required_attrs SDE.get_persisted(__MODULE__, :required_attrs, [])
+      @optional_attrs SDE.get_persisted(__MODULE__, :optional_attrs, [])
+      @attrs Enum.reverse(SDE.get_entities(__MODULE__, [:attributes]))
 
-      @required_relations Spark.Dsl.Extension.get_persisted(__MODULE__, :required_relations, [])
-      @optional_relations Spark.Dsl.Extension.get_persisted(__MODULE__, :optional_relations, [])
-      @relations Spark.Dsl.Extension.get_entities(__MODULE__, [:relations])
+      @required_relations SDE.get_persisted(__MODULE__, :required_relations, [])
+      @optional_relations SDE.get_persisted(__MODULE__, :optional_relations, [])
+      @castable_relations SDE.get_persisted(__MODULE__, :castable_relations, [])
+      @castable_required_relations SDE.get_persisted(__MODULE__, :castable_required_relations, [])
+      @relations SDE.get_entities(__MODULE__, [:relations])
 
-      @required_assets Spark.Dsl.Extension.get_persisted(__MODULE__, :required_assets, [])
-      @optional_assets Spark.Dsl.Extension.get_persisted(__MODULE__, :optional_assets, [])
-      @assets Spark.Dsl.Extension.get_entities(__MODULE__, [:assets])
+      @required_assets SDE.get_persisted(__MODULE__, :required_assets, [])
+      @optional_assets SDE.get_persisted(__MODULE__, :optional_assets, [])
+      @castable_assets SDE.get_persisted(__MODULE__, :castable_assets, [])
+      @castable_required_assets SDE.get_persisted(__MODULE__, :castable_required_assets, [])
+      @assets SDE.get_entities(__MODULE__, [:assets])
 
-      @datasources Spark.Dsl.Extension.get_entities(__MODULE__, [:datasources])
-      @translations Spark.Dsl.Extension.get_persisted(__MODULE__, :translations)
+      # collect fields
+      @castable_fields @required_attrs ++
+                         @optional_attrs ++ @castable_relations ++ @castable_assets
+      @required_castable_fields @required_attrs ++
+                                  @castable_required_relations ++ @castable_required_assets
+
+      @datasources SDE.get_entities(__MODULE__, [:datasources])
+      @translations SDE.get_persisted(__MODULE__, :translations)
 
       if @datasources != [] do
         def __datasource__ do
@@ -97,10 +108,6 @@ defmodule Brando.Blueprint.Dsl do
         @primary_key
       end
 
-      @all_attributes @attrs
-      @all_relations @relations
-      @all_assets @assets
-
       @all_traits Enum.reverse(@traits)
       def __traits__, do: @all_traits
 
@@ -110,21 +117,26 @@ defmodule Brando.Blueprint.Dsl do
 
       def has_trait(_), do: false
 
-      @all_required_attrs @required_attrs ++ @required_relations ++ @required_assets
       def __required_attrs__ do
-        @all_required_attrs
+        @required_attrs
       end
 
       def __optional_attrs__ do
-        Spark.Dsl.Extension.get_persisted(__MODULE__, :optional_attrs, [])
+        @optional_attrs
       end
 
-      @castable_relations Brando.Blueprint.get_castable_relation_fields(@all_relations)
-      def __castable_rels__ do
+      def __required_relations__ do
+        @required_relations
+      end
+
+      def __castable_relations__ do
         @castable_relations
       end
 
-      @castable_assets Brando.Blueprint.get_castable_asset_fields(@all_assets)
+      def __required_assets__ do
+        @required_assets
+      end
+
       def __castable_assets__ do
         @castable_assets
       end
@@ -250,27 +262,27 @@ defmodule Brando.Blueprint.Dsl do
 
       def __modules__(type), do: Map.get(__modules__(), type)
 
-      @file_fields Enum.filter(@all_assets, &(&1.type == :file))
+      @file_fields Enum.filter(@assets, &(&1.type == :file))
       def __file_fields__ do
         @file_fields
       end
 
-      @image_fields Enum.filter(@all_assets, &(&1.type == :image))
+      @image_fields Enum.filter(@assets, &(&1.type == :image))
       def __image_fields__ do
         @image_fields
       end
 
-      @video_fields Enum.filter(@all_assets, &(&1.type == :video))
+      @video_fields Enum.filter(@assets, &(&1.type == :video))
       def __video_fields__ do
         @video_fields
       end
 
-      @gallery_fields Enum.filter(@all_assets, &(&1.type == :gallery))
+      @gallery_fields Enum.filter(@assets, &(&1.type == :gallery))
       def __gallery_fields__ do
         @gallery_fields
       end
 
-      @villain_fields Enum.filter(@all_relations, &(&1.opts.module == :blocks))
+      @villain_fields Enum.filter(@relations, &(&1.opts.module == :blocks))
       def __blocks_fields__ do
         @villain_fields
       end
@@ -285,18 +297,18 @@ defmodule Brando.Blueprint.Dsl do
         @status_fields
       end
 
-      if Enum.empty?(@status_fields) do
-        def has_status?, do: false
-      else
-        def has_status?, do: true
-      end
-
       @poly_fields Enum.filter(
                      @attrs,
                      &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
                    )
       def __poly_fields__ do
         @poly_fields
+      end
+
+      if Enum.empty?(@status_fields) do
+        def has_status?, do: false
+      else
+        def has_status?, do: true
       end
 
       def __translations__ do
@@ -316,16 +328,16 @@ defmodule Brando.Blueprint.Dsl do
           __MODULE__,
           @table_name,
           @attrs,
-          @all_relations,
-          @all_assets
+          @relations,
+          @assets
         )
       else
         Brando.Blueprint.build_schema(
           __MODULE__,
           @table_name,
           @attrs,
-          @all_relations,
-          @all_assets
+          @relations,
+          @assets
         )
       end
 
@@ -354,13 +366,11 @@ defmodule Brando.Blueprint.Dsl do
           sequence,
           user,
           @all_traits,
-          @all_attributes,
-          @all_relations,
-          @all_assets,
-          @castable_relations,
-          @castable_assets,
-          @all_required_attrs,
-          @optional_attrs,
+          @attrs,
+          @relations,
+          @assets,
+          @castable_fields,
+          @required_castable_fields,
           opts
         )
       end

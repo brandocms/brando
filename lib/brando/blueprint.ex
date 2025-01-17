@@ -575,20 +575,15 @@ defmodule Brando.Blueprint do
         all_attributes,
         all_relations,
         all_assets,
-        castable_relations,
-        castable_assets,
-        all_required_attrs,
-        all_optional_attrs,
+        castable_fields,
+        required_castable_fields,
         opts
       ) do
     start = System.monotonic_time()
 
+    # TODO: split those as module attrs maybe? we shouldn't have to parse these each time
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
-
-    fields_to_cast =
-      (all_required_attrs ++ all_optional_attrs ++ castable_relations ++ castable_assets)
-      |> strip_polymorphic_embeds_from_fields_to_cast(module)
 
     if module != schema.__struct__ do
       require Logger
@@ -602,33 +597,19 @@ defmodule Brando.Blueprint do
 
     changeset =
       schema
-      |> Changeset.cast(params, fields_to_cast)
+      |> Changeset.cast(params, castable_fields)
       |> Relations.run_cast_relations(all_relations, user)
       |> Assets.run_cast_assets(all_assets, user)
       |> Villain.maybe_cast_blocks(module, user, opts)
-      |> Trait.run_changeset_mutators(
-        module,
-        traits_before_validate_required,
-        user,
-        opts
-      )
-      |> maybe_validate_required(all_required_attrs)
+      |> Trait.run_changeset_mutators(module, traits_before_validate_required, user, opts)
+      |> maybe_validate_required(required_castable_fields)
       |> Unique.run_unique_attribute_constraints(module, all_attributes)
       |> Unique.run_unique_relation_constraints(module, all_relations)
       |> Constraints.run_validations(module, all_attributes)
       |> Constraints.run_validations(module, all_relations)
       |> Constraints.run_fk_constraints(module, all_relations)
-      |> Upload.run_upload_validations(
-        module,
-        all_assets,
-        user
-      )
-      |> Trait.run_changeset_mutators(
-        module,
-        traits_after_validate_required,
-        user,
-        opts
-      )
+      |> Upload.run_upload_validations(module, all_assets, user)
+      |> Trait.run_changeset_mutators(module, traits_after_validate_required, user, opts)
       |> maybe_mark_for_deletion(module)
       |> maybe_sequence(module, sequence)
 
@@ -668,11 +649,6 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(changeset, _) do
     changeset
-  end
-
-  defp strip_polymorphic_embeds_from_fields_to_cast(fields_to_cast, module) do
-    poly_fields = Enum.map(module.__poly_fields__(), & &1.name)
-    Enum.reject(fields_to_cast, &(&1 in poly_fields))
   end
 
   @doc """

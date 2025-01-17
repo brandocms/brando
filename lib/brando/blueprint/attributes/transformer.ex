@@ -33,6 +33,10 @@ defmodule Brando.Blueprint.Attributes.Transformer do
 
     {required_attrs, optional_attrs} =
       Enum.reduce(entities, {[], []}, fn
+        %{type: type}, acc when type in [{:array, PolymorphicEmbed}, PolymorphicEmbed] ->
+          # skip polymorphic embeds, they are casted separately
+          acc
+
         %{name: name, opts: opts}, {required_attrs, optional_attrs} ->
           if Map.get(opts, :required) do
             {[name | required_attrs], optional_attrs}
