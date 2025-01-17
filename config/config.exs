@@ -5,14 +5,6 @@
 # is restricted to this project.
 import Config
 
-config :brando, ecto_repos: [BrandoIntegration.Repo]
-
-config :brando,
-  languages: [
-    [value: "en", text: "English"],
-    [value: "no", text: "Norsk"]
-  ]
-
 config :brando, Brando.Images,
   processor_module: Brando.Images.Processor.Sharp,
   default_config: %{
@@ -47,13 +39,21 @@ config :brando, Brando.Images,
     ]
   }
 
-config :phoenix, :json_library, Jason
-
 # These are defaults for internals, mostly overridden for testing
 # purposes. We put them here to not pollute the brando.exs file.
 config :brando,
   auth_sleep_duration: 2_000,
   otp_app: :brando
+
+config :brando, ecto_repos: [BrandoIntegration.Repo]
+
+config :brando,
+  languages: [
+    [value: "en", text: "English"],
+    [value: "no", text: "Norsk"]
+  ]
+
+config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
