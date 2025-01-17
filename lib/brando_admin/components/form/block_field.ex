@@ -1,10 +1,12 @@
 defmodule BrandoAdmin.Components.Form.BlockField do
+  @moduledoc false
   use BrandoAdmin, :live_component
-  alias Ecto.Changeset
+  use Gettext, backend: Brando.Gettext
+
+  alias Brando.Villain
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
-  alias Brando.Villain
-  use Gettext, backend: Brando.Gettext
+  alias Ecto.Changeset
 
   def mount(socket) do
     socket
@@ -88,10 +90,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&{:ok, &1})
   end
 
-  def update(
-        %{event: "duplicate_block", uid: uid, changeset: changeset, children: children},
-        socket
-      ) do
+  def update(%{event: "duplicate_block", uid: uid, changeset: changeset, children: children}, socket) do
     block_module = socket.assigns.block_module
     block_list = socket.assigns.block_list
     root_changesets = socket.assigns.root_changesets
@@ -408,8 +407,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end
     end
 
-    socket
-    |> then(&{:ok, &1})
+    then(socket, &{:ok, &1})
   end
 
   def update(%{event: "clear_root_changesets"}, socket) do
@@ -545,17 +543,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # reposition a main block
-  def handle_event("reposition", %{"new" => new_idx, "old" => old_idx}, socket)
-      when new_idx == old_idx do
+  def handle_event("reposition", %{"new" => new_idx, "old" => old_idx}, socket) when new_idx == old_idx do
     # same index, no move needed
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reposition",
-        %{"uid" => id, "new" => new_idx, "old" => old_idx},
-        socket
-      ) do
+  def handle_event("reposition", %{"uid" => id, "new" => new_idx, "old" => old_idx}, socket) do
     block_list = socket.assigns.block_list
     root_changesets = socket.assigns.root_changesets
 
@@ -724,7 +717,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
 
     var_changesets =
-      Enum.map(vars_without_pk, &(Changeset.change(&1, %{}) |> Map.put(:action, :insert)))
+      Enum.map(vars_without_pk, &(&1 |> Changeset.change(%{}) |> Map.put(:action, :insert)))
 
     Changeset.change(
       %Brando.Content.Block{},
@@ -785,8 +778,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     assign_new(socket, :templates, fn ->
       if template_namespace = socket.assigns.opts[:template_namespace] do
         Brando.Content.list_templates!(%{filter: %{namespace: template_namespace}})
-      else
-        nil
       end
     end)
   end

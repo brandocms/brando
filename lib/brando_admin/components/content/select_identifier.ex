@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Content.SelectIdentifier do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Form.Input
 

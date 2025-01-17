@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Button do
+  @moduledoc false
   use BrandoAdmin, :component
 
   def dropdown(assigns) do

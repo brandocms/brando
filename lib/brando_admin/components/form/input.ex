@@ -1,9 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input do
+  @moduledoc false
   use BrandoAdmin, :component
   use BrandoAdmin.Translator
   # use Phoenix.HTML
 
   use Gettext, backend: Brando.Gettext
+
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Form
@@ -24,6 +26,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   ##
   ## Form inputs (function components)
+
+  alias Phoenix.HTML.FormField
 
   def checkbox(assigns) do
     assigns = prepare_input_component(assigns)
@@ -342,7 +346,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :label, :string
   attr :uid, :string
   attr :id_prefix, :string
-  attr :field, Phoenix.HTML.FormField
+  attr :field, FormField
 
   def radios(assigns) do
     input_options =
@@ -498,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField, required: true
+  attr :field, FormField, required: true
   attr :value, :any
   attr :id_prefix, :string, default: nil
 
@@ -528,8 +532,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     include:
       ~w(class phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck)
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :hidden_input, :boolean, default: true
 
@@ -630,8 +633,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns),
-    do: assign(assigns, :id, assigns.field.id)
+  defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns), do: assign(assigns, :id, assigns.field.id)
 
   defp process_input_id(%{uid: uid, id_prefix: id_prefix} = assigns),
     do: assign(assigns, :id, "f-#{uid}-#{id_prefix}-#{assigns.field.id}")
@@ -639,8 +641,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp process_input_id(%{id: nil} = assigns), do: assign(assigns, :id, assigns.field.id)
   defp process_input_id(%{id: ""} = assigns), do: assign(assigns, :id, assigns.field.id)
 
-  defp process_input_id(%{id: id, id_prefix: id_prefix} = assigns),
-    do: assign(assigns, :id, "f-#{id_prefix}-#{id}")
+  defp process_input_id(%{id: id, id_prefix: id_prefix} = assigns), do: assign(assigns, :id, "f-#{id_prefix}-#{id}")
 
   defp process_input_id(%{id: id} = assigns), do: assign(assigns, :id, id)
   defp process_input_id(assigns), do: assign(assigns, :id, assigns.field.id)
@@ -768,7 +769,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField
+  attr :field, FormField
   attr :label, :string
   attr :instructions, :string
   attr :class, :string
@@ -824,7 +825,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField
+  attr :field, FormField
   attr :label, :string
   attr :instructions, :string
   attr :class, :string
@@ -863,7 +864,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField
+  attr :field, FormField
   attr :label, :string
   attr :instructions, :string
   attr :placeholder, :string
@@ -903,7 +904,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
-  attr :field, Phoenix.HTML.FormField
+  attr :field, FormField
   attr :label, :string
   attr :instructions, :string
   attr :class, :string

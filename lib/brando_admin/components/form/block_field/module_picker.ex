@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content
 
   def mount(socket) do
@@ -124,13 +126,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(
-        %{
-          event: :show_module_picker,
-          sequence: sequence,
-          parent_cid: parent_cid,
-          module_set: module_set,
-          type: type
-        } = assigns,
+        %{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid, module_set: module_set, type: type} =
+          assigns,
         socket
       ) do
     socket
@@ -149,9 +146,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {:ok, assign(socket, assigns)}
   end
 
-  def maybe_update_modules_by_filter(socket, %{
-        filter: %{parent_id: nil, namespace: set_title} = filter
-      })
+  def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: set_title} = filter})
       when set_title != "all" do
     {:ok, set} =
       Brando.Content.get_module_set(%{

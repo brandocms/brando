@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
+  @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input.Entries
 
@@ -117,33 +119,21 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_entry",
-        %{"schema" => schema, "parent_id" => parent_id, "id" => id},
-        socket
-      ) do
+  def handle_event("select_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
     alternate_schema = Module.concat(schema, Alternate)
     _ = alternate_schema.add(id, parent_id)
 
     {:noreply, add_identifier(socket, id)}
   end
 
-  def handle_event(
-        "remove_entry",
-        %{"schema" => schema, "parent_id" => parent_id, "id" => id},
-        socket
-      ) do
+  def handle_event("remove_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
     alternate_schema = Module.concat(schema, Alternate)
     _ = alternate_schema.delete(id, parent_id)
 
     {:noreply, delete_identifier(socket, id)}
   end
 
-  def handle_event(
-        "store_alternates",
-        _,
-        socket
-      ) do
+  def handle_event("store_alternates", _, socket) do
     # new identifiers here must be linked to eachother.
     identifiers = socket.assigns.new_identifiers
     schema = socket.assigns.entry.__struct__

@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Fieldset do
+  @moduledoc false
   use BrandoAdmin.Translator
   use BrandoAdmin, :component
 

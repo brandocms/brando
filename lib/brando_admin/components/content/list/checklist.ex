@@ -1,4 +1,5 @@
 defmodule BrandoAdmin.Components.Content.List.Checklist do
+  @moduledoc false
   use BrandoAdmin, :component
 
   attr :tiny, :boolean, default: false

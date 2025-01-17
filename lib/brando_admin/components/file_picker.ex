@@ -1,16 +1,13 @@
 defmodule BrandoAdmin.Components.FilePicker do
+  @moduledoc false
   use BrandoAdmin, :live_component
-  alias Brando.Utils
-  alias BrandoAdmin.Components.Content
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Utils
+  alias BrandoAdmin.Components.Content
+
   def update(
-        %{
-          config_target: config_target,
-          event_target: event_target,
-          multi: multi,
-          selected_files: selected_files
-        },
+        %{config_target: config_target, event_target: event_target, multi: multi, selected_files: selected_files},
         socket
       ) do
     {:ok,
