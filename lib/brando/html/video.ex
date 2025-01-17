@@ -23,17 +23,7 @@ defmodule Brando.HTML.Video do
   """
   def video(assigns)
 
-  def video(%{
-        assigns:
-          %{
-            video: %Video{
-              source: "vimeo",
-              remote_id: remote_id,
-              width: width,
-              height: height
-            }
-          } = assigns
-      }) do
+  def video(%{assigns: %{video: %Video{source: "vimeo", remote_id: remote_id, width: width, height: height}} = assigns}) do
     assigns =
       assigns
       |> assign(:remote_id, remote_id)
@@ -57,15 +47,7 @@ defmodule Brando.HTML.Video do
 
   def video(%{
         assigns:
-          %{
-            video: %Video{
-              source: "youtube",
-              remote_id: remote_id,
-              width: width,
-              height: height
-            },
-            opts: opts
-          } = assigns
+          %{video: %Video{source: "youtube", remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
       }) do
     autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
@@ -219,7 +201,7 @@ defmodule Brando.HTML.Video do
   defp get_video_cover(false, _, _, _), do: nil
   defp get_video_cover(url, _, _, _), do: url
 
-  defp get_play_button(false), do: "" |> Phoenix.HTML.raw()
+  defp get_play_button(false), do: Phoenix.HTML.raw("")
 
   defp get_play_button(true),
     do:
