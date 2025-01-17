@@ -1,5 +1,7 @@
 defmodule Brando.Blueprint.Relations.Transformer do
+  @moduledoc false
   use Spark.Dsl.Transformer
+
   alias Spark.Dsl.Transformer
 
   @impl true
@@ -54,9 +56,7 @@ defmodule Brando.Blueprint.Relations.Transformer do
     {false, acc, relation, relation_key}
   end
 
-  defp maybe_add_required_relation(
-         {status, acc, %{opts: %{required: true}} = relation, relation_key}
-       ) do
+  defp maybe_add_required_relation({status, acc, %{opts: %{required: true}} = relation, relation_key}) do
     {status, true, %{acc | required: [relation_key | acc.required]}, relation, relation_key}
   end
 
