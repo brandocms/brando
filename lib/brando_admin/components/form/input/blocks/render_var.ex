@@ -1,9 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.RenderVar do
+  @moduledoc false
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
   use Gettext, backend: Brando.Gettext
-  import Ecto.Changeset
+
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
+  import Ecto.Changeset
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
@@ -39,14 +41,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             :image ->
               image_id = get_field(changeset, :image_id)
 
-              {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files,
-               identifier_ids, cmp_identifiers}
+              {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files, identifier_ids, cmp_identifiers}
 
             :file ->
               file_id = get_field(changeset, :file_id)
 
-              {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files],
-               identifier_ids, cmp_identifiers}
+              {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files], identifier_ids, cmp_identifiers}
 
             :link ->
               case get_field(changeset, :identifier_id) do
@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         Brando.Images.list_images(%{filter: %{ids: image_ids}, cache: {:ttl, :timer.minutes(5)}})
       end
 
-    mapped_imgs = images |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_imgs = Map.new(images, &{&1.id, &1})
     mapped_img_ids = Map.new(cmp_imgs)
 
     {:ok, files} =
@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         Brando.Files.list_files(%{filter: %{ids: file_ids}, cache: {:ttl, :timer.minutes(5)}})
       end
 
-    mapped_files = files |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_files = Map.new(files, &{&1.id, &1})
     mapped_file_ids = Map.new(cmp_files)
 
     {:ok, identifiers} =
@@ -94,7 +94,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         })
       end
 
-    mapped_identifiers = identifiers |> Enum.map(&{&1.id, &1}) |> Map.new()
+    mapped_identifiers = Map.new(identifiers, &{&1.id, &1})
     mapped_identifier_ids = Map.new(cmp_identifiers)
 
     Enum.map(assigns_sockets, fn {assigns, socket} ->
@@ -943,11 +943,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "reset_image",
-        _,
-        socket
-      ) do
+  def handle_event("reset_image", _, socket) do
     socket
     |> assign(:image, nil)
     |> assign(:image_id, nil)
@@ -955,11 +951,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "reset_file",
-        _,
-        socket
-      ) do
+  def handle_event("reset_file", _, socket) do
     socket
     |> assign(:file, nil)
     |> assign(:file_id, nil)
@@ -967,11 +959,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => image_id},
-        socket
-      ) do
+  def handle_event("select_image", %{"id" => image_id}, socket) do
     image = Brando.Images.get_image!(image_id)
 
     socket
@@ -981,11 +969,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "image_uploaded",
-        %{"id" => image_id},
-        socket
-      ) do
+  def handle_event("image_uploaded", %{"id" => image_id}, socket) do
     image = Brando.Images.get_image!(image_id)
 
     socket
@@ -995,11 +979,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "select_file",
-        %{"id" => file_id},
-        socket
-      ) do
+  def handle_event("select_file", %{"id" => file_id}, socket) do
     file = Brando.Files.get_file!(file_id)
 
     socket
@@ -1009,11 +989,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event(
-        "file_uploaded",
-        %{"id" => file_id},
-        socket
-      ) do
+  def handle_event("file_uploaded", %{"id" => file_id}, socket) do
     file = Brando.Files.get_file!(file_id)
 
     socket
