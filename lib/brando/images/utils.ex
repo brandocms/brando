@@ -2,13 +2,14 @@ defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
   """
+  import Brando.Utils
+  import SweetXml
+
+  alias Brando.Image
+
   @type id :: binary | integer
   @type image_struct :: Brando.Images.Image.t()
   @type user :: Brando.Users.User.t() | :system
-
-  alias Brando.Image
-  import Brando.Utils
-  import SweetXml
 
   @doc """
   Goes through `image` then passes to `delete_media/2` for removal
@@ -97,8 +98,7 @@ defmodule Brando.Images.Utils do
     Path.join([dir, size, filename])
   end
 
-  def get_sized_path(file, size, type) when is_atom(size),
-    do: get_sized_path(file, Atom.to_string(size), type)
+  def get_sized_path(file, size, type) when is_atom(size), do: get_sized_path(file, Atom.to_string(size), type)
 
   @doc """
   Adds `size` to the path before
@@ -133,8 +133,7 @@ defmodule Brando.Images.Utils do
 
     doc
     |> xpath(~x"//svg", width: ~x"./@width", height: ~x"./@height", viewbox: ~x"./@viewBox")
-    |> Enum.map(fn {k, v} -> {k, to_string(v)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {k, to_string(v)} end)
     |> parse_svg_size()
   end
 
@@ -143,13 +142,11 @@ defmodule Brando.Images.Utils do
   end
 
   defp parse_svg_size(%{width: "", height: "", viewbox: viewbox}) do
-    try do
-      [_, _, parsed_width, parsed_height] = String.split(viewbox, " ")
-      parse_svg_size_dims(parsed_width, parsed_height)
-    rescue
-      MatchError ->
-        %{width: 300, height: 150}
-    end
+    [_, _, parsed_width, parsed_height] = String.split(viewbox, " ")
+    parse_svg_size_dims(parsed_width, parsed_height)
+  rescue
+    MatchError ->
+      %{width: 300, height: 150}
   end
 
   defp parse_svg_size(%{width: width, height: height}) do
