@@ -4,6 +4,7 @@ defmodule Brando.Utils.Schema do
   """
 
   import Ecto.Query
+
   alias Brando.SoftDelete
   alias Ecto.Changeset
 
@@ -65,12 +66,7 @@ defmodule Brando.Utils.Schema do
     end
   end
 
-  def avoid_field_collision(
-        %Changeset{valid?: true} = changeset,
-        module,
-        fields,
-        {filter_field, filter_fn}
-      ) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, module, fields, {filter_field, filter_fn}) do
     case Changeset.get_field(changeset, :status) do
       :draft ->
         changeset
@@ -85,8 +81,7 @@ defmodule Brando.Utils.Schema do
     changeset
   end
 
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn)
-      when is_list(fields) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn) when is_list(fields) do
     case Changeset.get_field(changeset, :status) do
       :draft ->
         changeset
@@ -99,8 +94,7 @@ defmodule Brando.Utils.Schema do
 
   def avoid_field_collision(%Changeset{} = changeset, _, _), do: changeset
 
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields)
-      when is_list(fields) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields) when is_list(fields) do
     case Changeset.get_field(changeset, :status) do
       :draft ->
         changeset
@@ -137,8 +131,7 @@ defmodule Brando.Utils.Schema do
     end)
   end
 
-  defp get_unique_field_value(cs, src, field, field_val, attempts)
-       when attempts < @field_val_collision_attemps do
+  defp get_unique_field_value(cs, src, field, field_val, attempts) when attempts < @field_val_collision_attemps do
     field_val_to_test = construct_field_val(field_val, attempts)
     test_query = from m in src, where: field(m, ^field) == ^field_val_to_test
 
