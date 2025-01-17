@@ -3,6 +3,7 @@ defmodule BrandoAdmin.API.Content.Upload.FileController do
   Legacy upload of files (used in Block vars)
   """
   use BrandoAdmin, :controller
+
   alias Brando.Files.Uploads.Schema
 
   def create(conn, %{"uid" => uid} = params) do
