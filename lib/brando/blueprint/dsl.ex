@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Dsl do
+  @moduledoc false
   use Spark.Dsl,
     default_extensions: [
       extensions: [
