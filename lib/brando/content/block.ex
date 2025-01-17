@@ -3,6 +3,16 @@ defmodule Brando.Content.Block do
   Blueprint for the Block schema.
   """
 
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Content",
+    schema: "Block",
+    singular: "block",
+    plural: "blocks",
+    gettext_module: Brando.Gettext
+
+  use Gettext, backend: Brando.Gettext
+
   @type t :: %__MODULE__{}
 
   @block_attrs [
@@ -54,16 +64,6 @@ defmodule Brando.Content.Block do
     :global_set_id,
     :table_template_id
   ]
-
-  use Brando.Blueprint,
-    application: "Brando",
-    domain: "Content",
-    schema: "Block",
-    singular: "block",
-    plural: "blocks",
-    gettext_module: Brando.Gettext
-
-  use Gettext, backend: Brando.Gettext
 
   # ++ Traits
   trait Brando.Trait.Creator
