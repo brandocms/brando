@@ -3,6 +3,7 @@ defmodule Brando.Blueprint.ConstraintsTest do
   use Brando.ConnCase
 
   defmodule P1 do
+    @moduledoc false
     use Brando.Blueprint,
       application: "Brando",
       domain: "Projects",

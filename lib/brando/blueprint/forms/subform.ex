@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Forms.Subform do
+  @moduledoc false
   defstruct name: nil,
             label: nil,
             instructions: nil,

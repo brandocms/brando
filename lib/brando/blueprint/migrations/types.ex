@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Migrations.Types do
+  @moduledoc false
   def migration_type(:string), do: :text
   def migration_type(:villain), do: :jsonb
   def migration_type(:image), do: :jsonb

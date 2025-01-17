@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Forms.Form do
+  @moduledoc false
   defstruct name: :default,
             __identifier__: nil,
             query: nil,

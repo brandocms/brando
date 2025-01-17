@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint.AbsoluteURLTest do
   use ExUnit.Case
+
   alias Brando.Pages.Page
 
   test "__absolute_url_preloads__" do

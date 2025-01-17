@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Trait do
+  @moduledoc false
   defmacro trait(name, opts \\ []) do
     [
       Macro.expand(name, __CALLER__).generate_code(__CALLER__.module, opts),

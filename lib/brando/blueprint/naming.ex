@@ -1,6 +1,6 @@
 defmodule Brando.Blueprint.Naming do
   ## Naming
-
+  @moduledoc false
   defmacro application(value) do
     quote location: :keep do
       @application unquote(value)

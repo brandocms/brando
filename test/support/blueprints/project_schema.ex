@@ -1,4 +1,5 @@
 defmodule Brando.BlueprintTest.Project do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Projects",
@@ -143,6 +144,7 @@ defmodule Brando.BlueprintTest.Project do
 end
 
 defmodule Brando.TraitTest.Project do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "TraitTest",
@@ -196,6 +198,7 @@ defmodule Brando.TraitTest.Project do
 end
 
 defmodule Brando.BlueprintTest.Property do
+  @moduledoc false
   use Brando.Blueprint,
     application: "Brando",
     domain: "Projects",

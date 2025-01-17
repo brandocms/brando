@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint.MigrationsTest do
   use ExUnit.Case
+
   alias Brando.Blueprint.Migrations
 
   @test_opts [

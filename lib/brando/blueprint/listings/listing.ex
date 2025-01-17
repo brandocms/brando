@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Listings.Listing do
+  @moduledoc false
   defstruct __identifier__: nil,
             name: nil,
             query: %{},

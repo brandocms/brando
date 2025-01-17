@@ -3,7 +3,9 @@ defmodule Brando.Blueprint.Listings.Components do
   Components to use in listings
   """
   use Phoenix.Component
+
   import Brando.HTML, only: [icon: 1]
+
   alias BrandoAdmin.Components.ChildrenButton
   alias BrandoAdmin.Components.Content
 
