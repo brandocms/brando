@@ -1,5 +1,7 @@
 defmodule Brando.Blueprint.Translations.Transformer do
+  @moduledoc false
   use Spark.Dsl.Transformer
+
   alias Spark.Dsl.Transformer
 
   @impl true
@@ -19,10 +21,7 @@ defmodule Brando.Blueprint.Translations.Transformer do
       |> Transformer.get_entities([:translations])
       |> Enum.reduce(%{}, fn
         %{key: key, translations: translations}, acc ->
-          processed_translations =
-            translations
-            |> Enum.map(&{&1.key, &1.value})
-            |> Enum.into(%{})
+          processed_translations = Map.new(translations, &{&1.key, &1.value})
 
           Map.put(acc, key, processed_translations)
       end)
