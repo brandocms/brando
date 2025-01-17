@@ -1,37 +1,29 @@
 defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
   # import Brando.Blueprint.Migrations.Types
-
+  @moduledoc false
   defstruct asset: nil,
             module: nil,
             opts: nil
 
-  def up(%{
-        asset: %{type: :image, name: name}
-      }) do
+  def up(%{asset: %{type: :image, name: name}}) do
     """
     add #{inspect(name)}_id, references(:images, on_delete: :nilify_all)
     """
   end
 
-  def up(%{
-        asset: %{type: :file, name: name}
-      }) do
+  def up(%{asset: %{type: :file, name: name}}) do
     """
     add #{inspect(name)}_id, references(:files, on_delete: :nilify_all)
     """
   end
 
-  def up(%{
-        asset: %{type: :gallery, name: name}
-      }) do
+  def up(%{asset: %{type: :gallery, name: name}}) do
     """
     add #{inspect(name)}_id, references(:images_galleries, on_delete: :nilify_all)
     """
   end
 
-  def up(%{
-        asset: %{type: :video, name: name}
-      }) do
+  def up(%{asset: %{type: :video, name: name}}) do
     """
     add #{inspect(name)}, :jsonb
     """
@@ -41,33 +33,25 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
     ""
   end
 
-  def down(%{
-        asset: %{type: :image, name: name}
-      }) do
+  def down(%{asset: %{type: :image, name: name}}) do
     """
     remove #{inspect(name)}_id
     """
   end
 
-  def down(%{
-        asset: %{type: :file, name: name}
-      }) do
+  def down(%{asset: %{type: :file, name: name}}) do
     """
     remove #{inspect(name)}_id
     """
   end
 
-  def down(%{
-        asset: %{type: :video, name: name}
-      }) do
+  def down(%{asset: %{type: :video, name: name}}) do
     """
     remove #{inspect(name)}
     """
   end
 
-  def down(%{
-        asset: %{type: :gallery, name: name}
-      }) do
+  def down(%{asset: %{type: :gallery, name: name}}) do
     """
     remove #{inspect(name)}_id
     """
