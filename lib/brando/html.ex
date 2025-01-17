@@ -3,15 +3,17 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  use Phoenix.Component
+  use Gettext, backend: Brando.Gettext
+
+  import Phoenix.HTML
+
+  alias Brando.Assets.Vite
+  alias Brando.Utils
+
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
   @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
-
-  use Phoenix.Component
-  use Gettext, backend: Brando.Gettext
-  import Phoenix.HTML
-  alias Brando.Assets.Vite
-  alias Brando.Utils
 
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
   defdelegate picture(assigns), to: Brando.HTML.Images
@@ -143,14 +145,9 @@ defmodule Brando.HTML do
 
   defp get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
 
-  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}})
-       when not is_nil(text),
-       do: text
+  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
 
-  defp get_menu_item_text(%{
-         link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}
-       }),
-       do: text
+  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
 
   defp get_menu_item_text(_), do: nil
 
@@ -212,11 +209,7 @@ defmodule Brando.HTML do
     """
   end
 
-  defp get_alternate_url(%{
-         fallback: fallback,
-         language: language,
-         conn: %{private: %{brando_hreflangs: hreflangs}}
-       }) do
+  defp get_alternate_url(%{fallback: fallback, language: language, conn: %{private: %{brando_hreflangs: hreflangs}}}) do
     Keyword.get(hreflangs, language, fallback)
   end
 
@@ -337,7 +330,7 @@ defmodule Brando.HTML do
   """
   def render_markdown(markdown, opts \\ [breaks: true])
   def render_markdown(nil, _), do: ""
-  def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw
+  def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw()
 
   @doc """
   Zero pad `val` as a binary.
@@ -352,8 +345,7 @@ defmodule Brando.HTML do
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 
-  def zero_pad(val, count) when is_integer(val),
-    do: String.pad_leading(Integer.to_string(val), count, "0")
+  def zero_pad(val, count) when is_integer(val), do: String.pad_leading(Integer.to_string(val), count, "0")
 
   @doc """
   Split `name` and return first name
@@ -569,12 +561,11 @@ defmodule Brando.HTML do
       iex> ratio(nil)
       0
   """
-  def ratio(%{height: height, width: width})
-      when is_nil(height) or is_nil(width),
-      do: 0
+  def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
 
   def ratio(%{height: height, width: width}) do
-    Decimal.new(height)
+    height
+    |> Decimal.new()
     |> Decimal.div(Decimal.new(width))
     |> Decimal.mult(Decimal.new(100))
   end
@@ -844,7 +835,7 @@ defmodule Brando.HTML do
       |> assign(:rendered_field, rendered_field)
       |> assign(:rendered_field_at, rendered_field_at)
       |> assign(:html, Map.get(assigns.entry, rendered_field, ""))
-      |> assign(:at, Map.get(assigns.entry, rendered_field_at) |> inspect())
+      |> assign(:at, assigns.entry |> Map.get(rendered_field_at) |> inspect())
 
     ~H"""
     {@html |> raw}
