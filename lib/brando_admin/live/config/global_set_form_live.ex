@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.Sites.GlobalSetFormLive do
+  @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalSet
-  alias BrandoAdmin.Components.Form
   use Gettext, backend: Brando.Gettext
+
+  alias BrandoAdmin.Components.Form
 
   def render(assigns) do
     ~H"""
@@ -20,11 +22,7 @@ defmodule BrandoAdmin.Sites.GlobalSetFormLive do
     """
   end
 
-  def handle_event(
-        "add_select_var_option",
-        %{"var_key" => var_key},
-        socket
-      ) do
+  def handle_event("add_select_var_option", %{"var_key" => var_key}, socket) do
     send_update(BrandoAdmin.Components.Form,
       id: "global_set_form",
       action: :add_select_var_option,
