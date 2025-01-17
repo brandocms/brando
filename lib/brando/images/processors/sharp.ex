@@ -3,11 +3,12 @@ defmodule Brando.Images.Processor.Sharp do
   Process image with Sharp
   """
 
-  require Logger
+  @behaviour Brando.Images.Processor
+
   alias Brando.Images
   alias Brando.Images.Processor
 
-  @behaviour Brando.Images.Processor
+  require Logger
 
   @doc """
   Wrapper for System.cmd
@@ -155,10 +156,10 @@ defmodule Brando.Images.Processor.Sharp do
 
     extract_params = [
       "extract",
-      crop_values.top |> round_to_string,
-      crop_values.left |> round_to_string,
-      crop_values.width |> round_to_string,
-      crop_values.height |> round_to_string
+      round_to_string(crop_values.top),
+      round_to_string(crop_values.left),
+      round_to_string(crop_values.width),
+      round_to_string(crop_values.height)
     ]
 
     extra_params = [
@@ -247,6 +248,7 @@ defmodule Brando.Images.Processor.Sharp do
   rescue
     err ->
       require Logger
+
       Logger.error("==> get_dominant_color errored:")
       Logger.error(inspect(err, pretty: true))
       nil
@@ -267,5 +269,5 @@ defmodule Brando.Images.Processor.Sharp do
 
   defp round_to_string(0), do: "0"
   defp round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
-  defp round_to_string(val), do: val |> to_string()
+  defp round_to_string(val), do: to_string(val)
 end
