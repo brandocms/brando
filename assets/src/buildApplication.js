@@ -211,6 +211,14 @@ export default (hooks, enableDebug = false) => {
       app.toast.mutation(data.level, data.payload)
     })
 
+    app.userChannel.on('toast', (data) => {
+      app.toast.notification(data.level, data.payload)
+    })
+
+    app.userChannel.on('progress_popup', (data) => {
+      app.toast.progressPopup(data.payload)
+    })
+
     app.userChannel.on('progress:show', () => {
       gsap.to($progressWrapper, {
         yPercent: 0,
@@ -225,14 +233,6 @@ export default (hooks, enableDebug = false) => {
         ease: 'circ.in',
         duration: 0.35,
       })
-    })
-
-    app.userChannel.on('toast', (data) => {
-      app.toast.notification(data.level, data.payload)
-    })
-
-    app.userChannel.on('progress_popup', (data) => {
-      app.toast.progressPopup(data.payload)
     })
 
     app.userChannel.on(
@@ -250,18 +250,10 @@ export default (hooks, enableDebug = false) => {
           percentEl.innerHTML = `${percent}%`
 
           if (parseInt(percent) === 100) {
-            console.log('percent is 100%!', keyEl)
-            const tl = gsap.timeline()
-
-            tl.to(keyEl, { opacity: 0 })
-              .to(keyEl, { height: 0 })
-              .call(() => {
-                keyEl.remove()
-                gsap.set($progressWrapper, { height: getHeights() })
-              })
+            keyEl.remove()
+            gsap.set($progressWrapper, { height: getHeights() })
           }
         } else {
-          console.log('creating with key', key)
           const updateProgress = document.createRange()
             .createContextualFragment(`
             <div class="progress-item" data-progress-key="${key}">
@@ -279,8 +271,7 @@ export default (hooks, enableDebug = false) => {
             `)
           $progress.append(updateProgress)
           const keyEl = Dom.find(`[data-progress-key="${key}"]`)
-          gsap.set(keyEl, { opacity: 0 })
-          gsap.to(keyEl, { opacity: 1, duration: 0.45 })
+          gsap.set(keyEl, { opacity: 1 })
         }
 
         gsap.set($progressWrapper, { height: getHeights() })
