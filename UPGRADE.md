@@ -7,7 +7,7 @@ NOTE: Upgrade notes are in the CHANGELOG now.
 
 * `mix deps.get` -- you might need to unlock some deps, i.e: `mix deps.unlock phoenix_ecto`
 
-* Switch your backend gettext module in `gettext.ex` from 
+* Switch your backend gettext module in `gettext.ex` from
   `YourApp.Backend.Gettext` to `YourAppAdmin.Gettext`
 
 * Say bye to your Vue backend. Pull in the new backend with
@@ -16,7 +16,7 @@ NOTE: Upgrade notes are in the CHANGELOG now.
 
 * Replace `use Brando.I18n.Helpers` with `import Brando.I18n.Helpers`
 
-* Delete guardian: 
+* Delete guardian:
   `$ rm -rf lib/my_app_web/guardian`
   `$ rm -rf lib/my_app_web/guardian.ex`
 
@@ -76,10 +76,10 @@ end
   saving the main entry first. It might just be missing UIDs on
   the blocks.
 
-* Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`, 
+* Change image configs `target_format: :png` to `formats: [:png]`. If you have `webp: true`,
   you should also add `webp` to your formats list.
 
-* Switch your frontend `app.html.eex` to `app.html.heex`. Change your `<%= body_tag %>` call to 
+* Switch your frontend `app.html.eex` to `app.html.heex`. Change your `<%= body_tag %>` call to
   a heex component call: `<.body_tag conn={@conn} id="top"> ... <./body_tag>`
 
 
@@ -92,9 +92,9 @@ end
 * Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`
 
 * Move your contexts to the application root:
+  `lib/my_app/accounts/accounts.ex` -> `lib/my_app/accounts.ex`
 
 * Rename all `Brando.GraphQL` -> `BrandoGraphQL`
-  `lib/my_app/accounts/accounts.ex` -> `lib/my_app/accounts.ex`
 
 * OTP24 needs a newer `jose` version:
 
