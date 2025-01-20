@@ -977,18 +977,8 @@ defmodule BrandoAdmin.Components.Form do
                 </svg>
                 <span class="tab-text">{gettext("Scheduled publishing")}</span>
               </button>
-              <button
-                :if={@has_alternates?}
-                phx-click={toggle_drawer("##{@id}-alternates-drawer")}
-                type="button"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+              <button :if={@has_alternates?} phx-click={toggle_drawer("##{@id}-alternates-drawer")} type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
                   <path
                     fill-rule="evenodd"
@@ -1007,11 +997,7 @@ defmodule BrandoAdmin.Components.Form do
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                 </svg>
               </button>
-              <button
-                :if={@has_live_preview?}
-                phx-click={JS.push("share_link", target: @myself)}
-                type="button"
-              >
+              <button :if={@has_live_preview?} phx-click={JS.push("share_link", target: @myself)} type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z" />
                 </svg>
@@ -1023,10 +1009,7 @@ defmodule BrandoAdmin.Components.Form do
                   </svg>
                 </button>
                 <SplitDropdown.render id="save-dropdown">
-                  <Button.dropdown
-                    value={false}
-                    event={JS.push("push_submit_redirect", target: @myself)}
-                  >
+                  <Button.dropdown value={false} event={JS.push("push_submit_redirect", target: @myself)}>
                     {gettext("Save")}<span class="shortcut">⇧⌘S</span>
                   </Button.dropdown>
                   <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
@@ -1059,13 +1042,7 @@ defmodule BrandoAdmin.Components.Form do
             processing={@processing}
           />
 
-          <.form
-            id={"#{@id}_form"}
-            for={@form}
-            phx-target={@myself}
-            phx-submit="save"
-            phx-change="validate"
-          >
+          <.form id={"#{@id}_form"} for={@form} phx-target={@myself} phx-submit="save" phx-change="validate">
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <MetaDrawer.render
               :if={@has_meta?}
@@ -1134,12 +1111,7 @@ defmodule BrandoAdmin.Components.Form do
             form_cid={@myself}
           />
 
-          <.submit_button
-            processing={@processing}
-            form_id={@id}
-            label={gettext("Save (⌘S)")}
-            class="primary submit-button"
-          />
+          <.submit_button processing={@processing} form_id={@id} label={gettext("Save (⌘S)")} class="primary submit-button" />
         </div>
 
         <.live_preview
@@ -1159,11 +1131,7 @@ defmodule BrandoAdmin.Components.Form do
   def form_presences(assigns) do
     ~H"""
     <div class="page-presences">
-      <div
-        :for={{_, user} <- @presences}
-        class="user-presence visible"
-        data-presence-user-id={user.id}
-      >
+      <div :for={{_, user} <- @presences} class="user-presence visible" data-presence-user-id={user.id}>
         <div class="avatar" data-popover={user.name}>
           <Content.image image={user.avatar} size={:thumb} />
         </div>
@@ -1174,11 +1142,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def form_tabs(assigns) do
     ~H"""
-    <div
-      :for={tab <- @tabs}
-      class={["form-tab", @active_tab == tab.name && "active"]}
-      data-tab-name={tab.name}
-    >
+    <div :for={tab <- @tabs} class={["form-tab", @active_tab == tab.name && "active"]} data-tab-name={tab.name}>
       <div class="row">
         <.tab_fields
           tab={tab}
@@ -1313,12 +1277,7 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Select existing file")}
           </button>
 
-          <button
-            class="secondary"
-            type="button"
-            phx-page-loading
-            phx-click={reset_file_field(@myself)}
-          >
+          <button class="secondary" type="button" phx-page-loading phx-click={reset_file_field(@myself)}>
             {gettext("Reset file field")}
           </button>
         </div>
@@ -1388,9 +1347,7 @@ defmodule BrandoAdmin.Components.Form do
               <img
                 width={@edit_image.image.width}
                 height={@edit_image.image.height}
-                src={
-                  Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())
-                }
+                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())}
               />
             </figure>
             <figcaption class="tiny">{@edit_image.image.path}</figcaption>
@@ -1446,12 +1403,7 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Duplicate image")}
           </button>
 
-          <button
-            class="secondary"
-            type="button"
-            phx-page-loading
-            phx-click={reset_image_field(@myself)}
-          >
+          <button class="secondary" type="button" phx-page-loading phx-click={reset_image_field(@myself)}>
             {gettext("Reset image field")}
           </button>
         </div>
@@ -3022,12 +2974,7 @@ defmodule BrandoAdmin.Components.Form do
   def live_preview(assigns) do
     ~H"""
     <%= if @live_preview_active? do %>
-      <div
-        class="live-preview-wrapper"
-        phx-update="ignore"
-        id="live-preview"
-        phx-hook="Brando.LivePreview"
-      >
+      <div class="live-preview-wrapper" phx-update="ignore" id="live-preview" phx-hook="Brando.LivePreview">
         <div class="live-preview">
           <div class="live-preview-targets">
             <div class="live-preview-divider"></div>
@@ -3061,10 +3008,7 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
           <div class="live-preview-iframe-wrapper">
-            <iframe
-              data-live-preview-device={@live_preview_target}
-              src={"/__livepreview?key=#{@live_preview_cache_key}"}
-            >
+            <iframe data-live-preview-device={@live_preview_target} src={"/__livepreview?key=#{@live_preview_cache_key}"}>
             </iframe>
           </div>
         </div>
@@ -3133,21 +3077,9 @@ defmodule BrandoAdmin.Components.Form do
           data-field-presence={!@skip_presence && @f_name}
         >
           <span>{@label}</span>
-          <div
-            :if={!@skip_presence}
-            class="field-presence"
-            phx-update="ignore"
-            id={"#{@f_id}-field-presence"}
-          >
-          </div>
+          <div :if={!@skip_presence} class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
         </label>
-        <.error_tag
-          :if={@field}
-          field={@field}
-          relation={@relation}
-          id_prefix={@id_prefix}
-          uid={@uid}
-        />
+        <.error_tag :if={@field} field={@field} relation={@relation} id_prefix={@id_prefix} uid={@uid} />
         <div :if={@header != []} class="field-wrapper-header">
           {render_slot(@header)}
         </div>
@@ -3256,12 +3188,7 @@ defmodule BrandoAdmin.Components.Form do
         )}
       </div>
     <% else %>
-      <div
-        class="brando-input"
-        data-component={inspect(@type)}
-        data-compact={@compact}
-        data-size={@size}
-      >
+      <div class="brando-input" data-component={inspect(@type)} data-compact={@compact} data-size={@size}>
         <.live_component
           module={@component_target}
           id={@component_id}
@@ -3554,13 +3481,7 @@ defmodule BrandoAdmin.Components.Form do
     >
       <%= if @processing do %>
         <div class="processing">
-          <svg
-            class="spin"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-          >
+          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
             <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
           </svg>
           {gettext("Processing. Please wait...")}
@@ -3675,13 +3596,7 @@ defmodule BrandoAdmin.Components.Form do
       data-field-presence={@f_name}
     >
       {render_slot(@inner_block)}
-      <div
-        :if={!@skip_presence}
-        class="field-presence"
-        phx-update="ignore"
-        id={"#{@f_id}-field-presence"}
-      >
-      </div>
+      <div :if={!@skip_presence} class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
     </label>
     """
   end
