@@ -1895,9 +1895,8 @@ defmodule BrandoAdmin.Components.Form do
     # if redirect_on_save is set in form, use this
     redirect_fn =
       form_blueprint.redirect_on_save ||
-        fn socket, _entry, _mutation_type ->
-          generated_list_view = schema.__modules__().admin_list_view
-          Brando.routes().admin_live_path(socket, generated_list_view)
+        fn _socket, _entry, _mutation_type ->
+          schema.__admin_route__(:list, [schema.__modules__().admin_list_view])
         end
 
     # redirect to "create new"
