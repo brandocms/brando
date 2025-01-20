@@ -160,6 +160,23 @@ defmodule Brando.Blueprint.Dsl do
 
       def __admin_route__(type, args \\ [])
 
+      def __admin_route__(:list, args) do
+        live_path =
+          if @router_scope do
+            :"admin_#{@router_scope}_live_path"
+          else
+            :admin_live_path
+          end
+
+        base_args = [Brando.endpoint()]
+
+        apply(
+          Brando.routes(),
+          live_path,
+          base_args ++ args
+        )
+      end
+
       def __admin_route__(:create, args) do
         form_path =
           if @router_scope do
