@@ -63,7 +63,9 @@ defmodule Brando.Villain.Parser do
   @doc "Default options passed to <.video> component for :file type"
   @callback video_file_options(data :: map) :: list
 
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
+    format_html = Keyword.get(opts, :format_html, false)
+
     quote location: :keep do
       @behaviour Brando.Villain.Parser
       use Phoenix.Component
@@ -78,6 +80,8 @@ defmodule Brando.Villain.Parser do
       alias Brando.Villain
 
       alias Liquex.Context
+
+      @format_html unquote(format_html)
 
       def render_caption(%{title: nil, credits: nil}), do: ""
       def render_caption(%{title: "", credits: nil}), do: ""
@@ -372,9 +376,7 @@ defmodule Brando.Villain.Parser do
       def datasource(_, _) do
         require Logger
 
-        Logger.error(
-          "==> parser: datasource/2 is deprecated. Use module with datasource instead."
-        )
+        Logger.error("==> parser: datasource/2 is deprecated. Use module with datasource instead.")
 
         ""
       end
@@ -1246,7 +1248,29 @@ defmodule Brando.Villain.Parser do
         end
       end
 
-      def maybe_format(html, _), do: html
+      def maybe_format(html, _) do
+        if @format_html do
+          try do
+            Phoenix.LiveView.HTMLFormatter.format(html, [])
+          rescue
+            e ->
+              require Logger
+
+              Logger.error("""
+
+              ==> Error formatting HTML.
+              Pre-formatted HTML below:
+
+              #{html}")
+
+              """)
+
+              reraise e, __STACKTRACE__
+          end
+        else
+          html
+        end
+      end
     end
   end
 
