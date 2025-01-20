@@ -18,7 +18,7 @@ defmodule Brando.Worker.ImageUploader do
           "field_full_path" => field_full_path
         }
       }) do
-    BrandoAdmin.Progress.show(%Brando.Users.User{id: user_id})
+    BrandoAdmin.Progress.show(user_id)
 
     field_full_path =
       Enum.map(field_full_path, fn
@@ -31,7 +31,7 @@ defmodule Brando.Worker.ImageUploader do
       if any_remaining_jobs?(image_id, job_id) do
         {:ok, s3_key}
       else
-        BrandoAdmin.Progress.hide(%Brando.Users.User{id: user_id})
+        BrandoAdmin.Progress.hide(user_id)
         {:ok, image} = Images.get_image(image_id)
 
         case Images.update_image(image, %{cdn: true}, %{id: user_id}) do

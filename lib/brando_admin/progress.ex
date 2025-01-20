@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Progress do
   Progress sent through user channel
   """
 
-  @spec show(atom | %{:id => any, optional(any) => any}) :: :ok | {:error, any}
+  @spec show(atom | integer) :: :ok | {:error, any}
   def show(:system), do: nil
 
   def show(user_id) do
