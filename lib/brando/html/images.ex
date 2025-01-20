@@ -204,16 +204,29 @@ defmodule Brando.HTML.Images do
         """
       else
         ~H"""
-        <%= for format <- Enum.reverse(@src.formats) do %>
-          <%= if format == @sizes_format do %>
-            <source {@attrs.source} />
-          <% else %>
-            <source {replace_attrs(@attrs.source, format)} />
-          <% end %>
-        <% end %>
+        <.source_tag
+          :for={format <- Enum.reverse(@src.formats)}
+          format={format}
+          original_format={@sizes_format}
+          source={@attrs.source}
+        />
         """
       end
     end
+  end
+
+  defp source_tag(%{format: format, original_format: format} = assigns) do
+    ~H"""
+    <source {@source} />
+    """
+  end
+
+  defp source_tag(%{format: format, source: source} = assigns) do
+    assigns = assign(assigns, :replaced_source, replace_attrs(source, format))
+
+    ~H"""
+    <source {@replaced_source} />
+    """
   end
 
   defp figcaption_tag(assigns) do
@@ -224,9 +237,7 @@ defmodule Brando.HTML.Images do
 
   defp noscript_tag(assigns) do
     ~H"""
-    <noscript>
-      <img alt={@alt} {@attrs} />
-    </noscript>
+    <noscript><img alt={@alt} {@attrs} /></noscript>
     """
   end
 
@@ -252,8 +263,8 @@ defmodule Brando.HTML.Images do
   defp suffix_srcs(srcs, suffix), do: String.replace(srcs, [".jpg", ".jpeg", ".png", ".avif", ".gif"], suffix)
 
   defp add_alt(attrs, image_struct) do
-    alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, "") || "")
-    put_in(attrs, [:img, "alt"], alt)
+    alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt))
+    put_in(attrs, [:img, "alt"], alt || "")
   end
 
   defp add_lazyload(attrs) do
