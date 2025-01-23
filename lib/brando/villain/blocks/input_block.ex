@@ -28,6 +28,6 @@ defmodule Brando.Villain.Blocks.InputBlock do
   end
 
   def protected_attrs do
-    [:text]
+    [:value]
   end
 end
