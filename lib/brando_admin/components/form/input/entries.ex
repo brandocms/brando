@@ -407,6 +407,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :available_identifiers, :list, default: []
   attr :selected_identifiers, :list, default: []
   attr :select, :any, default: false
+  slot :inner_block
   slot :delete
 
   def identifier(%{identifier_id: identifier_id} = assigns) when not is_nil(identifier_id) do
