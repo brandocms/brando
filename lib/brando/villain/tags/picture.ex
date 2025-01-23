@@ -1,7 +1,7 @@
 defmodule Brando.Villain.Tags.Picture do
   @moduledoc """
   {% picture entry.cover {
-    size: 'auto',
+    sizes: 'auto',
     lazyload: true,
     placeholder: 'dominant_color_faded',
     srcset: 'MyApp.Projects.Project:cover.default',
