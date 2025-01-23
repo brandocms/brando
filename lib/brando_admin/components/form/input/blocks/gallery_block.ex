@@ -74,13 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       data-block-uid={@uid}
     >
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block
-          id={"block-#{@uid}-base"}
-          block={@block}
-          is_ref?={true}
-          multi={false}
-          target={@target}
-        >
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             {block_data[:type].value}
             <%= if @ref_description not in ["", nil] do %>
@@ -107,9 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           <button
             type="button"
             class="tiny"
-            phx-click={
-              JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")
-            }
+            phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}
           >
             {gettext("Edit captions")}
           </button>
@@ -126,12 +118,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-selector=".preview"
           >
             <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
-              <.gallery_image
-                image={image}
-                uid={@uid}
-                parent_form_name={block_data.name}
-                target={@myself}
-              />
+              <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} target={@myself} />
             </.inputs_for>
           </div>
 
@@ -190,10 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               ]}
             />
 
-            <Form.array_inputs
-              :let={%{value: array_value, name: array_name}}
-              field={block_data[:formats]}
-            >
+            <Form.array_inputs :let={%{value: array_value, name: array_name}} field={block_data[:formats]}>
               <input type="hidden" name={array_name} value={array_value} />
             </Form.array_inputs>
 
@@ -233,18 +217,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         <input type="hidden" name={array_name} value={array_value} />
       </Form.array_inputs>
       <Content.image image={@img} size={:thumb} />
-      <button
-        class="delete-x"
-        type="button"
-        phx-click={JS.push("remove_image", target: @target)}
-        phx-value-path={@img.path}
-      >
+      <button class="delete-x" type="button" phx-click={JS.push("remove_image", target: @target)} phx-value-path={@img.path}>
         <.icon name="hero-x-mark" />
         <div class="text">{gettext("Delete")}</div>
       </button>
-      <figcaption phx-click={
-        JS.push("show_captions", target: @target) |> show_modal("#block-#{@uid}_captions")
-      }>
+      <figcaption phx-click={JS.push("show_captions", target: @target) |> show_modal("#block-#{@uid}_captions")}>
         <div :if={@img.title}>
           <span>{gettext("Caption")}</span>
           {raw(@img.title || "{ #{gettext("No caption")} }")}
@@ -260,6 +237,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       </figcaption>
     </div>
     """
+  end
+
+  def handle_event("focus", _, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("toggle_only_selected", _, socket) do
