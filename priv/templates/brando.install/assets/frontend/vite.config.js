@@ -12,20 +12,23 @@ function HMREuropa() {
 
         server.ws.send({
           type: 'full-reload',
-          path: '*'
+          path: '*',
         })
       }
-    }
+    },
   }
 }
 
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    port: 3000
+    port: 3000,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
   },
   css: {
-    devSourcemap: true
+    devSourcemap: true,
   },
   build: {
     manifest: 'manifest.json',
@@ -36,22 +39,22 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'js/index.js',
-        critical: 'js/critical.js'
-      }
+        critical: 'js/critical.js',
+      },
     },
     terserOptions: {
       mangle: true,
       safari10: true,
       output: {
-        comments: false
+        comments: false,
       },
       compress: {
         pure_funcs: ['console.info', 'console.debug', 'console.warn'],
         global_defs: {
-          module: false
-        }
-      }
-    }
+          module: false,
+        },
+      },
+    },
   },
 
   plugins: [
@@ -66,9 +69,9 @@ export default defineConfig({
         'intersection-observer',
         'custom-event-polyfill',
         'element-polyfill',
-        'picturefill'
+        'picturefill',
       ],
-      corejs: true
-    })
-  ]
+      corejs: true,
+    }),
+  ],
 })
