@@ -611,8 +611,7 @@ defmodule Brando.Utils do
            brando_skip_title_postfix: skip_postfix
          }
        }) do
-    {if(skip_prefix == true, do: nil, else: prefix),
-     if(skip_postfix == true, do: nil, else: postfix)}
+    {if(skip_prefix == true, do: nil, else: prefix), if(skip_postfix == true, do: nil, else: postfix)}
   end
 
   defp maybe_skip_title_prefix_postfix(prefix, postfix, _conn) do
@@ -1353,6 +1352,12 @@ defmodule Brando.Utils do
 
   def strip_leading_slash("/" <> rest), do: rest
   def strip_leading_slash(rest), do: rest
+
+  def nilify_fields(struct_or_map, fields) when is_list(fields) do
+    Enum.reduce(fields, struct_or_map, fn field, acc ->
+      Map.put(acc, field, nil)
+    end)
+  end
 
   def apply_changes_recursively(changesets) when is_list(changesets) do
     Enum.map(changesets, &apply_changes_recursively/1)

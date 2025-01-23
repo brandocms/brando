@@ -90,7 +90,18 @@ defmodule Brando.Pages do
   mutation :delete, Page
 
   mutation :duplicate,
-           {Page, delete_fields: [:children, :parent], change_fields: [:uri, :title, vars: &__MODULE__.duplicate_vars/2]}
+           {Page,
+            delete_fields: [
+              :parent
+            ],
+            change_fields: [
+              :uri,
+              :title,
+              children: [],
+              alternates: [],
+              alternate_entries: [],
+              vars: &__MODULE__.duplicate_vars/2
+            ]}
 
   def duplicate_vars(entry, _) do
     entry

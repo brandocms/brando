@@ -196,25 +196,40 @@ defmodule BrandoAdmin.LiveView.Listing do
         context = schema.__modules__().context
 
         override_opts = [
-          change_fields: [{:language, language}],
-          delete_fields: []
+          change_fields: [{:language, String.to_existing_atom(language)}]
         ]
 
-        {:ok, duped_entry} =
-          apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts])
+        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+          {:ok, duped_entry} ->
+            send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
 
-        send(self(), {:toast, "#{String.capitalize(singular)} duplicated to [#{language}]"})
+            # the entry is translatable, but might not have alternates setup
+            if schema.has_alternates?() do
+              # link the entries together
+              _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+            end
 
-        # the entry is translatable, but might not have alternates setup
-        if schema.has_alternates?() do
-          # link the entries together
-          _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+            update_url = schema.__admin_route__(:update, [duped_entry.id])
+            send(self(), {:set_content_language_and_navigate, language, update_url})
+
+            {:halt, socket}
+
+          {:error, changeset} ->
+            require Logger
+
+            Logger.error("""
+            (!) Error duplicating #{String.capitalize(singular)}
+
+            Errors:
+            #{inspect(changeset.errors, pretty: true)}
+
+            Changes with errors:
+            #{inspect(Map.take(changeset.changes, Keyword.keys(changeset.errors)), pretty: true)}
+            """)
+
+            send(self(), {:toast, "Error duplicating #{String.capitalize(singular)}"})
+            {:halt, socket}
         end
-
-        update_url = schema.__admin_route__(:update, [duped_entry.id])
-        send(self(), {:set_content_language_and_navigate, language, update_url})
-
-        {:halt, socket}
 
       _, _, socket ->
         {:cont, socket}

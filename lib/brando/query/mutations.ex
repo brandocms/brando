@@ -178,7 +178,7 @@ defmodule Brando.Query.Mutations do
 
   def duplicate(context, module, name, id, opts, override_opts, user) do
     override_opts = Enum.into(override_opts, %{})
-    preloads = Keyword.get(opts, :preload) || []
+    preloads = Keyword.get(opts, :preload) || Brando.Blueprint.preloads_for(module)
 
     case apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]) do
       {:ok, entry} ->
@@ -187,35 +187,44 @@ defmodule Brando.Query.Mutations do
           |> Enum.into(%{})
           |> Map.merge(override_opts)
 
-        params =
+        has_blocks? = module.has_trait(Trait.Blocks)
+
+        cloned_entry =
           entry
           |> maybe_change_fields(opts)
           |> maybe_delete_fields(opts)
           |> maybe_set_status()
-          |> maybe_duplicate_blocks(module, opts)
-          |> Utils.map_from_struct()
+          |> maybe_duplicate_blocks(module, has_blocks?)
           |> maybe_merge_fields(opts)
+          |> maybe_put_creator(user)
           |> drop_fields()
+          |> update_meta()
 
-        # if the module has the Block trait, we need to cast the blocks
-        create_opts = if module.has_trait(Trait.Blocks), do: [cast_blocks: true], else: []
-        apply(context, :"create_#{name}", [params, user, create_opts])
+        Brando.Repo.insert(cloned_entry)
 
       err ->
         err
     end
   end
 
-  defp drop_fields(%{id: _} = entry), do: Map.drop(entry, [:id, :inserted_at, :updated_at])
+  defp maybe_put_creator(%{creator_id: _} = entry, %{id: user_id}) do
+    Map.put(entry, :creator_id, user_id)
+  end
+
+  defp maybe_put_creator(entry, _user), do: entry
+
+  defp update_meta(struct) do
+    put_in(struct, [Access.key(:__meta__), Access.key(:state)], :built)
+  end
+
+  defp drop_fields(%{id: _} = entry), do: Utils.nilify_fields(entry, [:id, :inserted_at, :updated_at])
   defp drop_fields(entry), do: entry
 
   defp maybe_set_status(%{status: _} = entry), do: Map.put(entry, :status, :draft)
   defp maybe_set_status(entry), do: entry
 
-  defp maybe_duplicate_blocks(entry, module, _opts) do
+  defp maybe_duplicate_blocks(entry, module, true) do
     block_fields = Enum.map(module.__blocks_fields__(), &:"entry_#{&1.name}")
-    preloads = Brando.Villain.preloads_for(module)
-    entry = Brando.Repo.preload(entry, preloads)
 
     updated_entry =
       Enum.reduce(block_fields, entry, fn field, acc ->
@@ -224,7 +233,7 @@ defmodule Brando.Query.Mutations do
         duplicated_blocks =
           Enum.map(blocks, fn entry_block ->
             entry_block = %{entry_block | id: nil, entry_id: nil, block_id: nil}
-
+            entry_block = update_meta(entry_block)
             updated_block = duplicate_block(entry_block.block)
             %{entry_block | block: updated_block}
           end)
@@ -235,23 +244,39 @@ defmodule Brando.Query.Mutations do
     updated_entry
   end
 
-  defp duplicate_block(block) do
-    new_uid = Brando.Utils.generate_uid()
+  defp maybe_duplicate_blocks(entry, _module, false), do: entry
 
+  defp duplicate_block(block) do
     %{
       block
       | id: nil,
-        uid: new_uid,
-        vars: Enum.map(block.vars, &duplicate_var/1),
-        table_rows: Enum.map(block.table_rows, &%{&1 | id: nil}),
-        block_identifiers: Enum.map(block.block_identifiers, &%{&1 | id: nil, block_id: nil}),
-        children: Enum.map(block.children, &duplicate_block/1),
-        refs: duplicate_refs(block.refs)
+        uid: Brando.Utils.generate_uid(),
+        vars: Enum.map(block.vars || [], &duplicate_var/1),
+        table_rows: Enum.map(block.table_rows || [], &duplicate_table_row/1),
+        block_identifiers: Enum.map(block.block_identifiers || [], &duplicate_block_identifiers/1),
+        children: Enum.map(block.children || [], &duplicate_block/1),
+        refs: duplicate_refs(block.refs || []),
+        creator: nil,
+        fragment: nil,
+        module: nil,
+        identifiers: nil
     }
+    |> update_meta()
+  end
+
+  defp duplicate_table_row(table_row) do
+    %{table_row | id: nil}
+    |> update_meta()
+  end
+
+  defp duplicate_block_identifiers(block_identifier) do
+    %{block_identifier | id: nil, block_id: nil}
+    |> update_meta()
   end
 
   defp duplicate_var(var) do
     %{var | id: nil}
+    |> update_meta()
   end
 
   defp duplicate_refs(refs) do
@@ -290,14 +315,14 @@ defmodule Brando.Query.Mutations do
       raise ArgumentError, message: "delete_fields must be a list"
     end
 
-    Map.drop(entry, delete_fields)
+    Utils.nilify_fields(entry, delete_fields)
   end
 
   defp maybe_delete_fields(entry, _), do: entry
 
   defp maybe_merge_fields(entry, %{merge_fields: merge_fields}) do
     unless is_map(merge_fields) do
-      raise ArgumentError, message: "merge_fields must be a list"
+      raise ArgumentError, message: "merge_fields must be a map"
     end
 
     Map.merge(entry, merge_fields)
