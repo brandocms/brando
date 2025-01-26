@@ -61,7 +61,7 @@ defmodule E2eProject.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_dashboard, "~> 0.7"},
       {:telemetry, "~> 1.0", override: true},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # {:exsync, "~> 0.2", only: :dev},
 

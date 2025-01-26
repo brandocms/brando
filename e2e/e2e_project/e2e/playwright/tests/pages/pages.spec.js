@@ -124,6 +124,35 @@ test('creates a simple page', async ({ page }) => {
   await expect(page.getByText('Hello from Playwright!')).toBeVisible()
 })
 
+test('duplicates to other language', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByRole('link', { name: 'Pages & Sections' }).click()
+  await page.getByRole('link', { name: 'Create page' }).click()
+  await syncLV(page)
+  await page.getByText('Published', { exact: true }).click()
+  await page.getByLabel('Title', { exact: true }).fill('Clients')
+  await page.getByLabel('URI').fill('clients')
+  await page.getByRole('button', { name: 'Add block' }).click()
+  await page.getByRole('button', { name: 'HEADERS' }).click()
+  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await page
+    .locator('textarea')
+    .filter({ hasText: 'Text' })
+    .first()
+    .fill('Heading')
+  await page.getByTestId('submit').click()
+  await expect(page.getByRole('link', { name: 'Clients →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '/clients' })).toBeVisible()
+  await page
+    .locator('.list-row')
+    .nth(1)
+    .getByTestId('circle-dropdown-button')
+    .click()
+  await page.getByRole('button', { name: 'Duplicate to [NO]' }).click()
+  await expect(page.getByLabel('Title', { exact: true })).toBeVisible()
+  await expect(page.getByText('/no/clients')).toBeVisible()
+})
+
 test('creates meta information', async ({ page }) => {
   await page.goto('/admin')
   await page.getByRole('link', { name: 'Pages & Sections' }).click()
