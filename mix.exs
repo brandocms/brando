@@ -89,7 +89,7 @@ defmodule Brando.Mixfile do
       {:cachex, "~> 4.0"},
 
       # cron & processing
-      {:oban, "~> 2.18.0"},
+      {:oban, "~> 2.19.1"},
 
       # sitemaps
       {:sitemapper, "~> 0.9.0"},
