@@ -1,15 +1,16 @@
 import { expect } from '@playwright/test'
 import Crypto from 'crypto'
 
-const randomString = (size = 21) => Crypto.randomBytes(size).toString('base64').slice(0, size)
+const randomString = (size = 21) =>
+  Crypto.randomBytes(size).toString('base64').slice(0, size)
 
 // a helper function to wait until the LV has no pending events
-const syncLV = async page => {
+const syncLV = async (page) => {
   const promises = [
     expect(page.locator('.phx-connected').first()).toBeVisible(),
     expect(page.locator('.phx-change-loading')).toHaveCount(0),
-    // expect(page.locator('.phx-click-loading')).toHaveCount(0),
-    expect(page.locator('.phx-submit-loading')).toHaveCount(0)
+    expect(page.locator('.phx-click-loading')).toHaveCount(0),
+    expect(page.locator('.phx-submit-loading')).toHaveCount(0),
   ]
   return Promise.all(promises)
 }
@@ -21,18 +22,21 @@ const syncLV = async page => {
 const evalLV = async (page, code, selector = '[data-phx-main]') =>
   await page.evaluate(
     ([code, selector]) => {
-      return new Promise(resolve => {
-        window.liveSocket.main.withinTargets(selector, (targetView, targetCtx) => {
-          targetView.pushEvent(
-            'event',
-            document.body,
-            targetCtx,
-            'sandbox:eval',
-            { value: code },
-            {},
-            ({ result }) => resolve(result)
-          )
-        })
+      return new Promise((resolve) => {
+        window.liveSocket.main.withinTargets(
+          selector,
+          (targetView, targetCtx) => {
+            targetView.pushEvent(
+              'event',
+              document.body,
+              targetCtx,
+              'sandbox:eval',
+              { value: code },
+              {},
+              ({ result }) => resolve(result)
+            )
+          }
+        )
       })
     },
     [code, selector]
@@ -43,9 +47,9 @@ const evalLV = async (page, code, selector = '[data-phx-main]') =>
 const evalPlug = async (request, code) => {
   return await request
     .post('/eval', {
-      data: { code }
+      data: { code },
     })
-    .then(resp => resp.json())
+    .then((resp) => resp.json())
 }
 
 const attributeMutations = (page, selector) => {
@@ -56,7 +60,7 @@ const attributeMutations = (page, selector) => {
   const id = randomString(24)
   // this promise resolves to the mutation list
   const promise = page.locator(selector).evaluate((target, id) => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const mutations = []
       let observer
       window[id] = () => {
@@ -66,12 +70,12 @@ const attributeMutations = (page, selector) => {
       }
       // https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
       observer = new MutationObserver((mutationsList, _observer) => {
-        mutationsList.forEach(mutation => {
+        mutationsList.forEach((mutation) => {
           if (mutation.type === 'attributes') {
             mutations.push({
               attr: mutation.attributeName,
               oldValue: mutation.oldValue,
-              newValue: mutation.target.getAttribute(mutation.attributeName)
+              newValue: mutation.target.getAttribute(mutation.attributeName),
             })
           }
         })

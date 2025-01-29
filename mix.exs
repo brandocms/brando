@@ -71,7 +71,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.12.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.2", override: true},
+      {:phoenix_live_view, "1.0.3", override: true},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -89,7 +89,7 @@ defmodule Brando.Mixfile do
       {:cachex, "~> 4.0"},
 
       # cron & processing
-      {:oban, "~> 2.18.0"},
+      {:oban, "~> 2.19.0"},
 
       # sitemaps
       {:sitemapper, "~> 0.9.0"},

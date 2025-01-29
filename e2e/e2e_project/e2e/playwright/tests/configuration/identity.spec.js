@@ -8,8 +8,6 @@ test('verify navigation to admin page', async ({ page }) => {
   await page.goto('/admin/pages')
   await expect(page).toHaveURL('/admin/pages')
   await expect(page.locator('h1')).toHaveText('Pages & Sections')
-
-  await syncLV(page)
 })
 
 test('update identity', async ({ page }) => {
@@ -59,13 +57,15 @@ test('update identity', async ({ page }) => {
   await page.locator('#identity_links_2_name').fill('Twitter')
   await page.locator('#identity_links_2_url').fill('https://twitter.com/acme')
 
-  await syncLV(page)
+  // await syncLV(page)
 
-  await page.locator('button[name="identity\\[drop_links_ids\\]\\[\\]"]').nth(1).click()
+  await page
+    .locator('button[name="identity\\[drop_links_ids\\]\\[\\]"]')
+    .nth(1)
+    .click()
 
-  await syncLV(page)
   await page.getByTestId('submit').click()
-  await syncLV(page)
+  // await syncLV(page)
 
   await page.goto('/')
   await expect(page).toHaveTitle('Acme // Index')

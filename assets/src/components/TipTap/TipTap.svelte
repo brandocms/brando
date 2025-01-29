@@ -17,12 +17,10 @@
 
   import { alertPrompt } from "../../alerts";
 
-  export let content;
-  export let extensions;
-  export let onFocus;
+  let { content, extensions = $bindable(), onFocus } = $props();
 
-  let element;
-  let editor;
+  let element = $state();
+  let editor = $state();
   let tiptapInput;
 
   const ATTR_WHITESPACE =
@@ -285,7 +283,7 @@
   <div class="tiptap-menu">
     {#if extensions.includes("p")}
       <button
-        on:click={() => editor.chain().focus().setParagraph().run()}
+        onclick={() => editor.chain().focus().setParagraph().run()}
         class="menu-item"
         class:active={editor.isActive("paragraph")}
         type="button"
@@ -297,7 +295,7 @@
     {/if}
     {#if extensions.includes("h1")}
       <button
-        on:click={() =>
+        onclick={() =>
           editor.chain().focus().toggleHeading({ level: 1 }).run()}
         class="menu-item"
         class:active={editor.isActive("heading", { level: 1 })}
@@ -310,7 +308,7 @@
     {/if}
     {#if extensions.includes("h2")}
       <button
-        on:click={() =>
+        onclick={() =>
           editor.chain().focus().toggleHeading({ level: 2 }).run()}
         class="menu-item"
         class:active={editor.isActive("heading", { level: 2 })}
@@ -323,7 +321,7 @@
     {/if}
     {#if extensions.includes("h3")}
       <button
-        on:click={() =>
+        onclick={() =>
           editor.chain().focus().toggleHeading({ level: 3 }).run()}
         class="menu-item"
         class:active={editor.isActive("heading", { level: 3 })}
@@ -336,7 +334,7 @@
     {/if}
     {#if extensions.includes("list")}
       <button
-        on:click={() => editor.chain().focus().toggleBulletList().run()}
+        onclick={() => editor.chain().focus().toggleBulletList().run()}
         class="menu-item"
         class:active={editor.isActive("bulletList")}
         type="button"
@@ -348,7 +346,7 @@
     {/if}
     {#if extensions.includes("link")}
       <button
-        on:click={() => toggleLink()}
+        onclick={() => toggleLink()}
         type="button"
         title="Link"
         class="menu-item"
@@ -360,7 +358,7 @@
     {/if}
     {#if extensions.includes("button") || extensions.includes("action_button")}
       <button
-        on:click={() => toggleButton()}
+        onclick={() => toggleButton()}
         type="button"
         title="Button"
         class="menu-item"
@@ -372,7 +370,7 @@
     {/if}
     {#if extensions.includes("bold")}
       <button
-        on:click={() => editor.chain().focus().toggleBold().run()}
+        onclick={() => editor.chain().focus().toggleBold().run()}
         class="menu-item"
         class:active={editor.isActive("bold")}
         type="button"
@@ -384,7 +382,7 @@
     {/if}
     {#if extensions.includes("italic")}
       <button
-        on:click={() => editor.chain().focus().toggleItalic().run()}
+        onclick={() => editor.chain().focus().toggleItalic().run()}
         class="menu-item"
         class:active={editor.isActive("italic")}
         type="button"
@@ -396,7 +394,7 @@
     {/if}
     {#if extensions.includes("sub")}
       <button
-        on:click={() => editor.chain().focus().toggleSubscript().run()}
+        onclick={() => editor.chain().focus().toggleSubscript().run()}
         class="menu-item"
         class:active={editor.isActive("subscript")}
         type="button"
@@ -408,7 +406,7 @@
     {/if}
     {#if extensions.includes("sup")}
       <button
-        on:click={() => editor.chain().focus().toggleSuperscript().run()}
+        onclick={() => editor.chain().focus().toggleSuperscript().run()}
         class="menu-item"
         class:active={editor.isActive("superscript")}
         type="button"
@@ -424,7 +422,7 @@
 
         <input
           type="color"
-          on:input={(ev) =>
+          oninput={(ev) =>
             editor.chain().focus().setColor(ev.target.value).run()}
           value={editor.getAttributes("textStyle").color}
         />
@@ -432,7 +430,7 @@
     {/if}
     {#if extensions.includes("jumpAnchor")}
       <button
-        on:click={() => toggleAnchor()}
+        onclick={() => toggleAnchor()}
         class="menu-item"
         type="button"
         title="Jump anchor"
@@ -443,7 +441,7 @@
       </button>
     {/if}
     <button
-      on:click={() => editor.chain().focus().unsetAllMarks().run()}
+      onclick={() => editor.chain().focus().unsetAllMarks().run()}
       class="menu-item"
       type="button"
       title="Clear marks"

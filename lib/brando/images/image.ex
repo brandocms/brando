@@ -93,6 +93,16 @@ defmodule Brando.Images.Image do
           input :height, :number, label: t("Height"), monospace: true
           input :dominant_color, :color, label: t("Dominant color"), monospace: true
           input :config_target, :text, label: t("Configuration target"), monospace: true
+
+          inputs_for :focal do
+            label t("Focal")
+            cardinality :one
+            style :inline
+            default %{x: 50, y: 50}
+
+            input :x, :text, label: t("x", Focal)
+            input :y, :text, label: t("y", Focal)
+          end
         end
       end
     end

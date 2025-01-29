@@ -144,9 +144,9 @@ defmodule BrandoAdmin.Nav do
               <section class="dropdown-content">
                 <ul>
                   <li>
-                    <a data-testid="logout" tabindex="0" href="/admin/logout">
+                    <.link href="/admin/logout" data-testid="logout" tabindex="0">
                       {gettext("Log out")}
-                    </a>
+                    </.link>
                   </li>
                 </ul>
               </section>
@@ -162,15 +162,13 @@ defmodule BrandoAdmin.Nav do
                   </header>
                   <dl :for={item <- section.items}>
                     <dt>
-                      <a
+                      <.link
                         :if={item.url}
-                        href={item.url}
-                        class={Brando.HTML.active(@current_url, "#{item.url}")}
-                        data-phx-link="redirect"
-                        data-phx-link-state="push"
+                        navigate={item.url}
+                        class={Brando.HTML.active(@current_url, item.url)}
                       >
                         {item.name}
-                      </a>
+                      </.link>
                       <span :if={item[:items]} data-nav-expand>
                         {item.name} <.icon name="hero-plus-circle" />
                       </span>
@@ -178,9 +176,9 @@ defmodule BrandoAdmin.Nav do
                     <dd :if={item[:items]}>
                       <ul>
                         <li :for={sub_item <- item.items}>
-                          <a href={sub_item.url} data-phx-link="redirect" data-phx-link-state="push">
+                          <.link navigate={sub_item.url}>
                             {sub_item.name}
-                          </a>
+                          </.link>
                         </li>
                       </ul>
                     </dd>

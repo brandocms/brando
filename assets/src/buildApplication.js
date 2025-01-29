@@ -157,6 +157,7 @@ export default (hooks, enableDebug = false) => {
       const currentActiveItem = document.querySelector('#navigation .active')
       if (currentActiveItem) {
         currentActiveItem.classList.remove('active')
+        currentActiveItem.classList.remove('phx-click-loading')
       }
 
       const newActiveItem = document.querySelector(
@@ -164,6 +165,7 @@ export default (hooks, enableDebug = false) => {
       )
       if (newActiveItem) {
         newActiveItem.classList.add('active')
+        newActiveItem.classList.remove('phx-click-loading')
       }
     }
 

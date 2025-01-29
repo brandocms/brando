@@ -10,7 +10,6 @@ test('has cache and clears cache', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Cache' }).click()
   await expect(page).toHaveURL('/admin/config/cache')
-  await syncLV(page)
 
   await expect(
     page.getByRole('cell', { name: 'pages', exact: true })

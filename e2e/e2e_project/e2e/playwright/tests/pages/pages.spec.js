@@ -7,7 +7,7 @@ test('creates a simple page', async ({ page }) => {
   await page.getByRole('link', { name: 'Create page' }).click()
   await syncLV(page)
 
-  await page.getByLabel('Published').check()
+  await page.locator('label').filter({ hasText: 'Published' }).click()
   await page.getByLabel('Title', { exact: true }).click()
   await page.getByLabel('Title', { exact: true }).fill('About')
   await page.getByLabel('URI').click()

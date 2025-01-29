@@ -117,6 +117,7 @@ defmodule Brando.HTML.Images do
       |> add_src(image_struct)
       |> add_fetchpriority(image_struct)
       |> add_dominant_color(image_struct)
+      |> add_focal(image_struct)
       |> add_extra_attrs()
       |> add_classes()
       |> add_moonwalk()
@@ -293,6 +294,11 @@ defmodule Brando.HTML.Images do
       [:img, "data-ll-srcset-image"],
       lazyload && Map.get(attrs.picture, "data-ll-srcset", false)
     )
+  end
+
+  defp add_focal(attrs, image_struct) do
+    focal = Map.get(image_struct, :focal) || %{x: 50, y: 50}
+    put_in(attrs, [:img, "style"], "object-position: #{focal.x}% #{focal.y}%;")
   end
 
   defp add_extra_attrs(attrs) do

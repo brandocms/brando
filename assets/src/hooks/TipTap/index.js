@@ -1,5 +1,6 @@
 import { Dom } from '@brandocms/jupiter'
 import TipTap from '../../components/TipTap/TipTap.svelte'
+import { mount, unmount } from 'svelte'
 
 export default (app) => ({
   mounted() {
@@ -23,7 +24,7 @@ export default (app) => ({
       this.pushEventTo(this.el, 'focus', { field: fName })
     }
 
-    this._instance = new TipTap({
+    this._instance = mount(TipTap, {
       target: Dom.find(this.el, '.tiptap-target'),
       props: {
         content: $input.getAttribute('value') || '',
@@ -34,11 +35,11 @@ export default (app) => ({
   },
 
   remount() {
-    this._instance?.$destroy()
+    unmount(this._instance)
     this.mount()
   },
 
   destroyed() {
-    this._instance?.$destroy()
+    unmount(this._instance)
   },
 })

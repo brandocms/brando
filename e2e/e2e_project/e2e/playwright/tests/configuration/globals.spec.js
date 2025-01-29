@@ -99,7 +99,6 @@ test('add global string', async ({ page }) => {
   })
 
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/global_sets')
   await expect(page.getByText('3 variables in set')).toHaveCount(1)
 })
