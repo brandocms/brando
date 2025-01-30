@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias Ecto.Changeset
 
   # prop uploads, :any
@@ -135,7 +136,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               <.inputs_for :let={image} field={block_data[:images]}>
                 <div class="caption-row">
                   <figure>
-                    <Content.image image={image.data} size={:thumb} />
+                    <Content.image image={image.data} size={:smallest}>
+                      <.live_component
+                        module={FocalPoint}
+                        id={"image-drawer-focal-#{image.data.path}"}
+                        image={%{image: image.data}}
+                        form={image}
+                      />
+                    </Content.image>
+                    <%!-- <.inputs_for :let={focal_form} field={image[:focal]}>
+                      <Input.input type={:hidden} field={focal_form[:x]} />
+                      <Input.input type={:hidden} field={focal_form[:y]} />
+                    </.inputs_for> --%>
                   </figure>
                   <div>
                     <Input.rich_text field={image[:title]} label={gettext("Title")} />
@@ -203,11 +215,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       <Input.input type={:hidden} field={@image[:height]} />
       <Input.input type={:hidden} field={@image[:width]} />
       <Input.input type={:hidden} field={@image[:path]} />
-
-      <.inputs_for :let={focal_form} field={@image[:focal]}>
-        <Input.input type={:hidden} field={focal_form[:x]} />
-        <Input.input type={:hidden} field={focal_form[:y]} />
-      </.inputs_for>
 
       <Form.map_inputs :let={%{value: value, name: name}} field={@image[:sizes]}>
         <input type="hidden" name={"#{name}"} value={"#{value}"} />

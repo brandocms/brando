@@ -3,6 +3,10 @@
     display: none;
   }
 
+  .focus-point-pin {
+    padding: 6px;
+  }
+
   .images {
     @space margin-top 15px;
   }
