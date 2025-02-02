@@ -204,8 +204,15 @@ defmodule BrandoAdmin.Components.Form.Input.File do
           </svg>
         </div>
         <div class="file-info">
-          {@file_name} ({Brando.Utils.human_size(@file.filesize)})
-          <button class="btn-small" type="button" phx-click={@click}>
+          <div>
+            <div class="name">
+              {@file_name} ({Brando.Utils.human_size(@file.filesize)})
+            </div>
+            <div class="updated">
+              {gettext("Last updated")}: {Brando.Utils.Datetime.format_datetime(@file.updated_at, "%d/%m/%y, %H:%M")}
+            </div>
+          </div>
+          <button class="btn tiny mt-1" type="button" phx-click={@click}>
             {gettext("Edit file")}
           </button>
         </div>
@@ -216,7 +223,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
           </div>
 
           <button
-            class="btn-small"
+            class="btn tiny mt-1"
             type="button"
             phx-click={@click}
             phx-value-id={"edit-file-#{@field.id}"}

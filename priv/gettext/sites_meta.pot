@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/sites/identity.ex:146
+#: lib/brando/sites/identity.ex:147
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:147
+#: lib/brando/sites/identity.ex:148
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr ""

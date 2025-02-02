@@ -1,14 +1,33 @@
-.file-preview-empty, .file-preview {
-  @fontsize sm;  
+.file-preview-empty,
+.file-preview {
+  @fontsize sm;
+  @font mono;
   align-items: center;
+  border: 1px dashed var(--brando-color-dark);
+  border-radius: 8px;
+  padding: 8px 25px 8px 8px;
+  width: fit-content;
+  line-height: 1.4;
 
   .file-info {
-    @space padding-left 20px;
+    @space padding-left 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-self: stretch;
+
+    button.tiny {
+      width: fit-content;
+    }
   }
 
-  .title {
-    @fontsize 13px/13px;
-    @space margin-top 5px;
+  .name {
+    @fontsize 13px;
+  }
+
+  .updated {
+    font-size: 10px;
+    opacity: 0.8;
   }
 
   img {
@@ -20,9 +39,9 @@
 
   .img-placeholder {
     background-color: var(--brando-color-input);
-    border-radius: 50%;
-    width: 100px;
-    height: 100px;
+    border-radius: 5px;
+    width: 80px;
+    height: 80px;
     min-width: 100px;
     display: flex;
     align-items: center;
@@ -41,7 +60,9 @@
     padding: 9px 20px;
     margin-top: 10px;
     border-radius: 25px;
-    transition: background-color 250ms ease, color 250ms ease;
+    transition:
+      background-color 250ms ease,
+      color 250ms ease;
 
     &:hover {
       background-color: var(--brando-color-dark);

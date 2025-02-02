@@ -64,6 +64,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
      |> assign(:editing_image?, false)
+     |> assign(:editing_file?, false)
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -102,6 +103,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_file, edit_file)
+     |> assign(:editing_file?, true)
      |> assign(:file_changeset, file_changeset)}
   end
 
@@ -111,6 +113,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_file, edit_file)
+     |> assign(:editing_file?, true)
      |> assign(:file_changeset, file_changeset)}
   end
 
@@ -1684,6 +1687,18 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  def handle_event("save", _params, %{assigns: %{editing_file?: true}} = socket) do
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Error"),
+       message:
+         gettext(
+           "You must close the file drawer before saving this form. You might have changes to a file that has not been processed, which might lead to broken links. Close the file drawer, allow processing to finish (if any), then try to save again."
+         ),
+       type: "error"
+     })}
+  end
+
   def handle_event("save", params, %{assigns: %{has_blocks?: true, all_blocks_received?: true}} = socket) do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
@@ -2013,7 +2028,7 @@ defmodule BrandoAdmin.Components.Form do
 
     file_config = Brando.Utils.try_path(relation_field, [:opts, :cfg])
 
-    if file_config.completed_callback do
+    if file_config && file_config.completed_callback do
       file_config.completed_callback.(updated_file, current_user)
     end
 
@@ -2040,6 +2055,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
+     |> assign(:editing_file?, false)
      |> assign(:edit_file, edit_file)
      |> push_event("b:validate", %{
        target: "#{singular}[#{edit_file.relation_field.field}]",

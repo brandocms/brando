@@ -66,3 +66,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
+
+#: lib/brando/images/image.ex:98
+#, elixir-autogen, elixir-format
+msgid "Focal"
+msgstr ""

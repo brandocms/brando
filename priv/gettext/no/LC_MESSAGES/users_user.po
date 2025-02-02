@@ -16,7 +16,7 @@ msgstr ""
 msgid "Admin"
 msgstr "Admin"
 
-#: lib/brando/users/user.ex:108
+#: lib/brando/users/user.ex:110
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
@@ -31,18 +31,18 @@ msgstr "Profilbilde"
 msgid "Config"
 msgstr "Konfigurasjon"
 
-#: lib/brando/users/user.ex:132
+#: lib/brando/users/user.ex:134
 #: lib/brando/users/user.ex:148
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/users/user.ex:108
+#: lib/brando/users/user.ex:110
 #, elixir-autogen, elixir-format
 msgid "Disable user"
 msgstr "Deaktiver bruker"
 
-#: lib/brando/users/user.ex:107
+#: lib/brando/users/user.ex:109
 #, elixir-autogen, elixir-format
 msgid "Edit user"
 msgstr "Oppdater bruker"
@@ -52,7 +52,7 @@ msgstr "Oppdater bruker"
 msgid "Editor"
 msgstr "Redaktør"
 
-#: lib/brando/users/user.ex:106
+#: lib/brando/users/user.ex:108
 #: lib/brando/users/user.ex:152
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -63,7 +63,7 @@ msgstr "Epost"
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/users/user.ex:105
+#: lib/brando/users/user.ex:107
 #: lib/brando/users/user.ex:151
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -80,7 +80,7 @@ msgstr "Passord"
 msgid "Superuser"
 msgstr "Superbruker"
 
-#: lib/brando/users/user.ex:134
+#: lib/brando/users/user.ex:136
 #, elixir-autogen, elixir-format
 msgid "The administrator has set a mandatory password change on first login for this website."
 msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
@@ -90,12 +90,12 @@ msgstr "Administratoren har angitt obligatorisk passordendring ved første pålo
 msgid "User"
 msgstr "Bruker"
 
-#: lib/brando/users/user.ex:96
+#: lib/brando/users/user.ex:98
 #, elixir-autogen, elixir-format
 msgid "user"
 msgstr "bruker"
 
-#: lib/brando/users/user.ex:97
+#: lib/brando/users/user.ex:99
 #, elixir-autogen, elixir-format
 msgid "users"
 msgstr "brukere"

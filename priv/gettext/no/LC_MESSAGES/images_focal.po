@@ -9,14 +9,14 @@
 msgid ""
 msgstr ""
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
-#: lib/brando/sites/identity.ex:135
+#: lib/brando/images/image.ex:103
 #, elixir-autogen, elixir-format
-msgid "Name"
-msgstr "Navn"
+msgid "x"
+msgstr "x"
 
-#: lib/brando/sites/identity.ex:136
+#: lib/brando/images/image.ex:104
 #, elixir-autogen, elixir-format
-msgid "URL"
-msgstr "URL"
+msgid "y"
+msgstr "y"

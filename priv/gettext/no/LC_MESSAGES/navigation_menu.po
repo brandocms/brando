@@ -11,38 +11,38 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/navigation/menu.ex:51
+#: lib/brando/navigation/menu.ex:54
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/navigation/menu.ex:62
+#: lib/brando/navigation/menu.ex:65
 #, elixir-autogen, elixir-format
 msgid "Items"
 msgstr "Menypunkter"
 
-#: lib/brando/navigation/menu.ex:57
+#: lib/brando/navigation/menu.ex:60
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/navigation/menu.ex:55
+#: lib/brando/navigation/menu.ex:58
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/navigation/menu.ex:56
-#: lib/brando/navigation/menu.ex:107
+#: lib/brando/navigation/menu.ex:59
+#: lib/brando/navigation/menu.ex:110
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/navigation/menu.ex:42
+#: lib/brando/navigation/menu.ex:45
 #, elixir-autogen, elixir-format
 msgid "menu"
 msgstr "meny"
 
-#: lib/brando/navigation/menu.ex:43
+#: lib/brando/navigation/menu.ex:46
 #, elixir-autogen, elixir-format
 msgid "menus"
 msgstr "menyer"

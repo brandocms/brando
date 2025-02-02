@@ -11,22 +11,22 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/navigation/menu.ex:70
+#: lib/brando/navigation/menu.ex:73
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/navigation/menu.ex:74
+#: lib/brando/navigation/menu.ex:77
 #, elixir-autogen, elixir-format
 msgid "Link"
 msgstr "Lenke"
 
-#: lib/brando/navigation/item.ex:44
+#: lib/brando/navigation/item.ex:45
 #, elixir-autogen, elixir-format
 msgid "menu item"
 msgstr "menypunkt"
 
-#: lib/brando/navigation/item.ex:45
+#: lib/brando/navigation/item.ex:46
 #, elixir-autogen, elixir-format
 msgid "menu items"
 msgstr "menypunkter"

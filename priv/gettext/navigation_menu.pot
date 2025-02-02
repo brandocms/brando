@@ -11,38 +11,38 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:51
+#: lib/brando/navigation/menu.ex:54
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:62
+#: lib/brando/navigation/menu.ex:65
 #, elixir-autogen, elixir-format
 msgid "Items"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:57
+#: lib/brando/navigation/menu.ex:60
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:55
+#: lib/brando/navigation/menu.ex:58
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:56
-#: lib/brando/navigation/menu.ex:107
+#: lib/brando/navigation/menu.ex:59
+#: lib/brando/navigation/menu.ex:110
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:42
+#: lib/brando/navigation/menu.ex:45
 #, elixir-autogen, elixir-format
 msgid "menu"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:43
+#: lib/brando/navigation/menu.ex:46
 #, elixir-autogen, elixir-format
 msgid "menus"
 msgstr ""
