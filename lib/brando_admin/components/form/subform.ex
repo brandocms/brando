@@ -106,11 +106,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
         class="subform"
         meta_top
       >
-        <div
-          id={"#{@field.id}-sortable"}
-          data-embeds={@embeds?}
-          phx-hook={@sequenced? && "Brando.SortableEmbeds"}
-        >
+        <div id={"#{@field.id}-sortable"} data-embeds={@embeds?} phx-hook={@sequenced? && "Brando.SortableEmbeds"}>
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field} skip_hidden>
             <div
@@ -123,31 +119,18 @@ defmodule BrandoAdmin.Components.Form.Subform do
             >
               <input type="hidden" name={sub_form[:id].name} value={sub_form[:id].value} />
               <input type="hidden" name={sub_form[:_persistent_id].name} value={sub_form.index} />
-              <input
-                type="hidden"
-                name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
-                value={sub_form.index}
-              />
+              <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={sub_form.index} />
               <div class="subform-tools">
                 <.subentry_edit
-                  on_click={
-                    JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)
-                  }
+                  on_click={JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)}
                   open={sub_form.index in @open_entries}
                 />
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove
-                  name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
-                  index={sub_form.index}
-                />
+                <.subentry_remove name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} index={sub_form.index} />
               </div>
               <.listing subform={sub_form} subform_config={@subform} />
               <div class="subform-fields">
-                <Input.hidden
-                  :if={@sequenced? and !@embeds?}
-                  field={sub_form[:sequence]}
-                  value={sub_form.index}
-                />
+                <Input.hidden :if={@sequenced? and !@embeds?} field={sub_form[:sequence]} value={sub_form.index} />
                 <Subform.Field.render
                   :for={input <- @subform.sub_fields}
                   cardinality={:many}
@@ -227,17 +210,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field}>
             <div class={["subform-entry", @subform.style == :inline && "inline"]}>
-              <input
-                type="hidden"
-                name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
-                value={sub_form.index}
-              />
+              <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={sub_form.index} />
               <div class="subform-tools">
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove
-                  name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
-                  index={sub_form.index}
-                />
+                <.subentry_remove name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} index={sub_form.index} />
               </div>
 
               <div class="subform-fields">
@@ -373,13 +349,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_remove(assigns) do
     ~H"""
-    <button
-      name={@name}
-      type="button"
-      value={@index}
-      phx-click={JS.dispatch("change")}
-      class="subform-delete"
-    >
+    <button name={@name} type="button" value={@index} phx-click={JS.dispatch("change")} class="subform-delete">
       <.icon name="hero-x-mark" />
     </button>
     """

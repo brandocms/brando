@@ -76,12 +76,7 @@ defmodule Brando.Videos.Video do
     ~H"""
     <.field columns={2}>
       <div class="padded">
-        <img
-          :if={@entry.cover}
-          width="25"
-          height="25"
-          src={Brando.Utils.img_url(@entry.cover, :smallest)}
-        />
+        <img :if={@entry.cover} width="25" height="25" src={Brando.Utils.img_url(@entry.cover, :smallest)} />
         <img :if={@entry.thumbnail_url} width="25" height="25" src={@entry.thumbnail_url} />
       </div>
     </.field>

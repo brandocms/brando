@@ -29,12 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
     ~H"""
     <div>
       <.inputs_for :let={var} field={@field}>
-        <.live_component
-          module={RenderVar}
-          id={"#{@field.id}-render-var-#{var.index}"}
-          var={var}
-          render={:all}
-        />
+        <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} />
       </.inputs_for>
     </div>
     """

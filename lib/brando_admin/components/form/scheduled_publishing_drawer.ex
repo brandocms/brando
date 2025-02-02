@@ -16,9 +16,7 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
     <Content.drawer id={@id} title={gettext("Scheduled publishing")} close={@close}>
       <:info>
         <p>
-          {gettext(
-            "Set a future publishing date for this entry. Leave blank for immediate publishing."
-          )}
+          {gettext("Set a future publishing date for this entry. Leave blank for immediate publishing.")}
         </p>
       </:info>
       <div class="brando-input">

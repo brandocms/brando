@@ -9,7 +9,6 @@
 msgid ""
 msgstr ""
 "Language: en"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
 
 msgid "day_1"
 msgstr "Monday"

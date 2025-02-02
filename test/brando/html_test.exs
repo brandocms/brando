@@ -37,10 +37,7 @@ defmodule Brando.HTMLTest do
              ~s(<body id="top" class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
 
     comp = ~H"""
-    <.body_tag
-      conn={%{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}}
-      id="top"
-    >
+    <.body_tag conn={%{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}} id="top">
       hello!
     </.body_tag>
     """

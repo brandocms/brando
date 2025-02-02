@@ -9,7 +9,6 @@
 msgid ""
 msgstr ""
 "Language: en\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/brando/content/module_set_module.ex:35
 #, elixir-autogen, elixir-format

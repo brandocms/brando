@@ -30,10 +30,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
   def render(assigns) do
     ~H"""
-    <div
-      class="content-language-selector"
-      phx-click={JS.push("show_language_picker", target: @myself)}
-    >
+    <div class="content-language-selector" phx-click={JS.push("show_language_picker", target: @myself)}>
       <div class="inner">
         <div class="top">
           <h2>{gettext("Current content language")}</h2>

@@ -57,13 +57,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block
-          id={"block-#{@uid}-base"}
-          block={@block}
-          is_ref?={true}
-          multi={false}
-          target={@target}
-        >
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -80,12 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
                 {gettext("Select media type:")}
               </div>
               <div class="buttons">
-                <.select_block
-                  block_data={block_data}
-                  target={@myself}
-                  uid={@uid}
-                  available_blocks={@available_blocks}
-                />
+                <.select_block block_data={block_data} target={@myself} uid={@uid} available_blocks={@available_blocks} />
               </div>
             </div>
           </div>
@@ -102,10 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   def select_block(assigns) do
     ~H"""
-    <Form.array_inputs
-      :let={%{value: array_value, name: array_name}}
-      field={@block_data[:available_blocks]}
-    >
+    <Form.array_inputs :let={%{value: array_value, name: array_name}} field={@block_data[:available_blocks]}>
       <input type="hidden" name={array_name} value={array_value} />
     </Form.array_inputs>
 

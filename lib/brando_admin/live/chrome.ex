@@ -65,18 +65,10 @@ defmodule BrandoAdmin.Chrome do
         </div>
       </Content.modal>
       <div class="presences-active" id="presences-active" phx-update="stream">
-        <.presence
-          :for={{dom_id, presence} <- @streams.active_presences}
-          presence={presence}
-          id={dom_id}
-        />
+        <.presence :for={{dom_id, presence} <- @streams.active_presences} presence={presence} id={dom_id} />
       </div>
       <div class="presences-inactive" id="presences-inactive" phx-update="stream">
-        <.presence
-          :for={{dom_id, presence} <- @streams.inactive_presences}
-          presence={presence}
-          id={dom_id}
-        />
+        <.presence :for={{dom_id, presence} <- @streams.inactive_presences} presence={presence} id={dom_id} />
       </div>
     </div>
     """
@@ -131,12 +123,7 @@ defmodule BrandoAdmin.Chrome do
       )
 
     ~H"""
-    <div
-      id={@id}
-      class="user-presence"
-      data-user-id={@presence.id}
-      data-user-status={@presence.status}
-    >
+    <div id={@id} class="user-presence" data-user-id={@presence.id} data-user-status={@presence.status}>
       <div class="avatar">
         <Content.image image={@presence.avatar} size={:thumb} />
       </div>

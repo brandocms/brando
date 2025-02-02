@@ -34,24 +34,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block
-          id={"block-#{@uid}-base"}
-          block={@block}
-          is_ref?={true}
-          multi={false}
-          target={@target}
-        >
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>{block_data[:source].value}</:description>
           <:config>
             <Input.input type={:hidden} field={block_data[:embed_url]} />
             <Input.input type={:hidden} field={block_data[:source]} />
 
-            <div
-              id={"block-#{@uid}-mapUrl"}
-              phx-hook="Brando.MapURLParser"
-              phx-update="ignore"
-              data-target={@myself}
-            >
+            <div id={"block-#{@uid}-mapUrl"} phx-hook="Brando.MapURLParser" phx-update="ignore" data-target={@myself}>
               <small>
                 {gettext("To embed a map in your content, please follow these steps:")}<br /><br />
                 <strong><%= gettext "Enter the Embed URL" %></strong>: {gettext(

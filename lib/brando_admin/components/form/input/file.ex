@@ -76,13 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base
-        field={@field}
-        label={@label}
-        instructions={@instructions}
-        class={@class}
-        relation
-      >
+      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} relation>
         <div>
           <div class="input-file">
             <.file_preview
@@ -162,12 +156,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         {gettext("No file associated with field")}
       </div>
 
-      <button
-        class="btn-small"
-        type="button"
-        phx-click={@click}
-        phx-value-id={"edit-file-#{@field.id}"}
-      >
+      <button class="btn-small" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
         {gettext("Add file")}
       </button>
     </div>
@@ -190,12 +179,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
     ~H"""
     <div class="file-preview">
-      <Input.input
-        type={:hidden}
-        field={@relation_field}
-        value={@value || @file_id}
-        publish={@publish}
-      />
+      <Input.input type={:hidden} field={@relation_field} value={@value || @file_id} publish={@publish} />
 
       <%= if @file do %>
         <div class="img-placeholder">
@@ -222,12 +206,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             {gettext("No file associated with field")}
           </div>
 
-          <button
-            class="btn tiny mt-1"
-            type="button"
-            phx-click={@click}
-            phx-value-id={"edit-file-#{@field.id}"}
-          >
+          <button class="btn tiny mt-1" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
             {gettext("Add file")}
           </button>
         </div>

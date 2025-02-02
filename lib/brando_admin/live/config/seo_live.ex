@@ -16,13 +16,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Form}
-      id="seo_form"
-      entry_id={@entry_id}
-      current_user={@current_user}
-      schema={@schema}
-    >
+    <.live_component module={Form} id="seo_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
       <:header>
         {gettext("Update SEO")}
       </:header>

@@ -85,13 +85,7 @@ defmodule Brando.HTML do
       |> assign(:target_blank?, target_blank?)
 
     ~H"""
-    <a
-      class={@class}
-      data-link-active={@active}
-      data-menu-item-key={@key}
-      href={@url}
-      target={@target_blank? && "_blank"}
-    >
+    <a class={@class} data-link-active={@active} data-menu-item-key={@key} href={@url} target={@target_blank? && "_blank"}>
       {render_slot(@inner_block, @text)}
     </a>
     """
@@ -229,14 +223,7 @@ defmodule Brando.HTML do
 
   def preload_fonts(assigns) do
     ~H"""
-    <link
-      :for={{type, font} <- @fonts}
-      rel="preload"
-      href={font}
-      as="font"
-      type={"font/#{type}"}
-      crossorigin={true}
-    />
+    <link :for={{type, font} <- @fonts} rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true} />
     """
   end
 
@@ -278,14 +265,7 @@ defmodule Brando.HTML do
 
     ~H"""
     <link rel="canonical" href={@canonical} />
-    <link
-      :for={{lang, url} <- @hreflangs}
-      :if={@multilang}
-      rel="alternate"
-      href={url}
-      type="text/html"
-      hreflang={lang}
-    />
+    <link :for={{lang, url} <- @hreflangs} :if={@multilang} rel="alternate" href={url} type="text/html" hreflang={lang} />
     """
   end
 
@@ -480,13 +460,7 @@ defmodule Brando.HTML do
       |> assign(:extra, extra)
 
     ~H"""
-    <body
-      id={@id}
-      class={[@classes, "unloaded"]}
-      data-script={@data_script}
-      data-vsn={@data_vsn}
-      {@extra}
-    >
+    <body id={@id} class={[@classes, "unloaded"]} data-script={@data_script} data-vsn={@data_vsn} {@extra}>
       <%= if @show_breakpoint_debug? do %>
         <.breakpoint_debug_tag />
         <.grid_debug_tag />

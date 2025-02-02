@@ -612,12 +612,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       <div class="label-wrapper ">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
           <span>{gettext("Blocks")}</span>
-          <div
-            class="field-presence"
-            phx-update="ignore"
-            id={"#{@form_name}[#{@block_field}]-field-presence"}
-          >
-          </div>
+          <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
       </div>
       <div class="blocks-content">
@@ -635,11 +630,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <br />{gettext("or get started with a prefab'ed template")}:<br />
               <div class="blocks-templates">
                 <%= for template <- @templates do %>
-                  <button
-                    type="button"
-                    phx-click={JS.push("use_template", target: @myself)}
-                    phx-value-id={template.id}
-                  >
+                  <button type="button" phx-click={JS.push("use_template", target: @myself)} phx-value-id={template.id}>
                     {template.name}<br />
                     <small>{template.instructions}</small>
                   </button>
@@ -659,12 +650,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         >
           <%= for {id, entry_block_form} <- @streams.entry_blocks_forms do %>
             <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
-              <div
-                id={id}
-                data-id={entry_block_form[:id].value}
-                data-uid={block[:uid].value}
-                class="entry-block draggable"
-              >
+              <div id={id} data-id={entry_block_form[:id].value} data-uid={block[:uid].value} class="entry-block draggable">
                 <.live_component
                   module={Block}
                   id={"block-#{block[:uid].value}"}
@@ -688,9 +674,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <% end %>
         </div>
 
-        <Block.plus click={
-          JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)
-        } />
+        <Block.plus click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)} />
       </div>
     </div>
     """

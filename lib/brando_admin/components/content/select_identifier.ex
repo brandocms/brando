@@ -77,12 +77,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       <%= if @selected_schema do %>
         <h2 class="titlecase">{gettext("Available entries")}</h2>
 
-        <div
-          id={"#{@id}-select-modal-filter"}
-          class="select-filter"
-          phx-hook="Brando.SelectFilter"
-          data-target=".identifier"
-        >
+        <div id={"#{@id}-select-modal-filter"} class="select-filter" phx-hook="Brando.SelectFilter" data-target=".identifier">
           <div class="field-wrapper">
             <div class="label-wrapper">
               <label for="identifier-filter" class="control-label">
@@ -154,9 +149,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
             {@identifier.title}
           </div>
           <div class="meta-info">
-            <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(
-              @identifier.entry_id
-            )}
+            <Row.status_circle status={@identifier.status} /> {@type}#{Brando.HTML.zero_pad(@identifier.entry_id)}
             <span>|</span> {Brando.Utils.Datetime.format_datetime(@identifier.updated_at)} [iid:{@identifier.id}]
           </div>
         </div>

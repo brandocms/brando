@@ -63,9 +63,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
     <div class="utils-live">
       <p class="help">
-        {gettext(
-          "These utilities are for administrative purposes and are potentially expensive procedures. Use with care."
-        )}
+        {gettext("These utilities are for administrative purposes and are potentially expensive procedures. Use with care.")}
       </p>
       <h1>{gettext("Utilities")}</h1>
       <table>

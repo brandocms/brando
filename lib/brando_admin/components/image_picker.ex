@@ -52,13 +52,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer
-        id={@id}
-        title={gettext("Select image")}
-        close={toggle_drawer("##{@id}")}
-        z={@z_index}
-        dark
-      >
+      <Content.drawer id={@id} title={gettext("Select image")} close={toggle_drawer("##{@id}")} z={@z_index} dark>
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">
@@ -82,8 +76,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
               phx-click={
                 if @multi,
                   do: JS.push("select_image", target: @event_target),
-                  else:
-                    JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
+                  else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
               }
               phx-value-id={image.id}
               phx-value-selected={(image.path in @selected_images && "true") || "false"}

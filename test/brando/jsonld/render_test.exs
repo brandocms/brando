@@ -93,8 +93,7 @@ defmodule Brando.JSONLDRenderTest do
              "image" => %{
                "@type" => "ImageObject",
                "height" => 933,
-               "url" =>
-                 "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
+               "url" => "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
                "width" => 1900
              },
              "name" => "Organization name",

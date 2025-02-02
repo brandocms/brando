@@ -170,11 +170,7 @@ defmodule Brando.Pages.Page do
 
     ~H"""
     <div class="col-1 center">
-      <div
-        :if={@entry.is_homepage}
-        class="badge"
-        data-popover={gettext("This page is marked as the homepage.")}
-      >
+      <div :if={@entry.is_homepage} class="badge" data-popover={gettext("This page is marked as the homepage.")}>
         <Brando.HTML.icon name="hero-home" class="s" />
       </div>
     </div>

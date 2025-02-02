@@ -173,17 +173,13 @@ defmodule Mix.Tasks.Brando.Gen do
       files ++
         [
           {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
-          {:eex, "detail.html.eex",
-           "lib/application_name_web/controllers/#{binding[:singular]}_html/detail.html.heex"},
-          {:eex, "list.html.eex",
-           "lib/application_name_web/controllers/#{binding[:singular]}_html/list.html.heex"},
+          {:eex, "detail.html.eex", "lib/application_name_web/controllers/#{binding[:singular]}_html/detail.html.heex"},
+          {:eex, "list.html.eex", "lib/application_name_web/controllers/#{binding[:singular]}_html/list.html.heex"},
           {:eex, "html.ex", "lib/application_name_web/controllers/#{binding[:singular]}_html.ex"},
 
           # ADMIN
-          {:eex, "admin/list.ex",
-           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_list_live.ex"},
-          {:eex, "admin/form.ex",
-           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_form_live.ex"},
+          {:eex, "admin/list.ex", "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_list_live.ex"},
+          {:eex, "admin/form.ex", "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_form_live.ex"},
 
           # TEST
           {:eex, "schema_test.exs", schema_test_path}

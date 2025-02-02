@@ -76,29 +76,29 @@ defmodule BrandoAdmin.Menu do
   Generate a menu item from blueprint schema
   """
   defmacro menu_item(schema) do
-    do_menu_item(schema)
+    do_menu_item(:schema, schema, nil)
   end
 
-  @doc """
-  Add custom URL to menu
-  """
   defmacro menu_item(name, do: block) do
-    do_menu_item(name, do: block)
+    do_menu_item(:block, name, do: block)
   end
 
-  defmacro menu_item(name, url) do
-    do_menu_item(name, url)
+  defmacro menu_item(name, url) when is_binary(name) and is_binary(url) do
+    do_menu_item(:url, name, url)
   end
 
-  defp do_menu_item(schema) do
+  defmacro menu_item(name, schema) do
+    do_menu_item(:schema, schema, name)
+  end
+
+  defp do_menu_item(:schema, schema, name) do
     quote location: :keep,
           generated: true,
-          bind_quoted: [schema: schema] do
+          bind_quoted: [schema: schema, name: name] do
       domain = schema.__naming__().domain
       snake_domain = Macro.underscore(domain)
       schema_name = schema.__naming__().schema
       plural = schema.__naming__().plural
-      msgid = Brando.Utils.humanize(plural, :downcase)
 
       url_base = "/admin/#{snake_domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__(), &(&1.name == :default))
@@ -117,17 +117,25 @@ defmodule BrandoAdmin.Menu do
         |> String.replace("%5B", "[")
         |> String.replace("%5D", "]")
 
+      name =
+        if name do
+          name
+        else
+          msgid = Brando.Utils.humanize(plural, :downcase)
+          gettext_domain = String.downcase("#{domain}_#{schema_name}")
+          {:translate, gettext_domain, msgid}
+        end
+
       url = Enum.join([url_base, query_params], "?")
-      gettext_domain = String.downcase("#{domain}_#{schema_name}")
 
       Module.put_attribute(__MODULE__, :menus, %{
-        name: {:translate, gettext_domain, msgid},
+        name: name,
         url: url
       })
     end
   end
 
-  defp do_menu_item(name, do: block) do
+  defp do_menu_item(:block, name, do: block) do
     quote location: :keep,
           generated: true do
       var!(b_menu_subitems) = []
@@ -141,7 +149,7 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
-  defp do_menu_item(name, url) do
+  defp do_menu_item(:url, name, url) do
     quote location: :keep,
           generated: true,
           bind_quoted: [name: name, url: url] do

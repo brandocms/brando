@@ -58,11 +58,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           </:delete>
         </Entries.identifier>
 
-        <button
-          class="secondary mt-1"
-          type="button"
-          phx-click={JS.push("get_entries_identifiers", target: @myself)}
-        >
+        <button class="secondary mt-1" type="button" phx-click={JS.push("get_entries_identifiers", target: @myself)}>
           {gettext("Select entries to link")}
         </button>
 
@@ -72,11 +68,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
               "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
             )}
           </p>
-          <button
-            type="button"
-            class="primary mt-1"
-            phx-click={JS.push("store_alternates", target: @myself)}
-          >
+          <button type="button" class="primary mt-1" phx-click={JS.push("store_alternates", target: @myself)}>
             {gettext("Link children")}
           </button>
         </div>

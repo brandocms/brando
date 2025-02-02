@@ -53,21 +53,13 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           </div>
         </div>
 
-        <button
-          class="primary mt-2"
-          type="button"
-          phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}
-        >
+        <button class="primary mt-2" type="button" phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}>
           {gettext("Import modules")}
         </button>
       </div>
 
       <form :if={!@imported_modules} id="module-import-form" phx-change="validate_module_import">
-        <textarea
-          name="encoded_modules"
-          rows="15"
-          style="width: 100%; font-size: 11px; font-family: Mono"
-        ></textarea>
+        <textarea name="encoded_modules" rows="15" style="width: 100%; font-size: 11px; font-family: Mono"></textarea>
       </form>
     </Content.modal>
     """

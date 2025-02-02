@@ -91,11 +91,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
         <%= if !@entry_form do %>
           <div class="button-group">
-            <button
-              phx-click={show_modal("##{@form.id}-#{@key}-icon")}
-              class="secondary"
-              type="button"
-            >
+            <button phx-click={show_modal("##{@form.id}-#{@key}-icon")} class="secondary" type="button">
               Edit icon
             </button>
           </div>
@@ -250,11 +246,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <div class="refs">
           <h2>
             <div class="header-spread">REFs</div>
-            <button
-              phx-click={show_modal("##{@form.id}-#{@key}-create-ref")}
-              type="button"
-              class="circle"
-            >
+            <button phx-click={show_modal("##{@form.id}-#{@key}-create-ref")} type="button" class="circle">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
                 <path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
               </svg>
@@ -272,27 +264,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   </div>
 
                   <div class="actions">
-                    <button
-                      class="tiny"
-                      type="button"
-                      phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
-                    >
+                    <button class="tiny" type="button" phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}>
                       <.icon name="hero-pencil" />
                     </button>
-                    <button
-                      class="tiny"
-                      type="button"
-                      phx-click={@duplicate_ref}
-                      phx-value-id={ref[:name].value}
-                    >
+                    <button class="tiny" type="button" phx-click={@duplicate_ref} phx-value-id={ref[:name].value}>
                       <.icon name="hero-document-duplicate" />
                     </button>
-                    <button
-                      class="tiny"
-                      type="button"
-                      phx-click={@delete_ref}
-                      phx-value-id={ref[:name].value}
-                    >
+                    <button class="tiny" type="button" phx-click={@delete_ref} phx-value-id={ref[:name].value}>
                       <.icon name="hero-x-mark" />
                     </button>
                   </div>
@@ -397,14 +375,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text field={block_data[:alt]} label={gettext("Alt. text")} />
                               <Input.text field={block_data[:credits]} label={gettext("Credits")} />
                               <Input.text field={block_data[:link]} label={gettext("Link")} />
-                              <Input.text
-                                field={block_data[:picture_class]}
-                                label={gettext("Picture class(es)")}
-                              />
-                              <Input.text
-                                field={block_data[:img_class]}
-                                label={gettext("Img class(es)")}
-                              />
+                              <Input.text field={block_data[:picture_class]} label={gettext("Picture class(es)")} />
+                              <Input.text field={block_data[:img_class]} label={gettext("Img class(es)")} />
                               <.live_component
                                 module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-placeholder"}
@@ -456,9 +428,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.text
                                 field={block_data[:config_target]}
                                 label={gettext("Config target")}
-                                instructions={
-                                  gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")
-                                }
+                                instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
                                 monospace
                               />
                             </Form.inputs_for_block>
@@ -486,10 +456,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 ]}
                               />
                               <Input.text field={block_data[:class]} label={gettext("Class")} />
-                              <Input.text
-                                field={block_data[:series_slug]}
-                                label={gettext("Series slug")}
-                              />
+                              <Input.text field={block_data[:series_slug]} label={gettext("Series slug")} />
                               <Input.toggle field={block_data[:lightbox]} label={gettext("Lightbox")} />
                               <Input.radios
                                 field={block_data[:placeholder]}
@@ -565,10 +532,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <Input.number field={block_data[:opacity]} label={gettext("Opacity")} />
                               <Input.toggle field={block_data[:autoplay]} label={gettext("Autoplay")} />
                               <Input.toggle field={block_data[:preload]} label={gettext("Preload")} />
-                              <Input.toggle
-                                field={block_data[:play_button]}
-                                label={gettext("Play button")}
-                              />
+                              <Input.toggle field={block_data[:play_button]} label={gettext("Play button")} />
                             </Form.inputs_for_block>
                           <% "media" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
@@ -609,22 +573,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                               <%= if "picture" in block_data[:available_blocks].value do %>
                                 <h2>Picture block template</h2>
                                 <.inputs_for :let={tpl_data} field={block_data[:template_picture]}>
-                                  <Input.toggle
-                                    field={tpl_data[:lazyload]}
-                                    label={gettext("Lazyload")}
-                                  />
-                                  <Input.toggle
-                                    field={tpl_data[:moonwalk]}
-                                    label={gettext("Moonwalk")}
-                                  />
-                                  <Input.text
-                                    field={tpl_data[:picture_class]}
-                                    label={gettext("Picture class")}
-                                  />
-                                  <Input.text
-                                    field={tpl_data[:img_class]}
-                                    label={gettext("Image class")}
-                                  />
+                                  <Input.toggle field={tpl_data[:lazyload]} label={gettext("Lazyload")} />
+                                  <Input.toggle field={tpl_data[:moonwalk]} label={gettext("Moonwalk")} />
+                                  <Input.text field={tpl_data[:picture_class]} label={gettext("Picture class")} />
+                                  <Input.text field={tpl_data[:img_class]} label={gettext("Image class")} />
                                   <.live_component
                                     module={Input.Select}
                                     id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-tpl-placeholder"}
@@ -681,9 +633,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                   <Input.text
                                     field={tpl_data[:config_target]}
                                     label={gettext("Config target")}
-                                    instructions={
-                                      gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")
-                                    }
+                                    instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
                                     monospace
                                   />
                                 </.inputs_for>
@@ -693,15 +643,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 <h2>Video block template</h2>
                                 <.inputs_for :let={tpl_data} field={block_data[:template_video]}>
                                   <Input.number field={tpl_data[:opacity]} label={gettext("Opacity")} />
-                                  <Input.toggle
-                                    field={tpl_data[:autoplay]}
-                                    label={gettext("Autoplay")}
-                                  />
+                                  <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
                                   <Input.toggle field={tpl_data[:preload]} label={gettext("Preload")} />
-                                  <Input.toggle
-                                    field={tpl_data[:play_button]}
-                                    label={gettext("Play button")}
-                                  />
+                                  <Input.toggle field={tpl_data[:play_button]} label={gettext("Play button")} />
                                 </.inputs_for>
                               <% end %>
 
@@ -730,14 +674,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     ]}
                                   />
                                   <Input.text field={tpl_data[:class]} label={gettext("Class")} />
-                                  <Input.text
-                                    field={tpl_data[:series_slug]}
-                                    label={gettext("Series slug")}
-                                  />
-                                  <Input.toggle
-                                    field={tpl_data[:lightbox]}
-                                    label={gettext("Lightbox")}
-                                  />
+                                  <Input.text field={tpl_data[:series_slug]} label={gettext("Series slug")} />
+                                  <Input.toggle field={tpl_data[:lightbox]} label={gettext("Lightbox")} />
                                   <Input.radios
                                     field={tpl_data[:placeholder]}
                                     opts={[
@@ -800,10 +738,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                             </Form.inputs_for_block>
                           <% "datasource" -> %>
                             <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text
-                                field={block_data[:description]}
-                                label={gettext("Description")}
-                              />
+                              <Input.text field={block_data[:description]} label={gettext("Description")} />
                               <Input.text field={block_data[:arg]} label={gettext("Arg")} />
                               <Input.text field={block_data[:limit]} label={gettext("Limit")} />
                             </Form.inputs_for_block>
@@ -919,11 +854,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         <div class="vars">
           <h2>
             <div class="header-spread">Vars</div>
-            <button
-              phx-click={show_modal("##{@form.id}-#{@key}-create-var")}
-              type="button"
-              class="circle"
-            >
+            <button phx-click={show_modal("##{@form.id}-#{@key}-create-var")} type="button" class="circle">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
                 <path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
               </svg>
@@ -958,19 +889,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                   {var[:type].value} - &lcub;&lcub; {var[:key].value} &rcub;&rcub;
                 </span>
                 <div class="actions">
-                  <button
-                    class="tiny"
-                    type="button"
-                    phx-click={show_modal("##{@form.id}-#{@key}-var-#{var.index}")}
-                  >
+                  <button class="tiny" type="button" phx-click={show_modal("##{@form.id}-#{@key}-var-#{var.index}")}>
                     <.icon name="hero-pencil" />
                   </button>
-                  <button
-                    class="tiny"
-                    type="button"
-                    phx-click={@duplicate_var}
-                    phx-value-id={var[:key].value}
-                  >
+                  <button class="tiny" type="button" phx-click={@duplicate_var} phx-value-id={var[:key].value}>
                     <.icon name="hero-document-duplicate" />
                   </button>
                   <button

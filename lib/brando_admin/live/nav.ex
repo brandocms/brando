@@ -58,11 +58,7 @@ defmodule BrandoAdmin.Nav do
         class="fullscreen-toggle"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12">
-          <path
-            d="M291.36 414.51h12v12h-12Z"
-            transform="translate(-291.36 -414.51)"
-            style="fill:none"
-          /><path d="M1.5 9h9v1h-9z" /><path
+          <path d="M291.36 414.51h12v12h-12Z" transform="translate(-291.36 -414.51)" style="fill:none" /><path d="M1.5 9h9v1h-9z" /><path
             id="chevron"
             d="m3.3 1.95.7.71-1.59 1.59L4 5.84l-.7.71L1 4.25l2.3-2.3z"
           /><path d="M6 5.5h4.5v1H6zM6 2h4.5v1H6z" />
@@ -106,13 +102,7 @@ defmodule BrandoAdmin.Nav do
                 <% end %>
               </div>
             </header>
-            <div
-              :if={@current_user}
-              id="current-user"
-              class="current-user"
-              tabindex="0"
-              data-testid="current-user"
-            >
+            <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
                 <section class="avatar-wrapper">
                   <div class="avatar">
@@ -129,13 +119,7 @@ defmodule BrandoAdmin.Nav do
                     </div>
                   </div>
                   <div class="dropdown-icon">
-                    <svg
-                      width="13"
-                      height="10"
-                      viewBox="0 0 13 10"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                    <svg width="13" height="10" viewBox="0 0 13 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M6.5 10L0.00480841 0.624999L12.9952 0.624998L6.5 10Z" fill="black" />
                     </svg>
                   </div>
@@ -162,11 +146,7 @@ defmodule BrandoAdmin.Nav do
                   </header>
                   <dl :for={item <- section.items}>
                     <dt>
-                      <.link
-                        :if={item.url}
-                        navigate={item.url}
-                        class={Brando.HTML.active(@current_url, item.url)}
-                      >
+                      <.link :if={item.url} navigate={item.url} class={Brando.HTML.active(@current_url, item.url)}>
                         {item.name}
                       </.link>
                       <span :if={item[:items]} data-nav-expand>

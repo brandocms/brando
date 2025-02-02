@@ -38,11 +38,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
               </button>
             </div>
           </div>
-          <div
-            :for={{global_set, index} <- @indexed_global_sets}
-            :if={index == @active_tab}
-            id={"set-#{index}"}
-          >
+          <div :for={{global_set, index} <- @indexed_global_sets} :if={index == @active_tab} id={"set-#{index}"}>
             <.set_form global_set={global_set} index={index} target={@myself} />
           </div>
         </div>
@@ -67,13 +63,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
       <Input.input type={:hidden} field={f[:key]} />
 
       <.inputs_for :let={var} field={f[:vars]}>
-        <.live_component
-          module={RenderVar}
-          id={"set-#{@global_set.id}-#{var.id}-#{@index}"}
-          var={var}
-          render={:all}
-          publish
-        />
+        <.live_component module={RenderVar} id={"set-#{@global_set.id}-#{var.id}-#{@index}"} var={var} render={:all} publish />
       </.inputs_for>
 
       <button class="primary">{gettext("Save")}</button>

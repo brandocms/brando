@@ -100,13 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           data-block-uid={@uid}
           data-upload-config-target={block_data[:config_target].value}
         >
-          <Block.block
-            id={"block-#{@uid}-base"}
-            block={@block}
-            is_ref?={true}
-            multi={false}
-            target={@target}
-          >
+          <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
             <:description>
               <%= if @ref_description not in ["", nil] do %>
                 {@ref_description}
@@ -186,11 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
                     <div class="placeholder-wrapper">
                       <div class="svg-wrapper">
-                        <svg
-                          class="icon-add-image"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                        >
+                        <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                           <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
                           <polygon
                             class="plus"
@@ -214,18 +204,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     <button
                       type="button"
                       class="secondary"
-                      phx-click={
-                        JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
-                      }
+                      phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
                     >
                       {gettext("Select image")}
                     </button>
 
-                    <button
-                      type="button"
-                      class="danger"
-                      phx-click={JS.push("reset_image", target: @myself)}
-                    >
+                    <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                       {gettext("Reset image")}
                     </button>
                   </div>
@@ -271,10 +255,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 <input type="hidden" name={name} value={value} />
               </Form.map_inputs>
 
-              <Form.array_inputs
-                :let={%{value: array_value, name: array_name}}
-                field={block_data[:formats]}
-              >
+              <Form.array_inputs :let={%{value: array_value, name: array_name}} field={block_data[:formats]}>
                 <input type="hidden" name={array_name} value={array_value} />
               </Form.array_inputs>
 

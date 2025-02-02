@@ -30,10 +30,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Scheduled Publishing")}
-      subtitle={gettext("Manage and clear publishing queue")}
-    />
+    <Content.header title={gettext("Scheduled Publishing")} subtitle={gettext("Manage and clear publishing queue")} />
 
     <div class="scheduled-publishing-live">
       <p class="help">
@@ -58,11 +55,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <span>•</span> {format_datetime(job.scheduled_at, "%H:%M")}
             </td>
             <td class="fit">
-              <button
-                type="button"
-                class="primary small"
-                phx-click={JS.push("delete_job", value: %{id: job.id})}
-              >
+              <button type="button" class="primary small" phx-click={JS.push("delete_job", value: %{id: job.id})}>
                 {gettext("Delete job")}
               </button>
             </td>

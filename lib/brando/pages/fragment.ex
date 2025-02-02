@@ -111,8 +111,7 @@ defmodule Brando.Pages.Fragment do
         fieldset do
           input :wrapper, :code,
             label: t("Wrapper"),
-            instructions:
-              t("You can access the fragment's rendered content as <code>{{ content }}</code>")
+            instructions: t("You can access the fragment's rendered content as <code>{{ content }}</code>")
         end
       end
     end

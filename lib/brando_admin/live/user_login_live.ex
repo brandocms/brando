@@ -102,19 +102,11 @@ defmodule BrandoAdmin.UserLoginLive do
 
               <div class="field-wrapper">
                 <div class="check-wrapper small">
-                  <.input
-                    field={@form[:remember_me]}
-                    type="checkbox"
-                    label={gettext("Keep me logged in for 60 days")}
-                  />
+                  <.input field={@form[:remember_me]} type="checkbox" label={gettext("Keep me logged in for 60 days")} />
                 </div>
               </div>
               <div>
-                <button
-                  class="primary"
-                  phx-disable-with={gettext("Logging in...")}
-                  data-testid="login-button"
-                >
+                <button class="primary" phx-disable-with={gettext("Logging in...")} data-testid="login-button">
                   {gettext("Log in")}
                 </button>
               </div>

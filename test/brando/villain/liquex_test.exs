@@ -121,8 +121,7 @@ defmodule Brando.Villain.LiquexTest do
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
     assert parsed_tpl == [
-             {{:tag, Brando.Villain.Tags.Picture},
-              [source: {:field, [key: "entry", key: "cover"]}]}
+             {{:tag, Brando.Villain.Tags.Picture}, [source: {:field, [key: "entry", key: "cover"]}]}
            ]
 
     tpl =

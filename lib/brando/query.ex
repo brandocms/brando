@@ -473,8 +473,7 @@ defmodule Brando.Query do
   Hash query arguments
   """
   def hash_query({query_type, query_name, _} = query_key) do
-    {query_type, query_name,
-     Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
+    {query_type, query_name, Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
   end
 
   @doc """

@@ -61,13 +61,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} class="video-block" data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block
-          id={"block-#{@uid}-base"}
-          block={@block}
-          is_ref?={true}
-          multi={false}
-          target={@target}
-        >
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @type == :file do %>
               {gettext("External file")}
@@ -91,12 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <Input.input type={:hidden} field={block_data[:preload]} />
               <Input.input type={:hidden} field={block_data[:play_button]} />
 
-              <div
-                id={"block-#{@uid}-videoUrl"}
-                phx-hook="Brando.VideoURLParser"
-                phx-update="ignore"
-                data-target={@myself}
-              >
+              <div id={"block-#{@uid}-videoUrl"} phx-hook="Brando.VideoURLParser" phx-update="ignore" data-target={@myself}>
                 <div class="video-loading hidden">
                   {gettext("Fetching video information. Please wait...")}
                 </div>
@@ -155,25 +144,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     <button
                       type="button"
                       class="secondary"
-                      phx-click={
-                        JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")
-                      }
+                      phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
                     >
                       {gettext("Select cover image")}
                     </button>
 
-                    <button
-                      type="button"
-                      class="danger"
-                      phx-click={JS.push("reset_image", target: @myself)}
-                    >
+                    <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                       {gettext("Reset cover image")}
                     </button>
-                    <button
-                      type="button"
-                      class="danger"
-                      phx-click={JS.push("reset_video", target: @myself)}
-                    >
+                    <button type="button" class="danger" phx-click={JS.push("reset_video", target: @myself)}>
                       {gettext("Reset video")}
                     </button>
                   </div>
@@ -198,11 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
                   <div class="row">
                     <div class="half">
-                      <Input.toggle
-                        compact
-                        field={block_data[:play_button]}
-                        label={gettext("Play button")}
-                      />
+                      <Input.toggle compact field={block_data[:play_button]} label={gettext("Play button")} />
                     </div>
                     <div class="half">
                       <Input.toggle compact field={block_data[:autoplay]} label={gettext("Autoplay")} />
@@ -213,18 +188,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <Input.toggle compact field={block_data[:preload]} label={gettext("Preload")} />
                     </div>
                     <div class="half">
-                      <Input.toggle
-                        compact
-                        field={block_data[:controls]}
-                        label={gettext("Show native player controls")}
-                      />
+                      <Input.toggle compact field={block_data[:controls]} label={gettext("Show native player controls")} />
                     </div>
                   </div>
-                  <.inputs_for
-                    :let={cover_image}
-                    :if={block_data[:cover_image].value}
-                    field={block_data[:cover_image]}
-                  >
+                  <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>
                     <Input.input type={:hidden} field={cover_image[:placeholder]} />
                     <Input.input type={:hidden} field={cover_image[:cdn]} />
                     <Input.input type={:hidden} field={cover_image[:moonwalk]} />
@@ -244,10 +211,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <input type="hidden" name={"#{name}"} value={"#{value}"} />
                     </Form.map_inputs>
 
-                    <Form.array_inputs
-                      :let={%{value: array_value, name: array_name}}
-                      field={cover_image[:formats]}
-                    >
+                    <Form.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
                       <input type="hidden" name={array_name} value={array_value} />
                     </Form.array_inputs>
                   </.inputs_for>
@@ -337,11 +301,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                           </.checklist>
                         </div>
                       </div>
-                      <button
-                        class="tiny mt-1"
-                        type="button"
-                        phx-click={show_modal("#block-#{@uid}_config")}
-                      >
+                      <button class="tiny mt-1" type="button" phx-click={show_modal("#block-#{@uid}_config")}>
                         {gettext("Edit video")}
                       </button>
                     </figcaption>

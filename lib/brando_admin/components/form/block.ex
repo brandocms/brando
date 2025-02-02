@@ -1398,8 +1398,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     <div class="alert danger text-mono">
       <div>
         Missing module — #{inspect(assigns.module_id)}.<br /><br />
-        If this is a mistake, you can hopefully undelete the module.<br /><br />
-        If you're sure the module is gone, you can
+        If this is a mistake, you can hopefully undelete the module.<br /><br /> If you're sure the module is gone, you can
         <button type="button" phx-click="delete_block" phx-target={@myself}>
           delete this block.
         </button>
@@ -1717,12 +1716,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         class={["block"]}
         phx-hook="Brando.Block"
       >
-        <.form
-          for={@form}
-          phx-value-id={@form.data.id}
-          phx-change="validate_block"
-          phx-target={@target}
-        >
+        <.form for={@form} phx-value-id={@form.data.id} phx-change="validate_block" phx-target={@target}>
           <%= if @belongs_to == :root do %>
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
@@ -1748,20 +1742,10 @@ defmodule BrandoAdmin.Components.Form.Block do
                   <% end %>
                 </:description>
               </.toolbar>
-              <.fragment_config
-                uid={@uid}
-                block={block_form}
-                target={@target}
-                fragment={@fragment}
-                fragments={@fragments}
-              />
+              <.fragment_config uid={@uid} block={block_form} target={@target} fragment={@fragment} fragments={@fragments} />
               <div class="block-content">
                 <div class="block-fragment-wrapper">
-                  <div
-                    class="fragment-info"
-                    phx-click="show_fragment_instructions"
-                    phx-target={@target}
-                  >
+                  <div class="fragment-info" phx-click="show_fragment_instructions" phx-target={@target}>
                     <div class="icon">
                       <span class="hero-puzzle-piece"></span>
                     </div>
@@ -1774,16 +1758,9 @@ defmodule BrandoAdmin.Components.Form.Block do
 
                   <div :if={!@fragment_id} class="block-instructions">
                     <p>
-                      {gettext(
-                        "This block embeds a fragment as a block, but no fragment is currently selected."
-                      )}
+                      {gettext("This block embeds a fragment as a block, but no fragment is currently selected.")}
                     </p>
-                    <button
-                      type="button"
-                      class="tiny"
-                      phx-click={show_modal("#block-#{@uid}_config")}
-                      phx-target={@target}
-                    >
+                    <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")} phx-target={@target}>
                       {gettext("Add fragment")}
                     </button>
                   </div>
@@ -1848,12 +1825,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         phx-hook="Brando.Block"
         style={"background-color: #{@bg_color}"}
       >
-        <.form
-          for={@form}
-          phx-value-id={@form.data.id}
-          phx-change="validate_block"
-          phx-target={@target}
-        >
+        <.form for={@form} phx-value-id={@form.data.id} phx-change="validate_block" phx-target={@target}>
           <%= if @belongs_to == :root do %>
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
@@ -1968,12 +1940,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         class="block"
         phx-hook="Brando.Block"
       >
-        <.form
-          for={@form}
-          phx-value-id={@form.data.id}
-          phx-change="validate_block"
-          phx-target={@target}
-        >
+        <.form for={@form} phx-value-id={@form.data.id} phx-change="validate_block" phx-target={@target}>
           <%= if @belongs_to == :root do %>
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
@@ -2090,23 +2057,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           target={@target}
         />
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
-          <.table
-            block_data={@block_form}
-            uid={@uid}
-            target={@target}
-            table_template_name={@table_template_name}
-          />
+          <.table block_data={@block_form} uid={@uid} target={@target} table_template_name={@table_template_name} />
         </div>
         <div class="block-splits">
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <.ref
-                  parent_uploads={@parent_uploads}
-                  refs_field={@block_form[:refs]}
-                  ref_name={ref}
-                  target={@target}
-                />
+                <.ref parent_uploads={@parent_uploads} refs_field={@block_form[:refs]} ref_name={ref} target={@target} />
               <% {:content, _} -> %>
                 <div class="split_content"></div>
               <% {:entry_variable, var_name, variable_value} -> %>
@@ -2177,10 +2134,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             label={gettext("Block description")}
             instructions={gettext("Helpful for collapsed blocks")}
           />
-          <Input.text
-            field={@block_form[:anchor]}
-            instructions={gettext("Anchor available to block.")}
-          />
+          <Input.text field={@block_form[:anchor]} instructions={gettext("Anchor available to block.")} />
           <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} />
           <div>
             UID: <span class="text-mono">{@uid}</span>
@@ -2228,21 +2182,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           </.inputs_for>
           <h2 class="titlecase">{gettext("Advanced")}</h2>
           <div class="button-group-vertical">
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("fetch_missing_refs", target: @target)}
-            >
+            <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @target)}>
               {gettext("Fetch missing refs")}
             </button>
             <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @target)}>
               {gettext("Reset all block refs")}
             </button>
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("fetch_missing_vars", target: @target)}
-            >
+            <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @target)}>
               {gettext("Fetch missing vars")}
             </button>
             <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @target)}>
@@ -2387,8 +2333,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     <% else %>
       <section class="alert danger">
         Ref <code>{@ref_name}</code>
-        is missing!<br /><br />
-        If the module has been changed, this block might be out of sync!<br /><br />
+        is missing!<br /><br /> If the module has been changed, this block might be out of sync!<br /><br />
         Available refs are:<br /><br />
         <div :for={ref_name <- @ref_names}>
           &rarr; {ref_name}<br />
@@ -2400,11 +2345,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def handle(assigns) do
     ~H"""
-    <div
-      class="sort-handle block-action"
-      data-sortable-group={1}
-      data-popover={gettext("Reposition block (click&drag)")}
-    >
+    <div class="sort-handle block-action" data-sortable-group={1} data-popover={gettext("Reposition block (click&drag)")}>
       <.icon name="hero-arrows-up-down" />
     </div>
     """
@@ -2773,10 +2714,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <%= if @extensions == "all" do %>
               <Input.hidden field={text_block_data[:extensions]} />
             <% else %>
-              <Form.array_inputs
-                :let={%{value: array_value, name: array_name}}
-                field={text_block_data[:extensions]}
-              >
+              <Form.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
                 <input type="hidden" name={array_name} value={array_value} />
               </Form.array_inputs>
             <% end %>
@@ -2791,19 +2729,10 @@ defmodule BrandoAdmin.Components.Form.Block do
                 data-tiptap-type="block"
                 data-name="TipTap"
               >
-                <div
-                  id={"block-#{@uid}-rich-text-target-wrapper"}
-                  class="tiptap-target-wrapper"
-                  phx-update="ignore"
-                >
+                <div id={"block-#{@uid}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
                   <div id={"block-#{@uid}-rich-text-target"} class="tiptap-target"></div>
                 </div>
-                <Input.input
-                  type={:hidden}
-                  field={text_block_data[:text]}
-                  class="tiptap-text"
-                  phx-debounce={400}
-                />
+                <Input.input type={:hidden} field={text_block_data[:text]} class="tiptap-text" phx-debounce={400} />
               </div>
             </div>
           </div>
@@ -3077,11 +3006,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               <div class="table-row draggable" data-id={table_row.index}>
                 <input type="hidden" name={table_row[:id].name} value={table_row[:id].value} />
                 <input type="hidden" name={table_row[:_persistent_id].name} value={table_row.index} />
-                <input
-                  type="hidden"
-                  name={"#{@block_data.name}[sort_table_row_ids][]"}
-                  value={table_row.index}
-                />
+                <input type="hidden" name={"#{@block_data.name}[sort_table_row_ids][]"} value={table_row.index} />
                 <div class="subform-tools">
                   <button type="button" class="sort-handle">
                     <.icon name="hero-arrows-up-down" />
@@ -3161,12 +3086,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
 
       <%= if @module_datasource_type == :selection do %>
-        <Content.modal
-          title={gettext("Select entries")}
-          id={"select-entries-#{@uid}"}
-          remember_scroll_position
-          narrow
-        >
+        <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} remember_scroll_position narrow>
           <h2 class="titlecase">{gettext("Available entries")}</h2>
           <Entries.block_identifier
             :for={identifier <- @available_identifiers}
@@ -3189,10 +3109,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={block_identifier} field={@block_identifiers}>
-              <Entries.block_identifier
-                block_identifier={block_identifier}
-                available_identifiers={@available_identifiers}
-              >
+              <Entries.block_identifier block_identifier={block_identifier} available_identifiers={@available_identifiers}>
                 <input
                   type="hidden"
                   name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
@@ -3218,10 +3135,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 </:meta>
               </Entries.block_identifier>
             </.inputs_for>
-            <input
-              type="hidden"
-              name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
-            />
+            <input type="hidden" name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"} />
           </div>
 
           <button

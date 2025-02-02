@@ -50,13 +50,7 @@ defmodule BrandoAdmin.Components.FilePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer
-        id={@id}
-        title={gettext("Select file")}
-        close={toggle_drawer("##{@id}")}
-        z={@z_index}
-        dark
-      >
+      <Content.drawer id={@id} title={gettext("Select file")} close={toggle_drawer("##{@id}")} z={@z_index} dark>
         <:info>
           <%= if @config_target do %>
             <div class="mb-2">

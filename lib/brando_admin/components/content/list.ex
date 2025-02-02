@@ -496,12 +496,7 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class="active-filters">
       {gettext("Active filters")} &rarr;
-      <button
-        :for={{name, value} <- @active_filters}
-        class="filter"
-        phx-click={@delete}
-        phx-value-filter={name}
-      >
+      <button :for={{name, value} <- @active_filters} class="filter" phx-click={@delete} phx-value-filter={name}>
         <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
         {name}: {inspect(value)}
       </button>
@@ -613,12 +608,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
-            <.status
-              :for={status <- @statuses}
-              status={status}
-              list_opts={@list_opts}
-              on_update_status={@update_status}
-            />
+            <.status :for={status <- @statuses} status={status} list_opts={@list_opts} on_update_status={@update_status} />
           </div>
         <% end %>
 
@@ -662,12 +652,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <div :if={@exports != []} class="exports">
           {gettext("Export")}
           <CircleDropdown.render id="listing-exports-dropdown">
-            <button
-              :for={export <- @exports}
-              type="button"
-              phx-value-name={export.name}
-              phx-click={@select_export}
-            >
+            <button :for={export <- @exports} type="button" phx-value-name={export.name} phx-click={@select_export}>
               {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
             </button>
           </CircleDropdown.render>
@@ -675,11 +660,7 @@ defmodule BrandoAdmin.Components.Content.List do
       </div>
       <div class="list-filters-and-sorts">
         <%= if @list_opts[:filter] do %>
-          <.active_filters
-            active_filters={@list_opts[:filter]}
-            filters={@filters}
-            delete={@delete_filter}
-          />
+          <.active_filters active_filters={@list_opts[:filter]} filters={@filters} delete={@delete_filter} />
         <% end %>
         <%= if @sorts != [] do %>
           <.sorts active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
@@ -701,12 +682,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li>
-            <button
-              :for={sort <- @sorts}
-              type="button"
-              phx-click={@on_update}
-              phx-value-sort_key={sort.key}
-            >
+            <button :for={sort <- @sorts} type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
               {raw(g(@schema, sort.label))}
             </button>
           </li>
@@ -828,12 +804,7 @@ defmodule BrandoAdmin.Components.Content.List do
       @selected_rows == [] && "hidden"
     ]}>
       <div class="clear-selection">
-        <button
-          phx-click="clear_selection"
-          phx-target={@target}
-          type="button"
-          class="btn-outline-primary inverted"
-        >
+        <button phx-click="clear_selection" phx-target={@target} type="button" class="btn-outline-primary inverted">
           {gettext("Clear selection")}
         </button>
       </div>
@@ -849,13 +820,7 @@ defmodule BrandoAdmin.Components.Content.List do
             phx-click-away={hide_dropdown("#selected-actions-dropdown-content")}
             type="button"
           >
-            <svg
-              width="40"
-              height="40"
-              viewBox="0 0 40 40"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
               <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white" class="inverted"></line>
               <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white" class="inverted"></line>

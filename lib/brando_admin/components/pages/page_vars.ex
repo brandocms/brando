@@ -80,13 +80,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
                   </button>
                 </div>
 
-                <.live_component
-                  module={RenderVar}
-                  id={"#{@field.id}-render-var-#{var.index}"}
-                  var={var}
-                  render={:all}
-                  edit
-                />
+                <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} edit />
               </div>
             </Form.inputs_for_poly>
           </div>
@@ -108,12 +102,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
         <% else %>
           <%= unless Enum.empty?(inputs_for_poly(@field, [])) do %>
             <Form.inputs_for_poly :let={var} field={@field}>
-              <.live_component
-                module={RenderVar}
-                id={"#{@field.id}-render-var-#{var.index}"}
-                var={var}
-                render={:all}
-              />
+              <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} />
             </Form.inputs_for_poly>
           <% end %>
         <% end %>

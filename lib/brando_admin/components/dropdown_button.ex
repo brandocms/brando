@@ -25,12 +25,7 @@ defmodule BrandoAdmin.Components.Button do
           {render_slot(@inner_block)}
         </button>
       <% else %>
-        <button
-          type="button"
-          id={"dropdown-button-#{@event_name}-#{@value}"}
-          phx-click={@event}
-          phx-page-loading={@loading}
-        >
+        <button type="button" id={"dropdown-button-#{@event_name}-#{@value}"} phx-click={@event} phx-page-loading={@loading}>
           {render_slot(@inner_block)}
         </button>
       <% end %>

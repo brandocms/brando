@@ -31,19 +31,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
             </div>
             <div class="other-buttons">
               <%= if !@hide_fragments do %>
-                <button
-                  type="button"
-                  phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
-                >
+                <button type="button" phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}>
                   <.icon name="hero-puzzle-piece" />
                   {gettext("Insert fragment")}
                 </button>
               <% end %>
               <%= if !@hide_sections do %>
-                <button
-                  type="button"
-                  phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
-                >
+                <button type="button" phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}>
                   <.icon name="hero-window" />
                   {gettext("Insert container")}
                 </button>

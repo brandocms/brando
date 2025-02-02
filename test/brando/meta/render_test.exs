@@ -153,8 +153,7 @@ defmodule Brando.MetaRenderTest do
                  {"og:url", "http://localhost"},
                  {"description", "My description"},
                  {"og:description", "My description"},
-                 {"og:image",
-                  "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg"},
+                 {"og:image", "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg"},
                  {"title", "My title"}
                ]
              }

@@ -123,8 +123,7 @@ defmodule Brando.DatasourcesTest do
 
   test "list datasource keys" do
     assert Brando.Datasource.list_datasource_keys(TestDatasource) ==
-             {:ok,
-              %{list: [:all_more, :all_of_them, :all], selection: [:featured], single: [:single]}}
+             {:ok, %{list: [:all_more, :all_of_them, :all], selection: [:featured], single: [:single]}}
   end
 
   test "get_list" do

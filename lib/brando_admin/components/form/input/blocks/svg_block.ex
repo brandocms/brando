@@ -35,32 +35,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block
-          id={"block-#{@uid}-base"}
-          block={@block}
-          is_ref?={true}
-          multi={false}
-          target={@target}
-        >
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
             <% end %>
           </:description>
           <:config>
-            <Input.code
-              id={"block-#{@uid}-svg-code"}
-              field={block_data[:code]}
-              label={gettext("Code")}
-            />
+            <Input.code id={"block-#{@uid}-svg-code"} field={block_data[:code]} label={gettext("Code")} />
             <Input.text field={block_data[:class]} label={gettext("Class")} />
           </:config>
-          <div
-            class="svg-block"
-            phx-hook="Brando.SVGDrop"
-            id={"block-#{@uid}-svg-drop"}
-            data-target={@myself}
-          >
+          <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
             <%= if block_data[:code].value do %>
               <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
                 {block_data[:code].value |> raw}

@@ -122,11 +122,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             )}
           </p>
           <div class="button-group">
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("store_revision", target: @myself)}
-            >
+            <button type="button" class="secondary" phx-click={JS.push("store_revision", target: @myself)}>
               {gettext("Save version without activating")}
             </button>
 
@@ -136,9 +132,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
               id="revisions-drawer-confirm-purge"
               phx-hook="Brando.ConfirmClick"
               phx-confirm-click-message={
-                gettext(
-                  "Are you sure you want to purge unprotected and non active revisions of this entry?"
-                )
+                gettext("Are you sure you want to purge unprotected and non active revisions of this entry?")
               }
               phx-confirm-click={JS.push("purge_inactive_revisions", target: @myself)}
             >
@@ -165,9 +159,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                       ),
                     else: gettext("Are you sure you want to activate this version?")
                 }
-                phx-confirm-click={
-                  JS.push("select_revision", value: %{revision: revision.revision}, target: @myself)
-                }
+                phx-confirm-click={JS.push("select_revision", value: %{revision: revision.revision}, target: @myself)}
                 phx-click={JS.push("select_revision", target: @myself)}
               >
                 <td class="fit">
@@ -323,10 +315,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                           data-locale={Gettext.get_locale()}
                           data-revision={revision.revision}
                         >
-                          <div
-                            id={"revision-#{revision.revision}-datetimepicker-flatpickr"}
-                            phx-update="ignore"
-                          >
+                          <div id={"revision-#{revision.revision}-datetimepicker-flatpickr"} phx-update="ignore">
                             <input type={:hidden} class="flatpickr" />
                           </div>
                         </div>

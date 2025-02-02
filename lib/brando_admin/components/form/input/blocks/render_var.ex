@@ -211,12 +211,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class={["variable", @var[:type].value]}
-      data-size={@var[:width].value}
-      data-id={@var[:id].value}
-    >
+    <div id={@id} class={["variable", @var[:type].value]} data-size={@var[:width].value} data-id={@var[:id].value}>
       <%= if @inner_block do %>
         {render_slot(@inner_block)}
       <% end %>
@@ -302,15 +297,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
               <%= case @type do %>
                 <% :color -> %>
-                  <Input.toggle
-                    field={@var[:color_picker]}
-                    label={gettext("Allow picking custom colors")}
-                  />
+                  <Input.toggle field={@var[:color_picker]} label={gettext("Allow picking custom colors")} />
                   <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
-                  <Input.number
-                    field={@var[:palette_id]}
-                    label={gettext("ID of palette to choose colors from")}
-                  />
+                  <Input.number field={@var[:palette_id]} label={gettext("ID of palette to choose colors from")} />
                 <% :link -> %>
                   <.live_component
                     module={Input.MultiSelect}
@@ -319,18 +308,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     field={@var[:link_identifier_schemas]}
                     opts={[options: @blueprint_schema_opts]}
                   />
-                  <Input.toggle
-                    field={@var[:link_allow_custom_text]}
-                    label={gettext("Allow setting custom link text")}
-                  />
+                  <Input.toggle field={@var[:link_allow_custom_text]} label={gettext("Allow setting custom link text")} />
                 <% :select -> %>
-                  <Form.field_base
-                    field={@var[:options]}
-                    label="Options"
-                    instructions=""
-                    left_justify_meta
-                    skip_presence
-                  >
+                  <Form.field_base field={@var[:options]} label="Options" instructions="" left_justify_meta skip_presence>
                     <Form.label field={@var[:options]}>
                       <.inputs_for :let={opt} field={@var[:options]}>
                         <Input.text field={opt[:label]} label={gettext("Label")} />
@@ -340,9 +320,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     <button
                       type="button"
                       class="secondary"
-                      phx-click={
-                        JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)
-                      }
+                      phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
                     >
                       {gettext("Add option")}
                     </button>
@@ -417,12 +395,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :string} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.text
-        field={@var[:value]}
-        label={@label}
-        placeholder={@placeholder}
-        instructions={@instructions}
-      />
+      <Input.text field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
     </div>
     """
   end
@@ -430,12 +403,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :html} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.rich_text
-        field={@var[:value]}
-        label={@label}
-        placeholder={@placeholder}
-        instructions={@instructions}
-      />
+      <Input.rich_text field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
     </div>
     """
   end
@@ -443,12 +411,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :text} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.textarea
-        field={@var[:value]}
-        label={@label}
-        placeholder={@placeholder}
-        instructions={@instructions}
-      />
+      <Input.textarea field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
     </div>
     """
   end
@@ -524,12 +487,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :image} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base
-        field={@var[:image_id]}
-        label={@label}
-        instructions={@instructions}
-        skip_presence
-      >
+      <Form.field_base field={@var[:image_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-image">
           <Input.Image.image_preview
             image={@image}
@@ -558,12 +516,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :file} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base
-        field={@var[:file_id]}
-        label={@label}
-        instructions={@instructions}
-        skip_presence
-      >
+      <Form.field_base field={@var[:file_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-file">
           <Input.File.file_preview
             publish
@@ -592,12 +545,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :link} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base
-        field={@var[:identifier_id]}
-        label={@label}
-        instructions={@instructions}
-        skip_presence
-      >
+      <Form.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-link">
           <.link_preview
             var={@var}
@@ -742,10 +690,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               monospace
             />
             <Input.text :if={@allow_text?} field={@field[:link_text]} label={gettext("Link text")} />
-            <Input.toggle
-              field={@field[:link_target_blank]}
-              label={gettext("Open link in new window/tab")}
-            />
+            <Input.toggle field={@field[:link_target_blank]} label={gettext("Open link in new window/tab")} />
           </div>
           <div :if={@link_type == :identifier}>
             <Input.text
@@ -754,10 +699,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               label={gettext("Link text")}
               instructions={gettext("Overrides identifier title")}
             />
-            <Input.toggle
-              field={@field[:link_target_blank]}
-              label={gettext("Open link in new window/tab")}
-            />
+            <Input.toggle field={@field[:link_target_blank]} label={gettext("Open link in new window/tab")} />
 
             <.live_component
               module={Content.SelectIdentifier}
@@ -854,8 +796,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <div class="panel">
           <%= if @file && @file.filename do %>
             <div class="file-info">
-              URL: {Utils.file_url(@file, prefix: Utils.media_url())}<br />
-              Path: {@file.filename}<br /> Size: {@file.filesize} bytes
+              URL: {Utils.file_url(@file, prefix: Utils.media_url())}<br /> Path: {@file.filename}<br />
+              Size: {@file.filesize} bytes
             </div>
           <% end %>
           <%= if !@file do %>

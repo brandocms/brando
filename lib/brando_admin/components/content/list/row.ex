@@ -69,12 +69,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <% end %>
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
-        <.entry_menu
-          schema={@schema}
-          content_language={@content_language}
-          entry={@entry}
-          listing={@listing}
-        />
+        <.entry_menu schema={@schema} content_language={@content_language} entry={@entry} listing={@listing} />
       </div>
 
       <%= if @show_children do %>
@@ -319,13 +314,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <%= if @soft_delete? and @entry.deleted_at do %>
       <div class="status">
         <div center="true">
-          <svg
-            data-testid="status-deleted"
-            xmlns="http://www.w3.org/2000/svg"
-            width="15"
-            height="15"
-            viewBox="0 0 15 15"
-          >
+          <svg data-testid="status-deleted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
             <circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle>
           </svg>
         </div>
@@ -334,11 +323,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <div class="status">
         <div phx-click={toggle_dropdown("#status-dropdown-#{@entry_id}")}>
           <.status_circle status={@entry.status} publish_at={@publish_at} />
-          <.status_dropdown
-            id={"status-dropdown-#{@entry_id}"}
-            entry_id={@entry.id}
-            schema={@entry.__struct__}
-          />
+          <.status_dropdown id={"status-dropdown-#{@entry_id}"} entry_id={@entry.id} schema={@entry.__struct__} />
         </div>
       </div>
     <% end %>
@@ -384,13 +369,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def status_circle(%{status: _status} = assigns) do
     ~H"""
-    <svg
-      data-testid={"status-#{@status}"}
-      xmlns="http://www.w3.org/2000/svg"
-      width="15"
-      height="15"
-      viewBox="0 0 15 15"
-    >
+    <svg data-testid={"status-#{@status}"} xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
       <circle r="7.5" cy="7.5" cx="7.5" class={@status} />
     </svg>
     """
@@ -542,12 +521,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <% end %>
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
-      <.entry_menu
-        schema={@schema}
-        entry={@entry}
-        content_language={@content_language}
-        listing={@listing}
-      />
+      <.entry_menu schema={@schema} entry={@entry} content_language={@content_language} listing={@listing} />
     </div>
     """
   end

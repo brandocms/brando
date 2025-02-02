@@ -120,12 +120,7 @@ defmodule Brando.Blueprint.Listings.Components do
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>
-      <.live_component
-        module={ChildrenButton}
-        id={"#{@entry.id}-children-button"}
-        fields={@fields}
-        entry={@entry}
-      />
+      <.live_component module={ChildrenButton} id={"#{@entry.id}-children-button"} fields={@fields} entry={@entry} />
     </div>
     """
   end
