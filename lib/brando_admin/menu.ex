@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Menu do
     do_menu_item(:block, name, do: block)
   end
 
-  defmacro menu_item(name, url) when is_binary(name) and is_binary(url) do
+  defmacro menu_item(name, url) when is_binary(url) do
     do_menu_item(:url, name, url)
   end
 
