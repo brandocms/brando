@@ -1048,6 +1048,10 @@ defmodule Brando.Villain.Filters do
     ""
   end
 
+  def media_url(binary, _) do
+    Brando.Utils.media_url(binary)
+  end
+
   def schema(%{__struct__: schema}, _) do
     to_string(schema)
   end
