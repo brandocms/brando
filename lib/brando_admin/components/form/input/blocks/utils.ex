@@ -57,6 +57,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     params = Map.get(source_changeset.params || %{}, to_string(name), %{})
     block = Ecto.Changeset.get_field(source_changeset, name)
 
+    if block == nil do
+      raise ArgumentError, message: """
+      Block is nil!
+
+      id: #{inspect(id)}
+      source_changeset: #{inspect(source_changeset)}
+      name: #{inspect(name)}
+      """
+    end
+
     changeset =
       block
       |> Ecto.Changeset.change()
