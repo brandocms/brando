@@ -268,6 +268,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     """
   end
 
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+
   def handle_event("image_uploaded", %{"id" => id}, socket) do
     block = socket.assigns.block
     block_data_cs = Block.get_block_data_changeset(block)
