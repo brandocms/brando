@@ -358,7 +358,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     %{label: "Bold", value: "bold"},
                                     %{label: "Italic", value: "italic"},
                                     %{label: "Subscript", value: "sub"},
-                                    %{label: "Superscript", value: "sup"}
+                                    %{label: "Superscript", value: "sup"},
+                                    %{label: "Color", value: "color"},
+                                    %{label: "Unset Marks", value: "unsetMarks"},
+                                    %{label: "Jump Anchor", value: "jumpAnchor"},
+                                    %{label: "Smart Text", value: "smartText"},
+                                    %{label: "Align", value: "align"},
                                   ]
                                 ]}
                               />

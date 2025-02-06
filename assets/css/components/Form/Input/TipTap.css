@@ -144,26 +144,25 @@
     border-left: 2px solid black;
   }
 
+  &:first-child {
+    margin-top: 0 !important;
+  }
+
   h1 {
     @fontsize xl;
-    margin-top: 30px;
-    margin-bottom: 15px;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
     letter-spacing: -0.05em;
     font-weight: 600 !important;
     line-height: 1 !important;
-
-    &:first-of-type {
-      margin-top: 25px;
-    }
   }
 
   h2 {
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.05 !important;
-    letter-spacing: -0.02em;
     font-weight: 600;
-    margin-top: 15px;
-    margin-bottom: 15px;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
 
     a {
       border-bottom: none;
@@ -180,12 +179,11 @@
   }
 
   h3 {
-    @fontsize base(1.2);
+    @fontsize 23px;
     font-weight: 600 !important;
     line-height: 1.1 !important;
-    letter-spacing: -0.05em;
-    margin-top: 20px;
-    margin-bottom: 5px;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
 
     a {
       border-bottom: none;

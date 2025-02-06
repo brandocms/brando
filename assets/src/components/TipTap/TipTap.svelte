@@ -14,6 +14,7 @@
   import JumpAnchor from "./extensions/JumpAnchor";
   import PreventDrop from "./extensions/PreventDrop";
   import Focus from "@tiptap/extension-focus";
+  import TextAlign from "@tiptap/extension-text-align";
 
   import { alertPrompt } from "../../alerts";
 
@@ -22,6 +23,23 @@
   let element = $state();
   let editor = $state();
   let tiptapInput;
+
+  let isLinkActive = $state(false);
+  let isH1Active = $state(false);
+  let isH2Active = $state(false);
+  let isH3Active = $state(false);
+  let isPActive = $state(false);
+  let isListActive = $state(false);
+  let isButtonActive = $state(false);
+  let isBoldActive = $state(false);
+  let isItalicActive = $state(false);
+  let isSubActive = $state(false);
+  let isSupActive = $state(false);
+  let isAlignLeftActive = $state(false);
+  let isAlignCenterActive = $state(false);
+  let isAlignRightActive = $state(false);
+  let isColorActive = $state(false);
+  let isJumpAnchorActive = $state(false);
 
   const ATTR_WHITESPACE =
     /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g;
@@ -94,7 +112,6 @@
         return allExtensions;
       }
 
-      // TODO: add smartText no matter what?
       return extensions.split("|");
     } else {
       return allExtensions;
@@ -178,6 +195,7 @@
     }
 
     extensions = processExtensions();
+
     tiptapInput =
       element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector(
         ".tiptap-text",
@@ -234,6 +252,7 @@
         SmartText,
         TextStyle,
         Color,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
       ],
       content,
       onFocus({ editor, event }) {
@@ -243,12 +262,23 @@
         updateInput();
       },
       onTransaction: () => {
-        // if (editor.options.element.clientHeight > document.body.clientHeight) {
-        //   editor.options.element.classList.add('pinned')
-        // } else {
-        //   editor.options.element.classList.remove('pinned')
-        // }
         editor = editor;
+        isH1Active = editor.isActive("heading", { level: 1 });
+        isH2Active = editor.isActive("heading", { level: 2 });
+        isH3Active = editor.isActive("heading", { level: 3 });
+        isPActive = editor.isActive("paragraph");
+        isListActive = editor.isActive("bulletList");
+        isLinkActive = editor.isActive("link");
+        isButtonActive = editor.isActive("button");
+        isBoldActive = editor.isActive("bold");
+        isItalicActive = editor.isActive("italic");
+        isSubActive = editor.isActive("subscript");
+        isSupActive = editor.isActive("superscript");
+        isAlignLeftActive = editor.isActive({ textAlign: "left" });
+        isAlignCenterActive = editor.isActive({ textAlign: "center" });
+        isAlignRightActive = editor.isActive({ textAlign: "right" });
+        isColorActive = editor.isActive("textStyle", { color: true });
+        isJumpAnchorActive = editor.isActive("jumpAnchor");
       },
     });
 
@@ -285,7 +315,7 @@
       <button
         onclick={() => editor.chain().focus().setParagraph().run()}
         class="menu-item"
-        class:active={editor.isActive("paragraph")}
+        class:active={isPActive}
         type="button"
         title="Paragraph"
         aria-label="Paragraph"
@@ -295,10 +325,9 @@
     {/if}
     {#if extensions.includes("h1")}
       <button
-        onclick={() =>
-          editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        onclick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         class="menu-item"
-        class:active={editor.isActive("heading", { level: 1 })}
+        class:active={isH1Active}
         type="button"
         title="Heading 1"
         aria-label="Heading 1"
@@ -308,10 +337,9 @@
     {/if}
     {#if extensions.includes("h2")}
       <button
-        onclick={() =>
-          editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        onclick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         class="menu-item"
-        class:active={editor.isActive("heading", { level: 2 })}
+        class:active={isH2Active}
         type="button"
         title="Heading 2"
         aria-label="Heading 2"
@@ -321,10 +349,9 @@
     {/if}
     {#if extensions.includes("h3")}
       <button
-        onclick={() =>
-          editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        onclick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         class="menu-item"
-        class:active={editor.isActive("heading", { level: 3 })}
+        class:active={isH3Active}
         type="button"
         title="Heading 3"
         aria-label="Heading 3"
@@ -336,7 +363,7 @@
       <button
         onclick={() => editor.chain().focus().toggleBulletList().run()}
         class="menu-item"
-        class:active={editor.isActive("bulletList")}
+        class:active={isListActive}
         type="button"
         title="Bullet list"
         aria-label="Bullet list"
@@ -350,7 +377,7 @@
         type="button"
         title="Link"
         class="menu-item"
-        class:active={editor.isActive("link")}
+        class:active={isLinkActive}
         aria-label="Link"
       >
         <span class="hero-link"></span>
@@ -362,7 +389,7 @@
         type="button"
         title="Button"
         class="menu-item"
-        class:active={editor.isActive("button")}
+        class:active={isButtonActive}
         aria-label="Button"
       >
         <span class="hero-squares-plus"></span>
@@ -372,7 +399,7 @@
       <button
         onclick={() => editor.chain().focus().toggleBold().run()}
         class="menu-item"
-        class:active={editor.isActive("bold")}
+        class:active={isBoldActive}
         type="button"
         title="Bold"
         aria-label="Bold"
@@ -384,7 +411,7 @@
       <button
         onclick={() => editor.chain().focus().toggleItalic().run()}
         class="menu-item"
-        class:active={editor.isActive("italic")}
+        class:active={isItalicActive}
         type="button"
         title="Italic"
         aria-label="Italic"
@@ -396,7 +423,7 @@
       <button
         onclick={() => editor.chain().focus().toggleSubscript().run()}
         class="menu-item"
-        class:active={editor.isActive("subscript")}
+        class:active={isSubActive}
         type="button"
         title="Subscript"
         aria-label="Subscript"
@@ -408,12 +435,44 @@
       <button
         onclick={() => editor.chain().focus().toggleSuperscript().run()}
         class="menu-item"
-        class:active={editor.isActive("superscript")}
+        class:active={isSupActive}
         type="button"
         title="Superscript"
         aria-label="Superscript"
       >
         <span class="tiptap-sup"></span>
+      </button>
+    {/if}
+    {#if extensions.includes("align")}
+      <button
+        onclick={() => editor.chain().focus().setTextAlign("left").run()}
+        class="menu-item"
+        class:active={isAlignLeftActive}
+        type="button"
+        title="Align left"
+        aria-label="Align left"
+      >
+        <span class="hero-bars-3-bottom-left"></span>
+      </button>
+      <button
+        onclick={() => editor.chain().focus().setTextAlign("center").run()}
+        class="menu-item"
+        class:active={isAlignCenterActive}
+        type="button"
+        title="Align center"
+        aria-label="Align center"
+      >
+        <span class="hero-bars-3"></span>
+      </button>
+      <button
+        onclick={() => editor.chain().focus().setTextAlign("right").run()}
+        class="menu-item"
+        class:active={isAlignRightActive}
+        type="button"
+        title="Align right"
+        aria-label="Align right"
+      >
+        <span class="hero-bars-3-bottom-right"></span>
       </button>
     {/if}
     {#if extensions.includes("color")}
@@ -422,6 +481,7 @@
 
         <input
           type="color"
+          class:active={isColorActive}
           oninput={(ev) =>
             editor.chain().focus().setColor(ev.target.value).run()}
           value={editor.getAttributes("textStyle").color}
@@ -434,7 +494,7 @@
         class="menu-item"
         type="button"
         title="Jump anchor"
-        class:active={editor.isActive("jumpAnchor")}
+        class:active={isJumpAnchorActive}
         aria-label="Jump anchor"
       >
         <span class="tiptap-anchor"></span>
