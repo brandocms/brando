@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "@brandocms/brandojs": {
-      "signature": "e6df49640bad4164c84bb8c9b5466e13",
+      "signature": "f425f8808eea33ce4803d1d816cb7ec9",
       "file": true
     }
   }
