@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-selector=".preview"
           >
             <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
-              <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} target={@myself} />
+              <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} display={@display} target={@myself} />
             </.inputs_for>
           </div>
 
@@ -139,15 +139,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     <Content.image image={image.data} size={:smallest}>
                       <.live_component
                         module={FocalPoint}
-                        id={"image-drawer-focal-#{image.data.path}"}
+                        id={"image-drawer-focal-#{@uid}-#{image.index}"}
                         image={%{image: image.data}}
                         form={image}
                       />
                     </Content.image>
-                    <%!-- <.inputs_for :let={focal_form} field={image[:focal]}>
-                      <Input.input type={:hidden} field={focal_form[:x]} />
-                      <Input.input type={:hidden} field={focal_form[:y]} />
-                    </.inputs_for> --%>
                   </figure>
                   <div>
                     <Input.rich_text field={image[:title]} label={gettext("Title")} />
@@ -223,7 +219,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       <Form.array_inputs :let={%{value: array_value, name: array_name}} field={@image[:formats]}>
         <input type="hidden" name={array_name} value={array_value} />
       </Form.array_inputs>
-      <Content.image image={@img} size={:thumb} />
+      <Content.image image={@img} size={(@display == :grid && :thumb) || :smallest} />
       <button class="delete-x" type="button" phx-click={JS.push("remove_image", target: @target)} phx-value-path={@img.path}>
         <.icon name="hero-x-mark" />
         <div class="text">{gettext("Delete")}</div>

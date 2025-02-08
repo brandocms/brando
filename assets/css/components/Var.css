@@ -121,8 +121,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    background-color: var(--brando-color-dark);
+    background-color: #f1f1f1;
+    color: var(--brando-color-dark);
     border-radius: 50%;
 
     span {

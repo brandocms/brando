@@ -21,11 +21,14 @@
     }
 
     .title-and-alt {
+      @font main;
+      font-size: 12px;
       display: flex;
       flex-direction: column;
       row-gap: 7px;
 
       > div span {
+        @font mono;
         text-transform: uppercase;
         font-size: 10px;
         font-weight: normal;
@@ -40,6 +43,7 @@
       height: 100%;
       font-size: 13px;
       cursor: auto;
+      text-align: left;
 
       button.tiny {
         margin-top: 7px;
@@ -139,6 +143,10 @@
     .image-info {
       @space margin-top 15px;
       @fontsize 13px;
+    }
+
+    [data-name="TipTap"] .ProseMirror {
+      text-align: left;
     }
 
     .img-placeholder {

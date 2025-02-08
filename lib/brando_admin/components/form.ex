@@ -1312,6 +1312,7 @@ defmodule BrandoAdmin.Components.Form do
       assigns
       |> assign(:upload_field, upload_field)
       |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
+      |> assign(:random_id, Brando.Utils.generate_uid())
 
     ~H"""
     <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
@@ -1343,7 +1344,7 @@ defmodule BrandoAdmin.Components.Form do
               </div>
               <.live_component
                 module={FocalPoint}
-                id={"image-drawer-focal-#{@edit_image.id}"}
+                id={"image-drawer-focal-#{@random_id}"}
                 image={@edit_image}
                 form={image_form}
               />

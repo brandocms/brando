@@ -152,7 +152,6 @@
     @fontsize xl;
     margin-top: 1.5em;
     margin-bottom: 0.5em;
-    letter-spacing: -0.05em;
     font-weight: 600 !important;
     line-height: 1 !important;
   }
@@ -191,6 +190,10 @@
       text-decoration-color: var(--brando-color-blue);
       text-decoration-thickness: 2px;
     }
+  }
+
+  > :is(h1, h2, h3, h4):first-child {
+    margin-top: 0.5em !important;
   }
 
   ul {

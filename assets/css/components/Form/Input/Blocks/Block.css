@@ -196,6 +196,13 @@ button.btn-palette {
     background-color: var(--brando-color-block-ref-background);
     box-shadow: 0px 0px 1px #ccc;
     border: none !important;
+
+    /* &[data-block-type="picture"] {
+      background-color: #fff7ed;
+      color: #7c2d12;
+      border: 1px solid #ffedd5 !important;
+      box-shadow: 0 0 1px #ffedd5;
+    } */
   }
 
   figcaption {
@@ -234,8 +241,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--brando-color-dark);
-      color: white;
+      background-color: #f1f1f1;
+      color: var(--brando-color-dark);
       border-radius: 50%;
 
       span {
@@ -268,8 +275,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--brando-color-dark);
-      color: white;
+      background-color: #f1f1f1;
+      color: var(--brando-color-dark);
       border-radius: 50%;
 
       span {
@@ -309,8 +316,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--brando-color-dark);
-      color: white;
+      background-color: #f1f1f1;
+      color: var(--brando-color-dark);
       border-radius: 50%;
 
       span {
@@ -619,8 +626,8 @@ button.btn-palette {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: var(--brando-color-dark);
-        color: white;
+        background-color: #f1f1f1;
+        color: var(--brando-color-dark);
         border-radius: 50%;
 
         span {

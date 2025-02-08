@@ -36,9 +36,9 @@
         cursor: pointer;
         z-index: 1;
         position: absolute;
-        top: 15px;
-        right: 15px;
-        background-color: var(--brando-color-dark);
+        top: 5px;
+        right: 5px;
+        background-color: white;
         width: 30px;
         height: 30px;
         border-radius: 50%;
@@ -46,9 +46,16 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        border: 1px dashed var(--brando-color-dark);
+
+        &:hover {
+          background-color: var(--brando-color-dark);
+          color: white;
+          border: 1px solid var(--brando-color-dark);
+        }
 
         span {
-          background-color: white;
+          background-color: var(--brando-color-dark);
         }
 
         .text {
@@ -77,22 +84,24 @@
     width: 100%;
 
     .preview {
-      @row 3;
-      @space margin-bottom 1vw;
-      background-color: var(--brando-color-peach);
-      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: nowrap;
+      padding: 6px;
       align-items: center;
+      border: 1px dashed var(--brando-color-dark);
+      border-radius: 10px;
 
       .image-content {
-        @column 2/12 desktop_xl;
-        @column 2/12 desktop_lg;
-        @column 2/12 desktop_md;
+        @column 3/12 desktop_xl;
+        @column 3/12 desktop_lg;
+        @column 3/12 desktop_md;
         @order 0;
       }
 
       figcaption {
         @order 1;
-        @column 7/12;
+        @column 6/12;
         @fontsize sm;
         padding-left: 15px;
         margin-left: 15px;
@@ -102,9 +111,17 @@
 
         div {
           @space margin-bottom 8px;
-          width: 30%;
+          max-width: 40ch;
           display: block;
           text-align: left;
+          font-size: 14px;
+
+          span {
+            @font mono;
+            font-size: 10px;
+            font-weight: normal;
+            text-transform: uppercase;
+          }
         }
       }
 
