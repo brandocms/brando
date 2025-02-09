@@ -97,6 +97,17 @@
   }
 }
 
+[data-block-type="module"] {
+  > .block-children {
+    padding: 0px 10px 0px;
+    > [data-parent_id]:first-of-type {
+      .block-plus {
+        margin-top: 0;
+      }
+    }
+  }
+}
+
 .block[data-block-type="comment"] {
   background-color: #ffffc4a6 !important;
 }
@@ -129,7 +140,7 @@
   &.disabled,
   &.collapsed {
     > .block {
-      padding: 0 15px;
+      padding: 0;
 
       > .block-plus {
         display: none;
