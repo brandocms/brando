@@ -101,6 +101,7 @@
 .ProseMirror {
   line-height: 1.5;
   max-width: 70ch;
+  color: #1a1a1a;
 
   &:focus {
     outline: none;

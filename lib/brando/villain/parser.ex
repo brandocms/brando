@@ -1022,8 +1022,7 @@ defmodule Brando.Villain.Parser do
 
         children_html =
           if skip_children? === true do
-            "[$ content $]"
-            |> annotate_children(block.uid)
+            annotate_children("[$ content $]", block.uid)
           else
             (children || [])
             |> Enum.reduce([], fn
@@ -1038,6 +1037,7 @@ defmodule Brando.Villain.Parser do
 
         container.code
         |> String.replace("{{ content }}", children_html)
+        |> Brando.Villain.Parser.replace_fragments()
         |> maybe_annotate(block.uid, opts)
         |> maybe_format(opts)
       end
@@ -1276,6 +1276,23 @@ defmodule Brando.Villain.Parser do
 
   use Phoenix.Component
   import Brando.HTML
+
+  def replace_fragments(html) do
+    fragments = Regex.scan(~r/{% fragment (\w+) (\w+) (\w+) %}/, html)
+
+    if Enum.count(fragments) > 0 do
+      Enum.reduce(fragments, html, fn [_, parent_key, key, language], updated_html ->
+        rendered_fragment =
+          parent_key
+          |> Brando.Pages.render_fragment(key, language)
+          |> Phoenix.HTML.safe_to_string()
+
+        String.replace(updated_html, "{% fragment #{parent_key} #{key} #{language} %}", rendered_fragment)
+      end)
+    else
+      html
+    end
+  end
 
   def picture_tag(assigns) do
     ~H"""

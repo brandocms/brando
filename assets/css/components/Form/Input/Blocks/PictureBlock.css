@@ -7,7 +7,7 @@
     @font mono 13px;
     display: flex;
     align-items: stretch;
-    border: 1px dashed #3b3b3b;
+    border: 1px dashed currentColor;
     border-radius: 8px;
     padding: 8px 25px 8px 8px;
     width: fit-content;

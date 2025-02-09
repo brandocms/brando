@@ -118,11 +118,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <div class="image-info">
                 <figcaption phx-click={!@compact && show_modal("#block-#{@uid}_config")}>
                   <div class="info-wrapper">
-                    <div class="name-and-dims">
-                      <div class="filename">{@file_name}</div>
-                      <div class="dims">{@image.width}&times;{@image.height}</div>
-                    </div>
+                    <div class="filename">{@file_name}</div>
                     <div class="title-and-alt">
+                      <div class="dims">{@image.width}&times;{@image.height}</div>
                       <div id={"block-#{@uid}-figcaption-title"}>
                         <span>{gettext("Caption")}</span>
                         <%= if @image.title in [nil, ""] do %>

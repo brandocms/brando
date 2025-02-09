@@ -81,7 +81,14 @@
 }
 
 [data-block-type="container"] {
+  overflow: clip;
+
+  > form > .block-toolbar {
+    background-color: transparent;
+  }
+
   > .block-children {
+    padding: 20px 10px;
     > [data-parent_id]:first-of-type {
       .block-plus {
         margin-top: 0;
@@ -171,21 +178,225 @@ button.btn-palette {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  padding: 0 10px;
 }
 
 .block {
   background-color: #fff;
-  padding: 0 15px 15px;
+  padding: 0 0 15px;
   position: relative;
   transition:
     border 500ms ease,
     background-color 1500ms ease;
-  box-shadow:
-    inset 0 0 0.5px 1px hsla(0, 0%, 100%, 0.075),
-    0 0 0 1px hsla(0, 0%, 0%, 0.05),
-    0 0.3px 0.4px hsla(0, 0%, 0%, 0.02),
-    0 0.9px 1.5px hsla(0, 0%, 0%, 0.065),
-    0 3.5px 6px hsla(0, 0%, 0%, 0.03);
+
+  border: 1px solid #e4edf6;
+  color: #0c4a6e;
+
+  .ref_block {
+    background-color: #fcffff;
+    color: #0c4a6e;
+    border: 1px solid #e4edf6 !important;
+    box-shadow: none;
+
+    .block-content {
+      border-top: 1px solid #e4edf6;
+    }
+  }
+
+  .block-toolbar {
+    background-color: #f0f9ff;
+    color: #0c4a6e;
+  }
+
+  .block-actions {
+    .block-action {
+      color: #0c4a6e;
+
+      &:hover {
+        background-color: #0c4a6e;
+        color: #f0f9ff;
+      }
+    }
+  }
+
+  .block-vars-wrapper {
+    border-top: 1px solid #e4edf6;
+
+    .vars-info {
+      .icon {
+        background-color: #f0f9ff;
+        color: #0c4a6e;
+      }
+    }
+  }
+
+  .block-datasource {
+    border-top: 1px solid #e4edf6;
+
+    .datasource-info {
+      .icon {
+        background-color: #f0f9ff;
+        color: #0c4a6e;
+      }
+    }
+  }
+
+  .block-splits {
+    border-top: 1px solid #e4edf6;
+  }
+
+  &[data-color="pink"] {
+    border: 1px solid #fce7f3;
+    color: #064e3b;
+
+    .block-toolbar {
+      background-color: #fdf2f8;
+      color: #831843;
+    }
+
+    .block-actions {
+      .block-action {
+        color: #831843;
+
+        &:hover {
+          background-color: #831843;
+          color: #fdf2f8;
+        }
+      }
+    }
+
+    .block-vars-wrapper {
+      border-top: 1px solid #fce7f3;
+
+      .vars-info {
+        .icon {
+          background-color: #fdf2f8;
+          color: #831843;
+        }
+      }
+    }
+
+    .block-splits {
+      border-top: 1px solid #fce7f3;
+    }
+
+    .ref_block {
+      background-color: #fefeff;
+      color: #831843;
+      border: 1px solid #fce7f3 !important;
+      box-shadow: none;
+
+      .block-content {
+        border-top: 1px solid #fce7f3;
+      }
+    }
+  }
+
+  &[data-color="emerald"] {
+    border: 1px solid #d1fae5;
+    color: #064e3b;
+
+    .block-toolbar {
+      background-color: #ecfdf5;
+      color: #064e3b;
+    }
+
+    button.tiny,
+    a.tiny {
+      color: currentColor;
+      border-color: currentColor;
+
+      &:hover {
+        border-color: #064e3b;
+        background-color: #064e3b;
+        color: #ecfdf5;
+      }
+    }
+
+    .block-actions {
+      .block-action {
+        color: #064e3b;
+
+        &:hover {
+          background-color: #064e3b;
+          color: #ecfdf5;
+        }
+      }
+    }
+
+    .block-vars-wrapper {
+      border-top: 1px solid #d1fae5;
+
+      .vars-info {
+        .icon {
+          background-color: #ecfdf5;
+          color: #064e3b;
+        }
+      }
+    }
+
+    .block-splits {
+      border-top: 1px solid #d1fae5;
+    }
+
+    .ref_block {
+      background-color: #fdfffd;
+      color: #064e3b;
+      border: 1px solid #d1fae5 !important;
+      box-shadow: none;
+
+      .block-content {
+        border-top: 1px solid #d1fae5;
+      }
+    }
+  }
+
+  &[data-color="peach"] {
+    border: 1px solid #ffedd5;
+    color: #7c2d12;
+
+    .block-toolbar {
+      background-color: #fff7ed;
+      color: #7c2d12;
+    }
+
+    .block-actions {
+      .block-action {
+        color: #7c2d12;
+
+        &:hover {
+          background-color: #7c2d12;
+          color: #fff7ed;
+        }
+      }
+    }
+
+    .block-vars-wrapper {
+      border-top: 1px solid #ffedd6;
+
+      .vars-info {
+        .icon {
+          background-color: #fff7ed;
+          color: #7c2d12;
+        }
+      }
+    }
+
+    .block-splits {
+      border-top: 1px solid #ffedd5;
+    }
+
+    .ref_block {
+      background-color: #fffefd;
+      color: #7c2d12;
+      border: 1px solid #ffedd5 !important;
+      box-shadow: none;
+
+      .block-content {
+        border-top: 1px solid #ffedd5;
+      }
+    }
+  }
 
   &[data-block-type="container"] {
     background-color: #ffffff;
@@ -193,16 +404,16 @@ button.btn-palette {
 
   &.ref_block {
     border-radius: 12px;
-    background-color: var(--brando-color-block-ref-background);
-    box-shadow: 0px 0px 1px #ccc;
-    border: none !important;
+    overflow: clip;
 
-    /* &[data-block-type="picture"] {
-      background-color: #fff7ed;
-      color: #7c2d12;
-      border: 1px solid #ffedd5 !important;
-      box-shadow: 0 0 1px #ffedd5;
-    } */
+    .block-content {
+      padding: 10px;
+    }
+
+    .tiptap {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
   }
 
   figcaption {
@@ -338,8 +549,7 @@ button.btn-palette {
 
   .block-vars-wrapper {
     border-top: 1px solid #eee;
-    padding-top: 15px;
-    padding-bottom: 15px;
+    padding: 15px 10px;
   }
 
   .block-vars {
@@ -350,7 +560,6 @@ button.btn-palette {
 
     .variable {
       color: var(--brando-color-foreground);
-      background-color: var(--brando-color-block-ref-background);
       box-shadow: 0px 0px 1px #ccc;
       border-radius: 8px;
       padding-left: 15px;
@@ -598,16 +807,15 @@ button.btn-palette {
 
   .block-splits {
     border-top: 1px solid #eee;
-    padding-top: 15px;
+    padding: 15px 10px 0;
   }
 
   .block-datasource {
     @font mono;
     font-size: 10px;
-    padding-top: 15px;
-    width: 100%;
-    padding-right: 15px;
     border-top: 1px solid #eee;
+    padding: 15px 10px;
+    width: 100%;
 
     .select-button {
       margin-bottom: 15px;
@@ -626,8 +834,6 @@ button.btn-palette {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #f1f1f1;
-        color: var(--brando-color-dark);
         border-radius: 50%;
 
         span {
@@ -662,10 +868,9 @@ button.btn-palette {
   .module-description,
   .block-description {
     @font mono;
-    color: #000;
     font-size: 10px;
     border-radius: 0;
-    padding: 15px 0;
+    padding: 10px 0;
     font-weight: normal;
     display: flex;
     opacity: 0.8;
@@ -743,7 +948,6 @@ button.btn-palette {
       border: none;
       padding: 3px 6px;
       background-color: transparent;
-      color: theme(colors.villain.mainFaded);
       border: 1px solid transparent;
       display: flex;
 
