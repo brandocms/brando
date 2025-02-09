@@ -1150,6 +1150,8 @@ defmodule Brando.Villain.Filters do
     end
   end
 
+  def i18n(_, _), do: ""
+
   def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
     preloads = Brando.Blueprint.preloads_for(identifier.schema, skip_blocks: true)
 
