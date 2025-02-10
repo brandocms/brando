@@ -181,6 +181,7 @@
 
 .image-content {
   position: relative;
+  flex-shrink: 0;
 
   .compact & {
     margin: 0 !important;
