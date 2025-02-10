@@ -76,6 +76,14 @@ defmodule Brando.HTML do
     splat_url? = (assigns.splat && String.starts_with?(url, "/")) || false
     match_url = (splat_url? && Path.join([url, "*"])) || url
 
+    # drop the leading slash if the url is a hash link and we are on the root path
+    url =
+      if String.starts_with?(url, "/#") and assigns.conn.request_path == "/" do
+        String.slice(url, 1, String.length(url))
+      else
+        url
+      end
+
     assigns =
       assigns
       |> assign(:url, url)
