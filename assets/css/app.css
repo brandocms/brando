@@ -73,6 +73,12 @@ html.moonwalk [data-moonwalk-run].moonwalked {
   opacity: 1 !important;
 }
 
+.input-group {
+  border: 1px dashed currentColor;
+  padding: 12px;
+  border-radius: 8px;
+}
+
 .button-group-horizontal {
   display: flex;
 

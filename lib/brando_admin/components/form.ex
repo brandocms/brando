@@ -3101,9 +3101,9 @@ defmodule BrandoAdmin.Components.Form do
           {render_slot(@header)}
         </div>
       </div>
-      <%= if @instructions || @meta do %>
+      <%= if @raw_instructions || @meta do %>
         <div :if={@meta_top} class={["meta", @left_justify_meta && "left"]}>
-          <%= if @instructions do %>
+          <%= if @raw_instructions do %>
             <div class="help-text">
               ↳ <span>{@raw_instructions}</span>
             </div>
@@ -3116,9 +3116,9 @@ defmodule BrandoAdmin.Components.Form do
       <div class="field-base" id={"#{@f_id}-field-base"}>
         {render_slot(@inner_block)}
       </div>
-      <%= if @instructions || @meta do %>
+      <%= if @raw_instructions || @meta do %>
         <div :if={!@meta_top} class={["meta", @left_justify_meta && "left"]}>
-          <%= if @instructions do %>
+          <%= if @raw_instructions do %>
             <div class="help-text">
               ↳ <span>{@raw_instructions}</span>
             </div>

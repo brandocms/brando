@@ -310,11 +310,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   />
                   <Input.toggle field={@var[:link_allow_custom_text]} label={gettext("Allow setting custom link text")} />
                 <% :select -> %>
-                  <Form.field_base field={@var[:options]} label="Options" instructions="" left_justify_meta skip_presence>
+                  <hr />
+                  <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
                     <Form.label field={@var[:options]}>
                       <.inputs_for :let={opt} field={@var[:options]}>
-                        <Input.text field={opt[:label]} label={gettext("Label")} />
-                        <Input.text field={opt[:value]} label={gettext("Value")} />
+                        <div class="input-group mt-1">
+                          <Input.text field={opt[:label]} label={gettext("Label")} />
+                          <Input.text field={opt[:value]} label={gettext("Value")} />
+                          <button
+                            type="button"
+                            phx-click={JS.push("del_select_var_option", value: %{value: opt[:value].value})}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </.inputs_for>
                     </Form.label>
                     <button
