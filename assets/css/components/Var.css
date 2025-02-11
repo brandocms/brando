@@ -104,6 +104,11 @@
   }
 }
 
+.brando-input .link-preview .icon {
+  background-color: white;
+  border: 1px dashed #333;
+}
+
 .link-preview {
   display: flex;
   align-items: center;
