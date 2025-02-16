@@ -519,9 +519,7 @@ button.btn-palette {
 
   .table-block-wrapper {
     border-top: 1px solid #eee;
-    padding-top: 15px;
-    padding-bottom: 15px;
-    padding-right: 15px;
+    padding: 15px 10px;
   }
 
   .table-info {
@@ -1120,8 +1118,9 @@ button.btn-palette {
 .html-input {
   border: 0;
   width: 100%;
-  font-family: "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono",
-    "Droid Sans Mono", "Source Code Pro", monospace;
+  font-family:
+    "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono",
+    "Source Code Pro", monospace;
 }
 
 .svg-output {
@@ -1170,7 +1169,8 @@ button.btn-palette {
 
   .CodeMirror {
     /* Set height, width, borders, and global font properties here */
-    font-family: "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono",
+    font-family:
+      "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono",
       "Droid Sans Mono", "Source Code Pro", monospace;
     font-size: 14px;
     height: auto;
