@@ -74,7 +74,12 @@ defmodule Brando.Content.Var do
   end
 
   relations do
-    relation :options, :embeds_many, module: Brando.Content.Var.Option, on_replace: :delete
+    relation :options, :embeds_many,
+      module: Brando.Content.Var.Option,
+      on_replace: :delete,
+      sort_param: :sort_option_ids,
+      drop_param: :drop_option_ids
+
     relation :palette, :belongs_to, module: Brando.Content.Palette
     relation :image, :belongs_to, module: Brando.Images.Image
     relation :file, :belongs_to, module: Brando.Files.File

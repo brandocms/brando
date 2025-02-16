@@ -311,29 +311,42 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                   <Input.toggle field={@var[:link_allow_custom_text]} label={gettext("Allow setting custom link text")} />
                 <% :select -> %>
                   <hr />
-                  <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
-                    <Form.label field={@var[:options]}>
+                  <div
+                    phx-hook="Brando.SortableEmbeds"
+                    id={"#{@var.id}-variable-options"}
+                    data-target={@myself}
+                    data-sortable-id={"sortable-#{@var.id}-variable-options"}
+                    data-sortable-handle=".sort-handle"
+                    data-sortable-selector=".input-group"
+                  >
+                    <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
                       <.inputs_for :let={opt} field={@var[:options]}>
-                        <div class="input-group mt-1">
+                        <div class="input-group draggable drag-item mt-1">
                           <Input.text field={opt[:label]} label={gettext("Label")} />
                           <Input.text field={opt[:value]} label={gettext("Value")} />
+
+                          <input type="hidden" name={"#{@var.name}[sort_option_ids][]"} value={opt.index} />
                           <button
+                            class="tiny"
                             type="button"
-                            phx-click={JS.push("del_select_var_option", value: %{value: opt[:value].value})}
+                            name={"#{@var.name}[drop_option_ids][]"}
+                            value={opt.index}
+                            phx-click={JS.dispatch("change")}
                           >
-                            Delete
+                            {gettext("Delete")}
                           </button>
                         </div>
                       </.inputs_for>
-                    </Form.label>
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
-                    >
-                      {gettext("Add option")}
-                    </button>
-                  </Form.field_base>
+
+                      <button
+                        type="button"
+                        class="secondary"
+                        phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
+                      >
+                        {gettext("Add option")}
+                      </button>
+                    </Form.field_base>
+                  </div>
                 <% _ -> %>
               <% end %>
             </div>

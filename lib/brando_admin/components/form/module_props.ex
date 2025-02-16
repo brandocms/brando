@@ -363,7 +363,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     %{label: "Unset Marks", value: "unsetMarks"},
                                     %{label: "Jump Anchor", value: "jumpAnchor"},
                                     %{label: "Smart Text", value: "smartText"},
-                                    %{label: "Align", value: "align"},
+                                    %{label: "Align", value: "align"}
                                   ]
                                 ]}
                               />
@@ -1017,6 +1017,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
   def handle_event("add_select_var_option", %{"var_key" => var_key}, socket) do
     send(self(), {:add_select_var_option, var_key})
+    {:noreply, socket}
+  end
+
+  def handle_event("del_select_var_option", params, socket) do
+    send(self(), {:del_select_var_option, params})
     {:noreply, socket}
   end
 end

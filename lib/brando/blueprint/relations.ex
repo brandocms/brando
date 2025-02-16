@@ -227,8 +227,7 @@ defmodule Brando.Blueprint.Relations do
         end
 
       _ ->
-        updated_opts = to_changeset_opts(:embeds_many, opts)
-        cast_embed(changeset, name, updated_opts)
+        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
     end
   end
 
