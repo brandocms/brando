@@ -1,6 +1,6 @@
 import Sortable from 'sortablejs'
 
-export default app => ({
+export default (app) => ({
   mounted() {
     this.target = this.el.dataset.target
     this.sortableSelector = this.el.dataset.sortableSelector
@@ -18,15 +18,24 @@ export default app => ({
       handle: this.handle,
       swapThreshold: 0.5,
       forceFallback: true,
-      onEnd: e => {
+      onEnd: (e) => {
         this.el
           .closest('form')
           .querySelector('input')
           .dispatchEvent(new Event('input', { bubbles: true }))
 
-        let params = { old: e.oldIndex, new: e.newIndex, to: e.to.dataset, ...e.item.dataset }
-        this.pushEventTo(this.el, this.el.dataset['drop'] || 'reposition', params)
-      }
+        let params = {
+          old: e.oldIndex,
+          new: e.newIndex,
+          to: e.to.dataset,
+          ...e.item.dataset,
+        }
+        this.pushEventTo(
+          this.el,
+          this.el.dataset['drop'] || 'reposition',
+          params
+        )
+      },
     })
-  }
+  },
 })
