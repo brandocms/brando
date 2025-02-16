@@ -32,10 +32,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
 
-"@brandocms/jupiter@^3.53.0":
-  version "3.54.1"
-  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.1.tgz#c96169bd53fe516431ac15feb291249813b1bb52"
-  integrity sha512-n6Z+vtulokWXfYQ+KtTJ6VXjCpmItDZh60TtCVZGSubTcklOpN0WvLPla8Nv9Z9OapXfh07MdW61y7DKYg5aDA==
+"@brandocms/jupiter@^3.54.2":
+  version "3.54.2"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.2.tgz#e6d0284bce7afe2c662dc31243135e8c511ee792"
+  integrity sha512-FUqAHQclVudoHT+6rniZUtqvKKMGUaX0hYQ+G0s060aYZxuqRs0l2bgtTlEtcxUSCBbqPsnXh6whESkSx0qAfw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^4.0.0-beta.0"
@@ -1610,10 +1610,10 @@ svelte-preprocess@^6.0.3:
   resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-6.0.3.tgz#fdc1f9dc41b6f22bf8b1f059e9f21eaaae181eeb"
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
-svelte@^5.19.7:
-  version "5.19.7"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.19.7.tgz#4f3c32d0e6ef8c737f6951d786b502671e440559"
-  integrity sha512-I0UUp2MpB5gF8aqHJVklOcRcoLgQNnBolSwLMMqDepE9gVwmGeYBmJp1/obzae72QpxdPIymA4AunIm2x70LBg==
+svelte@^5.20.1:
+  version "5.20.1"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.20.1.tgz#2379284f2623da132b4590315ac6911fcf9926d9"
+  integrity sha512-aCARru2WTdzJl55Ws8SK27+kvQwd8tijl4kY7NoDUXUHtTHhxMa8Lf6QNZKmU7cuPu3jjFloDO1j5HgYJNIIWg==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
@@ -1630,10 +1630,10 @@ svelte@^5.19.7:
     magic-string "^0.30.11"
     zimmerframe "^1.1.2"
 
-sweetalert2@^11.14.5:
-  version "11.15.10"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.10.tgz#315ed4d0933bb1b6fbd7d0daf3d160bd3cc78b64"
-  integrity sha512-Sjiwcd5mWiz8X0JFkHsso2EPVQHrLCjVv+xR6Ry2LKf4KY6kSi4U5pM0Tgmn1c7SMfkyDqPal2NWqwj6vck8bw==
+sweetalert2@^11.17.1:
+  version "11.17.1"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.17.1.tgz#717c9061c285380116334afd092ae63e4dcbbd00"
+  integrity sha512-I+Fv0A0eZwVmw11TbT1hhMvxZPUi1+2Yn3+xlYCr136h7VniJywCHjZo3COAhcBi4VuvcWxW4n7uNWwMnCvPRg==
 
 tippy.js@^6.3.7:
   version "6.3.7"
