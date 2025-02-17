@@ -102,6 +102,16 @@
     gsap "3.12.5"
     lodash.defaultsdeep "^4.6.1"
 
+"@brandocms/jupiter@^3.54.2":
+  version "3.54.2"
+  resolved "https://registry.yarnpkg.com/@brandocms/jupiter/-/jupiter-3.54.2.tgz#e6d0284bce7afe2c662dc31243135e8c511ee792"
+  integrity sha512-FUqAHQclVudoHT+6rniZUtqvKKMGUaX0hYQ+G0s060aYZxuqRs0l2bgtTlEtcxUSCBbqPsnXh6whESkSx0qAfw==
+  dependencies:
+    "@egjs/hammerjs" "^2.0.17"
+    body-scroll-lock "^4.0.0-beta.0"
+    gsap "3.12.5"
+    lodash.defaultsdeep "^4.6.1"
+
 "@codemirror/autocomplete@^6.0.0", "@codemirror/autocomplete@^6.7.1":
   version "6.18.4"
   resolved "https://registry.yarnpkg.com/@codemirror/autocomplete/-/autocomplete-6.18.4.tgz#4394f55d6771727179f2e28a871ef46bbbeb11b1"
@@ -1352,7 +1362,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
@@ -1684,10 +1694,10 @@ svelte-preprocess@^6.0.3:
   resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-6.0.3.tgz#fdc1f9dc41b6f22bf8b1f059e9f21eaaae181eeb"
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
-svelte@^5.19.5:
-  version "5.19.9"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.19.9.tgz#ab29aafe43a512a4ceb517c4f7e2ed4f972c87cc"
-  integrity sha512-860s752/ZZxHIsii31ELkdKBOCeAuDsfb/AGUXJyQyzUVLRSt4oqEw/BV5+2+mNg8mbqmD3OK+vMvwWMPM6f8A==
+svelte@^5.20.1:
+  version "5.20.1"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.20.1.tgz#2379284f2623da132b4590315ac6911fcf9926d9"
+  integrity sha512-aCARru2WTdzJl55Ws8SK27+kvQwd8tijl4kY7NoDUXUHtTHhxMa8Lf6QNZKmU7cuPu3jjFloDO1j5HgYJNIIWg==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
