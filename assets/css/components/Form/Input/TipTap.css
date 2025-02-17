@@ -21,6 +21,7 @@
     display: flex;
     flex-wrap: wrap;
     background-color: #fff;
+    width: fit-content;
     z-index: 1;
     margin-bottom: 0px;
     position: sticky;

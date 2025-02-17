@@ -203,6 +203,12 @@ button.btn-palette {
   border: 1px solid #e4edf6;
   color: #0c4a6e;
 
+  .tiptap-wrapper {
+    .tiptap-menu {
+      background-color: #f0f9ff;
+    }
+  }
+
   .ref_block {
     background-color: #fcffff;
     color: #0c4a6e;
@@ -260,6 +266,12 @@ button.btn-palette {
     border: 1px solid #fce7f3;
     color: #064e3b;
 
+    .tiptap-wrapper {
+      .tiptap-menu {
+        background-color: #fdf2f8;
+      }
+    }
+
     .block-toolbar {
       background-color: #fdf2f8;
       color: #831843;
@@ -306,6 +318,12 @@ button.btn-palette {
   &[data-color="emerald"] {
     border: 1px solid #d1fae5;
     color: #064e3b;
+
+    .tiptap-wrapper {
+      .tiptap-menu {
+        background-color: #ecfdf5;
+      }
+    }
 
     .block-toolbar {
       background-color: #ecfdf5;
@@ -365,6 +383,12 @@ button.btn-palette {
   &[data-color="peach"] {
     border: 1px solid #ffedd5;
     color: #7c2d12;
+
+    .tiptap-wrapper {
+      .tiptap-menu {
+        background-color: #fff7ed;
+      }
+    }
 
     .block-toolbar {
       background-color: #fff7ed;
