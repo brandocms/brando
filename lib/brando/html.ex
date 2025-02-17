@@ -228,10 +228,18 @@ defmodule Brando.HTML do
 
   """
   attr :fonts, :list, default: []
+  attr :conn, :map, required: true
 
   def preload_fonts(assigns) do
     ~H"""
-    <link :for={{type, font} <- @fonts} rel="preload" href={font} as="font" type={"font/#{type}"} crossorigin={true} />
+    <link
+      :for={{type, font} <- @fonts}
+      rel="preload"
+      href={Brando.helpers().static_path(@conn, font)}
+      as="font"
+      type={"font/#{type}"}
+      crossorigin={true}
+    />
     """
   end
 
@@ -596,7 +604,7 @@ defmodule Brando.HTML do
       <.include_assets only_css />
       <.render_palettes_css />
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
-      <.preload_fonts fonts={@fonts} />
+      <.preload_fonts conn={@conn} fonts={@fonts} />
       <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
       <.include_assets ignored_chunks={@ignored_chunks} only_js />
       <%= if @deferred_scripts != [] do %><%= render_slot(@deferred_scripts) %><% end %>

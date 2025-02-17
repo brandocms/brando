@@ -33,7 +33,7 @@ export default defineConfig({
   build: {
     manifest: 'manifest.json',
     emptyOutDir: false,
-    target: 'es2015',
+    target: 'modules',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {

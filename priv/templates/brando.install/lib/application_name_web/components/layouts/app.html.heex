@@ -2,7 +2,7 @@
 <html class="no-js" lang={@language}>
   <.head
     conn={@conn}
-    fonts={[{:woff2, "/fonts/MyFont-Regular.woff2?vsn=d"}]}
+    fonts={[{:woff2, "/fonts/MyFont-Regular.woff2"}]}
   >
     <:prefetch>
       <link href="//player.vimeo.com" rel="dns-prefetch" />
@@ -12,7 +12,7 @@
     <meta name="format-detection" content="telephone=no" />
   </.head>
   <.body_tag conn={@conn} id="top">
-    <%!-- <.cookie_law 
+    <%!-- <.cookie_law
       button_text="OK"
       info_link="/privacy"
       info_text="Privacy">

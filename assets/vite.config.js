@@ -4,41 +4,41 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    port: 3333
+    port: 3333,
   },
   css: {
-    devSourcemap: true
+    devSourcemap: true,
   },
   build: {
     manifest: false,
     emptyOutDir: false,
-    target: 'es2015',
+    target: 'modules',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        admin: 'src/main.js'
+        admin: 'src/main.js',
       },
       output: {
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
-      }
+        assetFileNames: `assets/[name].[ext]`,
+      },
     },
     terserOptions: {
       mangle: true,
       safari10: true,
       output: {
-        comments: false
+        comments: false,
       },
       compress: {
         pure_funcs: ['console.info', 'console.debug', 'console.warn'],
         global_defs: {
-          module: false
-        }
-      }
-    }
+          module: false,
+        },
+      },
+    },
   },
 
-  plugins: [svelte()]
+  plugins: [svelte()],
 })

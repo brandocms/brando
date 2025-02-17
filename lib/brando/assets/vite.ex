@@ -250,7 +250,14 @@ defmodule Brando.Assets.Vite do
     @moduledoc false
     alias Brando.Assets.Vite.Manifest
 
-    def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
+    def static_path(file, strip_vsn \\ nil)
+    def static_path(file, nil), do: Brando.helpers().static_path(Brando.endpoint(), file)
+
+    def static_path(file, :strip_vsn) do
+      Brando.endpoint()
+      |> Brando.helpers().static_path(file)
+      |> String.replace("?vsn=d", "")
+    end
 
     def main_css(scope \\ :app) do
       manifest = Manifest.read(scope)
@@ -271,7 +278,7 @@ defmodule Brando.Assets.Vite do
       digested_scripts =
         js_files
         |> Enum.reduce([], fn file, acc ->
-          digested_file = static_path(file)
+          digested_file = static_path(file, :strip_vsn)
 
           acc ++
             [
@@ -279,14 +286,6 @@ defmodule Brando.Assets.Vite do
             ]
         end)
         |> Enum.join("\n")
-
-      # digested_vendor =
-      #   if vendor_file do
-      #     digested_vendor_file = static_path(vendor_file)
-      #     "<link rel=\"modulepreload\" phx-track-static href=\"#{digested_vendor_file}\">"
-      #   else
-      #     ""
-      #   end
 
       [digested_scripts]
     end
@@ -300,7 +299,7 @@ defmodule Brando.Assets.Vite do
           []
         else
           Enum.reduce(Enum.with_index(legacy_files), [], fn {file, idx}, acc ->
-            digested_entry = static_path(file)
+            digested_entry = static_path(file, :strip_vsn)
 
             acc ++
               [
