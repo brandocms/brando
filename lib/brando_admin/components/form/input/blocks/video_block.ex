@@ -315,6 +315,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     """
   end
 
+  def handle_event("focus", _, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("url", params, socket) do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
