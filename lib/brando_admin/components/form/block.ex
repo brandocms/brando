@@ -1088,6 +1088,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:module_class, fn -> nil end)
     |> assign_new(:module_code, fn -> nil end)
     |> assign_new(:module_type, fn -> nil end)
+    |> assign_new(:module_color, fn -> :blue end)
     |> assign_new(:is_datasource?, fn -> false end)
     |> assign_new(:has_table_template?, fn -> false end)
     |> assign_new(:table_template, fn -> nil end)
@@ -1125,6 +1126,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_class, fn -> module.class end)
         |> assign_new(:module_code, fn -> module.code end)
         |> assign_new(:module_type, fn -> module.type end)
+        |> assign_new(:module_color, fn -> module.color end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
         |> assign_new(:table_template, fn ->
@@ -1422,6 +1424,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
         module_class={@module_class}
+        module_color={@module_color}
+        module_name={@module_name}
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
@@ -1440,7 +1444,6 @@ defmodule BrandoAdmin.Components.Form.Block do
           |> show_modal(@module_picker_id)
         }
         has_children?={@has_children?}
-        module_name={@module_name}
       >
         <div
           :if={@has_children?}
@@ -1512,6 +1515,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
+        module_color={@module_color}
         module_datasource_module_label={@module_datasource_module_label}
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
@@ -1544,6 +1548,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         insert_block={JS.push("insert_block_entry", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
+        module_color={@module_color}
       />
     </div>
     """
@@ -1897,6 +1902,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :insert_child_block, :any, default: nil
   attr :insert_multi_block, :any, default: nil
   attr :module_name, :string, default: nil
+  attr :module_color, :string, default: nil
   attr :module_datasource_module_label, :string, default: ""
   attr :module_datasource_type, :string, default: ""
   attr :module_datasource_query, :string, default: ""
@@ -1937,6 +1943,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         data-block-uid={@uid}
         data-block-type={@type}
         data-module-id={@module_id}
+        data-color={@module_color}
         class="block"
         phx-hook="Brando.Block"
       >

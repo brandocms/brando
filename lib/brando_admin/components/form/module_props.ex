@@ -77,6 +77,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
         <.live_component
           module={Input.Select}
+          id={"#{@form.id}-color"}
+          field={@form[:color]}
+          opts={[
+            options: [
+              %{label: gettext("Blue"), value: :blue},
+              %{label: gettext("Emerald"), value: :emerald},
+              %{label: gettext("Peach"), value: :peach},
+              %{label: gettext("Pink"), value: :pink}
+            ]
+          ]}
+        />
+
+        <.live_component
+          module={Input.Select}
           id={"#{@form.id}-parent_id"}
           field={@form[:parent_id]}
           opts={[options: @available_parents]}

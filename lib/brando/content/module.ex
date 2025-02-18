@@ -41,7 +41,7 @@ defmodule Brando.Content.Module do
   identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"
   persist_identifier false
 
-  @derived_fields ~w(id type name sequence namespace help_text multi class code refs vars svg deleted_at)a
+  @derived_fields ~w(id type name sequence namespace help_text multi color class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait Brando.Trait.Sequenced
@@ -58,6 +58,7 @@ defmodule Brando.Content.Module do
     attribute :code, :text, required: true
     attribute :svg, :text
     attribute :multi, :boolean
+    attribute :color, :enum, values: [:blue, :emerald, :pink, :peach], default: :blue
 
     attribute :datasource, :boolean, default: false
     attribute :datasource_module, :string

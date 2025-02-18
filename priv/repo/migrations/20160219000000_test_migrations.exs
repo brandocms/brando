@@ -204,6 +204,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :refs, :jsonb
       add :svg, :string
       add :type, :string
+      add :color, :string, default: "blue"
       add :multi, :boolean
       add :datasource, :boolean
       add :datasource_module, :string
