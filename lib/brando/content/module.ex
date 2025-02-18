@@ -86,8 +86,6 @@ defmodule Brando.Content.Module do
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
-
-    relation :blocks, :has_many, module: Brando.Content.Block
   end
 
   listings do

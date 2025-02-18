@@ -165,18 +165,25 @@ defmodule Brando.Content do
             change_fields: [
               :class,
               name: &__MODULE__.duplicate_module_name/2,
-              vars: &__MODULE__.duplicate_vars/2
+              vars: &__MODULE__.duplicate_vars/2,
+              refs: &__MODULE__.duplicate_refs/2
             ]}
+
+  def duplicate_module_name(entry, _) do
+    Enum.reduce(entry.name, %{}, fn {k, v}, acc -> Map.put(acc, k, "#{v}_dupl") end)
+  end
 
   def duplicate_vars(entry, _) do
     entry
     |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
-    |> Enum.map(&Map.put(&1, :id, nil))
+    |> Brando.Villain.remove_pk_from_vars()
   end
 
-  def duplicate_module_name(entry, _) do
-    Enum.reduce(entry.name, %{}, fn {k, v}, acc -> Map.put(acc, k, "#{v}_dupl") end)
+  def duplicate_refs(entry, _) do
+    entry
+    |> Map.get(:refs)
+    |> Brando.Villain.add_uid_to_refs()
   end
 
   @doc """
