@@ -55,6 +55,10 @@ export default class Toast {
       this.popup.innerHTML = `<div class="message">[${this.msgNo}] &rarr; ${message}</div>`
       document.body.appendChild(this.popup)
       gsap.set(this.popup, { opacity: 0 })
+      this.popup.setAttribute('popover', '')
+      if (typeof this.popup.showPopover === 'function') {
+        this.popup.showPopover()
+      }
       gsap.to(this.popup, { opacity: 1, duration: 0.15 })
     } else {
       this.msgNo++
