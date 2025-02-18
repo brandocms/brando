@@ -235,7 +235,7 @@ defmodule Brando.HTML do
     <link
       :for={{type, font} <- @fonts}
       rel="preload"
-      href={Brando.helpers().static_path(@conn, font)}
+      href={Brando.endpoint().static_path(font)}
       as="font"
       type={"font/#{type}"}
       crossorigin={true}
