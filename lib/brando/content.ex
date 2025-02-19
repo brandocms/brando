@@ -178,6 +178,7 @@ defmodule Brando.Content do
     |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
     |> Brando.Villain.remove_pk_from_vars()
+    |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
   end
 
   def duplicate_refs(entry, _) do
