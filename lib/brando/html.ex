@@ -228,7 +228,6 @@ defmodule Brando.HTML do
 
   """
   attr :fonts, :list, default: []
-  attr :conn, :map, required: true
 
   def preload_fonts(assigns) do
     ~H"""
