@@ -1,18 +1,17 @@
 # Release Instructions
 
-  1. git-flow: Start release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!
-  2. Bump version in `CHANGELOG`
-  3. Bump version in `mix.exs`
-  5. Bump version in `README.md` installation instructions (if we add to hex)
-  6. Update translations:
+  1. Bump version in `CHANGELOG`
+     Bump version in `mix.exs`
+     Bump version in `README.md` installation instructions (if we add to hex)
+     Bump version in `assets/package.json`
+     Bump Brando version in installation template: `priv/templates/brando.install/mix.exs`
+  2. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
-  7. `$ mix test`
-  8. Commit with `Prepare X.X.X release`
-  9. git-flow: finish release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!
-     - tag message: Release vX.X.X
-  10. Switch to master. Push.
-  11. Push `X.X.X` tag to `origin`
-  12. Switch to develop-branch.
-  13. Bump version in CHANGELOG + -dev
-  14. Bump version in mix.exs + -dev
-  15. Commit `develop` with `Start X.X.X development`. Push
+  3. `$ mix test`
+  4. `$ cd e2e/e2e_project && ./test_e2e.sh`
+  5.  Commit with `Release X.X.X`
+  6.  Tag with `vX.X.X`
+  7.  Push `vX.X.X` tag to `origin`
+  8.  Bump version in `CHANGELOG` + -dev
+  9.  Bump version in `mix.exs` + -dev
+  10. Commit with `Start X.X.X development`. Push
