@@ -603,7 +603,7 @@ defmodule Brando.HTML do
       <.include_assets only_css />
       <.render_palettes_css />
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
-      <.preload_fonts conn={@conn} fonts={@fonts} />
+      <.preload_fonts fonts={@fonts} />
       <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
       <.include_assets ignored_chunks={@ignored_chunks} only_js />
       <%= if @deferred_scripts != [] do %><%= render_slot(@deferred_scripts) %><% end %>
