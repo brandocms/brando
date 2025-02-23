@@ -22,8 +22,6 @@ defmodule BrandoAdmin.Components.Form do
 
 
   """
-  alias BrandoAdmin.Components.Form.Input.MultiSelect
-  alias BrandoAdmin.Components.Form.Input.Select
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
 
@@ -32,7 +30,6 @@ defmodule BrandoAdmin.Components.Form do
   import Phoenix.LiveView.TagEngine
 
   alias Brando.Villain
-
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.SplitDropdown
   alias BrandoAdmin.Components.Content
@@ -42,6 +39,8 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
   alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
+  alias BrandoAdmin.Components.Form.Input.MultiSelect
+  alias BrandoAdmin.Components.Form.Input.Select
   alias BrandoAdmin.Components.Form.AlternatesDrawer
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.MetaDrawer

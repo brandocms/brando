@@ -79,6 +79,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           module={Input.Select}
           id={"#{@form.id}-color"}
           field={@form[:color]}
+          inline={true}
           opts={[
             options: [
               %{label: gettext("Blue"), value: :blue},
@@ -100,6 +101,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           module={Input.Select}
           id={"#{@form.id}-table_template_id"}
           field={@form[:table_template_id]}
+          inline={true}
           opts={[options: @available_table_templates]}
         />
 
@@ -400,6 +402,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                 module={Input.Select}
                                 id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-placeholder"}
                                 field={block_data[:placeholder]}
+                                inline={true}
                                 opts={[
                                   options: [
                                     %{label: "SVG", value: :svg},
@@ -601,6 +604,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                                     id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-tpl-placeholder"}
                                     field={tpl_data[:placeholder]}
                                     label={gettext("Placeholder")}
+                                    inline={true}
                                     opts={[
                                       options: [
                                         %{label: "SVG", value: :svg},

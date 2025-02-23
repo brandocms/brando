@@ -264,6 +264,8 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   border: 1px dashed #aaa;
   color: var(--brando-color-dark);
   z-index: 2;
+  font-family: "Mono";
+  font-size: 12px;
 
   &.hidden {
     display: none;
@@ -271,6 +273,9 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
   button,
   a {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
     border: none;
     background-color: #fbfbfb;
     width: max-content;
