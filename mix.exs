@@ -116,7 +116,7 @@ defmodule Brando.Mixfile do
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
-      {:ecto_nested_changeset, "~> 0.2"},
+      {:ecto_nested_changeset, "~> 1.0"},
       {:nimble_csv, "~> 1.2"},
       {:tzdata, "~> 1.1"},
       {:polymorphic_embed, "~> 5.0"},
