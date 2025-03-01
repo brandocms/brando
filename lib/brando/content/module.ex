@@ -105,6 +105,7 @@ defmodule Brando.Content.Module do
       filter label: t("Name"), filter: "name"
       filter label: t("Namespace"), filter: "namespace"
       filter label: t("Class"), filter: "class"
+      filter label: t("Code"), filter: "code"
 
       selection_action label: t("Export modules"),
                        event:

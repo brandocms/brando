@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-#: lib/brando/pages/page.ex:275
+#: lib/brando/pages/page.ex:271
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
@@ -21,17 +21,17 @@ msgstr ""
 msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/pages/page.ex:247
+#: lib/brando/pages/page.ex:243
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/pages/page.ex:292
+#: lib/brando/pages/page.ex:288
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:249
+#: lib/brando/pages/page.ex:245
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
@@ -76,59 +76,59 @@ msgstr ""
 msgid "Edit sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:284
+#: lib/brando/pages/page.ex:280
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr ""
 
-#: lib/brando/pages/page.ex:280
+#: lib/brando/pages/page.ex:276
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:266
+#: lib/brando/pages/page.ex:262
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/pages/page.ex:285
+#: lib/brando/pages/page.ex:281
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr ""
 
-#: lib/brando/pages/page.ex:281
+#: lib/brando/pages/page.ex:277
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr ""
 
-#: lib/brando/pages/page.ex:297
+#: lib/brando/pages/page.ex:293
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr ""
 
-#: lib/brando/pages/page.ex:271
+#: lib/brando/pages/page.ex:267
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:251
+#: lib/brando/pages/page.ex:247
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/pages/page.ex:290
+#: lib/brando/pages/page.ex:286
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr ""
 
 #: lib/brando/pages/page.ex:135
-#: lib/brando/pages/page.ex:256
+#: lib/brando/pages/page.ex:252
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
 #: lib/brando/pages/page.ex:134
-#: lib/brando/pages/page.ex:257
+#: lib/brando/pages/page.ex:253
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""

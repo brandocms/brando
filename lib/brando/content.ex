@@ -70,6 +70,9 @@ defmodule Brando.Content do
       {:class, class}, query ->
         from(q in query, where: ilike(q.class, ^"%#{class}%"))
 
+      {:code, code}, query ->
+        from(q in query, where: ilike(q.code, ^"%#{code}%"))
+
       {:ids, ids}, query ->
         from(q in query, where: q.id in ^ids)
 

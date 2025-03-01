@@ -10,12 +10,12 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-#: lib/brando/sites/identity.ex:134
+#: lib/brando/sites/identity.ex:135
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:135
+#: lib/brando/sites/identity.ex:136
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr ""

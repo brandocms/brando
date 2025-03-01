@@ -61,7 +61,7 @@ msgstr "Tittel"
 msgid "Wrapper"
 msgstr "Innpakningskode"
 
-#: lib/brando/pages/fragment.ex:115
+#: lib/brando/pages/fragment.ex:114
 #, elixir-autogen, elixir-format
 msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
 msgstr "Du kan få tilgang til fragmentets rendrede innhold som <code>{{ content }}</code>"

@@ -9,23 +9,14 @@
 msgid ""
 msgstr ""
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/navigation/menu.ex:73
+#: lib/brando/images/image.ex:103
 #, elixir-autogen, elixir-format
-msgid "Key"
+msgid "x"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:77
+#: lib/brando/images/image.ex:104
 #, elixir-autogen, elixir-format
-msgid "Link"
-msgstr ""
-
-#: lib/brando/navigation/item.ex:45
-#, elixir-autogen, elixir-format
-msgid "menu item"
-msgstr ""
-
-#: lib/brando/navigation/item.ex:46
-#, elixir-autogen, elixir-format
-msgid "menu items"
+msgid "y"
 msgstr ""
