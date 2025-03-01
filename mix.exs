@@ -63,7 +63,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "1.7.19"},
+      {:phoenix, "1.7.20"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.20"},
@@ -71,7 +71,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.12.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.4", override: true},
+      {:phoenix_live_view, "1.0.5"},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -116,10 +116,10 @@ defmodule Brando.Mixfile do
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
-      {:ecto_nested_changeset, "~> 0.2"},
+      {:ecto_nested_changeset, "~> 1.0.0"},
       {:nimble_csv, "~> 1.2"},
       {:tzdata, "~> 1.1"},
-      {:polymorphic_embed, "~> 5.0"},
+      {:polymorphic_embed, "~> 5.0.1"},
 
       # tracing
       {:opentelemetry_api, "~> 1.4"},
