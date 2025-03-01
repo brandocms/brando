@@ -580,6 +580,7 @@ defmodule Brando.Villain.Parser do
             lightbox: lightbox,
             placeholder: placeholder,
             srcset: srcset || default_srcset,
+            sizes: "auto",
             prefix: Brando.Utils.media_url()
           ]
         }
