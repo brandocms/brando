@@ -423,15 +423,16 @@ defmodule BrandoAdmin.Components.Form.Subform do
         struct -> struct
       end
 
+    # nilify all unloaded assocs
+    processed_default = sanitize_associations(default)
     field_name = socket.assigns.subform.name
-
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
     updated_field =
       changeset
       |> Ecto.Changeset.get_field(field_name)
-      |> Kernel.++([default])
+      |> Kernel.++([processed_default])
 
     updated_changeset =
       case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
@@ -577,5 +578,18 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> Ecto.Changeset.get_field(String.to_existing_atom(transform_field), %{path: ""})
 
     (is_map(field_map) && Brando.Utils.try_path(field_map, [:path])) || ""
+  end
+
+  defp sanitize_associations(struct) do
+    struct_type = struct.__struct__
+
+    struct_data =
+      struct
+      |> Map.from_struct()
+      |> Enum.map(fn {key, value} ->
+        {key, if(match?(%Ecto.Association.NotLoaded{}, value), do: nil, else: value)}
+      end)
+
+    struct!(struct_type, struct_data)
   end
 end
