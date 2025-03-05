@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
+  alias Brando.Exception.BlueprintError
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
@@ -211,7 +212,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:open, false)
      |> assign(:filter_string, "")
-     |> assign_new(:publish, fn -> true end)}
+     |> assign_new(:publish, fn -> true end)
+     |> assign(:initial_run, true)}
   end
 
   def update(%{action: :force_refresh_options}, socket) do
@@ -249,7 +251,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
      |> assign_new(:inner_block, fn -> nil end)
-     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)}
+     |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)
+     |> assign_relation_schema(assigns.field)
+     |> maybe_register_mutation_listener()
+     |> assign(:initial_run, fn -> false end)}
   end
 
   def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
@@ -521,5 +526,54 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:selected_option, nil)
      |> assign_label()}
+  end
+
+  defp maybe_register_mutation_listener(%{assigns: %{initial_run: true, relation_schema: schema}} = socket)
+       when not is_nil(schema) do
+    myself = socket.assigns.myself
+    send(self(), {:register_mutation_listener, schema, myself})
+    socket
+  end
+
+  defp maybe_register_mutation_listener(socket) do
+    socket
+  end
+
+  defp assign_relation_schema(socket, field) do
+    assign_new(socket, :relation_schema, fn ->
+      module = field.form.data.__struct__
+      update_relation = socket.assigns.update_relation
+
+      if update_relation do
+        {relation_field, _} = update_relation
+        %{opts: %{module: rel_module}} = Brando.Blueprint.Relations.__relation__(module, relation_field)
+
+        if !rel_module do
+          raise BlueprintError,
+            message: """
+            Missing relation module for multi select
+
+            The target module in a select with an `:update_relation` option
+            must have a `module: MySchema` defined for the associated schema.
+
+            For instance, for this multi select:
+
+                input :category_id, :select,
+                  options: &__MODULE__.get_categories/2,
+                  update_relation: {:category, &__MODULE__.get_category/1},
+                  resetable: true,
+                  label: t("Category")
+
+            we need the relation to have the `module` defined:
+
+                relations do
+                  relation :category, :belongs_to, module: Cases.Category
+
+            """
+        end
+
+        rel_module
+      end
+    end)
   end
 end

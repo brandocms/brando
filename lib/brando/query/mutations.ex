@@ -13,8 +13,9 @@ defmodule Brando.Query.Mutations do
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
     {custom_changeset, opts} = Keyword.pop(opts, :changeset)
-    notify? = Keyword.get(opts, :notify?, true)
     changeset_fun = custom_changeset || (&module.changeset/5)
+    notify? = Keyword.get(opts, :notify?, true)
+    pubsub? = Keyword.get(opts, :pubsub?, true)
 
     changeset =
       module
@@ -42,6 +43,14 @@ defmodule Brando.Query.Mutations do
           end
         end
 
+        if pubsub? do
+          Phoenix.PubSub.broadcast(
+            Brando.pubsub(),
+            "brando:mutations:#{inspect(module)}",
+            {:mutation, module, entry, :created}
+          )
+        end
+
         callback_block.(entry)
 
       err ->
@@ -52,6 +61,7 @@ defmodule Brando.Query.Mutations do
   def create_with_changeset(module, changeset, user, callback_block, opts) do
     {preloads, _opts} = Keyword.pop(opts, :preloads)
     notify? = Keyword.get(opts, :notify?, true)
+    pubsub? = Keyword.get(opts, :pubsub?, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :insert),
@@ -71,6 +81,14 @@ defmodule Brando.Query.Mutations do
           nil -> nil
           identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
         end
+      end
+
+      if pubsub? do
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          "brando:mutations:#{inspect(module)}",
+          {:mutation, module, entry, :created}
+        )
       end
 
       callback_block.(entry)
@@ -135,6 +153,7 @@ defmodule Brando.Query.Mutations do
 
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     show_notification = Keyword.get(opts, :show_notification, true)
+    pubsub? = Keyword.get(opts, :pubsub, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
@@ -155,6 +174,14 @@ defmodule Brando.Query.Mutations do
             nil -> nil
             identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
           end
+        end
+
+        if pubsub? do
+          Phoenix.PubSub.broadcast(
+            Brando.pubsub(),
+            "brando:mutations:#{inspect(module)}",
+            {:mutation, module, entry, :updated}
+          )
         end
 
         callback_block.(entry)
@@ -352,6 +379,12 @@ defmodule Brando.Query.Mutations do
       nil -> nil
       identifier -> Notifications.push_mutation(gettext("deleted"), identifier, user)
     end
+
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:mutations:#{inspect(module)}",
+      {:mutation, module, entry, :deleted}
+    )
 
     callback_block.(entry)
   end

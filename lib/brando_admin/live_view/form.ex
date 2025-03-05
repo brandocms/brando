@@ -27,6 +27,8 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_active_field, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_modules, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_focal_point, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutations, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutation_listener, unquote(schema)}})
 
       unless unquote(skip_image_hooks) do
         on_mount({BrandoAdmin.LiveView.Form, {:hooks_images, unquote(schema)}})
@@ -44,6 +46,7 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_entry_id(entry_id)
         |> assign_title()
+        |> assign(:mutation_listeners, %{})
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
@@ -64,6 +67,7 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_schema(schema)
         |> assign_entry_id(nil)
         |> assign_title()
+        |> assign(:mutation_listeners, %{})
 
       {:cont, socket}
     else
@@ -130,6 +134,26 @@ defmodule BrandoAdmin.LiveView.Form do
        :b_form_modules,
        :handle_info,
        &handle_hooks_modules_info/2
+     )}
+  end
+
+  def on_mount({:hooks_mutation_listener, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_mutation_listener,
+       :handle_info,
+       &handle_hooks_mutation_listener_info/2
+     )}
+  end
+
+  def on_mount({:hooks_mutations, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_mutations,
+       :handle_info,
+       &handle_hooks_mutations_info/2
      )}
   end
 
@@ -354,6 +378,32 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_modules_info(_, socket), do: {:cont, socket}
+
+  defp handle_hooks_mutation_listener_info({:register_mutation_listener, schema, target}, socket) do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:mutations:#{inspect(schema)}")
+
+    {:halt,
+     update(socket, :mutation_listeners, fn mls ->
+       Map.update(mls, schema, [target], &[target | &1])
+     end)}
+  end
+
+  defp handle_hooks_mutation_listener_info(_, socket), do: {:cont, socket}
+
+  defp handle_hooks_mutations_info({:mutation, module, _entry, _action}, socket) do
+    targets = Map.get(socket.assigns.mutation_listeners, module, [])
+
+    for target <- targets do
+      send_update(
+        target,
+        action: :force_refresh_options
+      )
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_mutations_info(_, socket), do: {:cont, socket}
 
   defp assign_schema(socket, schema) do
     assign_new(socket, :schema, fn ->
