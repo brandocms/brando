@@ -42,6 +42,7 @@ defmodule Brando.Blueprint.Relations.Dsl do
         doc: "Relation options"
       ]
     ],
+    modules: [:opts],
     transform: {__MODULE__, :transform, []}
   }
 

@@ -71,6 +71,7 @@ defmodule Brando.Blueprint.Attributes.Dsl do
         doc: "Attribute options"
       ]
     ],
+    modules: [:opts],
     transform: {__MODULE__, :transform, []}
   }
 
