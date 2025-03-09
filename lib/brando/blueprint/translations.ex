@@ -34,7 +34,7 @@ defmodule Brando.Blueprint.Translations do
   end
 
   defmacro t(msgid, schema) do
-    schema = Macro.expand(schema, __CALLER__)
+    schema = Macro.expand_literals(schema, %{__CALLER__ | function: {:t, 2}})
     domain = schema.__naming__().domain
     schema = schema.__naming__().schema
 
