@@ -8,7 +8,7 @@ defmodule <%= application_module %>.MixProject do
     [
       app: :<%= application_name %>,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.14.1 or ~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "1.7.19"},
+      {:phoenix, "~> 1.7.19"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -62,7 +62,7 @@ defmodule <%= application_module %>.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "1.0.4", override: true},
+      {:phoenix_live_view, "~> 1.0.4"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps

@@ -8,7 +8,7 @@ defmodule E2eProject.MixProject do
     [
       app: :e2e_project,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.14.1 or ~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
