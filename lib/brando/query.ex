@@ -144,47 +144,85 @@ defmodule Brando.Query do
         end
       end
   """
-  defmacro query(:list, module, do: block),
-    do: query_list(Macro.expand(module, __CALLER__), block)
+  defmacro query(:list, module, do: block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:query, 3}})
+    query_list(module, block)
+  end
 
-  defmacro query(:single, module, do: block),
-    do: query_single(Macro.expand(module, __CALLER__), block)
+  defmacro query(:single, module, do: block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:query, 3}})
+    query_single(module, block)
+  end
 
-  defmacro mutation(:create, {module, opts}),
-    do: mutation_create({Macro.expand(module, __CALLER__), opts})
+  defmacro mutation(:create, {module, opts}) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_create({module, opts})
+  end
 
-  defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
+  defmacro mutation(:create, module) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_create(Macro.expand(module, __CALLER__))
+  end
 
-  defmacro mutation(:update, {module, opts}),
-    do: mutation_update({Macro.expand(module, __CALLER__), opts})
+  defmacro mutation(:update, {module, opts}) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_update({module, opts})
+  end
 
-  defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
+  defmacro mutation(:update, module) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_update(module)
+  end
 
-  defmacro mutation(:delete, {module, opts}),
-    do: mutation_delete({Macro.expand(module, __CALLER__), opts})
+  defmacro mutation(:delete, {module, opts}) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_delete({module, opts})
+  end
 
-  defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
+  defmacro mutation(:delete, module) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_delete(module)
+  end
 
-  defmacro mutation(:duplicate, {module, opts}),
-    do: mutation_duplicate({Macro.expand(module, __CALLER__), opts})
+  defmacro mutation(:duplicate, {module, opts}) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_duplicate({module, opts})
+  end
 
-  defmacro mutation(:duplicate, module),
-    do: mutation_duplicate(Macro.expand(module, __CALLER__))
+  defmacro mutation(:duplicate, module) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_duplicate(module)
+  end
 
-  defmacro mutation(:create, module, do: callback_block),
-    do: mutation_create(Macro.expand(module, __CALLER__), callback_block)
+  defmacro mutation(:create, module, do: callback_block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_create(module, callback_block)
+  end
 
-  defmacro mutation(:update, {module, opts}, do: callback_block),
-    do: mutation_update({Macro.expand(module, __CALLER__), opts}, callback_block)
+  defmacro mutation(:update, {module, opts}, do: callback_block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_update({module, opts}, callback_block)
+  end
 
-  defmacro mutation(:update, module, do: callback_block),
-    do: mutation_update(Macro.expand(module, __CALLER__), callback_block)
+  defmacro mutation(:update, module, do: callback_block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_update(module, callback_block)
+  end
 
-  defmacro mutation(:delete, module, do: callback_block),
-    do: mutation_delete(Macro.expand(module, __CALLER__), callback_block)
+  defmacro mutation(:delete, module, do: callback_block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
+    mutation_delete(module, callback_block)
+  end
 
-  defmacro filters(module, do: block), do: filter_query(module, block)
-  defmacro matches(module, do: block), do: match_query(module, block)
+  defmacro filters(module, do: block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:filters, 2}})
+    filter_query(module, block)
+  end
+
+  defmacro matches(module, do: block) do
+    module = Macro.expand_literals(module, %{__CALLER__ | function: {:matches, 2}})
+    match_query(module, block)
+  end
 
   defp query_list(module, block) do
     source = module.__schema__(:source)
