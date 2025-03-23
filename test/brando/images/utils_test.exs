@@ -1,9 +1,7 @@
 defmodule Brando.Images.UtilsTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Plug.Test
   use RouterHelper
-
   import Brando.Images.Utils
 
   test "get_sized_path/2 binary" do

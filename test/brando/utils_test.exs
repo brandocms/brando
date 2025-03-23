@@ -1,8 +1,8 @@
 defmodule Brando.UtilsTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
-  use Plug.Test
 
+  import Plug.Test
   import Brando.Utils
   import ExUnit.CaptureIO
 

@@ -1,7 +1,9 @@
 defmodule Brando.Plug.SentryUserContextTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Plug.Test
+
+  import Plug.Test
+  import Plug.Conn
 
   alias Brando.Factory
   alias Brando.Plug.SentryUserContext

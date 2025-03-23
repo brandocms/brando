@@ -2,7 +2,6 @@ defmodule Brando.Utils.SchemaTest do
   use ExUnit.Case
   use Brando.ConnCase
   use BrandoIntegration.TestCase
-  use Plug.Test
 
   alias Brando.Factory
   alias Brando.Utils
