@@ -21,10 +21,13 @@ function HMREuropa() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: './',
   server: {
+    host: 'localhost',
     port: 3000,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
+    cors: 'localhost',
+    hmr: {
+      port: 3000,
     },
   },
   css: {
@@ -32,9 +35,10 @@ export default defineConfig({
   },
   build: {
     manifest: 'manifest.json',
+    cssMinify: 'lightningcss',
+    minify: 'terser',
     emptyOutDir: false,
-    target: 'modules',
-    outDir: '../../priv/static', // <- Phoenix expects our files here
+    outDir: '../web/assets',
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
@@ -44,34 +48,12 @@ export default defineConfig({
     },
     terserOptions: {
       mangle: true,
-      safari10: true,
-      output: {
-        comments: false,
-      },
+      output: { comments: false },
       compress: {
         pure_funcs: ['console.info', 'console.debug', 'console.warn'],
-        global_defs: {
-          module: false,
-        },
       },
     },
   },
 
-  plugins: [
-    HMREuropa(),
-    legacy({
-      // The browsers that must be supported by your legacy bundle.
-      // https://babeljs.io/docs/en/babel-preset-env#targets
-      targets: ['> 0.5%', 'last 2 versions', 'Firefox ESR', 'not dead'],
-      // Define which polyfills your legacy bundle needs. They will be loaded
-      // from the Polyfill.io server. See the "Polyfills" section for more info.
-      additionalLegacyPolyfills: [
-        'intersection-observer',
-        'custom-event-polyfill',
-        'element-polyfill',
-        'picturefill',
-      ],
-      corejs: true,
-    }),
-  ],
+  plugins: [HMREuropa(), legacy({})],
 })
