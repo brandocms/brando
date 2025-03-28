@@ -63,7 +63,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "1.7.20"},
+      {:phoenix, "1.7.21"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.20"},
