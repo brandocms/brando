@@ -369,5 +369,13 @@ end
        marked_as_deleted: false
      }
    ],
-   vars: [],
+   vars: [
+     %Brando.Content.Var{
+      type: :string,
+      label: "String label",
+      key: "string_label",
+      important: true,
+      value: "test value for string label",
+    }
+   ]
  } |> E2eProject.Repo.insert!()

@@ -34,6 +34,13 @@ test('creates a simple page', async ({ page }) => {
     page.locator('#block-field-blocks-module-picker')
   ).not.toBeVisible()
   await expect(page.getByText('Module | Single asset')).toBeVisible()
+
+  // ensure that we can edit the module's var and interact with it afterwards
+  await page.getByRole('textbox', { name: 'String label' }).click()
+  await page.getByRole('textbox', { name: 'String label' }).fill('New Value')
+
+  await syncLV(page)
+
   await page.getByRole('button', { name: 'Video' }).click()
   await page.getByRole('button', { name: 'Configure video block' }).click()
 
