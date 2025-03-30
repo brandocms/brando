@@ -1401,12 +1401,11 @@ defmodule BrandoAdmin.Components.Form do
             class="secondary"
             type="button"
             phx-click={duplicate_image(@edit_image, @myself)}
-            phx-page-loading
           >
             {gettext("Duplicate image")}
           </button>
 
-          <button class="secondary" type="button" phx-page-loading phx-click={reset_image_field(@myself)}>
+          <button class="secondary" type="button" phx-click={reset_image_field(@myself)}>
             {gettext("Reset image field")}
           </button>
         </div>

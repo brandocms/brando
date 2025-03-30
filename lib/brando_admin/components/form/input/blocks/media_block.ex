@@ -136,42 +136,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
+    ref_description = socket.assigns.ref_description
+    uid = Brando.Utils.generate_uid()
 
-    new_ref_block =
+    ref_data =
       case selected_block_type do
         "picture" ->
           %Brando.Villain.Blocks.PictureBlock{
-            uid: Brando.Utils.generate_uid(),
+            uid: uid,
             type: "picture",
             data: block_templates.picture
           }
 
         "video" ->
           %Brando.Villain.Blocks.VideoBlock{
-            uid: Brando.Utils.generate_uid(),
+            uid: uid,
             type: "video",
             data: block_templates.video
           }
 
         "gallery" ->
           %Brando.Villain.Blocks.GalleryBlock{
-            uid: Brando.Utils.generate_uid(),
+            uid: uid,
             type: "gallery",
             data: block_templates.gallery
           }
 
         "svg" ->
           %Brando.Villain.Blocks.SvgBlock{
-            uid: Brando.Utils.generate_uid(),
+            uid: uid,
             type: "svg",
             data: block_templates.svg
           }
       end
 
+    ref = %Brando.Content.Module.Ref{
+      name: ref_name,
+      description: ref_description,
+      data: ref_data
+    }
+
     send_update(target, %{
       event: "update_ref",
-      ref: new_ref_block,
-      ref_name: ref_name
+      ref: ref
     })
 
     {:noreply, socket}

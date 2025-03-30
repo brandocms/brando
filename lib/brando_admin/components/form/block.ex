@@ -654,7 +654,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "update_ref", ref_name: ref_name, ref: new_ref_data}, socket) do
+  def update(%{event: "update_ref", ref: ref}, socket) do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -667,31 +667,39 @@ defmodule BrandoAdmin.Components.Form.Block do
     refs = Ecto.Changeset.get_embed(block_changeset, :refs)
 
     new_refs =
-      Enum.map(refs, fn ref_cs ->
-        if Ecto.Changeset.get_field(ref_cs, :name) == ref_name do
-          Ecto.Changeset.change(ref_cs, data: new_ref_data)
-        else
-          ref_cs
-        end
+      Enum.reduce(refs, [], fn
+        %Changeset{action: :replace}, acc ->
+          acc
+
+        old_ref, acc ->
+          if Changeset.get_field(old_ref, :name) == ref.name do
+            acc ++ List.wrap(ref)
+          else
+            acc ++ List.wrap(old_ref)
+          end
       end)
 
     updated_changeset =
       if belongs_to == :root do
-        block_changeset = Ecto.Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Ecto.Changeset.put_embed(block_changeset, :refs, new_refs)
-        changeset = Ecto.Changeset.put_assoc(changeset, :block, updated_block_changeset)
-
+        block_changeset = Changeset.get_assoc(changeset, :block)
+        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
         render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
-        changeset = Ecto.Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Changeset.put_embed(changeset, :refs, new_refs)
         render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
-    new_form = build_form_from_changeset(updated_changeset, uid, belongs_to)
+    new_form =
+      build_form_from_changeset(
+        updated_changeset,
+        uid,
+        belongs_to
+      )
 
     socket
     |> assign(:form, new_form)
-    |> send_form_to_parent_stream()
+    # |> send_form_to_parent_stream()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
