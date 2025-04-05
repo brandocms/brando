@@ -98,6 +98,23 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  attr :class, :string, default: nil
+  attr :columns, :integer, default: nil
+  attr :offset, :integer, default: nil
+  slot :inner_block, required: true
+
+  def column(assigns) do
+    ~H"""
+    <div class={[
+      @class,
+      @columns && "col-#{@columns}",
+      @offset && "offset-#{@offset}"
+    ]}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
   def field(assigns) do
     attr = Brando.Blueprint.Attributes.__attribute__(assigns.schema, assigns.field.name)
     entry_field = Map.get(assigns.entry, assigns.field.name)
@@ -118,19 +135,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <%= case @field.type do %>
       <% :image -> %>
-        <div class={[
-          @class,
-          @columns && "col-#{@columns}",
-          @offset && "offset-#{@offset}"
-        ]}>
+        <.column class={@class} columns={@columns} offset={@offset}>
           <Content.image image={@entry_field} size={@size || :thumb} />
-        </div>
+        </.column>
       <% :children_button -> %>
-        <div class={[
-          @class,
-          @columns && "col-#{@columns}",
-          @offset && "offset-#{@offset}"
-        ]}>
+        <.column class={@class} columns={@columns} offset={@offset}>
           <.live_component
             module={ChildrenButton}
             id={"#{@entry.id}-children-button"}
@@ -138,27 +147,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             entry={@entry}
             {@field.opts}
           />
-        </div>
+        </.column>
       <% :language -> %>
-        <div class={[
-          @class,
-          @columns && "col-#{@columns}",
-          @offset && "offset-#{@offset}"
-        ]}>
+        <.column class={@class} columns={@columns} offset={@offset}>
           <Badge.language language={@entry_field} />
-        </div>
+        </.column>
       <% :url -> %>
-        <div class={[
-          @class,
-          "col-1",
-          @offset && "offset-#{@offset}"
-        ]}>
+        <.column class={@class} columns={1} offset={@offset}>
           <a href={@schema.__absolute_url__(@entry)} target="_blank">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
               <path fill="none" d="M0 0h24v24H0z" /><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z" />
             </svg>
           </a>
-        </div>
+        </.column>
     <% end %>
     """
   end
@@ -171,6 +172,37 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       action ->
         action
     end)
+  end
+
+  # Action button component
+  attr :id, :string, required: true
+  attr :entry_id, :any, required: true
+  attr :language, :string, required: true
+  attr :event, :any, required: true
+  attr :confirm, :string, default: nil
+  attr :extra_attrs, :list, default: []
+  slot :inner_block, required: true
+
+  def action_button(assigns) do
+    ~H"""
+    <%= if @confirm do %>
+      <button
+        id={@id}
+        phx-hook="Brando.ConfirmClick"
+        phx-confirm-click-message={@confirm}
+        phx-confirm-click={@event}
+        phx-value-language={@language}
+        phx-value-id={@entry_id}
+        {@extra_attrs}
+      >
+        {render_slot(@inner_block)}
+      </button>
+    <% else %>
+      <button id={@id} phx-value-id={@entry_id} phx-value-language={@language} phx-click={@event} {@extra_attrs}>
+        {render_slot(@inner_block)}
+      </button>
+    <% end %>
+    """
   end
 
   attr :schema, :atom
@@ -210,76 +242,62 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <CircleDropdown.render id={@id}>
       <%= if @default_actions? do %>
-        <button
+        <.action_button
           id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
-          phx-value-id={@entry.id}
-          phx-value-language={@language}
-          phx-click="edit_entry"
+          entry_id={@entry.id}
+          language={@language}
+          event="edit_entry"
         >
           {gettext("Edit")} {@translated_singular}
-        </button>
-        <button
+        </.action_button>
+        <.action_button
           id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
-          phx-hook="Brando.ConfirmClick"
-          phx-confirm-click-message={gettext("Are you sure you want to delete this entry?")}
-          phx-confirm-click={JS.push("delete_entry")}
-          phx-value-language={@language}
-          phx-value-id={@entry.id}
+          entry_id={@entry.id}
+          language={@language}
+          event="delete_entry"
+          confirm={gettext("Are you sure you want to delete this entry?")}
         >
           {gettext("Delete")} {@translated_singular}
-        </button>
-        <button
+        </.action_button>
+        <.action_button
           :if={@has_duplicate_fn?}
           id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
-          phx-value-id={@entry.id}
-          phx-value-language={@language}
-          phx-click="duplicate_entry"
+          entry_id={@entry.id}
+          language={@language}
+          event="duplicate_entry"
         >
           {gettext("Duplicate")} {@translated_singular}
-        </button>
-        <button
+        </.action_button>
+        <.action_button
           :for={lang <- @duplicate_langs}
           :if={@duplicate_langs?}
           id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
-          phx-value-id={@entry.id}
-          phx-value-language={lang}
-          phx-click="duplicate_entry_to_language"
+          entry_id={@entry.id}
+          language={lang}
+          event="duplicate_entry_to_language"
         >
           {gettext("Duplicate to")} [{String.upcase(lang)}]
-        </button>
+        </.action_button>
       <% end %>
-      <%= for %{event: event, label: label} = action <- @processed_actions do %>
-        <%= if action.confirm do %>
-          <button
-            id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
-            phx-hook="Brando.ConfirmClick"
-            phx-confirm-click-message={action.confirm}
-            phx-confirm-click={event}
-            phx-value-language={@language}
-            phx-value-id={@entry.id}
-          >
-            {g(@schema, label)}
-          </button>
-        <% else %>
-          <button
-            id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
-            phx-value-id={@entry.id}
-            phx-value-language={@language}
-            phx-click={event}
-          >
-            {g(@schema, label)}
-          </button>
-        <% end %>
-      <% end %>
-      <button
+      <.action_button
+        :for={%{event: event, label: label, confirm: confirm} <- @processed_actions}
+        id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
+        entry_id={@entry.id}
+        language={@language}
+        event={event}
+        confirm={confirm}
+      >
+        {g(@schema, label)}
+      </.action_button>
+      <.action_button
         :if={Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at)}
         id={"action_#{@listing.name}_undelete_#{@entry.id}"}
-        phx-value-id={@entry.id}
-        phx-value-language={@language}
-        phx-click="undelete_entry"
+        entry_id={@entry.id}
+        language={@language}
+        event="undelete_entry"
       >
         {gettext("Undelete")} {@translated_singular}
-      </button>
+      </.action_button>
     </CircleDropdown.render>
     """
   end
@@ -302,6 +320,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
+  # Status components
+  attr :entry, :map, required: true
+  attr :soft_delete?, :boolean, required: true
+
   def status(assigns) do
     publish_at = Map.get(assigns.entry, :publish_at, nil)
 
@@ -311,24 +333,24 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:entry_id, make_id(assigns.entry))
 
     ~H"""
-    <%= if @soft_delete? and @entry.deleted_at do %>
-      <div class="status">
+    <div class="status">
+      <%= if @soft_delete? and @entry.deleted_at do %>
         <div center="true">
-          <svg data-testid="status-deleted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15">
-            <circle r="7.5" cy="7.5" cx="7.5" class="deleted"></circle>
-          </svg>
+          <.status_circle status={:deleted} />
         </div>
-      </div>
-    <% else %>
-      <div class="status">
+      <% else %>
         <div phx-click={toggle_dropdown("#status-dropdown-#{@entry_id}")}>
           <.status_circle status={@entry.status} publish_at={@publish_at} />
           <.status_dropdown id={"status-dropdown-#{@entry_id}"} entry_id={@entry.id} schema={@entry.__struct__} />
         </div>
-      </div>
-    <% end %>
+      <% end %>
+    </div>
     """
   end
+
+  attr :id, :string, required: true
+  attr :entry_id, :any, required: true
+  attr :schema, :any, required: true
 
   def status_dropdown(assigns) do
     assigns = assign(assigns, :statuses, statuses())
@@ -349,6 +371,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     </div>
     """
   end
+
+  attr :status, :atom, required: true
+  attr :publish_at, :any, default: nil
 
   def status_circle(%{status: :pending, publish_at: publish_at} = assigns) when not is_nil(publish_at) do
     ~H"""
@@ -478,7 +503,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     entry_schema = entry.__struct__
 
     if !child_listing do
-      raise "No child listing set for `#{inspect(entry_schema)}`"
+      raise "No child listing set for entry schema `#{inspect(entry_schema)}`. " <>
+              "Check your blueprint configuration for child listings."
     end
 
     assigns =
@@ -492,10 +518,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign_new(:soft_delete?, fn -> entry_schema.has_trait(Trait.SoftDelete) end)
       |> assign_new(:listing, fn ->
         listing_for_schema = Enum.find(child_listing, &(&1.schema == entry_schema))
+
+        if !listing_for_schema do
+          raise "No matching child listing found for entry schema `#{inspect(entry_schema)}`. " <>
+                  "Available child listings: #{inspect(Enum.map(child_listing, & &1.schema))}"
+        end
+
         listing = Enum.find(schema.__listings__(), &(&1.name == listing_for_schema.name))
 
         if !listing do
-          raise "No listing `#{inspect(listing_for_schema.name)}` found for `#{inspect(entry_schema)}`"
+          available_listings = Enum.map(schema.__listings__(), & &1.name)
+
+          raise "No listing `#{inspect(listing_for_schema.name)}` found for `#{inspect(entry_schema)}`. " <>
+                  "Available listings: #{inspect(available_listings)}"
         end
 
         listing
