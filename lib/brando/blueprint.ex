@@ -643,8 +643,8 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
-    if module.__allow_mark_as_deleted__ do
+  defp maybe_mark_for_deletion(%Ecto.Changeset{changes: %{marked_as_deleted: true}} = changeset, module) do
+    if module.__allow_mark_as_deleted__() do
       %{changeset | action: :delete}
     else
       changeset
