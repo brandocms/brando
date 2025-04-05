@@ -504,6 +504,53 @@ defmodule BrandoAdmin.Components.Content.List do
     """
   end
 
+  # Pagination button component
+  attr :page_number, :integer, required: true
+  attr :current_page, :integer, required: true
+  attr :change_page, :any, required: true
+
+  def pagination_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={[@page_number == @current_page && "active"]}
+      phx-click={@change_page}
+      phx-value-page={@page_number - 1}
+    >
+      {@page_number}
+    </button>
+    """
+  end
+
+  # Page size button component
+  attr :page_size, :integer, required: true
+  attr :current_page_size, :integer, required: true
+  attr :change_limit, :any, required: true
+  attr :label, :string, default: nil
+
+  def page_size_button(assigns) do
+    label = assigns.label || to_string(assigns.page_size)
+
+    assigns =
+      assigns
+      |> assign(:is_active, assigns.page_size == assigns.current_page_size)
+      |> assign(:label, label)
+
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "limit-button",
+        @is_active && "active"
+      ]}
+      phx-click={@change_limit}
+      phx-value-limit={@page_size}
+    >
+      {@label}
+    </button>
+    """
+  end
+
   defp pagination(
          %{
            pagination_meta: %{
@@ -512,75 +559,121 @@ defmodule BrandoAdmin.Components.Content.List do
              total_entries: total_entries,
              total_pages: total_pages
            },
-           change_page: change_page
+           change_page: change_page,
+           change_limit: change_limit
          } = assigns
        ) do
+    showing_start = get_showing_start(page_size, current_page)
+    showing_end = get_showing_end(page_size, current_page, total_entries)
+    has_entries = total_entries > 0
+    page_numbers = 1..total_pages
+
     assigns =
       assigns
       |> assign(:change_page, change_page)
+      |> assign(:change_limit, change_limit)
       |> assign(:current_page, current_page)
       |> assign(:total_entries, total_entries)
-      |> assign(:total_pages, total_pages)
       |> assign(:page_size, page_size)
-      |> assign(:showing_start, page_size * current_page - page_size + 1)
-      |> assign(:showing_end, min(page_size * current_page, total_entries))
+      |> assign(:has_entries, has_entries)
+      |> assign(:showing_start, showing_start)
+      |> assign(:showing_end, showing_end)
+      |> assign(:page_numbers, page_numbers)
 
     ~H"""
     <div class="pagination">
       <div class="pagination-entries">
         &rarr; {@total_entries} {gettext("entries")}
-        <%= if @total_entries > 0 do %>
-          | {gettext("showing")} {@showing_start}-{(@showing_end == 0 && @total_entries) ||
-            @showing_end}
+        <%= if @has_entries do %>
+          | {gettext("showing")} {@showing_start}-{@showing_end}
         <% end %>
         — {gettext("Per page:")}
-        <button
-          type="button"
-          class={[
-            "limit-button",
-            @page_size == 25 && "active"
-          ]}
-          phx-click={@change_limit}
-          phx-value-limit={25}
-        >
-          25
-        </button>
-        /
-        <button
-          type="button"
-          class={[
-            "limit-button",
-            @page_size == 50 && "active"
-          ]}
-          phx-click={@change_limit}
-          phx-value-limit={50}
-        >
-          50
-        </button>
-        /
-        <button
-          type="button"
-          class={[
-            "limit-button",
-            @page_size == 0 && "active"
-          ]}
-          phx-click={@change_limit}
-          phx-value-limit={0}
-        >
-          {gettext("All")}
-        </button>
+        <.page_size_button page_size={25} current_page_size={@page_size} change_limit={@change_limit} /> /
+        <.page_size_button page_size={50} current_page_size={@page_size} change_limit={@change_limit} /> /
+        <.page_size_button page_size={0} current_page_size={@page_size} change_limit={@change_limit} label={gettext("All")} />
       </div>
       <div class="pagination-buttons">
-        <button
-          :for={p <- 0..(@total_pages - 1)}
-          type="button"
-          class={[p + 1 == @current_page && "active"]}
-          phx-click={@change_page}
-          phx-value-page={p}
-        >
-          {p + 1}
-        </button>
+        <.pagination_button
+          :for={page_number <- @page_numbers}
+          page_number={page_number}
+          current_page={@current_page}
+          change_page={@change_page}
+        />
       </div>
+    </div>
+    """
+  end
+
+  # Helper functions for pagination
+  defp get_showing_start(page_size, current_page) do
+    page_size * current_page - page_size + 1
+  end
+
+  defp get_showing_end(page_size, current_page, total_entries) do
+    showing_end = min(page_size * current_page, total_entries)
+    # If showing_end is 0 and we have entries, show the total
+    if showing_end == 0 and total_entries > 0, do: total_entries, else: showing_end
+  end
+
+  # Filter input component
+  attr :filter, :map, required: true
+  attr :active_filter, :map, required: true
+  attr :schema, :atom, required: true
+  attr :update_filter, :any, required: true
+  attr :next_filter_key, :any, required: true
+  attr :filters_count, :integer, required: true
+
+  def filter_input(assigns) do
+    ~H"""
+    <div class={[
+      "filter",
+      @filter.filter == @active_filter.filter && "visible"
+    ]}>
+      <button class="filter-key" phx-click={@next_filter_key}>
+        <span>
+          {g(@schema, @filter.label)}
+          <%= if @filters_count > 1 do %>
+            &darr;
+          <% end %>
+        </span>
+      </button>
+      <.form
+        for={%{}}
+        as={:filter_form}
+        phx-change={@update_filter}
+        phx-window-keydown={JS.focus(to: "#listing-filter-#{@filter.filter}")}
+        phx-key="f"
+        onkeydown="return event.key != 'Enter';"
+      >
+        <input
+          id={"listing-filter-#{@filter.filter}"}
+          type="text"
+          name="q"
+          value=""
+          placeholder={gettext("Filter")}
+          autocomplete="off"
+          phx-debounce="400"
+        />
+        <input type="hidden" name="filter" value={@active_filter.filter} />
+      </.form>
+    </div>
+    """
+  end
+
+  # Export button component
+  attr :exports, :list, required: true
+  attr :schema, :atom, required: true
+  attr :select_export, :any, required: true
+
+  def export_dropdown(assigns) do
+    ~H"""
+    <div :if={@exports != []} class="exports">
+      {gettext("Export")}
+      <CircleDropdown.render id="listing-exports-dropdown">
+        <button :for={export <- @exports} type="button" phx-value-name={export.name} phx-click={@select_export}>
+          {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
+        </button>
+      </CircleDropdown.render>
     </div>
     """
   end
@@ -613,50 +706,18 @@ defmodule BrandoAdmin.Components.Content.List do
         <% end %>
 
         <div class="filters">
-          <%= for filter <- @filters do %>
-            <div class={[
-              "filter",
-              filter.filter == @active_filter.filter && "visible"
-            ]}>
-              <button class="filter-key" phx-click={@next_filter_key}>
-                <span>
-                  {g(@schema, filter.label)}
-                  <%= if Enum.count(@filters) > 1 do %>
-                    &darr;
-                  <% end %>
-                </span>
-              </button>
-              <.form
-                for={%{}}
-                as={:filter_form}
-                phx-change={@update_filter}
-                phx-window-keydown={JS.focus(to: "#listing-filter-#{filter.filter}")}
-                phx-key="f"
-                onkeydown="return event.key != 'Enter';"
-              >
-                <input
-                  id={"listing-filter-#{filter.filter}"}
-                  type="text"
-                  name="q"
-                  value=""
-                  placeholder={gettext("Filter")}
-                  autocomplete="off"
-                  phx-debounce="400"
-                />
-                <input type="hidden" name="filter" value={@active_filter.filter} />
-              </.form>
-            </div>
-          <% end %>
+          <.filter_input
+            :for={filter <- @filters}
+            filter={filter}
+            active_filter={@active_filter}
+            schema={@schema}
+            update_filter={@update_filter}
+            next_filter_key={@next_filter_key}
+            filters_count={Enum.count(@filters)}
+          />
         </div>
 
-        <div :if={@exports != []} class="exports">
-          {gettext("Export")}
-          <CircleDropdown.render id="listing-exports-dropdown">
-            <button :for={export <- @exports} type="button" phx-value-name={export.name} phx-click={@select_export}>
-              {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
-            </button>
-          </CircleDropdown.render>
-        </div>
+        <.export_dropdown exports={@exports} schema={@schema} select_export={@select_export} />
       </div>
       <div class="list-filters-and-sorts">
         <%= if @list_opts[:filter] do %>
@@ -782,6 +843,27 @@ defmodule BrandoAdmin.Components.Content.List do
     |> Enum.reject(&(&1 == content_language))
   end
 
+  # Selection action button component
+  attr :event, :string, required: true
+  attr :encoded_ids, :string, required: true
+  attr :language, :string, default: nil
+  slot :inner_block, required: true
+
+  def selection_action_button(assigns) do
+    ~H"""
+    <button phx-click={@event} phx-value-ids={@encoded_ids} {%{phx_value_language: @language} |> filter_nil_attrs()}>
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  # Helper function to filter out nil attributes
+  defp filter_nil_attrs(attrs) do
+    attrs
+    |> Enum.filter(fn {_, v} -> not is_nil(v) end)
+    |> Enum.into(%{})
+  end
+
   def selected_rows(assigns) do
     ctx = assigns.schema.__modules__().context
     singular = assigns.schema.__naming__().singular
@@ -834,21 +916,21 @@ defmodule BrandoAdmin.Components.Content.List do
             id="selected-actions-dropdown-content"
           >
             <%= for lang <- @duplicate_langs do %>
-              <button
-                phx-click="duplicate_selected_to_language"
-                phx-value-language={lang}
-                phx-value-ids={@encoded_selected_rows}
+              <.selection_action_button
+                event="duplicate_selected_to_language"
+                language={lang}
+                encoded_ids={@encoded_selected_rows}
               >
                 {gettext("Duplicate selected to")} [{String.upcase(lang)}]
-              </button>
+              </.selection_action_button>
             <% end %>
-            <button phx-click="delete_selected" phx-value-ids={@encoded_selected_rows}>
+            <.selection_action_button event="delete_selected" encoded_ids={@encoded_selected_rows}>
               {gettext("Delete selected")}
-            </button>
+            </.selection_action_button>
             <%= for %{event: event, label: label} <- @selection_actions do %>
-              <button phx-click={event} phx-value-ids={@encoded_selected_rows}>
+              <.selection_action_button event={event} encoded_ids={@encoded_selected_rows}>
                 {g(@schema, label)}
-              </button>
+              </.selection_action_button>
             <% end %>
           </ul>
         </div>
