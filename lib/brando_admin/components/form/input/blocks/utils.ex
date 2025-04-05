@@ -58,13 +58,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
     block = Ecto.Changeset.get_field(source_changeset, name)
 
     if block == nil do
-      raise ArgumentError, message: """
-      Block is nil!
+      raise ArgumentError,
+        message: """
+        Block is nil!
 
-      id: #{inspect(id)}
-      source_changeset: #{inspect(source_changeset)}
-      name: #{inspect(name)}
-      """
+        id: #{inspect(id)}
+        source_changeset: #{inspect(source_changeset)}
+        name: #{inspect(name)}
+        """
     end
 
     changeset =
@@ -74,13 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
 
     errors = get_errors(changeset)
 
-    changeset = %Ecto.Changeset{
-      changeset
-      | action: parent_action,
-        params: params,
-        errors: errors,
-        valid?: errors == []
-    }
+    changeset = %{changeset | action: parent_action, params: params, errors: errors, valid?: errors == []}
 
     %Phoenix.HTML.Form{
       source: changeset,
@@ -118,13 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
 
         errors = get_errors(changeset)
 
-        changeset = %Ecto.Changeset{
-          changeset
-          | action: parent_action,
-            params: params,
-            errors: errors,
-            valid?: errors == []
-        }
+        changeset = %{changeset | action: parent_action, params: params, errors: errors, valid?: errors == []}
 
         %Phoenix.HTML.Form{
           source: changeset,

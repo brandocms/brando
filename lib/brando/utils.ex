@@ -1277,7 +1277,7 @@ defmodule Brando.Utils do
         form_id = "#{parent_form.id}_#{field_name}_#{id}"
         new_params = Map.put(params, @persistent_id, id)
         new_hidden = [{@persistent_id, id} | form.hidden]
-        new_form = %Phoenix.HTML.Form{form | id: form_id, params: new_params, hidden: new_hidden}
+        new_form = %{form | id: form_id, params: new_params, hidden: new_hidden}
         {new_form, Map.put(seen_ids, id, true)}
       end)
 

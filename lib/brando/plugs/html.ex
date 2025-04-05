@@ -190,7 +190,7 @@ defmodule Brando.Plug.HTML do
     Id...........: ##{alt.id}
     URL template.:
 
-    #{alt.__struct__.__absolute_url_template__}
+    #{alt.__struct__.__absolute_url_template__()}
 
     This usually happens when the alternate entry is missing a preload.
     For instance if you have an entry that requires a preloaded category

@@ -103,16 +103,7 @@ defmodule Brando.Navigation do
             ]}
 
   defp fix_items(items) do
-    Enum.map(items, fn item ->
-      %Item{
-        item
-        | id: nil,
-          link: %Brando.Content.Var{
-            item.link
-            | id: nil
-          }
-      }
-    end)
+    Enum.map(items, fn item -> %{item | id: nil, link: %{item.link | id: nil}} end)
   end
 
   @doc """

@@ -37,7 +37,7 @@ defmodule Brando.Trait.ProtectRole do
         # new user and the new role is lower or equal to the current user
         changeset
 
-      changeset.data.id != nil and current_user.role >= 2 and old_role_val < user_role_val ->
+      changeset.data.id != nil and user_role_val >= 2 and old_role_val < user_role_val ->
         # user is existing user and the old role is lower than the current user
         changeset
 

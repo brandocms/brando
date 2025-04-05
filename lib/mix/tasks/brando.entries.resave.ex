@@ -61,25 +61,25 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     ------------------------------
     """)
 
-    blueprint = Module.concat([blueprint_binary])
+    blueprint_module = Module.concat([blueprint_binary])
 
-    if blueprint.__has_identifier__ do
-      resave_entries(blueprint)
+    if blueprint_module.__has_identifier__() do
+      resave_entries(blueprint_module)
       Mix.shell().info([:green, "\n==> Done.\n"])
     end
   end
 
-  defp resave_entries(blueprint) do
-    context = blueprint.__modules__().context
-    singular = blueprint.__naming__().singular
-    plural = blueprint.__naming__().plural
-    preloads = Brando.Blueprint.preloads_for(blueprint)
+  defp resave_entries(blueprint_module) do
+    context = blueprint_module.__modules__().context
+    singular = blueprint_module.__naming__().singular
+    plural = blueprint_module.__naming__().plural
+    preloads = Brando.Blueprint.preloads_for(blueprint_module)
     {:ok, entries} = apply(context, :"list_#{plural}", [%{order: "asc id", preload: preloads}])
 
     Mix.shell().info([:green, "\n==> Resaving #{singular} entries\n"])
 
     for entry <- entries do
-      title = blueprint.__identifier__(entry, skip_cover: true).title
+      title = blueprint_module.__identifier__(entry, skip_cover: true).title
 
       IO.write([
         "* [",
@@ -100,7 +100,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       changeset =
         entry
         |> Ecto.Changeset.change()
-        |> Brando.Villain.render_all_block_fields_and_add_to_changeset(blueprint, entry)
+        |> Brando.Villain.render_all_block_fields_and_add_to_changeset(blueprint_module, entry)
 
       case Brando.Repo.update(changeset, force: true) do
         {:ok, _} ->

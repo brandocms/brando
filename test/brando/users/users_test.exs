@@ -4,12 +4,11 @@ defmodule BrandoIntegration.UsersTest do
   use BrandoIntegration.TestCase
 
   alias Brando.Factory
-  alias Brando.Users.User
+  alias Brando.Users
 
   test "set_last_login/1" do
     user = Factory.insert(:user)
-
-    {:ok, new_user} = User.set_last_login(user)
+    {:ok, new_user} = Users.set_last_login(user)
     refute user.last_login == new_user.last_login
   end
 end
