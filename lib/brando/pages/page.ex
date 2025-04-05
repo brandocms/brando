@@ -99,13 +99,6 @@ defmodule Brando.Pages.Page do
 
   @derive {Jason.Encoder, only: @derived_fields}
 
-  translations do
-    context :naming do
-      translate :singular, t("page")
-      translate :plural, t("pages")
-    end
-  end
-
   listings do
     listing do
       query %{
@@ -319,6 +312,13 @@ defmodule Brando.Pages.Page do
     field :mainEntityOfPage, :current_url
     field :name, :string, & &1.title
     field :url, :current_url
+  end
+
+  translations do
+    context :naming do
+      translate :singular, t("page")
+      translate :plural, t("pages")
+    end
   end
 
   def get_templates(_, _) do
