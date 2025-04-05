@@ -14,7 +14,6 @@ defmodule BrandoAdmin.Components.Content.List.Checklist do
   end
 
   attr :cond, :any, required: true
-
   slot :inner_block, required: true
 
   def checklist_item(assigns) do
