@@ -131,7 +131,6 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         @identifier.id == @selected_identifier_id && "selected"
       ]}
       data-label={@identifier.title}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >

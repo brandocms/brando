@@ -1279,7 +1279,7 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Select existing file")}
           </button>
 
-          <button class="secondary" type="button" phx-page-loading phx-click={reset_file_field(@myself)}>
+          <button class="secondary" type="button" phx-click={reset_file_field(@myself)}>
             {gettext("Reset file field")}
           </button>
         </div>
@@ -3607,7 +3607,6 @@ defmodule BrandoAdmin.Components.Form do
       for={@f_id}
       data-popover={@popover}
       phx-click={@click}
-      phx-page-loading={(@click && true) || false}
       data-field-presence={@f_name}
     >
       {render_slot(@inner_block)}

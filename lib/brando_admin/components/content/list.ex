@@ -800,7 +800,6 @@ defmodule BrandoAdmin.Components.Content.List do
         @active_class
       ]}
       type="button"
-      phx-page-loading
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
         <circle class={@status} r="6" cy="6" cx="6" />

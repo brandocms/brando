@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   @moduledoc false
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
   use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]

@@ -16,11 +16,9 @@ defmodule BrandoAdmin.Components.Content do
           <h1>
             {@title}
           </h1>
-          <%= if @subtitle do %>
-            <h3>
-              {@subtitle}
-            </h3>
-          <% end %>
+          <h3 :if={@subtitle}>
+            {@subtitle}
+          </h3>
         </section>
         <section class="actions">
           <%= if @inner_block do %>
@@ -52,11 +50,9 @@ defmodule BrandoAdmin.Components.Content do
             {gettext("Close")}
           </button>
         </div>
-        <%= if @info do %>
-          <div class="drawer-info">
-            {render_slot(@info)}
-          </div>
-        <% end %>
+        <div :if={@info} class="drawer-info">
+          {render_slot(@info)}
+        </div>
         <div class="drawer-form">
           {render_slot(@inner_block)}
         </div>
@@ -169,9 +165,7 @@ defmodule BrandoAdmin.Components.Content do
           <%= if @footer do %>
             <footer class="modal-footer">
               {render_slot(@footer)}
-              <%= if @ok do %>
-                <button class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
-              <% end %>
+              <button :if={@ok} class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
             </footer>
           <% end %>
         </div>

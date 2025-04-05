@@ -51,7 +51,6 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
                 type="button"
                 phx-click={JS.push("select_language", target: @myself)}
                 phx-value-id={language[:value]}
-                phx-page-loading
               >
                 {language[:text]}
               </button>

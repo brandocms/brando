@@ -345,7 +345,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         "draggable",
         "identifier"
       ]}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
@@ -389,7 +388,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         "identifier",
         @selected && "selected"
       ]}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
@@ -433,7 +431,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         @select && "selectable",
         @identifier in @selected_identifiers && "selected"
       ]}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
@@ -481,7 +478,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         "draggable",
         "identifier"
       ]}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
@@ -522,7 +518,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         "identifier",
         @selected && "selected"
       ]}
-      phx-page-loading
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
@@ -558,7 +553,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         "identifier",
         @select && "selectable"
       ]}
-      phx-page-loading
       phx-click={@select}
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>

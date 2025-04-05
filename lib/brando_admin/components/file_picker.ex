@@ -70,7 +70,6 @@ defmodule BrandoAdmin.Components.FilePicker do
               }
               phx-value-id={file.id}
               phx-value-selected={(file.filename in @selected_files && "true") || "false"}
-              phx-page-loading
             >
               <div class="file-picker__info">
                 <div class="file-picker__filename">#{file.id} {Utils.file_url(file)}</div>

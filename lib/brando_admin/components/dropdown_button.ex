@@ -20,12 +20,11 @@ defmodule BrandoAdmin.Components.Button do
           phx-hook="Brando.ConfirmClick"
           phx-confirm-click-message={@confirm}
           phx-confirm-click={@event}
-          phx-page-loading={@loading}
         >
           {render_slot(@inner_block)}
         </button>
       <% else %>
-        <button type="button" id={"dropdown-button-#{@event_name}-#{@value}"} phx-click={@event} phx-page-loading={@loading}>
+        <button type="button" id={"dropdown-button-#{@event_name}-#{@value}"} phx-click={@event}>
           {render_slot(@inner_block)}
         </button>
       <% end %>

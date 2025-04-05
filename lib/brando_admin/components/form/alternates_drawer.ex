@@ -45,7 +45,6 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           <:delete>
             <button
               type="button"
-              phx-page-loading
               phx-click={
                 JS.push("remove_entry",
                   target: @myself,

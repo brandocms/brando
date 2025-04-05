@@ -53,7 +53,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       data-id={@entry.id}
       phx-click={@click}
       phx-value-id={@entry.id}
-      phx-page-loading
     >
       <div class="main-content">
         <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
@@ -448,7 +447,6 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           <:delete>
             <button
               type="button"
-              phx-page-loading
               phx-click={
                 JS.push("remove_entry",
                   value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id},

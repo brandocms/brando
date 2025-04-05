@@ -262,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_add(assigns) do
     ~H"""
-    <button type="button" class="add-entry-button" phx-click={@on_click} phx-page-loading>
+    <button type="button" class="add-entry-button" phx-click={@on_click}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
         <path fill="none" d="M0 0h24v24H0z" /><path
           d="M18 15l-.001 3H21v2h-3.001L18 23h-2l-.001-3H13v-2h2.999L16 15h2zm-7 3v2H3v-2h8zm10-7v2H3v-2h18zm0-7v2H3V4h18z"
@@ -276,7 +276,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def sort_by_filename(assigns) do
     ~H"""
-    <button type="button" class="add-entry-button" phx-click={@on_click} phx-page-loading>
+    <button type="button" class="add-entry-button" phx-click={@on_click}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -307,7 +307,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_edit(assigns) do
     ~H"""
-    <button class="subform-edit" type="button" phx-click={@on_click} phx-page-loading>
+    <button class="subform-edit" type="button" phx-click={@on_click}>
       <svg
         :if={!@open}
         xmlns="http://www.w3.org/2000/svg"
