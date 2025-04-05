@@ -325,29 +325,33 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :soft_delete?, :boolean, required: true
 
   def status(assigns) do
+    is_deleted = assigns.soft_delete? and not is_nil(assigns.entry.deleted_at)
     publish_at = Map.get(assigns.entry, :publish_at, nil)
+    status_value = if is_deleted, do: :deleted, else: assigns.entry.status
 
     assigns =
       assigns
+      |> assign(:is_deleted, is_deleted)
+      |> assign(:status_value, status_value)
       |> assign(:publish_at, publish_at)
       |> assign(:entry_id, make_id(assigns.entry))
 
     ~H"""
     <div class="status">
-      <%= if @soft_delete? and @entry.deleted_at do %>
-        <div center="true">
-          <.status_circle status={:deleted} />
-        </div>
-      <% else %>
-        <div phx-click={toggle_dropdown("#status-dropdown-#{@entry_id}")}>
-          <.status_circle status={@entry.status} publish_at={@publish_at} />
-          <.status_dropdown id={"status-dropdown-#{@entry_id}"} entry_id={@entry.id} schema={@entry.__struct__} />
-        </div>
-      <% end %>
+      <div center={@is_deleted} phx-click={if !@is_deleted, do: toggle_dropdown("#status-dropdown-#{@entry_id}")}>
+        <.status_circle status={@status_value} publish_at={@publish_at} />
+        <.status_dropdown
+          :if={!@is_deleted}
+          id={"status-dropdown-#{@entry_id}"}
+          entry_id={@entry.id}
+          schema={@entry.__struct__}
+        />
+      </div>
     </div>
     """
   end
 
+  # Status dropdown component
   attr :id, :string, required: true
   attr :entry_id, :any, required: true
   attr :schema, :any, required: true
@@ -357,21 +361,33 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="status-dropdown hidden" id={@id}>
-      <button
-        :for={status <- @statuses}
-        type="button"
-        phx-click={
-          "set_status"
-          |> JS.push(value: %{id: @entry_id, status: status, schema: @schema})
-          |> toggle_dropdown("##{@id}")
-        }
-      >
-        <.status_circle status={status} /> {render_status_label(status)}
-      </button>
+      <.status_button :for={status <- @statuses} status={status} id={@id} entry_id={@entry_id} schema={@schema} />
     </div>
     """
   end
 
+  # Status button component
+  attr :status, :atom, required: true
+  attr :id, :string, required: true
+  attr :entry_id, :any, required: true
+  attr :schema, :any, required: true
+
+  def status_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click={
+        "set_status"
+        |> JS.push(value: %{id: @entry_id, status: @status, schema: @schema})
+        |> toggle_dropdown("##{@id}")
+      }
+    >
+      <.status_circle status={@status} /> {render_status_label(@status)}
+    </button>
+    """
+  end
+
+  # Status circle component
   attr :status, :atom, required: true
   attr :publish_at, :any, default: nil
 
